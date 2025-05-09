@@ -8,18 +8,21 @@ use App\Models\Group;
 use App\Models\Dimension;
 use App\Models\SubDimension;
 use App\Models\MeasurementParameter;
+use App\Traits\DatabaseSeederTrait;
 
 class RiskDataSeeder extends Seeder
 {
+    use DatabaseSeederTrait;
+
     public function run()
     {
         // Matikan FK checks & truncate semua tabel
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        $this->disableForeignKeyChecks();
         Group::truncate();
         MeasurementParameter::truncate();
         SubDimension::truncate();
         Dimension::truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        $this->enableForeignKeyChecks();
 
         // 1) Seed groups
         $groups = [

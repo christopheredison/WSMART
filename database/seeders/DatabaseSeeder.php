@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
             KonstruksiSpesifikSeeder::class,
             OpsiPerlakuanRisikoSeeder::class,
             ProjectTypeSeeder::class,
+            RiskDataSeeder::class,
         ]);
     }
 }

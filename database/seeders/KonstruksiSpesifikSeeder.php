@@ -6,20 +6,33 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Traits\DatabaseSeederTrait;
 
 class KonstruksiSpesifikSeeder extends Seeder
 {
+    use DatabaseSeederTrait;
+
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        //
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        $this->disableForeignKeyChecks();
         DB::table('project_sektors')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        DB::table('project_divisis')->truncate();
+        $this->enableForeignKeyChecks();
 
         $now = Carbon::now();
+
+        $projectDivisis = [
+            ['id' => 1, 'divisi_name' => 'Divisi 1', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 2, 'divisi_name' => 'Divisi 2', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 3, 'divisi_name' => 'Divisi 3', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 4, 'divisi_name' => 'Divisi 4', 'created_at' => $now, 'updated_at' => $now],
+            ['id' => 5, 'divisi_name' => 'Divisi 5', 'created_at' => $now, 'updated_at' => $now],
+        ];
+
+        DB::table('project_divisis')->insert($projectDivisis);
 
         $datas = [
             ['id' => 1, 'sektor_name' => 'Apartement', 'project_divisi_id' => 1, 'created_at' => $now, 'updated_at' => $now],
