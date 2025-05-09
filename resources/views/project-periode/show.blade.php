@@ -1,0 +1,728 @@
+@extends('layouts.default')
+@section('dashboard')
+    <div class="row mb-5">
+        <div class="col-12 d-flex align-items-center gap-3 position-relative">
+            <div class="svg-icon svg-icon-secondary">
+                @include('partials.icon-tool')
+            </div>
+            <h3 class="mb-0">Data Proyek {{ $projectPeriode->project->project_name }} Periode {{ $projectPeriode->periode->tahun }}</h3>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header stepper border-0 pb-0">
+            <div class="nav-link active d-flex align-items-center p-0">
+                <span class="h3 mb-0">Data Project</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="row d-flex align-items-center">
+                        <label class="col-md-3">Kode Project</label>
+                        <div class="col-md-9">
+                            {{ Form::text('project_code', $projectPeriode->project->project_code, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Nama Project</label>
+                        <div class="col-md-9">
+                            {{ Form::text('project_name', $projectPeriode->project->project_name, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Divisi</label>
+                        <div class="col-md-9">
+                            {{ Form::text('divisi', $projectPeriode->project->projectDivisi?->divisi_name, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Konstruksi Spesifik</label>
+                        <div class="col-md-9">
+                            {{ Form::text('industry_sector', $projectPeriode->project->projectSektor?->sektor_name, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Status Proyek</label>
+                        <div class="col-md-9">
+                            {{ Form::text('tender_status', $projectPeriode->project->tender_status ? __('project.tender_statuses.' . $projectPeriode->project->tender_status) : '', ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Jenis Proyek</label>
+                        <div class="col-md-9">
+                            {{ Form::text('project_type', $projectPeriode->project->projectType?->name, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Owner</label>
+                        <div class="col-md-9">
+                            {{ Form::text('owner', $projectPeriode->project->owner, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Kategori Owner</label>
+                        <div class="col-md-9">
+                            {{ Form::text('owner_category', $projectPeriode->project->owner_category ? __('project.owner_categories.' . $projectPeriode->project->owner_category) : '', ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Sumber Dana</label>
+                        <div class="col-md-9">
+                            {{ Form::text('funding_source', $projectPeriode->project->sumber_dana ? __('project.sumber_danas.' . $projectPeriode->project->sumber_dana) : '', ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Lokasi Proyek</label>
+                        <div class="col-md-9">
+                            {{ Form::text('project_location', $projectPeriode->project->projectLocation?->location, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Jenis Kontrak</label>
+                        <div class="col-md-9">
+                            {{ Form::text('jenis_kontrak', $projectPeriode->project->jenis_kontrak ? __('project.jenis_kontraks.' . $projectPeriode->project->jenis_kontrak) : '', ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Cara Pembayaran</label>
+                        <div class="col-md-9">
+                            {{ Form::text('cara_pembayaran', $projectPeriode->project->cara_pembayaran ? __('project.cara_pembayarans.' . $projectPeriode->project->cara_pembayaran) : '', ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Scope Pekerjaan</label>
+                        <div class="col-md-9">
+                            {{ Form::text('scope_pekerjaan', $projectPeriode->project->scope_pekerjaan ? __('project.scope_pekerjaans.' . $projectPeriode->project->scope_pekerjaan) : '', ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Nilai Kontrak - PPN (Rp)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('nk_ppn', $projectPeriode->project->nk_ppn, ['class' => 'form-control inputmask-general', 'readonly', 'step' => '0.01']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-md-0 mt-3">
+                        <label class="col-md-3">NK Addendum (Rp)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('nk', $projectPeriode->project->nk, ['class' => 'form-control inputmask-general', 'readonly', 'step' => '0.01']) }}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">  
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Awal Masa Pelaksanaan</label>
+                        <div class="col-md-9">
+                            {{ Form::text('masa_pelaksanaan_start', $projectPeriode->project->display_masa_pelaksanaan_start, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Akhir Masa Pelaksanaan</label>
+                        <div class="col-md-9">
+                            {{ Form::text('masa_pelaksanaan_end', $projectPeriode->project->display_masa_pelaksanaan_end, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    @if($projectPeriode->project->type==1)
+                    <div class="row d-flex align-items-center">
+                        <label class="col-md-3">RAPT (Rp)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('rapt', $projectPeriode->project->rapt, ['class' => 'form-control inputmask-general', 'readonly', 'step' => '0.01']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">RAPT (%)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('rapt_persentase', $projectPeriode->project->rapt_persentase, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    @else
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">RAPK Awal (Rp)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('rapk', $projectPeriode->project->rapk, ['class' => 'form-control inputmask-general', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">RAPK Awal (%)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('rapk_persentase', $projectPeriode->project->rapk_persentase, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">RAPK Hold I (Rp)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('rapk_0_10_rp', $projectPeriode->project->rapk_0_10_rp, ['class' => 'form-control inputmask-general', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">RAPK Hold I (%)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('rapk_0_10_persen', $projectPeriode->project->rapk_0_10_persen, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">RAPK Hold II (Rp)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('rapk_30_50_rp', $projectPeriode->project->rapk_30_50_rp, ['class' => 'form-control inputmask-general', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">RAPK Hold II (%)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('rapk_30_50_persen', $projectPeriode->project->rapk_30_50_persen, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">RAPK Hold III (Rp)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('rapk_70_90_rp', $projectPeriode->project->rapk_70_90_rp, ['class' => 'form-control inputmask-general', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">RAPK Hold III (%)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('rapk_70_90_persen', $projectPeriode->project->rapk_70_90_persen, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">RAPK Hold IV (Rp)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('rapk_100_rp', $projectPeriode->project->rapk_100_rp, ['class' => 'form-control inputmask-general', 'readonly']) }}
+                        </div>
+                    </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">RAPK Hold IV (%)</label>
+                        <div class="col-md-9">
+                            {{ Form::text('rapk_100_persen', $projectPeriode->project->rapk_100_persen, ['class' => 'form-control', 'readonly']) }}
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            <div class="mb-2 mt-4">
+                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modalEdit">Edit</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mt-5">
+        <div class="card-header stepper border-0 pb-0">
+            <div class="nav-link active d-flex align-items-center p-0">
+                <span class="h3 mb-0">Peta Risiko Inheren dan Residual</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="border p-3 mb-3">
+                @foreach (['High', 'Moderate to High', 'Moderate', 'Low to Moderate', 'Low'] as $level)
+                <div class="me-3 d-inline-flex align-items-center gap-2">
+                    <span class="d-inline-block bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($level)))}}" style="width:20px; height:20px; border-radius: 3px;"></span>
+                    <span>{{ $level }}</span>
+                </div>
+                @endforeach
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="row mb-3">
+                        <div class="col align-items-center d-flex">
+                            <h3 class="h4">Peta Risiko Inheren dan Residual</h3>
+                        </div>
+                        <div class="col-1">
+                            <select class="form-select" style="visibility: hidden;">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-risk-map" id="inherentMap">
+                        <table class="map-table">
+                            <tbody>
+                                @for($likelihood = 5; $likelihood >= 1; $likelihood--)
+                                    <tr>
+                                    @if ($likelihood == 5)
+                                        <td rowspan="5" class="side-title">
+                                            <div class="divider m-0">
+                                                <div class="divider-text">
+                                                    LIKELIHOOD
+                                                </div>
+                                            </div>
+                                        </td>
+                                    @endif
+                                    @for($impact = 1; $impact <= 5; $impact++)
+                                        @php
+                                        $riskMap = $riskMaps[$impact . '-' . $likelihood] ?? null;
+                                        @endphp
+                                        <td>
+                                            <div class="data-cell {{strtolower(str_replace(' ', '-', $riskMap['level_risiko']))}}" data-id="{{ ($likelihood - 1) * 5 + $impact }}" data-posisi-risiko="{{ $riskMap['nilai_risiko'] }}" data-matrix='{{ $impact }}-{{ $likelihood }}'>
+                                                <div class="kode-peristiwa"></div>
+                                                <div class="posisi-risiko">{{ $riskMap['nilai_risiko'] }}</div>
+                                            </div>
+                                        </td>
+                                    @endfor
+                                    </tr>
+                                @endfor
+                                <tr>
+                                    <td class="useless-cell"></td>
+                                    <td colspan="5" class="footer-title">
+                                        <div class="divider m-0">
+                                            <div class="divider-text">
+                                                IMPACT
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <!-- begin::Legend -->
+                        <div class="risk-map-legend d-flex flex-center gap-3">
+                            <div class="d-flex align-items-center gap-1">
+                                <i class='bx bx-circle inherent'></i>
+                                Inherent
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <i class='bx bxs-circle residual'></i>
+                                Residual
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <i class="bx bxs-circle current"></i>
+                                Current
+                            </div>
+                        </div>
+                        <!-- end::Legend -->
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="row mb-3">
+                        <div class="col align-items-center d-flex">
+                            <h3 class="h4">Peta Risiko Terkini (Current)</h3>
+                        </div>
+                        <div class="col">
+                            <select class="form-select" id="quarterSelect">
+                                <option value="1">Quarter 1</option>
+                                <option value="2">Quarter 2</option>
+                                <option value="3">Quarter 3</option>
+                                <option value="4">Quarter 4</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <select class="form-select" id="tahunSelect">
+                                @foreach ($tahunMonitorings as $tahun)
+                                    <option value="{{ $tahun }}">{{ $tahun }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-risk-map" id="currentMap">
+                        <table class="map-table">
+                            <tbody>
+                                @for($likelihood = 5; $likelihood >= 1; $likelihood--)
+                                    <tr>
+                                    @if ($likelihood == 5)
+                                        <td rowspan="5" class="side-title">
+                                            <div class="divider m-0">
+                                                <div class="divider-text">
+                                                    LIKELIHOOD
+                                                </div>
+                                            </div>
+                                        </td>
+                                    @endif
+                                    @for($impact = 1; $impact <= 5; $impact++)
+                                        @php
+                                        $riskMap = $riskMaps[$impact . '-' . $likelihood] ?? null;
+                                        @endphp
+                                        <td>
+                                            <div class="data-cell {{strtolower(str_replace(' ', '-', $riskMap['level_risiko']))}}" data-id="{{ ($likelihood - 1) * 5 + $impact }}" data-posisi-risiko="{{ $riskMap['nilai_risiko'] }}" data-matrix='{{ $impact }}-{{ $likelihood }}'>
+                                                <div class="kode-peristiwa"></div>
+                                                <div class="posisi-risiko">{{ $riskMap['nilai_risiko'] }}</div>
+                                            </div>
+                                        </td>
+                                    @endfor
+                                    </tr>
+                                @endfor
+                                <tr>
+                                    <td class="useless-cell"></td>
+                                    <td colspan="5" class="footer-title">
+                                        <div class="divider m-0">
+                                            <div class="divider-text">
+                                                IMPACT
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <!-- begin::Legend -->
+                        <div class="risk-map-legend d-flex flex-center gap-3">
+                            <div class="d-flex align-items-center gap-1">
+                                <i class='bx bx-circle inherent'></i>
+                                Inherent
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <i class='bx bxs-circle residual'></i>
+                                Residual
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <i class="bx bxs-circle current"></i>
+                                Current
+                            </div>
+                        </div>
+                        <!-- end::Legend -->
+                    </div>
+                </div>
+            </div>
+            <div class="d-block mt-3">
+                <div class="table-responsive scrollbar">
+                    <table class="table table-strategi">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Peristiwa Risiko</th>
+                                <th>Deskripsi Peristiwa Risiko</th>
+                                <th>Nilai Dampak Inherent</th>
+                                <th>Skala Dampak Inherent</th>
+                                <th>Nilai Probabilitas Inherent</th>
+                                <th>Skala Probabilitas Inherent</th>
+                                <th>Nilai Risiko Inherent</th>
+                                <th>Level Risiko Inherent</th>
+                                <th>Nilai Dampak Residual</th>
+                                <th>Skala Dampak Residual</th>
+                                <th>Nilai Probabilitas Residual</th>
+                                <th>Skala Probabilitas Residual</th>
+                                <th>Nilai Risiko Residual</th>
+                                <th>Level Risiko Residual</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($projectPeriode->projectRisks as $projectRisk)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $projectRisk->peristiwaRisiko?->title ?? '-' }}</td>
+                                <td>{{ $projectRisk->deskripsi_peristiwa_risiko ?? '-' }}</td>
+                                <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak, 0, ',', '.') : '-' }}</td>
+                                <td>
+                                    {{ $projectRisk->projectRiskAnalisa?->skalaDampakObj?->tingkat 
+                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaDampakObj?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaDampakObj?->deskripsi 
+                                        : '-' }}
+                                </td>
+                                <td>{{ $projectRisk->projectRiskAnalisa?->nilai_probabilitas ?? '-' }}</td>
+                                <td>
+                                    {{ $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->tingkat 
+                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->skala 
+                                        : '-' }}
+                                </td>
+                                <td>{{ $projectRisk->projectRiskAnalisa?->skala_risiko ?? '-' }}</td>
+                                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko ?? '-' }}</td>
+                                <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak_residual ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak_residual, 0, ',', '.') : '-' }}</td>
+                                <td>
+                                    {{ $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat 
+                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->deskripsi 
+                                        : '-' }}
+                                </td>
+                                <td>{{ $projectRisk->projectRiskAnalisa?->nilai_probabilitas_residual ?? '-' }}</td>
+                                <td>
+                                    {{ $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat 
+                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->skala 
+                                        : '-' }}
+                                </td>
+                                <td>{{ $projectRisk->projectRiskAnalisa?->skala_risiko_residual ?? '-' }}</td>
+                                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko_residual)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko_residual ?? '-' }}</td>
+                            </tr>
+                            @endforeach
+                            @if ($projectPeriode->projectRisks->isEmpty())
+                            <tr>
+                                <td colspan="15" class="text-center p-3">Tidak ada data</td>
+                            </tr>
+                            @endif
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    @include('master.basic-crud._modal_edit', ['fields' => $editFields, 'action' => route('projects.update', $projectPeriode->project->id), 'resourceName' => 'Project'])
+@endsection
+
+@push('styles')
+<style>
+.kode-peristiwa {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    position: absolute;
+    bottom: 5px;
+    right: 0;
+    width: calc(100% - 5px) !important;
+}
+.box-inherent {
+    background-color: #fff;
+    color: #000;
+    padding: 2px 5px;
+    border-radius: 5px;
+}
+.box-residual {
+    background-color: #000;
+    color: #fff;
+    padding: 2px 5px;
+    border-radius: 5px;
+}
+.box-current {
+    background-color: #007bff;
+    color: #fff;
+    padding: 2px 5px;
+    border-radius: 5px;
+}
+#currentMap .current-q1, #currentMap .current-q2, #currentMap .current-q3, #currentMap .current-q4 {
+    display: none;
+}
+
+#currentMap.show-q1 .current-q1 {
+    display: block;
+}
+
+#currentMap.show-q2 .current-q2 {
+    display: block;
+}
+
+#currentMap.show-q3 .current-q3 {
+    display: block;
+}
+
+#currentMap.show-q4 .current-q4 {
+    display: block;
+}
+</style>
+
+@foreach ($tahunMonitorings as $tahunMonitoring)
+<style>
+#currentMap .current-{{ $tahunMonitoring }}-q1, #currentMap .current-{{ $tahunMonitoring }}-q2, #currentMap .current-{{ $tahunMonitoring }}-q3, #currentMap .current-{{ $tahunMonitoring }}-q4 {
+    display: none;
+}
+
+#currentMap.show-{{ $tahunMonitoring }}-q1 .current-{{ $tahunMonitoring }}-q1 {
+    display: block;
+}
+
+#currentMap.show-{{ $tahunMonitoring }}-q2 .current-{{ $tahunMonitoring }}-q2 {
+    display: block;
+}
+
+#currentMap.show-{{ $tahunMonitoring }}-q3 .current-{{ $tahunMonitoring }}-q3 {
+    display: block;
+}
+
+#currentMap.show-{{ $tahunMonitoring }}-q4 .current-{{ $tahunMonitoring }}-q4 {
+    display: block;
+}
+</style>
+@endforeach
+@endpush
+
+@push('scripts')
+<script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
+<script>
+$(document).ready(function () {
+    const inputmaskGeneral = $('.inputmask-general');
+    const risks = @json($projectPeriode->projectRisks);
+
+    $('#modalEdit input[name="nk_ppn"],#modalEdit input[name="rapk"]').on('change', function() {
+        const nkPpn = $('#modalEdit input[name="nk_ppn"]').inputmask('unmaskedvalue');
+        const rapk = $('#modalEdit input[name="rapk"]').inputmask('unmaskedvalue');
+    });
+
+    inputmaskGeneral.each(function() {
+        const inputmask = $(this);
+        const options = {
+            alias: 'numeric',
+            groupSeparator: '.',
+            radixPoint: ',',
+            autoGroup: true,
+            digits: 0,
+            digitsOptional: true,
+            placeholder: '0',
+            rightAlign: false,
+            autoUnmask: true,
+            removeMaskOnSubmit: true,
+            onBeforeMask: function(maskedValue, opts) {
+                return maskedValue.replace('.', ',');
+            },
+            onUnMask: function(maskedValue, unmaskedValue, opts) {
+                return maskedValue.replaceAll('.', '').replace(',', '.');
+            }
+        };
+
+        if (inputmask.attr('step')) {
+            options.digits = -Math.log10(inputmask.attr('step'));
+        }
+        if (inputmask.attr('max')) {
+            options.max = inputmask.attr('max');
+        }
+        if (inputmask.attr('min')) {
+            options.min = inputmask.attr('min');
+        }
+
+        inputmask.inputmask(options);
+    });
+
+
+    const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
+    risks.forEach((risk, idx) => {
+        const matrixI = risk.project_risk_analisa?.skala_dampak + '-' + risk.project_risk_analisa?.skala_probabilitas?.tingkat;
+        const matrixR = risk.project_risk_analisa?.skala_dampak_residual + '-' + risk.project_risk_analisa?.skala_probabilitas_residual?.tingkat;
+
+        const cellI = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixI}"]`);
+        const cellR = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixR}"]`);
+
+        const code = (idx + 1).toString();
+        
+        if (cellI.length) {
+            if (!cellI.data('kode-peristiwa-inherent')) {
+                cellI.data('kode-peristiwa-inherent', []);
+            }
+            
+            cellI.data('kode-peristiwa-inherent').push(code);
+            cellI.data('has-inherent', true);
+        }
+
+        if (cellR.length) {
+            if (!cellR.data('kode-peristiwa-residual')) {
+                cellR.data('kode-peristiwa-residual', []);
+            }
+            
+            cellR.data('kode-peristiwa-residual').push(code);
+            cellR.data('has-residual', true);
+        }
+
+        const formattedCurrentRiskMap = formattedCurrentRiskMaps[risk.id];
+        Object.keys(formattedCurrentRiskMap).forEach((tahun) => {
+            const currentRiskMaps = formattedCurrentRiskMap[tahun];
+            currentRiskMaps.forEach((currentRiskMap) => {
+                const matrixC = currentRiskMap.skala_dampak + '-' + currentRiskMap.skala_probabilitas;
+                const cellC = $(`#currentMap.table-risk-map .data-cell[data-matrix="${matrixC}"]`);
+
+                if (cellC.length) {
+                    if (!cellC.data('kode-peristiwa-current-' + tahun + '-q' + currentRiskMap.quarter)) {
+                        cellC.data('kode-peristiwa-current-' + tahun + '-q' + currentRiskMap.quarter, []);
+                    }
+                    
+                    cellC.data('kode-peristiwa-current-' + tahun + '-q' + currentRiskMap.quarter).push(code);
+                    cellC.data('has-current', true);
+                }
+            });
+        });
+
+        const cells = $('#inherentMap.table-risk-map .data-cell');
+        cells.each((index, cell) => {
+            let html = '';
+            let kodePeristiwaInherent = $(cell).data('kode-peristiwa-inherent');
+            let kodePeristiwaResidual = $(cell).data('kode-peristiwa-residual');
+            if (kodePeristiwaInherent && kodePeristiwaInherent.length > 0) {
+                for (let i = 0; i < kodePeristiwaInherent.length; i++) {
+                    html += `<span class="box-inherent">R${kodePeristiwaInherent[i]}</span>`;
+                }
+            }
+
+            if (kodePeristiwaResidual && kodePeristiwaResidual.length > 0) {
+                for (let i = 0; i < kodePeristiwaResidual.length; i++) {
+                    html += `<span class="box-residual">R${kodePeristiwaResidual[i]}</span>`;
+                }
+            }
+
+            $(cell).find('.kode-peristiwa').html(html);
+        });
+
+        const cellsC = $('#currentMap.table-risk-map .data-cell');
+        cellsC.each((index, cell) => {
+            let html = '';
+            let kodePeristiwaCurrent = null;
+            @foreach ($tahunMonitorings as $tahun)
+            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-{{ $tahun }}-q1');
+            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
+                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
+                    html += `<span class="box-current current-{{ $tahun }}-q1">R${kodePeristiwaCurrent[i]}</span>`;
+                }
+            }
+
+            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-{{ $tahun }}-q2');
+            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
+                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
+                    html += `<span class="box-current current-{{ $tahun }}-q2">R${kodePeristiwaCurrent[i]}</span>`;
+                }
+            }
+
+            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-{{ $tahun }}-q3');
+            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
+                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
+                    html += `<span class="box-current current-{{ $tahun }}-q3">R${kodePeristiwaCurrent[i]}</span>`;
+                }
+            }
+
+            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-{{ $tahun }}-q4');
+            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
+                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
+                    html += `<span class="box-current current-{{ $tahun }}-q4">R${kodePeristiwaCurrent[i]}</span>`;
+                }
+            }
+            @endforeach
+
+            $(cell).find('.kode-peristiwa').html(html);
+        });
+    });
+
+    $('#quarterSelect,#tahunSelect').on('change', function() {
+        const quarter = $('#quarterSelect').val();
+        const tahun = $('#tahunSelect').val();
+        $('#currentMap').prop('class', 'table-risk-map');
+        $('#currentMap').addClass('show-' + tahun + '-q' + quarter);
+    }).change();
+    
+    flatpickr('.flatpickr-range', {
+        mode: 'range',
+        dateFormat: 'd/m/Y',
+        altInput: true,
+        altFormat: 'd/m/Y',
+        locale: {
+            rangeSeparator: ' - '
+        }
+    });
+
+    flatpickr('.flatpickr', {
+        dateFormat: 'd/m/Y',
+        altInput: true,
+        altFormat: 'd/m/Y',
+        locale: {
+            rangeSeparator: ' - '
+        }
+    });
+
+    const select2modals = $('.select2-modal');
+    select2modals.each(function() {
+        const select2modal = $(this);
+        const parent = select2modal.closest('.modal-body');
+        select2modal.select2({
+            dropdownParent: parent,
+        });
+    });
+
+    // $('#project_divisi_id').on('change', function() {
+    //     var divisiId = $(this).val(); // Ambil nilai yang dipilih
+    //     var sektorSelect = $('#project_sektor_id');
+
+    //     if (divisiId) {
+    //         $.ajax({
+    //             url: '/get-sektors/' + divisiId, // Panggil endpoint
+    //             type: 'GET',
+    //             dataType: 'json',
+    //             success: function(data) {
+    //                 sektorSelect.empty().append('<option value="">Pilih Konstruksi Spesifik</option>');
+
+    //                 $.each(data, function(id, name) {
+    //                     sektorSelect.append('<option value="' + id + '">' + name + '</option>');
+    //                 });
+    //             }
+    //         });
+    //     } else {
+    //         sektorSelect.empty().append('<option value="">Pilih Konstruksi Spesifik</option>');
+    //     }
+    // });
+});
+</script>
+@endpush

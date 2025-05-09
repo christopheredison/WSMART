@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1800 800">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke-width: 0px;
+      }
+
+      .cls-1, .cls-2 {
+        fill: none;
+      }
+
+      .cls-3 {
+        fill: #8459e7;
+        font-family: Poppins-SemiBold, Poppins;
+        font-weight: 600;
+      }
+
+      .cls-3, .cls-4 {
+        font-size: 23.49px;
+        isolation: isolate;
+      }
+
+      .cls-4 {
+        fill: #000;
+        font-family: NunitoSans-Regular, 'Nunito Sans';
+      }
+
+      .cls-2 {
+        stroke: #8459e7;
+        stroke-miterlimit: 10;
+        stroke-width: 3px;
+      }
+    </style>
+  </defs>
+  <g>
+    <path class="cls-2" d="M417.89,129.28H14.87c-5.53,0-9.87-4.34-9.87-9.87V25.22c0-5.53,4.34-9.87,9.87-9.87h403.02c5.53,0,9.87,4.34,9.87,9.87v94.19c0,5.53-4.34,9.87-9.87,9.87Z"/>
+    <g>
+      <rect class="cls-1" x="109.06" y="155.34" width="305.87" height="56.28"/>
+      <text class="cls-4" transform="translate(108.98 171.81)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+      <text class="cls-4" transform="translate(108.98 200.05)"><tspan x="0" y="0">permasalahan hukum.</tspan></text>
+      <text class="cls-4" transform="translate(37.3 172.92)"><tspan x="0" y="0">3.1.1.</tspan></text>
+    </g>
+    <g>
+      <rect class="cls-1" x="109.06" y="228.01" width="305.87" height="84.71"/>
+      <text class="cls-4" transform="translate(108.98 244.63)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+      <text class="cls-4" transform="translate(108.98 272.87)"><tspan x="0" y="0">perikatan.</tspan></text>
+      <text class="cls-4" transform="translate(37.3 245.75)"><tspan x="0" y="0">3.1.2.</tspan></text>
+    </g>
+    <g>
+      <rect class="cls-1" x="109.06" y="296.13" width="305.87" height="84.71"/>
+      <text class="cls-4" transform="translate(108.98 312.76)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+      <text class="cls-4" transform="translate(108.98 341)"><tspan x="0" y="0">kepatuhan.</tspan></text>
+      <text class="cls-4" transform="translate(37.3 313.87)"><tspan x="0" y="0">3.1.3.</tspan></text>
+    </g>
+    <rect class="cls-1" x="88.33" y="35.29" width="331.14" height="79.78"/>
+    <text class="cls-3" transform="translate(88.35 52.7)"><tspan x="0" y="0">Risiko Permasalahan </tspan></text>
+    <text class="cls-3" transform="translate(88.35 80.94)"><tspan x="0" y="0">Hukum, Perikatan, dan </tspan></text>
+    <text class="cls-3" transform="translate(88.35 109.18)"><tspan x="0" y="0">Kepatuhan</tspan></text>
+    <text class="cls-3" transform="translate(37.55 52.41)"><tspan x="0" y="0">3.1.</tspan></text>
+  </g>
+  <path class="cls-2" d="M417.89,563.89H14.87c-5.53,0-9.87-4.34-9.87-9.87v-94.19c0-5.53,4.34-9.87,9.87-9.87h403.02c5.53,0,9.87,4.34,9.87,9.87v94.19c0,5.53-4.34,9.87-9.87,9.87Z"/>
+  <g>
+    <rect class="cls-1" x="109.06" y="589.76" width="305.87" height="56.28"/>
+    <text class="cls-4" transform="translate(108.98 606.4)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+    <text class="cls-4" transform="translate(108.98 634.64)"><tspan x="0" y="0">ketersediaan layanan ICT.</tspan></text>
+    <text class="cls-4" transform="translate(37.3 607.51)"><tspan x="0" y="0">3.5.1.</tspan></text>
+  </g>
+  <g>
+    <rect class="cls-1" x="109.06" y="659.66" width="305.87" height="56.28"/>
+    <text class="cls-4" transform="translate(108.98 676.29)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+    <text class="cls-4" transform="translate(108.98 704.53)"><tspan x="0" y="0">kapabilitas sistem.</tspan></text>
+    <text class="cls-4" transform="translate(37.3 677.4)"><tspan x="0" y="0">3.5.2.</tspan></text>
+  </g>
+  <g>
+    <rect class="cls-1" x="109.06" y="730.75" width="305.87" height="53.91"/>
+    <text class="cls-4" transform="translate(108.98 747.35)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+    <text class="cls-4" transform="translate(108.98 775.59)"><tspan x="0" y="0">keamanan siber.</tspan></text>
+    <text class="cls-4" transform="translate(37.3 748.46)"><tspan x="0" y="0">3.5.3.</tspan></text>
+  </g>
+  <rect class="cls-1" x="88.33" y="483.92" width="321.86" height="54.1"/>
+  <text class="cls-3" transform="translate(88.35 501.39)"><tspan x="0" y="0">Risiko Teknologi, </tspan></text>
+  <text class="cls-3" transform="translate(88.35 529.62)"><tspan x="0" y="0">Informasi, dan Komunikasi</tspan></text>
+  <text class="cls-3" transform="translate(37.55 501.1)"><tspan x="0" y="0">3.5.</tspan></text>
+  <path class="cls-2" d="M873.64,563.89h-403.02c-5.53,0-9.87-4.34-9.87-9.87v-94.19c0-5.53,4.34-9.87,9.87-9.87h403.02c5.53,0,9.87,4.34,9.87,9.87v94.19c0,5.53-4.34,9.87-9.87,9.87Z"/>
+  <g>
+    <rect class="cls-1" x="564.61" y="589.76" width="305.87" height="56.28"/>
+    <text class="cls-4" transform="translate(564.71 606.4)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+    <text class="cls-4" transform="translate(564.71 634.64)"><tspan x="0" y="0">keselamatan.</tspan></text>
+    <text class="cls-4" transform="translate(493.03 607.51)"><tspan x="0" y="0">3.6.1.</tspan></text>
+  </g>
+  <g>
+    <rect class="cls-1" x="564.61" y="659.66" width="305.87" height="56.28"/>
+    <text class="cls-4" transform="translate(564.71 676.29)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+    <text class="cls-4" transform="translate(564.71 704.53)"><tspan x="0" y="0">kesehatan fisik dan psikis.</tspan></text>
+    <text class="cls-4" transform="translate(493.03 677.4)"><tspan x="0" y="0">3.6.2.</tspan></text>
+  </g>
+  <g>
+    <rect class="cls-1" x="564.61" y="730.75" width="305.87" height="53.91"/>
+    <text class="cls-4" transform="translate(564.71 747.35)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+    <text class="cls-4" transform="translate(564.71 775.59)"><tspan x="0" y="0">keamanan dan kenyamanan.</tspan></text>
+    <text class="cls-4" transform="translate(493.03 748.46)"><tspan x="0" y="0">3.6.3.</tspan></text>
+  </g>
+  <rect class="cls-1" x="544.07" y="469.9" width="321.86" height="79.78"/>
+  <text class="cls-3" transform="translate(544.08 487.29)"><tspan x="0" y="0">Risiko Keselamatan, </tspan></text>
+  <text class="cls-3" transform="translate(544.08 515.53)"><tspan x="0" y="0">Kesehatan, Keamanan </tspan></text>
+  <text class="cls-3" transform="translate(544.08 543.77)"><tspan x="0" y="0">dan Kenyamanan</tspan></text>
+  <text class="cls-3" transform="translate(493.28 487)"><tspan x="0" y="0">3.6.</tspan></text>
+  <g>
+    <path class="cls-2" d="M1329.78,563.89h-403.02c-5.53,0-9.87-4.34-9.87-9.87v-94.19c0-5.53,4.34-9.87,9.87-9.87h403.02c5.53,0,9.87,4.34,9.87,9.87v94.19c0,5.53-4.54,9.87-9.87,9.87Z"/>
+    <g>
+      <rect class="cls-1" x="1020.75" y="589.76" width="305.87" height="56.28"/>
+      <text class="cls-4" transform="translate(1020.76 606.4)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+      <text class="cls-4" transform="translate(1020.76 634.64)"><tspan x="0" y="0">kegagalan proses kerja.</tspan></text>
+      <text class="cls-4" transform="translate(949.09 607.51)"><tspan x="0" y="0">3.7.1.</tspan></text>
+    </g>
+    <rect class="cls-1" x="1000.21" y="498.14" width="321.86" height="23.5"/>
+    <text class="cls-3" transform="translate(1000.14 515.48)"><tspan x="0" y="0">Risiko Operasional</tspan></text>
+    <text class="cls-3" transform="translate(949.34 515.19)"><tspan x="0" y="0">3.7.</tspan></text>
+  </g>
+  <g>
+    <path class="cls-2" d="M873.64,129.28h-403.02c-5.53,0-9.87-4.34-9.87-9.87V25.22c0-5.53,4.34-9.87,9.87-9.87h403.02c5.53,0,9.87,4.34,9.87,9.87v94.19c0,5.53-4.34,9.87-9.87,9.87Z"/>
+    <g>
+      <rect class="cls-1" x="564.61" y="155.34" width="305.87" height="84.71"/>
+      <text class="cls-4" transform="translate(564.71 171.81)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+      <text class="cls-4" transform="translate(564.71 200.05)"><tspan x="0" y="0">kebijakan dan praktik </tspan></text>
+      <text class="cls-4" transform="translate(564.71 228.29)"><tspan x="0" y="0">pengelolaan SDM.</tspan></text>
+      <text class="cls-4" transform="translate(493.03 172.92)"><tspan x="0" y="0">3.2.1.</tspan></text>
+    </g>
+    <g>
+      <rect class="cls-1" x="564.61" y="319.63" width="305.87" height="56.28"/>
+      <text class="cls-4" transform="translate(564.71 336.25)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+      <text class="cls-4" transform="translate(564.71 364.49)"><tspan x="0" y="0">kompetensi SDM.</tspan></text>
+      <text class="cls-4" transform="translate(493.03 337.37)"><tspan x="0" y="0">3.2.3.</tspan></text>
+    </g>
+    <g>
+      <rect class="cls-1" x="564.61" y="251.51" width="305.87" height="56.28"/>
+      <text class="cls-4" transform="translate(564.71 268.13)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+      <text class="cls-4" transform="translate(564.71 296.36)"><tspan x="0" y="0">kecukupan SDM.</tspan></text>
+      <text class="cls-4" transform="translate(493.03 269.24)"><tspan x="0" y="0">3.2.2.</tspan></text>
+    </g>
+    <rect class="cls-1" x="544.07" y="63.52" width="331.14" height="25.87"/>
+    <text class="cls-3" transform="translate(544.08 80.89)"><tspan x="0" y="0">Risiko SDM</tspan></text>
+    <text class="cls-3" transform="translate(493.28 80.6)"><tspan x="0" y="0">3.2.</tspan></text>
+  </g>
+  <g>
+    <path class="cls-2" d="M1329.78,129.28h-403.02c-5.53,0-9.87-4.34-9.87-9.87V25.22c0-5.53,4.34-9.87,9.87-9.87h403.02c5.53,0,9.87,4.34,9.87,9.87v94.19c0,5.53-4.54,9.87-9.87,9.87Z"/>
+    <g>
+      <rect class="cls-1" x="1020.75" y="155.34" width="305.87" height="56.28"/>
+      <text class="cls-4" transform="translate(1020.76 171.81)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+      <text class="cls-4" transform="translate(1020.76 200.05)"><tspan x="0" y="0">pengelolaan keuangan.</tspan></text>
+      <text class="cls-4" transform="translate(949.09 172.92)"><tspan x="0" y="0">3.3.1.</tspan></text>
+    </g>
+    <g>
+      <rect class="cls-1" x="1020.75" y="293.77" width="305.87" height="56.28"/>
+      <text class="cls-4" transform="translate(1020.76 310.41)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+      <text class="cls-4" transform="translate(1020.76 338.65)"><tspan x="0" y="0">anggaran dan investasi.</tspan></text>
+      <text class="cls-4" transform="translate(949.09 311.52)"><tspan x="0" y="0">3.3.3.</tspan></text>
+    </g>
+    <g>
+      <rect class="cls-1" x="1020.75" y="357.35" width="305.87" height="56.28"/>
+      <text class="cls-4" transform="translate(1020.76 373.84)"><tspan x="0" y="0">Peristiwa risiko terkait fund </tspan></text>
+      <text class="cls-4" transform="translate(1020.76 402.07)"><tspan x="0" y="0">raising.</tspan></text>
+      <text class="cls-4" transform="translate(949.09 374.95)"><tspan x="0" y="0">3.3.4.</tspan></text>
+    </g>
+    <g>
+      <rect class="cls-1" x="1020.75" y="225.64" width="305.87" height="56.28"/>
+      <text class="cls-4" transform="translate(1020.76 242.29)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+      <text class="cls-4" transform="translate(1020.76 270.52)"><tspan x="0" y="0">pelaporan keuangan.</tspan></text>
+      <text class="cls-4" transform="translate(949.09 243.4)"><tspan x="0" y="0">3.3.2.</tspan></text>
+    </g>
+    <rect class="cls-1" x="1000.21" y="63.52" width="331.14" height="25.87"/>
+    <text class="cls-3" transform="translate(1000.14 80.89)"><tspan x="0" y="0">Risiko Keuangan</tspan></text>
+    <text class="cls-3" transform="translate(949.34 80.6)"><tspan x="0" y="0">3.3.</tspan></text>
+  </g>
+  <g>
+    <path class="cls-2" d="M1785.13,129.28h-403.02c-5.53,0-9.87-4.34-9.87-9.87V25.22c0-5.53,4.34-9.87,9.87-9.87h403.02c5.53,0,9.87,4.34,9.87,9.87v94.19c0,5.53-4.34,9.87-9.87,9.87Z"/>
+    <g>
+      <rect class="cls-1" x="1476.1" y="155.34" width="305.87" height="79.78"/>
+      <text class="cls-4" transform="translate(1476.17 171.81)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+      <text class="cls-4" transform="translate(1476.17 200.05)"><tspan x="0" y="0">ketersediaan sarana dan </tspan></text>
+      <text class="cls-4" transform="translate(1476.17 228.29)"><tspan x="0" y="0">prasarana.</tspan></text>
+      <text class="cls-4" transform="translate(1404.5 172.92)"><tspan x="0" y="0">3.4.1.</tspan></text>
+    </g>
+    <g>
+      <rect class="cls-1" x="1476.1" y="253.88" width="305.87" height="56.28"/>
+      <text class="cls-4" transform="translate(1476.17 270.47)"><tspan x="0" y="0">Peristiwa risiko terkait </tspan></text>
+      <text class="cls-4" transform="translate(1476.17 298.71)"><tspan x="0" y="0">pengadaan.</tspan></text>
+      <text class="cls-4" transform="translate(1404.5 271.59)"><tspan x="0" y="0">3.4.2.</tspan></text>
+    </g>
+    <rect class="cls-1" x="1455.56" y="63.52" width="331.14" height="25.87"/>
+    <text class="cls-3" transform="translate(1455.55 80.89)"><tspan x="0" y="0">Risiko Sarana &amp; Prasarana</tspan></text>
+    <text class="cls-3" transform="translate(1404.74 80.6)"><tspan x="0" y="0">3.4.</tspan></text>
+  </g>
+</svg>

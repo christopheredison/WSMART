@@ -1,0 +1,14 @@
+services:
+  php-apache:
+    build:
+      context: . # Mengacu ke lokasi Dockerfile
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80" # Memetakan port 80 di container ke port 8080 di host
+    volumes:
+      - .:/var/www/html # Menyinkronkan kode sumber ke dalam container
+      - ./docker/000-default.conf:/etc/apache2/sites-available/000-default.conf # Menyinkronkan konfigurasi Apache
+    container_name: php-apache-wika
+    # environment:
+    #   - APACHE_RUN_USER=root
+    #   - APACHE_RUN_GROUP=root

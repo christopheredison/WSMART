@@ -1,0 +1,21 @@
+<!-- Modal Restore Exclamation -->
+<div class="modal fade" id="modalRestore{{ $itemId }}" tabindex="-1" aria-labelledby="{ $itemId }}Label"
+  aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg exclamation-alert">
+    <div class="modal-content">
+      <div class="modal-body text-center">
+        <div class="exc-icon">
+          <div class="exc-icon-content">!</div>
+        </div>
+        <h5>Anda yakin akan memulihkan "{{ $innerItemText }}"?</h5>
+        <div class="d-flex justify-content-center mt-5">
+          <form action="{{ $formAction }}" method="POST">
+            @csrf
+            <button type="submit" class="btn btn-success">Pulihkan</button>
+          </form>
+          <button type=" button" class="btn btn-muted" data-bs-dismiss="modal">Batal</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
