@@ -6,18 +6,20 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Traits\DatabaseSeederTrait;
 
 class KRIProjectSeeder extends Seeder
 {
+    use DatabaseSeederTrait;
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
         //
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        $this->disableForeignKeyChecks();
         DB::table('master_kri')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        $this->enableForeignKeyChecks();
 
         // Waktu saat ini
         $now = Carbon::now();
