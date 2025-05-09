@@ -16,13 +16,13 @@ class RiskDataSeeder extends Seeder
 
     public function run()
     {
-        // Matikan FK checks & truncate semua tabel
-        $this->disableForeignKeyChecks();
-        Group::truncate();
-        MeasurementParameter::truncate();
-        SubDimension::truncate();
-        Dimension::truncate();
-        $this->enableForeignKeyChecks();
+        // Matikan FK checks & truncate semua tabel // menyebabkan data user hilang jika dijalankan di postgre
+        // $this->disableForeignKeyChecks(); 
+        // Group::truncate();
+        // MeasurementParameter::truncate();
+        // SubDimension::truncate();
+        // Dimension::truncate();
+        // $this->enableForeignKeyChecks();
 
         // 1) Seed groups
         $groups = [

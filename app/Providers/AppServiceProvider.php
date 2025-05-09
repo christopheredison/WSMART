@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Supports\ApiPP;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,5 +29,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         Paginator::useBootstrap();
+        
+        // Trust the proxy
+        if (config('app.force_https')) {
+            URL::forceScheme('https');
+            $this->app['request']->server->set('HTTPS', true);
+        }
     }
 }
