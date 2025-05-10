@@ -5,9 +5,9 @@
 <div class="row mb-7">
   <div class="col-12">
     <div class="card border-0 dashboard-header">
-      <img src="../assets/img/dashboard-header6.webp" alt="dashboard">
-      <div class="card-header text-white border-0 mt-auto mb-5">
-        <h1 class="mb-2">Risk Dashboard KRI</h1>
+      <img src="../assets/img/dashboard-header4.webp" alt="dashboard">
+      <div class="card-header border-0">
+        <h1 class="mb-auto mt-3 mt-md-6">Risk Dashboard KRI</h1>
         <h6>Statistik per tanggal {{ now()->format('d M Y') }}</h6>
       </div>
     </div>
@@ -77,9 +77,9 @@
 </div>
 
 <div class="row g-3 dashboard-content">
-  
+
   <!--========================= Dashboard Tren Kategori Risiko Start =========================-->
-  {{-- 
+  {{--
   <div class="col-12">
     <div class="card">
       <div class="card-header">
@@ -94,7 +94,7 @@
   </div>
   --}}
   <!--========================= Dashboard Tren Kategori Risiko End =========================-->
-  
+
   <div class="col-12">
     <div class="card card-sm">
       <div class="card-header pb-0 border-0">
