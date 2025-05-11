@@ -20,7 +20,7 @@
         <button class="btn navbar-toggler-humburger-icon navbar-vertical-toggle" data-bs-toggle="tooltip"
           data-bs-placement="left" title="Toggle Navigation">
           <span class="navbar-toggle-icon">
-            <i class="bx bx-chevron-left bx-sm align-middle"></i>
+            <i class="bx bx-chevron-left align-middle"></i>
           </span>
         </button>
       </div>
@@ -105,8 +105,8 @@
         <!-- Ranking Risiko Menu Start -->
         @can('project_periode_list')
         <li class="nav-item single-indicator">
-          <a class="nav-link {{ request()->routeIs('project-periode-list.index') ? 'active' : '' }}" href="{{route('project-periode-list.index')}}" role="button"
-            data-bs-toggle="" aria-expanded="false">
+          <a class="nav-link {{ request()->routeIs('project-periode-list.index') ? 'active' : '' }}"
+            href="{{route('project-periode-list.index')}}" role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
               <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
               <span class="nav-link-text">Project List</span>
@@ -117,8 +117,8 @@
 
         @can('project_led_list')
         <li class="nav-item single-indicator">
-          <a class="nav-link {{ request()->routeIs('project-led.index') ? 'active' : '' }}" href="{{route('project-led.index')}}" role="button"
-            data-bs-toggle="" aria-expanded="false">
+          <a class="nav-link {{ request()->routeIs('project-led.index') ? 'active' : '' }}"
+            href="{{route('project-led.index')}}" role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
               <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
               <span class="nav-link-text">Loss Event Project</span>
@@ -162,10 +162,11 @@
             <ul
             class="nav collapse {{ request()->is(['peristiwa-risiko', 'rencana-kegiatan', 'master-risiko', 'tck', 'area-dampak', 'skala-dampak', 'skala-probabilitas', 'sikap-risiko', 'periode', 'kategori-risiko', 'jenis-risiko', 'unit-type', 'unit', 'roles', 'users']) || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index']) ? 'show' : '' }}"
             id="master-data">
-            
+
             @can('project_divisi_list')
             <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('project-divisi.index') ? 'active' : '' }}" href="{{ route('project-divisi.index') }}">
+              <a class="nav-link {{ request()->routeIs('project-divisi.index') ? 'active' : '' }}"
+                href="{{ route('project-divisi.index') }}">
                 <span class="nav-link-text">Project Divisi</span>
               </a>
             </li>
@@ -173,7 +174,8 @@
 
             @can('project_sektor_list')
             <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('project-sektor.index') ? 'active' : '' }}" href="{{ route('project-sektor.index') }}">
+              <a class="nav-link {{ request()->routeIs('project-sektor.index') ? 'active' : '' }}"
+                href="{{ route('project-sektor.index') }}">
                 <span class="nav-link-text">Project Sektor</span>
               </a>
             </li>
@@ -181,7 +183,8 @@
 
             @can('project_list')
             <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('projects.index') ? 'active' : '' }}" href="{{ route('projects.index') }}">
+              <a class="nav-link {{ request()->routeIs('projects.index') ? 'active' : '' }}"
+                href="{{ route('projects.index') }}">
                 <span class="nav-link-text">Project</span>
               </a>
             </li>
@@ -189,7 +192,8 @@
 
             @can('master_kri_list')
             <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('master-kri.index') ? 'active' : '' }}" href="{{ route('master-kri.index') }}">
+              <a class="nav-link {{ request()->routeIs('master-kri.index') ? 'active' : '' }}"
+                href="{{ route('master-kri.index') }}">
                 <span class="nav-link-text">Master KRI</span>
               </a>
             </li>
@@ -197,7 +201,8 @@
 
             @can('jenis_kontrol_eksisting_list')
             <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('jenis-kontrol-eksisting.index') ? 'active' : '' }}" href="{{ route('jenis-kontrol-eksisting.index') }}">
+              <a class="nav-link {{ request()->routeIs('jenis-kontrol-eksisting.index') ? 'active' : '' }}"
+                href="{{ route('jenis-kontrol-eksisting.index') }}">
                 <span class="nav-link-text">Jenis Eksisting Kontrol</span>
               </a>
             </li>
@@ -205,7 +210,8 @@
 
             @can('kontrol_eksisting_list')
             <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('kontrol-eksisting.index') ? 'active' : '' }}" href="{{ route('kontrol-eksisting.index') }}">
+              <a class="nav-link {{ request()->routeIs('kontrol-eksisting.index') ? 'active' : '' }}"
+                href="{{ route('kontrol-eksisting.index') }}">
                 <span class="nav-link-text">Eksisting Kontrol</span>
               </a>
             </li>
@@ -213,7 +219,8 @@
 
             @can('penilaian_efektivitas_kontrol_list')
             <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('penilaian-efektivitas-kontrol.index') ? 'active' : '' }}" href="{{ route('penilaian-efektivitas-kontrol.index') }}">
+              <a class="nav-link {{ request()->routeIs('penilaian-efektivitas-kontrol.index') ? 'active' : '' }}"
+                href="{{ route('penilaian-efektivitas-kontrol.index') }}">
                 <span class="nav-link-text">Penilaian Efektivitas Kontrol</span>
               </a>
             </li>
@@ -221,7 +228,8 @@
 
             @can('jenis_rencana_perlakuan_risiko_list')
             <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('jenis-rencana-perlakuan-risiko.index') ? 'active' : '' }}" href="{{ route('jenis-rencana-perlakuan-risiko.index') }}">
+              <a class="nav-link {{ request()->routeIs('jenis-rencana-perlakuan-risiko.index') ? 'active' : '' }}"
+                href="{{ route('jenis-rencana-perlakuan-risiko.index') }}">
                 <span class="nav-link-text">Jenis Rencana Perlakuan Risiko</span>
               </a>
             </li>
@@ -229,7 +237,8 @@
 
             @can('opsi_perlakuan_risiko_list')
             <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('opsi-perlakuan-risiko.index') ? 'active' : '' }}" href="{{ route('opsi-perlakuan-risiko.index') }}">
+              <a class="nav-link {{ request()->routeIs('opsi-perlakuan-risiko.index') ? 'active' : '' }}"
+                href="{{ route('opsi-perlakuan-risiko.index') }}">
                 <span class="nav-link-text">Opsi Perlakuan Risiko</span>
               </a>
             </li>
@@ -237,7 +246,8 @@
 
             @can('project_type_list')
             <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('project-type.index') ? 'active' : '' }}" href="{{ route('project-type.index') }}">
+              <a class="nav-link {{ request()->routeIs('project-type.index') ? 'active' : '' }}"
+                href="{{ route('project-type.index') }}">
                 <span class="nav-link-text">Tipe Proyek</span>
               </a>
             </li>
@@ -245,12 +255,12 @@
 
             @can('project_location_list')
             <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('project-location.index') ? 'active' : '' }}" href="{{ route('project-location.index') }}">
+              <a class="nav-link {{ request()->routeIs('project-location.index') ? 'active' : '' }}"
+                href="{{ route('project-location.index') }}">
                 <span class="nav-link-text">Lokasi Proyek</span>
               </a>
             </li>
             @endcan
-
             @can('rmi_period_list')
             <li class="nav-item">
               <a class="nav-link {{ request()->routeIs('rmi-period.index') ? 'active' : '' }}" href="{{ route('rmi-period.index') }}">
@@ -266,99 +276,98 @@
               </a>
             </li>
             @endcan
-
             {{--
             <li class="nav-item">
               <a class="nav-link {{ request()->is('tck') ? 'active' : '' }}" href="/tck">
-                <span class="nav-link-text">KPI/Sasaran</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ request()->is('area-dampak') ? 'active' : '' }}" href="/area-dampak">
-                <span class="nav-link-text">Area Dampak</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ request()->is('skala-dampak') ? 'active' : '' }}" href="/skala-dampak">
-                <span class="nav-link-text">Skala Dampak</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ request()->is('skala-probabilitas') ? 'active' : '' }}" href="/skala-probabilitas">
-                <span class="nav-link-text">Skala Probabilitas</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ request()->is('sikap-risiko') ? 'active' : '' }}" href="/sikap-risiko">
-                <span class="nav-link-text">Sikap Risiko</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ request()->is('periode') ? 'active' : '' }}" href="/periode">
-                <span class="nav-link-text">Periode</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ request()->is('kategori-risiko') ? 'active' : '' }}" href="/kategori-risiko">
-                <span class="nav-link-text">Kategori Risiko</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ request()->is('jenis-risiko') ? 'active' : '' }}" href="/jenis-risiko">
-                <span class="nav-link-text">Jenis Risiko</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ request()->is('peristiwa-risiko') ? 'active' : '' }}" href="/peristiwa-risiko">
-                <span class="nav-link-text">Peristiwa Risiko</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ request()->is('rencana-kegiatan') ? 'active' : '' }}" href="/rencana-kegiatan">
-                <span class="nav-link-text">Rencana Kegiatan</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ request()->is('master-risiko') ? 'active' : '' }}" href="/master-risiko">
-                <span class="nav-link-text">Master Risiko</span>
-              </a>
-            </li>
-            --}}
-          </ul>
+            <span class="nav-link-text">KPI/Sasaran</span>
+            </a>
         </li>
-        <!-- Master Data End -->
-
-        @endcan
-        {{-- @can('risk_map_setting') --}}
-        <li class="nav-item single-indicator">
-          <a class="nav-link {{ request()->is('risk-map-setting') ? 'active' : '' }}" href="/risk-map-setting"
-            role="button" data-bs-toggle="" aria-expanded="false">
-            <span class="nav-link-icon">
-              <i class="menu-icon tf-icons bx bx-grid-alt"></i>
-              <span class="nav-link-text">Risk Map Setting</span>
-            </span>
+        <li class="nav-item">
+          <a class="nav-link {{ request()->is('area-dampak') ? 'active' : '' }}" href="/area-dampak">
+            <span class="nav-link-text">Area Dampak</span>
           </a>
         </li>
-        {{-- @endcan --}}
-        
+        <li class="nav-item">
+          <a class="nav-link {{ request()->is('skala-dampak') ? 'active' : '' }}" href="/skala-dampak">
+            <span class="nav-link-text">Skala Dampak</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {{ request()->is('skala-probabilitas') ? 'active' : '' }}" href="/skala-probabilitas">
+            <span class="nav-link-text">Skala Probabilitas</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {{ request()->is('sikap-risiko') ? 'active' : '' }}" href="/sikap-risiko">
+            <span class="nav-link-text">Sikap Risiko</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {{ request()->is('periode') ? 'active' : '' }}" href="/periode">
+            <span class="nav-link-text">Periode</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {{ request()->is('kategori-risiko') ? 'active' : '' }}" href="/kategori-risiko">
+            <span class="nav-link-text">Kategori Risiko</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {{ request()->is('jenis-risiko') ? 'active' : '' }}" href="/jenis-risiko">
+            <span class="nav-link-text">Jenis Risiko</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {{ request()->is('peristiwa-risiko') ? 'active' : '' }}" href="/peristiwa-risiko">
+            <span class="nav-link-text">Peristiwa Risiko</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {{ request()->is('rencana-kegiatan') ? 'active' : '' }}" href="/rencana-kegiatan">
+            <span class="nav-link-text">Rencana Kegiatan</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {{ request()->is('master-risiko') ? 'active' : '' }}" href="/master-risiko">
+            <span class="nav-link-text">Master Risiko</span>
+          </a>
+        </li>
+        --}}
+      </ul>
+      </li>
+      <!-- Master Data End -->
 
-        <div class="row navbar-vertical-label-wrapper">
-          <div class="col-auto navbar-vertical-label">
-            Documents
-          </div>
-          <div class="col ps-0">
-            <hr class="mb-0 navbar-vertical-divider" />
-          </div>
+      @endcan
+      {{-- @can('risk_map_setting') --}}
+      <li class="nav-item single-indicator">
+        <a class="nav-link {{ request()->is('risk-map-setting') ? 'active' : '' }}" href="/risk-map-setting"
+          role="button" data-bs-toggle="" aria-expanded="false">
+          <span class="nav-link-icon">
+            <i class="menu-icon tf-icons bx bx-grid-alt"></i>
+            <span class="nav-link-text">Risk Map Setting</span>
+          </span>
+        </a>
+      </li>
+      {{-- @endcan --}}
+
+
+      <div class="row navbar-vertical-label-wrapper">
+        <div class="col-auto navbar-vertical-label">
+          Documents
         </div>
+        <div class="col ps-0">
+          <hr class="mb-0 navbar-vertical-divider" />
+        </div>
+      </div>
 
-        <li class="nav-item single-indicator">
-          <a class="nav-link" href="#" target="blank">
-            <span class="nav-link-icon">
-              <i class="menu-icon tf-icons bx bx-archive"></i>
-              <span class="nav-link-text">Panduan Penggunaan</span>
-            </span>
-          </a>
-        </li>
+      <li class="nav-item single-indicator">
+        <a class="nav-link" href="#" target="blank">
+          <span class="nav-link-icon">
+            <i class="menu-icon tf-icons bx bx-archive"></i>
+            <span class="nav-link-text">Panduan Penggunaan</span>
+          </span>
+        </a>
+      </li>
       </ul>
 
     </div>

@@ -5,9 +5,9 @@
 <div class="row mb-7">
   <div class="col-12">
     <div class="card border-0 dashboard-header">
-      <img src="../assets/img/dashboard-header6.webp" alt="dashboard">
-      <div class="card-header text-white border-0 mt-auto mb-5">
-        <h1 class="mb-2">Risk Dashboard Proyek</h1>
+      <img src="../assets/img/dashboard-header3.webp" alt="dashboard">
+      <div class="card-header border-0">
+        <h1 class="mb-auto mt-3 mt-md-6">Risk Dashboard Proyek</h1>
         <h6>Statistik per tanggal {{ now()->format('d M Y') }}</h6>
       </div>
     </div>
@@ -20,10 +20,12 @@
     <form action="{{ url()->current() }}">
       <div class="row g-3 justify-content-between">
         <div class="col-auto">
-          <select name="periode_id" id="periode_selector" class="form-select select2 js-select-hide-search" onchange="window.location.href = window.location.pathname + '?periode_id=' + this.value">
+          <select name="periode_id" id="periode_selector" class="form-select select2 js-select-hide-search"
+            onchange="window.location.href = window.location.pathname + '?periode_id=' + this.value">
             <option value="" selected disabled>Periode</option>
             @foreach ($periodes as $periode)
-              <option value="{{ $periode->id }}" {{$periode->id == $selectedPeriode ? 'selected' : ''}}>{{ $periode->tahun }}</option>
+            <option value="{{ $periode->id }}" {{$periode->id == $selectedPeriode ? 'selected' : ''}}>
+              {{ $periode->tahun }}</option>
             @endforeach
           </select>
         </div>
@@ -31,7 +33,7 @@
     </form>
   </div>
 </div>
-  
+
 <div class="card mb-3">
   <div class="card-header border-0 pb-0 d-flex flex-between-center">
     <h3 class="h4">Persentase Risk Profil</h3>
@@ -41,7 +43,8 @@
       @php $counter = 0; @endphp
       @foreach ($dashboardData['prp'] as $riskProfil)
       <div class="mb-1 d-flex align-items-center gap-2">
-        <span class="d-inline-block" style="width:25px; height:25px; border-radius: 3px; background-color: {{$riskProfil['color']}}"></span>
+        <span class="d-inline-block"
+          style="width:25px; height:25px; border-radius: 3px; background-color: {{$riskProfil['color']}}"></span>
         <span>{{ $riskProfil['label'] }}</span>
       </div>
       @php $counter++; @endphp
@@ -85,28 +88,27 @@
           <table class="map-table">
             <tbody>
               @for($likelihood = 5; $likelihood >= 1; $likelihood--)
-                <tr>
+              <tr>
                 @if ($likelihood == 5)
-                  <td rowspan="5" class="side-title">
-                    <div class="divider m-0">
-                      <div class="divider-text">
-                        LIKELIHOOD
-                      </div>
+                <td rowspan="5" class="side-title">
+                  <div class="divider m-0">
+                    <div class="divider-text">
+                      LIKELIHOOD
                     </div>
-                  </td>
+                  </div>
+                </td>
                 @endif
-                @for($impact = 1; $impact <= 5; $impact++)
-                  @php
-                  $riskMap = $riskMaps[$impact . '-' . $likelihood] ?? null;
-                  @endphp
-                  <td>
-                    <div class="data-cell {{strtolower(str_replace(' ', '-', $riskMap['level_risiko']))}}" data-id="{{ ($likelihood - 1) * 5 + $impact }}" data-posisi-risiko="{{ $riskMap['nilai_risiko'] }}" data-matrix='{{ $impact }}-{{ $likelihood }}'>
-                      <div class="kode-peristiwa"></div>
-                      <div class="posisi-risiko">{{ $riskMap['nilai_risiko'] }}</div>
-                    </div>
+                @for($impact = 1; $impact <= 5; $impact++) @php $riskMap=$riskMaps[$impact . '-' . $likelihood] ?? null;
+                  @endphp <td>
+                  <div class="data-cell {{strtolower(str_replace(' ', '-', $riskMap['level_risiko']))}}"
+                    data-id="{{ ($likelihood - 1) * 5 + $impact }}" data-posisi-risiko="{{ $riskMap['nilai_risiko'] }}"
+                    data-matrix='{{ $impact }}-{{ $likelihood }}'>
+                    <div class="kode-peristiwa"></div>
+                    <div class="posisi-risiko">{{ $riskMap['nilai_risiko'] }}</div>
+                  </div>
                   </td>
-                @endfor
-                </tr>
+                  @endfor
+              </tr>
               @endfor
               <tr>
                 <td class="useless-cell"></td>
@@ -167,19 +169,19 @@
             <h3 class="h4">Peta Risiko Terkini (Current)</h3>
           </div>
           <div class="col">
-              <select class="form-select" id="quarterSelect">
-                  <option value="1">Quarter 1</option>
-                  <option value="2">Quarter 2</option>
-                  <option value="3">Quarter 3</option>
-                  <option value="4">Quarter 4</option>
-              </select>
+            <select class="form-select" id="quarterSelect">
+              <option value="1">Quarter 1</option>
+              <option value="2">Quarter 2</option>
+              <option value="3">Quarter 3</option>
+              <option value="4">Quarter 4</option>
+            </select>
           </div>
           <div class="col">
-              <select class="form-select" id="tahunSelect">
-                  @foreach ($tahunMonitorings as $tahun)
-                      <option value="{{ $tahun }}">{{ $tahun }}</option>
-                  @endforeach
-              </select>
+            <select class="form-select" id="tahunSelect">
+              @foreach ($tahunMonitorings as $tahun)
+              <option value="{{ $tahun }}">{{ $tahun }}</option>
+              @endforeach
+            </select>
           </div>
         </div>
       </div>
@@ -188,28 +190,27 @@
           <table class="map-table">
             <tbody>
               @for($likelihood = 5; $likelihood >= 1; $likelihood--)
-                <tr>
+              <tr>
                 @if ($likelihood == 5)
-                  <td rowspan="5" class="side-title">
-                    <div class="divider m-0">
-                      <div class="divider-text">
-                        LIKELIHOOD
-                      </div>
+                <td rowspan="5" class="side-title">
+                  <div class="divider m-0">
+                    <div class="divider-text">
+                      LIKELIHOOD
                     </div>
-                  </td>
+                  </div>
+                </td>
                 @endif
-                @for($impact = 1; $impact <= 5; $impact++)
-                  @php
-                  $riskMap = $riskMaps[$impact . '-' . $likelihood] ?? null;
-                  @endphp
-                  <td>
-                    <div class="data-cell {{strtolower(str_replace(' ', '-', $riskMap['level_risiko']))}}" data-id="{{ ($likelihood - 1) * 5 + $impact }}" data-posisi-risiko="{{ $riskMap['nilai_risiko'] }}" data-matrix='{{ $impact }}-{{ $likelihood }}'>
-                      <div class="kode-peristiwa"></div>
-                      <div class="posisi-risiko">{{ $riskMap['nilai_risiko'] }}</div>
-                    </div>
+                @for($impact = 1; $impact <= 5; $impact++) @php $riskMap=$riskMaps[$impact . '-' . $likelihood] ?? null;
+                  @endphp <td>
+                  <div class="data-cell {{strtolower(str_replace(' ', '-', $riskMap['level_risiko']))}}"
+                    data-id="{{ ($likelihood - 1) * 5 + $impact }}" data-posisi-risiko="{{ $riskMap['nilai_risiko'] }}"
+                    data-matrix='{{ $impact }}-{{ $likelihood }}'>
+                    <div class="kode-peristiwa"></div>
+                    <div class="posisi-risiko">{{ $riskMap['nilai_risiko'] }}</div>
+                  </div>
                   </td>
-                @endfor
-                </tr>
+                  @endfor
+              </tr>
               @endfor
               <tr>
                 <td class="useless-cell"></td>
@@ -305,34 +306,37 @@
 @push('styles')
 <style>
 .kode-peristiwa {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    position: absolute;
-    bottom: 5px;
-    right: -5px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  position: absolute;
+  bottom: 5px;
+  right: -5px;
 }
+
 .box-inherent {
-    background-color: #fff;
-    color: #000;
-    padding: 2px 5px;
-    border-radius: 5px;
+  background-color: #fff;
+  color: #000;
+  padding: 2px 5px;
+  border-radius: 5px;
 }
+
 .box-residual {
-    background-color: #000;
-    color: #fff;
-    padding: 2px 5px;
-    border-radius: 5px;
+  background-color: #000;
+  color: #fff;
+  padding: 2px 5px;
+  border-radius: 5px;
 }
+
 .box-current {
-    background-color: #007bff;
-    color: #fff;
-    padding: 2px 5px;
-    border-radius: 5px;
+  background-color: #007bff;
+  color: #fff;
+  padding: 2px 5px;
+  border-radius: 5px;
 }
 
 .quarter-data {
-    display: none;
+  display: none;
 }
 
 .cell-level-risiko {
@@ -348,20 +352,68 @@
 
 @foreach ($tahunMonitorings as $tahunMonitoring)
 <style>
-.show-{{ $tahunMonitoring }}-q1 .quarter-1-{{ $tahunMonitoring }} {
-    display: flex;
+.show- {
+    {
+    $tahunMonitoring
+  }
 }
 
-.show-{{ $tahunMonitoring }}-q2 .quarter-2-{{ $tahunMonitoring }} {
-    display: flex;
+-q1 .quarter-1- {
+    {
+    $tahunMonitoring
+  }
 }
 
-.show-{{ $tahunMonitoring }}-q3 .quarter-3-{{ $tahunMonitoring }} {
-    display: flex;
+  {
+  display: flex;
 }
 
-.show-{{ $tahunMonitoring }}-q4 .quarter-4-{{ $tahunMonitoring }} {
-    display: flex;
+.show- {
+    {
+    $tahunMonitoring
+  }
+}
+
+-q2 .quarter-2- {
+    {
+    $tahunMonitoring
+  }
+}
+
+  {
+  display: flex;
+}
+
+.show- {
+    {
+    $tahunMonitoring
+  }
+}
+
+-q3 .quarter-3- {
+    {
+    $tahunMonitoring
+  }
+}
+
+  {
+  display: flex;
+}
+
+.show- {
+    {
+    $tahunMonitoring
+  }
+}
+
+-q4 .quarter-4- {
+    {
+    $tahunMonitoring
+  }
+}
+
+  {
+  display: flex;
 }
 </style>
 @endforeach
@@ -388,26 +440,24 @@ function fillPersentaseKejadian(data) {
     tooltip: {
       trigger: 'item'
     },
-    series: [
-      {
-        name: 'Jumlah Kejadian',
-        type: 'pie',
-        radius: '90%',
-        data: data.map(function(item) {
-          return {
-            value: item.jumlah_kejadian,
-            name: item.label,
-            itemStyle: {
-              color: item.color
-            }
+    series: [{
+      name: 'Jumlah Kejadian',
+      type: 'pie',
+      radius: '90%',
+      data: data.map(function(item) {
+        return {
+          value: item.jumlah_kejadian,
+          name: item.label,
+          itemStyle: {
+            color: item.color
           }
-        }),
-        label: {
-          position: 'inside',
-          formatter: '{d}%'
-        },
-      }
-    ]
+        }
+      }),
+      label: {
+        position: 'inside',
+        formatter: '{d}%'
+      },
+    }]
   };
 
   option && myChart.setOption(option);
@@ -422,26 +472,24 @@ function fillNilaiDampak(data) {
     tooltip: {
       trigger: 'item'
     },
-    series: [
-      {
-        name: 'Nilai Dampak',
-        type: 'pie',
-        radius: '90%',
-        data: data.map(function(item) {
-          return {
-            value: item.nilai_dampak,
-            name: item.label,
-            itemStyle: {
-              color: item.color
-            }
+    series: [{
+      name: 'Nilai Dampak',
+      type: 'pie',
+      radius: '90%',
+      data: data.map(function(item) {
+        return {
+          value: item.nilai_dampak,
+          name: item.label,
+          itemStyle: {
+            color: item.color
           }
-        }),
-        label: {
-          position: 'inside',
-          formatter: '{d}%'
-        },
-      }
-    ]
+        }
+      }),
+      label: {
+        position: 'inside',
+        formatter: '{d}%'
+      },
+    }]
   };
 
   option && myChart.setOption(option);
@@ -459,7 +507,8 @@ function fillPrir(data) {
     var row = $('<tr></tr>');
     row.append('<td>' + item.kode + '</td>');
     row.append('<td class="text-start">' + item.nama_proyek + '</td>');
-    row.append(`<td class="bg-${item.level_risiko.toLowerCase().replaceAll('to ', '').replaceAll(' ', '-')}">` + (item.skala_risiko || '-') + '</td>');
+    row.append(`<td class="bg-${item.level_risiko.toLowerCase().replaceAll('to ', '').replaceAll(' ', '-')}">` + (
+      item.skala_risiko || '-') + '</td>');
     table.append(row);
 
     const cellI = $(`#prir-card .table-risk-map .data-cell[data-posisi-risiko="${item.skala_risiko}"]`);
@@ -469,7 +518,7 @@ function fillPrir(data) {
       if (!cellI.data('kode-peristiwa-inherent')) {
         cellI.data('kode-peristiwa-inherent', []);
       }
-      
+
       cellI.data('kode-peristiwa-inherent').push(item.kode);
       cellI.data('has-inherent', true);
     }
@@ -478,7 +527,7 @@ function fillPrir(data) {
       if (!cellR.data('kode-peristiwa-residual')) {
         cellR.data('kode-peristiwa-residual', []);
       }
-      
+
       cellR.data('kode-peristiwa-residual').push(item.kode);
       cellR.data('has-residual', true);
     }
@@ -490,15 +539,15 @@ function fillPrir(data) {
     let kodePeristiwaInherent = $(cell).data('kode-peristiwa-inherent');
     let kodePeristiwaResidual = $(cell).data('kode-peristiwa-residual');
     if (kodePeristiwaInherent && kodePeristiwaInherent.length > 0) {
-        for (let i = 0; i < kodePeristiwaInherent.length; i++) {
-            html += `<span class="box-inherent">${kodePeristiwaInherent[i]}</span>`;
-        }
+      for (let i = 0; i < kodePeristiwaInherent.length; i++) {
+        html += `<span class="box-inherent">${kodePeristiwaInherent[i]}</span>`;
+      }
     }
 
     if (kodePeristiwaResidual && kodePeristiwaResidual.length > 0) {
-        for (let i = 0; i < kodePeristiwaResidual.length; i++) {
-            html += `<span class="box-residual">${kodePeristiwaResidual[i]}</span>`;
-        }
+      for (let i = 0; i < kodePeristiwaResidual.length; i++) {
+        html += `<span class="box-residual">${kodePeristiwaResidual[i]}</span>`;
+      }
     }
 
     $(cell).find('.kode-peristiwa').html(html);
@@ -529,14 +578,16 @@ function fillPrsi(data) {
     // row.append(`<td class="bg-${item.level_risiko?.toLowerCase().replaceAll('to ', '').replaceAll(' ', '-')}">` + (item.skala_risiko || '-') + '</td>');
     table.append(row);
 
-    @foreach ($tahunMonitorings as $tahunMonitoring)
+    @foreach($tahunMonitorings as $tahunMonitoring)
     for (let i = 1; i <= 4; i++) {
-      const cell = $(`#prsi-card .table-risk-map .data-cell[data-posisi-risiko="${item['monitorings'][`skala_risiko_{{ $tahunMonitoring }}_q${i}`]}"]`);
+      const cell = $(
+        `#prsi-card .table-risk-map .data-cell[data-posisi-risiko="${item['monitorings'][`skala_risiko_{{ $tahunMonitoring }}_q${i}`]}"]`
+      );
       if (cell.length) {
         if (!cell.data('kode-peristiwa-{{ $tahunMonitoring }}-q' + i)) {
           cell.data('kode-peristiwa-{{ $tahunMonitoring }}-q' + i, []);
         }
-        
+
         cell.data('kode-peristiwa-{{ $tahunMonitoring }}-q' + i).push(item.kode);
       }
     }
@@ -551,7 +602,7 @@ function fillPrsi(data) {
     let kodePeristiwaQ3 = null;
     let kodePeristiwaQ4 = null;
 
-    @foreach ($tahunMonitorings as $tahunMonitoring)
+    @foreach($tahunMonitorings as $tahunMonitoring)
     kodePeristiwaQ1 = $(cell).data('kode-peristiwa-{{ $tahunMonitoring }}-q1');
     kodePeristiwaQ2 = $(cell).data('kode-peristiwa-{{ $tahunMonitoring }}-q2');
     kodePeristiwaQ3 = $(cell).data('kode-peristiwa-{{ $tahunMonitoring }}-q3');
@@ -559,25 +610,29 @@ function fillPrsi(data) {
 
     if (kodePeristiwaQ1 && kodePeristiwaQ1.length > 0) {
       for (let i = 0; i < kodePeristiwaQ1.length; i++) {
-        html += `<span class="box-current quarter-data quarter-1-{{ $tahunMonitoring }}">${kodePeristiwaQ1[i]}</span>`;
+        html +=
+          `<span class="box-current quarter-data quarter-1-{{ $tahunMonitoring }}">${kodePeristiwaQ1[i]}</span>`;
       }
     }
 
     if (kodePeristiwaQ2 && kodePeristiwaQ2.length > 0) {
       for (let i = 0; i < kodePeristiwaQ2.length; i++) {
-        html += `<span class="box-current quarter-data quarter-2-{{ $tahunMonitoring }}">${kodePeristiwaQ2[i]}</span>`;
+        html +=
+          `<span class="box-current quarter-data quarter-2-{{ $tahunMonitoring }}">${kodePeristiwaQ2[i]}</span>`;
       }
     }
 
     if (kodePeristiwaQ3 && kodePeristiwaQ3.length > 0) {
       for (let i = 0; i < kodePeristiwaQ3.length; i++) {
-        html += `<span class="box-current quarter-data quarter-3-{{ $tahunMonitoring }}">${kodePeristiwaQ3[i]}</span>`;
+        html +=
+          `<span class="box-current quarter-data quarter-3-{{ $tahunMonitoring }}">${kodePeristiwaQ3[i]}</span>`;
       }
     }
 
     if (kodePeristiwaQ4 && kodePeristiwaQ4.length > 0) {
       for (let i = 0; i < kodePeristiwaQ4.length; i++) {
-        html += `<span class="box-current quarter-data quarter-4-{{ $tahunMonitoring }}">${kodePeristiwaQ4[i]}</span>`;
+        html +=
+          `<span class="box-current quarter-data quarter-4-{{ $tahunMonitoring }}">${kodePeristiwaQ4[i]}</span>`;
       }
     }
     @endforeach
@@ -604,7 +659,8 @@ function fillTopRisk(data) {
     row.append('<td>' + (item.skala_dampak || '-') + '</td>');
     row.append('<td>' + (item.jenis_risiko || '-') + '</td>');
     row.append('<td>' + (item.nilai_risiko || '-') + '</td>');
-    row.append(`<td class="bg-${item.level_risiko?.toLowerCase().replaceAll('to ', '').replaceAll(' ', '-')}">` + (item.level_risiko || '-') + '</td>');
+    row.append(`<td class="bg-${item.level_risiko?.toLowerCase().replaceAll('to ', '').replaceAll(' ', '-')}">` + (
+      item.level_risiko || '-') + '</td>');
     table.append(row);
   });
 }

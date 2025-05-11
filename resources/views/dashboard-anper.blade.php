@@ -5,9 +5,9 @@
 <div class="row mb-7">
   <div class="col-12">
     <div class="card border-0 dashboard-header">
-      <img src="../assets/img/dashboard-header6.webp" alt="dashboard">
-      <div class="card-header text-white border-0 mt-auto mb-5">
-        <h1 class="mb-2">Risk Dashboard Anak Perusahaan</h1>
+      <img src="../assets/img/dashboard-header.webp" alt="dashboard">
+      <div class="card-header border-0">
+        <h1 class="mb-auto mt-3 mt-md-6">Risk Dashboard Anak Perusahaan</h1>
         <h6>Statistik per tanggal {{ now()->format('d M Y') }}</h6>
       </div>
     </div>

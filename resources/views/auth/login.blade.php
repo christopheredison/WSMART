@@ -3,13 +3,13 @@
 <main class="main p-0 min-vh-100" id="top">
   <div class="authentication-wrapper">
     <div class="row justify-content-center align-items-center vh-100 g-0">
-      <div class="col-11 col-md-8 col-lg-5 col-xxl-4 mx-auto z-index-2">
+      <div class="col-11 col-md-8 col-lg-5 col-xxl-4">
         <div class="card">
           <div class="card-body p-5">
-            <div class="app-brand col-4 mx-auto mb-5">
+            <div class="app-brand col-4 mx-auto mb-5 text-primary">
               @include('partials.logo',["width"=>150])
             </div>
-            <h1 class="text-center mb-3">Sistem Informasi<br>Manajemen Risiko (SIMR)</h1>
+            <h1 class="h2 text-center mb-3">Sistem Informasi<br>Manajemen Risiko (SIMR)</h1>
             <h5 class="text-center mb-7">PT Wijaya Karya (Persero) Tbk</h5>
             <form class="needs-validation" novalidate="" method="POST" action="{{ route('login') }}">
               @csrf
