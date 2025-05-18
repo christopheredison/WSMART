@@ -45,7 +45,7 @@
   </div>
   <!--===================== Create User =====================-->
   <div class="col-12">
-    <form class="needs-validation" novalidate="" method="POST" action="{{ route('users.store') }}">
+    <form class="needs-validation" novalidate="" method="POST" action="{{ route('users.store') }}" id="form-add-user">
       @csrf
       <div class="card">
         <div class="card-header d-flex flex-between-center">
@@ -57,14 +57,36 @@
           </div>
         </div>
         <div class="card-body">
+          @if($errors->any())
+          <div class="alert alert-danger">
+            <ul>
+              @foreach($errors->all() as $error)
+              <li>{{ $error }}</li>
+              @endforeach
+            </ul>
+          </div>
+          @endif
+          <div class="row g-3">
+            <div class="form-group col-12 col-md-7 d-flex">
+              <label class="form-label label-md-start col-md-4">Cari</label>
+              <div class="input-group">
+                <input class="form-control" name="search" type="text" placeholder="Masukkan NIP / Email"
+                  value="{{ old('search') }}" style="border-top-right-radius: 0; border-bottom-right-radius: 0;" onkeydown="if(event.key === 'Enter') { event.preventDefault(); document.getElementById('search-button').click(); }"/>
+                <button class="btn btn-primary py-2" type="button" id="search-button">
+                  <i class="bx bx-search"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <hr>
           <div class="row g-3">
             <div class="form-group col-12 col-md-7 d-flex">
               <label class="form-label label-md-start col-md-4">Unit</label>
               <div class="input-group has-validation">
-                <select class="form-select select2" name="unit_id" required>
-                  <option selected disabled>Unit</option>
+                <select class="form-select select2" name="unit_id" required data-placeholder="Unit">
+                  <option></option>
                   @foreach($unit as $id => $name)
-                  <option value="{{ $id }}">{{ $name }}</option>
+                  <option value="{{ $id }}" {{ old('unit_id') == $id ? 'selected' : '' }}>{{ $name }}</option>
                   @endforeach
                 </select>
                 <div class="invalid-feedback">Silakan pilih unit.</div>
@@ -76,6 +98,14 @@
                 <input class="form-control" id="name" name="name" type="text" placeholder="Masukkan Nama"
                   value="{{ old('name') }}" required />
                 <div class="invalid-feedback">Silakan isi nama.</div>
+              </div>
+            </div>
+            <div class="form-group col-12 col-md-7 d-flex">
+              <label class="form-label label-md-start col-md-4" for="nip">NIP</label>
+              <div class="input-group has-validation">
+                <input class="form-control" id="nip" name="nip" type="text" placeholder="Masukkan NIP"
+                  value="{{ old('nip') }}" />
+                <div class="invalid-feedback">Silakan isi NIP.</div>
               </div>
             </div>
             <div class="form-group col-12 col-md-7 d-flex">
@@ -128,10 +158,10 @@
                     @foreach ($roles as $key => $value)
                     <div class="col-6 col-md-6 col-lg-3">
                       <div class="form-check form-switch">
-                        <input id="roles" class="form-check-input" role="switch" type="checkbox" name="roles[]"
+                        <input id="roles{{ $key }}" class="form-check-input" role="switch" type="checkbox" name="roles[]"
                           value="{{ $value }}" @if (in_array($value, old('roles', []))) checked @endif>
                         </input>
-                        <label class="form-check-label" for="roles">{{ ucwords(str_replace('_', ' ', $value)) }}</label>
+                        <label class="form-check-label" for="roles{{ $key }}">{{ ucwords(str_replace('_', ' ', $value)) }}</label>
                       </div>
                     </div>
                     @endforeach
@@ -149,3 +179,78 @@
   </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+  $('#search-button').click(function() {
+    Swal.fire({
+      title: 'Mencari user...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      allowEnterKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading()
+      }
+    });
+    $.ajax({
+      url: '{{ route('users.search-remote-user') }}',
+      type: 'GET',
+      data: {
+        search: $('input[name="search"]').val(),
+        not_registered_only: 1
+      },
+      success: function(response) {
+        const data = response.data;
+        $('#name').val(data.nm_peg);
+        $('#name').prop('readonly', true);
+        $('#nip').val(data.nip);
+        $('#nip').prop('readonly', true);
+        if (data.email) {
+          $('#email').val(data.email);
+          $('#email').prop('readonly', true);
+        } else {
+          $('#email').val('');
+          $('#email').prop('readonly', false);
+        }
+        
+        $('select[name="unit_id"] option').each(function() {
+          if (this.value && isNaN(this.value)) {
+            $(this).remove();
+          }
+        });
+
+        if (data.nm_unit) {
+          const existingUnit = $('select[name="unit_id"] option').filter(function() {
+            return $(this).text() === data.nm_unit;
+          }).val();
+          if (existingUnit) {
+            $('select[name="unit_id"]').val(existingUnit).change();
+          } else {
+            $('select[name="unit_id"]').append(`<option value="${data.nm_unit}">${data.nm_unit}</option>`);
+            $('select[name="unit_id"]').val(data.nm_unit).change();
+          }
+        }
+        Swal.close();
+      },
+      error: function(xhr, status, error) {
+        $('#form-add-user :input:not([type="hidden"]):not([name="search"])').val('').change();
+        $('#name').prop('readonly', false);
+        $('#nip').prop('readonly', false);
+        $('#email').prop('readonly', false);
+        Swal.close();
+        Swal.fire({
+          title: 'Error',
+          text: xhr.responseJSON.message || 'Terjadi kesalahan saat mencari user',
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
+      }
+    });
+  });
+
+  if ($('#form-add-user :input[name="search"]').val()) {
+    $('#search-button').click();
+  }
+</script>
+@endpush

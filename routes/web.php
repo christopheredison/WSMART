@@ -138,6 +138,7 @@ Route::group(['middleware' => ['auth']], function() {
     {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+        Route::get('/users/remote-users', [UserController::class, 'searchRemoteUser'])->name('users.search-remote-user');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
