@@ -17,10 +17,22 @@ class ParameterKinerjaSeeder extends Seeder
     public function run()
     {
         // (Optional) Bersihkan data lama jika diperlukan
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        ParameterKinerja::truncate();
-        PilihanParameterKinerja::truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        //DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        //ParameterKinerja::truncate();
+        //PilihanParameterKinerja::truncate();
+        //DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        PilihanParameterKinerja::withTrashed()->forceDelete();
+        ParameterKinerja::withTrashed()->forceDelete();
+        // Reset ID berdasarkan jenis database
+        $driver = DB::connection()->getDriverName();
+        if ($driver === 'mysql') {
+            DB::statement('ALTER TABLE pilihan_parameter_kinerjas AUTO_INCREMENT = 1');
+            DB::statement('ALTER TABLE parameter_kinerjas AUTO_INCREMENT = 1');
+        } elseif ($driver === 'pgsql') {
+            DB::statement('ALTER SEQUENCE pilihan_parameter_kinerjas_id_seq RESTART WITH 1');
+            DB::statement('ALTER SEQUENCE parameter_kinerjas_id_seq RESTART WITH 1');
+        }
+
         /*
          * Parameter 1: Capaian KPI Kolegial
          */

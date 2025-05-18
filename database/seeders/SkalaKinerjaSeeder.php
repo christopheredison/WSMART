@@ -15,13 +15,24 @@ class SkalaKinerjaSeeder extends Seeder
     public function run(): void
     {
         // Nonaktifkan foreign key checks
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        //DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         
         // Truncate tabel
-        DB::table('skala_kinerjas')->truncate();
+        //DB::table('skala_kinerjas')->truncate();
         
         // Aktifkan kembali foreign key checks
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        //DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        // Hapus data yang ada
+        SkalaKinerja::withTrashed()->forceDelete();
+
+        // Reset ID berdasarkan jenis database
+        $driver = DB::connection()->getDriverName();
+        if ($driver === 'mysql') {
+            DB::statement('ALTER TABLE skala_kinerjas AUTO_INCREMENT = 1');
+        } elseif ($driver === 'pgsql') {
+            DB::statement('ALTER SEQUENCE skala_kinerjas_id_seq RESTART WITH 1');
+        }
         
         // Data skala kinerja
         $skalaKinerjas = [

@@ -17,6 +17,10 @@ class RMIPeriod extends Model
         'year',
         'score_rmi',
         'score_rmi_desc',
+        'kinerja',
+        'kpmr',
+        'peringkat_komposit_risiko',
+        'nilai_konversi',
         'start_date',
         'end_date',
         'status',  // 1 : Dalam Proses, 2 : Selesai
@@ -40,5 +44,10 @@ class RMIPeriod extends Model
     public function userSurvey()
     {
         return $this->hasOne(UserSurvey::class, 'period_id');
+    }
+
+    public function penilaianCapaianKinerja()
+    {
+        return $this->hasOne(PenilaianCapaianKinerja::class, 'rmi_period_id');
     }
 }
