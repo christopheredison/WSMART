@@ -126,7 +126,24 @@
           </a>
         </li>
         @endcan
-
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->routeIs('sasaran-strategi.index') ? 'active' : '' }}" href="{{route('sasaran-strategi.index')}}" role="button"
+            data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon d-flex align-items-center w-100">
+              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <span class="nav-link-text">Seleksi Sasaran & Strategi Bisnis</span>
+            </span>
+          </a>
+        </li>
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->routeIs('penilaian-rmi.index') ? 'active' : '' }}" href="{{route('penilaian-rmi.index')}}" role="button"
+            data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon d-flex align-items-center w-100">
+              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <span class="nav-link-text">Penilaian RMI</span>
+            </span>
+          </a>
+        </li>        
         @can('kuesioner')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('kuesioner.index') ? 'active' : '' }}" href="{{route('kuesioner.index')}}" role="button"
@@ -151,7 +168,7 @@
 
         <!-- Master Data Start -->
         <li class="nav-item">
-          <a class="nav-link dropdown-indicator {{ request()->is('peristiwa-risiko') ||  request()->is('rencana-kegiatan') ||  request()->is('master-risiko') ||  request()->is('tck') ||  request()->is('area-dampak') ||  request()->is('skala-dampak') ||  request()->is('skala-probabilitas') ||  request()->is('skala-probabilitas') ||  request()->is('sikap-risiko') ||  request()->is('periode') ||  request()->is('kategori-risiko') ||  request()->is('kategori-risiko') ||  request()->is('jenis-risiko') ||  request()->is('peristiwa-risiko') ||  request()->is('unit-type') ||  request()->is('unit') ||  request()->is('roles') || request()->is('users') || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index']) ? 'active' : '' }}"
+          <a class="nav-link dropdown-indicator {{ request()->is('peristiwa-risiko') ||  request()->is('rencana-kegiatan') ||  request()->is('master-risiko') ||  request()->is('tck') ||  request()->is('area-dampak') ||  request()->is('skala-dampak') ||  request()->is('skala-probabilitas') ||  request()->is('skala-probabilitas') ||  request()->is('sikap-risiko') ||  request()->is('periode') ||  request()->is('kategori-risiko') ||  request()->is('kategori-risiko') ||  request()->is('jenis-risiko') ||  request()->is('peristiwa-risiko') ||  request()->is('unit-type') ||  request()->is('unit') ||  request()->is('roles') || request()->is('users') || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index', 'measurement-parameter.index']) ? 'active' : '' }}"
             href="#master-data" role="button" data-bs-toggle="collapse" aria-expanded="false"
             aria-controls="master-data">
             <div class="d-flex align-items-center">
@@ -160,7 +177,7 @@
             </div>
           </a>
             <ul
-            class="nav collapse {{ request()->is(['peristiwa-risiko', 'rencana-kegiatan', 'master-risiko', 'tck', 'area-dampak', 'skala-dampak', 'skala-probabilitas', 'sikap-risiko', 'periode', 'kategori-risiko', 'jenis-risiko', 'unit-type', 'unit', 'roles', 'users']) || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index']) ? 'show' : '' }}"
+            class="nav collapse {{ request()->is(['peristiwa-risiko', 'rencana-kegiatan', 'master-risiko', 'tck', 'area-dampak', 'skala-dampak', 'skala-probabilitas', 'sikap-risiko', 'periode', 'kategori-risiko', 'jenis-risiko', 'unit-type', 'unit', 'roles', 'users']) || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index', 'measurement-parameter.index']) ? 'show' : '' }}"
             id="master-data">
 
             @can('project_divisi_list')
@@ -276,6 +293,24 @@
               </a>
             </li>
             @endcan
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('measurement-parameter.index') ? 'active' : '' }}"
+                href="{{ route('measurement-parameter.index') }}">
+                <span class="nav-link-text">Parameter Pengukuran</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('users.index') ? 'active' : '' }}"
+                href="{{ route('users.index') }}">
+                <span class="nav-link-text">Manage User</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('roles.index') ? 'active' : '' }}"
+                href="{{ route('roles.index') }}">
+                <span class="nav-link-text">Manage Role</span>
+              </a>
+            </li>
             {{--
             <li class="nav-item">
               <a class="nav-link {{ request()->is('tck') ? 'active' : '' }}" href="/tck">
@@ -360,14 +395,14 @@
         </div>
       </div>
 
-      <li class="nav-item single-indicator">
+      <!-- <li class="nav-item single-indicator">
         <a class="nav-link" href="#" target="blank">
           <span class="nav-link-icon">
             <i class="menu-icon tf-icons bx bx-archive"></i>
             <span class="nav-link-text">Panduan Penggunaan</span>
           </span>
         </a>
-      </li>
+      </li> -->
       </ul>
 
     </div>

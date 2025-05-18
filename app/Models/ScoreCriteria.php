@@ -17,6 +17,7 @@ class ScoreCriteria extends Model
         'parameter_criteria_id',
         'period_id',
         'score',
+        'gap_analysis'
     ];
 
     public function parameterCriteria()
@@ -27,5 +28,10 @@ class ScoreCriteria extends Model
     public function period()
     {
         return $this->belongsTo(RMIPeriod::class, 'period_id');
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(ScoreCriteriaDoc::class);
     }
 }
