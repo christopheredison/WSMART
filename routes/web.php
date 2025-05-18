@@ -51,8 +51,10 @@ use App\Http\Controllers\Project\ProjectRiskMonitoringDocumentController;
 use App\Http\Controllers\Project\ProjectLEDController;
 use App\Http\Controllers\RiskOfficer\RiskRegisterController;
 use App\Http\Controllers\RMI\KuesionerController;
+use App\Http\Controllers\MetrikStrategiRisikoController;
 use App\Models\ProjectSektor;
-
+use App\Http\Controllers\SasaranStrategiBisnisController;
+use App\Http\Controllers\PenilaianRMIController;
 
 /*
 |--------------------------------------------------------------------------
@@ -80,8 +82,6 @@ Route::get('/top-navbar', function () {
 Route::get('/combo-navbar', function () {
     return view('navbar-combo');
 });
-
-
 
 Auth::routes();
 
@@ -195,6 +195,7 @@ Route::group(['middleware' => ['auth']], function() {
         Route::put('/rencana-kegiatan/{rencanaKegiatan}', [RencanaKegiatanController::class, 'update'])->name('rencana-kegiatan.update');
         Route::delete('/rencana-kegiatan/{rencanaKegiatan}', [RencanaKegiatanController::class, 'destroy'])->name('rencana-kegiatan.destroy');
         Route::post('/rencana-kegiatan/{id}/restore', [RencanaKegiatanController::class, 'restore'])->name('rencana-kegiatan.restore');
+        Route::get('/periode/{periode}/ambang-batas', [PeriodeController::class, 'getAmbangBatas'])->name('periode.get-ambang-batas');
 
         Route::get('/periode', [PeriodeController::class, 'index'])->name('periode.index');
         Route::get('/periode/create', [PeriodeController::class, 'create'])->name('periode.create');
@@ -204,6 +205,7 @@ Route::group(['middleware' => ['auth']], function() {
         Route::delete('/periode/{periode}', [PeriodeController::class, 'destroy'])->name('periode.destroy');
         Route::post('/periode/change-active-period', [PeriodeController::class, 'changeActivePeriod'])->name('change-active-period');
         Route::post('/periode/{id}/restore', [PeriodeController::class, 'restore'])->name('periode.restore');
+        Route::put('/periode/{periode}/update-ambang-batas', [PeriodeController::class, 'updateAmbangBatas'])->name('periode.update-ambang-batas');
 
         Route::get('/sikap-risiko', [SikapRisikoController::class, 'index'])->name('sikap-risiko.index');
         Route::get('/sikap-risiko/create', [SikapRisikoController::class, 'create'])->name('sikap-risiko.create');
@@ -410,6 +412,46 @@ Route::group(['middleware' => ['auth']], function() {
 
     Route::post('/calculate-poisson-residual', [ProjectRiskController::class, 'calculatePoissonRes'])
     ->name('calculate-poisson-residual');
+
+    Route::resource('penilaian-rmi', 'App\Http\Controllers\PenilaianRMIController');
+    // Penilaian Aspek Dinamis
+    Route::get('penilaian-rmi/{id}/aspek-dinamis', 'App\Http\Controllers\PenilaianRMIController@aspekDinamis')
+        ->name('penilaian-rmi.aspek-dinamis');
+    Route::post('penilaian-rmi/{id}/save-aspek-dinamis', 'App\Http\Controllers\PenilaianRMIController@saveAspekDinamis')
+        ->name('penilaian-rmi.save-aspek-dinamis');
+    Route::get('/penilaian-rmi/get-gap-analysis/{criteriaId}', [PenilaianRMIController::class, 'getGapAnalysis'])->name('penilaian-rmi.get-gap-analysis');
+    Route::post('/penilaian-rmi/delete-document/{docId}', [PenilaianRMIController::class, 'deleteDocument'])->name('penilaian-rmi.delete-document');
+    Route::get('penilaian-rmi/{id}/aspek-kinerja', 'App\Http\Controllers\PenilaianRMIController@aspekKinerja')
+        ->name('penilaian-rmi.aspek-kinerja');
+    // Proses simpan Aspek Kinerja
+    Route::post('{id}/aspek-kinerja', [PenilaianRMIController::class,'storeAspekKinerja'])
+         ->name('penilaian-rmi.aspek-kinerja.store');    
+
+    // Metrik Strategi Risiko
+    Route::get('metrik-strategi-risiko/{id}/parameter', 'App\Http\Controllers\MetrikStrategiRisikoController@parameter')
+        ->name('metrik-strategi-risiko.parameter');
+    Route::resource('metrik-strategi-risiko', MetrikStrategiRisikoController::class);
+    Route::put('metrik-strategi-risiko/{metrikStrategiRisiko}/update-parameter', [MetrikStrategiRisikoController::class, 'updateParameter'])
+        ->name('metrik-strategi-risiko.update-parameter');  
+        
+    Route::get('/metrik-strategi-risiko/{metrikStrategiRisiko}/parameter', [MetrikStrategiRisikoController::class, 'parameter'])
+        ->name('metrik-strategi-risiko.parameter');
+    Route::post('/metrik-strategi-risiko/{metrikStrategiRisiko}/parameter', [MetrikStrategiRisikoController::class, 'storeParameter'])
+        ->name('metrik-strategi-risiko.store-parameter');
+    Route::delete('/metrik-strategi-risiko/{metrikStrategiRisiko}/parameter/{parameter}', [MetrikStrategiRisikoController::class, 'destroyParameter'])
+        ->name('metrik-strategi-risiko.destroy-parameter'); 
+        
+    // Resource index, create, store
+    Route::resource('sasaran-strategi', SasaranStrategiBisnisController::class)
+         ->only(['index','create','store'])
+         ->names([
+             'index'  => 'sasaran-strategi.index',
+             'create' => 'sasaran-strategi.create',
+             'store'  => 'sasaran-strategi.store',
+         ]);
+
+    Route::delete('/sasaran-strategi/{sasaran}', [SasaranStrategiBisnisController::class, 'destroy'])->name('sasaran-strategi.destroy');
+    Route::put('/strategi-bisnis/{strategiBisnis}', [SasaranStrategiBisnisController::class, 'updateStatus'])->name('strategi-bisnis.update-status');
 });
 
 // Route untuk Measurement Parameter
@@ -425,9 +467,3 @@ Route::group(['prefix' => 'master', 'middleware' => ['auth']], function () {
     Route::post('measurement-parameter/{id}/store-criteria', 'App\Http\Controllers\Master\MeasurementParameterController@storeCriteria')
         ->name('measurement-parameter.store-criteria');
 });
-Route::resource('penilaian-rmi', 'App\Http\Controllers\PenilaianRMIController');
-// Penilaian Aspek Dinamis
-Route::get('penilaian-rmi/{id}/aspek-dinamis', 'App\Http\Controllers\PenilaianRMIController@aspekDinamis')
-    ->name('penilaian-rmi.aspek-dinamis');
-Route::post('penilaian-rmi/{id}/save-aspek-dinamis', 'App\Http\Controllers\PenilaianRMIController@saveAspekDinamis')
-    ->name('penilaian-rmi.save-aspek-dinamis');
