@@ -7,6 +7,7 @@ use App\Models\Project;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Unit;
+use App\Supports\ApiHC;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
@@ -36,6 +37,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'search' => 'nullable|sometimes|string|max:255',
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|unique:users',
             'password' => 'required|string|min:8|confirmed',
@@ -43,17 +45,48 @@ class UserController extends Controller
             'unit_id' => 'required',
         ]);
 
+        $dataUser = null;
+        if ($request->search) {
+            $remoteUser = $this->searchRemoteUser($request);
+            if ($remoteUser->getStatusCode() == 404) {
+                return back()->withErrors(['search' => 'User tidak ditemukan'])->withInput();
+            }
+            $dataUser = $remoteUser->getData(true)['data'];
+        }
+
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
 
+        $unitId = $request->unit_id;
+        if (is_numeric($unitId)) {
+            $unitId = $unitId;
+        } elseif ($dataUser) {
+            $unitId = null;
+            if ($dataUser['nm_unit']) {
+                $unit = Unit::where('name', $dataUser['nm_unit'])->first();
+                if (!$unit) {
+                    $unit = Unit::create([
+                        'name' => $dataUser['nm_unit'],
+                        'unit_type_id' => 2,
+                        'parent_id' => 0,
+                    ]);
+                }
+                $unitId = $unit->id;
+            }
+        }
+
+        $unit = Unit::findOrFail($unitId);
+
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
+            'name' => $dataUser['nm_peg'] ?? $request->name,
+            'email' => ($dataUser['email'] ?? null) ? $dataUser['email'] : $request->email,
+            'nip' => ($dataUser['nip'] ?? null) ? $dataUser['nip'] : $request->nip,
+            'nik' => ($dataUser['nik'] ?? null) ? $dataUser['nik'] : $request->nik,
             'password' => Hash::make($request->password),
-            'unit_id' => $request->unit_id,
-            'unit_type_id' => Unit::findOrFail($request->unit_id)->unitType->id,
-            'parent_id' => Unit::findOrFail($request->unit_id)->parent_id,
+            'unit_id' => $unitId,
+            'unit_type_id' => $unit->unitType->id,
+            'parent_id' => $unit->parent_id,
         ]);
 
         if ($request->has('user_projects')) {
@@ -125,5 +158,54 @@ class UserController extends Controller
         }
 
         return redirect()->route('users.index')->with('error', 'User not found!');
+    }
+
+    public function searchRemoteUser(Request $request)
+    {
+        $api = new ApiHC();
+        $value = $request->search;
+        $column = 'nip';
+        if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
+            $column = 'email';
+        }
+        $response = $api->apiRequest('GET', '/', ['method' => 'get_pegawai', $column => $value]);
+
+        $dataUser = $response['data'][0] ?? null;
+
+        if (!$dataUser) {
+            return response()->json([
+                'message' => 'Tidak ditemukan',
+            ], 404);
+        }
+
+        if ($request->not_registered_only) {
+            $email = $dataUser['email'] ?? null;
+            $nip = $dataUser['nip'] ?? null;
+
+            if ($email && $nip) {
+                $user = User::where('email', $email)->orWhere('nip', $nip)->first();
+                if ($user) {
+                    return response()->json([
+                        'message' => 'User sudah terdaftar',
+                    ], 400);
+                }
+            } elseif ($email) {
+                $user = User::where('email', $email)->first();
+                if ($user) {
+                    return response()->json([
+                        'message' => 'User sudah terdaftar',
+                    ], 400);
+                }
+            } elseif ($nip) {
+                $user = User::where('nip', $nip)->first();
+                if ($user) {
+                    return response()->json([
+                        'message' => 'User sudah terdaftar',
+                    ], 400);
+                }
+            }
+        }
+
+        return response()->json(['data' => $dataUser]);
     }
 }

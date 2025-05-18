@@ -24,12 +24,21 @@
         <div class="card h-auto">
           <div class="card-body p-4 p-md-5 p-xl-6 p-xxl-7">
             <h3 class="text-center mb-4">Login</h3>
+            @if($errors->any())
+            <div class="alert alert-danger">
+              <ul>
+                @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+                @endforeach
+              </ul>
+            </div>
+            @endif
             <form class="needs-validation" novalidate="" method="POST" action="{{ route('login') }}">
               @csrf
               <div class="has-validation mb-3">
-                <label class="form-label d-none" for="card-email">Email address</label>
+                <label class="form-label d-none" for="card-email">Email / NIP / NIK</label>
                 <input class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}"
-                  required autocomplete="email" autofocus id="email" type="email" placeholder="Email address" />
+                  required autocomplete="email" autofocus id="email" type="text" placeholder="Email / NIP / NIK" />
                 @error('email')
                 <span class="invalid-feedback" role="alert">{{ $message }}</span>
                 @enderror
