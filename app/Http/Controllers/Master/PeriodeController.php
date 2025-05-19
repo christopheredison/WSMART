@@ -90,4 +90,40 @@ class PeriodeController extends Controller
 
         return redirect()->route('periode.index')->with('error', 'Periode not found!');
     }
+
+    public function getAmbangBatas(Periode $periode)
+    {
+        $ambangBatas = $periode->ambangBatasRisiko;
+        return response()->json($ambangBatas);
+    }
+
+    public function updateAmbangBatas(Request $request, Periode $periode)
+    {
+        $validator = Validator::make($request->all(), [
+            'nilai_kapasitas_risiko' => 'required|numeric',
+            'nilai_selera_risiko' => 'required|numeric',
+            'nilai_toleransi_risiko' => 'required|numeric',
+            'nilai_batasan_risiko' => 'required|numeric',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        // Soft delete data lama jika ada
+        if ($periode->ambangBatasRisiko) {
+            $periode->ambangBatasRisiko->delete();
+        }
+
+        // Create data baru
+        $periode->ambangBatasRisiko()->create([
+            'nilai_kapasitas_risiko' => $request->nilai_kapasitas_risiko,
+            'nilai_selera_risiko' => $request->nilai_selera_risiko,
+            'nilai_toleransi_risiko' => $request->nilai_toleransi_risiko,
+            'nilai_batasan_risiko' => $request->nilai_batasan_risiko,
+        ]);
+
+        return redirect()->route('periode.index')
+            ->with('success', 'Ambang batas risiko berhasil diperbarui!');
+    }
 }

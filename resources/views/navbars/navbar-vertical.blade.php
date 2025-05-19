@@ -127,6 +127,15 @@
         </li>
         @endcan
         <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->routeIs('metrik-strategi-risiko.index') ? 'active' : '' }}" href="{{route('metrik-strategi-risiko.index')}}" role="button"
+            data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon d-flex align-items-center w-100">
+              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <span class="nav-link-text">Metrik Strategi Risiko</span>
+            </span>
+          </a>
+        </li>
+        <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('sasaran-strategi.index') ? 'active' : '' }}" href="{{route('sasaran-strategi.index')}}" role="button"
             data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
@@ -278,6 +287,12 @@
               </a>
             </li>
             @endcan
+            
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('periode') ? 'active' : '' }}" href="/periode">
+                <span class="nav-link-text">Periode Risiko</span>
+              </a>
+            </li>
             @can('rmi_period_list')
             <li class="nav-item">
               <a class="nav-link {{ request()->routeIs('rmi-period.index') ? 'active' : '' }}" href="{{ route('rmi-period.index') }}">
@@ -335,11 +350,6 @@
         <li class="nav-item">
           <a class="nav-link {{ request()->is('sikap-risiko') ? 'active' : '' }}" href="/sikap-risiko">
             <span class="nav-link-text">Sikap Risiko</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {{ request()->is('periode') ? 'active' : '' }}" href="/periode">
-            <span class="nav-link-text">Periode</span>
           </a>
         </li>
         <li class="nav-item">

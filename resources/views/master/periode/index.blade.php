@@ -15,7 +15,7 @@
           <div id="bulk-select-replace-element" class="col-auto ms-auto">
             <a class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#newPeriode">
               <span class="bx bx-plus"></span>
-              <span class="ms-1">New</span>
+              <span class="ms-1">Tambah Data Periode</span>
             </a>
           </div>
         </div>
@@ -74,8 +74,10 @@
                   @endphp
                   @include('partials.modal-restore-alert')
                   @else
-                  <a href="{{ route('periode.edit', $item) }}" class="btn-input-icon" data-bs-toggle="tooltip"
-                    title="Edit">
+                  <button type="button" class="btn-input-icon" data-bs-toggle="modal" data-bs-target="#modalAmbangBatas{{ $item->id }}" data-periode-id="{{ $item->id }}" title="Atur Ambang Batas">
+                    <span class="bx bx-slider text-info"></span>
+                  </button>
+                  <a href="{{ route('periode.edit', $item) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Edit">
                     <span class="bx bx-edit"></span>
                   </a>
                   <button type="button" class="btn-input-icon" data-bs-toggle="modal"
@@ -91,6 +93,55 @@
                   @endif
                 </td>
               </tr>
+              <!-- Modal Ambang Batas -->
+              <div class="modal fade" id="modalAmbangBatas{{ $item->id }}" tabindex="-1" role="dialog" aria-labelledby="modalAmbangBatasLabel{{ $item->id }}" aria-hidden="true">
+                <div class="modal-dialog modal-md" role="document">
+                  <div class="modal-content">
+                    <div class="modal-header flex-between-center">
+                      <h2 class="h4">Pengaturan Ambang Batas Risiko - Periode {{ $item->tahun }}</h2>
+                      <div class="lead__icon lead__icon_sm">
+                        <div class="svg-icon svg-icon-secondary">
+                          @include('partials.icon-tool')
+                        </div>
+                      </div>
+                    </div>
+                    <form id="formAmbangBatas" method="POST" action="{{ route('periode.update-ambang-batas', $item->id) }}">
+                      @csrf
+                      @method('PUT')
+                      <div class="modal-body">
+                        <div class="form-group mb-3">
+                          <label class="form-label" for="nilai_kapasitas_risiko">Nilai Kapasitas Risiko</label>
+                          <input type="text" class="form-control inputmask-rupiah" id="nilai_kapasitas_risiko" name="nilai_kapasitas_risiko" 
+                                 value="{{ old('nilai_kapasitas_risiko', $item->ambangBatasRisiko->nilai_kapasitas_risiko ?? '') }}" 
+                                 step="1" required>
+                        </div>
+                        <div class="form-group mb-3">
+                          <label class="form-label" for="nilai_selera_risiko">Nilai Selera Risiko</label>
+                          <input type="text" class="form-control inputmask-rupiah" id="nilai_selera_risiko" name="nilai_selera_risiko" 
+                                 value="{{ old('nilai_selera_risiko', $item->ambangBatasRisiko->nilai_selera_risiko ?? '') }}" 
+                                 step="1" required>
+                        </div>
+                        <div class="form-group mb-3">
+                          <label class="form-label" for="nilai_toleransi_risiko">Nilai Toleransi Risiko</label>
+                          <input type="text" class="form-control inputmask-rupiah" id="nilai_toleransi_risiko" name="nilai_toleransi_risiko" 
+                                 value="{{ old('nilai_toleransi_risiko', $item->ambangBatasRisiko->nilai_toleransi_risiko ?? '') }}" 
+                                 step="1" required>
+                        </div>
+                        <div class="form-group mb-3">
+                          <label class="form-label" for="nilai_batasan_risiko">Nilai Batasan Risiko</label>
+                          <input type="text" class="form-control inputmask-rupiah" id="nilai_batasan_risiko" name="nilai_batasan_risiko" 
+                                 value="{{ old('nilai_batasan_risiko', $item->ambangBatasRisiko->nilai_batasan_risiko ?? '') }}" 
+                                 step="1" required>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-submit">Simpan</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
               @endforeach
             </tbody>
           </table>
@@ -131,6 +182,7 @@
 </div>
 @endsection
 @section('scripts')
+<script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
 // Get badge status
 var elList = Array.prototype.slice.call(
@@ -142,6 +194,87 @@ elList.forEach(function(el) {
     el.classList.remove("bg-success");
     el.classList.add("tx-g400");
   }
+});
+</script>
+<script>
+// Tambahkan fungsi untuk mengambil data ambang batas 
+function getAmbangBatas(periodeId) { 
+    fetch(`/periode/${periodeId}/ambang-batas`) 
+        .then(response => response.json()) 
+        .then(data => { 
+            if (data) { 
+                document.getElementById('nilai_kapasitas_risiko').value = data.nilai_kapasitas_risiko; 
+                document.getElementById('nilai_selera_risiko').value = data.nilai_selera_risiko; 
+                document.getElementById('nilai_toleransi_risiko').value = data.nilai_toleransi_risiko; 
+                document.getElementById('nilai_batasan_risiko').value = data.nilai_batasan_risiko; 
+            } 
+        }); 
+} 
+
+// Tambahkan event listener untuk modal 
+document.querySelectorAll('[data-bs-target^="#modalAmbangBatas"]').forEach(button => { 
+    button.addEventListener('click', function() { 
+        const periodeId = this.getAttribute('data-periode-id'); 
+        getAmbangBatas(periodeId); 
+    }); 
+});
+
+// Tambahkan event listener untuk form submit dengan SweetAlert
+document.querySelector('#formAmbangBatas').addEventListener('submit', function(e) {
+    const numericInputs = this.querySelectorAll('.inputmask-rupiah');
+    numericInputs.forEach(input => {
+        input.value = input.value.replace(/\./g, '');
+    });
+    
+    e.preventDefault();
+    
+    Swal.fire({
+        title: 'Konfirmasi',
+        text: 'Apakah Anda yakin untuk melakukan update data?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya',
+        cancelButtonText: 'Tidak'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            this.submit();
+        }
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    $('.inputmask-rupiah').inputmask({
+        alias: 'numeric',
+        groupSeparator: '.',
+        autoGroup: true,
+        digits: 0,
+        digitsOptional: false,
+        prefix: '',
+        placeholder: '0',
+        rightAlign: false,
+        autoUnmask: true,
+        removeMaskOnSubmit: true,
+        min: 0,
+        allowMinus: false,
+        onKeyDown: function(e) {
+        if (e.key === 'Backspace' || e.keyCode === 8) {
+            // tunda eksekusi sampai mask selesai di-apply
+            setTimeout(() => {
+                const unmasked = this.inputmask.unmaskedvalue();
+                // kalau masih ada angka tersisa
+                if (unmasked.length > 0) {
+                // cek posisi cursor
+                const pos = this.selectionStart;
+                if (pos === 0) {
+                    // pindahkan ke paling kanan
+                    const end = this.value.length;
+                    this.setSelectionRange(end, end);
+                }
+                }
+            }, 0);
+            }
+        }
+    });
 });
 </script>
 @endsection
