@@ -20,4 +20,9 @@ class Periode extends Model
 
     public const STATUS_ACTIVE = 'active';
     public const STATUS_INACTIVE = 'non-active';
+
+    public function ambangBatasRisiko()
+    {
+        return $this->hasOne(AmbangBatasRisiko::class);
+    }
 }

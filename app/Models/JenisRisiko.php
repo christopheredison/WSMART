@@ -17,4 +17,14 @@ class JenisRisiko extends Model
     {
         return $this->belongsTo(KategoriRisiko::class, 'kategori_risiko_id');
     }
+
+    public function kategoriRisiko()
+    {
+        return $this->belongsTo(KategoriRisiko::class, 'kategori_risiko_id');
+    }
+
+    public function peristiwaRisikos()
+    {
+        return $this->hasMany(PeristiwaRisiko::class);
+    }
 }

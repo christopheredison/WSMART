@@ -12,4 +12,9 @@ class KategoriRisiko extends Model
 
     protected $guarded = [];
     protected $table = 'kategori_risikos';
+
+    public function jenisRisikos()
+    {
+        return $this->hasMany(JenisRisiko::class, 'kategori_risiko_id');
+    }
 }
