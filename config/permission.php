@@ -252,5 +252,10 @@ return [
         'question_delete',
 
         'kuesioner',
+
+        'sasaran_strategi_list',
+        'sasaran_strategi_create',
+        'sasaran_strategi_edit',
+        'sasaran_strategi_delete',
     ],
 ];
