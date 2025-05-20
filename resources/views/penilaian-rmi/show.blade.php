@@ -7,7 +7,8 @@
   // Prepare data
   $period    = $period;      // RMIPeriod instance passed from controller
   $penilaian = $period->penilaianCapaianKinerja; // with details/pilihan eager-loaded
-  $details   = $penilaian->details->keyBy('parameter_id');
+  //$details   = $penilaian->details->keyBy('parameter_id');
+  $details   = $penilaian ? $penilaian->details->keyBy('parameter_id') : collect();
   //$paramsDim = $paramsDimensi;   // Aspek Dimensi, passed from controller
   $paramsDim = $dimensions;
   $paramsC   = $paramsCapaian;   // Aspek Capaian Kinerja
