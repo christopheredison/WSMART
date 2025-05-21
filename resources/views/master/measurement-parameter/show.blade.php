@@ -43,6 +43,7 @@
                 <th width="19%">Kriteria Good Practice</th>
                 <th width="19%">Kriteria Strong Practice</th>
                 <th width="19%">Kriteria Best Practice</th>
+                <th width="5%">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -84,10 +85,17 @@
                     <span class="text-muted fst-italic">Tidak ada kriteria</span>
                   @endif
                 </td>
+                <td class="text-center">
+                  <button type="button" class="btn btn-sm btn-danger delete-criteria" 
+                          data-id="{{ $criteria->id }}" 
+                          data-parameter-id="{{ $parameter->id }}">
+                    <i class="bx bx-trash"></i>
+                  </button>
+                </td>
               </tr>
               @empty
               <tr>
-                <td colspan="6" class="text-center">Belum ada kriteria yang ditambahkan</td>
+                <td colspan="7" class="text-center">Belum ada kriteria yang ditambahkan</td>
               </tr>
               @endforelse
             </tbody>
@@ -99,10 +107,37 @@
           <i class="bx bx-arrow-back"></i> Kembali
         </a>
         <a href="{{ route('measurement-parameter.set-criteria', $parameter->id) }}" class="btn btn-primary">
-          <i class="bx bx-edit"></i> Edit Kriteria
+          <i class="bx bx-edit"></i> Set Kriteria
         </a>
       </div>
     </div>
   </div>
 </div>
+@section('scripts')
+<script>
+  $(document).ready(function() {
+    // Inisialisasi tombol delete dengan SweetAlert
+    $('.delete-criteria').on('click', function() {
+      const criteriaId = $(this).data('id');
+      const parameterId = $(this).data('parameter-id');
+      
+      Swal.fire({
+        title: 'Apakah Anda yakin?',
+        text: "Kriteria yang dihapus tidak dapat dikembalikan!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, hapus!',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Kirim request delete ke server
+          window.location.href = `{{ url('master/measurement-parameter') }}/${parameterId}/delete-criteria/${criteriaId}`;
+        }
+      });
+    });
+  });
+</script>
+@endsection
 @endsection

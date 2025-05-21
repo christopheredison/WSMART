@@ -42,7 +42,8 @@ class MeasurementParameterController extends Controller
                 });
         }
     
-        $parameters = $query->get();
+        //$parameters = $query->get();
+        $parameters = $query->orderBy('id', 'desc')->get();
     
         // Ambil data SubDimension untuk dropdown di modal
         $subDimensions = \App\Models\SubDimension::all();
@@ -259,5 +260,33 @@ class MeasurementParameterController extends Controller
         
         return redirect()->route('measurement-parameter.index')
             ->with('success', 'Kriteria parameter berhasil disimpan.');
+    }
+
+    /**
+     * Menghapus kriteria parameter
+     *
+     * @param  int  $parameterId
+     * @param  int  $criteriaId
+     * @return \Illuminate\Http\Response
+     */
+    public function deleteCriteria($parameterId, $criteriaId)
+    {
+        // Cari kriteria
+        $criteria = ParameterCriteria::findOrFail($criteriaId);
+        
+        // Pastikan kriteria milik parameter yang dimaksud
+        if ($criteria->parameter_id != $parameterId) {
+            return redirect()->route('measurement-parameter.show', $parameterId)
+                ->with('error', 'Kriteria tidak ditemukan untuk parameter ini.');
+        }
+        
+        // Hapus detail kriteria terlebih dahulu
+        $criteria->details()->delete();
+        
+        // Hapus kriteria
+        $criteria->delete();
+        
+        return redirect()->route('measurement-parameter.show', $parameterId)
+            ->with('success', 'Kriteria parameter berhasil dihapus.');
     }
 }

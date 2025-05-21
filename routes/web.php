@@ -466,4 +466,6 @@ Route::group(['prefix' => 'master', 'middleware' => ['auth']], function () {
         ->name('measurement-parameter.set-criteria');
     Route::post('measurement-parameter/{id}/store-criteria', 'App\Http\Controllers\Master\MeasurementParameterController@storeCriteria')
         ->name('measurement-parameter.store-criteria');
+    Route::get('measurement-parameter/{parameterId}/delete-criteria/{criteriaId}', 'App\Http\Controllers\Master\MeasurementParameterController@deleteCriteria')
+        ->name('measurement-parameter.delete-criteria');
 });
