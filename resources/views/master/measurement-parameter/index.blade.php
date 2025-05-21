@@ -161,35 +161,68 @@
     $('#formTambahParameter').on('submit', function(e) {
       e.preventDefault();
       
-      $.ajax({
-        url: $(this).attr('action'),
-        method: 'POST',
-        data: $(this).serialize(),
-        dataType: 'json',
-        success: function(response) {
-          // Tutup modal
-          $('#tambahParameterModal').modal('hide');
-          
-          // Reset form
-          $('#formTambahParameter')[0].reset();
-          
-          // Tampilkan pesan sukses
-          toastr.success('Parameter berhasil ditambahkan');
-          
-          // Reload halaman untuk menampilkan data baru
-          location.reload();
-        },
-        error: function(xhr) {
-          let errors = xhr.responseJSON.errors;
-          
-          // Tampilkan pesan error
-          if (errors) {
-            $.each(errors, function(key, value) {
-              toastr.error(value[0]);
-            });
-          } else {
-            toastr.error('Terjadi kesalahan. Silakan coba lagi.');
-          }
+      // Tampilkan konfirmasi dengan SweetAlert
+      Swal.fire({
+        title: 'Konfirmasi',
+        text: 'Apakah Anda yakin untuk menyimpan data?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Simpan',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Jika user mengkonfirmasi, lanjutkan dengan AJAX request
+          $.ajax({
+            url: $(this).attr('action'),
+            method: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(response) {
+              // Tutup modal
+              $('#tambahParameterModal').modal('hide');
+              
+              // Reset form
+              $('#formTambahParameter')[0].reset();
+              
+              // Tampilkan pesan sukses dengan SweetAlert
+              Swal.fire({
+                title: 'Berhasil!',
+                text: 'Parameter berhasil ditambahkan',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+              }).then(() => {
+                // Reload halaman untuk menampilkan data baru
+                location.reload();
+              });
+            },
+            error: function(xhr) {
+              let errors = xhr.responseJSON.errors;
+              
+              // Tampilkan pesan error dengan SweetAlert
+              if (errors) {
+                let errorMessage = '';
+                $.each(errors, function(key, value) {
+                  errorMessage += value[0] + '<br>';
+                });
+                
+                Swal.fire({
+                  title: 'Error!',
+                  html: errorMessage,
+                  icon: 'error',
+                  confirmButtonText: 'OK'
+                });
+              } else {
+                Swal.fire({
+                  title: 'Error!',
+                  text: 'Terjadi kesalahan. Silakan coba lagi.',
+                  icon: 'error',
+                  confirmButtonText: 'OK'
+                });
+              }
+            }
+          });
         }
       });
     });
