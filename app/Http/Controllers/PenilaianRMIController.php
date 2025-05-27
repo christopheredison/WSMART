@@ -746,10 +746,10 @@ class PenilaianRMIController extends Controller
         $totalCapaian = round($totalCapaian,2);
 
         $skalaCap = SkalaKinerja::where(function($q) use($totalCapaian){
-                        $q->whereNull('min')->orWhere('min','<=',$totalCapaian);
+                        $q->whereNull('min')->orWhere('min','<=',(int) floor($totalCapaian));
                     })
                     ->where(function($q) use($totalCapaian){
-                        $q->whereNull('max')->orWhere('max','>',$totalCapaian);
+                        $q->whereNull('max')->orWhere('max','>',(int) floor($totalCapaian));
                     })
                     ->first();
 
@@ -781,11 +781,11 @@ class PenilaianRMIController extends Controller
         $totalKpmr = round($totalKpmr,2);
 
         $skalaKpmr = SkalaKPMR::where(function($q) use($totalKpmr){
-                        $q->whereNull('min')->orWhere('min','<=',$totalKpmr);
+                        $q->whereNull('min')->orWhere('min','<=',(int) floor($totalKpmr));
                     })
                     ->where(function($q) use($totalKpmr){
-                        $q->whereNull('max')->orWhere('max','>',$totalKpmr);
-                    })
+                        $q->whereNull('max')->orWhere('max','>',(int) floor($totalKpmr));
+                    }) 
                     ->first();
 
         // 6. Simpan total & skala di Penilaian
