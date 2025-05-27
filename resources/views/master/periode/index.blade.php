@@ -221,11 +221,6 @@ document.querySelectorAll('[data-bs-target^="#modalAmbangBatas"]').forEach(butto
 
 // Tambahkan event listener untuk form submit dengan SweetAlert
 document.querySelector('#formAmbangBatas').addEventListener('submit', function(e) {
-    const numericInputs = this.querySelectorAll('.inputmask-rupiah');
-    numericInputs.forEach(input => {
-        input.value = input.value.replace(/\./g, '');
-    });
-    
     e.preventDefault();
     
     Swal.fire({
@@ -237,6 +232,10 @@ document.querySelector('#formAmbangBatas').addEventListener('submit', function(e
         cancelButtonText: 'Tidak'
     }).then((result) => {
         if (result.isConfirmed) {
+            // Unmask all inputmask fields before submitting
+            $('.inputmask-rupiah').each(function() {
+                $(this).inputmask('remove');
+            });
             this.submit();
         }
     });
