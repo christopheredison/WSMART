@@ -55,6 +55,7 @@ use App\Http\Controllers\MetrikStrategiRisikoController;
 use App\Models\ProjectSektor;
 use App\Http\Controllers\SasaranStrategiBisnisController;
 use App\Http\Controllers\PenilaianRMIController;
+use App\Http\Controllers\RiskRegisterUnitController;
 
 /*
 |--------------------------------------------------------------------------
@@ -470,4 +471,20 @@ Route::group(['prefix' => 'master', 'middleware' => ['auth']], function () {
         ->name('measurement-parameter.store-criteria');
     Route::get('measurement-parameter/{parameterId}/delete-criteria/{criteriaId}', 'App\Http\Controllers\Master\MeasurementParameterController@deleteCriteria')
         ->name('measurement-parameter.delete-criteria');
+});
+
+Route::prefix('risk-register-unit')->group(function () {
+    Route::get('/periods', [RiskRegisterUnitController::class, 'RiskPeriodeList'])->name('risk-register-unit.periods');
+    Route::get('/', [RiskRegisterUnitController::class, 'index'])->name('risk-register-unit.index');
+    Route::get('/create', [RiskRegisterUnitController::class, 'create'])->name('risk-register-unit.create');
+    Route::post('/', [RiskRegisterUnitController::class, 'store'])->name('risk-register-unit.store');
+    Route::get('/{riskRegister}/edit', [RiskRegisterUnitController::class, 'edit'])->name('risk-register-unit.edit');
+    Route::put('/{riskRegister}', [RiskRegisterUnitController::class, 'update'])->name('risk-register-unit.update');
+    Route::delete('/{riskRegister}', [RiskRegisterUnitController::class, 'destroy'])->name('risk-register-unit.destroy');
+    Route::get('/{riskRegister}/view', [RiskRegisterUnitController::class, 'view'])->name('risk-register-unit.view');
+    Route::post('/send', [RiskRegisterUnitController::class, 'send'])->name('risk-register-unit.send');
+    Route::post('/draft', [RiskRegisterUnitController::class, 'storeAsDraft'])->name('risk-register-unit.store-as-draft');
+
+    Route::get('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'analisa'])->name('risk-register-unit.analisa');
+    Route::post('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'doAnalisa'])->name('risk-register-unit.do-analisa');
 });
