@@ -19,11 +19,14 @@
           <th>Tahun Periode RMI</th>
           <th>Status</th>
           <th>Score RMI</th>
+          <th>Score Aspek Dimensi</th>
           <th>Deskripsi</th>
           <th>Kinerja</th>
           <th>KPMR</th>
           <th>Peringkat Komposit Risiko</th>
           <th>Nilai Konversi</th>
+          <th>Score Aspek Kinerja</th>
+          <th>Score Penyesuaian</th>
           <th>Action</th>
         </tr>
       </thead>
@@ -39,6 +42,7 @@
                 <span class="badge bg-success">Selesai</span>
               @endif
             </td>
+            <td>{{ $period->final_score_rmi }}</td>
             <td>{{ $period->score_rmi }}</td>
             <td>{{ $period->score_rmi_desc }}</td>
             <td>
@@ -51,6 +55,8 @@
             </td>
             <td>{{ $period->peringkat_komposit_risiko ?? '-' }}</td>
             <td>{{ $period->nilai_konversi ?? '-' }}</td>
+            <td>{{ $period->score_aspek_kinerja ?? '-' }}</td>
+            <td>{{ $period->adjusment_score ?? '-' }}</td>
             <td>
               <a href="{{ route('penilaian-rmi.show', $period->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
                 title="Lihat Detail">

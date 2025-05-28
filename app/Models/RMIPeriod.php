@@ -21,6 +21,9 @@ class RMIPeriod extends Model
         'kpmr',
         'peringkat_komposit_risiko',
         'nilai_konversi',
+        'score_aspek_kinerja',
+        'final_score_rmi',
+        'adjusment_score',
         'start_date',
         'end_date',
         'status',  // 1 : Dalam Proses, 2 : Selesai

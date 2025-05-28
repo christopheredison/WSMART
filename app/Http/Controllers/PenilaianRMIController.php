@@ -20,6 +20,8 @@ use App\Models\PenilaianCapaianKinerja;
 use App\Models\DetailPenilaianCapaianKinerja;
 use App\Models\SkalaKinerja;
 use App\Models\SkalaKPMR;
+use App\Models\FinalRating;
+use App\Models\FinalRatingPeriod;
 
 class PenilaianRMIController extends Controller
 {
@@ -667,27 +669,44 @@ class PenilaianRMIController extends Controller
         $existingComments = $penilaian
             ? $penilaian->details->pluck('comment','parameter_id')->toArray()
             : [];
+        
 
-        // 5. Kirim ke view
+        $finalRatings = FinalRating::orderBy('rating')->get();
+        $finalRatingPeriod = FinalRatingPeriod::where('rmi_period_id', $id)->first();
+        
         return view('penilaian-rmi.penilaian-aspek-kinerja', compact(
-            'period',
-            'paramsCapaian',
-            'paramsKpmr',
-            'existing',
-            'existingComments'
+            'period', 'paramsCapaian', 'paramsKpmr', 'existing', 'existingComments',
+            'finalRatings', 'finalRatingPeriod'
         ));
     }
 
     public function storeAspekKinerja(Request $request, $periodId)
     {
         // 1. Validasi
-        $data = $request->validate([
+        // $data = $request->validate([
+        //     'responses'   => 'required|array',
+        //     'responses.*' => 'required|integer|exists:pilihan_parameter_kinerjas,id',
+        //     'comments.*'  => 'nullable|string',
+        //     'action'      => 'required|string|in:save_capaian,back_to_capaian,finish,save_kpmr,finish_final_rating,back_to_kpmr',
+        //     'final_rating_id' => 'required_if:action,finish_final_rating|exists:final_ratings,id',
+            
+        // ]);
+
+        // Validasi dasar
+        $rules = [
             'responses'   => 'required|array',
             'responses.*' => 'required|integer|exists:pilihan_parameter_kinerjas,id',
             'comments.*'  => 'nullable|string',
-            'action'      => 'required|string|in:save_capaian,back_to_capaian,finish',
-        ]);
+            'action'      => 'required|string|in:save_capaian,back_to_capaian,finish,save_kpmr,finish_final_rating,back_to_kpmr',
+        ];
 
+        // Tambahkan validasi final_rating_id hanya jika action adalah finish_final_rating
+        if ($request->action == 'finish_final_rating') {
+            $rules['final_rating_id'] = 'required|exists:final_ratings,id';
+        }
+
+        $data = $request->validate($rules);
+        
         // 2. Ambil atau buat master Penilaian
         $penilaian = PenilaianCapaianKinerja::updateOrCreate(
             ['user_id'=>auth()->id(), 'rmi_period_id'=>$periodId],
@@ -819,6 +838,67 @@ class PenilaianRMIController extends Controller
             'nilai_konversi'            => $conv,
         ]);
 
+        if ($data['action'] == 'finish_final_rating' && isset($data['final_rating_id'])) {
+            $finalRatingId = $data['final_rating_id'];
+            $finalRating = FinalRating::findOrFail($finalRatingId);
+            $period = RMIPeriod::findOrFail($periodId);
+            
+            // Hitung score_bobot_konversi (50% dari conversion_score)
+            $scoreBobotKonversi = $finalRating->conversion_score * 0.5;
+            
+            // Hitung total_score_kinerja (score_bobot_konversi + 50% dari nilai_konversi)
+            $totalScoreKinerja = $scoreBobotKonversi + ($period->nilai_konversi * 0.5);
+            
+            // Tentukan penyesuaian_skor_aspek_dimensi berdasarkan total_score_kinerja
+            $penyesuaianSkor = 0;
+            if ($totalScoreKinerja >= 90) {
+                $penyesuaianSkor = 0.1;
+            } elseif ($totalScoreKinerja >= 80) {
+                $penyesuaianSkor = 0.075;
+            } elseif ($totalScoreKinerja >= 70) {
+                $penyesuaianSkor = 0.05;
+            } elseif ($totalScoreKinerja >= 60) {
+                $penyesuaianSkor = 0.025;
+            } elseif ($totalScoreKinerja >= 50) {
+                $penyesuaianSkor = 0;
+            } elseif ($totalScoreKinerja >= 40) {
+                $penyesuaianSkor = -0.025;
+            } elseif ($totalScoreKinerja >= 30) {
+                $penyesuaianSkor = -0.05;
+            } elseif ($totalScoreKinerja >= 20) {
+                $penyesuaianSkor = -0.075;
+            } else {
+                $penyesuaianSkor = -0.1;
+            }
+            
+            // Hitung final_score_rmi jika nilai_score_rmi >= 3
+            $finalScoreRmi = $period->score_rmi;
+            if ($period->score_rmi >= 3) {
+                $finalScoreRmi = $period->score_rmi + $penyesuaianSkor;
+            }
+            
+            // Simpan atau update FinalRatingPeriod
+            FinalRatingPeriod::updateOrCreate(
+                ['rmi_period_id' => $periodId],
+                [
+                    'final_rating_id' => $finalRatingId,
+                    'bobot' => 50, // 50%
+                    'score_bobot_konversi' => $scoreBobotKonversi,
+                    'total_score_kinerja' => $totalScoreKinerja
+                ]
+            );
+            
+            // Update RMIPeriod
+            $period->update([
+                'score_aspek_kinerja' => $totalScoreKinerja,
+                'adjusment_score' => $penyesuaianSkor,
+                'final_score_rmi' => $finalScoreRmi
+            ]);
+            
+            return redirect()->route('penilaian-rmi.index')
+                            ->with('success', 'Penilaian Aspek Kinerja, KPMR, dan Final Rating selesai disimpan.');
+        }
+
         // 9. Redirect sesuai action
         switch($data['action']) {
         case 'save_capaian':
@@ -829,6 +909,19 @@ class PenilaianRMIController extends Controller
         case 'back_to_capaian':
             return redirect()->route('penilaian-rmi.aspek-kinerja',$periodId)
                             ->with('active_tab','capaian');
+                             
+        case 'save_kpmr':
+            return redirect()->route('penilaian-rmi.aspek-kinerja',$periodId)
+                            ->with('success','Penilaian KPMR disimpan.')
+                            ->with('active_tab','final_rating')
+                            ->withInput();                                       
+        case 'back_to_kpmr':
+            return redirect()->route('penilaian-rmi.aspek-kinerja',$periodId)
+                            ->with('active_tab','kpmr');
+        case 'finish_final_rating':
+            // Tambahkan logika untuk menyimpan final rating jika diperlukan
+            return redirect()->route('penilaian-rmi.index')
+                            ->with('success','Penilaian Aspek Kinerja, KPMR, dan Final Rating sudah selesai disimpan.');
         case 'finish':
         default:
             return redirect()->route('penilaian-rmi.index')
