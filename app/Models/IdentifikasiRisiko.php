@@ -69,11 +69,16 @@ class IdentifikasiRisiko extends Model
 
     public function tck()
     {
-        return $this->belongsTo(Tck::class, 'target_capaian_kinerja');
+        return $this->belongsTo(Tck::class, 'tck_id');
     }
 
     public function kris() {
         return $this->hasMany(KRI::class, 'risiko_id');
+    }
+
+    public function jenisKontrolEksisting()
+    {
+        return $this->belongsTo(JenisKontrolEksisting::class, 'jenis_kontrol_eksisting_id');
     }
 
     public function toDraftStructure() {
@@ -104,4 +109,15 @@ class IdentifikasiRisiko extends Model
 
         return $basic;
     }
+
+    public const STATUS_INPUT_DATA = 1;
+    public const STATUS_DIKIRIM = 2;
+    public const STATUS_TUNGGU_VERIFIKASI = 3;
+    public const STATUS_TERVERIFIKASI = 4;
+
+    public const LEVEL_RISIKO_LOW = 'Low';
+    public const LEVEL_RISIKO_LOW_TO_MODERATE = 'Low To Moderate';
+    public const LEVEL_RISIKO_MODERATE = 'Moderate';
+    public const LEVEL_RISIKO_MODERATE_TO_HIGH = 'Moderate To High';
+    public const LEVEL_RISIKO_HIGH = 'High';
 }
