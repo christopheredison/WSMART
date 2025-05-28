@@ -5,14 +5,16 @@ namespace App\Http\Controllers\Master;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Periode;
+use App\Models\Unit;
 use Illuminate\Support\Facades\Validator;
 
 class PeriodeController extends Controller
 {
     public function index()
     {
-        $periode = Periode::withTrashed()->get();
-        return view('master.periode.index', compact('periode'));
+        $periode = Periode::withTrashed()->with('riskLimitPeriodes')->get();
+        $unitWithRiskLimit = Unit::where('unit_type_id', 2)->get();
+        return view('master.periode.index', compact('periode', 'unitWithRiskLimit'));
     }
 
     public function changeActivePeriod(Request $request)
@@ -125,5 +127,17 @@ class PeriodeController extends Controller
 
         return redirect()->route('periode.index')
             ->with('success', 'Ambang batas risiko berhasil diperbarui!');
+    }
+
+    public function updateRiskLimit(Request $request, Periode $periode)
+    {
+        foreach ($request->risk_limits as $unit_id => $risk_limit) {
+            $periode->riskLimitPeriodes()->updateOrCreate(
+                ['unit_id' => $unit_id],
+                ['risk_limit' => $risk_limit]
+            );
+        }
+
+        return redirect()->route('periode.index')->with('success', 'Risk limit berhasil diperbarui!');
     }
 }

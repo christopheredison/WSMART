@@ -77,6 +77,9 @@
                   <button type="button" class="btn-input-icon" data-bs-toggle="modal" data-bs-target="#modalAmbangBatas{{ $item->id }}" data-periode-id="{{ $item->id }}" title="Atur Ambang Batas">
                     <span class="bx bx-slider text-info"></span>
                   </button>
+                  <button type="button" class="btn-input-icon btn-action" data-action="risk-limit" data-periode-id="{{ $item->id }}" title="Atur Risk Limit">
+                    <span class="bx bx-slider-alt text-warning"></span>
+                  </button>
                   <a href="{{ route('periode.edit', $item) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Edit">
                     <span class="bx bx-edit"></span>
                   </a>
@@ -180,10 +183,56 @@
     </div>
   </div>
 </div>
+
+<!-- Modal Risk Limit -->
+<div class="modal fade" id="modalRiskLimit" tabindex="-1" role="dialog" aria-labelledby="modalRiskLimitLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header flex-between-center">
+        <h2 class="h4">Set Risk Limit</h2>
+        <div class="lead__icon lead__icon_sm">
+          <div class="svg-icon svg-icon-secondary">
+            @include('partials.icon-tool')
+          </div>
+        </div>
+      </div>
+      <form method="POST" action="{{ route('periode.update-risk-limit', ':id') }}" id="formRiskLimit">
+        @csrf
+        @method('PUT')
+        <div class="modal-body">
+          <table class="table table-hover mb-md-0">
+            <thead>
+              <tr>
+                <th>Unit</th>
+                <th>Risk Limit</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach($unitWithRiskLimit as $unit)
+              <tr>
+                <td>{{ $unit->name }}</td>
+                <td>
+                  <input type="text" class="form-control inputmask-rupiah" id="risk_limit_{{ $unit->id }}" name="risk_limits[{{ $unit->id }}]" required>
+                </td>
+              </tr>
+              @endforeach
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-submit">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 @endsection
 @section('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
+let periodes = @json($periode);
 // Get badge status
 var elList = Array.prototype.slice.call(
   document.querySelectorAll("figure"));
@@ -272,6 +321,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, 0);
             }
+        }
+    });
+
+    $('.btn-action').on('click', function() {
+        const periodeId = $(this).data('periode-id');
+        const action = $(this).data('action');
+        if (action === 'risk-limit') {
+            $('#formRiskLimit').attr('action', '{{ route('periode.update-risk-limit', ':id') }}'.replace(':id', periodeId));
+            let periode = periodes.find(periode => periode.id === periodeId);
+            @foreach($unitWithRiskLimit as $unit)
+            $('#risk_limit_{{ $unit->id }}').val((periode.risk_limit_periodes.find(riskLimit => riskLimit.unit_id === {{ $unit->id }})?.risk_limit) || 0);
+            @endforeach
+            $('#modalRiskLimit').modal('show');
         }
     });
 });

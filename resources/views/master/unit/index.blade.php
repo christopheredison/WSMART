@@ -13,6 +13,10 @@
           </div>
           <h2 class="h3">Unit</h2>
           <div id="bulk-select-replace-element" class="col-auto ms-auto">
+            <button class="btn btn-outline-info btn-sm" onclick="syncUnit()">
+              <span class="bx bx-sync"></span>
+              <span class="ms-1">Sync</span>
+            </button>
             <a class="btn btn-outline-info btn-sm" href="{{ route('unit.create') }}">
               <span class="bx bx-plus"></span>
               <span class="ms-1">New</span>
@@ -108,3 +112,55 @@
   </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+  function syncUnit() {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'This action will sync all units from API',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sync',
+      cancelButtonText: 'Cancel',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: 'Syncing unit...',
+          text: 'Please wait...',
+          icon: 'info',
+          showCancelButton: false,
+          showConfirmButton: false,
+        });
+        $.ajax({
+          url: '{{ route('unit.sync') }}',
+          type: 'POST',
+          data: {
+            _token: '{{ csrf_token() }}',
+          },
+          success: function(response) {
+            Swal.close();
+            Swal.fire({
+              title: 'Success',
+              text: 'Unit synced successfully',
+              icon: 'success',
+            }).then(() => {
+              location.reload();
+            });
+          },
+          error: function(xhr, status, error) {
+            Swal.close();
+            Swal.fire({
+              title: 'Error',
+              text: xhr.responseJSON?.message || 'Failed to sync units',
+              icon: 'error',
+            }).then(() => {
+              location.reload();
+            });
+          }
+        });
+      }
+    });
+  }
+</script>
+@endpush

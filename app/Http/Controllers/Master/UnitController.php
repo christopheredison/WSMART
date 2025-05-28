@@ -40,6 +40,7 @@ class UnitController extends Controller
         Unit::create([
             'name' => $request->name,
             'unit_type_id' => $request->unit_type_id,
+            'unit_api_id' => $request->unit_api_id,
             'parent_id' => $request->parent_id ?? 0
         ]);
 
@@ -68,7 +69,8 @@ class UnitController extends Controller
         $unit->update([
             'name' => $request->name,
             'unit_type_id' => $request->unit_type_id,
-            'parent_id' => $request->parent_id ?? 0
+            'parent_id' => $request->parent_id ?? 0,
+            'unit_api_id' => $request->unit_api_id,
         ]);
 
         return redirect()->route('unit.index')->with('success', 'Unit updated successfully!');
@@ -91,5 +93,12 @@ class UnitController extends Controller
         }
 
         return redirect()->route('unit.index')->with('error', 'Unit not found!');
+    }
+
+    public function sync()
+    {
+        Unit::sync();
+
+        return response()->json(['message' => 'Unit synced successfully']);
     }
 }

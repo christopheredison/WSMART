@@ -206,6 +206,7 @@ Route::group(['middleware' => ['auth']], function() {
         Route::post('/periode/change-active-period', [PeriodeController::class, 'changeActivePeriod'])->name('change-active-period');
         Route::post('/periode/{id}/restore', [PeriodeController::class, 'restore'])->name('periode.restore');
         Route::put('/periode/{periode}/update-ambang-batas', [PeriodeController::class, 'updateAmbangBatas'])->name('periode.update-ambang-batas');
+        Route::put('/periode/{periode}/update-risk-limit', [PeriodeController::class, 'updateRiskLimit'])->name('periode.update-risk-limit');
 
         Route::get('/sikap-risiko', [SikapRisikoController::class, 'index'])->name('sikap-risiko.index');
         Route::get('/sikap-risiko/create', [SikapRisikoController::class, 'create'])->name('sikap-risiko.create');
@@ -251,6 +252,7 @@ Route::group(['middleware' => ['auth']], function() {
         {
             Route::get('/unit', [UnitController::class, 'index'])->name('unit.index');
             Route::get('/unit/create', [UnitController::class, 'create'])->name('unit.create');
+            Route::post('/unit/sync', [UnitController::class, 'sync'])->name('unit.sync');
             Route::post('/unit', [UnitController::class, 'store'])->name('unit.store');
             Route::get('/unit/{unit}/edit', [UnitController::class, 'edit'])->name('unit.edit');
             Route::put('/unit/{unit}', [UnitController::class, 'update'])->name('unit.update');
