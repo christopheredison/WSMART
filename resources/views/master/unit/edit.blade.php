@@ -28,6 +28,10 @@
             </select>
           </div>
           <div class="form-group d-md-flex">
+            <label class="form-label label-md-start col-md-3">Unit ID</label>
+            <input type="text" name="unit_api_id" id="unit_api_id" class="form-control" value="{{ $unit->unit_api_id }}">
+          </div>
+          <div class="form-group d-md-flex">
             <label class="form-label label-md-start col-md-3">Nama Unit</label>
             <input type="text" name="name" id="name" class="form-control" value="{{ $unit->name }}">
           </div>

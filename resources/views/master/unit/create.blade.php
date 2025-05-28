@@ -24,6 +24,11 @@
             </select>
           </div>
           <div class="form-group d-md-flex">
+            <label class="form-label label-md-start col-md-3">Unit ID</label>
+            <input class="form-control" id="unit_api_id" name="unit_api_id" type="text" placeholder="Isi Unit ID"
+              value="{{ old('unit_api_id') }}" />
+          </div>
+          <div class="form-group d-md-flex">
             <label class="form-label label-md-start col-md-3">Nama Unit</label>
             <input class="form-control" id="name" name="name" type="text" placeholder="Isi Nama Unit"
               value="{{ old('name') }}" />

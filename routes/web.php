@@ -252,6 +252,7 @@ Route::group(['middleware' => ['auth']], function() {
         {
             Route::get('/unit', [UnitController::class, 'index'])->name('unit.index');
             Route::get('/unit/create', [UnitController::class, 'create'])->name('unit.create');
+            Route::post('/unit/sync', [UnitController::class, 'sync'])->name('unit.sync');
             Route::post('/unit', [UnitController::class, 'store'])->name('unit.store');
             Route::get('/unit/{unit}/edit', [UnitController::class, 'edit'])->name('unit.edit');
             Route::put('/unit/{unit}', [UnitController::class, 'update'])->name('unit.update');
