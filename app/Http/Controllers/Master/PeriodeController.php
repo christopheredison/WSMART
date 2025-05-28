@@ -134,7 +134,7 @@ class PeriodeController extends Controller
         foreach ($request->risk_limits as $unit_id => $risk_limit) {
             $periode->riskLimitPeriodes()->updateOrCreate(
                 ['unit_id' => $unit_id],
-                ['risk_limit' => $risk_limit]
+                ['risk_limit' => $risk_limit ?: 0]
             );
         }
 
