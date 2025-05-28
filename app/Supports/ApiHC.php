@@ -31,8 +31,12 @@ class ApiHC
 
         if (strtoupper($method) === 'GET') {
             $requestType = 'query';
-            $body['key'] = $this->apiKey;
-            $body['client'] = $this->apiClient;
+            if (!isset($body['key'])) {
+                $body['key'] = $this->apiKey;
+            }
+            if (!isset($body['client'])) {
+                $body['client'] = $this->apiClient;
+            }
         } else {
             $options[RequestOptions::QUERY]['key'] = $this->apiKey;
             $options[RequestOptions::QUERY]['client'] = $this->apiClient;

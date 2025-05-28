@@ -25,4 +25,9 @@ class Periode extends Model
     {
         return $this->hasOne(AmbangBatasRisiko::class);
     }
+
+    public function riskLimitPeriodes()
+    {
+        return $this->hasMany(RiskLimitPeriode::class);
+    }
 }
