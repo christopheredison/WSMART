@@ -199,8 +199,11 @@
       <form method="POST" action="{{ route('periode.update-risk-limit', ':id') }}" id="formRiskLimit">
         @csrf
         @method('PUT')
+        @foreach ($unitWithRiskLimit as $unit)
+        <input type="hidden" class="holder-risk-limit risk_limit_{{ $unit->id }}" name="risk_limits[{{ $unit->id }}]">
+        @endforeach
         <div class="modal-body">
-          <table class="table table-hover mb-md-0">
+          <table class="table table-hover mb-md-0" id="tableRiskLimit">
             <thead>
               <tr>
                 <th>Unit</th>
@@ -212,7 +215,7 @@
               <tr>
                 <td>{{ $unit->name }}</td>
                 <td>
-                  <input type="text" class="form-control inputmask-rupiah" id="risk_limit_{{ $unit->id }}" name="risk_limits[{{ $unit->id }}]" required>
+                  <input type="text" class="form-control inputmask-rupiah risk_limit_{{ $unit->id }} input-risk-limit" name="risk_limits[{{ $unit->id }}]">
                 </td>
               </tr>
               @endforeach
@@ -331,10 +334,37 @@ document.addEventListener('DOMContentLoaded', function() {
             $('#formRiskLimit').attr('action', '{{ route('periode.update-risk-limit', ':id') }}'.replace(':id', periodeId));
             let periode = periodes.find(periode => periode.id === periodeId);
             @foreach($unitWithRiskLimit as $unit)
-            $('#risk_limit_{{ $unit->id }}').val((periode.risk_limit_periodes.find(riskLimit => riskLimit.unit_id === {{ $unit->id }})?.risk_limit) || 0);
+            $('.risk_limit_{{ $unit->id }}').val((periode.risk_limit_periodes.find(riskLimit => riskLimit.unit_id === {{ $unit->id }})?.risk_limit) || 0);
             @endforeach
             $('#modalRiskLimit').modal('show');
         }
+    });
+
+    $('.input-risk-limit').on('input', function() {
+      const name = $(this).attr('name');
+      $('.holder-risk-limit[name="' + name + '"]').val($(this).val());
+    });
+
+    $('#tableRiskLimit').DataTable({
+        paging: true,
+        searching: true,
+        info: true,
+        order: [],
+        lengthChange: true,
+        pageLength: 10,
+        lengthMenu: [10, 25, 50, 100],
+        columnDefs: [{ orderable: false, targets: [0, 1] }],
+        drawCallback: function() {
+          $('.input-risk-limit').on('input', function() {
+            const name = $(this).attr('name');
+            $('.holder-risk-limit[name="' + name + '"]').val($(this).val());
+          });
+
+          $('.input-risk-limit').each(function() {
+            const name = $(this).attr('name');
+            $(this).val($('.holder-risk-limit[name="' + name + '"]').val());
+          });
+      }
     });
 });
 </script>
