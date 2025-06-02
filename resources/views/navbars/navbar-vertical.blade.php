@@ -70,37 +70,19 @@
                 <span class="nav-link-text">KRI</span>
               </a>
             </li>
-            <div class="col ps-0">
-              {{--
-                    <a class="nav-link dropdown-indicator {{ request()->is('home*') ? 'active' : '' }}"
-              href="#dashboard" role="button" data-bs-toggle="collapse"
-              aria-expanded="{{ request()->is('dashboard*') ? 'true' : 'false' }}" aria-controls="dashboard">
-              <div class="d-flex align-items-center">
-                <i class="menu-icon tf-icons bx bx-tachometer"></i>
-                <span class="nav-link-text">Dashboard</span>
-              </div>
-              </a>
-              <ul class="nav collapse {{ request()->is('home*') ? 'show' : '' }}" id="dashboard">
-                <li class="nav-item">
-                  <a class="nav-link {{ request()->is('home') ? 'active' : '' }}" href="/home">
-                    <span class="nav-link-text">Corporate</span>
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link {{ request()->is('fakultas') ? 'active' : '' }}" href="#">
-                    <span class="nav-link-text">Unit</span>
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link {{ request()->is('direktorat-biro') ? 'active' : '' }}" href="#">
-                    <span class="nav-link-text">Proyek</span>
-                  </a>
-                </li>
-                --}}
-            </div>
           </ul>
         </li>
         <!-- Dashboard Menu End -->
+
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->is('risk-register-unit') ? 'active' : '' }}" href="/risk-register-unit/periods"
+            role="button" data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon">
+              <i class="menu-icon tf-icons bx bx-grid-alt"></i>
+              <span class="nav-link-text">Risk Register Unit</span>
+            </span>
+          </a>
+        </li>
 
         <!-- Ranking Risiko Menu Start -->
         @can('project_periode_list')
