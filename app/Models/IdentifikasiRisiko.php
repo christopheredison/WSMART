@@ -9,6 +9,37 @@ class IdentifikasiRisiko extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'unit_type_id',
+        'unit_id',
+        'periode_id',
+        'user_id',
+        'kategori_risiko_id',
+        'jenis_risiko_id',
+        'peristiwa_risiko_id',
+        'target_capaian_kinerja',
+        'rencana_kegiatan',
+        'peristiwa_risiko',
+        'deskripsi_peristiwa_risiko',
+        'deskripsi_rencana_kegiatan',
+        'type',
+        'jenis_kontrol_eksisting_id',
+        'kontrol_eksisting',
+        'penilaian_efektivitas_kontrol',
+        'perkiraan_waktu_terpapar_risiko_mulai',
+        'perkiraan_waktu_terpapar_risiko_akhir',
+        'status_risiko',
+        'status_progress',
+        'type_risiko',
+        'status_progress',
+        'type_risiko',
+        'catatan',
+        'skala_risiko',
+        'level_risiko',
+        'status',
+        'is_corporate',
+    ];
+
     protected $guarded = [];
     protected $table = 'identifikasi_risikos';
 

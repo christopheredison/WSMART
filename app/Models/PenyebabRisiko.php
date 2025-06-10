@@ -16,4 +16,9 @@ class PenyebabRisiko extends Model
     {
         return $this->belongsTo(IdentifikasiRisiko::class, 'risiko_id');
     }
+
+    public function perlakuanPenyebabRisiko()
+    {
+        return $this->hasMany(PerlakuanPenyebabRisikoUnit::class, 'penyebab_risiko_id');
+    }
 }
