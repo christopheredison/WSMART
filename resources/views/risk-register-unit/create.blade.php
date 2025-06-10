@@ -36,29 +36,35 @@
                         </div>
                     </div>
                     <div class="row g-3 gx-md-5">
-                        <div class="col-md-6">
-                            <div class="form-group d-lg-flex">
-                            <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran</label>
-                            <select class="form-select select2 js-select-hide-search" name="target_capaian_kinerja" required>
-                                <option selected disabled>Pilih</option>
-                                @foreach($tck as $id => $title)
-                                <option value="{{ $id }}" {{ old('target_capaian_kinerja') == $id ? 'selected' : '' }}>
-                                {{ $title }}
-                                </option>
-                                @endforeach
-                            </select>
+                        <div class="col-12">
+                            <div class="form-group form-floating">
+                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Sasaran" required>{{ old('target_capaian_kinerja') }}</textarea>
+                                <label for="target_capaian_kinerja">Sasaran</label>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <div class="form-group d-lg-flex">
-                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Peristiwa Risiko</label>
-                                <select class="form-select select2 js-select-hide-search" name="peristiwa_risiko_id"
-                                    id="peristiwa_risiko" required>
-                                    <option selected>Pilih</option>
-                                    @foreach ($peristiwaRisikos as $peristiwaRisiko)
-                                        <option value="{{ $peristiwaRisiko->id }}">{{ $peristiwaRisiko->title }}</option>
-                                    @endforeach
-                                </select>
+                                <div class="form-floating flex-grow-1">
+                                    <select class="form-select" id="jenis_risiko_id" name="jenis_risiko_id" required>
+                                        <option value="" selected disabled>Pilih Jenis Risiko</option>
+                                        @foreach($jenisRisiko as $id => $title)
+                                            @php
+                                                $kategori = \App\Models\JenisRisiko::find($id)->kategoriRisiko;
+                                                $kategoriTitle = $kategori ? $kategori->title : '';
+                                            @endphp
+                                            <option value="{{ $id }}" {{ old('jenis_risiko_id') == $id ? 'selected' : '' }}>
+                                                {{ $kategoriTitle }} - {{ $title }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <label for="jenis_risiko_id">Jenis Risiko T2 & T3 KBUMN</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-group form-floating">
+                                <textarea class="form-control" id="peristiwa_risiko" name="peristiwa_risiko" rows="3"  placeholder="Peristiwa Risiko" required>{{ old('peristiwa_risiko') }}</textarea>
+                                <label for="peristiwa_risiko">Peristiwa Risiko</label>
                             </div>
                         </div>
                         <div class="col-12">
@@ -135,42 +141,32 @@
                             <div class="col-12 col-lg-11">
                                 <div class="row g-2">
                                     <div class="col-12">
-                                        <select name="master_kri_id[]" class="form-select" id="master_kri">
-                                            <option value="">Pilih</option>
-                                            {{--
-                                            @foreach ($masterKris as $masterKri)
-                                                <option value="{{ $masterKri->id }}">{{ $masterKri->kri }}</option>
-                                            @endforeach
-                                            --}}
-                                        </select>
-                                    </div>
-                                    <div class="col-12">
                                         <div class="form-group form-floating">
-                                            <input type="text" class="form-control" name="key_risk_indicator[]" id="key_risk_indicator" disabled>
+                                            <input type="text" class="form-control" name="key_risk_indicator[]" id="key_risk_indicator">
                                             <label for="key_risk_indicator_1">Key Risk Indicator</label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating">
-                                            <input type="text" class="form-control" name="satuan_kri[]" id="satuan_kri" disabled>
+                                            <input type="text" class="form-control" name="satuan_kri[]" id="satuan_kri">
                                             <label for="satuan_kri_1">Satuan KRI</label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
-                                            <input type="text" class="form-control border-success" name="batas_aman[]" id="batas_aman" disabled>
+                                            <input type="text" class="form-control border-success" name="batas_aman[]" id="batas_aman">
                                             <label for="batas_aman_1">Batas Aman</label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
-                                            <input type="text" class="form-control border-warning" name="batas_waspada[]" id="batas_waspada" disabled>
+                                            <input type="text" class="form-control border-warning" name="batas_waspada[]" id="batas_waspada">
                                             <label for="batas_waspada_1">Batas Waspada</label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
-                                            <input type="text" class="form-control border-danger" name="batas_bahaya[]" id="batas_bahaya" disabled>
+                                            <input type="text" class="form-control border-danger" name="batas_bahaya[]" id="batas_bahaya">
                                             <label for="batas_bahaya_1">Batas Bahaya</label>
                                         </div>
                                     </div>
@@ -213,34 +209,20 @@
                 <div class="card-body">
                     <div class="row gy-3 gx-xxl-6 mb-3">
                         <div class="col-md-6 col-lg-5 col-xxl-6">
-                            <select name="jenis_kontrol_eksisting_id" class="form-select">
-                                <option value="">Jenis Kontrol Eksisting</option>
-                                @foreach ($jenisKontrolEksistings as $jenisKontrolEksisting)
-                                    <option value="{{ $jenisKontrolEksisting->id }}">
-                                        {{ $jenisKontrolEksisting->jenis_kontrol }}</option>
-                                @endforeach
-                            </select>
-
-                            <div class="mt-3 text-end">
-                                <button type="button" class="btn btn-link text-primary" id="refresh-kontrol-eksisting-btn">Ambil ulang data</button>
+                            <div class="form-group d-lg-flex mb-4">
+                                <label class="form-label label-lg-start col-lg-5 col-xl-4">Jenis Kontrol Eksisting</label>
+                                <select name="jenis_kontrol_eksisting_id" class="form-select">
+                                    <option value="">Jenis Kontrol Eksisting</option>
+                                    @foreach ($jenisKontrolEksistings as $jenisKontrolEksisting)
+                                        <option value="{{ $jenisKontrolEksisting->id }}">
+                                            {{ $jenisKontrolEksisting->jenis_kontrol }}</option>
+                                    @endforeach
+                                </select>
                             </div>
-                            <table id="table-kontrol" class="table table-bordered table-hover table-responsive">
-                                <thead>
-                                    <tr>
-                                        <th class="col-6">#</th>
-                                        <th class="col-6">Eksisting Kontrol</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-
-                                </tbody>
-                                <tfoot class="table-empty">
-                                    <tr>
-                                        <td colspan="3" class="text-center">Data tidak tersedia</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                            <div class="form-group d-lg-flex mb-4">
+                                <label class="form-label label-lg-start col-lg-5 col-xl-4">Kontrol Eksisting</label>
+                                <textarea class="form-control" name="kontrol_eksisting" rows="3" placeholder="Masukkan kontrol eksisting">{{ old('kontrol_eksisting') }}</textarea>
+                            </div>
                         </div>
                         <div class="col-md-6 col-lg-7 col-xxl-6">
                             <div class="form-group d-lg-flex mb-4">
@@ -335,14 +317,14 @@
                 console.log('Peristiwa Risiko ID:', peristiwaRisikoId);
 
                 // Pastikan dropdown KRI di-reset
-                const kriDropdowns = $('select[name="master_kri_id[]"]');
-                kriDropdowns.html('<option value="">Pilih</option>');
+                //const kriDropdowns = $('select[name="master_kri_id[]"]');
+                //kriDropdowns.html('<option value="">Pilih</option>');
 
-                $('input[name="key_risk_indicator[]"]').val('').prop('disabled', true);
-                $('input[name="satuan_kri[]"]').val('').prop('disabled', true);
-                $('input[name="batas_aman[]"]').val('').prop('disabled', true);
-                $('input[name="batas_waspada[]"]').val('').prop('disabled', true);
-                $('input[name="batas_bahaya[]"]').val('').prop('disabled', true);
+                // $('input[name="key_risk_indicator[]"]').val('').prop('disabled', true);
+                // $('input[name="satuan_kri[]"]').val('').prop('disabled', true);
+                // $('input[name="batas_aman[]"]').val('').prop('disabled', true);
+                // $('input[name="batas_waspada[]"]').val('').prop('disabled', true);
+                // $('input[name="batas_bahaya[]"]').val('').prop('disabled', true);
 
                 // Lakukan fetch untuk mendapatkan data KRI
                 if (peristiwaRisikoId) {
@@ -407,37 +389,32 @@
                     <div class="col-12 col-lg-11">
                         <div class="row g-2">
                             <div class="col-12">
-                                <select name="master_kri_id[]" class="form-select" id="master_kri">
-                                    <option value="">Pilih</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
                                 <div class="form-group form-floating">
-                                    <input type="text" class="form-control" name="key_risk_indicator[]" disabled>
+                                    <input type="text" class="form-control" name="key_risk_indicator[]">
                                     <label for="key_risk_indicator_1">Key Risk Indicator</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating">
-                                    <input type="text" class="form-control" name="satuan_kri[]" disabled>
+                                    <input type="text" class="form-control" name="satuan_kri[]">
                                     <label for="satuan_kri_1">Satuan KRI</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
-                                    <input type="text" class="form-control border-success" name="batas_aman[]" disabled>
+                                    <input type="text" class="form-control border-success" name="batas_aman[]">
                                     <label for="batas_aman_1">Batas Aman</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
-                                    <input type="text" class="form-control border-warning" name="batas_waspada[]" disabled>
+                                    <input type="text" class="form-control border-warning" name="batas_waspada[]">
                                     <label for="batas_waspada_1">Batas Waspada</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
-                                    <input type="text" class="form-control border-danger" name="batas_bahaya[]" disabled>
+                                    <input type="text" class="form-control border-danger" name="batas_bahaya[]">
                                     <label for="batas_bahaya_1">Batas Bahaya</label>
                                 </div>
                             </div>
@@ -468,86 +445,21 @@
             row.find('[name="batas_waspada[]"]').val(kri.batas_waspada);
             row.find('[name="batas_bahaya[]"]').val(kri.batas_bahaya);
         });
-        /*
-        $('#refresh-kontrol-eksisting-btn').on('click', function() {
-            $('#table-kontrol tbody').empty();
+        
 
-            let count = 0;
-            $.each(kontrolExistings, function(id, kontrol) {
-                $('#table-kontrol tbody').append(`
-                    <tr>
-                        <td>
-                            ${count+1}
-                            <input type="text" name="kontrol_eksisting_id[]" value="${kontrol.id}" hidden>
-                        </td>
-                        <td>${kontrol.kontrol_eksisting}</td>
-                        <td>
-                            <button type="button" class="btn btn-icon-danger h-100" onclick="$(this).closest('tr').remove(); if ($('#table-kontrol tbody tr').length == 0) $('.table-empty').show();">
-                                <i class="bx bx-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `);
-                count++;
-            });
+        //var today = new Date();
+        //var endOfYear = new Date(today.getFullYear(), 11, 31);
 
-            if ($('#table-kontrol tbody tr').length > 0) {
-                $('.table-empty').hide();
-            }
-        });
-        */
-
-        function fetchKontrolEksisting() {
-            let peristiwaRisikoId = $('#peristiwa_risiko').val();
-            
-            if (!peristiwaRisikoId) {
-                $('#table-kontrol tbody').empty();
-                $('.table-empty').show();
-                return;
-            }
-
-            $.ajax({
-                url: "/get-kontrol-eksisting",
-                type: "GET",
-                data: { peristiwa_risiko_id: peristiwaRisikoId },
-                success: function (response) {
-                    let tableBody = $('#table-kontrol tbody');
-                    tableBody.empty();
-
-                    if (response.length > 0) {
-                        $('.table-empty').hide();
-                        $.each(response, function (index, item) {
-                            tableBody.append(`
-                                <tr>
-                                    <td>${index + 1}
-                                        <input type="hidden" name="kontrol_eksisting_id[]" value="${item.id}">
-                                    </td>
-                                    <td>${item.kontrol_eksisting}</td>
-                                    <td>
-                                        <button type="button" class="btn btn-icon-danger h-100"
-                                            onclick="$(this).closest('tr').remove(); if ($('#table-kontrol tbody tr').length == 0) $('.table-empty').show();">
-                                            <i class="bx bx-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `);
-                        });
-                    } else {
-                        $('.table-empty').show();
-                    }
-                },
-                error: function () {
-                    alert("Gagal mengambil data kontrol eksisting.");
-                }
-            });
-        }
-
-        $('#refresh-kontrol-eksisting-btn').on('click', function() {
-            fetchKontrolEksisting();
-        });
+        var periodeYear = {{ $selectedPeriode->tahun }};
+        console.log('Periode Year:', periodeYear);
 
         var today = new Date();
-        var endOfYear = new Date(today.getFullYear(), 11, 31);
+        var startOfYear = new Date(periodeYear, 0, 1); // 1 Januari tahun periode
+        var endOfYear = new Date(periodeYear, 11, 31); // 31 Desember tahun periode
+        var defaultDate = today;
+        if (today < startOfYear || today > endOfYear) {
+            defaultDate = startOfYear;
+        }
 
         var flatpickrIns = flatpickr("#timepicker2", {
             //mode: "range",
@@ -555,6 +467,9 @@
             altFormat: "j F Y",
             dateFormat: "d/m/Y",
             //maxDate: endOfYear,
+            minDate: startOfYear,
+            maxDate: endOfYear,
+            //defaultDate: defaultDate,
             disableMobile: true
         });
 
@@ -564,6 +479,9 @@
             altFormat: "j F Y",
             dateFormat: "d/m/Y",
             //maxDate: endOfYear,
+            minDate: startOfYear,
+            maxDate: endOfYear,
+            //defaultDate: defaultDate,
             disableMobile: true
         });
 

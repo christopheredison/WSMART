@@ -25,8 +25,14 @@ class KategoriRisikoSeeder extends Seeder
 
         // Data yang akan dimasukkan
         $kategoriRisiko = [
-            ['id' => 1, 'title' => 'Kategori Risiko Fiskal', 'deskripsi' => null, 'unit_type_id' => 4, 'created_at' => $now, 'updated_at' => $now, 'deleted_at' => null],
-            ['id' => 2, 'title' => 'Kategori Risiko Industri Umum', 'deskripsi' => null, 'unit_type_id' => 4, 'created_at' => $now, 'updated_at' => $now, 'deleted_at' => null],
+            ['id' => 1, 'title' => 'Risiko Fiskal', 'deskripsi' => null, 'unit_type_id' => null, 'created_at' => $now, 'updated_at' => $now, 'deleted_at' => null],
+            ['id' => 2, 'title' => 'Risiko Kebijakan', 'deskripsi' => null, 'unit_type_id' => null, 'created_at' => $now, 'updated_at' => $now, 'deleted_at' => null],
+            ['id' => 3, 'title' => 'Risiko Komposisi', 'deskripsi' => null, 'unit_type_id' => null, 'created_at' => $now, 'updated_at' => $now, 'deleted_at' => null],
+            ['id' => 4, 'title' => 'Risiko Struktur', 'deskripsi' => null, 'unit_type_id' => null, 'created_at' => $now, 'updated_at' => $now, 'deleted_at' => null],
+            ['id' => 5, 'title' => 'Risiko Restrukturisasi & Reorganisasi', 'deskripsi' => null, 'unit_type_id' => null, 'created_at' => $now, 'updated_at' => $now, 'deleted_at' => null],
+            ['id' => 6, 'title' => 'Risiko Industri Umum', 'deskripsi' => null, 'unit_type_id' => null, 'created_at' => $now, 'updated_at' => $now, 'deleted_at' => null],
+            ['id' => 7, 'title' => 'Risiko Industri Perbankan', 'deskripsi' => null, 'unit_type_id' => null, 'created_at' => $now, 'updated_at' => $now, 'deleted_at' => null],
+            ['id' => 8, 'title' => 'Risiko Industri Asuransi', 'deskripsi' => null, 'unit_type_id' => null, 'created_at' => $now, 'updated_at' => $now, 'deleted_at' => null],
         ];
 
         DB::table('kategori_risikos')->insert($kategoriRisiko);

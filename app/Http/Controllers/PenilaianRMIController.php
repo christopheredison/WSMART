@@ -851,24 +851,16 @@ class PenilaianRMIController extends Controller
             
             // Tentukan penyesuaian_skor_aspek_dimensi berdasarkan total_score_kinerja
             $penyesuaianSkor = 0;
-            if ($totalScoreKinerja >= 90) {
-                $penyesuaianSkor = 0.1;
-            } elseif ($totalScoreKinerja >= 80) {
-                $penyesuaianSkor = 0.075;
-            } elseif ($totalScoreKinerja >= 70) {
-                $penyesuaianSkor = 0.05;
-            } elseif ($totalScoreKinerja >= 60) {
-                $penyesuaianSkor = 0.025;
-            } elseif ($totalScoreKinerja >= 50) {
+            if ($totalScoreKinerja > 90) {
                 $penyesuaianSkor = 0;
-            } elseif ($totalScoreKinerja >= 40) {
-                $penyesuaianSkor = -0.025;
-            } elseif ($totalScoreKinerja >= 30) {
-                $penyesuaianSkor = -0.05;
-            } elseif ($totalScoreKinerja >= 20) {
-                $penyesuaianSkor = -0.075;
+            } elseif ($totalScoreKinerja > 80) {
+                $penyesuaianSkor = -0.25;
+            } elseif ($totalScoreKinerja > 65) {
+                $penyesuaianSkor = -0.5;
+            } elseif ($totalScoreKinerja > 50) {
+                $penyesuaianSkor = -0.75;
             } else {
-                $penyesuaianSkor = -0.1;
+                $penyesuaianSkor = -1;
             }
             
             // Hitung final_score_rmi jika nilai_score_rmi >= 3

@@ -481,6 +481,11 @@ Route::prefix('risk-register-unit')->group(function () {
     Route::get('/{riskRegister}/edit', [RiskRegisterUnitController::class, 'edit'])->name('risk-register-unit.edit');
     Route::put('/{riskRegister}', [RiskRegisterUnitController::class, 'update'])->name('risk-register-unit.update');
     Route::delete('/{riskRegister}', [RiskRegisterUnitController::class, 'destroy'])->name('risk-register-unit.destroy');
+    Route::get('/{riskRegister}/perencanaan', [RiskRegisterUnitController::class, 'perencanaan'])->name('risk-register-unit.perencanaan');
+    Route::post('/{riskRegister}/perencanaan', [RiskRegisterUnitController::class, 'doPerencanaan'])->name('risk-register-unit.do-perencanaan');
+    Route::delete('/{riskRegister}/perencanaan/{id}', [RiskRegisterUnitController::class, 'hapusRencanaPerlakuan'])->name('risk-register-unit.hapus-rencana-perlakuan');
+    Route::get('/{riskRegister}/perencanaan/{id}/edit', [RiskRegisterUnitController::class, 'editRencanaPerlakuan'])->name('risk-register-unit.edit-rencana-perlakuan');
+    Route::put('/{riskRegister}/perencanaan/{id}', [RiskRegisterUnitController::class, 'updateRencanaPerlakuan'])->name('risk-register-unit.update-rencana-perlakuan');
     Route::get('/{riskRegister}/view', [RiskRegisterUnitController::class, 'view'])->name('risk-register-unit.view');
     Route::post('/send', [RiskRegisterUnitController::class, 'send'])->name('risk-register-unit.send');
     Route::post('/draft', [RiskRegisterUnitController::class, 'storeAsDraft'])->name('risk-register-unit.store-as-draft');

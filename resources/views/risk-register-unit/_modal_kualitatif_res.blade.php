@@ -1,5 +1,5 @@
 <!-- Modal -->
-<div class="modal fade" id="modalKualitatifRes" tabindex="-1" role="dialog" aria-labelledby="modalKualitatifLabel" aria-hidden="true">
+<div class="modal fade" id="modalKualitatifRes" tabindex="-1" role="dialog" aria-labelledby="modalKualitatifLabel" aria-hidden="true" data-bs-focus="false">
     <div class="modal-dialog modal-lg modal-80" role="document">
         <div class="modal-content">
             <div class="modal-header">

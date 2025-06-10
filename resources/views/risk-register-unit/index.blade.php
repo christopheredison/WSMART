@@ -45,7 +45,7 @@
               </select>
             </div>
             @endcan
-            <div class="col-12 col-sm-4">
+            <div class="col-12 col-sm-4" style="display:none;">
               <label for="filter-risk-event" class="form-label d-none">Peristiwa Risiko</label>
               <select id="filter-risk-event" class="form-select select2">
                 <option value="" selected>Peristiwa Risiko</option>
@@ -54,7 +54,24 @@
                 @endforeach
               </select>
             </div>
-            <div class="col-5 col-sm-2">
+
+            <div class="col-12 col-sm-4">
+              <label for="filter-risk-t2t3" class="form-label d-none">T2 & T3 KBUMN</label>
+              <select id="filter-risk-t2t3" class="form-select select2">
+                <option value="" selected>T2 & T3 KBUMN</option>
+                @foreach($jenisRisiko as $id => $title)
+                    @php
+                        $kategori = \App\Models\JenisRisiko::find($id)->kategoriRisiko;
+                        $kategoriTitle = $kategori ? $kategori->title : '';
+                    @endphp
+                    <option value="{{ $kategoriTitle }} - {{ $title }}" {{ old('jenis_risiko_id') == $id ? 'selected' : '' }}>
+                        {{ $kategoriTitle }} - {{ $title }}
+                    </option>
+                @endforeach
+              </select>
+            </div>
+
+            <div class="col-5 col-sm-2" style="display:none;">
               <label for="filter-risk-level" class="form-label d-none">Level Risiko</label>
               <select id="filter-risk-level" class="form-select js-select-hide-search">
                 <option value="" selected>Level Risiko</option>
@@ -84,7 +101,7 @@
                 <th class="white-space-nowrap">#</th>
                 <th class="sort" data-sort="unit">Unit</th>
                 <th class="sort" data-sort="unit_type">Sasaran</th>
-                <th class="sort mw-20r" data-sort="kategori_jenis_risiko">Kategori dan Jenis Risiko</th>
+                <th class="sort mw-20r" data-sort="kategori_jenis_risiko">T2 & T3 KBUMN</th>
                 <th class="sort mw-10r" data-sort="peristiwa_risiko">Peristiwa Risiko</th>
                 <th class="sort mw-10r" data-sort="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</th>
                 <th class="sort mw-10r" data-sort="kontrol_eksisting">Jenis Kontrol Eksisting</th>
@@ -98,9 +115,9 @@
               <tr>
                 <td class="index-number">{{ $index + 1 }}</td>
                 <td class="unit">{{ $item->unit->name ?? '-' }}</td>
-                <td class="unit_type">{{ $item->tck->title ?? '-' }}</td>
+                <td class="unit_type">{{ $item->target_capaian_kinerja ?? '-' }}</td>
                 <td class="kategori_jenis_risiko">{{ $item->kategoriRisiko->title ?? '-' }} - {{ $item->jenisRisiko->title ?? '-' }}</td>
-                <td class="peristiwa_risiko">{{ $item->peristiwaRisiko?->title ?: '-' }}</td>
+                <td class="peristiwa_risiko">{{ $item->peristiwa_risiko ?? '-' }}</td>
                 <td class="deskripsi_peristiwa_risiko">{{ $item->deskripsi_peristiwa_risiko }}</td>
                 <td class="kontrol_eksisting">{{ $item->jenisKontrolEksisting->jenis_kontrol ?? '-' }}</td>
                 <td class="waktu_terpapar">
@@ -226,6 +243,11 @@ $(document).ready(function() {
   $('#filter-risk-event').on('change', function() {
     var riskEvent = $(this).val();
     table.column(4).search(riskEvent).draw();
+  });
+
+  $('#filter-risk-t2t3').on('change', function() {
+    var riskEvent = $(this).val();
+    table.column(3).search(riskEvent).draw();
   });
 
   // Function to handle changes in the risk level filter
