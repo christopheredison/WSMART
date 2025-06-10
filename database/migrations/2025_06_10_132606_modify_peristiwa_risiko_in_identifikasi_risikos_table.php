@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('identifikasi_risikos', function (Blueprint $table) {
             // ubah peristiwa_risiko_id menjadi nullable
-            $table->unsignedBigInteger('peristiwa_risiko_id')->nullable()->change();
+            $table->string('peristiwa_risiko_id')->nullable()->change();
 
             // tambahkan kolom peristiwa_risiko (text) nullable setelah peristiwa_risiko_id
             $table->text('peristiwa_risiko')->nullable()->after('peristiwa_risiko_id');
@@ -27,7 +27,7 @@ return new class extends Migration
     {
         Schema::table('identifikasi_risikos', function (Blueprint $table) {
             // kembalikan peristiwa_risiko_id menjadi NOT NULL
-            $table->unsignedBigInteger('peristiwa_risiko_id')->nullable(false)->change();
+            $table->string('peristiwa_risiko_id')->nullable(false)->change();
 
             // hapus kolom peristiwa_risiko
             $table->dropColumn('peristiwa_risiko');
