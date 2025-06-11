@@ -16,13 +16,13 @@ class AreaDampakSeeder extends Seeder
     {
         //
         // 1. Nonaktifkan FK checks (MySQL)
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        $this->disableForeignKeyChecks();
 
         // 2. Truncate tabel agar data lama hilang
         DB::table('area_dampaks')->truncate();
 
         // 3. Aktifkan FK checks kembali
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        $this->enableForeignKeyChecks();
 
         // 4. Baca file SQL
         //    Sesuaikan path jika folder atau nama filenya berbeda
