@@ -15,9 +15,9 @@ class AreaDampakDetailSeeder extends Seeder
     public function run(): void
     {
         //
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        $this->disableForeignKeyChecks();
         DB::table('area_dampak_details')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        $this->enableForeignKeyChecks();
 
         $path = database_path('seeders/sql/area_dampak_detail.sql');
         $sql  = File::get($path);
