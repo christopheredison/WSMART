@@ -1,6 +1,4 @@
--- database/seeders/sql/area_dampak_details.sql
-
-INSERT INTO `area_dampak_details` (`id`, `area_dampak_id`, `deskripsi`, `skala`, `created_at`, `updated_at`, `deleted_at`) VALUES
+INSERT INTO area_dampak_details (id, area_dampak_id, deskripsi, skala, created_at, updated_at, deleted_at) VALUES
 (1, 1, 'Minimal 1 parameter target strategis yang harus selesai pada tahun ini tertunda kurang dari 1 bulan', 1, '2025-02-05 02:59:45', '2025-02-05 02:59:45', NULL),
 (2, 1, 'Minimal 1 parameter tujuan strategis yang harus selesai pada tahun ini tertunda antara 2 - 3 bulan', 2, '2025-02-05 02:59:45', '2025-02-05 02:59:45', NULL),
 (3, 1, 'Minimal 1 parameter tujuan strategis yang harus selesai pada tahun ini tertunda antara 3 - 6 bulan', 3, '2025-02-05 02:59:45', '2025-02-05 02:59:45', NULL),
