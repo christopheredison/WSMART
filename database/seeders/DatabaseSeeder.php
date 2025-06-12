@@ -31,6 +31,14 @@ class DatabaseSeeder extends Seeder
             OpsiPerlakuanRisikoSeeder::class,
             ProjectTypeSeeder::class,
             RiskDataSeeder::class,
+            AreaDampakSeeder::class,
+            AreaDampakDetailSeeder::class,
+            FinalRatingSeeder::class,
+            JenisRencanaPerlakuanRisikoSeeder::class,
+            ParameterKinerjaSeeder::class,
+            PenilaianEfektivitaskontrolSeeder::class,
+            SkalaKinerjaSeeder::class,
+            SkalaKPMRSeeder::class,
         ]);
     }
 }
