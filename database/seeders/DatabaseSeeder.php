@@ -36,7 +36,7 @@ class DatabaseSeeder extends Seeder
             FinalRatingSeeder::class,
             JenisRencanaPerlakuanRisikoSeeder::class,
             ParameterKinerjaSeeder::class,
-            PenilaianEfektivitaskontrolSeeder::class,
+            PenilaianEfektivitasKontrolSeeder::class,
             SkalaKinerjaSeeder::class,
             SkalaKPMRSeeder::class,
         ]);
