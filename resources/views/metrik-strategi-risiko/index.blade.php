@@ -64,6 +64,7 @@
                 @endforeach
               </select>
             </div>
+            {{-- 
             <div class="col-md-3 mb-3">
               <label class="form-label">Peristiwa Risiko</label>
               <select name="peristiwa_risiko_id" class="form-select select2" id="peristiwa-risiko-filter">
@@ -75,6 +76,7 @@
                 @endforeach
               </select>
             </div>
+            --}}
             <div class="col-md-3 mb-3">
               <label class="form-label">&nbsp;</label>
               <button type="button" id="filterButton" class="btn btn-primary d-flex align-items-center" style="height: 38px; padding: 0.375rem 0.75rem;">
@@ -90,9 +92,7 @@
             <tr>
               <th class="white-space-nowrap">#</th>
               <th>Periode</th>
-              <th>Kategori Risiko</th>
-              <th>Jenis Risiko</th>
-              <th>Peristiwa Risiko</th>
+              <th>T2 & T3 KBUMN</th>
               <th>Risk Appetite Statement</th>
               <th>Sikap Risiko</th>
               <th>Jumlah Parameter</th>
@@ -104,9 +104,7 @@
             <tr>
               <td class="index-number">{{ $index + 1 }}</td>
               <td>{{ $metrik->periode->tahun }}</td>
-              <td>{{ $metrik->kategoriRisiko->title ?? '-' }}</td>
-              <td>{{ $metrik->jenisRisiko->title ?? '-' }}</td>
-              <td>{{ $metrik->peristiwaRisiko->title ?? '-' }}</td>
+              <td>{{ $metrik->kategoriRisiko->title ?? '-' }} - {{ $metrik->jenisRisiko->title ?? '-' }}</td>
               <td>{{ $metrik->risk_appetite_statement ?? '-' }}</td>
               <td>{{ $metrik->sikapRisiko->jenis_sikap ?? '-' }}</td>
               <td class="text-center">{{ $metrik->parameterMetriks->count() ?? '0' }}</td>
@@ -116,10 +114,10 @@
                    class="btn-input-icon" title="Kelola Parameter">
                   <span class="bx bx-list-check text-info"></span>
                 </a>
-                <a href="{{ route('metrik-strategi-risiko.edit', $metrik->id) }}" 
+                <!-- <a href="{{ route('metrik-strategi-risiko.edit', $metrik->id) }}" 
                    class="btn-input-icon" data-bs-toggle="tooltip" title="Edit">
                   <span class="bx bx-edit"></span>
-                </a>
+                </a> -->
                 <button type="button" class="btn-input-icon" data-bs-toggle="modal"
                   data-bs-target="#modalDelete{{ $metrik->id }}">
                   <span class="bx bx-trash text-danger" data-bs-toggle="tooltip" title="Delete"></span>

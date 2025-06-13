@@ -58,7 +58,7 @@ class MetrikStrategiRisikoController extends Controller
             'periode_id' => 'required|exists:periodes,id',
             'risk_appetite_statement' => 'required|string',
             'sikap_risiko_id' => 'required|exists:sikap_risikos,id',
-            'peristiwa_risiko_id' => 'required|exists:peristiwa_risikos,id'
+            'jenis_risiko' => 'required'
         ]);
 
         if ($validator->fails()) {
@@ -66,16 +66,15 @@ class MetrikStrategiRisikoController extends Controller
         }
 
         // Ambil data peristiwa risiko
-        $peristiwaRisiko = PeristiwaRisiko::findOrFail($request->peristiwa_risiko_id);
+        $jenisRisiko = JenisRisiko::findOrFail($request->jenis_risiko);
         
         // Buat data dengan kategori dan jenis risiko dari peristiwa
         MetrikStrategiRisiko::create([
             'periode_id' => $request->periode_id,
-            'kategori_risiko_id' => $peristiwaRisiko->kategori_risiko_id,
-            'jenis_risiko_id' => $peristiwaRisiko->jenis_risiko_id,
+            'kategori_risiko_id' => $jenisRisiko->kategori_risiko_id,
+            'jenis_risiko_id' => $jenisRisiko->id,
             'risk_appetite_statement' => $request->risk_appetite_statement,
             'sikap_risiko_id' => $request->sikap_risiko_id,
-            'peristiwa_risiko_id' => $request->peristiwa_risiko_id
         ]);
 
         return redirect()->route('metrik-strategi-risiko.index')
@@ -127,7 +126,7 @@ class MetrikStrategiRisikoController extends Controller
 
         // dd($metrikStrategiRisiko);
 
-        $metrikStrategiRisiko = MetrikStrategiRisiko::with(['periode', 'kategoriRisiko', 'jenisRisiko', 'sikapRisiko', 'parameterMetriks', 'peristiwaRisiko'])
+        $metrikStrategiRisiko = MetrikStrategiRisiko::with(['periode', 'kategoriRisiko', 'jenisRisiko', 'sikapRisiko', 'parameterMetriks'])
         ->findOrFail($id);
         
         return view('metrik-strategi-risiko.parameter', ['metrik' => $metrikStrategiRisiko]);

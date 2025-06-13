@@ -24,8 +24,8 @@
                 <td>{{ $metrik->periode->tahun }}</td>
               </tr>
               <tr>
-                <th>Peristiwa Risiko</th>
-                <td>{{ $metrik->peristiwaRisiko->title }}</td>
+                <th>T2 & T3 KBUMN</th>
+                <td>{{ $metrik->kategoriRisiko->title }} - {{ $metrik->JenisRisiko->title }}</td>
               </tr>
               <tr>
                 <th>Risk Appetite Statement</th>
