@@ -33,21 +33,24 @@
             </div>
 
             <div class="col-md-6">
-              <label class="form-label required">Peristiwa Risiko</label>
-              <select name="peristiwa_risiko_id" class="form-select select2" required>
-                <option value="">Pilih Peristiwa Risiko</option>
-                @foreach($peristiwaRisikos as $peristiwa)
-                  <option value="{{ $peristiwa->id }}" {{ old('peristiwa_risiko_id') == $peristiwa->id ? 'selected' : '' }}>
-                    {{ $peristiwa->title }}
-                  </option>
+              <label class="form-label required">T2 & T3 KBUMN</label>
+              <select name="jenis_risiko" id="jenis_risiko" class="form-select select2" required>
+                <option value="">Pilih T2 & T3</option>
+                @foreach($jenisRisikos as $jenisRisiko)
+                    @php
+                        $kategoriTitle = $jenisRisiko->kategoriRisiko ? $jenisRisiko->kategoriRisiko->title : '';
+                    @endphp
+                    <option value="{{ $jenisRisiko->id }}" {{ old('jenis_risiko_id') == $jenisRisiko->id ? 'selected' : '' }}>
+                        {{ $kategoriTitle }} - {{ $jenisRisiko->title }}
+                    </option>
                 @endforeach
               </select>
-              @error('peristiwa_risiko_id')
+              @error('jenis_risikos')
                 <div class="invalid-feedback d-block">{{ $message }}</div>
               @enderror
             </div>
 
-            <div class="col-md-6">
+            <!-- <div class="col-md-6">
               <label class="form-label">Jenis Risiko</label>
               <input type="text" class="form-control" id="jenis_risiko" readonly>
             </div>
@@ -55,7 +58,7 @@
             <div class="col-md-6">
               <label class="form-label">Kategori Risiko</label>
               <input type="text" class="form-control" id="kategori_risiko" readonly>
-            </div>
+            </div> -->
 
             <div class="col-12">
               <label class="form-label required">Risk Appetite Statement</label>
@@ -123,34 +126,34 @@ $(document).ready(function() {
     });
 
     // Event handler untuk peristiwa risiko
-    $('select[name="peristiwa_risiko_id"]').on('change', function() {
-        const peristiwaId = $(this).val();
-        if(peristiwaId) {
-            // Ambil data jenis dan kategori risiko
-            $.ajax({
-                url: `/api/peristiwa-risiko/${peristiwaId}/relations`,
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json'
-                },
-                success: function(response) {
-                    console.log('Response:', response); // untuk debugging
-                    if(response.data) {
-                        $('#jenis_risiko').val(response.data.jenis_risiko.title || '-');
-                        $('#kategori_risiko').val(response.data.kategori_risiko.title || '-');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error:', error);
-                    $('#jenis_risiko').val('-');
-                    $('#kategori_risiko').val('-');
-                }
-            });
-        } else {
-            $('#jenis_risiko').val('-');
-            $('#kategori_risiko').val('-');
-        }
-    });
+    // $('select[name="peristiwa_risiko_id"]').on('change', function() {
+    //     const peristiwaId = $(this).val();
+    //     if(peristiwaId) {
+    //         // Ambil data jenis dan kategori risiko
+    //         $.ajax({
+    //             url: `/api/peristiwa-risiko/${peristiwaId}/relations`,
+    //             method: 'GET',
+    //             headers: {
+    //                 'Accept': 'application/json'
+    //             },
+    //             success: function(response) {
+    //                 console.log('Response:', response); // untuk debugging
+    //                 if(response.data) {
+    //                     $('#jenis_risiko').val(response.data.jenis_risiko.title || '-');
+    //                     $('#kategori_risiko').val(response.data.kategori_risiko.title || '-');
+    //                 }
+    //             },
+    //             error: function(xhr, status, error) {
+    //                 console.error('Error:', error);
+    //                 $('#jenis_risiko').val('-');
+    //                 $('#kategori_risiko').val('-');
+    //             }
+    //         });
+    //     } else {
+    //         $('#jenis_risiko').val('-');
+    //         $('#kategori_risiko').val('-');
+    //     }
+    // });
 });
 </script>
 @endpush
