@@ -18,7 +18,19 @@ class Unit extends Model
         'unit_api_id',
         'unit_type_id',
         'name',
-        'parent_id'
+        'parent_id',
+        'unit_deskripsi',
+        'persubarea_sap',
+        'persubarea_deskripsi', 
+        'persubarea_type',
+        'company_sap',
+        'company_deskripsi',
+        'cost_center',
+        'cost_center_deskripsi',
+        'cost_center_abbrevation',
+        'cost_center_type',
+        'cost_center_parent',
+        'cost_center_parent_deskripsi'
     ];
 
     public const UNIT_TYPE_DIVISION = 1;
@@ -41,16 +53,32 @@ class Unit extends Model
         $unitTypes = [
             'Divisi' => self::UNIT_TYPE_DIVISION,
             'Department' => self::UNIT_TYPE_DEPARTMENT,
-            'Project' => self::UNIT_TYPE_PROJECT,
+            // 'Project' => self::UNIT_TYPE_PROJECT,
         ];
         
         foreach ($units['data'] as $unit) {
+            if (!($unitTypes[$unit['cost_center_type']] ?? false)) {
+                continue;
+            }
+
             $unit = Unit::updateOrCreate(
                 ['unit_api_id' => $unit['unit_id']],
                 [
-                    'name' => $unit['unit_deskripsi'],
+                    'name' => $unit['cost_center_deskripsi'],
                     'unit_type_id' => $unitTypes[$unit['cost_center_type']] ?? 2,
                     'parent_id' => 0,
+                    'unit_deskripsi' => $unit['unit_deskripsi'] ?? null,
+                    'persubarea_sap' => $unit['persubarea_sap'] ?? null,
+                    'persubarea_deskripsi' => $unit['persubarea_deskripsi'] ?? null,
+                    'persubarea_type' => $unit['persubarea_type'] ?? null,
+                    'company_sap' => $unit['company_sap'] ?? null,
+                    'company_deskripsi' => $unit['company_deskripsi'] ?? null,
+                    'cost_center' => $unit['cost_center'] ?? null,
+                    'cost_center_deskripsi' => $unit['cost_center_deskripsi'] ?? null,
+                    'cost_center_abbrevation' => $unit['cost_center_abbrevation'] ?? null,
+                    'cost_center_type' => $unit['cost_center_type'] ?? null,
+                    'cost_center_parent' => $unit['cost_center_parent'] ?? null,
+                    'cost_center_parent_deskripsi' => $unit['cost_center_parent_deskripsi'] ?? null,
                 ]
             );
         }
