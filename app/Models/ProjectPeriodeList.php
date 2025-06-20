@@ -13,6 +13,7 @@ class ProjectPeriodeList extends Model
         'project_id',
         'periode_id',
         'unit_id',
+        'risk_limit',
         'skala_risiko',
         'level_risiko',
         'skala_risiko_residual',

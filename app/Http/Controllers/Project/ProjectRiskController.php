@@ -285,16 +285,13 @@ class ProjectRiskController extends BasicCRUDController
                         return $query->where('project_id', $project->id);
                     })
                 ],
+                'target_capaian_kinerja' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
                 'penilaian_efektifitas_kontrol' => 'required',
                 'perkiraan_waktu_mulai_terpapar_risiko' => 'required',
                 'perkiraan_waktu_selesai_terpapar_risiko' => 'required',
                 'penyebab_risiko' => 'required|array|min:1',
                 'penyebab_risiko.*' => 'required|string',
-                'master_kri_id' => 'required|array|min:1',
-                'master_kri_id.*' => 'required|exists:master_kri,id',
-                'kontrol_eksisting_id' => 'required|array|min:1',
-                'kontrol_eksisting_id.*' => 'required|exists:kontrol_eksistings,id',
             ]);
 
             $user = $request->user();
@@ -306,11 +303,6 @@ class ProjectRiskController extends BasicCRUDController
             $perkiraanWaktuTerpaparRisikoMulai = DateTime::createFromFormat('d/m/Y', $perkiraanWaktuMulaiTerpaparRisiko)->format('Y-m-d');
             $perkiraanWaktuTerpaparRisikoAkhir = DateTime::createFromFormat('d/m/Y', $perkiraanWaktuSelesaiTerpaparRisiko)->format('Y-m-d');
 
-            $data = $request->kontrol_eksisting_id; // Ambil data dari request
-
-            // Pastikan data adalah array sebelum mengubahnya menjadi string
-            $kontrolEksisting = is_array($data) ? implode(',', $data) : $data;
-            
             $toStore = [
                 'unit_type_id' => $user->unit_type_id,
                 'unit_id' => $user->unit_id,
@@ -318,6 +310,7 @@ class ProjectRiskController extends BasicCRUDController
                 'user_id' => $user->id,
                 'project_id' => $project->id,
                 'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
+                'target_capaian_kinerja' => $request->target_capaian_kinerja,
                 'project_periode_list_id' => $projectPeriodeList->id,
                 'deskripsi_peristiwa_risiko' => $request->deskripsi_peristiwa_risiko,
                 'jenis_kontrol_eksisting_id' => $request->jenis_kontrol_eksisting_id,
@@ -326,7 +319,7 @@ class ProjectRiskController extends BasicCRUDController
                 'perkiraan_waktu_terpapar_risiko_akhir' => $perkiraanWaktuTerpaparRisikoAkhir,
                 'kategori_risiko_id' => 0,
                 'jenis_risiko_id' => 0,
-                'kontrol_eksisting' => $kontrolEksisting,
+                'kontrol_eksisting' => '',
             ];
 
             $projectRisk = ProjectRisk::create($toStore);
@@ -340,26 +333,23 @@ class ProjectRiskController extends BasicCRUDController
                 ]);
             }
 
-            $masterKriObj = MasterKRI::whereIn('id', $request->master_kri_id)->get()->keyBy('id');
+            foreach ($request->key_risk_indicator as $kri) {
+                $kriData = [
+                    'kri' => $kri,
+                    'satuan_kri' => $request->satuan_kri[$kri] ?? '',
+                    'batas_aman' => $request->batas_aman[$kri] ?? '',
+                    'batas_waspada' => $request->batas_waspada[$kri] ?? '',
+                    'batas_bahaya' => $request->batas_bahaya[$kri] ?? '',
+                ];
 
-            foreach ($request->master_kri_id as $masterKriId) {
-                $kriObj = $masterKriObj[$masterKriId];
-                $projectRisk->kriProjects()->create([
-                    'kri_id' => $masterKriId,
-                    'kri' => $kriObj->kri,
-                    'satuan_kri' => $kriObj->satuan_kri,
-                    'batas_aman' => $kriObj->batas_aman,
-                    'batas_waspada' => $kriObj->batas_waspada,
-                    'batas_bahaya' => $kriObj->batas_bahaya,
-                ]);
+                $projectRisk->kriProjects()->create($kriData);
             }
 
-            // foreach ($request->kontrol_eksisting_id as $kontrolEksistingId) {
-            //     $kontrolEksistingObj = KontrolEksisting::findOrFail($kontrolEksistingId);
-            //     $projectRisk->kontrolEksistings()->create([
-            //         'kontrol_eksisting' => $kontrolEksistingObj->kontrol_eksisting,
-            //     ]);
-            // }
+            foreach ($request->kontrol_eksisting as $kontrolEksisting) {
+                $projectRisk->projectKontrolEksistings()->create([
+                    'kontrol_eksisting_desc' => $kontrolEksisting,
+                ]);
+            }
 
             if ($request->action === 'savenext') {
                 return [

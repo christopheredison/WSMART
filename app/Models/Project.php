@@ -162,6 +162,11 @@ class Project extends Model
         //$this->attributes['masa_pelaksanaan_end'] = ($dates[1] ?? null) ? \Carbon\Carbon::createFromFormat('d/m/Y', $dates[1]) : $this->attributes['masa_pelaksanaan_start'];
     }
 
+    public function projectPeriodeList()
+    {
+        return $this->hasOne(ProjectPeriodeList::class)->whereNull('periode_id');
+    }
+
     protected function displayMasaPelaksanaanStart(): Attribute
     {
         return Attribute::make(

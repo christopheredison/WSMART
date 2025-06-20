@@ -185,12 +185,6 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             return $projectRisk->peristiwaRisiko;
         })->flatten()->unique('id');
 
-        $tahun = $projectPeriode->periode->tahun;
-        $optionTahuns = [];
-        for ($i = $tahun; $i <= $tahun + 9; $i++) {
-            $optionTahuns[$i] = $i;
-        }
-
         $this->availableFilters = [
             'peristiwa_risiko_id' => [
                 'label' => 'Peristiwa Risiko',
@@ -215,21 +209,6 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                         3 => 'Monitoring Quarter 3',
                         4 => 'Monitoring Quarter 4',
                     ],
-                    '',
-                    [
-                        'class' => 'form-select',
-                    ]
-                ],
-                'handler' => function ($query, $key, $value) {
-                    // handled outside
-                },
-            ],
-            'tahun' => [
-                'label' => 'Tahun',
-                'type' => 'select',
-                'parameters' => [
-                    'tahun',
-                    $optionTahuns,
                     '',
                     [
                         'class' => 'form-select',

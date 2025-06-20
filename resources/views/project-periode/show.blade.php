@@ -5,7 +5,7 @@
             <div class="svg-icon svg-icon-secondary">
                 @include('partials.icon-tool')
             </div>
-            <h3 class="mb-0">Data Proyek {{ $projectPeriode->project->project_name }} Periode {{ $projectPeriode->periode->tahun }}</h3>
+            <h3 class="mb-0">Data Proyek {{ $projectPeriode->project->project_name }}</h3>
         </div>
     </div>
 
@@ -30,173 +30,14 @@
                             {{ Form::text('project_name', $projectPeriode->project->project_name, ['class' => 'form-control', 'readonly']) }}
                         </div>
                     </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Divisi</label>
-                        <div class="col-md-9">
-                            {{ Form::text('divisi', $projectPeriode->project->projectDivisi?->divisi_name, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Konstruksi Spesifik</label>
-                        <div class="col-md-9">
-                            {{ Form::text('industry_sector', $projectPeriode->project->projectSektor?->sektor_name, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Status Proyek</label>
-                        <div class="col-md-9">
-                            {{ Form::text('tender_status', $projectPeriode->project->tender_status ? __('project.tender_statuses.' . $projectPeriode->project->tender_status) : '', ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Jenis Proyek</label>
-                        <div class="col-md-9">
-                            {{ Form::text('project_type', $projectPeriode->project->projectType?->name, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Owner</label>
-                        <div class="col-md-9">
-                            {{ Form::text('owner', $projectPeriode->project->owner, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Kategori Owner</label>
-                        <div class="col-md-9">
-                            {{ Form::text('owner_category', $projectPeriode->project->owner_category ? __('project.owner_categories.' . $projectPeriode->project->owner_category) : '', ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Sumber Dana</label>
-                        <div class="col-md-9">
-                            {{ Form::text('funding_source', $projectPeriode->project->sumber_dana ? __('project.sumber_danas.' . $projectPeriode->project->sumber_dana) : '', ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Lokasi Proyek</label>
-                        <div class="col-md-9">
-                            {{ Form::text('project_location', $projectPeriode->project->projectLocation?->location, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Jenis Kontrak</label>
-                        <div class="col-md-9">
-                            {{ Form::text('jenis_kontrak', $projectPeriode->project->jenis_kontrak ? __('project.jenis_kontraks.' . $projectPeriode->project->jenis_kontrak) : '', ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Cara Pembayaran</label>
-                        <div class="col-md-9">
-                            {{ Form::text('cara_pembayaran', $projectPeriode->project->cara_pembayaran ? __('project.cara_pembayarans.' . $projectPeriode->project->cara_pembayaran) : '', ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Scope Pekerjaan</label>
-                        <div class="col-md-9">
-                            {{ Form::text('scope_pekerjaan', $projectPeriode->project->scope_pekerjaan ? __('project.scope_pekerjaans.' . $projectPeriode->project->scope_pekerjaan) : '', ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Nilai Kontrak - PPN (Rp)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('nk_ppn', $projectPeriode->project->nk_ppn, ['class' => 'form-control inputmask-general', 'readonly', 'step' => '0.01']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-md-0 mt-3">
-                        <label class="col-md-3">NK Addendum (Rp)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('nk', $projectPeriode->project->nk, ['class' => 'form-control inputmask-general', 'readonly', 'step' => '0.01']) }}
-                        </div>
-                    </div>
                 </div>
-                <div class="col-md-6">  
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Awal Masa Pelaksanaan</label>
+                <div class="col-md-6">
+                    <div class="row d-flex align-items-center mt-3 mt-md-0">
+                        <label class="col-md-3">Risk Limit</label>
                         <div class="col-md-9">
-                            {{ Form::text('masa_pelaksanaan_start', $projectPeriode->project->display_masa_pelaksanaan_start, ['class' => 'form-control', 'readonly']) }}
+                            {{ Form::text('risk_limit', $projectPeriode->risk_limit, ['class' => 'form-control inputmask-general', 'readonly']) }}
                         </div>
                     </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Akhir Masa Pelaksanaan</label>
-                        <div class="col-md-9">
-                            {{ Form::text('masa_pelaksanaan_end', $projectPeriode->project->display_masa_pelaksanaan_end, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    @if($projectPeriode->project->type==1)
-                    <div class="row d-flex align-items-center">
-                        <label class="col-md-3">RAPT (Rp)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('rapt', $projectPeriode->project->rapt, ['class' => 'form-control inputmask-general', 'readonly', 'step' => '0.01']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">RAPT (%)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('rapt_persentase', $projectPeriode->project->rapt_persentase, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    @else
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">RAPK Awal (Rp)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('rapk', $projectPeriode->project->rapk, ['class' => 'form-control inputmask-general', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">RAPK Awal (%)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('rapk_persentase', $projectPeriode->project->rapk_persentase, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">RAPK Hold I (Rp)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('rapk_0_10_rp', $projectPeriode->project->rapk_0_10_rp, ['class' => 'form-control inputmask-general', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">RAPK Hold I (%)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('rapk_0_10_persen', $projectPeriode->project->rapk_0_10_persen, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">RAPK Hold II (Rp)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('rapk_30_50_rp', $projectPeriode->project->rapk_30_50_rp, ['class' => 'form-control inputmask-general', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">RAPK Hold II (%)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('rapk_30_50_persen', $projectPeriode->project->rapk_30_50_persen, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">RAPK Hold III (Rp)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('rapk_70_90_rp', $projectPeriode->project->rapk_70_90_rp, ['class' => 'form-control inputmask-general', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">RAPK Hold III (%)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('rapk_70_90_persen', $projectPeriode->project->rapk_70_90_persen, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">RAPK Hold IV (Rp)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('rapk_100_rp', $projectPeriode->project->rapk_100_rp, ['class' => 'form-control inputmask-general', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">RAPK Hold IV (%)</label>
-                        <div class="col-md-9">
-                            {{ Form::text('rapk_100_persen', $projectPeriode->project->rapk_100_persen, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    @endif
                 </div>
             </div>
             <div class="mb-2 mt-4">
