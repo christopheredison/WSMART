@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Supports\ApiHC;
+use App\Supports\ApiWika;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -18,7 +19,19 @@ class Unit extends Model
         'unit_api_id',
         'unit_type_id',
         'name',
-        'parent_id'
+        'parent_id',
+        'unit_deskripsi',
+        'persubarea_sap',
+        'persubarea_deskripsi', 
+        'persubarea_type',
+        'company_sap',
+        'company_deskripsi',
+        'cost_center',
+        'cost_center_deskripsi',
+        'cost_center_abbrevation',
+        'cost_center_type',
+        'cost_center_parent',
+        'cost_center_parent_deskripsi'
     ];
 
     public const UNIT_TYPE_DIVISION = 1;
@@ -32,6 +45,7 @@ class Unit extends Model
             'page' => 1,
             'limit' => 999999,
             'key' => 'GZrmL5TH',
+            'cost_center_type' => 'Divisi',
         ]);
 
         if (!($units['data'] ?? [])) {
@@ -40,19 +54,91 @@ class Unit extends Model
 
         $unitTypes = [
             'Divisi' => self::UNIT_TYPE_DIVISION,
-            'Department' => self::UNIT_TYPE_DEPARTMENT,
-            'Project' => self::UNIT_TYPE_PROJECT,
+            // 'Department' => self::UNIT_TYPE_DEPARTMENT,
+            'Project' => self::UNIT_TYPE_PROJECT, // ambil dari api.wika
         ];
         
         foreach ($units['data'] as $unit) {
+            if (!($unitTypes[$unit['cost_center_type']] ?? false)) {
+                continue;
+            }
+
             $unit = Unit::updateOrCreate(
                 ['unit_api_id' => $unit['unit_id']],
                 [
-                    'name' => $unit['unit_deskripsi'],
-                    'unit_type_id' => $unitTypes[$unit['cost_center_type']] ?? 2,
+                    'name' => $unit['cost_center_deskripsi'],
+                    'unit_type_id' => $unitTypes[$unit['cost_center_type']],
                     'parent_id' => 0,
+                    'unit_deskripsi' => $unit['unit_deskripsi'] ?? null,
+                    'persubarea_sap' => $unit['persubarea_sap'] ?? null,
+                    'persubarea_deskripsi' => $unit['persubarea_deskripsi'] ?? null,
+                    'persubarea_type' => $unit['persubarea_type'] ?? null,
+                    'company_sap' => $unit['company_sap'] ?? null,
+                    'company_deskripsi' => $unit['company_deskripsi'] ?? null,
+                    'cost_center' => $unit['cost_center'] ?? null,
+                    'cost_center_deskripsi' => $unit['cost_center_deskripsi'] ?? null,
+                    'cost_center_abbrevation' => $unit['cost_center_abbrevation'] ?? null,
+                    'cost_center_type' => $unit['cost_center_type'] ?? null,
+                    'cost_center_parent' => $unit['cost_center_parent'] ?? null,
+                    'cost_center_parent_deskripsi' => $unit['cost_center_parent_deskripsi'] ?? null,
                 ]
             );
+        }
+
+        $projectUnits = collect($apiHC->apiRequest('GET', '/', [
+            'method' => 'get_assign_ccplace',
+            'page' => 1,
+            'limit' => 999999,
+            'key' => 'GZrmL5TH',
+            'cost_center_type' => 'Project',
+        ])['data'] ?? [])->keyBy('cost_center');
+
+        $projectDatas = (new ApiWika())->getProjects();
+        foreach ($projectDatas as $projectData) {
+            $projectUnit = $projectUnits[$projectData['profit_center']] ?? null;
+            if ($projectUnit) {
+                if (!($unitTypes[$projectUnit['cost_center_type']] ?? false)) {
+                    continue;
+                }
+
+                $unit = Unit::updateOrCreate(
+                    ['unit_api_id' => $projectUnit['unit_id']],
+                    [
+                        'name' => $projectUnit['cost_center_deskripsi'],
+                        'unit_type_id' => $unitTypes[$projectUnit['cost_center_type']],
+                        'parent_id' => 0,
+                        'unit_deskripsi' => $projectUnit['unit_deskripsi'] ?? null,
+                        'persubarea_sap' => $projectUnit['persubarea_sap'] ?? null,
+                        'persubarea_deskripsi' => $projectUnit['persubarea_deskripsi'] ?? null,
+                        'persubarea_type' => $projectUnit['persubarea_type'] ?? null,
+                        'company_sap' => $projectUnit['company_sap'] ?? null,
+                        'company_deskripsi' => $projectUnit['company_deskripsi'] ?? null,
+                        'cost_center' => $projectUnit['cost_center'] ?? null,
+                        'cost_center_deskripsi' => $projectUnit['cost_center_deskripsi'] ?? null,
+                        'cost_center_abbrevation' => $projectUnit['cost_center_abbrevation'] ?? null,
+                        'cost_center_type' => $projectUnit['cost_center_type'] ?? null,
+                        'cost_center_parent' => $projectUnit['cost_center_parent'] ?? null,
+                        'cost_center_parent_deskripsi' => $projectUnit['cost_center_parent_deskripsi'] ?? null,
+                    ]
+                );
+
+                $project =Project::updateOrCreate([
+                    'project_code' => $projectData['kode_spk'],
+                ], [
+                    'project_name' => $projectData['nama_spk_full'],
+                    'type' => Project::TYPE_HAS_RKB_RKN,
+                    'project_status' => 1,
+                    'nk' => 0,
+                    'meta' => $projectData,
+                ]);
+
+                ProjectPeriodeList::updateOrCreate([
+                    'project_id' => $project->id,
+                    'periode_id' => null,
+                ], [
+                    'unit_id' => $unit->id,
+                ]);
+            }
         }
     }
 

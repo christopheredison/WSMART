@@ -26,17 +26,15 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- <div class="row">
-                        <div class="col-12">
-                            <div class="divider mb-3 mb-md-5 mt-0">
-                                <div class="divider-text">
-                                    <h5 class="mb-0 ff-heading-sm">Periode Tahun {{ $periode->tahun }}</h5>
-                                </div>
+                    <div class="row g-3 gx-md-5">
+                        <div class="col-md-12">
+                            <div class="form-group d-lg-flex">
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko</label>
+                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
+                                    value="{{ old('target_capaian_kinerja', $projectRisk->target_capaian_kinerja) }}" placeholder="Sasaran Risiko" required></textarea>
                             </div>
                         </div>
-                    </div> -->
-                    <div class="row g-3 gx-md-5">
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Peristiwa Risiko</label>
                                 <input type="hidden" name="peristiwa_risiko_id" id="peristiwa_risiko" value="{{ old('peristiwa_risiko_id', $projectRisk->peristiwa_risiko_id) }}">
@@ -119,40 +117,32 @@
                             <div class="col-12 col-lg-11">
                                 <div class="row g-2">
                                     <div class="col-12">
-                                        <select name="master_kri_id[]" class="form-select">
-                                            <option value="">Pilih</option>
-                                            @foreach ($masterKris as $masterKri)
-                                                <option value="{{ $masterKri->id }}">{{ $masterKri->kri }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-12">
                                         <div class="form-group form-floating">
-                                            <input type="text" class="form-control" name="key_risk_indicator[]" disabled>
+                                            <input type="text" class="form-control" name="key_risk_indicator[]">
                                             <label for="key_risk_indicator_1">Key Risk Indicator</label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating">
-                                            <input type="text" class="form-control" name="satuan_kri[]" disabled>
+                                            <input type="text" class="form-control" name="satuan_kri[]">
                                             <label for="satuan_kri_1">Satuan KRI</label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
-                                            <input type="text" class="form-control border-success" name="batas_aman[]" disabled>
+                                            <input type="text" class="form-control border-success" name="batas_aman[]">
                                             <label for="batas_aman_1">Batas Aman</label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
-                                            <input type="text" class="form-control border-warning" name="batas_waspada[]" disabled>
+                                            <input type="text" class="form-control border-warning" name="batas_waspada[]">
                                             <label for="batas_waspada_1">Batas Waspada</label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
-                                            <input type="text" class="form-control border-danger" name="batas_bahaya[]" disabled>
+                                            <input type="text" class="form-control border-danger" name="batas_bahaya[]">
                                             <label for="batas_bahaya_1">Batas Bahaya</label>
                                         </div>
                                     </div>
@@ -203,41 +193,24 @@
                                 @endforeach
                             </select>
 
-                            <div class="mt-3 text-end">
-                                <button type="button" class="btn btn-link text-primary" id="refresh-kontrol-eksisting-btn">Ambil ulang data</button>
+                            <div id="kontrol-eksisting-container">
+                                @foreach ($projectRisk->projectKontrolEksistings as $kontrolEksisting)
+                                <div class="input-group mt-3">
+                                    <input type="text" class="form-control" name="kontrol_eksisting[]" value="{{ $kontrolEksisting->kontrol_eksisting_desc }}" placeholder="Masukkan Kontrol Eksisting">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="$(this).closest('.input-group').remove();">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                </div>
+                                @endforeach
                             </div>
-                            <table id="table-kontrol" class="table table-bordered table-hover table-responsive">
-                                <thead>
-                                    <tr>
-                                        <th class="col-6">#</th>
-                                        <th class="col-6">Eksisting Kontrol</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($kontrolEksistings as $kontrolEksisting)
-                                        <tr>
-                                            <td>
-                                                {{ $loop->iteration }}
-                                                <input type="text" name="kontrol_eksisting_id[]" value="{{ $kontrolEksisting->id }}"
-                                                    hidden>
-                                            </td>
-                                            <td>{{ $kontrolEksisting->kontrol_eksisting }}</td>
-                                            <td>
-                                                <button type="button" class="btn btn-icon-danger h-100"
-                                                    onclick="$(this).closest('tr').remove(); if ($('#table-kontrol tbody tr').length == 0) $('.table-empty').show();">
-                                                    <i class="bx bx-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                                <tfoot class="table-empty" style="{{ count($kontrolEksistings) > 0 ? 'display: none;' : '' }}">
-                                    <tr>
-                                        <td colspan="3" class="text-center">Data tidak tersedia</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                            <div class="row">
+                                <div class="col-auto d-flex ms-auto mt-3">
+                                    <button type="button" class="btn btn-outline-secondary p-2" id="add-kontrol-eksisting"
+                                        data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Tambah Kontrol Eksisting">
+                                        <i class='bx bx-plus fs-5'></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6 col-lg-7 col-xxl-6">
                             <div class="form-group d-lg-flex mb-4">
@@ -342,40 +315,32 @@
                     <div class="col-12 col-lg-11">
                         <div class="row g-2">
                             <div class="col-12">
-                                <select name="master_kri_id[]" class="form-select">
-                                    <option value="">Pilih</option>
-                                    @foreach ($masterKris as $masterKri)
-                                        <option value="{{ $masterKri->id }}">{{ $masterKri->kri }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-12">
                                 <div class="form-group form-floating">
-                                    <input type="text" class="form-control" name="key_risk_indicator[]" disabled>
+                                    <input type="text" class="form-control" name="key_risk_indicator[]">
                                     <label for="key_risk_indicator_1">Key Risk Indicator</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating">
-                                    <input type="text" class="form-control" name="satuan_kri[]" disabled>
+                                    <input type="text" class="form-control" name="satuan_kri[]">
                                     <label for="satuan_kri_1">Satuan KRI</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
-                                    <input type="text" class="form-control border-success" name="batas_aman[]" disabled>
+                                    <input type="text" class="form-control border-success" name="batas_aman[]">
                                     <label for="batas_aman_1">Batas Aman</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
-                                    <input type="text" class="form-control border-warning" name="batas_waspada[]" disabled>
+                                    <input type="text" class="form-control border-warning" name="batas_waspada[]">
                                     <label for="batas_waspada_1">Batas Waspada</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
-                                    <input type="text" class="form-control border-danger" name="batas_bahaya[]" disabled>
+                                    <input type="text" class="form-control border-danger" name="batas_bahaya[]">
                                     <label for="batas_bahaya_1">Batas Bahaya</label>
                                 </div>
                             </div>
@@ -594,10 +559,18 @@
                     } else if (key === 'kri_projects') {
                         value.forEach((kri, index) => {
                             if (index === 0) {
-                                $(`[name="master_kri_id[]"]`).val(kri.kri_id).change();
+                                $(`[name="key_risk_indicator[]"]`).val(kri.kri);
+                                $(`[name="satuan_kri[]"]`).val(kri.satuan_kri);
+                                $(`[name="batas_aman[]"]`).val(kri.batas_aman);
+                                $(`[name="batas_waspada[]"]`).val(kri.batas_waspada);
+                                $(`[name="batas_bahaya[]"]`).val(kri.batas_bahaya);
                             } else {
                                 $('#add-column-kri').click();
-                                $(`[name="master_kri_id[]"]`).last().val(kri.kri_id).change();
+                                $(`[name="key_risk_indicator[]"]`).last().val(kri.kri);
+                                $(`[name="satuan_kri[]"]`).last().val(kri.satuan_kri);
+                                $(`[name="batas_aman[]"]`).last().val(kri.batas_aman);
+                                $(`[name="batas_waspada[]"]`).last().val(kri.batas_waspada);
+                                $(`[name="batas_bahaya[]"]`).last().val(kri.batas_bahaya);
                             }
                         });
                     } else if (key === 'kontrol_eksisting_projects') {
@@ -627,6 +600,19 @@
                 }
             }
         }
+
+        $('#add-kontrol-eksisting').click(function() {
+            const html = `
+                <div class="input-group mt-3">
+                    <input type="text" class="form-control" name="kontrol_eksisting[]" placeholder="Masukkan Kontrol Eksisting">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="$(this).closest('.input-group').remove();">
+                        <i class="bx bx-trash"></i>
+                    </button>
+                </div>
+            `;
+
+            $('#kontrol-eksisting-container').append(html);
+        });
     });
 </script>
 @endpush

@@ -25,15 +25,6 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="divider mb-3 mb-md-5 mt-0">
-                                <div class="divider-text">
-                                    <h5 class="mb-0 ff-heading-sm">Periode Tahun {{ $periode->tahun }}</h5>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <div class="row g-3 gx-md-5">
                         <div class="col-md-6">
                             <div class="form-group d-lg-flex">
