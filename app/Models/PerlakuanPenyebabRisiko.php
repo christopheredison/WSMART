@@ -116,13 +116,11 @@ class PerlakuanPenyebabRisiko extends Model
     public function getLastMonitoringAttribute()
     {
         $quarter = request('quarter');
-        $tahun = request('tahun');
 
         return $this->perlakuanPenyebabMonitorings
-            ->filter(function ($item) use ($quarter, $tahun) {
+            ->filter(function ($item) use ($quarter) {
                 return $item->projectMonitoring
-                    && $item->projectMonitoring->quarter == $quarter
-                    && $item->projectMonitoring->tahun == $tahun;
+                    && $item->projectMonitoring->quarter == $quarter;
             })
             ->sortByDesc('id')
             ->first();

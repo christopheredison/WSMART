@@ -708,12 +708,7 @@ class ProjectRiskController extends BasicCRUDController
                 ->count();
             $sum_risk = $sum_risk + 1;
             
-            if ($risk_tolerance != 0 && $sum_risk != 0) {
-                $risk_limit = $risk_tolerance/$sum_risk;
-            }
-            else{
-                $risk_limit = $risk_tolerance;
-            }
+            $risk_limit = $projectPeriodeList->risk_limit;
 
             $skala_dampak = $this->hitungSkalaDampak($nilai_dampak, $risk_limit);
             $skala_dampak_residual = $this->hitungSkalaDampak($nilai_dampak_residual, $risk_limit);
