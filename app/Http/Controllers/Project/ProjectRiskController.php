@@ -590,12 +590,8 @@ class ProjectRiskController extends BasicCRUDController
         else{
             $risk_tolerance = 0;
         }
-        if ($risk_tolerance != 0 && $sum_risk != 0) {
-            $risk_limit = $risk_tolerance/$sum_risk;
-        }
-        else{
-            $risk_limit = $risk_tolerance;
-        }
+
+        $risk_limit = $projectPeriodeList->risk_limit;
 
         return view('project-risk.analisa', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'skalaProbabilitas', 'riskMaps', 'analisa', 'areas', 'groupedAreas', 'risk_tolerance', 'risk_limit'));
     }
@@ -619,9 +615,9 @@ class ProjectRiskController extends BasicCRUDController
             //'area_dampak' => 'required',
             'kategori_dampak' => 'required|in:' . ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF . ',' . ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF,
             //'deskripsi_dampak' => 'required',
-            'skala_dampak_hidden' => 'required|numeric',
+            // 'skala_dampak_hidden' => 'required|numeric',
             'nilai_probabilitas' => 'required|numeric',
-            'skala_dampak_residual_hidden' => 'required|numeric|lte:skala_dampak_hidden',
+            // 'skala_dampak_residual_hidden' => 'required|numeric|lte:skala_dampak_hidden',
             'nilai_probabilitas_residual' => 'required|numeric|lte:nilai_probabilitas',
         ]);
 
