@@ -45,17 +45,15 @@ class KRIProject extends Model
     public function getLastMonitoringAttribute()
     {
         $quarter = request()->input('quarter');
-        $tahun = request()->input('tahun');
 
         return $this->kriProjectMonitorings
-            ->filter(function ($item) use ($quarter, $tahun) {
+            ->filter(function ($item) use ($quarter) {
                 // Antisipasi jika relasi tidak diload
                 if (!$item->relationLoaded('projectMonitoring')) {
                     $item->load('projectMonitoring');
                 }
 
-                return optional($item->projectMonitoring)->quarter == $quarter &&
-                    optional($item->projectMonitoring)->tahun == $tahun;
+                return optional($item->projectMonitoring)->quarter == $quarter;
             })
             ->sortByDesc('id')
             ->first();

@@ -19,7 +19,7 @@ class ProjectRisk extends Model
         'jenis_risiko_id', //berelasi ke model JenisRisiko (table jenis_risikos)
         'peristiwa_risiko_id', //berelasi ke model PeristiwaRisiko (table peristiwa_risikos)
         'project_periode_list_id', //berelasi ke model ProjectPeriodeList (table project_periode_lists)
-        'target_capaian_kinerja', //berelasi ke model Tck (table tcks)
+        'target_capaian_kinerja', //berelasi ke model Tck (table tcks) -> sudah diupdate jadi text
         'rencana_kegiatan',
         'deskripsi_peristiwa_risiko',
         'type',
@@ -100,11 +100,6 @@ class ProjectRisk extends Model
         return $this->belongsTo(PeristiwaRisiko::class);
     }
 
-    public function tck()
-    {
-        return $this->belongsTo(Tck::class, 'target_capaian_kinerja');
-    }
-
     public function jenisKontrolEksisting()
     {
         return $this->belongsTo(JenisKontrolEksisting::class);
@@ -163,6 +158,11 @@ class ProjectRisk extends Model
     public function projectRiskMonitorings()
     {
         return $this->hasMany(ProjectRiskMonitoring::class, 'risiko_id');
+    }
+
+    public function projectKontrolEksistings()
+    {
+        return $this->hasMany(ProjectKontrolEksisting::class, 'project_risk_id');
     }
 
     public function getPerkiraanWaktuTerpaparRisikoAttribute()

@@ -32,7 +32,7 @@
                 <div class="card-body">
                     <i class='bx bx-alarm-exclamation fs-1 mb-3 text-white'></i>
                     <h4>Periode Monitoring</h4>
-                    <h3 class="mb-0">Quarter {{ $quarter }} - {{ $tahun }} </h3>
+                    <h3 class="mb-0">Quarter {{ $quarter }}</h3>
                     <input type="hidden" name="periode_monitoring" value="{{ $quarter }}">
                 </div>
             </div>
@@ -270,83 +270,39 @@
                             </thead>
                             <tbody>
                                 @foreach ($penyebabRisikoProjects as $penyebabRisiko)
-                                    @php 
-                                        $rowSpan = $penyebabRisiko->perlakuanPenyebabRisiko->count() ?: 1;
-                                        $firstPerlakuan = $penyebabRisiko->perlakuanPenyebabRisiko->first();
-                                    @endphp
-                                    <tr data-id="{{ $firstPerlakuan?->id }}">
-                                        <td rowspan="{{ $rowSpan }}">{{ $loop->iteration }}</td>
-                                        <td rowspan="{{ $rowSpan }}">{{ $penyebabRisiko->penyebab_risiko ?: '-' }}</td>
-                                        <td>{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->rencana_perlakuan_risiko ?: '-' }}</td>
-                                        <td><span class="inputmask-fixed">{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->biaya_perlakuan_risiko ?: '-' }}</span></td>
-                                        <!-- <td class="display-progress inputmask-fixed">{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->{'progress_rencana_perlakuan_risiko_q' . $quarter } ?: '-' }}</td>
-                                        <td class="display-biaya inputmask-fixed">{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->{'realisasi_biaya_perlakuan_risiko_q' . $quarter } ?: '-' }}</td> -->
-                                        <td class="display-progress inputmask-fixed">
-                                            {{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->last_monitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
-                                        </td>
-                                        <td class="display-biaya inputmask-fixed">
-                                            {{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->last_monitoring?->realisasi_biaya_perlakuan_risiko ?? '-' }}
-                                        </td>
-                                        <td class="display-timeline">{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0]?? null)?->last_monitoring?->waktu_perlakuan_risiko?: '-' }}</td>
-                                        <td style="white-space:nowrap" class="column-action">
-                                            @if(($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null))
-                                            <div class="d-none dom-saved">
-                                                <div class="upload-container">
+                                    @foreach ($penyebabRisiko->perlakuanPenyebabRisiko as $perlakuan)
+                                        @if ($loop->index == 0)
+                                        <tr data-id="{{ $perlakuan?->id }}">
+                                            <td rowspan="{{ $penyebabRisiko->perlakuanPenyebabRisiko->count() }}">{{ $loop->iteration }}</td>
+                                            <td rowspan="{{ $penyebabRisiko->perlakuanPenyebabRisiko->count() }}">{{ $penyebabRisiko->penyebab_risiko ?: '-' }}</td>        
+                                        @else
+                                        <tr data-id="{{ $perlakuan->id }}">
+                                        @endif
+                                            <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
+                                            <td><span class="inputmask-fixed">{{ $perlakuan->biaya_perlakuan_risiko ?: '-' }}</span></td>
+                                            <td class="display-progress inputmask-fixed">{{ $perlakuan->{'progress_rencana_perlakuan_risiko_q' . $quarter } ?: '-' }}</td>
+                                            <td class="display-biaya inputmask-fixed">{{ $perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter } ?: '-' }}</td>
+                                            <td class="display-timeline">{{ $perlakuan?->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
+                                            <td style="white-space:nowrap" class="column-action">
+                                                <div class="d-none dom-saved">
+                                                    <div class="upload-container">
+                                                    </div>
+                                                    <input type="textarea" class="input-file-description" name="document_description_{{ $perlakuan->id }}" id="deskripsi_perlakuan_risiko_{{ $perlakuan->id }}">
                                                 </div>
-                                                <input type="textarea" class="input-file-description" name="document_description_{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->id }}" id="deskripsi_perlakuan_risiko_{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->id }}">
-                                            </div>
-                                            @endif
-                                            {{-- <a href="javascript:void(0)" class="hover-underline px-1 btn-action" data-action="update-realisasi" data-id="{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->id }}">Update Realisasi</a> --}}
-                                            <div class="text-center">
-                                                <a href="javascript:void(0)" 
-                                                class="btn-input-icon btn-action" 
-                                                data-action="update-realisasi" 
-                                                data-bs-toggle="tooltip"
-                                                title="Update Realisasi"
-                                                data-id="{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->id }}">
-                                                    <span class="bx bx-edit-alt text-primary"></span>
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @if ($penyebabRisiko->perlakuanPenyebabRisiko->count() > 1)
-                                        @foreach ($penyebabRisiko->perlakuanPenyebabRisiko as $perlakuan)
-                                            @if ($loop->index == 0)
-                                                @continue
-                                            @endif
-                                            <tr data-id="{{ $perlakuan->id }}">
-                                                <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
-                                                <td><span class="inputmask-fixed">{{ $perlakuan->biaya_perlakuan_risiko ?: '-' }}</span></td>
-                                                <!-- <td class="display-progress inputmask-fixed">{{ $perlakuan->{'progress_rencana_perlakuan_risiko_q' . $quarter } ?: '-' }}</td>
-                                                <td class="display-biaya inputmask-fixed">{{ $perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter } ?: '-' }}</td> -->
-                                                <td class="display-progress inputmask-fixed">
-                                                    {{ $perlakuan->last_monitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
-                                                </td>
-                                                <td class="display-biaya inputmask-fixed">
-                                                    {{ $perlakuan?->last_monitoring?->realisasi_biaya_perlakuan_risiko ?? '-' }}
-                                                </td>
-                                                <td class="display-timeline">{{ $perlakuan?->last_monitoring?->waktu_perlakuan_risiko?: '-' }}</td>
-                                                <td style="white-space:nowrap" class="column-action">
-                                                    <div class="d-none dom-saved">
-                                                        <div class="upload-container">
-                                                        </div>
-                                                        <input type="textarea" class="input-file-description" name="document_description_{{ $perlakuan->id }}" id="deskripsi_perlakuan_risiko_{{ $perlakuan->id }}">
-                                                    </div>
-                                                    {{-- <a href="javascript:void(0)" class="hover-underline px-1 btn-action" data-action="update-realisasi" data-id="{{ $perlakuan->id }}">Update Realisasi</a> --}}
-                                                    <div class="text-center">
-                                                        <a href="javascript:void(0)" 
-                                                        class="btn-input-icon btn-action" 
-                                                        data-action="update-realisasi" 
-                                                        data-bs-toggle="tooltip"
-                                                        title="Update Realisasi"
-                                                        data-id="{{ $perlakuan->id }}">
-                                                            <span class="bx bx-edit-alt text-primary"></span>
-                                                        </a>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    @endif
+                                                {{-- <a href="javascript:void(0)" class="hover-underline px-1 btn-action" data-action="update-realisasi" data-id="{{ $perlakuan->id }}">Update Realisasi</a> --}}
+                                                <div class="text-center">
+                                                    <a href="javascript:void(0)" 
+                                                    class="btn-input-icon btn-action" 
+                                                    data-action="update-realisasi" 
+                                                    data-bs-toggle="tooltip"
+                                                    title="Update Realisasi"
+                                                    data-id="{{ $perlakuan->id }}">
+                                                        <span class="bx bx-edit-alt text-primary"></span>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforeach
                                 @endforeach
 
                                 @if($penyebabRisikoProjects->isEmpty())
@@ -633,7 +589,6 @@ $(document).ready(function() {
             formData.append('perlakuan_penyebab_risikos', JSON.stringify(perlakuanPenyebabRisikos));
             formData.append('kri_projects', JSON.stringify(kriProjects));
             formData.append('quarter', quarter);
-            formData.append('tahun', '{{ $tahun }}');
             formData.append('_method', 'PUT');
             $.ajax({
                 url: '{{ route('projects.monitorings.update', ['project' => request()->route('project'), 'monitoring' => request()->route('monitoring')]) }}',
@@ -675,12 +630,8 @@ $(document).ready(function() {
             $('#modalUpdateKri input[name="batas_aman"]').val(kriProject.batas_aman);
             $('#modalUpdateKri input[name="batas_waspada"]').val(kriProject.batas_waspada);
             $('#modalUpdateKri input[name="batas_bahaya"]').val(kriProject.batas_bahaya);
-            // $('#modalUpdateKri input[name="nilai_kri"]').val(kriProject['nilai_kri_terkini_q' + quarter]);
-            // $('#modalUpdateKri input[name="status_kri"]').val(kriProject['status_kri_terkini_q' + quarter]);
-            //$('#modalUpdateKri input[name="nilai_kri"]').val(latestMonitoring?.nilai_kri_terkini ?? '');
-            //$('#modalUpdateKri input[name="status_kri"]').val(latestMonitoring?.status_kri_terkini ?? '');
-            $('#modalUpdateKri input[name="nilai_kri"]').val('');
-            $('#modalUpdateKri input[name="status_kri"]').val('');
+            $('#modalUpdateKri input[name="nilai_kri"]').val(kriProject['nilai_kri_terkini_q' + quarter]);
+            $('#modalUpdateKri :input[name="status_kri"]').val(kriProject['status_kri_terkini_q' + quarter]);
             $('#modalUpdateKri').modal('show');
         } else if (action === 'update-realisasi') {
             const perlakuanPenyebab = perlakuanPenyebabRisikos[$(this).data('id')];
@@ -695,23 +646,18 @@ $(document).ready(function() {
             $('#modalUpdateRealisasi :input[name="rencana_perlakuan_risiko"]').val(perlakuanPenyebab.rencana_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="biaya_perlakuan_risiko"]').val(perlakuanPenyebab.biaya_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="pic"]').val(perlakuanPenyebab.pic);
-            // $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab['realisasi_biaya_perlakuan_risiko_q' + quarter]);
-            // $('#modalUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val(perlakuanPenyebab['progress_rencana_perlakuan_risiko_q' + quarter]);
-            $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val('');
-            $('#modalUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val('');
-            //$('#modalUpdateRealisasi :input[name="jenis_program_rkap"]').val(perlakuanPenyebab.jenis_program_rkap);
-            // $('#modalUpdateRealisasi :input[name="jenis_program_rkap_id"]').val(perlakuanPenyebab.jenis_program_rkap_id);
-            // $('#modalUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val(perlakuanPenyebab.deskripsi_perlakuan_risiko);
-            // if (perlakuanPenyebab.timeline_perlakuan_risiko?.length === 2) {
-            //     $("#timelineInput").data('_flatpickr').setDate(perlakuanPenyebab.timeline_perlakuan_risiko[0]);
-            // } else if (perlakuanPenyebab.timeline_perlakuan_risiko) {
-            //     $("#timelineInput").data('_flatpickr').setDate(perlakuanPenyebab.timeline_perlakuan_risiko);
-            // } else {
-            //     $("#timelineInput").data('_flatpickr').clear();
-            // }
-            $('#modalUpdateRealisasi :input[name="jenis_program_rkap_id"]').val('');
-            $('#modalUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val('');
-            $("#timelineInput").data('_flatpickr').clear();
+            $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab['realisasi_biaya_perlakuan_risiko_q' + quarter]);
+            $('#modalUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val(perlakuanPenyebab['progress_rencana_perlakuan_risiko_q' + quarter]);
+            $('#modalUpdateRealisasi :input[name="jenis_program_rkap"]').val(perlakuanPenyebab.jenis_program_rkap);
+            $('#modalUpdateRealisasi :input[name="jenis_program_rkap_id"]').val(perlakuanPenyebab.jenis_program_rkap_id);
+            $('#modalUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val(perlakuanPenyebab.deskripsi_perlakuan_risiko);
+            if (perlakuanPenyebab.timeline_perlakuan_risiko?.length === 2) {
+                $("#timelineInput").data('_flatpickr').setDate(perlakuanPenyebab.timeline_perlakuan_risiko[0]);
+            } else if (perlakuanPenyebab.timeline_perlakuan_risiko) {
+                $("#timelineInput").data('_flatpickr').setDate(perlakuanPenyebab.timeline_perlakuan_risiko);
+            } else {
+                $("#timelineInput").data('_flatpickr').clear();
+            }
             $('#modalUpdateRealisasi').modal('show');
 
             const tableDocument = $('#modalUpdateRealisasi .table-dokumen');

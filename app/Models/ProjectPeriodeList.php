@@ -13,6 +13,7 @@ class ProjectPeriodeList extends Model
         'project_id',
         'periode_id',
         'unit_id',
+        'risk_limit',
         'skala_risiko',
         'level_risiko',
         'skala_risiko_residual',
@@ -55,16 +56,6 @@ class ProjectPeriodeList extends Model
 
         $currentData = [];
 
-        $tahunMonitorings = $this->projectRisks->pluck('projectRiskMonitorings')->flatten()->pluck('tahun')->unique()->toArray();
-        $tahunMonitorings[] = $this->periode->tahun;
-        sort($tahunMonitorings);
-        $minTahun = min($tahunMonitorings);
-        $maxTahun = max($tahunMonitorings);
-        $tahunMonitorings = [];
-        for ($tahun = $minTahun; $tahun <= $maxTahun; $tahun++) {
-            $tahunMonitorings[] = $tahun;
-        }
-
         // inherent
         $avg = $this->projectRisks->avg('skala_risiko');
         if (!is_null($avg)) {
@@ -87,40 +78,35 @@ class ProjectPeriodeList extends Model
 
         foreach ($this->projectRisks as $projectRisk) {
             $currentNilai = $projectRisk->skala_risiko;
-            foreach ($tahunMonitorings as $tahun) {
-                $projectRiskMonitorings = $projectRisk->projectRiskMonitorings->where('tahun', $tahun);
-                for ($i = 1; $i <= 4; $i++) {
-                    if ($newNilai = $projectRiskMonitorings->where('quarter', $i)->first()?->skala_risiko) {
-                        $currentNilai = $newNilai;
-                    }
-
-                    $currentData[$tahun]['risks'][$projectRisk->id]['nilai_q' . $i] = $currentNilai;
+            for ($i = 1; $i <= 4; $i++) {
+                if ($newNilai = $projectRisk->projectRiskMonitorings->where('quarter', $i)->first()?->skala_risiko) {
+                    $currentNilai = $newNilai;
                 }
+
+                $currentData['risks'][$projectRisk->id]['nilai_q' . $i] = $currentNilai;
             }
         }
 
-        foreach ($currentData as &$dataTahunan) {
-            $skalaRisikoQ1 = round(collect($dataTahunan['risks'])->avg('nilai_q1'));
-            $levelRisikoQ1 = $riskmaps[$skalaRisikoQ1];
-            $skalaRisikoQ2 = round(collect($dataTahunan['risks'])->avg('nilai_q2'));
-            $levelRisikoQ2 = $riskmaps[$skalaRisikoQ2];
-            $skalaRisikoQ3 = round(collect($dataTahunan['risks'])->avg('nilai_q3'));
-            $levelRisikoQ3 = $riskmaps[$skalaRisikoQ3];
-            $skalaRisikoQ4 = round(collect($dataTahunan['risks'])->avg('nilai_q4'));
-            $levelRisikoQ4 = $riskmaps[$skalaRisikoQ4];
+        $skalaRisikoQ1 = round(collect($currentData['risks'])->avg('nilai_q1'));
+        $levelRisikoQ1 = $riskmaps[$skalaRisikoQ1];
+        $skalaRisikoQ2 = round(collect($currentData['risks'])->avg('nilai_q2'));
+        $levelRisikoQ2 = $riskmaps[$skalaRisikoQ2];
+        $skalaRisikoQ3 = round(collect($currentData['risks'])->avg('nilai_q3'));
+        $levelRisikoQ3 = $riskmaps[$skalaRisikoQ3];
+        $skalaRisikoQ4 = round(collect($currentData['risks'])->avg('nilai_q4'));
+        $levelRisikoQ4 = $riskmaps[$skalaRisikoQ4];
 
-            $dataTahunan['summary'] = [
-                'skala_risiko_q1' => $skalaRisikoQ1,
-                'level_risiko_q1' => $levelRisikoQ1,
-                'skala_risiko_q2' => $skalaRisikoQ2,
-                'level_risiko_q2' => $levelRisikoQ2,
-                'skala_risiko_q3' => $skalaRisikoQ3,
-                'level_risiko_q3' => $levelRisikoQ3,
-                'skala_risiko_q4' => $skalaRisikoQ4,
-                'level_risiko_q4' => $levelRisikoQ4,
-            ];
-        }
-        
+        $currentData['summary'] = [
+            'skala_risiko_q1' => $skalaRisikoQ1,
+            'level_risiko_q1' => $levelRisikoQ1,
+            'skala_risiko_q2' => $skalaRisikoQ2,
+            'level_risiko_q2' => $levelRisikoQ2,
+            'skala_risiko_q3' => $skalaRisikoQ3,
+            'level_risiko_q3' => $levelRisikoQ3,
+            'skala_risiko_q4' => $skalaRisikoQ4,
+            'level_risiko_q4' => $levelRisikoQ4,
+        ];
+
         $this->update([
             'skala_risiko' => $skalaRisiko ?? null,
             'level_risiko' => $levelRisiko ?? null,
@@ -128,8 +114,6 @@ class ProjectPeriodeList extends Model
             'level_risiko_residual' => $levelRisikoResidual ?? null,
             'additional_data' => [
                 'data_risiko' => $currentData,
-                'min_year' => (int) $minTahun,
-                'max_year' => (int) $maxTahun,
             ],
         ]);
     }

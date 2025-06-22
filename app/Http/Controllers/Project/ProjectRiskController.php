@@ -274,7 +274,6 @@ class ProjectRiskController extends BasicCRUDController
         }
 
         $project = $projectPeriodeList->project;
-        $periode = Periode::where('status','active')->first();
 
         if ($request->action === 'save' || $request->action === 'savenext') {
             $request->validate([
@@ -285,16 +284,13 @@ class ProjectRiskController extends BasicCRUDController
                         return $query->where('project_id', $project->id);
                     })
                 ],
+                'target_capaian_kinerja' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
                 'penilaian_efektifitas_kontrol' => 'required',
                 'perkiraan_waktu_mulai_terpapar_risiko' => 'required',
                 'perkiraan_waktu_selesai_terpapar_risiko' => 'required',
                 'penyebab_risiko' => 'required|array|min:1',
                 'penyebab_risiko.*' => 'required|string',
-                'master_kri_id' => 'required|array|min:1',
-                'master_kri_id.*' => 'required|exists:master_kri,id',
-                'kontrol_eksisting_id' => 'required|array|min:1',
-                'kontrol_eksisting_id.*' => 'required|exists:kontrol_eksistings,id',
             ]);
 
             $user = $request->user();
@@ -306,18 +302,14 @@ class ProjectRiskController extends BasicCRUDController
             $perkiraanWaktuTerpaparRisikoMulai = DateTime::createFromFormat('d/m/Y', $perkiraanWaktuMulaiTerpaparRisiko)->format('Y-m-d');
             $perkiraanWaktuTerpaparRisikoAkhir = DateTime::createFromFormat('d/m/Y', $perkiraanWaktuSelesaiTerpaparRisiko)->format('Y-m-d');
 
-            $data = $request->kontrol_eksisting_id; // Ambil data dari request
-
-            // Pastikan data adalah array sebelum mengubahnya menjadi string
-            $kontrolEksisting = is_array($data) ? implode(',', $data) : $data;
-            
             $toStore = [
                 'unit_type_id' => $user->unit_type_id,
                 'unit_id' => $user->unit_id,
-                'periode_id' => $periode->id,
+                'periode_id' => 0,
                 'user_id' => $user->id,
                 'project_id' => $project->id,
                 'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
+                'target_capaian_kinerja' => $request->target_capaian_kinerja,
                 'project_periode_list_id' => $projectPeriodeList->id,
                 'deskripsi_peristiwa_risiko' => $request->deskripsi_peristiwa_risiko,
                 'jenis_kontrol_eksisting_id' => $request->jenis_kontrol_eksisting_id,
@@ -326,7 +318,7 @@ class ProjectRiskController extends BasicCRUDController
                 'perkiraan_waktu_terpapar_risiko_akhir' => $perkiraanWaktuTerpaparRisikoAkhir,
                 'kategori_risiko_id' => 0,
                 'jenis_risiko_id' => 0,
-                'kontrol_eksisting' => $kontrolEksisting,
+                'kontrol_eksisting' => '',
             ];
 
             $projectRisk = ProjectRisk::create($toStore);
@@ -340,26 +332,23 @@ class ProjectRiskController extends BasicCRUDController
                 ]);
             }
 
-            $masterKriObj = MasterKRI::whereIn('id', $request->master_kri_id)->get()->keyBy('id');
+            foreach ($request->key_risk_indicator as $idx => $kri) {
+                $kriData = [
+                    'kri' => $kri,
+                    'satuan_kri' => $request->satuan_kri[$idx] ?? '',
+                    'batas_aman' => $request->batas_aman[$idx] ?? '',
+                    'batas_waspada' => $request->batas_waspada[$idx] ?? '',
+                    'batas_bahaya' => $request->batas_bahaya[$idx] ?? '',
+                ];
 
-            foreach ($request->master_kri_id as $masterKriId) {
-                $kriObj = $masterKriObj[$masterKriId];
-                $projectRisk->kriProjects()->create([
-                    'kri_id' => $masterKriId,
-                    'kri' => $kriObj->kri,
-                    'satuan_kri' => $kriObj->satuan_kri,
-                    'batas_aman' => $kriObj->batas_aman,
-                    'batas_waspada' => $kriObj->batas_waspada,
-                    'batas_bahaya' => $kriObj->batas_bahaya,
-                ]);
+                $projectRisk->kriProjects()->create($kriData);
             }
 
-            // foreach ($request->kontrol_eksisting_id as $kontrolEksistingId) {
-            //     $kontrolEksistingObj = KontrolEksisting::findOrFail($kontrolEksistingId);
-            //     $projectRisk->kontrolEksistings()->create([
-            //         'kontrol_eksisting' => $kontrolEksistingObj->kontrol_eksisting,
-            //     ]);
-            // }
+            foreach ($request->kontrol_eksisting as $kontrolEksisting) {
+                $projectRisk->projectKontrolEksistings()->create([
+                    'kontrol_eksisting_desc' => $kontrolEksisting,
+                ]);
+            }
 
             if ($request->action === 'savenext') {
                 return [
@@ -382,7 +371,7 @@ class ProjectRiskController extends BasicCRUDController
             $key = $request->draft_key ?: uniqid();
             $data = $request->except('_token', 'draft_key');
 
-            $data['periode_id'] = $periode->id;
+            $data['periode_id'] = 0;
             $data['user_id'] = $request->user()->id;
             $data['unit_id'] = $request->user()->unit_id;
             $data['unit_type_id'] = $request->user()->unit_type_id;
@@ -413,7 +402,6 @@ class ProjectRiskController extends BasicCRUDController
         }
 
         $project = $projectPeriodeList->project;
-        $periode = $projectPeriodeList->periode;
 
         $peristiwaRisikos = PeristiwaRisiko::get();
 
@@ -425,7 +413,7 @@ class ProjectRiskController extends BasicCRUDController
         
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
 
-        return view('project-risk.edit', compact('projectRisk', 'periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList'));
+        return view('project-risk.edit', compact('projectRisk', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList'));
     }
 
     public function update(Request $request, $resource)
@@ -453,10 +441,6 @@ class ProjectRiskController extends BasicCRUDController
                 'perkiraan_waktu_terpapar_risiko_akhir' => 'required',
                 'penyebab_risiko' => 'required|array|min:1',
                 'penyebab_risiko.*' => 'required|string',
-                'master_kri_id' => 'required|array|min:1',
-                'master_kri_id.*' => 'required|exists:master_kri,id',
-                'kontrol_eksisting_id' => 'required|array|min:1',
-                'kontrol_eksisting_id.*' => 'required|exists:kontrol_eksistings,id',
             ]);
 
             $user = $request->user();
@@ -468,7 +452,7 @@ class ProjectRiskController extends BasicCRUDController
             $toUpdate = [
                 'unit_type_id' => $user->unit_type_id,
                 'unit_id' => $user->unit_id,
-                'periode_id' => $periode->id,
+                'periode_id' => 0,
                 'user_id' => $user->id,
                 'project_id' => $project->id,
                 'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
@@ -490,30 +474,27 @@ class ProjectRiskController extends BasicCRUDController
                 ]);
             }
 
-            $masterKriObj = MasterKRI::whereIn('id', $request->master_kri_id)->get()->keyBy('id');
-
             $projectRisk->kriProjects()->delete();
 
-            foreach ($request->master_kri_id as $masterKriId) {
-                $kriObj = $masterKriObj[$masterKriId];
-                $projectRisk->kriProjects()->create([
-                    'kri_id' => $masterKriId,
-                    'kri' => $kriObj->kri,
-                    'satuan_kri' => $kriObj->satuan_kri,
-                    'batas_aman' => $kriObj->batas_aman,
-                    'batas_waspada' => $kriObj->batas_waspada,
-                    'batas_bahaya' => $kriObj->batas_bahaya,
-                ]);
+            foreach ($request->key_risk_indicator as $idx => $kri) {
+                $kriData = [
+                    'kri' => $kri,
+                    'satuan_kri' => $request->satuan_kri[$idx] ?? '',
+                    'batas_aman' => $request->batas_aman[$idx] ?? '',
+                    'batas_waspada' => $request->batas_waspada[$idx] ?? '',
+                    'batas_bahaya' => $request->batas_bahaya[$idx] ?? '',
+                ];
+
+                $projectRisk->kriProjects()->create($kriData);
             }
 
-            // $projectRisk->kontrolEksistings()->delete();
+            $projectRisk->projectKontrolEksistings()->delete();
 
-            // foreach ($request->kontrol_eksisting_id as $kontrolEksistingId) {
-            //     $kontrolEksistingObj = KontrolEksisting::findOrFail($kontrolEksistingId);
-            //     $projectRisk->kontrolEksistings()->create([
-            //         'kontrol_eksisting' => $kontrolEksistingObj->kontrol_eksisting,
-            //     ]);
-            // }
+            foreach ($request->kontrol_eksisting as $kontrolEksisting) {
+                $projectRisk->projectKontrolEksistings()->create([
+                    'kontrol_eksisting_desc' => $kontrolEksisting,
+                ]);
+            }
 
             return [
                 'redirect' => route('projects.risks.index', ['project' => $projectPeriodeList->id]),
@@ -572,8 +553,7 @@ class ProjectRiskController extends BasicCRUDController
 
         $risk_tolerance = 0;
         $risk_limit = 0;
-        $sum_risk = ProjectRisk::where('periode_id', $periode->id)
-            ->where('project_id', $project->id)
+        $sum_risk = ProjectRisk::where('project_id', $project->id)
             ->where('id', '!=', $projectRisk->id)
             ->whereHas('projectRiskAnalisa', function ($query) {
                 $query->where('kategori_dampak', 'Kuantitatif');
@@ -610,13 +590,8 @@ class ProjectRiskController extends BasicCRUDController
         else{
             $risk_tolerance = 0;
         }
-        
-        if ($risk_tolerance != 0 && $sum_risk != 0) {
-            $risk_limit = $risk_tolerance/$sum_risk;
-        }
-        else{
-            $risk_limit = $risk_tolerance;
-        }
+
+        $risk_limit = $projectPeriodeList->risk_limit;
 
         return view('project-risk.analisa', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'skalaProbabilitas', 'riskMaps', 'analisa', 'areas', 'groupedAreas', 'risk_tolerance', 'risk_limit'));
     }
@@ -640,9 +615,9 @@ class ProjectRiskController extends BasicCRUDController
             //'area_dampak' => 'required',
             'kategori_dampak' => 'required|in:' . ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF . ',' . ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF,
             //'deskripsi_dampak' => 'required',
-            'skala_dampak_hidden' => 'required|numeric',
+            // 'skala_dampak_hidden' => 'required|numeric',
             'nilai_probabilitas' => 'required|numeric',
-            'skala_dampak_residual_hidden' => 'required|numeric|lte:skala_dampak_hidden',
+            // 'skala_dampak_residual_hidden' => 'required|numeric|lte:skala_dampak_hidden',
             'nilai_probabilitas_residual' => 'required|numeric|lte:nilai_probabilitas',
         ]);
 
@@ -733,12 +708,7 @@ class ProjectRiskController extends BasicCRUDController
                 ->count();
             $sum_risk = $sum_risk + 1;
             
-            if ($risk_tolerance != 0 && $sum_risk != 0) {
-                $risk_limit = $risk_tolerance/$sum_risk;
-            }
-            else{
-                $risk_limit = $risk_tolerance;
-            }
+            $risk_limit = $projectPeriodeList->risk_limit;
 
             $skala_dampak = $this->hitungSkalaDampak($nilai_dampak, $risk_limit);
             $skala_dampak_residual = $this->hitungSkalaDampak($nilai_dampak_residual, $risk_limit);
