@@ -23,6 +23,28 @@ class LossEventProject extends Model
         'nilai_kerugian_finansial',
         'nilai_kerugian_non_finansial',
         'unit_penanggung_jawab',
+        'nama_kejadian',
+        'kategori_kejadian_id',
+        'sumber_penyebab_kejadian',
+        'penyebab_masalah',
+        'penanganan_kejadian',
+        'kategori_risiko_bumn',
+        'kategori_risiko_id',
+        'jenis_risiko_id',
+        'penjelasan_kerugian',
+        'kejadian_berulang',
+        'frekuensi_kejadian',
+        'rencana_mitigasi',
+        'realisasi_mitigasi',
+        'perbaikan_mendatang',
+        'status_asuransi',
+        'nilai_premi',
+        'nilai_klaim',
+        'status_risk_register',
+        'no_urut_risiko',
+        'biaya_risiko_inheren',
+        'biaya_upaya_perbaikan',
+        'hasil_perbaikan',
     ];
 
     public function projectSektor()
@@ -38,5 +60,23 @@ class LossEventProject extends Model
     public function project()
     {
         return $this->belongsTo(Project::class, 'project_id');
+    }
+    
+    // Relasi dengan KategoriKejadian
+    public function kategoriKejadian()
+    {
+        return $this->belongsTo(KategoriKejadian::class);
+    }
+
+    // Relasi dengan KategoriRisiko
+    public function kategoriRisiko()
+    {
+        return $this->belongsTo(KategoriRisiko::class);
+    }
+
+    // Relasi dengan JenisRisiko
+    public function jenisRisiko()
+    {
+        return $this->belongsTo(JenisRisiko::class);
     }
 }
