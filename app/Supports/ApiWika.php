@@ -69,7 +69,7 @@ class ApiWika
     public function getProjects()
     {
         return $this->apiRequest('GET', 'proyek', [
-            'period' => '202505',
+            'period' => '202506',
         ])['data'] ?? [];
     }
 }
