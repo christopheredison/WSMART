@@ -143,14 +143,16 @@
                   @endswitch
                 </td>
                 <td class="white-space-nowrap">
+                  {{--
                   @can('risk_register_view')
                   <a href="{{ route('risk-register.view', $item) }}" class="btn-input-icon" data-bs-toggle="tooltip"
                     title="View">
                     <span class="bx bx-show-alt"></span>
                   </a>
                   @endcan
+                  --}}
                   @can('risk_register_edit')
-                  <a href="{{ route('risk-register.edit', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+                  <a href="{{ route('risk-register-unit.edit', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
                     title="Edit"><span class="bx bx-message-square-edit"></span></a>
                   @endcan
                   <!-- Tambahkan tombol Analisa Risiko di sini -->
@@ -168,7 +170,7 @@
                   @php
                   $itemId = $item->id;
                   $innerItemText = $item->peristiwaRisiko?->title ?: '-';
-                  $formAction = route('risk-register.destroy', $item->id);
+                  $formAction = route('risk-register-unit.destroy', $item->id);
                   @endphp
                   @include('partials.modal-delete-alert')
                   @endcan

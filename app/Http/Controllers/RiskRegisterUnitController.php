@@ -158,7 +158,9 @@ class RiskRegisterUnitController extends Controller
             'jenis_kontrol_eksisting_id' => 'nullable|exists:jenis_kontrol_eksistings,id',
             //'kontrol_eksisting_id' => 'nullable|array',
             //'kontrol_eksisting_id.*' => 'nullable|exists:kontrol_eksistings,id',
-            'kontrol_eksisting' => 'required|string',
+            //'kontrol_eksisting' => 'required|string',
+            'kontrol_eksisting' => 'required|array',  // Ubah menjadi array
+            'kontrol_eksisting.*' => 'required|string', // Validasi setiap item
             'penilaian_efektifitas_kontrol' => 'nullable|exists:penilaian_efektivitas_kontrols,id',
             'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
             'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
@@ -202,7 +204,8 @@ class RiskRegisterUnitController extends Controller
             $identifikasiRisiko->peristiwa_risiko = $request->peristiwa_risiko;
             $identifikasiRisiko->deskripsi_peristiwa_risiko = $request->deskripsi_peristiwa_risiko;
             $identifikasiRisiko->jenis_kontrol_eksisting_id = $request->jenis_kontrol_eksisting_id;
-            $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting;
+            //$identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting;
+            $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
             $identifikasiRisiko->penilaian_efektifitas_kontrol = $request->penilaian_efektifitas_kontrol;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
@@ -226,6 +229,19 @@ class RiskRegisterUnitController extends Controller
             // }
 
             $identifikasiRisiko->save();
+
+            // Simpan kontrol eksisting ke model KontrolEksisting
+            if ($request->has('kontrol_eksisting') && is_array($request->kontrol_eksisting)) {
+                foreach ($request->kontrol_eksisting as $kontrolEksisting) {
+                    if (!empty($kontrolEksisting)) {
+                        $identifikasiRisiko->kontrolEksistings()->create([
+                            'risiko_id' => $identifikasiRisiko->id,
+                            'peristiwa_risiko_id' => null,
+                            'kontrol_eksisting' => $kontrolEksisting,
+                        ]);
+                    }
+                }
+            }
     
             // Simpan penyebab risiko
             if ($request->has('penyebab_risiko') && is_array($request->penyebab_risiko)) {
@@ -407,7 +423,7 @@ class RiskRegisterUnitController extends Controller
     public function doPerencanaan(Request $request, $riskRegisterId)
     {
         $validated = $request->validate([
-            'penyebab_risiko_id' => 'required|exists:penyebab_risiko_projects,id',
+            'penyebab_risiko_id' => 'required|exists:penyebab_risikos,id',
             'rencana_perlakuan_risiko' => 'required|string',
             'output_perlakuan_risiko' => 'required|string',
             'biaya_perlakuan_risiko' => 'required|numeric|min:0',
@@ -783,5 +799,224 @@ class RiskRegisterUnitController extends Controller
         if ($percentage > 40 && $percentage <= 60) return 3; // Moderate
         if ($percentage > 60 && $percentage <= 80) return 4; // Moderate To High
         return 5; // High
+    }
+
+    public function edit($id)
+    {
+        $user = auth()->user();
+        $unitId = $user->unit_id;
+        
+        // Ambil data identifikasi risiko
+        $identifikasiRisiko = IdentifikasiRisiko::with(['kontrolEksistings', 'penyebabRisiko', 'kris'])->findOrFail($id);
+        
+        // Ambil periode yang dipilih
+        $selectedPeriode = Periode::find($identifikasiRisiko->periode_id);
+
+        $tck = Tck::where('unit_id', $unitId)->pluck('title', 'id');
+        if ($tck->isEmpty()) {
+            $parentUnitId = Unit::where('id', $unitId)->value('parent_id');
+
+            if ($parentUnitId) {
+                $tck = Tck::where('unit_id', $parentUnitId)->pluck('title', 'id');
+            }
+        }
+
+        $masterKris = MasterKRI::get();
+        $kategoriRisiko = KategoriRisiko::pluck('title','id');
+        $peristiwaRisikos = PeristiwaRisiko::get();
+        $areaDampak = AreaDampak::pluck('type','id');
+        $jenisRisiko = JenisRisiko::pluck('title','id');
+
+        $jenisKontrolEksistings = JenisKontrolEksisting::get();
+        $kontrolEksistings = KontrolEksisting::get();
+        $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
+
+        return view('risk-register-unit.edit', compact(
+            'identifikasiRisiko',
+            'kategoriRisiko',
+            'peristiwaRisikos', 
+            'masterKris', 
+            'jenisKontrolEksistings', 
+            'penilaianEfektifitasKontrols', 
+            'kontrolEksistings',
+            'areaDampak',
+            'jenisRisiko',
+            'tck',
+            'selectedPeriode'
+        ));
+    }
+
+    public function update(Request $request, $id)
+    {
+        // Validasi input
+        $validated = $request->validate([
+            'periode_id' => 'required|exists:periodes,id',
+            'target_capaian_kinerja' => 'required|string',
+            'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
+            'peristiwa_risiko' => 'required|string',
+            'deskripsi_peristiwa_risiko' => 'required|string',
+            'penyebab_risiko' => 'required|array',
+            'penyebab_risiko.*' => 'required|string',
+            'key_risk_indicator' => 'nullable|array',
+            'key_risk_indicator.*' => 'nullable|string',
+            'satuan_kri' => 'nullable|array',
+            'satuan_kri.*' => 'nullable|string',
+            'batas_aman' => 'nullable|array',
+            'batas_aman.*' => 'nullable|string',
+            'batas_waspada' => 'nullable|array',
+            'batas_waspada.*' => 'nullable|string',
+            'batas_bahaya' => 'nullable|array',
+            'batas_bahaya.*' => 'nullable|string',
+            'jenis_kontrol_eksisting_id' => 'nullable|exists:jenis_kontrol_eksistings,id',
+            'kontrol_eksisting' => 'required|array',
+            'kontrol_eksisting.*' => 'required|string',
+            'penilaian_efektifitas_kontrol' => 'nullable|exists:penilaian_efektivitas_kontrols,id',
+            'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
+            'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
+        ]);
+
+        try {
+            // Konversi format tanggal
+            $waktuMulai = null;
+            $waktuSelesai = null;
+            
+            if ($request->perkiraan_waktu_mulai_terpapar_risiko) {
+                $waktuMulai = Carbon::createFromFormat('d/m/Y', $request->perkiraan_waktu_mulai_terpapar_risiko)->format('Y-m-d');
+            }
+            
+            if ($request->perkiraan_waktu_selesai_terpapar_risiko) {
+                $waktuSelesai = Carbon::createFromFormat('d/m/Y', $request->perkiraan_waktu_selesai_terpapar_risiko)->format('Y-m-d');
+            }
+
+            // Ambil data risiko yang akan diupdate
+            $identifikasiRisiko = IdentifikasiRisiko::findOrFail($id);
+            
+            // Update data risiko
+            $identifikasiRisiko->periode_id = $request->periode_id;
+            $identifikasiRisiko->target_capaian_kinerja = $request->target_capaian_kinerja;
+            $identifikasiRisiko->jenis_risiko_id = $request->jenis_risiko_id;
+            
+            $jenisRisiko = \App\Models\JenisRisiko::find($request->jenis_risiko_id);
+            if ($jenisRisiko) {
+                $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
+            }
+
+            $identifikasiRisiko->peristiwa_risiko = $request->peristiwa_risiko;
+            $identifikasiRisiko->deskripsi_peristiwa_risiko = $request->deskripsi_peristiwa_risiko;
+            $identifikasiRisiko->jenis_kontrol_eksisting_id = $request->jenis_kontrol_eksisting_id;
+            $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
+            $identifikasiRisiko->penilaian_efektifitas_kontrol = $request->penilaian_efektifitas_kontrol;
+            $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
+            $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
+            
+            $identifikasiRisiko->save();
+
+            // Hapus kontrol eksisting lama dan buat yang baru
+            $identifikasiRisiko->kontrolEksistings()->delete();
+            
+            // Simpan kontrol eksisting ke model KontrolEksisting
+            if ($request->has('kontrol_eksisting') && is_array($request->kontrol_eksisting)) {
+                foreach ($request->kontrol_eksisting as $kontrolEksisting) {
+                    if (!empty($kontrolEksisting)) {
+                        $identifikasiRisiko->kontrolEksistings()->create([
+                            'risiko_id' => $identifikasiRisiko->id,
+                            'peristiwa_risiko_id' => null,
+                            'kontrol_eksisting' => $kontrolEksisting,
+                        ]);
+                    }
+                }
+            }
+
+            // Hapus penyebab risiko lama dan buat yang baru
+            $identifikasiRisiko->penyebabRisiko()->delete();
+            
+            // Simpan penyebab risiko
+            if ($request->has('penyebab_risiko') && is_array($request->penyebab_risiko)) {
+                foreach ($request->penyebab_risiko as $penyebab) {
+                    if (!empty($penyebab)) {
+                        $identifikasiRisiko->penyebabRisiko()->create([
+                            'penyebab_risiko' => $penyebab,
+                            'risiko_id' => $identifikasiRisiko->id,
+                        ]);
+                    }
+                }
+            }
+
+            // Hapus KRI lama dan buat yang baru
+            $identifikasiRisiko->kris()->delete();
+            
+            // Simpan KRI
+            if ($request->has('key_risk_indicator') && is_array($request->key_risk_indicator)) {
+                for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
+                    if (!empty($request->key_risk_indicator[$i])) {
+                        $identifikasiRisiko->kris()->create([
+                            'kri_id' => 0, // Karena tidak menggunakan master_kri_id lagi
+                            'risiko_id' => $identifikasiRisiko->id,
+                            'kri' => $request->key_risk_indicator[$i],
+                            'satuan_kri' => $request->satuan_kri[$i] ?? null,
+                            'batas_aman' => $request->batas_aman[$i] ?? null,
+                            'batas_waspada' => $request->batas_waspada[$i] ?? null,
+                            'batas_bahaya' => $request->batas_bahaya[$i] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            // Tentukan redirect berdasarkan action
+            $action = $request->input('action', 'save');
+            
+            if ($action === 'savenext') {
+                // Redirect ke halaman analisis risiko
+                return response()->json([
+                    'message' => 'Data risiko berhasil diperbarui',
+                    'redirect' => route('risk-register-unit.analisa', ['riskRegister' => $identifikasiRisiko->id])
+                ]);
+            } else {
+                // Redirect ke halaman index
+                return response()->json([
+                    'message' => 'Data risiko berhasil diperbarui',
+                    'redirect' => route('risk-register-unit.index', ['pid' => $request->periode_id])
+                ]);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat memperbarui data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            // Cari data identifikasi risiko
+            $identifikasiRisiko = IdentifikasiRisiko::findOrFail($id);
+            
+            // Cek apakah user memiliki akses untuk menghapus
+            if (!Gate::check('risk_register_delete') && $identifikasiRisiko->user_id != auth()->id()) {
+                return redirect()->route('risk-register-unit.index')->with('error', 'Anda tidak memiliki izin untuk menghapus data ini');
+            }
+            
+            // Hapus data terkait
+            // Hapus kontrol eksisting
+            $identifikasiRisiko->kontrolEksistings()->delete();
+            
+            // Hapus penyebab risiko
+            $identifikasiRisiko->penyebabRisiko()->delete();
+            
+            // Hapus KRI
+            $identifikasiRisiko->kris()->delete();
+            
+            // Hapus analisis risiko jika ada
+            if ($identifikasiRisiko->riskAnalysis) {
+                $identifikasiRisiko->riskAnalysis->delete();
+            }
+            
+            // Hapus data identifikasi risiko
+            $identifikasiRisiko->delete();
+            
+            return redirect()->route('risk-register-unit.index')->with('success', 'Data risiko berhasil dihapus');
+        } catch (\Exception $e) {
+            return redirect()->route('risk-register-unit.index')->with('error', 'Terjadi kesalahan saat menghapus data: ' . $e->getMessage());
+        }
     }
 }

@@ -10,9 +10,16 @@ class KontrolEksisting extends Model
     use HasFactory;
 
     protected $fillable = [
+        'risiko_id',
         'peristiwa_risiko_id',//berelasi dengan Model Peristiwa Risiko
         'kontrol_eksisting',
     ];
+
+    public function identifikasiRisiko()
+    {
+        return $this->belongsTo(IdentifikasiRisiko::class, 'risiko_id');
+    }
+
 
     public function peristiwaRisiko()
     {
