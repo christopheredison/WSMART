@@ -494,3 +494,17 @@ Route::prefix('risk-register-unit')->group(function () {
     Route::get('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'analisa'])->name('risk-register-unit.analisa');
     Route::post('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'doAnalisa'])->name('risk-register-unit.do-analisa');
 });
+
+Route::group(['prefix' => 'ict', 'as' => 'ict.'], function () {
+    Route::get('/', [\App\Http\Controllers\ICT\ICTController::class, 'index'])->name('index');
+    Route::get('/create', [\App\Http\Controllers\ICT\ICTController::class, 'create'])->name('create');
+    Route::post('/', [\App\Http\Controllers\ICT\ICTController::class, 'store'])->name('store');
+    Route::get('/{ictPlan}', [\App\Http\Controllers\ICT\ICTController::class, 'show'])->name('show');
+    Route::get('/{ictPlan}/edit', [\App\Http\Controllers\ICT\ICTController::class, 'edit'])->name('edit');
+    Route::put('/{ictPlan}', [\App\Http\Controllers\ICT\ICTController::class, 'update'])->name('update');
+    Route::delete('/{ictPlan}', [\App\Http\Controllers\ICT\ICTController::class, 'destroy'])->name('destroy');
+    Route::get('/{ictPlan}/testing', [\App\Http\Controllers\ICT\ICTController::class, 'testing'])->name('testing');
+    Route::post('/{ictPlan}/testing', [\App\Http\Controllers\ICT\ICTController::class, 'storeTesting'])->name('store-testing');
+    Route::get('/{ictPlan}/report', [\App\Http\Controllers\ICT\ICTController::class, 'report'])->name('report');
+    Route::post('/{ictPlan}/report', [\App\Http\Controllers\ICT\ICTController::class, 'storeReport'])->name('store-report');
+});

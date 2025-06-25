@@ -4,6 +4,8 @@ use App\Http\Controllers\RiskOfficer\RiskRegisterController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\LossEventProjectImportController;
+use App\Models\KontrolEksisting;
+use App\Models\ProjectKontrolEksisting;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,4 +37,19 @@ Route::get('/peristiwa-risiko/{id}/relations', function($id) {
             ]
         ]
     ]);
+});
+
+Route::get('/key-controls', function (Request $request) {
+    $type = $request->input('type');
+    $risikoId = $request->input('risiko_id');
+    
+    $data = [];
+    
+    if ($type == 1) { // Unit
+        $data = KontrolEksisting::where('risiko_id', $risikoId)->get();
+    } else if ($type == 2) { // Proyek
+        $data = ProjectKontrolEksisting::where('project_risk_id', $risikoId)->get();
+    }
+    
+    return response()->json(['data' => $data]);
 });
