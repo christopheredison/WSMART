@@ -131,23 +131,8 @@
                             <!-- Kategori Risiko T2 & T3 BUMN -->
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Kategori Risiko T2 & T3 BUMN <span class="text-danger">*</span></label>
-                                <select class="form-select @error('kategori_risiko_id') is-invalid @enderror" name="kategori_risiko_id" id="kategori_risiko_id" required>
-                                    <option value="">Pilih Kategori Risiko</option>
-                                    @foreach($kategoriRisikos as $kategori)
-                                        <option value="{{ $kategori->id }}" {{ old('kategori_risiko_id') == $kategori->id ? 'selected' : '' }}>
-                                            {{ $kategori->title }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('kategori_risiko_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- Jenis Risiko -->
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Jenis Risiko <span class="text-danger">*</span></label>
-                                <select class="form-select @error('jenis_risiko_id') is-invalid @enderror" name="jenis_risiko_id" id="jenis_risiko_id" required>
+                                <input type="hidden" name="kategori_risiko_id" value="{{ old('kategori_risiko_id') }}" id="kategori_risiko_id">
+                                <select class="form-select @error('jenis_risiko_id') is-invalid @enderror" name="jenis_risiko_id" id="jenis_risiko_id" required onchange="handleJenisRisikoChange(this)">
                                     <option value="">Pilih Jenis Risiko</option>
                                     @foreach($jenisRisikos as $jenis)
                                         <option value="{{ $jenis->id }}" 
@@ -358,6 +343,11 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
+function handleJenisRisikoChange(select) {
+    var kategoriId = $(select).find('option:selected').data('kategori');
+    $('#kategori_risiko_id').val(kategoriId);
+}
+
 $(document).ready(function() {
     // Initialize flatpickr for date input
     flatpickr("#tanggal_kejadian", {
@@ -408,15 +398,6 @@ $(document).ready(function() {
         }
     });
 
-    // Filter jenis risiko based on kategori risiko
-    $('#kategori_risiko_id').change(function() {
-        var kategoriId = $(this).val();
-        $('#jenis_risiko_id option').show();
-        if (kategoriId) {
-            $('#jenis_risiko_id option').not('[data-kategori="' + kategoriId + '"]').hide();
-        }
-        $('#jenis_risiko_id').val('').trigger('change');
-    });
 
     // Trigger initial state
     $('#kejadian_berulang').trigger('change');
