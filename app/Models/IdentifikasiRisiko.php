@@ -112,6 +112,11 @@ class IdentifikasiRisiko extends Model
         return $this->belongsTo(JenisKontrolEksisting::class, 'jenis_kontrol_eksisting_id');
     }
 
+    public function kontrolEksistings()
+    {
+        return $this->hasMany(KontrolEksisting::class, 'risiko_id');
+    }
+
     public function toDraftStructure() {
         $basic = $this->toArray();
         $basic['penyebab_risiko_ids'] = $this->penyebabRisiko->pluck('id')->toArray();

@@ -20,6 +20,7 @@ class PeristiwaRisiko extends Model
         'title',
         'deskripsi',
         'unit_type_id',
+        'type',
     ];
 
     public function kategoriRisiko()
