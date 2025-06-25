@@ -90,6 +90,11 @@ Breadcrumbs::for('project-led.edit', function (BreadcrumbTrail $trail, $id) {
     $trail->push('Tambah Loss Event Project', route('project-led.edit', $id));
 });
 
+Breadcrumbs::for('project-led.show', function (BreadcrumbTrail $trail, $id) {
+    $trail->parent('project-led.index');
+    $trail->push('Detail Loss Event Project', route('project-led.show', $id));
+});
+
 // rmi-period.index
 Breadcrumbs::for('rmi-period.index', function (BreadcrumbTrail $trail) {
     $trail->push('Periode RMI', route('rmi-period.index'));

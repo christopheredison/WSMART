@@ -12,7 +12,7 @@
                             </div>
                         </div>
                         <h2 class="h3">Data Loss Event Project</h2>
-                        <div id="bulk-select-replace-element" class="col-auto ms-auto">
+                        <div class="col-auto ms-auto">
                             <a class="btn btn-outline-info btn-sm" href="{{ route('project-led.create') }}">
                                 <span class="bx bx-plus"></span>
                                 <span class="ms-1">Tambah Data Loss Event</span>
@@ -36,16 +36,7 @@
                             </select>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <label class="form-label">Konstruksi Spesifik</label>
-                            <select class="form-select" id="filter-konstruksi">
-                                <option value="">Semua</option>
-                                @foreach($projectSektors as $sektor)
-                                    <option value="{{ $sektor->id }}">{{ $sektor->sektor_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Peristiwa Risiko</label>
+                            <label class="form-label">Identifikasi Kejadian</label>
                             <select class="form-select" id="filter-peristiwa">
                                 <option value="">Semua</option>
                                 @foreach($peristiwaRisikos as $risiko)
@@ -53,31 +44,34 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Kategori Kejadian</label>
+                            <select class="form-select" id="filter-kategori">
+                                <option value="">Semua</option>
+                                @foreach($kategoriKejadians as $kategori)
+                                    <option value="{{ $kategori->id }}">{{ $kategori->kategori_kejadian }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="col-md-3 mb-3 d-flex align-items-end">
                             <button class="btn btn-primary" id="btn-filter">Filter</button>
                         </div>
                     </div>
-                    <table class="table table-bulk-select table-hover ajax-datatable" data-paging="true" data-scroll-y="false"
+                    <table class="table table-hover ajax-datatable" data-paging="true" data-scroll-y="false"
                         data-filter="true" data-info="true">
                         <thead>
                             <tr>
-                                <th class="white-space-nowrap">
-                                    <div class="form-check mb-0">
-                                        <input class="form-check-input" type="checkbox"
-                                            data-bulk-select='{"body":"bulk-select-body","actions":"bulk-select-actions","replacedElement":"bulk-select-replace-element"}' />
-                                    </div>
-                                </th>
                                 <th class="white-space-nowrap">#</th>
                                 <th class="sort" data-sort="tahun">Tahun Kejadian</th>
-                                <th class="sort" data-sort="konstruksi_spesifik">Konstruksi Spesifik</th>
-                                <th class="sort" data-sort="peristiwa_risiko">Peristiwa Risiko</th>
-                                <th class="sort" data-sort="project">Project</th>
-                                <th class="sort" data-sort="deskripsi_kejadian">Deskripsi</th>
-                                <th class="sort" data-sort="unit_penanggung_jawab">PIC</th>
+                                <th class="sort" data-sort="nama_kejadian">Nama Kejadian</th>
+                                <th class="sort" data-sort="peristiwa_risiko">Identifikasi Kejadian</th>
+                                <th class="sort" data-sort="kategori_kejadian">Kategori Kejadian</th>
+                                <th class="sort" data-sort="nilai_kerugian">Nilai Kerugian</th>
+                                <th class="sort" data-sort="unit_penanggung_jawab">Pihak Terkait</th>
                                 <th class="white-space-nowrap" data-sort="action">Action</th>
                             </tr>
                         </thead>
-                        <tbody class="list" id="bulk-select-body">
+                        <tbody class="list">
                         </tbody>
                     </table>
                 </div>
@@ -85,6 +79,7 @@
         </div>
     </div>
 @endsection
+
 @push('styles')
 @endpush
 
@@ -101,19 +96,11 @@ $(document).ready(function() {
             type: 'GET',
             data: function(d) {
                 d.tahun = $('#filter-tahun').val();
-                d.konstruksi_id = $('#filter-konstruksi').val();
                 d.peristiwa_id = $('#filter-peristiwa').val();
+                d.kategori_id = $('#filter-kategori').val();
             }
         },
         columns: [
-            {
-                data: 'id',
-                orderable: false,
-                searchable: false,
-                render: function(data) {
-                    return '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" value="' + data + '"></div>';
-                }
-            },
             {
                 data: null,
                 orderable: false,
@@ -123,10 +110,10 @@ $(document).ready(function() {
                 }
             },
             {data: 'tahun', name: 'tahun'},
-            {data: 'konstruksi_spesifik', name: 'konstruksi_spesifik'},
+            {data: 'nama_kejadian', name: 'nama_kejadian'},
             {data: 'peristiwa_risiko', name: 'peristiwa_risiko'},
-            {data: 'project', name: 'project'},
-            {data: 'deskripsi_kejadian', name: 'deskripsi_kejadian'},
+            {data: 'kategori_kejadian', name: 'kategori_kejadian'},
+            {data: 'nilai_kerugian', name: 'nilai_kerugian'},
             {data: 'unit_penanggung_jawab', name: 'unit_penanggung_jawab'},
             {
                 data: 'action',
@@ -136,25 +123,8 @@ $(document).ready(function() {
                     return data;
                 }
             }
-            // {
-            //     data: null,
-            //     orderable: false,
-            //     searchable: false,
-            //     render: function(data) {
-            //         return `
-            //             <div class="d-flex gap-2">
-            //                 <a href="/project-led/${data.id}/edit" class="btn btn-sm btn-info">
-            //                     <i class="bx bx-edit"></i>
-            //                 </a>
-            //                 <button class="btn btn-sm btn-danger" onclick="deleteData(${data.id})">
-            //                     <i class="bx bx-trash"></i>
-            //                 </button>
-            //             </div>
-            //         `;
-            //     }
-            // }
         ],
-        order: [[2, 'desc']],
+        order: [[1, 'desc']],
         language: {
             processing: "Memproses...",
             search: "Cari:",
