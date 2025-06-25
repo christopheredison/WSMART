@@ -16,6 +16,9 @@ use App\Models\ProjectSektor;
 use App\Models\PeristiwaRisiko;
 use App\Models\LossEventProject;
 use Yajra\DataTables\Facades\DataTables;
+use App\Models\KategoriKejadian;
+use App\Models\KategoriRisiko;
+use App\Models\JenisRisiko;
 
 class ProjectLEDController extends Controller
 {
@@ -63,7 +66,7 @@ class ProjectLEDController extends Controller
         }
     
         $projectSektors = ProjectSektor::all();
-        $peristiwaRisikos = PeristiwaRisiko::all();
+        $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
     
         return view('project-led.index', compact('projectSektors', 'peristiwaRisikos'));
     }
@@ -71,23 +74,52 @@ class ProjectLEDController extends Controller
     public function create()
     {
         $projectSektors = ProjectSektor::all();
-        $peristiwaRisikos = PeristiwaRisiko::all();
+        $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get(); // Filter for project type
         $projects = Project::all();
+        $kategoriKejadians = KategoriKejadian::all();
+        $kategoriRisikos = KategoriRisiko::all();
+        $jenisRisikos = JenisRisiko::all();
 
-        return view('project-led.create', compact('projectSektors', 'peristiwaRisikos', 'projects'));
+        return view('project-led.create', compact(
+            'projectSektors', 
+            'peristiwaRisikos', 
+            'projects', 
+            'kategoriKejadians',
+            'kategoriRisikos',
+            'jenisRisikos'
+        ));
     }
 
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'project_sektor_id' => 'required',
-            'peristiwa_risiko_id' => 'required',
-            'project_id' => 'required',
+            'nama_kejadian' => 'required',
             'tanggal_kejadian' => 'required|date',
+            'peristiwa_risiko_id' => 'required',
+            'kategori_kejadian_id' => 'required',
+            'sumber_penyebab_kejadian' => 'required|in:1,2',
+            'penyebab_masalah' => 'required',
+            'penanganan_kejadian' => 'required',
             'deskripsi_kejadian' => 'required',
-            'nilai_kerugian_finansial' => 'required_without:nilai_kerugian_non_finansial|nullable|numeric',
-            'nilai_kerugian_non_finansial' => 'required_without:nilai_kerugian_finansial|nullable',
-            'unit_penanggung_jawab' => 'required'
+            'kategori_risiko_bumn' => 'required|in:1,2,3',
+            'kategori_risiko_id' => 'required',
+            'jenis_risiko_id' => 'required',
+            'penjelasan_kerugian' => 'required',
+            'nilai_kerugian_finansial' => 'nullable|numeric',
+            'kejadian_berulang' => 'required|in:0,1',
+            'frekuensi_kejadian' => 'required_if:kejadian_berulang,1|nullable|in:1,2,3,4,5,6',
+            'rencana_mitigasi' => 'required',
+            'realisasi_mitigasi' => 'required',
+            'perbaikan_mendatang' => 'required',
+            'unit_penanggung_jawab' => 'required',
+            'status_asuransi' => 'required|in:0,1',
+            'nilai_premi' => 'required_if:status_asuransi,1|nullable|numeric',
+            'nilai_klaim' => 'required_if:status_asuransi,1|nullable|numeric',
+            'status_risk_register' => 'required|in:0,1',
+            'no_urut_risiko' => 'required_if:status_risk_register,1|nullable',
+            'biaya_risiko_inheren' => 'nullable|numeric',
+            'biaya_upaya_perbaikan' => 'nullable|numeric',
+            'hasil_perbaikan' => 'nullable|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -101,9 +133,13 @@ class ProjectLEDController extends Controller
             $data = $request->all();
             $data['tahun'] = Carbon::parse($request->tanggal_kejadian)->format('Y');
             
-            // Set default values
+            // Set default values for numeric fields
             $data['nilai_kerugian_finansial'] = $request->nilai_kerugian_finansial ?: 0;
-            $data['nilai_kerugian_non_finansial'] = $request->nilai_kerugian_non_finansial ?: '-';
+            $data['nilai_premi'] = $request->nilai_premi ?: 0;
+            $data['nilai_klaim'] = $request->nilai_klaim ?: 0;
+            $data['biaya_risiko_inheren'] = $request->biaya_risiko_inheren ?: 0;
+            $data['biaya_upaya_perbaikan'] = $request->biaya_upaya_perbaikan ?: 0;
+            $data['hasil_perbaikan'] = $request->hasil_perbaikan ?: 0;
             
             LossEventProject::create($data);
 
@@ -122,23 +158,53 @@ class ProjectLEDController extends Controller
     {
         $lossEvent = LossEventProject::findOrFail($id);
         $projectSektors = ProjectSektor::all();
-        $peristiwaRisikos = PeristiwaRisiko::all();
+        $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get(); // Filter for project type
         $projects = Project::all();
+        $kategoriKejadians = KategoriKejadian::all();
+        $kategoriRisikos = KategoriRisiko::all();
+        $jenisRisikos = JenisRisiko::all();
 
-        return view('project-led.edit', compact('lossEvent', 'projectSektors', 'peristiwaRisikos', 'projects'));
+        return view('project-led.edit', compact(
+            'lossEvent', 
+            'projectSektors', 
+            'peristiwaRisikos', 
+            'projects', 
+            'kategoriKejadians',
+            'kategoriRisikos',
+            'jenisRisikos'
+        ));
     }
 
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'project_sektor_id' => 'required',
-            'peristiwa_risiko_id' => 'required',
-            'project_id' => 'required',
+            'nama_kejadian' => 'required',
             'tanggal_kejadian' => 'required|date',
+            'peristiwa_risiko_id' => 'required',
+            'kategori_kejadian_id' => 'required',
+            'sumber_penyebab_kejadian' => 'required|in:1,2',
+            'penyebab_masalah' => 'required',
+            'penanganan_kejadian' => 'required',
             'deskripsi_kejadian' => 'required',
-            'nilai_kerugian_finansial' => 'required_without:nilai_kerugian_non_finansial|nullable|numeric',
-            'nilai_kerugian_non_finansial' => 'required_without:nilai_kerugian_finansial|nullable',
-            'unit_penanggung_jawab' => 'required'
+            'kategori_risiko_bumn' => 'required|in:1,2,3',
+            'kategori_risiko_id' => 'required',
+            'jenis_risiko_id' => 'required',
+            'penjelasan_kerugian' => 'required',
+            'nilai_kerugian_finansial' => 'nullable|numeric',
+            'kejadian_berulang' => 'required|in:0,1',
+            'frekuensi_kejadian' => 'required_if:kejadian_berulang,1|nullable|in:1,2,3,4,5,6',
+            'rencana_mitigasi' => 'required',
+            'realisasi_mitigasi' => 'required',
+            'perbaikan_mendatang' => 'required',
+            'unit_penanggung_jawab' => 'required',
+            'status_asuransi' => 'required|in:0,1',
+            'nilai_premi' => 'required_if:status_asuransi,1|nullable|numeric',
+            'nilai_klaim' => 'required_if:status_asuransi,1|nullable|numeric',
+            'status_risk_register' => 'required|in:0,1',
+            'no_urut_risiko' => 'required_if:status_risk_register,1|nullable',
+            'biaya_risiko_inheren' => 'nullable|numeric',
+            'biaya_upaya_perbaikan' => 'nullable|numeric',
+            'hasil_perbaikan' => 'nullable|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -153,9 +219,13 @@ class ProjectLEDController extends Controller
             $data = $request->all();
             $data['tahun'] = Carbon::parse($request->tanggal_kejadian)->format('Y');
             
-            // Set default values
+            // Set default values for numeric fields
             $data['nilai_kerugian_finansial'] = $request->nilai_kerugian_finansial ?: 0;
-            $data['nilai_kerugian_non_finansial'] = $request->nilai_kerugian_non_finansial ?: '-';
+            $data['nilai_premi'] = $request->nilai_premi ?: 0;
+            $data['nilai_klaim'] = $request->nilai_klaim ?: 0;
+            $data['biaya_risiko_inheren'] = $request->biaya_risiko_inheren ?: 0;
+            $data['biaya_upaya_perbaikan'] = $request->biaya_upaya_perbaikan ?: 0;
+            $data['hasil_perbaikan'] = $request->hasil_perbaikan ?: 0;
             
             $lossEvent->update($data);
 
