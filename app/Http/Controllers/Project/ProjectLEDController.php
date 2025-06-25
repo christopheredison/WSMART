@@ -26,16 +26,16 @@ class ProjectLEDController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = LossEventProject::with(['projectSektor', 'peristiwaRisiko', 'project']);
+            $data = LossEventProject::with(['peristiwaRisiko', 'kategoriKejadian']);
             
             if ($request->filled('tahun') && $request->tahun !== '') {
                 $data->where('tahun', $request->tahun);
             }
-            if ($request->filled('konstruksi_id') && $request->konstruksi_id !== '') {
-                $data->where('project_sektor_id', $request->konstruksi_id);
-            }
             if ($request->filled('peristiwa_id') && $request->peristiwa_id !== '') {
                 $data->where('peristiwa_risiko_id', $request->peristiwa_id);
+            }
+            if ($request->filled('kategori_id') && $request->kategori_id !== '') {
+                $data->where('kategori_kejadian_id', $request->kategori_id);
             }
 
             return DataTables::of($data)
@@ -43,32 +43,32 @@ class ProjectLEDController extends Controller
                 ->addColumn('action', function($row) {
                     return view('project-led._table_action', compact('row'))->render();
                 })
-                ->editColumn('tahun_kejadian', function($row) {
-                    return $row->tahun;
-                })
-                ->editColumn('konstruksi_spesifik', function($row) {
-                    return $row->projectSektor ? $row->projectSektor->sektor_name : 'Non Project';
+                ->editColumn('nama_kejadian', function($row) {
+                    return $row->nama_kejadian ?? '-';
                 })
                 ->editColumn('peristiwa_risiko', function($row) {
                     return $row->peristiwaRisiko ? $row->peristiwaRisiko->title : '-';
                 })
-                ->editColumn('project', function($row) {
-                    return $row->project ? $row->project->project_name : 'Non Project';
+                ->editColumn('kategori_kejadian', function($row) {
+                    return $row->kategoriKejadian ? $row->kategoriKejadian->kategori_kejadian : '-';
                 })
-                ->editColumn('deskripsi', function($row) {
-                    return $row->deskripsi_kejadian ?? '-';
+                ->editColumn('nilai_kerugian', function($row) {
+                    if ($row->nilai_kerugian_finansial && $row->nilai_kerugian_finansial > 0) {
+                        return 'Rp ' . number_format($row->nilai_kerugian_finansial, 0, ',', '.');
+                    }
+                    return '-';
                 })
-                ->editColumn('pic', function($row) {
+                ->editColumn('unit_penanggung_jawab', function($row) {
                     return $row->unit_penanggung_jawab ?? '-';
                 })
                 ->rawColumns(['action'])
                 ->make(true);
         }
     
-        $projectSektors = ProjectSektor::all();
         $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
+        $kategoriKejadians = KategoriKejadian::all();
     
-        return view('project-led.index', compact('projectSektors', 'peristiwaRisikos'));
+        return view('project-led.index', compact('peristiwaRisikos', 'kategoriKejadians'));
     }
 
     public function create()
@@ -256,5 +256,12 @@ class ProjectLEDController extends Controller
                 'message' => 'Gagal menghapus data Loss Event Project'
             ], 500);
         }
+    }
+
+    public function show($id)
+    {
+        $lossEvent = LossEventProject::with(['peristiwaRisiko', 'kategoriKejadian', 'kategoriRisiko', 'jenisRisiko'])->findOrFail($id);
+        
+        return view('project-led.show', compact('lossEvent'));
     }
 }

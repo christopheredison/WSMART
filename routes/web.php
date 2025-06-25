@@ -383,6 +383,7 @@ Route::group(['middleware' => ['auth']], function() {
     Route::resource('kuesioner', KuesionerController::class)->except(['create', 'store', 'destroy']);
 
     Route::get('project-led/create', [ProjectLEDController::class, 'create'])->name('project-led.create');
+    Route::get('project-led/{id}', [ProjectLEDController::class, 'show'])->name('project-led.show');
     Route::get('project-led/{id}/edit', [ProjectLEDController::class, 'edit'])->name('project-led.edit');
     Route::post('project-led', [ProjectLEDController::class, 'store'])->name('project-led.store');
     Route::delete('project-led/{id}', [ProjectLEDController::class, 'destroy'])->name('project-led.destroy');
