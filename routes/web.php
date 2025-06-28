@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\CapaianTckController;
 use App\Http\Controllers\CapaianTkmruController;
 use Illuminate\Support\Facades\Route;
@@ -456,6 +457,9 @@ Route::group(['middleware' => ['auth']], function() {
 
     Route::delete('/sasaran-strategi/{sasaran}', [SasaranStrategiBisnisController::class, 'destroy'])->name('sasaran-strategi.destroy');
     Route::put('/strategi-bisnis/{strategiBisnis}', [SasaranStrategiBisnisController::class, 'updateStatus'])->name('strategi-bisnis.update-status');
+
+    Route::middleware('can:backups.index')->resource('backups', BackupController::class);
+	Route::post('backups/restore', [BackupController::class, 'restore'])->name('backups.restore');
 });
 
 // Route untuk Measurement Parameter
