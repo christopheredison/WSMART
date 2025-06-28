@@ -10,5 +10,5 @@ class KategoriKejadian extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['kategori_kejadian'];
+    protected $fillable = ['kategori_kejadian', 'type'];
 }
