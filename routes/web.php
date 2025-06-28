@@ -57,6 +57,8 @@ use App\Models\ProjectSektor;
 use App\Http\Controllers\SasaranStrategiBisnisController;
 use App\Http\Controllers\PenilaianRMIController;
 use App\Http\Controllers\RiskRegisterUnitController;
+use App\Http\Controllers\UnitLEDController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -458,8 +460,16 @@ Route::group(['middleware' => ['auth']], function() {
     Route::delete('/sasaran-strategi/{sasaran}', [SasaranStrategiBisnisController::class, 'destroy'])->name('sasaran-strategi.destroy');
     Route::put('/strategi-bisnis/{strategiBisnis}', [SasaranStrategiBisnisController::class, 'updateStatus'])->name('strategi-bisnis.update-status');
 
+    Route::get('unit-led/create', [UnitLEDController::class, 'create'])->name('unit-led.create');
+    Route::get('unit-led/{id}', [UnitLEDController::class, 'show'])->name('unit-led.show');
+    Route::get('unit-led/{id}/edit', [UnitLEDController::class, 'edit'])->name('unit-led.edit');
+    Route::post('unit-led', [UnitLEDController::class, 'store'])->name('unit-led.store');
+    Route::delete('unit-led/{id}', [UnitLEDController::class, 'destroy'])->name('unit-led.destroy');
+    Route::resource('unit-led', UnitLEDController::class)->except(['create', 'show', 'edit']);
+
     Route::middleware('can:backups.index')->resource('backups', BackupController::class);
 	Route::post('backups/restore', [BackupController::class, 'restore'])->name('backups.restore');
+
 });
 
 // Route untuk Measurement Parameter
@@ -497,4 +507,18 @@ Route::prefix('risk-register-unit')->group(function () {
 
     Route::get('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'analisa'])->name('risk-register-unit.analisa');
     Route::post('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'doAnalisa'])->name('risk-register-unit.do-analisa');
+});
+
+Route::group(['prefix' => 'ict', 'as' => 'ict.'], function () {
+    Route::get('/', [\App\Http\Controllers\ICT\ICTController::class, 'index'])->name('index');
+    Route::get('/create', [\App\Http\Controllers\ICT\ICTController::class, 'create'])->name('create');
+    Route::post('/', [\App\Http\Controllers\ICT\ICTController::class, 'store'])->name('store');
+    Route::get('/{ictPlan}', [\App\Http\Controllers\ICT\ICTController::class, 'show'])->name('show');
+    Route::get('/{ictPlan}/edit', [\App\Http\Controllers\ICT\ICTController::class, 'edit'])->name('edit');
+    Route::put('/{ictPlan}', [\App\Http\Controllers\ICT\ICTController::class, 'update'])->name('update');
+    Route::delete('/{ictPlan}', [\App\Http\Controllers\ICT\ICTController::class, 'destroy'])->name('destroy');
+    Route::get('/{ictPlan}/testing', [\App\Http\Controllers\ICT\ICTController::class, 'testing'])->name('testing');
+    Route::post('/{ictPlan}/testing', [\App\Http\Controllers\ICT\ICTController::class, 'storeTesting'])->name('store-testing');
+    Route::get('/{ictPlan}/report', [\App\Http\Controllers\ICT\ICTController::class, 'report'])->name('report');
+    Route::post('/{ictPlan}/report', [\App\Http\Controllers\ICT\ICTController::class, 'storeReport'])->name('store-report');
 });

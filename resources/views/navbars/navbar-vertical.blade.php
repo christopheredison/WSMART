@@ -146,6 +146,15 @@
           </a>
         </li>
         @endcan
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->routeIs('ict.index') ? 'active' : '' }}" href="{{route('ict.index')}}" role="button"
+            data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon d-flex align-items-center w-100">
+              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <span class="nav-link-text">Internal Control Testing</span>
+            </span>
+          </a>
+        </li>  
 
         @can('manajemen_master')
         <div class="row navbar-vertical-label-wrapper">

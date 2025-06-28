@@ -31,4 +31,9 @@ class LossEvent extends Model
     {
         return $this->hasMany(LossEventFile::class);
     }
+    
+    public function kategoriKejadian()
+    {
+        return $this->belongsTo(KategoriKejadian::class, 'kategori_kejadian_id');
+    }
 }
