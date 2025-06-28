@@ -395,6 +395,16 @@
           </span>
         </a>
       </li> -->
+        @can('backups.index')
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->routeIs('backups.index') ? 'active' : '' }}" href="{{ route('backups.index') }}">
+            <span class="nav-link-icon">
+              <i class="menu-icon tf-icons bx bx-cloud-download"></i>
+              <span class="nav-link-text">Backup & Restore</span>
+            </span>
+          </a>
+        </li>
+        @endcan
       </ul>
 
     </div>

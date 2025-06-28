@@ -257,5 +257,7 @@ return [
         'sasaran_strategi_create',
         'sasaran_strategi_edit',
         'sasaran_strategi_delete',
+
+        'backups.index',
     ],
 ];
