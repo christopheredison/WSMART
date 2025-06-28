@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\CapaianTckController;
 use App\Http\Controllers\CapaianTkmruController;
 use Illuminate\Support\Facades\Route;
@@ -459,13 +460,16 @@ Route::group(['middleware' => ['auth']], function() {
     Route::delete('/sasaran-strategi/{sasaran}', [SasaranStrategiBisnisController::class, 'destroy'])->name('sasaran-strategi.destroy');
     Route::put('/strategi-bisnis/{strategiBisnis}', [SasaranStrategiBisnisController::class, 'updateStatus'])->name('strategi-bisnis.update-status');
 
-
     Route::get('unit-led/create', [UnitLEDController::class, 'create'])->name('unit-led.create');
     Route::get('unit-led/{id}', [UnitLEDController::class, 'show'])->name('unit-led.show');
     Route::get('unit-led/{id}/edit', [UnitLEDController::class, 'edit'])->name('unit-led.edit');
     Route::post('unit-led', [UnitLEDController::class, 'store'])->name('unit-led.store');
     Route::delete('unit-led/{id}', [UnitLEDController::class, 'destroy'])->name('unit-led.destroy');
     Route::resource('unit-led', UnitLEDController::class)->except(['create', 'show', 'edit']);
+
+    Route::middleware('can:backups.index')->resource('backups', BackupController::class);
+	Route::post('backups/restore', [BackupController::class, 'restore'])->name('backups.restore');
+
 });
 
 // Route untuk Measurement Parameter
