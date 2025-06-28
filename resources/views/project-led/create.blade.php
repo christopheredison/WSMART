@@ -349,6 +349,41 @@ function handleJenisRisikoChange(select) {
 }
 
 $(document).ready(function() {
+    // Form submit dengan konfirmasi SweetAlert
+    $('form').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Validasi form terlebih dahulu
+        if (!this.checkValidity()) {
+            this.reportValidity();
+            return;
+        }
+        
+        // Simpan referensi ke form
+        var form = this;
+        
+        // Tampilkan konfirmasi SweetAlert
+        Swal.fire({
+            title: 'Konfirmasi',
+            text: 'Apakah Anda yakin ingin menyimpan data Loss Event Project ini?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Simpan',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Hapus format rupiah dari input sebelum submit
+                $('.inputmask-rupiah').each(function() {
+                    $(this).inputmask('remove');
+                });
+                
+                // Jika user mengkonfirmasi, submit form
+                form.submit();
+            }
+        });
+    });
+    
     // Initialize flatpickr for date input
     flatpickr("#tanggal_kejadian", {
         dateFormat: "Y-m-d",
