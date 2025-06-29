@@ -15,7 +15,7 @@ return new class extends Migration
             //
             $table->unsignedBigInteger('risiko_id')
                   ->after('peristiwa_risiko_id')
-                  ->nullable(false);
+                  ->nullable();
 
             $table->foreign('risiko_id')
                   ->references('id')
