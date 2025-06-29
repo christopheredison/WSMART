@@ -12,8 +12,8 @@ class PeriodeController extends Controller
 {
     public function index()
     {
-        $periode = Periode::withTrashed()->with('riskLimitPeriodes')->get();
-        $unitWithRiskLimit = Unit::where('unit_type_id', 2)->get();
+        $periode = Periode::with('riskLimitPeriodes')->get();
+        $unitWithRiskLimit = Unit::where('unit_type_id', 1)->get();
         return view('master.periode.index', compact('periode', 'unitWithRiskLimit'));
     }
 
