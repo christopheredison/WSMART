@@ -251,7 +251,7 @@ class ProjectRiskController extends BasicCRUDController
         $project = $projectPeriodeList->project;
         $periode = Periode::where('status','active')->first();
 
-        $peristiwaRisikos = PeristiwaRisiko::get();
+        $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
 
         $masterKris = MasterKRI::get();
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
