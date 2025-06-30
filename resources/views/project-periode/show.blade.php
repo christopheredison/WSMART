@@ -35,7 +35,7 @@
                     <div class="row d-flex align-items-center mt-3 mt-md-0">
                         <label class="col-md-3">Risk Limit</label>
                         <div class="col-md-9">
-                            {{ Form::text('risk_limit', $projectPeriode->risk_limit, ['class' => 'form-control inputmask-general', 'readonly']) }}
+                            {{ Form::text('risk_limit', (int) $projectPeriode->risk_limit, ['class' => 'form-control inputmask-general', 'readonly']) }}
                         </div>
                     </div>
                 </div>
