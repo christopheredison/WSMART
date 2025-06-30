@@ -216,6 +216,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                         'placeholder' => 'Masukkan Risk Limit',
                         'required' => true,
                         'step' => '0.01',
+                        'autocomplete' => 'off',
                     ]
                 ],
             ],
