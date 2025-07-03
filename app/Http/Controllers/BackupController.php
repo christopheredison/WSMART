@@ -145,32 +145,39 @@ class BackupController extends Controller
 
         $this->cleanupOrphanedTempFiles();
 
-        $files = scandir($saveDir);
-        $files = array_filter($files, function($item) {
-            $extension = explode('.', $item)[1] ?? '';
-            return in_array($extension, ['tar', 'sql']);
-        });
-        $file_temps = scandir($tempDir);
-        $file_temps = array_filter($file_temps, function($item) {
-            $extension = explode('.', $item)[1] ?? '';
-            return in_array($extension, ['tar', 'sql']);
-        });
-        $file_failed = scandir($logDir);
-        $file_failed = array_filter($file_failed, function($item) use ($files, $file_temps) {
+        $backups = [];
+
+        $backupLogs = scandir($logDir);
+        $backupLogs = array_filter($backupLogs, function($item) {
             $exploded = explode('.', $item);
             $extension = $exploded[count($exploded) - 1] ?? '';
-            $name = $exploded[0] ?? '';
-            if (in_array($name, $files) || in_array($name, $file_temps)) {
-                return false;
-            }
-            return in_array($extension, ['log']);
+            return in_array($extension, ['log']) && !str_contains($item, '_restore.log');
         });
-        $failed_logs = [];
-        foreach ($file_failed as $file) {
-            $content = file_get_contents(storage_path('backup/log/' . $file));
-            $failed_logs[$file] = $content;
-        }
-        return view('backup.index', compact('files', 'file_temps', 'file_failed', 'failed_logs'));
+
+        $dbType = $this->getDatabaseType();
+        array_walk($backupLogs, function($item) use ($logDir, &$backups, $dbType, $tempDir) {
+            $backupName = str_replace('.' . ($dbType === 'pgsql' ? 'tar' : 'sql') . '.log', '', $item);
+            $backupFileName = $backupName . ($dbType === 'pgsql' ? '.tar.zip' : '.sql.zip');
+            $tempFileName = $backupName . ($dbType === 'pgsql' ? '.tar' : '.sql');
+
+            $backup = [
+                'name' => $backupName,
+                'status' => 'in_progress',
+                'backup_log' => is_file(storage_path('backup/log/' . $item)) ? file_get_contents(storage_path('backup/log/' . $item)) : '',
+                'restore_log' => is_file(storage_path('backup/log/' . $backupFileName . '_restore.log')) ? file_get_contents(storage_path('backup/log/' . $backupFileName . '_restore.log')) : '',
+                'filename' => $backupFileName,
+            ];
+
+            if (is_file(storage_path('backup/' . $backupFileName))) {
+                $backup['status'] = 'success';
+            } else if (is_file(storage_path($tempDir . '/' . $tempFileName))) {
+                $backup['status'] = 'in_progress';
+            }
+
+            $backups[$backupFileName] = $backup;
+        });
+
+        return view('backup.index', compact('backups'));
     }
 
     // backup
@@ -298,7 +305,7 @@ class BackupController extends Controller
         if (is_file($tempPath)) {
             unlink($tempPath);
         }
-        $logPath = storage_path('backup/log/' . $filename);
+        $logPath = storage_path('backup/log/' . str_replace('.zip', '.log', $filename));
         if (is_file($logPath)) {
             unlink($logPath);
         }
@@ -353,6 +360,7 @@ class BackupController extends Controller
         // Extract backup file with error handling
         $extractScript = "
         (
+            echo \"--------------------------------\" >> \"$logPath\" 2>&1
             echo \"Starting restore process for $filename at $(date)\" >> \"$logPath\" 2>&1
             echo \"Extracting backup file...\" >> \"$logPath\" 2>&1
             
