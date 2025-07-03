@@ -111,44 +111,32 @@
                         <tr>
                             <th>Backup File</th>
                             <th>Status</th>
+                            <th>Log</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if(!$file_temps && !$files && !$file_failed) 
+                        @if(!$backups) 
                         <tr>
-                            <td colspan="3" class="text-center"><em class="text-muted">Belum ada backup</em></td>
+                            <td colspan="4" class="text-center"><em class="text-muted">Belum ada backup</em></td>
                         </tr>
                         @endif
-                        @foreach($file_temps as $file)
+                        @foreach($backups as $backup)
                         <tr>
-                            <td>{{$file}}</td>
-                            <td>Berproses</td>
+                            <td>{{$backup['name']}}</td>
+                            <td>{{['success' => 'Tersedia', 'in_progress' => 'Berproses', 'failed' => 'Gagal'][$backup['status']] ?? '-'}}</td>
                             <td>
-                                <button type="button" onclick="restoreBackup('{{$file}}')" class="btn btn-sm btn-warning">Restore</button>
-                                <a href="{{route('backups.show', $file)}}" class="btn btn-sm btn-primary">Unduh</a>
-                                <button type="button" onclick="deleteBackup('{{$file}}')" class="btn btn-sm btn-danger">Hapus</button>
+                                <button type="button" onclick="viewBackupLog('{{$backup['filename']}}')" class="btn btn-sm btn-info">View Backup Log</button>
+                                @if($backup['restore_log'])
+                                <button type="button" onclick="viewRestoreLog('{{$backup['filename']}}')" class="btn btn-sm btn-info">View Restore Log</button>
+                                @endif
                             </td>
-                        </tr>
-                        @endforeach
-                        @foreach($files as $file)
-                        <tr>
-                            <td>{{$file}}</td>
-                            <td>Tersedia</td>
                             <td>
-                                <button type="button" onclick="restoreBackup('{{$file}}')" class="btn btn-sm btn-warning">Restore</button>
-                                <a href="{{route('backups.show', $file)}}" class="btn btn-sm btn-primary">Unduh</a>
-                                <button type="button" onclick="deleteBackup('{{$file}}')" class="btn btn-sm btn-danger">Hapus</button>
-                            </td>
-                        </tr>
-                        @endforeach
-                        @foreach($file_failed as $file)
-                        <tr>
-                            <td>{{$file}}</td>
-                            <td>Gagal</td>
-                            <td>
-                                <button type="button" onclick="viewLog('{{$file}}')" class="btn btn-sm btn-info">View Log</button>
-                                <button type="button" onclick="deleteBackup('{{$file}}')" class="btn btn-sm btn-danger">Hapus</button>
+                                @if($backup['status'] == 'success')
+                                <button type="button" onclick="restoreBackup('{{$backup['filename']}}')" class="btn btn-sm btn-warning">Restore</button>
+                                <a href="{{route('backups.show', $backup['filename'])}}" class="btn btn-sm btn-primary">Unduh</a>
+                                @endif
+                                <button type="button" onclick="deleteBackup('{{$backup['filename']}}')" class="btn btn-sm btn-danger">Hapus</button>
                             </td>
                         </tr>
                         @endforeach
@@ -274,12 +262,22 @@
             });
         }
 
-        failedLogs = {!! json_encode($failed_logs) !!};
-        function viewLog(id) {
-            console.log(failedLogs[id]);
+        backups = @json($backups);
+        function viewBackupLog(id) {
+            console.log(backups[id]);
             Swal.fire({
                 title: 'View log',
-                html: failedLogs[id].replace(/\n/g, '<br/>'),
+                html: backups[id].backup_log.replace(/\n/g, '<br/>'),
+                icon: 'info',
+                confirmButtonText: 'Tutup'
+            });
+        }
+
+        function viewRestoreLog(id) {
+            console.log(backups[id]);
+            Swal.fire({
+                title: 'View log',
+                html: backups[id].restore_log.replace(/\n/g, '<br/>'),
                 icon: 'info',
                 confirmButtonText: 'Tutup'
             });
