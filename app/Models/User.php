@@ -103,4 +103,34 @@ class User extends Authenticatable
 
         return $this->projects->contains($project);
     }
+
+    public function jabatan()
+    {
+        return $this->belongsTo(Jabatan::class);
+    }
+
+    public function levels()
+    {
+        return $this->jabatan ? $this->jabatan->levels() : collect([]);
+    }
+
+    // Override method dari HasRoles trait untuk menggabungkan role dari jabatan
+    public function getRoleNamesAttribute()
+    {
+        $directRoles = $this->roles()->pluck('name');
+        
+        // Jika user memiliki jabatan, ambil role dari level yang terkait dengan jabatan
+        if ($this->jabatan) {
+            $levelRoles = $this->jabatan->levels()
+                ->with('roles')
+                ->get()
+                ->pluck('roles')
+                ->flatten()
+                ->pluck('name');
+            
+            return $directRoles->merge($levelRoles)->unique();
+        }
+        
+        return $directRoles;
+    }
 }
