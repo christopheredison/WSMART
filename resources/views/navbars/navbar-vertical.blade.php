@@ -79,7 +79,7 @@
             role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon">
               <i class="menu-icon tf-icons bx bx-grid-alt"></i>
-              <span class="nav-link-text">Risk Register Unit</span>
+              <span class="nav-link-text">Risk Register Divisi</span>
             </span>
           </a>
         </li>
@@ -89,7 +89,7 @@
             href="{{route('unit-led.index')}}" role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
               <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
-              <span class="nav-link-text">Loss Event Unit</span>
+              <span class="nav-link-text">Loss Event Divisi</span>
             </span>
           </a>
         </li>

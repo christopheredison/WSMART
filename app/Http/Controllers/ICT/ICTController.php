@@ -145,8 +145,11 @@ class ICTController extends Controller
                 $lokasiRisiko = $project ? $project->name : '-';
             }
         }
+
+        // Ambil data Jabatan untuk dropdown
+        $jabatans = \App\Models\Jabatan::orderBy('name')->get();
         
-        return view('ict.pelaksanaan', compact('ictPlan', 'peristiwaRisiko', 'lokasiRisiko'));
+        return view('ict.pelaksanaan', compact('ictPlan', 'peristiwaRisiko', 'lokasiRisiko', 'jabatans'));
     }
 
     public function storeTesting(Request $request, $id)
@@ -171,10 +174,14 @@ class ICTController extends Controller
             'rencana_tindak_lanjut' => 'required|array',
             'batas_waktu_penyelesaian' => 'required|array',
             'penanggung_jawab' => 'required|array',
+            'penanggung_jawab_jabatan_id' => 'required|array',
         ]);
         
         // Simpan data ICTDo untuk setiap key control
         foreach ($request->plan_control_id as $index => $planControlId) {
+            $jabatan = \App\Models\Jabatan::find($request->penanggung_jawab_jabatan_id[$index]);
+            $penanggungJawab = $jabatan ? $jabatan->name : $request->penanggung_jawab[$index];
+
             ICTDo::create([
                 'plan_control_id' => $planControlId,
                 'jenis_kontrol' => $request->jenis_kontrol[$index],
@@ -193,7 +200,9 @@ class ICTController extends Controller
                 'hasil_temuan' => $request->hasil_temuan[$index],
                 'rencana_tindak_lanjut' => $request->rencana_tindak_lanjut[$index],
                 'batas_waktu_penyelesaian' => $request->batas_waktu_penyelesaian[$index],
-                'penanggung_jawab' => $request->penanggung_jawab[$index],
+                'penanggung_jawab' => $penanggungJawab,
+                'penanggung_jawab_jabatan_id' => $request->penanggung_jawab_jabatan_id[$index],
+                //'penanggung_jawab' => $request->penanggung_jawab[$index],
             ]);
         }
         

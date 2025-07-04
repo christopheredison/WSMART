@@ -40,7 +40,7 @@
     </div>
     <div class="col-12 col-md-6">
         <div class="form-floating">
-            {{ Form::text('xpic', null, ['class' => 'form-control', 'required']) }}
+            {{ Form::select('xpic', \App\Models\Jabatan::pluck('name', 'id'), '', ['class' => 'form-select', 'required']) }}
             <label for="xpic">PIC</label>
         </div>
     </div>

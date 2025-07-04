@@ -210,7 +210,16 @@
                     </div>
                     <div class="col-md-6">
                       <label class="form-label">Penanggung Jawab Tindak Lanjut</label>
+                      <select name="penanggung_jawab_jabatan_id[]" class="form-select" required>
+                        <option value="">Pilih Jabatan</option>
+                        @foreach($jabatans as $jabatan)
+                          <option value="{{ $jabatan->id }}">{{ $jabatan->name }}</option>
+                        @endforeach
+                      </select>
+                      <input type="hidden" name="penanggung_jawab[]" value="">
+                      {{--
                       <input type="text" class="form-control" name="penanggung_jawab[]" required>
+                      --}}
                     </div>
                   </div>
                 </div>
@@ -321,6 +330,11 @@
           this.submit();
         }
       });
+    });
+
+    $('select').select2({
+        width: '100%',
+        placeholder: 'Pilih Opsi'
     });
   });
 </script>

@@ -57,7 +57,9 @@ use App\Models\ProjectSektor;
 use App\Http\Controllers\SasaranStrategiBisnisController;
 use App\Http\Controllers\PenilaianRMIController;
 use App\Http\Controllers\RiskRegisterUnitController;
+use App\Http\Controllers\RiskRegisterUnitMonitoringController;
 use App\Http\Controllers\UnitLEDController;
+
 
 
 /*
@@ -490,6 +492,10 @@ Route::group(['prefix' => 'master', 'middleware' => ['auth']], function () {
 
 Route::prefix('risk-register-unit')->group(function () {
     Route::get('/periods', [RiskRegisterUnitController::class, 'RiskPeriodeList'])->name('risk-register-unit.periods');
+    Route::get('/periods/{period}', [RiskRegisterUnitController::class, 'riskPeriodeDashboard'])->name('risk-register-unit.periods.show');
+    Route::resource('/periods/{period}/monitorings', RiskRegisterUnitMonitoringController::class)
+            ->names('risk-register-unit.monitorings')
+            ->only(['index', 'show', 'edit', 'update']);
     Route::get('/', [RiskRegisterUnitController::class, 'index'])->name('risk-register-unit.index');
     Route::get('/create', [RiskRegisterUnitController::class, 'create'])->name('risk-register-unit.create');
     Route::post('/', [RiskRegisterUnitController::class, 'store'])->name('risk-register-unit.store');

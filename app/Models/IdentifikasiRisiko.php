@@ -48,6 +48,11 @@ class IdentifikasiRisiko extends Model
         return $this->hasMany(PenyebabRisiko::class, 'risiko_id');
     }
 
+    public function penyebabRisikos()
+    {
+        return $this->hasMany(PenyebabRisiko::class, 'risiko_id');
+    }
+
     public function riskAnalysis()
     {
         return $this->hasOne(RiskAnalysis::class, 'risiko_id');
@@ -112,6 +117,21 @@ class IdentifikasiRisiko extends Model
         return $this->belongsTo(JenisKontrolEksisting::class, 'jenis_kontrol_eksisting_id');
     }
 
+    public function monitoringRisiko()
+    {
+        return $this->hasOne(UnitRiskMonitoring::class, 'identifikasi_risiko_id');
+    }
+
+    public function monitoringRisikos()
+    {
+        return $this->hasMany(UnitRiskMonitoring::class, 'identifikasi_risiko_id');
+    }
+
+    public function lastMonitoringRisiko()
+    {
+        return $this->hasOne(UnitRiskMonitoring::class, 'identifikasi_risiko_id')->orderBy('id', 'desc');
+    }
+
     public function kontrolEksistings()
     {
         return $this->hasMany(KontrolEksisting::class, 'risiko_id');
@@ -156,4 +176,58 @@ class IdentifikasiRisiko extends Model
     public const LEVEL_RISIKO_MODERATE = 'Moderate';
     public const LEVEL_RISIKO_MODERATE_TO_HIGH = 'Moderate To High';
     public const LEVEL_RISIKO_HIGH = 'High';
+
+    public function refreshRealisasi()
+    {
+        $this->load('penyebabRisiko.perlakuanPenyebabRisikoUnit.perlakuanPenyebabUnitMonitorings.unitRiskMonitoring', 'kris.kriUnitMonitorings.unitRiskMonitoring');
+    
+        $perlakuanPenyebabRisikos = $this->penyebabRisiko->flatten()->pluck('perlakuanPenyebabRisikoUnit')->flatten();
+        $kris = $this->kris->flatten();
+    
+        $perlakuanPenyebabRisikos->each(function($perlakuanPenyebabRisiko) {
+            for ($quarter = 1; $quarter <= 4; $quarter++) {
+                $realisasiBiaya = $perlakuanPenyebabRisiko
+                    ->perlakuanPenyebabUnitMonitorings
+                    ->filter(fn($monitoring) => $monitoring->unitRiskMonitoring->quarter === $quarter)
+                    ->sortByDesc('id')
+                    ->first()
+                    ?->realisasi_biaya_perlakuan_risiko;
+    
+                $progress = $perlakuanPenyebabRisiko
+                    ->perlakuanPenyebabUnitMonitorings
+                    ->filter(fn($monitoring) => $monitoring->unitRiskMonitoring->quarter === $quarter)
+                    ->sortByDesc('id')
+                    ->first()
+                    ?->progress_rencana_perlakuan_risiko;
+    
+                $perlakuanPenyebabRisiko->update([
+                    "realisasi_biaya_perlakuan_risiko_q{$quarter}" => $realisasiBiaya,
+                    "progress_rencana_perlakuan_risiko_q{$quarter}" => $progress,
+                ]);
+            }
+        });
+    
+        $kris->each(function($kri) {
+            for ($quarter = 1; $quarter <= 4; $quarter++) {
+                $nilaiKri = $kri
+                    ->kriUnitMonitorings
+                    ->filter(fn($monitoring) => $monitoring->unitRiskMonitoring->quarter === $quarter)
+                    ->sortByDesc('id')
+                    ->first()
+                    ?->nilai_kri_terkini;
+    
+                $statusKri = $kri
+                    ->kriUnitMonitorings
+                    ->filter(fn($monitoring) => $monitoring->unitRiskMonitoring->quarter === $quarter)
+                    ->sortByDesc('id')
+                    ->first()
+                    ?->status_kri_terkini;
+    
+                $kri->update([
+                    "nilai_kri_terkini_q{$quarter}" => $nilaiKri,
+                    "status_kri_terkini_q{$quarter}" => $statusKri,
+                ]);
+            }
+        });
+    }
 }

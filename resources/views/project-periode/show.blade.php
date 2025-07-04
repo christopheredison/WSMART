@@ -21,7 +21,7 @@
                     <div class="row d-flex align-items-center">
                         <label class="col-md-3">Kode Project</label>
                         <div class="col-md-9">
-                            {{ Form::text('project_code', $projectPeriode->project->project_code, ['class' => 'form-control', 'readonly']) }}
+                            {{ Form::text('project_code', $projectPeriode->project->meta['profit_center'] ?? '-', ['class' => 'form-control', 'readonly']) }}
                         </div>
                     </div>
                     <div class="row d-flex align-items-center mt-3">
@@ -35,14 +35,16 @@
                     <div class="row d-flex align-items-center mt-3 mt-md-0">
                         <label class="col-md-3">Risk Limit</label>
                         <div class="col-md-9">
-                            {{ Form::text('risk_limit', (int) $projectPeriode->risk_limit, ['class' => 'form-control inputmask-general', 'readonly']) }}
+                            {{ Form::text('risk_limit', ($projectPeriode->project->meta['omset'] ?? 0) * 0.03, ['class' => 'form-control inputmask-general', 'readonly']) }}
                         </div>
                     </div>
                 </div>
             </div>
+            {{--
             <div class="mb-2 mt-4">
                 <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modalEdit">Edit</button>
             </div>
+            --}}
         </div>
     </div>
     
@@ -376,8 +378,8 @@ $(document).ready(function () {
             groupSeparator: '.',
             radixPoint: ',',
             autoGroup: true,
-            digits: 0,
-            digitsOptional: true,
+            digits: 2,
+            digitsOptional: false,
             placeholder: '0',
             rightAlign: false,
             autoUnmask: true,

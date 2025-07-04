@@ -20,4 +20,9 @@ class KRI extends Model
     {
         return $this->status_kri_terkini_q4 ?: $this->status_kri_terkini_q3 ?: $this->status_kri_terkini_q2 ?: $this->status_kri_terkini_q1;
     }
+
+    public function kriUnitMonitorings()
+    {
+        return $this->hasMany(KRIUnitMonitoring::class, 'key_risk_indicator_id', 'id');
+    }
 }

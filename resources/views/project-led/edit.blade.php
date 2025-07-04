@@ -232,8 +232,15 @@
                             <!-- Pihak Terkait -->
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Pihak Terkait <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control @error('unit_penanggung_jawab') is-invalid @enderror" 
-                                    name="unit_penanggung_jawab" value="{{ old('unit_penanggung_jawab', $lossEvent->unit_penanggung_jawab) }}" required>
+                                <select class="form-select @error('unit_penanggung_jawab') is-invalid @enderror" 
+                                    name="unit_penanggung_jawab" id="unit_penanggung_jawab" required>
+                                    <option value="">Pilih Pihak Terkait</option>
+                                    @foreach($jabatans as $jabatan)
+                                        <option value="{{ $jabatan->id }}" {{ old('unit_penanggung_jawab', $lossEvent->unit_penanggung_jawab_jabatan_id) == $jabatan->id ? 'selected' : '' }}>
+                                            {{ $jabatan->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
                                 @error('unit_penanggung_jawab')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror

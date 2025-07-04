@@ -259,5 +259,7 @@ return [
         'sasaran_strategi_delete',
 
         'backups.index',
+        
+        'risk_monitoring_edit',
     ],
 ];

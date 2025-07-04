@@ -11,5 +11,8 @@ class Role extends SpatieRole
 {
     use HasFactory, SoftDeletes;
 
-
+    public function levels()
+    {
+        return $this->belongsToMany(Level::class, 'level_role');
+    }
 }

@@ -15,6 +15,7 @@ class PerlakuanPenyebabRisiko extends Model
         'output_perlakuan_risiko',
         'biaya_perlakuan_risiko',
         'pic',
+        'pic_jabatan_id',
         'timeline_perlakuan_risiko_start',
         'timeline_perlakuan_risiko_end',
         'opsi_perlakuan_risiko',
@@ -124,5 +125,10 @@ class PerlakuanPenyebabRisiko extends Model
             })
             ->sortByDesc('id')
             ->first();
+    }
+
+    public function picJabatan()
+    {
+        return $this->belongsTo(Jabatan::class, 'pic_jabatan_id');
     }
 }

@@ -36,4 +36,9 @@ class LossEvent extends Model
     {
         return $this->belongsTo(KategoriKejadian::class, 'kategori_kejadian_id');
     }
+
+    public function unitPenanggungJawabJabatan()
+    {
+        return $this->belongsTo(Jabatan::class, 'unit_penanggung_jawab_jabatan_id');
+    }
 }

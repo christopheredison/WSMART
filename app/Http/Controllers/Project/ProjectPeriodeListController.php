@@ -19,10 +19,30 @@ class ProjectPeriodeListController extends BasicCRUDController
     protected $userProjectIdsx = [];
 
     protected $tableColumns = [
+        'project_code' => [
+            'label' => 'Kode',
+            'data' => 'project.meta.profit_center',
+            'render' => '(data, type, row) => row.project?.meta?.profit_center || "-"',
+        ],
         'project_id' => [
             'label' => 'Proyek',
             'data' => 'project.project_name',
             'render' => '(data, type, row) => row.project?.project_name || "-"',
+        ],
+        'ok' => [
+            'label' => 'Nilai OK',
+            'data' => 'project.meta.omset',
+            'render' => '(data, type, row) => row.project?.meta?.omset ? Intl.NumberFormat(\'id-ID\').format(row.project.meta.omset) : "-"',
+        ],
+        'tanggal_mulai' => [
+            'label' => 'Tanggal Mulai',
+            'data' => 'project.meta.tanggal_mulai',
+            'render' => '(data, type, row) => {
+                if (!row.project?.meta?.tanggal_mulai) return "-";
+                const date = new Date(row.project.meta.tanggal_mulai);
+                const options = { day: "numeric", month: "short", year: "numeric" };
+                return date.toLocaleDateString("id-ID", options);
+            }',
         ],
         'skala_risiko' => [
             'label' => 'Nilai Risiko',

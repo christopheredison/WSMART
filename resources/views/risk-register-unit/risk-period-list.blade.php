@@ -14,7 +14,7 @@
         </div>
         <div class="d-block">
           <div class="ff-preheading">Daftar Periode</div>
-          <h2>Risk Register Unit</h2>
+          <h2>Risk Register Divisi</h2>
         </div>
       </div>
       <div class="card-body dt-header-true">
@@ -39,9 +39,19 @@
                   </figure>
                 </td>
                 <td class="white-space-nowrap">
-                  <a href="{{ route('risk-register-unit.index', ['pid' => $periode->id]) }}" class="btn btn-sm btn-outline-primary">
-                    <span class="bx bx-list-ul"></span>
-                    <span class="ms-1">Risk Register</span>
+                  {{--
+                  <a href="{{ route('risk-register-unit.periods.show', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
+                    <span class="bx bx-show"></span>
+                  </a>
+                  <a href="javascript:void(0)" class="btn-input-icon" data-bs-toggle="tooltip" title="Pengaturan Periode Divisi" onclick="openPeriodeUnitSettings({{ $periode->id }})">
+                    <span class="bx bx-cog"></span>
+                  </a>
+                  --}}
+                  <a href="{{ route('risk-register-unit.index', ['pid' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
+                    <span class="bx bx-list-check"></span>
+                  </a>
+                  <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
+                    <span class="bx bx-radar"></span>
                   </a>
                 </td>
               </tr>

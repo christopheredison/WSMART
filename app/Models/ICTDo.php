@@ -31,7 +31,8 @@ class ICTDo extends Model
         'hasil_temuan',
         'rencana_tindak_lanjut',
         'batas_waktu_penyelesaian',
-        'penanggung_jawab'
+        'penanggung_jawab',
+        'penanggung_jawab_jabatan_id',
     ];
 
     protected $casts = [
@@ -44,5 +45,10 @@ class ICTDo extends Model
     public function planControl()
     {
         return $this->belongsTo(ICTPlanControl::class, 'plan_control_id');
+    }
+
+    public function penanggungJawabJabatan()
+    {
+        return $this->belongsTo(Jabatan::class, 'penanggung_jawab_jabatan_id');
     }
 }

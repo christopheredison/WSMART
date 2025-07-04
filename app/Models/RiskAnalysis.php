@@ -114,4 +114,30 @@ class RiskAnalysis extends Model
     {
         return $this->belongsTo(AreaDampak::class, 'area_dampak');
     }
+
+    // Tambahkan relasi skalaDampakObj
+    public function skalaDampakObj()
+    {
+        return $this->belongsTo(SkalaDampak::class, 'skala_dampak', 'tingkat');
+    }
+
+    public function skalaDampakResidualQ1Obj()
+    {
+        return $this->belongsTo(SkalaDampak::class, 'skala_dampak_residual_q1', 'tingkat');
+    }
+
+    public function skalaDampakResidualQ2Obj()
+    {
+        return $this->belongsTo(SkalaDampak::class, 'skala_dampak_residual_q2', 'tingkat');
+    }
+
+    public function skalaDampakResidualQ3Obj()
+    {
+        return $this->belongsTo(SkalaDampak::class, 'skala_dampak_residual_q3', 'tingkat');
+    }
+
+    public function skalaDampakResidualQ4Obj()
+    {
+        return $this->belongsTo(SkalaDampak::class, 'skala_dampak_residual_q4', 'tingkat');
+    }
 }

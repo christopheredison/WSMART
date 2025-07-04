@@ -15,6 +15,7 @@ class PerlakuanPenyebabRisikoUnit extends Model
         'output_perlakuan_risiko',
         'biaya_perlakuan_risiko',
         'pic',
+        'pic_jabatan_id',
         'timeline_perlakuan_risiko_start',
         'timeline_perlakuan_risiko_end',
         'opsi_perlakuan_risiko',
@@ -40,6 +41,47 @@ class PerlakuanPenyebabRisikoUnit extends Model
         return $this->belongsTo(PenyebabRisiko::class, 'penyebab_risiko_id');
     }
 
+    public function documents()
+    {
+        return $this->hasMany(PerlakuanPenyebabRisikoUnitDocument::class, 'perlakuan_penyebab_risiko_unit_id', 'id');
+    }
+
+    public function monitorings()
+    {
+        return $this->hasMany(PerlakuanPenyebabUnitMonitoring::class, 'perlakuan_penyebab_risiko_unit_id', 'id');
+    }
+
+    public function lastMonitoring()
+    {
+        return $this->hasOne(PerlakuanPenyebabUnitMonitoring::class, 'perlakuan_penyebab_risiko_unit_id')->orderBy('created_at', 'desc');
+    }
+
+    public function getTimelinePerlakuanRisikoAttribute()
+    {
+        if (!$this->lastMonitoring) {
+            return null;
+        }
+        return [
+            $this->lastMonitoring->timeline_perlakuan_risiko_start?->format('d/m/Y'),
+            $this->lastMonitoring->timeline_perlakuan_risiko_end?->format('d/m/Y'),
+        ];
+    }
+
+    public function getDeskripsiPerlakuanRisikoAttribute()
+    {
+        return $this->lastMonitoring?->deskripsi_perlakuan_risiko;
+    }
+
+    public function getJenisProgramRkapAttribute()
+    {
+        return $this->lastMonitoring?->jenis_program_rkap;
+    }
+
+    public function getJenisProgramRkapIdAttribute()
+    {
+        return $this->lastMonitoring?->jenis_program_rkap_id;
+    }
+
     public function getWaktuPerlakuanRisikoAttribute()
     {
         if (!$this->timeline_perlakuan_risiko_start) {
@@ -62,4 +104,18 @@ class PerlakuanPenyebabRisikoUnit extends Model
         return $start;
     }
 
+    public function perlakuanPenyebabMonitorings()
+    {
+        return $this->hasMany(PerlakuanPenyebabUnitMonitoring::class, 'perlakuan_penyebab_risiko_unit_id', 'id');
+    }
+
+    public function perlakuanPenyebabUnitMonitorings()
+    {
+        return $this->hasMany(PerlakuanPenyebabUnitMonitoring::class, 'perlakuan_penyebab_risiko_unit_id', 'id');
+    }
+    
+    public function picJabatan()
+    {
+        return $this->belongsTo(Jabatan::class, 'pic_jabatan_id');
+    }
 }
