@@ -23,6 +23,7 @@ class LossEventProject extends Model
         'nilai_kerugian_finansial',
         'nilai_kerugian_non_finansial',
         'unit_penanggung_jawab',
+        'unit_penanggung_jawab_jabatan_id',
         'nama_kejadian',
         'kategori_kejadian_id',
         'sumber_penyebab_kejadian',
@@ -78,5 +79,11 @@ class LossEventProject extends Model
     public function jenisRisiko()
     {
         return $this->belongsTo(JenisRisiko::class);
+    }
+
+    // Tambahkan method relasi
+    public function unitPenanggungJawabJabatan()
+    {
+        return $this->belongsTo(Jabatan::class, 'unit_penanggung_jawab_jabatan_id');
     }
 }

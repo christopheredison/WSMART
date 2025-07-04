@@ -14,7 +14,7 @@
         </div>
         <div class="d-block">
           <div class="ff-preheading">Input Data</div>
-          <h2>Risk Register Unit</h2>
+          <h2>Risk Register Divisi</h2>
           @if(isset($selectedPeriode)) 
           <div class="ff-preheading">Periode: {{ $selectedPeriode->tahun }}</div> 
           @endif

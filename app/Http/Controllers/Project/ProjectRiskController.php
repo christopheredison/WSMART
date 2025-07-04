@@ -25,6 +25,7 @@ use Carbon\Carbon;
 use App\Models\AreaDampak;
 use App\Models\AreaDampakDetail;
 use App\Models\LossEventProject;
+use App\Models\Jabatan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
@@ -591,8 +592,8 @@ class ProjectRiskController extends BasicCRUDController
             $risk_tolerance = 0;
         }
 
-        $risk_limit = $projectPeriodeList->risk_limit;
-
+        //$risk_limit = $projectPeriodeList->risk_limit;
+        $risk_limit = ($projectPeriodeList->project->meta['omset'] ?? 0) * 0.03;
         return view('project-risk.analisa', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'skalaProbabilitas', 'riskMaps', 'analisa', 'areas', 'groupedAreas', 'risk_tolerance', 'risk_limit'));
     }
 
@@ -708,7 +709,8 @@ class ProjectRiskController extends BasicCRUDController
                 ->count();
             $sum_risk = $sum_risk + 1;
             
-            $risk_limit = $projectPeriodeList->risk_limit;
+            //$risk_limit = $projectPeriodeList->risk_limit;
+            $risk_limit = ($projectPeriodeList->project->meta['omset'] ?? 0) * 0.03;
 
             $skala_dampak = $this->hitungSkalaDampak($nilai_dampak, $risk_limit);
             $skala_dampak_residual = $this->hitungSkalaDampak($nilai_dampak_residual, $risk_limit);
@@ -811,8 +813,6 @@ class ProjectRiskController extends BasicCRUDController
         $periode = $projectPeriodeList->periode;
         $analisa = $projectRisk->projectRiskAnalisa;
 
-
-    
         return view('project-risk.rencana', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'analisa'));
     }
 
@@ -843,7 +843,7 @@ class ProjectRiskController extends BasicCRUDController
             'rencana_perlakuan_risiko' => 'required|string',
             'output_perlakuan_risiko' => 'required|string',
             'biaya_perlakuan_risiko' => 'required|numeric|min:0',
-            'pic' => 'required|string',
+            'pic' => 'required',
             //'timeline_perlakuan_risiko' => 'required|string',
             'timeline_mulai_perlakuan_risiko' => 'required',
             'timeline_selesai_perlakuan_risiko' => 'required',
@@ -880,12 +880,19 @@ class ProjectRiskController extends BasicCRUDController
             ], 422);
         }
 
+        $jabatan = Jabatan::find($validated['pic']);
+        $jabatan_name = "-";
+        if($jabatan){
+            $jabatan_name = $jabatan->name;
+        }
+
         $perlakuan = PerlakuanPenyebabRisiko::create([
             'penyebab_risiko_id' => $validated['penyebab_risiko_id'],
             'rencana_perlakuan_risiko' => $validated['rencana_perlakuan_risiko'],
             'output_perlakuan_risiko' => $validated['output_perlakuan_risiko'],
             'biaya_perlakuan_risiko' => $validated['biaya_perlakuan_risiko'],
-            'pic' => $validated['pic'],
+            'pic' => $jabatan_name,
+            'pic_jabatan_id' => $validated['pic'],
             'timeline_perlakuan_risiko_start' => $startDate,
             'timeline_perlakuan_risiko_end' => $endDate,
             'opsi_perlakuan_risiko' => $validated['opsi_perlakuan_risiko'],
@@ -932,6 +939,7 @@ class ProjectRiskController extends BasicCRUDController
             'jenis_rencana_perlakuan_risiko' => $perlakuan->jenis_rencana_perlakuan_risiko,
             'biaya_perlakuan_risiko' => $perlakuan->biaya_perlakuan_risiko,
             'pic' => $perlakuan->pic,
+            'pic_jabatan_id' => $perlakuan->pic_jabatan_id,
             'timeline_perlakuan_risiko_start' => $perlakuan->timeline_perlakuan_risiko_start ? $perlakuan->timeline_perlakuan_risiko_start->format('d/m/Y') : null,
             'timeline_perlakuan_risiko_end' => $perlakuan->timeline_perlakuan_risiko_end ? $perlakuan->timeline_perlakuan_risiko_end->format('d/m/Y') : null,
         ]);
@@ -961,13 +969,20 @@ class ProjectRiskController extends BasicCRUDController
                 ], 422);
             }
 
+            $jabatan = Jabatan::find($validated['xpic']);
+            $jabatan_name = "-";
+            if($jabatan){
+                $jabatan_name = $jabatan->name;
+            }
+            
             $data = [
                 'rencana_perlakuan_risiko' => $validated['xrencana_perlakuan_risiko'],
                 'output_perlakuan_risiko' => $validated['xoutput_perlakuan_risiko'],
                 'opsi_perlakuan_risiko' => $validated['xopsi_perlakuan_risiko'],
                 'jenis_rencana_perlakuan_risiko' => $validated['xjenis_rencana_perlakuan_risiko'],
                 'biaya_perlakuan_risiko' => $validated['xbiaya_perlakuan_risiko'],
-                'pic' => $validated['xpic'],
+                'pic' => $jabatan_name,
+                'pic_jabatan_id' => $validated['xpic'],
                 'timeline_perlakuan_risiko_start' => $startDate->format('Y-m-d'),
                 'timeline_perlakuan_risiko_end' => $endDate->format('Y-m-d'),
             ];

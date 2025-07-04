@@ -29,6 +29,7 @@ use App\Models\SkalaProbabilitas;
 use App\Models\RiskMap;
 use App\Models\StrategiRisiko;
 use App\Models\RiskLimitPeriode;
+use App\Models\Jabatan;
 
 class RiskRegisterUnitController extends Controller
 {
@@ -375,16 +376,16 @@ class RiskRegisterUnitController extends Controller
         if ($riskLimitPeriode) {
             $risk_limit = $riskLimitPeriode->risk_limit;
             $risk_tolerance = $riskLimitPeriode->risk_limit;
-            $totalOtherIdentifikasiRisiko = IdentifikasiRisiko::where('unit_id', $unit->id)
-                ->where('periode_id', $periode->id)
-                ->whereHas('riskAnalysis', function($query) {
-                    $query->where('kategori_dampak', 'Kuantitatif');
-                })
-                ->count();
+            // $totalOtherIdentifikasiRisiko = IdentifikasiRisiko::where('unit_id', $unit->id)
+            //     ->where('periode_id', $periode->id)
+            //     ->whereHas('riskAnalysis', function($query) {
+            //         $query->where('kategori_dampak', 'Kuantitatif');
+            //     })
+            //     ->count();
 
-            if ($totalOtherIdentifikasiRisiko > 0) {
-                $risk_limit = $risk_limit / $totalOtherIdentifikasiRisiko;
-            }
+            // if ($totalOtherIdentifikasiRisiko > 0) {
+            //     $risk_limit = $risk_limit / $totalOtherIdentifikasiRisiko;
+            // }
         }
 
         $autoCalculate = true; // Flag untuk menentukan apakah perhitungan harus dilakukan secara otomatis
@@ -427,7 +428,7 @@ class RiskRegisterUnitController extends Controller
             'rencana_perlakuan_risiko' => 'required|string',
             'output_perlakuan_risiko' => 'required|string',
             'biaya_perlakuan_risiko' => 'required|numeric|min:0',
-            'pic' => 'required|string',
+            'pic' => 'required',
             'timeline_mulai_perlakuan_risiko' => 'required',
             'timeline_selesai_perlakuan_risiko' => 'required',
             'opsi_perlakuan_risiko' => 'required|exists:opsi_perlakuan_risikos,id',
@@ -456,12 +457,19 @@ class RiskRegisterUnitController extends Controller
             ], 422);
         }
 
+        $jabatan = Jabatan::find($validated['pic']);
+        $jabatan_name = "-";
+        if($jabatan){
+            $jabatan_name = $jabatan->name;
+        }
+
         $perlakuan = PerlakuanPenyebabRisikoUnit::create([
             'penyebab_risiko_id' => $validated['penyebab_risiko_id'],
             'rencana_perlakuan_risiko' => $validated['rencana_perlakuan_risiko'],
             'output_perlakuan_risiko' => $validated['output_perlakuan_risiko'],
             'biaya_perlakuan_risiko' => $validated['biaya_perlakuan_risiko'],
-            'pic' => $validated['pic'],
+            'pic' => $jabatan_name,
+            'pic_jabatan_id' => $validated['pic'],
             'timeline_perlakuan_risiko_start' => $startDate,
             'timeline_perlakuan_risiko_end' => $endDate,
             'opsi_perlakuan_risiko' => $validated['opsi_perlakuan_risiko'],
@@ -502,6 +510,7 @@ class RiskRegisterUnitController extends Controller
             'jenis_rencana_perlakuan_risiko' => $perlakuan->jenis_rencana_perlakuan_risiko,
             'biaya_perlakuan_risiko' => $perlakuan->biaya_perlakuan_risiko,
             'pic' => $perlakuan->pic,
+            'pic_jabatan_id' => $perlakuan->pic_jabatan_id,
             'timeline_perlakuan_risiko_start' => $perlakuan->timeline_perlakuan_risiko_start ? $perlakuan->timeline_perlakuan_risiko_start->format('d/m/Y') : null,
             'timeline_perlakuan_risiko_end' => $perlakuan->timeline_perlakuan_risiko_end ? $perlakuan->timeline_perlakuan_risiko_end->format('d/m/Y') : null,
         ]);
@@ -530,13 +539,20 @@ class RiskRegisterUnitController extends Controller
                 ], 422);
             }
 
+            $jabatan = Jabatan::find($validated['xpic']);
+            $jabatan_name = "-";
+            if($jabatan){
+                $jabatan_name = $jabatan->name;
+            }
+
             $data = [
                 'rencana_perlakuan_risiko' => $validated['xrencana_perlakuan_risiko'],
                 'output_perlakuan_risiko' => $validated['xoutput_perlakuan_risiko'],
                 'opsi_perlakuan_risiko' => $validated['xopsi_perlakuan_risiko'],
                 'jenis_rencana_perlakuan_risiko' => $validated['xjenis_rencana_perlakuan_risiko'],
                 'biaya_perlakuan_risiko' => $validated['xbiaya_perlakuan_risiko'],
-                'pic' => $validated['xpic'],
+                'pic' => $jabatan_name,
+                'pic_jabatan_id' => $validated['xpic'],
                 'timeline_perlakuan_risiko_start' => $startDate->format('Y-m-d'),
                 'timeline_perlakuan_risiko_end' => $endDate->format('Y-m-d'),
             ];
@@ -613,43 +629,31 @@ class RiskRegisterUnitController extends Controller
             $periode = $identifikasiRisiko->periode;
             $risk_limit = 0;
 
-            // $strategiRisiko = StrategiRisiko::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
-            // if ($strategiRisiko) {
-            //     $totalAnggaranUnit = $strategiRisiko->total_anggaran_unit;
-            //     $riskLimitPercentage = config('risk_limit.percentage');
-            //     $risk_limit = $totalAnggaranUnit * $riskLimitPercentage / 100;
-
-            //     $totalOtherIdentifikasiRisiko = IdentifikasiRisiko::where('unit_id', $unit->id)
-            //         ->where('periode_id', $periode->id)
-            //         ->count();
-
-            //     if ($totalOtherIdentifikasiRisiko > 0) {
-            //         $risk_limit = $risk_limit / $totalOtherIdentifikasiRisiko;
-            //     }
-            // }
-
             $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
             if ($riskLimitPeriode) {
                 $risk_limit = $riskLimitPeriode->risk_limit;
                 $risk_tolerance = $riskLimitPeriode->risk_limit;
-                $totalOtherIdentifikasiRisiko = IdentifikasiRisiko::where('unit_id', $unit->id)
-                    ->where('periode_id', $periode->id)
-                    ->whereHas('riskAnalysis', function($query) {
-                        $query->where('kategori_dampak', 'Kuantitatif');
-                    })
-                    ->count();
+                // $totalOtherIdentifikasiRisiko = IdentifikasiRisiko::where('unit_id', $unit->id)
+                //     ->where('periode_id', $periode->id)
+                //     ->whereHas('riskAnalysis', function($query) {
+                //         $query->where('kategori_dampak', 'Kuantitatif');
+                //     })
+                //     ->count();
 
-                if ($totalOtherIdentifikasiRisiko > 0) {
-                    $risk_limit = $risk_limit / $totalOtherIdentifikasiRisiko;
-                }
+                // if ($totalOtherIdentifikasiRisiko > 0) {
+                //     $risk_limit = $risk_limit / $totalOtherIdentifikasiRisiko;
+                // }
             }
 
             $toMerge = [
-                'skala_dampak' => $this->calculateSkalaDampak($request->nilai_dampak / $risk_limit),
+                'skala_dampak' => $this->calculateSkalaDampak($request->nilai_dampak * 100 / $risk_limit),
             ];
-
+            //echo "risk limit = " . $risk_limit . "\n";
             for ($i = 1; $i <= 4; $i++) {
-                $toMerge['skala_dampak_residual_q' . $i] = $this->calculateSkalaDampak($request->{'nilai_dampak_residual_q' . $i} / $risk_limit);
+                //echo "nilai_dampak_residual_q" . $i . " = " . $request->{'nilai_dampak_residual_q' . $i} . "\n";
+                $calculateSkala = $this->calculateSkalaDampak($request->{'nilai_dampak_residual_q' . $i} * 100 / $risk_limit);
+                //echo "skala dampak residual q" . $i . " = " . $calculateSkala . "\n";
+                $toMerge['skala_dampak_residual_q' . $i] = $calculateSkala;
             }
 
             $request->merge($toMerge);

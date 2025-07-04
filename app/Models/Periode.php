@@ -30,4 +30,9 @@ class Periode extends Model
     {
         return $this->hasMany(RiskLimitPeriode::class);
     }
+
+    public function identifikasiRisikos()
+    {
+        return $this->hasMany(IdentifikasiRisiko::class);
+    }
 }

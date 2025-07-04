@@ -14,6 +14,7 @@ use Yajra\DataTables\Facades\DataTables;
 use App\Models\KategoriKejadian;
 use App\Models\KategoriRisiko;
 use App\Models\JenisRisiko;
+use App\Models\Jabatan;
 
 class UnitLEDController extends Controller
 {
@@ -67,8 +68,9 @@ class UnitLEDController extends Controller
         $periodes = Periode::orderBy('tahun', 'desc')->get();
         $kategoriKejadians = KategoriKejadian::all();
         $jenisRisikos = JenisRisiko::with('kategoriRisiko')->get();
+        $jabatans = Jabatan::all();
         
-        return view('unit-led.create', compact('periodes', 'kategoriKejadians', 'jenisRisikos'));
+        return view('unit-led.create', compact('periodes', 'kategoriKejadians', 'jenisRisikos', 'jabatans'));
     }
 
     public function store(Request $request)
@@ -123,6 +125,17 @@ class UnitLEDController extends Controller
             $data['biaya_risiko_inheren'] = $request->biaya_risiko_inheren ?: 0;
             $data['biaya_upaya_perbaikan'] = $request->biaya_upaya_perbaikan ?: 0;
             $data['hasil_perbaikan'] = $request->hasil_perbaikan ?: 0;
+
+            $data['unit_penanggung_jawab_jabatan_id'] = $request->unit_penanggung_jawab;
+        
+            // Ambil nama jabatan berdasarkan ID
+            $jabatan = Jabatan::find($request->unit_penanggung_jawab);
+            if ($jabatan) {
+                $data['unit_penanggung_jawab'] = $jabatan->name;
+            }
+            else {
+                $data['unit_penanggung_jawab'] = '-';
+            }
             
             LossEvent::create($data);
 
@@ -143,8 +156,9 @@ class UnitLEDController extends Controller
         $periodes = Periode::orderBy('tahun', 'desc')->get();
         $kategoriKejadians = KategoriKejadian::all();
         $jenisRisikos = JenisRisiko::with('kategoriRisiko')->get();
-        
-        return view('unit-led.edit', compact('lossEvent', 'periodes', 'kategoriKejadians', 'jenisRisikos'));
+        $jabatans = Jabatan::all();
+
+        return view('unit-led.edit', compact('lossEvent', 'periodes', 'kategoriKejadians', 'jenisRisikos', 'jabatans'));
     }
 
     public function update(Request $request, $id)
@@ -199,6 +213,17 @@ class UnitLEDController extends Controller
             $data['biaya_risiko_inheren'] = $request->biaya_risiko_inheren ?: 0;
             $data['biaya_upaya_perbaikan'] = $request->biaya_upaya_perbaikan ?: 0;
             $data['hasil_perbaikan'] = $request->hasil_perbaikan ?: 0;
+
+            $data['unit_penanggung_jawab_jabatan_id'] = $request->unit_penanggung_jawab;
+        
+            // Ambil nama jabatan berdasarkan ID
+            $jabatan = Jabatan::find($request->unit_penanggung_jawab);
+            if ($jabatan) {
+                $data['unit_penanggung_jawab'] = $jabatan->name;
+            }
+            else {
+                $data['unit_penanggung_jawab'] = '-';
+            }
             
             $lossEvent->update($data);
 

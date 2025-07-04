@@ -572,7 +572,7 @@ $(document).ready(function() {
                 $('#formEditRencana [name="xopsi_perlakuan_risiko"]').val(response.opsi_perlakuan_risiko);
                 $('#formEditRencana [name="xjenis_rencana_perlakuan_risiko"]').val(response.jenis_rencana_perlakuan_risiko);
                 $('#formEditRencana [name="xbiaya_perlakuan_risiko"]').val(response.biaya_perlakuan_risiko);
-                $('#formEditRencana [name="xpic"]').val(response.pic);
+                $('#formEditRencana [name="xpic"]').val(response.pic_jabatan_id);
                 
                 if (response.timeline_perlakuan_risiko_start && response.timeline_perlakuan_risiko_end) {
                     // flatpickrInstance.setDate([

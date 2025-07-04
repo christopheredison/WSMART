@@ -9,7 +9,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    @include('project-risk.form-perencanaan') <!-- Include the shared fields -->
+                    @include('risk-register-unit.form-perencanaan') <!-- Include the shared fields -->
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
@@ -136,6 +136,7 @@ $(document).ready(function() {
         //maxDate: endOfYear,
         disableMobile: true
     });
+
 })
 </script>
 @endpush
