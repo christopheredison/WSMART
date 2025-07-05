@@ -427,12 +427,7 @@ class HomeController extends Controller
 
     public function dashboardProyek(Request $request)
     {
-        $periodes = Periode::orderBy('status')->orderBy('id', 'desc')->get();
-
-        $selectedPeriode = $request->periode_id ?: $periodes->first()?->id;
-
-        $projectPeriodes = ProjectPeriodeList::where('periode_id', $selectedPeriode)
-            ->whereHas('project', function($query) {
+        $projectPeriodes = ProjectPeriodeList::whereHas('project', function($query) {
                 $query->where('type', Project::TYPE_OPERASIONAL);
             })
             ->orderBy('skala_risiko', 'desc')
@@ -446,7 +441,9 @@ class HomeController extends Controller
         $peristiwaRisikos = PeristiwaRisiko::whereIn('id', $projectRisks->pluck('peristiwa_risiko_id')->unique())->get()->keyBy('id');
 
         $tahunMonitorings = $projectRisks->pluck('projectRiskMonitorings')->flatten()->pluck('tahun')->unique()->toArray();
-        $tahunMonitorings[] = $periodes->where('id', $selectedPeriode)->first()?->tahun;
+        foreach ($projectPeriodes as $projectPeriode) {
+            $tahunMonitorings[] = $projectPeriode->created_at->format('Y');
+        }
         sort($tahunMonitorings);
         $minTahun = min($tahunMonitorings);
         $maxTahun = max($tahunMonitorings);
@@ -531,6 +528,6 @@ class HomeController extends Controller
             return $item->skala_dampak . '-' . $item->skala_probabilitas;
         });
 
-        return view('dashboard-proyek', compact('periodes', 'selectedPeriode', 'dashboardData', 'tahunMonitorings', 'riskMaps'));
+        return view('dashboard-proyek', compact('dashboardData', 'tahunMonitorings', 'riskMaps'));
     }
 }
