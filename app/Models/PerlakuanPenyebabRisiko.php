@@ -55,6 +55,16 @@ class PerlakuanPenyebabRisiko extends Model
         return $this->hasMany(PerlakuanPenyebabRisikoDocument::class, 'perlakuan_penyebab_risiko_id');
     }
 
+    public function getProgressRencanaPerlakuanRisikoAttribute()
+    {
+        return $this->lastMonitoring?->progress_rencana_perlakuan_risiko;
+    }
+
+    public function getRealisasiBiayaPerlakuanRisikoAttribute()
+    {
+        return $this->lastMonitoring?->realisasi_biaya_perlakuan_risiko;
+    }
+
     public function getDeskripsiPerlakuanRisikoAttribute()
     {
         return $this->lastMonitoring?->deskripsi_perlakuan_risiko;

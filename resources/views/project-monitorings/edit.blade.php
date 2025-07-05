@@ -32,8 +32,9 @@
                 <div class="card-body">
                     <i class='bx bx-alarm-exclamation fs-1 mb-3 text-white'></i>
                     <h4>Periode Monitoring</h4>
-                    <h3 class="mb-0">Quarter {{ $quarter }}</h3>
+                    <h3 class="mb-0">Quarter {{ $quarter }} - Tahun {{ $tahun }}</h3>
                     <input type="hidden" name="periode_monitoring" value="{{ $quarter }}">
+                    <input type="hidden" name="tahun" value="{{ $tahun }}">
                 </div>
             </div>
         </div>
@@ -280,8 +281,8 @@
                                         @endif
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
                                             <td><span class="inputmask-fixed">{{ $perlakuan->biaya_perlakuan_risiko ?: '-' }}</span></td>
-                                            <td class="display-progress inputmask-fixed">{{ $perlakuan->{'progress_rencana_perlakuan_risiko_q' . $quarter } ?: '-' }}</td>
-                                            <td class="display-biaya inputmask-fixed">{{ $perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter } ?: '-' }}</td>
+                                            <td class="display-progress inputmask-fixed">{{ $perlakuan->progress_rencana_perlakuan_risiko }}</td>
+                                            <td class="display-biaya inputmask-fixed">{{ $perlakuan->realisasi_biaya_perlakuan_risiko }}</td>
                                             <td class="display-timeline">{{ $perlakuan?->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
                                             <td style="white-space:nowrap" class="column-action">
                                                 <div class="d-none dom-saved">
@@ -337,7 +338,7 @@
                                         <td>{{ $kriProject->batas_waspada ?: '-' }}</td>                    
                                         <td>{{ $kriProject->batas_bahaya ?: '-' }}</td>
                                         <td class="display-nilai-kri">
-                                            {{ $kriProject->last_monitoring?->nilai_kri_terkini ?? '-' }}
+                                            {{ $kriProject->nilai_kri_terkini ?? '-' }}
                                         </td>
                                         <td class="display-kondisi">
                                             @php
@@ -346,7 +347,7 @@
                                                     2 => 'Waspada',
                                                     3 => 'Bahaya',
                                                 ];
-                                                $status = $kriProject->last_monitoring?->status_kri_terkini;
+                                                $status = $kriProject->status_kri_terkini;
                                                 $displayStatus = $statusMap[$status] ?? '-';
                                             @endphp
                                             {{ $displayStatus }}
@@ -630,12 +631,11 @@ $(document).ready(function() {
             $('#modalUpdateKri input[name="batas_aman"]').val(kriProject.batas_aman);
             $('#modalUpdateKri input[name="batas_waspada"]').val(kriProject.batas_waspada);
             $('#modalUpdateKri input[name="batas_bahaya"]').val(kriProject.batas_bahaya);
-            $('#modalUpdateKri input[name="nilai_kri"]').val(kriProject['nilai_kri_terkini_q' + quarter]);
-            $('#modalUpdateKri :input[name="status_kri"]').val(kriProject['status_kri_terkini_q' + quarter]);
+            $('#modalUpdateKri input[name="nilai_kri"]').val(kriProject.nilai_kri_terkini);
+            $('#modalUpdateKri :input[name="status_kri"]').val(kriProject.status_kri_terkini);
             $('#modalUpdateKri').modal('show');
         } else if (action === 'update-realisasi') {
             const perlakuanPenyebab = perlakuanPenyebabRisikos[$(this).data('id')];
-            console.log(perlakuanPenyebab);
             if (!perlakuanPenyebab) {
                 Swal.fire('Error', 'Data perlakuan penyebab risiko tidak ditemukan', 'error');
                 return;
@@ -646,8 +646,8 @@ $(document).ready(function() {
             $('#modalUpdateRealisasi :input[name="rencana_perlakuan_risiko"]').val(perlakuanPenyebab.rencana_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="biaya_perlakuan_risiko"]').val(perlakuanPenyebab.biaya_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="pic"]').val(perlakuanPenyebab.pic);
-            $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab['realisasi_biaya_perlakuan_risiko_q' + quarter]);
-            $('#modalUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val(perlakuanPenyebab['progress_rencana_perlakuan_risiko_q' + quarter]);
+            $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab.realisasi_biaya_perlakuan_risiko);
+            $('#modalUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val(perlakuanPenyebab.progress_rencana_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="jenis_program_rkap"]').val(perlakuanPenyebab.jenis_program_rkap);
             $('#modalUpdateRealisasi :input[name="jenis_program_rkap_id"]').val(perlakuanPenyebab.jenis_program_rkap_id);
             $('#modalUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val(perlakuanPenyebab.deskripsi_perlakuan_risiko);
@@ -804,8 +804,8 @@ $(document).ready(function() {
         }
 
         // update perlakuan penyebab risiko
-        perlakuanPenyebabRisikos[id]['realisasi_biaya_perlakuan_risiko_q' + quarter] = realisasiBiayaPerlakuanRisiko;
-        perlakuanPenyebabRisikos[id]['progress_rencana_perlakuan_risiko_q' + quarter] = progressPerlakuanRisiko;
+        perlakuanPenyebabRisikos[id]['realisasi_biaya_perlakuan_risiko'] = realisasiBiayaPerlakuanRisiko;
+        perlakuanPenyebabRisikos[id]['progress_rencana_perlakuan_risiko'] = progressPerlakuanRisiko;
         perlakuanPenyebabRisikos[id]['deskripsi_perlakuan_risiko'] = deskripsiPerlakuanRisiko;
         perlakuanPenyebabRisikos[id]['jenis_program_rkap'] = jenisProgramRkap;
         perlakuanPenyebabRisikos[id]['jenis_program_rkap_id'] = jenisProgramRkapId;
@@ -835,8 +835,8 @@ $(document).ready(function() {
         const statusKri = $('#formUpdateKri :input[name="status_kri"]').val();
 
         // update kri
-        kriProjects[id]['nilai_kri_terkini_q' + quarter] = nilaiKri;
-        kriProjects[id]['status_kri_terkini_q' + quarter] = statusKri;
+        kriProjects[id]['nilai_kri_terkini'] = nilaiKri;
+        kriProjects[id]['status_kri_terkini'] = statusKri;
 
         // update DOM
         const tr = $('#table-kri tr[data-id="' + id + '"]');
