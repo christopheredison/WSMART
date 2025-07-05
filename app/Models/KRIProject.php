@@ -45,17 +45,28 @@ class KRIProject extends Model
     public function getLastMonitoringAttribute()
     {
         $quarter = request()->input('quarter');
+        $tahun = request()->input('tahun');
 
         return $this->kriProjectMonitorings
-            ->filter(function ($item) use ($quarter) {
+            ->filter(function ($item) use ($quarter, $tahun) {
                 // Antisipasi jika relasi tidak diload
                 if (!$item->relationLoaded('projectMonitoring')) {
                     $item->load('projectMonitoring');
                 }
 
-                return optional($item->projectMonitoring)->quarter == $quarter;
+                return optional($item->projectMonitoring)->quarter == $quarter && optional($item->projectMonitoring)->tahun == $tahun;
             })
             ->sortByDesc('id')
             ->first();
+    }
+
+    public function getStatusKriTerkiniAttribute()
+    {
+        return $this->lastMonitoring?->status_kri_terkini;
+    }
+
+    public function getNilaiKriTerkiniAttribute()
+    {
+        return $this->lastMonitoring?->nilai_kri_terkini;
     }
 }
