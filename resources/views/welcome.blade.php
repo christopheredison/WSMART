@@ -66,6 +66,11 @@
                   <button class="btn btn-primary d-block w-100 mt-3" type="submit" name="submit">Log in</button>
                 </div>
               </div>
+              <div class="row flex-center">
+                <div class="col-12">
+                  <a class="btn btn-primary d-block w-100 mt-3" href="{{ config('wzone.url') }}" id="login-sso-btn">Log in SSO</a>
+                </div>
+              </div>
             </form>
           </div>
         </div>
