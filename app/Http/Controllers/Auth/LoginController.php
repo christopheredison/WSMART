@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Unit;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
+use App\Supports\ApiHC;
 use App\Supports\WZone;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Support\Facades\Auth;
@@ -71,16 +72,49 @@ class LoginController extends Controller
         if (!$userExist) {
             $userExist = User::where('nip', $responseData['nip'])->first();
             if (!$userExist) {
-                $unit = Unit::where('unit_api_id', $responseData['kd_unit_org'])->first();
-                User::create([
+                $userExist = User::create([
                     'email' => $responseData['email'],
                     'name' => $responseData['full_name'],
                     'nip' => $responseData['nip'],
-                    'unit_type_id' => $unit?->unit_type_id ?: 0,
-                    'unit_id' => $unit?->id ?: 0,
+                    'unit_type_id' => 0,
+                    'unit_id' => 0,
                     'password' => Hash::make(Str::random(10)),
+                    'username' => $responseData['username'] ?? null,
+                    'departemen' => $responseData['departemen'] ?? null,
+                    'jabatan' => $responseData['jabatan'] ?? null,
+                    'kd_jabatan' => $responseData['kd_jabatan'] ?? null,
+                    'meta' => $responseData
                 ]);
             }
+        } else {
+            $userExist->update([
+                'name' => $responseData['full_name'],
+                'email' => $responseData['email'],
+                'nip' => $responseData['nip'],
+                'username' => $responseData['username'] ?? null,
+                'departemen' => $responseData['departemen'] ?? null,
+                'jabatan' => $responseData['jabatan'] ?? null,
+                'kd_jabatan' => $responseData['kd_jabatan'] ?? null,
+                'meta' => $responseData
+            ]);
+        }
+
+        $apiHC = new ApiHC();
+        $response = $apiHC->apiRequest('GET', '/', [
+            'client' => 'risk',
+            'method' => 'get_pegawai', 
+            'key' => '38VeNwf5',
+            'nip' => $userExist->nip,
+        ]);
+
+        $costCenter = $response['data'][0]['cost_center'] ?? null;
+
+        if ($costCenter) {
+            $unit = Unit::where('cost_center', $costCenter)->first();
+            $userExist->update([
+                'unit_type_id' => $unit?->unit_type_id ?: 0,
+                'unit_id' => $unit?->id ?: 0,
+            ]);
         }
 
         Auth::guard('web')->login($userExist);
