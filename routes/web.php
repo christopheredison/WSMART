@@ -130,9 +130,7 @@ Route::group(['middleware' => ['auth']], function() {
         return view('risk-governance.peraturan-mwa');
     });
 
-    Route::get('/dashboard-unit', function () {
-      return view('dashboard-unit');
-    });
+    Route::get('/dashboard-unit', [HomeController::class, 'dashboardUnit'])->name('dashboard-unit');
 
     Route::get('/dashboard-proyek', [HomeController::class, 'dashboardProyek'])->name('dashboard-proyek');
 

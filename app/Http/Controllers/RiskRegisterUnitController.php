@@ -252,6 +252,39 @@ class RiskRegisterUnitController extends Controller
         return view('risk-register-unit.risk-period-list', compact('periodes', 'activePeriode'));
     }
 
+    public function riskPeriodeDashboard($period)
+    {
+        $user    = request()->user()->load('unit');
+        $periode = Periode::find($period);
+        $risikos = IdentifikasiRisiko::where('periode_id', $period)
+            ->where('unit_id', auth()->user()->unit_id)
+            ->with('riskAnalysis')
+            ->get();
+
+        $currentRiskMaps = $risikos->pluck('currentRiskMaps');
+        $formattedCurrentRiskMaps = [];
+        foreach ($risikos as $idx => $risiko) {
+            $currentValue = $risiko->currentRiskMaps['inherent'];
+            for ($quarter = 1; $quarter <= 4; $quarter++) {
+                if ($nextValue = ($risiko->currentRiskMaps[$quarter] ?? null)) {
+                    $currentValue = $nextValue;
+                }
+
+                $currentValue['quarter'] = $quarter;
+
+                $formattedCurrentRiskMaps[$risiko->id][] = $currentValue;
+            }
+        }
+
+        $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->skala_dampak . '-' . $item->skala_probabilitas;
+            });
+
+        return view('risk-register-unit.risk-period-dashboard', compact('user', 'periode', 'risikos', 'riskMaps', 'formattedCurrentRiskMaps'));
+    }
+
     public function store(Request $request)
     {
         // Validasi input

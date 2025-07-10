@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CapaianTck;
 use App\Models\CapaianTkmru;
+use App\Models\IdentifikasiRisiko;
 use App\Models\LossEvent;
 use App\Models\Periode;
 use App\Models\PeristiwaRisiko;
@@ -423,6 +424,110 @@ class HomeController extends Controller
         ];
 
         return view('profil-risiko', compact('riskMaps', 'periodes', 'dataDashboard'));
+    }
+
+    public function dashboardUnit(Request $request)
+    {
+        $user = auth()->user();
+        $isAllUnit = Gate::check('risk_register_all_unit');
+
+        $periodes        = Periode::orderBy('status')->orderBy('id', 'desc')->get();
+        $selectedPeriode = $request->periode_id ? $periodes->find($request->periode_id) : $periodes->first();
+        $tahun = $selectedPeriode->tahun;
+
+        $selectedUnitId = ($isAllUnit && $request->unit_id) ? $request->unit_id : $user->unit_id;
+        $selectedUnit = Unit::find($selectedUnitId);
+
+        $units = Unit::query()
+          ->when(!$isAllUnit, function ($query) use ($user) {
+              $query->where('id', $user->unit_id);
+          })
+          ->get();
+
+        $risikos = IdentifikasiRisiko::with([
+            'periode',
+            'peristiwaRisiko',
+            'riskAnalysis',
+            'monitoringRisikos' => function ($query) {
+                $query->orderBy('id', 'desc');
+            },
+        ])
+            ->where('periode_id', $selectedPeriode->id)
+            ->where('unit_id', $selectedUnitId)
+            ->get();
+
+        $currentRiskMaps          = $risikos->pluck('currentRiskMaps');
+        $formattedCurrentRiskMaps = [];
+        foreach ($risikos as $idx => $risk) {
+            $currentValue = $risk->current_risk_maps['inherent'];
+            for ($quarter = 1; $quarter <= 4; $quarter++) {
+                if ($nextValue = ($risk->current_risk_maps[$quarter] ?? null)) {
+                    $currentValue = $nextValue;
+                }
+
+                $currentValue['quarter'] = $quarter;
+
+                $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
+            }
+        }
+
+        $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->skala_dampak . '-' . $item->skala_probabilitas;
+            });
+
+        $lossEvents = LossEvent::with(['kategoriRisiko', 'jenisRisiko'])
+          ->where('unit_id', $selectedUnitId)
+          ->whereYear('tanggal_kejadian', $tahun)
+          ->get();
+
+        $dashboardData = [
+          'rpr_c' => null,
+          'rpr_date' => null,
+          'jkk_c' => null,
+          'jkk_date' => null,
+          'tkmru_c' => null,
+          'tkmru_date' => null,
+          'tkmru' => null,
+          'tkmru_notes' => null,
+          'top_risk' => $risikos->sortByDesc('riskAnalysis.skala_risiko')->take(5)->map(function ($item) use ($riskMaps) {
+            return [
+              'peristiwa' => $item->peristiwaRisiko->title ?? '-',
+              'deskripsi' => $item->deskripsi_peristiwa_risiko ?? '-',
+              'jenis_risiko' => $item->jenisRisiko->title ?? '-',
+              'tingkat_risiko' => $item->skala_risiko,
+              'warna_tingkat_risiko' => strtolower(str_replace(' ', '-', $riskMaps->where('nilai_risiko', $item->skala_risiko)->pluck('level_risiko')->first())),
+              'tck_terpengaruh' => '-',
+              'kri' => $item->kris->first()?->kri,
+              'status_kri' => $item->kris->first()?->status_kri_terkini_q4,
+              'risk_owner' => '-'
+            ];
+          })->values(),
+          'leds' => $lossEvents->map(function ($led) {
+            return [
+              'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
+              'kategori_risiko' => $led->kategoriRisiko->title ?? '-',
+              'jenis_risiko' => $led->jenisRisiko->title ?? '-',
+              'nilai_kerugian_finansial' => is_numeric($led->nilai_kerugian_finansial) ? number_format($led->nilai_kerugian_finansial, 0, ',', '.') : $led->nilai_kerugian_finansial,
+              'nilai_kerugian_non_finansial' => is_numeric($led->nilai_kerugian_non_finansial) ? number_format($led->nilai_kerugian_non_finansial, 0, ',', '.') : $led->nilai_kerugian_non_finansial,
+              'peristiwa_kerugian' => $led->peristiwa_kerugian,
+              'unit_penanggung_jawab' => $led->unit_penanggung_jawab,
+            ];
+          }),
+        ];
+
+        return view('dashboard-unit', compact(
+          'user',
+          'periodes',
+          'selectedPeriode',
+          'units',
+          'selectedUnit',
+          'risikos',
+          'formattedCurrentRiskMaps',
+          'riskMaps',
+          'dashboardData',
+        ));
     }
 
     public function dashboardProyek(Request $request)

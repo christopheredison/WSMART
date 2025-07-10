@@ -40,13 +40,13 @@
                 </td>
                 <td class="white-space-nowrap">
                   {{--
-                  <a href="{{ route('risk-register-unit.periods.show', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
-                    <span class="bx bx-show"></span>
-                  </a>
                   <a href="javascript:void(0)" class="btn-input-icon" data-bs-toggle="tooltip" title="Pengaturan Periode Divisi" onclick="openPeriodeUnitSettings({{ $periode->id }})">
                     <span class="bx bx-cog"></span>
                   </a>
                   --}}
+                  <a href="{{ route('risk-register-unit.periods.show', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
+                    <span class="bx bx-show"></span>
+                  </a>
                   <a href="{{ route('risk-register-unit.index', ['pid' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
                     <span class="bx bx-list-check"></span>
                   </a>

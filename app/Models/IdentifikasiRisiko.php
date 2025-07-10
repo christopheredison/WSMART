@@ -118,6 +118,11 @@ class IdentifikasiRisiko extends Model
         return $this->belongsTo(JenisKontrolEksisting::class, 'jenis_kontrol_eksisting_id');
     }
 
+    public function penilaianEfektifitasKontrol()
+    {
+        return $this->belongsTo(PenilaianEfektivitasKontrol::class, 'penilaian_efektifitas_kontrol');
+    }
+
     public function monitoringRisiko()
     {
         return $this->hasOne(UnitRiskMonitoring::class, 'identifikasi_risiko_id');
@@ -165,6 +170,43 @@ class IdentifikasiRisiko extends Model
         ]);
 
         return $basic;
+    }
+
+    public function getCurrentRiskMapsAttribute() {
+        $currentRiskMaps = [
+            'inherent' => [
+                'skala_dampak' => $this->riskAnalysis?->skala_dampak,
+                'skala_probabilitas' => $this->riskAnalysis?->skalaProbabilitas?->tingkat,
+                'quarter' => 0,
+            ],
+        ];
+
+        $projectMonitoringQ1 = $this->monitoringRisikos->where('quarter', 1)->first();
+        $projectMonitoringQ2 = $this->monitoringRisikos->where('quarter', 2)->first();
+        $projectMonitoringQ3 = $this->monitoringRisikos->where('quarter', 3)->first();
+        $projectMonitoringQ4 = $this->monitoringRisikos->where('quarter', 4)->first();
+        $currentRiskMaps[1] = [
+            'skala_dampak' => $projectMonitoringQ1?->skala_dampak,
+            'skala_probabilitas' => $projectMonitoringQ1?->skalaProbabilitas?->tingkat,
+            'quarter' => 1,
+        ];
+        $currentRiskMaps[2] = [
+            'skala_dampak' => $projectMonitoringQ2?->skala_dampak ?? $projectMonitoringQ1?->skala_dampak,
+            'skala_probabilitas' => $projectMonitoringQ2?->skalaProbabilitas?->tingkat ?? $projectMonitoringQ1?->skalaProbabilitas?->tingkat,
+            'quarter' => 2,
+        ];
+        $currentRiskMaps[3] = [
+            'skala_dampak' => $projectMonitoringQ3?->skala_dampak ?? $projectMonitoringQ2?->skala_dampak ?? $projectMonitoringQ1?->skala_dampak,
+            'skala_probabilitas' => $projectMonitoringQ3?->skalaProbabilitas?->tingkat ?? $projectMonitoringQ2?->skalaProbabilitas?->tingkat ?? $projectMonitoringQ1?->skalaProbabilitas?->tingkat,
+            'quarter' => 3,
+        ];
+        $currentRiskMaps[4] = [
+            'skala_dampak' => $projectMonitoringQ4?->skala_dampak ?? $projectMonitoringQ3?->skala_dampak ?? $projectMonitoringQ2?->skala_dampak ?? $projectMonitoringQ1?->skala_dampak,
+            'skala_probabilitas' => $projectMonitoringQ4?->skalaProbabilitas?->tingkat ?? $projectMonitoringQ3?->skalaProbabilitas?->tingkat ?? $projectMonitoringQ2?->skalaProbabilitas?->tingkat ?? $projectMonitoringQ1?->skalaProbabilitas?->tingkat,
+            'quarter' => 4,
+        ];
+
+        return $currentRiskMaps;
     }
 
     public const STATUS_INPUT_DATA = 1;
