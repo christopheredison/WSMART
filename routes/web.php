@@ -476,6 +476,10 @@ Route::group(['middleware' => ['auth']], function() {
     Route::middleware('can:backups.index')->resource('backups', BackupController::class);
 	Route::post('backups/restore', [BackupController::class, 'restore'])->name('backups.restore');
 
+  Route::prefix('laporan')->group(function () {
+    Route::get('unit', [App\Http\Controllers\LaporanController::class, 'unit'])->name('laporan.unit');
+    Route::post('unit', [App\Http\Controllers\LaporanController::class, 'unitExport'])->name('laporan.unit.export');
+  });
 });
 
 // Route untuk Measurement Parameter

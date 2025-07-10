@@ -94,6 +94,16 @@
           </a>
         </li>
 
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->routeIs('laporan.unit') ? 'active' : '' }}"
+            href="{{route('laporan.unit')}}" role="button" data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon d-flex align-items-center w-100">
+              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <span class="nav-link-text">Laporan Divisi</span>
+            </span>
+          </a>
+        </li>
+
         <!-- Ranking Risiko Menu Start -->
         @can('project_periode_list')
         <li class="nav-item single-indicator">
