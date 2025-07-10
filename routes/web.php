@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\CapaianTckController;
 use App\Http\Controllers\CapaianTkmruController;
@@ -88,6 +89,8 @@ Route::get('/top-navbar', function () {
 Route::get('/combo-navbar', function () {
     return view('navbar-combo');
 });
+
+Route::get('/callback-sso', [LoginController::class, 'callbackSSO']);
 
 Auth::routes();
 
