@@ -9,6 +9,7 @@ use App\Providers\RouteServiceProvider;
 use App\Supports\ApiHC;
 use App\Supports\WZone;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -120,4 +121,30 @@ class LoginController extends Controller
         Auth::guard('web')->login($userExist);
         return redirect()->route('home');
     }
+
+    public function logout(Request $request)
+    {
+        $user = $request->user();
+        // $wzone = new WZone();
+        // if ($user->nip && $wzone->getStatusLogin($user->nip)['responseData']['status_login'] ?? 0) {
+        //     // do something here
+        // }
+
+        $this->guard()->logout();
+
+        $request->session()->invalidate();
+
+        $request->session()->regenerateToken();
+
+        if ($response = $this->loggedOut($request)) {
+            return $response;
+        }
+
+        return redirect(config('wzone.url'));
+
+        return $request->wantsJson()
+            ? response()->json([], 204)
+            : redirect('/');
+    }
+
 }

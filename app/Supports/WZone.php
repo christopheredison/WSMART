@@ -54,9 +54,8 @@ class WZone
 
     public function getStatusLogin($nip)
     {
-        $url = '/sso/api/index.php/status_login';
-        $body = ['NIP' => $nip];
-        return $this->apiRequest('POST', $url, $body);
+        $url = 'sso/status_login/' . $nip;
+        return $this->apiRequest('GET', $url);
     }
 
     public function cekValidToken($token)
