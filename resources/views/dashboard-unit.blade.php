@@ -929,7 +929,7 @@
                     Nilai Kerugian
                   </div>
                 </th>
-                <th rowspan="2">Rekomendasi Perbaikan yang perlu Ditindaklanjuti</th>
+                <th rowspan="2">Penyebab Masalah</th>
                 <th rowspan="2">Unit Penanggung Jawab</th>
               </tr>
               <tr>
@@ -1052,13 +1052,46 @@ $(document).ready(function() {
     // $('#rpr-card .last-changes').html(dashboardData.rpr_date);
 
     // Jumlah Kejadian Kerusakan
-    if (dashboardData.jkk_c >= 0) {
-      $('#jkk-card .changes-summary').html(`<span class="up-label">${dashboardData.jkk_c}</span> Since last month`);
-    } else {
-      $('#jkk-card .changes-summary').html(`<span class="down-label">${dashboardData.jkk_c}</span> Since last month`);
+    // if (dashboardData.jkk_c >= 0) {
+    //   $('#jkk-card .changes-summary').html(`<span class="up-label">${dashboardData.jkk_c}</span> Since last month`);
+    // } else {
+    //   $('#jkk-card .changes-summary').html(`<span class="down-label">${dashboardData.jkk_c}</span> Since last month`);
+    // }
+    // $('#jkk-card .last-changes').html(dashboardData.jkk_date);
+    // $('#jkk-card #jkk-counter').html(1);
+    const jkkCount = dashboardData.led.length;
+    $('#jkk-card #jkk-counter').html(jkkCount);
+    let latestLedDate = 'N/A';
+    let previousJkkCount = dashboardData.led;
+
+    if (dashboardData.led.length > 0) {
+      const dates = dashboardData.led.map(item => new Date(item.tanggal_kejadian));
+      const maxDate = new Date(Math.max(...dates));
+      latestLedDate = maxDate.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
     }
-    $('#jkk-card .last-changes').html(dashboardData.jkk_date);
-    $('#jkk-card #jkk-counter').html(1);
+
+    $('#jkk-card .last-changes').html(latestLedDate);
+
+    if (typeof previousJkkCount === 'number' && previousJkkCount !== null) {
+      if (jkkCount > previousJkkCount) {
+        $('#jkk-card .changes-summary').html(
+          `<span class="up-label">${jkkCount}</span>`);
+      } else if (jkkCount < previousJkkCount) {
+        $('#jkk-card .changes-summary').html(
+          `<span class="down-label">${jkkCount}</span>`);
+      } else {
+        $('#jkk-card .changes-summary').html(
+          `<span class="neutral-label">${jkkCount}</span>`);
+      }
+    } else {
+      // Jika tidak ada data pembanding
+      $('#jkk-card .changes-summary').html(
+        `<span class="up-label">${jkkCount}</span>`);
+    }
 
     // Capaian TKMRU
     // if (dashboardData.tkmru_c >= 0) {
@@ -1121,9 +1154,7 @@ $(document).ready(function() {
                     <td>${led.jenis_risiko}</td>
                     <td>${led.nilai_kerugian_finansial}</td>
                     <td>${led.nilai_kerugian_non_finansial}</td>
-                    <td>${led.rekomendasi_perbaikan.length > 1 ? `
-                        <ol>${led.rekomendasi_perbaikan.map(item => `<li>${item}</li>`).join('')}</ol>
-                        ` : led.rekomendasi_perbaikan.join('')}</td>
+                    <td>${led.penyebab_masalah}</td>
                     <td>${led.unit_penanggung_jawab}</td>
                 </tr>
             `);

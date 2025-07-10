@@ -15,8 +15,8 @@
         <div class="d-block">
           <div class="ff-preheading">Input Data</div>
           <h2>Risk Register Divisi</h2>
-          @if(isset($selectedPeriode)) 
-          <div class="ff-preheading">Periode: {{ $selectedPeriode->tahun }}</div> 
+          @if(isset($selectedPeriode))
+          <div class="ff-preheading">Periode: {{ $selectedPeriode->tahun }}</div>
           @endif
         </div>
       </div>
@@ -86,7 +86,7 @@
             @php
                 // diasumsikan di view Anda ada $selectedPeriode
                 $pid = $selectedPeriode->id;
-            @endphp  
+            @endphp
             @can('risk_register_create')
               <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $pid]) }}" type="button"
                 class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
@@ -123,7 +123,7 @@
                 <td class="deskripsi_peristiwa_risiko">{{ $item->deskripsi_peristiwa_risiko }}</td>
                 <td class="kontrol_eksisting">{{ $item->jenisKontrolEksisting->jenis_kontrol ?? '-' }}</td>
                 <td class="waktu_terpapar">
-                  {{ \Carbon\Carbon::parse($item->perkiraan_waktu_terpapar_risiko_mulai)->format('d/m/Y') }} - 
+                  {{ \Carbon\Carbon::parse($item->perkiraan_waktu_terpapar_risiko_mulai)->format('d/m/Y') }} -
                   {{ \Carbon\Carbon::parse($item->perkiraan_waktu_terpapar_risiko_akhir)->format('d/m/Y') }}
                 </td>
                 <td class="status">
@@ -141,7 +141,7 @@
                       ->orderBy('approved_at', 'desc')
                       ->with('approver')
                       ->first();
-                    $levelName = '-';  
+                    $levelName = '-';
                     if ($lastApproval && $lastApproval->approvalStep && $lastApproval->approvalStep->level) {
                       $levelName = $lastApproval->approvalStep->level->name;
                     }
@@ -159,6 +159,12 @@
                   @endswitch
                 </td>
                 <td class="white-space-nowrap">
+                  @can('risk_register_view')
+                  <a href="{{ route('risk-register-unit.view', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+                    title="View">
+                    <span class="bx bx-show-alt"></span>
+                  </a>
+                  @endcan
                   @include('risk-register-unit._table_action', ['item' => $item])
                 </td>
               </tr>
@@ -178,18 +184,18 @@
           <strong>Catatan Perbaikan:</strong> {{ $batchNotes->notes }}
         </div>
         @endif
-        
+
         @if(isset($pending_risk) && $pending_risk > 0)
         <div class="alert alert-info mb-3">
           <strong>Informasi:</strong> Terdapat {{ $pending_risk }} risiko yang menunggu verifikasi/revisi.
         </div>
         @endif
         @can('risk_register_send')
-        <form id="send-form" action="{{ route('risk-register-unit.send') }}" method="POST" class="d-inline-block"> 
-          @csrf 
-          <input type="hidden" name="periode_id" value="{{ $selectedPeriode->id ?? '' }}"> 
+        <form id="send-form" action="{{ route('risk-register-unit.send') }}" method="POST" class="d-inline-block">
+          @csrf
+          <input type="hidden" name="periode_id" value="{{ $selectedPeriode->id ?? '' }}">
           @if($status == 5 && ($step_order == 0 || $step_order == null))
-              <button id="revise-button" class="btn btn-submit btn-arrow-right">Kirim Perbaikan Risiko</button> 
+              <button id="revise-button" class="btn btn-submit btn-arrow-right">Kirim Perbaikan Risiko</button>
           @else
             <div style="display: none;">
               levelId: {{ $levelId }}, status: {{ $status }}, tipe status: {{ gettype($status) }}<br>
@@ -197,9 +203,9 @@
               kondisi 2: {{ ($levelId > 1 && intval($status) === 1) ? 'true' : 'false' }}<br>
               kondisi lengkap: {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && intval($status) === 1) ? 'true' : 'false' }}
             </div>
-            <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button> 
+            <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button>
           @endif
-        </form> 
+        </form>
         @endcan
       </div>
     </div>
@@ -269,24 +275,24 @@ function showVerifikasiModal(id, peristiwaRisiko, deskripsiRisiko) {
   // Set data risiko ke dalam modal
   document.getElementById('modal-peristiwa-risiko').textContent = 'Peristiwa Risiko: ' + peristiwaRisiko;
   document.getElementById('modal-deskripsi-risiko').textContent = deskripsiRisiko;
-  
+
   // Set action form dengan ID risiko yang dipilih
   const form = document.getElementById('form-verifikasi');
   form.action = '{{ url("risk-register-unit") }}/' + id + '/verifikasi';
-  
+
   // Reset form
   form.reset();
   document.getElementById('status-verifikasi').value = '';
-  
+
   // Tampilkan modal
   const modal = new bootstrap.Modal(document.getElementById('modalVerifikasiRisiko'));
   modal.show();
-  
+
   // Set event listener untuk tombol terima dan tolak
   document.getElementById('btn-terima-risiko').onclick = function() {
     submitVerifikasi(id, 'terima');
   };
-  
+
   document.getElementById('btn-tolak-risiko').onclick = function() {
     submitVerifikasi(id, 'tolak');
   };
@@ -298,7 +304,7 @@ function submitVerifikasi(id, status) {
   const form = document.getElementById('form-verifikasi');
   const statusInput = document.getElementById('status-verifikasi');
   const catatanInput = document.getElementById('catatan-verifikasi');
-  
+
   // Validasi catatan verifikasi
   if (!catatanInput.value.trim()) {
     Swal.fire({
@@ -309,10 +315,10 @@ function submitVerifikasi(id, status) {
     });
     return;
   }
-  
+
   // Set nilai status verifikasi
   statusInput.value = status;
-  
+
   // Konfirmasi dengan SweetAlert
   Swal.fire({
     title: status === 'terima' ? 'Terima Risiko?' : 'Kembalikan Risiko?',
@@ -384,10 +390,10 @@ $(document).ready(function() {
 
   document.querySelector('#send-form').addEventListener('submit', function(event) {
     event.preventDefault(); // Mencegah form submission otomatis
-    
+
     const status = {{ $status ?? 'null' }};
     const stepOrder = {{ $step_order ?? 'null' }};
-    
+
     // Jika status adalah 5 (revisi) dan step_order adalah 0 atau null, tampilkan modal kirim perbaikan
     if (status === 5 && (stepOrder === 0 || stepOrder === null)) {
       const modal = new bootstrap.Modal(document.getElementById('modalKirimPerbaikanRisiko'));
@@ -435,13 +441,13 @@ document.addEventListener('DOMContentLoaded', function() {
 // Tambahkan event listener untuk tombol kirim perbaikan
 document.addEventListener('DOMContentLoaded', function() {
   // ... existing code ...
-  
+
   // Event listener untuk tombol kirim perbaikan di dalam modal
   const btnKirimPerbaikan = document.getElementById('btn-kirim-perbaikan');
   if (btnKirimPerbaikan) {
     btnKirimPerbaikan.addEventListener('click', function() {
       const catatanInput = document.getElementById('catatan-perbaikan');
-      
+
       // Validasi catatan perbaikan
       if (!catatanInput.value.trim()) {
         Swal.fire({
@@ -452,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         return;
       }
-      
+
       // Konfirmasi dengan SweetAlert
       Swal.fire({
         title: 'Kirim Perbaikan Risiko?',

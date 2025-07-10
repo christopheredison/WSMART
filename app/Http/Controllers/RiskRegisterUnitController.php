@@ -50,7 +50,7 @@ class RiskRegisterUnitController extends Controller
             $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
             $periodeId = $activePeriode ? $activePeriode->id : null;
         }
-        
+
         // Ambil data periode yang dipilih
         $selectedPeriode = Periode::find($periodeId);
         $user = auth()->user();
@@ -66,13 +66,13 @@ class RiskRegisterUnitController extends Controller
         if ($approvalFlow) {
             $min_verification = $approvalFlow->min_verification;
         }
-        
+
         $dataBatch = DataBatch::where('unit_id', $unitId)
                       ->where('periode_id', $periodeId)
                       ->where('type', 1)
                       ->where('finish', false)
                       ->first();
-        
+
         if(!$dataBatch){
             $dataBatch = DataBatch::create([
                 'unit_id' => $unitId,
@@ -81,7 +81,7 @@ class RiskRegisterUnitController extends Controller
                 'status' => DataBatch::STATUS_PROSES,
                 'step_verification' => 0,
                 'finish' => false
-            ]);    
+            ]);
         }
         $status = $dataBatch->status;
         // Query dasar untuk identifikasi risiko
@@ -95,25 +95,25 @@ class RiskRegisterUnitController extends Controller
             //'tck',
             'riskAnalysis',
         ]);
-        
+
         // Filter berdasarkan periode jika ada
         if ($periodeId) {
             $risikoQuery->where('periode_id', $periodeId);
         }
-        
+
         if ($unitId) {
             $risikoQuery->where('unit_id', $unitId);
         }
-        
+
         // Ambil data risiko
         $risiko = $risikoQuery->get();
-    
+
         // Data untuk filter
         $unit = Unit::pluck('name', 'id');
         $unitChild = Unit::where('parent_id', '!=', null)->pluck('name', 'id');
         $peristiwaRisiko = PeristiwaRisiko::pluck('title', 'id');
         $jenisRisiko = JenisRisiko::pluck('title','id');
-        
+
         //hitung pending risk berdasarkan level id dan flow
         $pending_risk = 0;
         $step_order = 0;
@@ -157,7 +157,7 @@ class RiskRegisterUnitController extends Controller
                 //         ->where('periode_id', $periodeId)
                 //         ->count();
             }
-            
+
             $pending_risk = IdentifikasiRisiko::where(function($query) use ($step_order) {
                         $query->where('step_verification', '<=', $step_order)
                             ->orWhereNull('step_verification');
@@ -191,7 +191,7 @@ class RiskRegisterUnitController extends Controller
                 $pending_risk = 0;
             }
         }
-        
+
         return view('risk-register-unit.index', compact(
             'risiko',
             'unit',
@@ -245,10 +245,10 @@ class RiskRegisterUnitController extends Controller
     {
         // Ambil semua data periode
         $periodes = Periode::orderBy('tahun', 'desc')->get();
-        
+
         // Ambil periode aktif jika ada
         $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
-        
+
         return view('risk-register-unit.risk-period-list', compact('periodes', 'activePeriode'));
     }
 
@@ -320,20 +320,20 @@ class RiskRegisterUnitController extends Controller
             'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
             'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
         ]);
-    
+
         try {
             // Konversi format tanggal
             $waktuMulai = null;
             $waktuSelesai = null;
-            
+
             if ($request->perkiraan_waktu_mulai_terpapar_risiko) {
                 $waktuMulai = Carbon::createFromFormat('d/m/Y', $request->perkiraan_waktu_mulai_terpapar_risiko)->format('Y-m-d');
             }
-            
+
             if ($request->perkiraan_waktu_selesai_terpapar_risiko) {
                 $waktuSelesai = Carbon::createFromFormat('d/m/Y', $request->perkiraan_waktu_selesai_terpapar_risiko)->format('Y-m-d');
             }
-    
+
             // Simpan data risiko
             $identifikasiRisiko = new IdentifikasiRisiko();
             $identifikasiRisiko->periode_id = $request->periode_id;
@@ -396,7 +396,7 @@ class RiskRegisterUnitController extends Controller
                     }
                 }
             }
-    
+
             // Simpan penyebab risiko
             if ($request->has('penyebab_risiko') && is_array($request->penyebab_risiko)) {
                 foreach ($request->penyebab_risiko as $penyebab) {
@@ -408,11 +408,11 @@ class RiskRegisterUnitController extends Controller
                     }
                 }
             }
-    
+
             // Simpan KRI
             // if ($request->has('master_kri_id') && is_array($request->master_kri_id)) {
             //     $masterKriObj = MasterKRI::whereIn('id', $request->master_kri_id)->get()->keyBy('id');
-                
+
             //     foreach ($request->master_kri_id as $masterKriId) {
             //         if (!empty($masterKriId)) {
             //             $kriObj = $masterKriObj[$masterKriId];
@@ -443,10 +443,10 @@ class RiskRegisterUnitController extends Controller
                     }
                 }
             }
-    
+
             // Tentukan redirect berdasarkan action
             $action = $request->input('action', 'save');
-            
+
             if ($action === 'savenext') {
                 // Redirect ke halaman analisis risiko
                 return response()->json([
@@ -477,36 +477,36 @@ class RiskRegisterUnitController extends Controller
             'unit',
             'periode'
         ])->findOrFail($riskRegisterId);
-        
+
         $user = $request->user();
-        
+
         // Cek akses
         if (!(Gate::check('risk_register_edit') || $identifikasiRisiko->user_id == $user->id)) {
             abort(403);
         }
-        
+
         $unit = $identifikasiRisiko->unit;
         $periode = $identifikasiRisiko->periode;
-        
+
         // Ambil data analisa jika sudah ada
         $analisa = $identifikasiRisiko->riskAnalysis;
         if (!$analisa) {
             // Jika belum ada, buat baru
             $analisa = $identifikasiRisiko->riskAnalysis()->create([]);
         }
-        
+
         // Ambil data skala probabilitas
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
-        
+
         // Ambil data risk map
         $riskMaps = RiskMap::get()->keyBy(function($item) {
             return $item->skala_dampak . '-' . $item->skala_probabilitas;
         });
-        
+
         // Ambil data area dampak
         $areas = AreaDampak::with('details')->get();
         $groupedAreas = $areas->groupBy('risk_category');
-        
+
         $risk_tolerance = 0;
         $risk_limit = 0;
 
@@ -551,8 +551,8 @@ class RiskRegisterUnitController extends Controller
             'skalaProbabilitas',
             'riskMaps',
             'areas',
-            'groupedAreas', 
-            'risk_tolerance', 
+            'groupedAreas',
+            'risk_tolerance',
             'risk_limit',
             'autoCalculate'
         ));
@@ -638,7 +638,7 @@ class RiskRegisterUnitController extends Controller
         try {
             $perlakuan = PerlakuanPenyebabRisikoUnit::findOrFail($id);
             $perlakuan->delete();
-    
+
             return response()->json([
                 'message' => 'Rencana perlakuan berhasil dihapus.'
             ], 200);
@@ -731,9 +731,9 @@ class RiskRegisterUnitController extends Controller
     public function doAnalisa(Request $request, $riskRegisterId)
     {
         $identifikasiRisiko = IdentifikasiRisiko::findOrFail($riskRegisterId);
-        
+
         $user = $request->user();
-        
+
         // Cek akses
         // if (!(Gate::check('risk_register_edit') || $identifikasiRisiko->user_id == $user->id)) {
         //     abort(403);
@@ -765,7 +765,7 @@ class RiskRegisterUnitController extends Controller
             'deskripsi_dampak'                   => 'nullable|string',
             'asumsi_perhitungan_dampak'          => 'nullable|string',
         ];
-        
+
         for ($i = 1; $i <= 4; $i++) {
             $validationRules['nilai_dampak_residual_q' . $i] = 'nullable';
             $validationRules['nilai_probabilitas_residual_q' . $i] = 'nullable|numeric';
@@ -773,7 +773,7 @@ class RiskRegisterUnitController extends Controller
             $validationRules['skala_dampak_residual_hidden_q' . $i] = 'nullable|integer';
             $validationRules['deskripsi_dampak_residual_q' . $i] = 'nullable|string';
         }
-        
+
         // Validasi input
         $validated = $request->validate($validationRules);
 
@@ -844,7 +844,7 @@ class RiskRegisterUnitController extends Controller
         $xrisk_limit = $this->cleanRupiah($request->_risk_limit);
         $nilai_dampak = $this->cleanRupiah($request->nilai_dampak);
         $nilai_dampak_residual = $this->cleanRupiah($request->nilai_dampak_residual);
-        
+
         // Ambil atau buat data analisa
         $analisa = $identifikasiRisiko->riskAnalysis;
         if (!$analisa) {
@@ -855,7 +855,7 @@ class RiskRegisterUnitController extends Controller
         $riskMaps = RiskMap::get()->keyBy(function($item) {
             return $item->skala_dampak . '-' . $item->skala_probabilitas;
         });
-        
+
         // Update data analisa
         //$analisa->update($validated);
         $toUpdate = [
@@ -882,7 +882,7 @@ class RiskRegisterUnitController extends Controller
         }
 
         $analisa->update($toUpdate);
-        
+
         $toUpdate = [
             'nilai_probabilitas' => $request->nilai_probabilitas,
             'skala_dampak' => $request->skala_dampak_hidden,
@@ -927,7 +927,7 @@ class RiskRegisterUnitController extends Controller
             } else {
                 $toUpdate['skala_risiko_residual_q' . $i] = null;
                 $toUpdate['level_risiko_residual_q' . $i] = null;
-            }    
+            }
         }
 
         $toUpdate['skala_probabilitas_residual_id'] = $toUpdate['skala_probabilitas_residual_id_q4'];
@@ -962,10 +962,10 @@ class RiskRegisterUnitController extends Controller
     {
         $user = auth()->user();
         $unitId = $user->unit_id;
-        
+
         // Ambil data identifikasi risiko
         $identifikasiRisiko = IdentifikasiRisiko::with(['kontrolEksistings', 'penyebabRisiko', 'kris'])->findOrFail($id);
-        
+
         // Ambil periode yang dipilih
         $selectedPeriode = Periode::find($identifikasiRisiko->periode_id);
 
@@ -991,10 +991,10 @@ class RiskRegisterUnitController extends Controller
         return view('risk-register-unit.edit', compact(
             'identifikasiRisiko',
             'kategoriRisiko',
-            'peristiwaRisikos', 
-            'masterKris', 
-            'jenisKontrolEksistings', 
-            'penilaianEfektifitasKontrols', 
+            'peristiwaRisikos',
+            'masterKris',
+            'jenisKontrolEksistings',
+            'penilaianEfektifitasKontrols',
             'kontrolEksistings',
             'areaDampak',
             'jenisRisiko',
@@ -1036,23 +1036,23 @@ class RiskRegisterUnitController extends Controller
             // Konversi format tanggal
             $waktuMulai = null;
             $waktuSelesai = null;
-            
+
             if ($request->perkiraan_waktu_mulai_terpapar_risiko) {
                 $waktuMulai = Carbon::createFromFormat('d/m/Y', $request->perkiraan_waktu_mulai_terpapar_risiko)->format('Y-m-d');
             }
-            
+
             if ($request->perkiraan_waktu_selesai_terpapar_risiko) {
                 $waktuSelesai = Carbon::createFromFormat('d/m/Y', $request->perkiraan_waktu_selesai_terpapar_risiko)->format('Y-m-d');
             }
 
             // Ambil data risiko yang akan diupdate
             $identifikasiRisiko = IdentifikasiRisiko::findOrFail($id);
-            
+
             // Update data risiko
             $identifikasiRisiko->periode_id = $request->periode_id;
             $identifikasiRisiko->target_capaian_kinerja = $request->target_capaian_kinerja;
             $identifikasiRisiko->jenis_risiko_id = $request->jenis_risiko_id;
-            
+
             $jenisRisiko = \App\Models\JenisRisiko::find($request->jenis_risiko_id);
             if ($jenisRisiko) {
                 $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
@@ -1065,12 +1065,12 @@ class RiskRegisterUnitController extends Controller
             $identifikasiRisiko->penilaian_efektifitas_kontrol = $request->penilaian_efektifitas_kontrol;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
-            
+
             $identifikasiRisiko->save();
 
             // Hapus kontrol eksisting lama dan buat yang baru
             $identifikasiRisiko->kontrolEksistings()->delete();
-            
+
             // Simpan kontrol eksisting ke model KontrolEksisting
             if ($request->has('kontrol_eksisting') && is_array($request->kontrol_eksisting)) {
                 foreach ($request->kontrol_eksisting as $kontrolEksisting) {
@@ -1086,7 +1086,7 @@ class RiskRegisterUnitController extends Controller
 
             // Hapus penyebab risiko lama dan buat yang baru
             $identifikasiRisiko->penyebabRisiko()->delete();
-            
+
             // Simpan penyebab risiko
             if ($request->has('penyebab_risiko') && is_array($request->penyebab_risiko)) {
                 foreach ($request->penyebab_risiko as $penyebab) {
@@ -1101,7 +1101,7 @@ class RiskRegisterUnitController extends Controller
 
             // Hapus KRI lama dan buat yang baru
             $identifikasiRisiko->kris()->delete();
-            
+
             // Simpan KRI
             if ($request->has('key_risk_indicator') && is_array($request->key_risk_indicator)) {
                 for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
@@ -1121,7 +1121,7 @@ class RiskRegisterUnitController extends Controller
 
             // Tentukan redirect berdasarkan action
             $action = $request->input('action', 'save');
-            
+
             if ($action === 'savenext') {
                 // Redirect ke halaman analisis risiko
                 return response()->json([
@@ -1147,30 +1147,30 @@ class RiskRegisterUnitController extends Controller
         try {
             // Cari data identifikasi risiko
             $identifikasiRisiko = IdentifikasiRisiko::findOrFail($id);
-            
+
             // Cek apakah user memiliki akses untuk menghapus
             if (!Gate::check('risk_register_delete') && $identifikasiRisiko->user_id != auth()->id()) {
                 return redirect()->route('risk-register-unit.index')->with('error', 'Anda tidak memiliki izin untuk menghapus data ini');
             }
-            
+
             // Hapus data terkait
             // Hapus kontrol eksisting
             $identifikasiRisiko->kontrolEksistings()->delete();
-            
+
             // Hapus penyebab risiko
             $identifikasiRisiko->penyebabRisiko()->delete();
-            
+
             // Hapus KRI
             $identifikasiRisiko->kris()->delete();
-            
+
             // Hapus analisis risiko jika ada
             if ($identifikasiRisiko->riskAnalysis) {
                 $identifikasiRisiko->riskAnalysis->delete();
             }
-            
+
             // Hapus data identifikasi risiko
             $identifikasiRisiko->delete();
-            
+
             return redirect()->route('risk-register-unit.index')->with('success', 'Data risiko berhasil dihapus');
         } catch (\Exception $e) {
             return redirect()->route('risk-register-unit.index')->with('error', 'Terjadi kesalahan saat menghapus data: ' . $e->getMessage());
@@ -1185,18 +1185,18 @@ class RiskRegisterUnitController extends Controller
         $level_id = $user->level_id;
         $periode_id = $request->periode_id;
         $send_type = $request->send_type ?? 'send';
-        
+
         if (!$periode_id) {
             return redirect()->route('risk-register-unit.index')
                 ->with('error', 'Periode tidak ditemukan');
         }
-        
+
         // Cek apakah semua risiko sudah dianalisa dan dilakukan rencana perlakuan
         $identifikasiRisikos = IdentifikasiRisiko::where('unit_id', $unit_id)
             ->where('periode_id', $periode_id)
             //->where('status', IdentifikasiRisiko::STATUS_INPUT_DATA)
             ->get();
-        
+
         // Cek apakah ada risiko yang belum dianalisa atau belum memiliki rencana perlakuan
         $belumLengkap = false;
         $idRisikoBelumLengkap = [];
@@ -1205,7 +1205,7 @@ class RiskRegisterUnitController extends Controller
         $step_order = $appFlow['step_order'];
         $min_verification = $appFlow['min_verification'];
         $approval_step_id = $appFlow['approval_step_id'];
-        
+
         foreach ($identifikasiRisikos as $risiko) {
             // Cek apakah risiko memiliki analisis risiko
             if (!$risiko->riskAnalysis) {
@@ -1213,7 +1213,7 @@ class RiskRegisterUnitController extends Controller
                 $idRisikoBelumLengkap[] = $risiko->id;
                 continue;
             }
-            
+
             // Cek apakah semua penyebab risiko memiliki perlakuan
             $penyebabRisikos = $risiko->penyebabRisikos;
             if ($penyebabRisikos->isEmpty()) {
@@ -1221,7 +1221,7 @@ class RiskRegisterUnitController extends Controller
                 $idRisikoBelumLengkap[] = $risiko->id;
                 continue;
             }
-            
+
             // Cek apakah setiap penyebab risiko memiliki perlakuan
             foreach ($penyebabRisikos as $penyebabRisiko) {
                 if ($penyebabRisiko->perlakuanPenyebabRisikoUnit->isEmpty()) {
@@ -1231,19 +1231,19 @@ class RiskRegisterUnitController extends Controller
                 }
             }
         }
-        
+
         if ($belumLengkap) {
             return redirect()->route('risk-register-unit.index', ['pid' => $periode_id])
                 ->with('error', 'Terdapat risiko yang belum dianalisa atau belum memiliki rencana perlakuan. Silahkan lengkapi terlebih dahulu.');
         }
-        
+
         // Cek di data batch apakah sudah ada batch terkait unit_id dan periode_id dengan type = 1 (unit)
         $dataBatch = DataBatch::where('unit_id', $unit_id)
             ->where('periode_id', $periode_id)
             ->where('type', 1) // type = 1 untuk unit/divisi
             ->orderBy('batch', 'desc')
             ->first();
-        
+
         if($send_type == 'rev'){
             $dataBatch->update(
                 [
@@ -1257,7 +1257,7 @@ class RiskRegisterUnitController extends Controller
                 ->where('periode_id', $periode_id)
                 ->whereNotIn('status', [IdentifikasiRisiko::STATUS_DIKIRIM, IdentifikasiRisiko::STATUS_TUNGGU_VERIFIKASI, IdentifikasiRisiko::STATUS_TERVERIFIKASI])
                 ->update(['status' => IdentifikasiRisiko::STATUS_DIKIRIM, 'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW]);
-            
+
             //isi batch notes
             if ($request->has('catatan_perbaikan') && !empty($request->catatan_perbaikan)) {
                 DataBatchNotes::create([
@@ -1277,7 +1277,7 @@ class RiskRegisterUnitController extends Controller
             if (!$dataBatch) {
                 // Jika belum ada, buat batch baru dengan nilai batch = 1
                 $batch = 1;
-                
+
                 // Buat data batch baru
                 $newDataBatch = DataBatch::create([
                     'periode_id' => $periode_id,
@@ -1289,7 +1289,7 @@ class RiskRegisterUnitController extends Controller
                     'finish' => false
                 ]);
 
-            } 
+            }
             else if (!$dataBatch->finish) {
                 //jika pengiriman pertama
                 if($dataBatch->step_verification==null || $dataBatch->step_verification < 1){
@@ -1315,7 +1315,7 @@ class RiskRegisterUnitController extends Controller
                             'finish' => false
                         ]);
                 }
-            } 
+            }
             else {
                 if($dataBatch->finish){
                     // Jika sudah ada dan status sudah finish, nilai batch adalah batch sebelumnya + 1
@@ -1344,7 +1344,7 @@ class RiskRegisterUnitController extends Controller
                     ]);
                 }
             }
-            
+
             // Kembali ke halaman index dan informasi bahwa pengiriman risiko sudah dilakukan
             return redirect()->route('risk-register-unit.index', ['pid' => $periode_id])
                 ->with('success', 'Pengiriman risiko berhasil dilakukan. Risiko telah dikirim untuk diverifikasi.');
@@ -1370,27 +1370,27 @@ class RiskRegisterUnitController extends Controller
             return redirect()->route('risk-register-unit.index')
                 ->with('error', 'Anda tidak memiliki hak untuk melakukan verifikasi risiko');
         }
-            
+
         // Validasi input
         $validated = $request->validate([
             'catatan_verifikasi' => 'required|string',
             'status_verifikasi' => 'required|in:terima,tolak',
         ]);
-        
+
         try {
             // Cek apakah user memiliki izin verifikator_risiko
             if (!Gate::check('risk_register_verification')) {
                 return redirect()->back()->with('error', 'Anda tidak memiliki izin untuk melakukan verifikasi risiko');
             }
-            
-            
+
+
             //batch perlu tahu bahwa masih ada risiko yang dikembalikan sehingga batch menjadi on revision
             $dataBatch = DataBatch::where('unit_id', $identifikasiRisiko->unit_id)
             ->where('periode_id', $identifikasiRisiko->periode_id)
             ->where('type', 1) // type = 1 untuk unit/divisi
             ->orderBy('batch', 'desc')
             ->first();
-            
+
             // catat log disini
             Log::channel('verification')->info('Verifikasi risiko dengan ID: ' . $identifikasiRisiko->id . ' oleh user dengan ID: ' . auth()->id());
             Log::channel('verification')->info('Step Order: ' . $step_order);
@@ -1436,11 +1436,11 @@ class RiskRegisterUnitController extends Controller
                     ->update([
                         'unread' => false
                     ]);
-            } 
+            }
             else {//ditolak
                 //catat log disini
                 Log::channel('verification')->info('Verifikasi risiko dengan ID: ' . $identifikasiRisiko->id . ' ditolak oleh user dengan ID: ' . auth()->id());
-                
+
                 // Jika ditolak, kembalikan ke status input data
                 $identifikasiRisiko->update([
                     'status' => IdentifikasiRisiko::STATUS_REJECTED,
@@ -1450,7 +1450,7 @@ class RiskRegisterUnitController extends Controller
                 $dataBatch->update([
                     'status' => DataBatch::STATUS_REVISI,
                 ]);
-                
+
                 //semua batch notes perlu diupdate sudah read jadi unread menjadi false
                 $batchNotes = DataBatchNotes::where('data_batch_id', $dataBatch->id)
                     ->where('step_order', $step_order)
@@ -1458,7 +1458,7 @@ class RiskRegisterUnitController extends Controller
                         'unread' => false
                     ]);
             }
-            
+
             // Simpan catatan verifikasi ke RiskNote
             $riskNote = new RiskNote([
                 'risiko_id' => $riskRegisterId,
@@ -1467,13 +1467,13 @@ class RiskRegisterUnitController extends Controller
                 'notes' => $validated['catatan_verifikasi'],
                 'user_id' => auth()->id(),
             ]);
-            
+
             $riskNote->save();
-            
+
             // Redirect dengan pesan sukses
             return redirect()->route('risk-register-unit.index', ['pid' => $identifikasiRisiko->periode_id])
                 ->with('success', 'Verifikasi risiko berhasil dilakukan');
-                
+
         } catch (\Exception $e) {
             // Tangani kesalahan
             return redirect()->back()
@@ -1503,44 +1503,75 @@ class RiskRegisterUnitController extends Controller
                 'approval_step_id' => $approval_step_id
             ];
         }
-        
+
         $approvalFlow = ApprovalFlow::where('unit_id', $unit_id)
             ->whereNull('project_id')
-            ->first(); 
-        
-        if ($approvalFlow) { 
+            ->first();
+
+        if ($approvalFlow) {
             $min_verification = $approvalFlow->min_verification;
-            $approvalStep = ApprovalStep::where('approval_flow_id', $approvalFlow->id) 
-                ->where('level_id', $level_id) 
-                ->first(); 
-            if ($approvalStep) { 
-                $step_order = $approvalStep->step_order; 
+            $approvalStep = ApprovalStep::where('approval_flow_id', $approvalFlow->id)
+                ->where('level_id', $level_id)
+                ->first();
+            if ($approvalStep) {
+                $step_order = $approvalStep->step_order;
                 $approval_step_id = $approvalStep->id;
-            } else { 
-                //default step order 
-                if ($level_id == 2) { 
-                    $step_order = 1; 
-                } else if ($level_id == 3) { 
-                    $step_order = 2; 
-                } else if ($level_id == 4) { 
-                    $step_order = 3; 
-                } 
-            } 
-        } else { 
-            //default step order jika tidak ada approval flow 
-            if ($level_id == 2) { 
-                $step_order = 1; 
-            } else if ($level_id == 3) { 
-                $step_order = 2; 
-            } else if ($level_id == 4) { 
-                $step_order = 3; 
-            } 
+            } else {
+                //default step order
+                if ($level_id == 2) {
+                    $step_order = 1;
+                } else if ($level_id == 3) {
+                    $step_order = 2;
+                } else if ($level_id == 4) {
+                    $step_order = 3;
+                }
+            }
+        } else {
+            //default step order jika tidak ada approval flow
+            if ($level_id == 2) {
+                $step_order = 1;
+            } else if ($level_id == 3) {
+                $step_order = 2;
+            } else if ($level_id == 4) {
+                $step_order = 3;
+            }
         }
-        
+
         return [
             'step_order' => $step_order,
             'min_verification' => $min_verification,
             'approval_step_id' => $approval_step_id
         ];
+    }
+
+    public function view($id)
+    {
+        $user    = request()->user()->load('unit');
+        $risikos = IdentifikasiRisiko::where('id', $id)
+            ->with('riskAnalysis')
+            ->get();
+
+        $currentRiskMaps = $risikos->pluck('currentRiskMaps');
+        $formattedCurrentRiskMaps = [];
+        foreach ($risikos as $idx => $risiko) {
+            $currentValue = $risiko->currentRiskMaps['inherent'];
+            for ($quarter = 1; $quarter <= 4; $quarter++) {
+                if ($nextValue = ($risiko->currentRiskMaps[$quarter] ?? null)) {
+                    $currentValue = $nextValue;
+                }
+
+                $currentValue['quarter'] = $quarter;
+
+                $formattedCurrentRiskMaps[$risiko->id][] = $currentValue;
+            }
+        }
+
+        $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->skala_dampak . '-' . $item->skala_probabilitas;
+            });
+
+        return view('risk-register-unit.view', compact('user', 'risikos', 'riskMaps', 'formattedCurrentRiskMaps'));
     }
 }

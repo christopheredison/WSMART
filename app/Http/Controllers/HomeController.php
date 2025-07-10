@@ -504,7 +504,7 @@ class HomeController extends Controller
               'risk_owner' => '-'
             ];
           })->values(),
-          'leds' => $lossEvents->map(function ($led) {
+          'led' => $lossEvents->map(function ($led) {
             return [
               'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
               'kategori_risiko' => $led->kategoriRisiko->title ?? '-',
