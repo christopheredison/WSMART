@@ -369,6 +369,7 @@ Route::group(['middleware' => ['auth']], function() {
     Route::resource('project-sektor', ProjectSektorController::class)->except(['create', 'show', 'edit']);
     Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit', 'destroy']);
     Route::resource('projects/{project}/risks', ProjectRiskController::class)->names('projects.risks');
+    Route::get('projects/{project}/risks/{risk}/view', [ProjectRiskController::class, 'view'])->name('projects.risks.view');
     Route::get('projects/{project}/risks/{risk}/rencana', [ProjectRiskController::class, 'rencana'])->name('projects.risks.rencana')->middleware('can:project_risk_edit');
     Route::post('projects/{project}/risks/{risk}/rencana', [ProjectRiskController::class, 'doRencana'])->name('projects.risks.do-rencana')->middleware('can:project_risk_edit');
     Route::get('projects/{project}/risks/{risk}/analisa', [ProjectRiskController::class, 'analisa'])->name('projects.risks.analisa')->middleware('can:project_risk_edit');

@@ -156,6 +156,10 @@ class ProjectRiskController extends BasicCRUDController
         if (Gate::check('project_risk_edit')) {
             $this->tableLegend = [
                 [
+                    'icon' => '<span class="bx bx-show-alt"></span>',
+                    'label' => 'View'
+                ],
+                [
                     'icon' => '<span class="bx bx-analyse text-warning"></span>',
                     'label' => 'Analisa'
                 ],
@@ -167,6 +171,14 @@ class ProjectRiskController extends BasicCRUDController
                     'icon' => '<span class="bx bx-edit"></span>',
                     'label' => 'Edit'
                 ]
+            ];
+
+            $this->tableActions[] = [
+                'label' => '<span class="bx bx-show-alt"></span>',
+                'btn_icon' => true,
+                'action' => 'link',
+                'url' => route('projects.risks.view', ['project' => request()->route('project'), 'risk' => ':id']),
+                'title' => 'View Risiko'
             ];
 
             $this->tableActions[] = [
@@ -525,6 +537,61 @@ class ProjectRiskController extends BasicCRUDController
                 'redirect' => route('projects.risks.index', ['project' => $projectPeriodeList->id]),
             ];
         }
+    }
+
+    public function view(Request $request, $resource)
+    {
+        $projectRisk = ProjectRisk::with([
+                'projectPeriodeList.project',
+                'peristiwaRisiko',
+                'projectRiskAnalisa.skalaDampakObj',
+                'projectRiskAnalisa.skalaProbabilitas',
+                'projectRiskAnalisa.skalaDampakResidualObj',
+                'projectRiskAnalisa.skalaProbabilitasResidual',
+                'projectRiskMonitorings' => function($query) {
+                    $query->orderBy('id', 'desc')->with('skalaProbabilitas');
+                },
+            ])
+            ->where('project_periode_list_id', request()->route('project'))
+            ->findOrFail(request()->route('risk'));
+
+        $projectRisk->append('currentRiskMaps');
+
+        $tahunMonitorings = $projectRisk->projectRiskMonitorings->pluck('tahun')->unique()->toArray();
+        $tahunMonitorings[] = $projectRisk->created_at->year;
+        sort($tahunMonitorings);
+        $minTahun = !empty($tahunMonitorings) ? min($tahunMonitorings) : date('Y');
+        $maxTahun = !empty($tahunMonitorings) ? max($tahunMonitorings) : date('Y');
+        $tahunMonitorings = range($minTahun, $maxTahun);
+        
+        $formattedCurrentRiskMaps = [];
+        $currentValue = $projectRisk->currentRiskMaps['inherent'] ?? null;
+
+        if ($currentValue) {
+            foreach ($tahunMonitorings as $tahun) {
+                for ($quarter = 1; $quarter <= 4; $quarter++) {
+                    if ($nextValue = ($projectRisk->currentRiskMaps[$tahun . '-' . $quarter] ?? null)) {
+                        $currentValue = $nextValue;
+                    }
+                    $currentValue['tahun']   = $tahun;
+                    $currentValue['quarter'] = $quarter;
+                    $formattedCurrentRiskMaps[$projectRisk->id][$tahun][] = $currentValue;
+                }
+            }
+        }
+
+        $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->skala_dampak . '-' . $item->skala_probabilitas;
+            });
+
+        return view('project-risk.view', compact(
+            'projectRisk', 
+            'tahunMonitorings', 
+            'formattedCurrentRiskMaps', 
+            'riskMaps'
+        ));
     }
 
     public function analisa(Request $request, $resource) {
