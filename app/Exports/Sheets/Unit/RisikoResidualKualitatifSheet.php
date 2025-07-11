@@ -134,6 +134,10 @@ class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, Wit
                 
                 $maxRow = max(50, $risikosCount + 10);
                 $sheet->getStyle('A4:AJ' . $maxRow)->applyFromArray($dataStyle);
+
+                foreach (range('A', 'AJ') as $column) {
+                    $sheet->getColumnDimension($column)->setAutoSize(true);
+                }
             },
         ];
     }
@@ -159,13 +163,15 @@ class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, Wit
             ->where('periode_id', $this->periodeId)
             ->where('unit_id', $this->unitId)
             ->whereHas('riskAnalysis', function ($query) {
-                $query->where('kategori_dampak', 'kualitatif');
+                $query->where('kategori_dampak', 'Kualitatif');
             })
             ->get()
             ->sortByDesc('riskAnalysis.skala_risiko');
 
         $exportData = new Collection();
         $nomorUrut = 1;
+
+        // dd($risikos);
 
         foreach ($risikos as $risiko) {
             $analisa = $risiko->riskAnalysis;
@@ -174,7 +180,7 @@ class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, Wit
                 'no' => $nomorUrut,
                 'nama_bumn' => 'PT Wijaya Karya (Persero) Tbk',
                 'no_risiko' => $nomorUrut,
-                'peristiwa_risiko' => $risiko->peristiwaRisiko->title ?? '-',
+                'peristiwa_risiko' => $risiko->peristiwa_risiko ?? '-',
                 
                 // Deskripsi Dampak Q1-Q4
                 'deskripsi_dampak_q1' => $analisa->deskripsi_dampak_residual_q1 ?? '-',

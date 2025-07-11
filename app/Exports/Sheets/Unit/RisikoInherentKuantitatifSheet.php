@@ -10,6 +10,10 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
@@ -103,15 +107,51 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
                     ]
                 ];
                 
-                $risikosCount = \App\Models\IdentifikasiRisiko::where('periode_id', $this->periodeId)
+                $risikos = IdentifikasiRisiko::with(['riskAnalysis'])
+                    ->where('periode_id', $this->periodeId)
                     ->where('unit_id', $this->unitId)
                     ->whereHas('riskAnalysis', function ($query) {
                         $query->where('kategori_dampak', 'Kuantitatif');
                     })
-                    ->count();
+                    ->get();
+
+                // $risikosCount = \App\Models\IdentifikasiRisiko::where('periode_id', $this->periodeId)
+                //     ->where('unit_id', $this->unitId)
+                //     ->whereHas('riskAnalysis', function ($query) {
+                //         $query->where('kategori_dampak', 'Kuantitatif');
+                //     })
+                //     ->count();
                 
-                $maxRow = max(50, $risikosCount + 10);
+                $maxRow = 3 + $risikos->count();
                 $sheet->getStyle('A3:L' . $maxRow)->applyFromArray($dataStyle);
+                
+                // $maxRow = max(50, $risikosCount + 10);
+                // $sheet->getStyle('A3:L' . $maxRow)->applyFromArray($dataStyle);
+
+                // Mapping warna berdasarkan level risiko
+                $colorMap = [
+                    'Low' => '008000', // Hijau Tua
+                    'Low to Moderate' => '90EE90', // Hijau Muda
+                    'Moderate' => 'FFFF00', // Kuning
+                    'Moderate to High' => 'FFA500', // Orange
+                    'High' => 'FF0000', // Merah
+                ];
+
+                // Looping data untuk menerapkan warna background
+                $row = 3;
+                foreach ($risikos as $risiko) {
+                    $levelRisiko = optional($risiko->riskAnalysis)->level_risiko;
+                    
+                    if (isset($colorMap[$levelRisiko])) {
+                        $color = $colorMap[$levelRisiko];
+                        $sheet->getStyle('L' . $row)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB($color);
+                    }
+                    $row++;
+                }
+
+                foreach (range('A', 'L') as $column) {
+                    $sheet->getColumnDimension($column)->setAutoSize(true);
+                }
             },
         ];
     }
@@ -146,7 +186,7 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 'no' => $nomorUrut,
                 'nama_bumn' => 'PT Wijaya Karya (Persero) Tbk',
                 'no_risiko' => $nomorUrut,
-                'peristiwa_risiko' => $risiko->peristiwaRisiko->title ?? '-',
+                'peristiwa_risiko' => $risiko->peristiwa_risiko ?? '-',
                 'asumsi_perhitungan_dampak' => $analisa->asumsi_perhitungan_dampak ?? '-',
                 'nilai_dampak' => $this->formatCurrency($analisa->nilai_dampak ?? 0),
                 'skala_dampak' => $this->formatSkalaDampak($analisa),

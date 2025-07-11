@@ -13,8 +13,8 @@
           </div>
         </div>
         <div class="d-block">
-          <div class="ff-preheading">Laporan</div>
-          <h2>Risk Register Unit</h2>
+          <div class="ff-preheading">export excel</div>
+          <h2>Laporan Divisi</h2>
         </div>
       </div>
       <div class="card-body">

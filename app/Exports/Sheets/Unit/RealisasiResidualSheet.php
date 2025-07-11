@@ -142,6 +142,10 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 
                 $maxRow = max(50, $risikosCount + 10); // Estimasi row yang akan terisi
                 $sheet->getStyle('A4:AL' . $maxRow)->applyFromArray($dataStyle);
+                
+                foreach (range('A', 'AL') as $column) {
+                    $sheet->getColumnDimension($column)->setAutoSize(true);
+                }
             },
         ];
     }
@@ -187,7 +191,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 'no' => $nomorUrut,
                 'nama_bumn' => 'PT PP Persero Tbk',
                 'no_risiko' => $nomorUrut,
-                'peristiwa_risiko' => $risiko->peristiwaRisiko->title ?? '-',
+                'peristiwa_risiko' => $risiko->peristiwa_risiko ?? '-',
                 
                 // Asumsi Perhitungan Dampak Q1-Q4
                 'asumsi_perhitungan_dampak_q1' => $this->getAsumsiPerhitunganDampak($analisa, 'q1'),

@@ -10,6 +10,7 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 use Carbon\Carbon;
 
@@ -122,6 +123,12 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                     ->count();
                 $maxRow = max(100, $risikosCount * 10 + 10);
                 $sheet->getStyle('A3:X' . $maxRow)->applyFromArray($dataStyle);
+
+                $sheet->getStyle('L3:L' . $maxRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+
+                foreach (range('A', 'X') as $column) {
+                    $sheet->getColumnDimension($column)->setAutoSize(true);
+                }
             },
         ];
     }
@@ -164,7 +171,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                     'kategori_risiko_bumn' => optional($risiko->kategoriRisiko)->title ?? '-',
                     'kategori_risiko_t2_t3' => `${$risiko->kategoriRisiko->title} - ${$risiko->jenisRisiko->title}`,
                     'no_risiko' => $nomorUrutRisiko,
-                    'peristiwa_risiko' => optional($risiko->peristiwaRisiko)->title ?? '-',
+                    'peristiwa_risiko' => $risiko->peristiwa_risiko ?? '-',
                     'deskripsi_peristiwa_risiko' => $risiko->deskripsi_peristiwa_risiko ?? '-',
                     'no_penyebab_risiko' => '-',
                     'kode_penyebab_risiko' => '-',
@@ -241,7 +248,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
             'kategori_risiko_bumn' => $isFirstRowOfGroup ? (optional($risiko->kategoriRisiko)->title ?? '-') : '',
             'kategori_risiko_t2_t3' => $isFirstRowOfGroup ? ($risiko->jenisRisiko->title ?? '-') : '',
             'no_risiko' => $isFirstRowOfGroup ? $nomorUrutRisiko : '',
-            'peristiwa_risiko' => $isFirstRowOfGroup ? (optional($risiko->peristiwaRisiko)->title ?? '-') : '',
+            'peristiwa_risiko' => $isFirstRowOfGroup ? ($risiko->peristiwa_risiko ?? '-') : '',
             'deskripsi_peristiwa_risiko' => $isFirstRowOfGroup ? ($risiko->deskripsi_peristiwa_risiko ?? '-') : '',
             'no_penyebab_risiko' => ($penyebab && $isFirstKRIOfPenyebab) ? $nomorUrutRisiko : '',
             'kode_penyebab_risiko' => ($penyebab && $isFirstKRIOfPenyebab) ? ($nomorUrutRisiko . '.' . $nomorUrutPenyebab) : '',

@@ -153,6 +153,10 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 $sheet->getStyle('A3:X' . $maxRow)->applyFromArray($dataStyle);
 
                 $this->addTimelineConditionalFormatting($sheet, $maxRow);
+
+                foreach (range('A', 'X') as $column) {
+                    $sheet->getColumnDimension($column)->setAutoSize(true);
+                }
             },
         ];
     }

@@ -134,6 +134,10 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 
                 $maxRow = max(50, $risikosCount + 10);
                 $sheet->getStyle('A4:AJ' . $maxRow)->applyFromArray($dataStyle);
+                    
+                foreach (range('A', 'AJ') as $column) {
+                    $sheet->getColumnDimension($column)->setAutoSize(true);
+                }
             },
         ];
     }
@@ -174,7 +178,7 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 'no' => $nomorUrut,
                 'nama_bumn' => 'PT Wijaya Karya (Persero) Tbk',
                 'no_risiko' => $nomorUrut,
-                'peristiwa_risiko' => $risiko->peristiwaRisiko->title ?? '-',
+                'peristiwa_risiko' => $risiko->peristiwa_risiko ?? '-',
                 
                 // Asumsi Perhitungan Dampak Q1-Q4
                 'asumsi_perhitungan_dampak_q1' => $analisa->asumsi_perhitungan_dampak_residual_q1 ?? '-',
