@@ -6,11 +6,11 @@
                 @include('partials.icon-tool')
             </div>
             <h3 class="mb-0">Data {{ $risikos->first()->peristiwa_risiko }}</h3>
-            <div class="ms-auto">
+            {{-- <div class="ms-auto">
                 <button id="exportPdfBtn" class="btn btn-sm btn-danger ms-auto d-flex align-items-center gap-1">
                     <i class='bx bxs-file-pdf'></i> Export PDF
                 </button>
-            </div>
+            </div> --}}
         </div>
     </div>
 
@@ -197,9 +197,9 @@
                             @foreach($risikos as $risiko)
                             <tr>
                                 {{-- <td>{{ $loop->iteration }}</td> --}}
-                                <td>{{ $risiko->peristiwaRisiko?->title ?? '-' }}</td>
+                                <td>{{ $risiko->peristiwa_risiko ?? '-' }}</td>
                                 <td>{{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}</td>
-                                <td>{{ $risiko->riskAnalysis?->nilai_dampak ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak, 0, ',', '.') : '-' }}</td>
+                                <td>{{ $risiko->riskAnalysis?->nilai_dampak ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak, 0, ',', '.') : 'Rp 0' }}</td>
                                 <td>
                                     {{ $risiko->riskAnalysis?->skalaDampakObj?->tingkat
                                         ? '(' . $risiko->riskAnalysis?->skalaDampakObj?->tingkat . ') ' . $risiko->riskAnalysis?->skalaDampakObj?->deskripsi
@@ -237,6 +237,528 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    @php
+        $risiko = $risikos->first();
+        $analisa = $risiko->riskAnalysis;
+    @endphp
+
+    <!-- ::DataRisiko Start -->
+    <div class="col-12 mt-4 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">1</span>
+                    </span>
+                    <span class="h3 mb-0">Data Risiko</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="divider mb-3 mb-md-5 mt-0">
+                            <div class="divider-text">
+                                <h5 class="mb-0 ff-heading-sm">Periode Tahun {{ $risiko->periode->tahun ?? '-' }}</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3 gx-md-5">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Sasaran</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko->target_capaian_kinerja ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Jenis Risiko T2 & T3 KBUMN</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ optional($risiko->jenisRisiko->kategoriRisiko)->title ?? '-' }} - {{ optional($risiko->jenisRisiko)->title ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Peristiwa Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko->peristiwa_risiko ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Deskripsi Peristiwa Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ::DataRisiko End -->
+
+    <!-- ::Peristiwa Risiko Start -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">2</span>
+                    </span>
+                    <span class="h3 mb-0">Peristiwa Risiko</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row gy-3 gx-xxl-6">
+                    <div class="col-md-6">
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Peristiwa Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko->peristiwa_risiko ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Deskripsi Peristiwa Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ::Peristiwa Risiko End -->
+
+    <!-- ::Kontrol Start -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">3</span>
+                    </span>
+                    <span class="h3 mb-0">Kontrol</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row gy-3 gx-xxl-6">
+                    <div class="col-md-6">
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Jenis Kontrol Eksisting</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ optional($risiko->jenisKontrolEksisting)->jenis_kontrol ?? '-' }}
+                            </div>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Kontrol Eksisting</label>
+                            @if($risiko->kontrolEksistings && $risiko->kontrolEksistings->isNotEmpty())
+                                @foreach($risiko->kontrolEksistings as $key=>$kontrol)
+                                    <div class="p-3 bg-light rounded mb-2">
+                                      {{$key + 1}}. {{ $kontrol->kontrol_eksisting }}
+                                    </div>
+                                @endforeach
+                            @else
+                                <div class="p-3 bg-light rounded">
+                                    Tidak ada kontrol eksisting
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Penilaian Efektivitas Kontrol</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ optional($risiko->penilaianEfektifitasKontrol)->efektivitas_kontrol ?? '-' }}
+                            </div>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Perkiraan Waktu Mulai Terpapar Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko->perkiraan_waktu_terpapar_risiko_mulai ? \Carbon\Carbon::parse($risiko->perkiraan_waktu_terpapar_risiko_mulai)->format('d F Y') : '-' }}
+                            </div>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Perkiraan Waktu Selesai Terpapar Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko->perkiraan_waktu_terpapar_risiko_akhir ? \Carbon\Carbon::parse($risiko->perkiraan_waktu_terpapar_risiko_akhir)->format('d F Y') : '-' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ::Kontrol End -->
+
+    <!-- ::PenyebabRisiko Start -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">4</span>
+                    </span>
+                    <span class="h3 mb-0">Penyebab Risiko</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">#</th>
+                                <th width="25%">Penyebab Risiko</th>
+                                <th width="25%">Rencana Perlakuan Risiko</th>
+                                <th width="25%">Output Perlakuan Risiko</th>
+                                <th width="20%">Biaya Perlakuan Risiko</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php $totalBiaya = 0; @endphp
+                            @forelse($risiko->penyebabRisiko as $penyebab)
+                                @if($penyebab->perlakuanPenyebabRisiko && $penyebab->perlakuanPenyebabRisiko->isNotEmpty())
+                                    @foreach($penyebab->perlakuanPenyebabRisiko as $perlakuan)
+                                        @php $totalBiaya += $perlakuan->biaya_perlakuan_risiko ?? 0; @endphp
+                                        <tr>
+                                            @if($loop->first)
+                                                <td rowspan="{{ $penyebab->perlakuanPenyebabRisiko->count() }}">{{ $loop->parent->iteration }}</td>
+                                                <td rowspan="{{ $penyebab->perlakuanPenyebabRisiko->count() }}">{{ $penyebab->penyebab_risiko }}</td>
+                                            @endif
+                                            <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
+                                            <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
+                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
+                                        </tr>
+                                    @endforeach
+                                @else
+                                    <tr>
+                                        <td>{{ $loop->iteration }}</td>
+                                        <td>{{ $penyebab->penyebab_risiko }}</td>
+                                        <td colspan="3" class="text-center text-muted">Belum ada rencana perlakuan</td>
+                                    </tr>
+                                @endif
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">Tidak ada penyebab risiko</td>
+                                </tr>
+                            @endforelse
+                            @if($totalBiaya > 0)
+                                <tr class="table-warning">
+                                    <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
+                                    <td class="fw-bold">{{ 'Rp' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                                </tr>
+                            @endif
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ::PenyebabRisiko End -->
+
+    <!-- ::KeyRiskIndicator Start -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">5</span>
+                    </span>
+                    <span class="h3 mb-0">Key Risk Indicator</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">#</th>
+                                <th width="35%">Key Risk Indicator</th>
+                                <th width="15%">Satuan KRI</th>
+                                <th width="15%">Batas Aman</th>
+                                <th width="15%">Batas Waspada</th>
+                                <th width="15%">Batas Bahaya</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($risiko->kris as $kri)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $kri->kri ?? '-' }}</td>
+                                    <td>{{ $kri->satuan_kri ?? '-' }}</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success">{{ $kri->batas_aman ?? '-' }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-warning">{{ $kri->batas_waspada ?? '-' }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-danger">{{ $kri->batas_bahaya ?? '-' }}</span>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">Tidak ada Key Risk Indicator</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ::KeyRiskIndicator End -->
+
+    <!-- ::AnalisaRisiko Start -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">6</span>
+                    </span>
+                    <span class="h3 mb-0">Analisa Risiko</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 gx-md-5">
+                    <div class="col-md-4">
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Kategori Dampak</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->kategori_dampak ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    @if($analisa->kategori_dampak === 'Kualitatif')
+                      <div class="col-md-4">
+                          <div class="form-group mb-4">
+                              <label class="form-label fw-bold">Area Dampak</label>
+                              <div class="p-3 bg-light rounded">
+                                  {{ optional($analisa->areaDampakObj)->title ?? '-' }}
+                              </div>
+                          </div>
+                      </div>
+                    @endif
+                    <div class="col-md-4">
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Risk Limit</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->risk_limit ? 'Rp' . number_format($analisa->risk_limit, 0, ',', '.') : 'Rp 0' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ::AnalisaRisiko End -->
+
+    <!-- ::PengukuranRisikoInheren Start -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">7</span>
+                    </span>
+                    <span class="h3 mb-0">Pengukuran Risiko Inheren</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Nilai Dampak</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->nilai_dampak ? 'Rp' . number_format($analisa->nilai_dampak, 0, ',', '.') : 'Rp 0' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Nilai Probabilitas (%)</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->nilai_probabilitas ?? '-' }}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Eksposur Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->eksposur_risiko ? 'Rp' . number_format($analisa->eksposur_risiko, 0, ',', '.') : 'Rp 0' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Skala Dampak</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->skala_dampak ? '(' . $analisa->skala_dampak . ') ' . optional($analisa->skalaDampakObj)->deskripsi : '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Skala Probabilitas</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->skalaProbabilitas ? '(' . $analisa->skalaProbabilitas->tingkat . ') ' . $analisa->skalaProbabilitas->skala : '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Skala Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->skala_risiko ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Level Risiko</label>
+                            <div class="p-3 rounded bg-{{ str_replace(' ', '-', str_replace('to ', '', strtolower($analisa->level_risiko))) }}">
+                                <span class="text-white fw-bold">{{ $analisa->level_risiko ?? '-' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    @if($analisa->kategori_dampak === 'Kualitatif')
+                        <div class="col-12">
+                            <div class="form-group mb-4">
+                                <label class="form-label fw-bold">Deskripsi Dampak</label>
+                                <div class="p-3 bg-light rounded">
+                                    {{ $analisa->deskripsi_dampak ?? '-' }}
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="col-12">
+                            <div class="form-group mb-4">
+                                <label class="form-label fw-bold">Asumsi Perhitungan Dampak & Probabilitas Inherent</label>
+                                <div class="p-3 bg-light rounded">
+                                    {{ $analisa->asumsi_perhitungan_dampak ?? '-' }}
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ::PengukuranRisikoInheren End -->
+
+    <!-- ::PengukuranRisikoResidual Start -->
+    @for ($i = 1; $i <= 4; $i++)
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">{{ $i + 7 }}</span>
+                    </span>
+                    <span class="h3 mb-0">Pengukuran Risiko Residual - Quarter {{ $i }}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Nilai Dampak</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->{'nilai_dampak_residual_q' . $i} ? 'Rp' . number_format($analisa->{'nilai_dampak_residual_q' . $i}, 0, ',', '.') : 'Rp 0' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Nilai Probabilitas (%)</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->{'nilai_probabilitas_residual_q' . $i} ?? '-' }}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Eksposur Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->{'eksposur_risiko_residual_q' . $i} ? 'Rp' . number_format($analisa->{'eksposur_risiko_residual_q' . $i}, 0, ',', '.') : 'Rp 0' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Skala Dampak Residual</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->{'skala_dampak_residual_q' . $i} ? '(' . $analisa->{'skala_dampak_residual_q' . $i} . ') ' . optional($analisa->{'skalaDampakResidualQ' . $i . 'Obj'})->deskripsi : '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Skala Probabilitas</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->{'skalaProbabilitasResidualQ' . $i} ? '(' . $analisa->{'skalaProbabilitasResidualQ' . $i}->tingkat . ') ' . $analisa->{'skalaProbabilitasResidualQ' . $i}->skala : '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Skala Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->{'skala_risiko_residual_q' . $i} ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Level Risiko</label>
+                            <div class="p-3 rounded bg-{{ str_replace(' ', '-', str_replace('to ', '', strtolower($analisa->{'level_risiko_residual_q' . $i}))) }}">
+                                <span class="text-white fw-bold">{{ $analisa->{'level_risiko_residual_q' . $i} ?? '-' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    @if($analisa->kategori_dampak === 'Kualitatif')
+                        <div class="col-12">
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">Deskripsi Dampak Residual Q{{ $i }}</label>
+                                <div class="p-3 bg-light rounded">
+                                    {{ $analisa->{'deskripsi_dampak_residual_q' . $i} ?? '-' }}
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="col-12">
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">Asumsi Perhitungan Dampak & Probabilitas Residual Q{{ $i }}</label>
+                                <div class="p-3 bg-light rounded">
+                                    {{ $analisa->{'asumsi_perhitungan_dampak_residual_q' . $i} ?? '-' }}
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    @endfor
+    <!-- ::PengukuranRisikoResidual End -->
+
+    <div class="col-12 mt-5">
+        <div class="row g-2">
+            <div class="col-auto order-1">
+                <a href="{{ route('risk-register-unit.index') }}" class="btn btn-outline-secondary">Kembali</a>
             </div>
         </div>
     </div>
@@ -290,6 +812,20 @@
 #currentMap.show-q4 .current-q4 {
     display: block;
 }
+
+.table-warning {
+    background-color: #fff3cd !important;
+}
+.form-group {
+    margin-bottom: 1rem;
+}
+.rounded {
+    border-radius: 0.375rem !important;
+}
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+
 </style>
 
 @endpush
