@@ -491,28 +491,27 @@ class HomeController extends Controller
           'tkmru_date' => null,
           'tkmru' => null,
           'tkmru_notes' => null,
-          'top_risk' => $risikos->sortByDesc('riskAnalysis.skala_risiko')->take(5)->map(function ($item) use ($riskMaps) {
+          'top_risk' => $risikos->sortByDesc('riskAnalysis.skala_risiko')->take(5)->map(function ($item) use ($riskMaps, $selectedUnit) {
             return [
-              'peristiwa' => $item->peristiwaRisiko->title ?? '-',
+              'peristiwa' => $item->peristiwa_risiko ?? '-',
               'deskripsi' => $item->deskripsi_peristiwa_risiko ?? '-',
               'jenis_risiko' => $item->jenisRisiko->title ?? '-',
               'tingkat_risiko' => $item->skala_risiko,
               'warna_tingkat_risiko' => strtolower(str_replace(' ', '-', $riskMaps->where('nilai_risiko', $item->skala_risiko)->pluck('level_risiko')->first())),
-              'tck_terpengaruh' => '-',
+              'sasaran' => $item->target_capaian_kinerja ?? '-',
               'kri' => $item->kris->first()?->kri,
               'status_kri' => $item->kris->first()?->status_kri_terkini_q4,
-              'risk_owner' => '-'
+              'risk_owner' => $selectedUnit->name,
             ];
           })->values(),
           'led' => $lossEvents->map(function ($led) {
             return [
               'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
-              'kategori_risiko' => $led->kategoriRisiko->title ?? '-',
-              'jenis_risiko' => $led->jenisRisiko->title ?? '-',
-              'nilai_kerugian_finansial' => is_numeric($led->nilai_kerugian_finansial) ? number_format($led->nilai_kerugian_finansial, 0, ',', '.') : $led->nilai_kerugian_finansial,
-              'nilai_kerugian_non_finansial' => is_numeric($led->nilai_kerugian_non_finansial) ? number_format($led->nilai_kerugian_non_finansial, 0, ',', '.') : $led->nilai_kerugian_non_finansial,
-              'peristiwa_kerugian' => $led->peristiwa_kerugian,
-              'unit_penanggung_jawab' => $led->unit_penanggung_jawab,
+              'nama_kejadian' => $led->nama_kejadian ?? '-',
+              'identifikasi_kejadian' => $led->identifikasi_kejadian ?? '-',
+              'kategori_kejadian' => $led->kategoriKejadian->kategori_kejadian ?? '-',
+              'nilai_kerugian' => is_numeric($led->nilai_kerugian_finansial) ? number_format($led->nilai_kerugian_finansial, 0, ',', '.') : $led->nilai_kerugian_finansial,
+              'unit_penanggung_jawab' => $led?->unitPenanggungJawabJabatan?->name ?? '-',
             ];
           }),
         ];

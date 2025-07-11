@@ -817,9 +817,9 @@
               @foreach($risikos as $risiko)
               <tr>
                 <td>{{ $loop->iteration }}</td>
-                <td>{{ $risiko->peristiwaRisiko?->title ?? '-' }}</td>
+                <td>{{ $risiko->peristiwa_risiko ?? '-' }}</td>
                 <td>{{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}</td>
-                <td>{{ $risiko->riskAnalysis?->nilai_dampak ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak, 0, ',', '.') : '-' }}</td>
+                <td>{{ $risiko->riskAnalysis?->nilai_dampak ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak, 0, ',', '.') : 'Rp 0' }}</td>
                 <td>
                   {{ $risiko->riskAnalysis?->skalaDampakObj?->tingkat 
                     ? '(' . $risiko->riskAnalysis?->skalaDampakObj?->tingkat . ') ' . $risiko->riskAnalysis?->skalaDampakObj?->deskripsi 
@@ -886,7 +886,7 @@
                 <th>Deskripsi peristiwa risiko</th>
                 <th>Jenis Risiko</th>
                 <th class="text-center white-space-nowrap">Tingkat Risiko</th>
-                <th class="white-space-nowrap">TCK terpengaruh</th>
+                <th class="white-space-nowrap">Sasaran</th>
                 <th>KRI</th>
                 <th class="text-center white-space-nowrap">Status KRI</th>
                 <th class="white-space-nowrap">Risk Owner</th>
@@ -922,20 +922,16 @@
             <thead>
               <tr>
                 <th rowspan="2">Tanggal Kejadian</th>
-                <th rowspan="2">Peristiwa Kerugian</th>
-                <th rowspan="2">Jenis Risiko</th>
-                <th colspan="2" class="no-sort white-space-nowrap py-1">
-                  <div class="alert alert-danger fw-semibold text-center py-2 my-0">
-                    Nilai Kerugian
-                  </div>
-                </th>
-                <th rowspan="2">Penyebab Masalah</th>
-                <th rowspan="2">Unit Penanggung Jawab</th>
+                <th rowspan="2">Nama Kejadian</th>
+                <th rowspan="2">Identifikasi Kejadian</th>
+                <th rowspan="2">Kategori Kejadian</th>
+                <th rowspan="2">Nilai Kerugian</th>
+                <th rowspan="2">Pihak Terkait</th>
               </tr>
-              <tr>
+              {{-- <tr>
                 <th class="no-sort text-center py-2">Finansial (IDR)</th>
                 <th class="no-sort text-center py-2">Non Finansial</th>
-              </tr>
+              </tr> --}}
             </thead>
             <tbody>
               {{-- <tr>
@@ -1122,7 +1118,7 @@ $(document).ready(function() {
                     <td class="level_risiko text-center">
                         <div class="badge ${risk.warna_tingkat_risiko}">${risk.tingkat_risiko}</div>
                     </td>
-                    <td>${risk.tck_terpengaruh}</td>
+                    <td>${risk.sasaran}</td>
                     <td>${risk.kri}</td>
                     <td class="text-center">
                         <div class="status-container ${risk.status_kri}">
@@ -1150,11 +1146,10 @@ $(document).ready(function() {
         $('#led-card .table tbody').append(`
                 <tr>
                     <td>${led.tanggal_kejadian}</td>
-                    <td>${led.peristiwa_kerugian}</td>
-                    <td>${led.jenis_risiko}</td>
-                    <td>${led.nilai_kerugian_finansial}</td>
-                    <td>${led.nilai_kerugian_non_finansial}</td>
-                    <td>${led.penyebab_masalah}</td>
+                    <td>${led.nama_kejadian}</td>
+                    <td>${led.identifikasi_kejadian}</td>
+                    <td>${led.kategori_kejadian}</td>
+                    <td>${led.nilai_kerugian}</td>
                     <td>${led.unit_penanggung_jawab}</td>
                 </tr>
             `);
