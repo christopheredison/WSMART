@@ -480,6 +480,8 @@ Route::group(['middleware' => ['auth']], function() {
   Route::prefix('laporan')->group(function () {
     Route::get('unit', [App\Http\Controllers\LaporanController::class, 'unit'])->name('laporan.unit');
     Route::post('unit', [App\Http\Controllers\LaporanController::class, 'unitExport'])->name('laporan.unit.export');
+    Route::get('project', [App\Http\Controllers\LaporanController::class, 'project'])->name('laporan.project');
+    Route::post('project', [App\Http\Controllers\LaporanController::class, 'projectExport'])->name('laporan.project.export');
   });
 });
 

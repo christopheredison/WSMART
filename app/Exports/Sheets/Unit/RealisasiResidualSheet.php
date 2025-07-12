@@ -125,6 +125,46 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 ];
                 $sheet->getStyle('A1:AL3')->applyFromArray($headerStyle);
 
+                // Style khusus untuk sub-header kategori (row 2) - Background abu-abu
+                $kategoriHeaderStyle = [
+                    'alignment' => [
+                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                    ],
+                    'font' => ['bold' => true],
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'DBDBDB']
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000']
+                        ]
+                    ]
+                ];
+                $sheet->getStyle('F2:AK2')->applyFromArray($kategoriHeaderStyle);
+
+                // Style khusus untuk sub-header Q1-Q4 (row 3) - Background putih
+                $quarterHeaderStyle = [
+                    'alignment' => [
+                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                    ],
+                    'font' => ['bold' => true],
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FFFFFF']
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000']
+                        ]
+                    ]
+                ];
+                $sheet->getStyle('F3:AK3')->applyFromArray($quarterHeaderStyle);
+
                 // Tambahkan border untuk semua data yang akan terisi
                 $dataStyle = [
                     'borders' => [
@@ -135,19 +175,78 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                     ]
                 ];
                 
-                // Hitung jumlah data untuk border yang tepat
+                // Hitung jumlah data aktual untuk border yang tepat
                 $risikosCount = \App\Models\IdentifikasiRisiko::where('periode_id', $this->periodeId)
                     ->where('unit_id', $this->unitId)
                     ->count();
                 
-                $maxRow = max(50, $risikosCount + 10); // Estimasi row yang akan terisi
-                $sheet->getStyle('A4:AL' . $maxRow)->applyFromArray($dataStyle);
+                // Border hanya untuk row yang berisi data (header + data aktual)
+                if ($risikosCount > 0) {
+                    $maxDataRow = 3 + $risikosCount; // Row 3 (header) + jumlah data aktual
+                    $sheet->getStyle('A4:AL' . $maxDataRow)->applyFromArray($dataStyle);
+                    
+                    // Tambahkan pewarnaan background untuk Level Risiko BUMN
+                    $this->applyLevelRisikoColoring($sheet, $maxDataRow);
+                }
                 
                 foreach (range('A', 'AL') as $column) {
                     $sheet->getColumnDimension($column)->setAutoSize(true);
                 }
             },
         ];
+    }
+
+    /**
+     * Apply coloring untuk Level Risiko BUMN berdasarkan nilai level risiko
+     */
+    private function applyLevelRisikoColoring($sheet, $maxRow)
+    {
+        // Kolom Level Risiko BUMN (AH, AI, AJ, AK untuk Q1-Q4)
+        $levelRisikoColumns = ['AH', 'AI', 'AJ', 'AK'];
+        
+        // Mulai dari row 4 (setelah header)
+        for ($row = 4; $row <= $maxRow; $row++) {
+            foreach ($levelRisikoColumns as $column) {
+                $cellValue = $sheet->getCell($column . $row)->getValue();
+                $backgroundColor = $this->getLevelRisikoBackgroundColor($cellValue);
+                
+                if ($backgroundColor) {
+                    $sheet->getStyle($column . $row)->applyFromArray([
+                        'fill' => [
+                            'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                            'startColor' => ['rgb' => $backgroundColor]
+                        ]
+                    ]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get background color berdasarkan level risiko
+     */
+    private function getLevelRisikoBackgroundColor($levelRisiko)
+    {
+        if (!$levelRisiko || $levelRisiko === '-') {
+            return null;
+        }
+        
+        $levelRisiko = strtolower(trim($levelRisiko));
+        
+        switch ($levelRisiko) {
+            case 'low':
+                return '92D050'; // Hijau Tua
+            case 'low to moderate':
+                return 'C6E0B4'; // Hijau Muda
+            case 'moderate':
+                return 'FFFF00'; // Kuning
+            case 'moderate to high':
+                return 'FFC000'; // Orange
+            case 'high':
+                return 'FF0000'; // Merah
+            default:
+                return null;
+        }
     }
 
     /**

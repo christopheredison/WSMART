@@ -96,7 +96,7 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 $sheet->mergeCells('AC2:AF2'); // Skala Risiko BUMN
                 $sheet->mergeCells('AG2:AJ2'); // Level Risiko BUMN
 
-                // Atur style untuk semua header
+                // Atur style untuk semua header - Row 1 (Biru)
                 $headerStyle = [
                     'alignment' => [
                         'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
@@ -116,6 +116,46 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 ];
                 $sheet->getStyle('A1:AJ3')->applyFromArray($headerStyle);
 
+                // Style khusus untuk sub-header kategori (row 2) - Background abu-abu
+                $kategoriHeaderStyle = [
+                    'alignment' => [
+                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                    ],
+                    'font' => ['bold' => true],
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'DBDBDB']
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000']
+                        ]
+                    ]
+                ];
+                $sheet->getStyle('E2:AJ2')->applyFromArray($kategoriHeaderStyle);
+
+                // Style khusus untuk sub-header Q1-Q4 (row 3) - Background putih
+                $quarterHeaderStyle = [
+                    'alignment' => [
+                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                    ],
+                    'font' => ['bold' => true],
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FFFFFF']
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000']
+                        ]
+                    ]
+                ];
+                $sheet->getStyle('E3:AJ3')->applyFromArray($quarterHeaderStyle);
+
                 $dataStyle = [
                     'borders' => [
                         'allBorders' => [
@@ -125,6 +165,7 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
                     ]
                 ];
                 
+                // Hitung jumlah data aktual untuk border yang tepat
                 $risikosCount = \App\Models\IdentifikasiRisiko::where('periode_id', $this->periodeId)
                     ->where('unit_id', $this->unitId)
                     ->whereHas('riskAnalysis', function ($query) {
@@ -132,14 +173,73 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
                     })
                     ->count();
                 
-                $maxRow = max(50, $risikosCount + 10);
-                $sheet->getStyle('A4:AJ' . $maxRow)->applyFromArray($dataStyle);
+                // Border hanya untuk row yang berisi data (header + data aktual)
+                if ($risikosCount > 0) {
+                    $maxDataRow = 3 + $risikosCount; // Row 3 (header) + jumlah data aktual
+                    $sheet->getStyle('A4:AJ' . $maxDataRow)->applyFromArray($dataStyle);
+                    
+                    // Tambahkan pewarnaan background untuk Level Risiko BUMN
+                    $this->applyLevelRisikoColoring($sheet, $maxDataRow);
+                }
                     
                 foreach (range('A', 'AJ') as $column) {
                     $sheet->getColumnDimension($column)->setAutoSize(true);
                 }
             },
         ];
+    }
+
+    /**
+     * Apply coloring untuk Level Risiko BUMN berdasarkan nilai level risiko
+     */
+    private function applyLevelRisikoColoring($sheet, $maxRow)
+    {
+        // Kolom Level Risiko BUMN (AG, AH, AI, AJ untuk Q1-Q4)
+        $levelRisikoColumns = ['AG', 'AH', 'AI', 'AJ'];
+        
+        // Mulai dari row 4 (setelah header)
+        for ($row = 4; $row <= $maxRow; $row++) {
+            foreach ($levelRisikoColumns as $column) {
+                $cellValue = $sheet->getCell($column . $row)->getValue();
+                $backgroundColor = $this->getLevelRisikoBackgroundColor($cellValue);
+                
+                if ($backgroundColor) {
+                    $sheet->getStyle($column . $row)->applyFromArray([
+                        'fill' => [
+                            'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                            'startColor' => ['rgb' => $backgroundColor]
+                        ]
+                    ]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get background color berdasarkan level risiko
+     */
+    private function getLevelRisikoBackgroundColor($levelRisiko)
+    {
+        if (!$levelRisiko || $levelRisiko === '-') {
+            return null;
+        }
+        
+        $levelRisiko = strtolower(trim($levelRisiko));
+        
+        switch ($levelRisiko) {
+            case 'low':
+                return '92D050'; // Hijau Tua
+            case 'low to moderate':
+                return 'C6E0B4'; // Hijau Muda
+            case 'moderate':
+                return 'FFFF00'; // Kuning
+            case 'moderate to high':
+                return 'FFC000'; // Orange
+            case 'high':
+                return 'FF0000'; // Merah
+            default:
+                return null;
+        }
     }
 
     /**

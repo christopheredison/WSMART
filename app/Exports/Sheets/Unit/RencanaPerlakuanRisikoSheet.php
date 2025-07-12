@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 
@@ -21,6 +22,7 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
     private $unitId;
     private $opsiPerlakuan = [];
     private $jenisRencana = [];
+    private $timelineData = []; // Store timeline data for coloring
 
     public function __construct(int $periodeId, int $unitId)
     {
@@ -116,7 +118,7 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 // Merge sel header "Timeline" secara horizontal (dari M1 sampai X1)
                 $sheet->mergeCells('M1:X1');
 
-                // Atur style untuk semua header
+                // Atur style untuk header utama (Row 1) - Biru
                 $headerStyle = [
                     'alignment' => [
                         'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
@@ -136,6 +138,26 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 ];
                 $sheet->getStyle('A1:X2')->applyFromArray($headerStyle);
 
+                // Style khusus untuk sub-header bulan (row 2 kolom M-X) - Background abu-abu
+                $monthHeaderStyle = [
+                    'alignment' => [
+                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                    ],
+                    'font' => ['bold' => true],
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'DBDBDB']
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000']
+                        ]
+                    ]
+                ];
+                $sheet->getStyle('M2:X2')->applyFromArray($monthHeaderStyle);
+
                 $dataStyle = [
                     'borders' => [
                         'allBorders' => [
@@ -145,20 +167,54 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                     ]
                 ];
                 
+                // Hitung jumlah data aktual untuk border yang tepat
                 $risikosCount = \App\Models\IdentifikasiRisiko::where('periode_id', $this->periodeId)
                     ->where('unit_id', $this->unitId)
                     ->count();
                 
-                $maxRow = max(100, $risikosCount * 5 + 10);
-                $sheet->getStyle('A3:X' . $maxRow)->applyFromArray($dataStyle);
-
-                $this->addTimelineConditionalFormatting($sheet, $maxRow);
+                // Estimasi jumlah row berdasarkan data risiko dan perlakuan
+                $estimatedRows = $risikosCount * 3; // Asumsi rata-rata 3 perlakuan per risiko
+                
+                // Border hanya untuk row yang berisi data (header + data aktual)
+                if ($risikosCount > 0) {
+                    $maxDataRow = 2 + $estimatedRows; // Row 2 (header) + estimasi data
+                    $sheet->getStyle('A3:X' . $maxDataRow)->applyFromArray($dataStyle);
+                    
+                    // Set format text untuk kolom Kode Penyebab Risiko
+                    $sheet->getStyle('D3:D' . $maxDataRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+                    
+                    // Tambahkan pewarnaan timeline berdasarkan data
+                    $this->applyTimelineColoring($sheet, $maxDataRow);
+                }
 
                 foreach (range('A', 'X') as $column) {
                     $sheet->getColumnDimension($column)->setAutoSize(true);
                 }
             },
         ];
+    }
+
+    /**
+     * Apply timeline coloring berdasarkan data yang tersimpan
+     */
+    private function applyTimelineColoring($sheet, $maxRow)
+    {
+        foreach ($this->timelineData as $rowIndex => $monthsData) {
+            $actualRow = $rowIndex + 3; // Data mulai dari row 3
+            if ($actualRow <= $maxRow) {
+                for ($month = 0; $month < 12; $month++) {
+                    if (isset($monthsData[$month]) && $monthsData[$month] === true) {
+                        $columnLetter = chr(77 + $month); // M = 77, N = 78, etc.
+                        $sheet->getStyle($columnLetter . $actualRow)->applyFromArray([
+                            'fill' => [
+                                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                                'startColor' => ['rgb' => '5B9BD5'] // Blue background
+                            ]
+                        ]);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -179,6 +235,7 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
 
         $exportData = new Collection();
         $nomorUrutRisiko = 1;
+        $currentRowIndex = 0; // Track row index for timeline coloring
 
         foreach ($risikos as $risiko) {
             // Kumpulkan semua perlakuan dari semua penyebab risiko
@@ -201,19 +258,23 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                     'jenis_program_rkap' => '-',
                     'pic' => '-',
                 ];
-                $timelineMonths = array_fill(0, 12, '');
+                $timelineMonths = array_fill(0, 12, ''); // Empty timeline
                 $finalRow = array_merge($rowData, $timelineMonths);
                 $exportData->push($finalRow);
+                
+                // Store empty timeline data
+                $this->timelineData[$currentRowIndex] = array_fill(0, 12, false);
+                $currentRowIndex++;
             } else {
                 // Logika untuk risiko dengan perlakuan
-                $jumlahPerlakuan = $allPerlakuan->count();
                 $isFirstRowOfGroup = true;
                 $nomorUrutPerlakuan = 1;
 
                 foreach ($allPerlakuan as $perlakuan) {
                     $timelineStart = $perlakuan->timeline_perlakuan_risiko_start;
                     $timelineEnd = $perlakuan->timeline_perlakuan_risiko_end;
-                    $timelineMonths = array_fill(0, 12, '');
+                    $timelineMonths = array_fill(0, 12, ''); // Empty by default
+                    $timelineBooleans = array_fill(0, 12, false); // For coloring
 
                     // Isi timeline berdasarkan periode start-end
                     if ($timelineStart && $timelineEnd) {
@@ -221,7 +282,8 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                         foreach ($period as $date) {
                             $monthIndex = (int)$date->format('n') - 1; // index 0-11
                             if (isset($timelineMonths[$monthIndex])) {
-                                $timelineMonths[$monthIndex] = 'V'; // Tanda centang
+                                $timelineMonths[$monthIndex] = ''; // No text, just background color
+                                $timelineBooleans[$monthIndex] = true; // Mark for coloring
                             }
                         }
                     }
@@ -244,6 +306,10 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                     $finalRow = array_merge($rowData, $timelineMonths);
                     $exportData->push($finalRow);
 
+                    // Store timeline data for coloring
+                    $this->timelineData[$currentRowIndex] = $timelineBooleans;
+                    $currentRowIndex++;
+
                     $isFirstRowOfGroup = false;
                     $nomorUrutPerlakuan++;
                 }
@@ -252,26 +318,6 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
         }
 
         return $exportData;
-    }
-
-    private function addTimelineConditionalFormatting($sheet, $maxRow)
-    {
-        $timelineRange = "M3:X{$maxRow}";
-        
-        $conditional = new \PhpOffice\PhpSpreadsheet\Style\Conditional();
-        $conditional->setConditionType(\PhpOffice\PhpSpreadsheet\Style\Conditional::CONDITION_CELLIS);
-        $conditional->setOperatorType(\PhpOffice\PhpSpreadsheet\Style\Conditional::OPERATOR_EQUAL);
-        $conditional->addCondition('"V"');
-        
-        // Set style untuk cell yang berisi "V"
-        $conditional->getStyle()->getFill()
-            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setRGB('5B9BD5');
-            
-        $conditional->getStyle()->getFont()->getColor()->setRGB('FFFFFF'); // Text putih untuk kontras
-        
-        $conditionalStyles = [$conditional];
-        $sheet->getStyle($timelineRange)->setConditionalStyles($conditionalStyles);
     }
 
     /**

@@ -78,7 +78,7 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
                 // Merge sel header "Risiko Inherent" secara horizontal (dari E1 sampai L1)
                 $sheet->mergeCells('E1:L1');
 
-                // Atur style untuk semua header
+                // Atur style untuk header utama (Row 1) - Biru
                 $headerStyle = [
                     'alignment' => [
                         'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
@@ -98,6 +98,26 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
                 ];
                 $sheet->getStyle('A1:L2')->applyFromArray($headerStyle);
 
+                // Style khusus untuk sub-header (row 2 kolom E-L) - Background abu-abu
+                $subHeaderStyle = [
+                    'alignment' => [
+                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                    ],
+                    'font' => ['bold' => true],
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'DBDBDB']
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000']
+                        ]
+                    ]
+                ];
+                $sheet->getStyle('E2:L2')->applyFromArray($subHeaderStyle);
+
                 $dataStyle = [
                     'borders' => [
                         'allBorders' => [
@@ -107,53 +127,79 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
                     ]
                 ];
                 
-                $risikos = IdentifikasiRisiko::with(['riskAnalysis'])
-                    ->where('periode_id', $this->periodeId)
+                // Hitung jumlah data aktual untuk border yang tepat
+                $risikosCount = \App\Models\IdentifikasiRisiko::where('periode_id', $this->periodeId)
                     ->where('unit_id', $this->unitId)
                     ->whereHas('riskAnalysis', function ($query) {
-                        $query->where('kategori_dampak', 'Kuantitatif');
+                        $query->where('kategori_dampak', 'Kualitatif');
                     })
-                    ->get();
-
-                // $risikosCount = \App\Models\IdentifikasiRisiko::where('periode_id', $this->periodeId)
-                //     ->where('unit_id', $this->unitId)
-                //     ->whereHas('riskAnalysis', function ($query) {
-                //         $query->where('kategori_dampak', 'Kualitatif');
-                //     })
-                //     ->count();
+                    ->count();
                 
-                $maxRow = 3 + $risikos->count();
-                $sheet->getStyle('A3:L' . $maxRow)->applyFromArray($dataStyle);
-
-                // $maxRow = max(50, $risikosCount + 10);
-                // $sheet->getStyle('A3:L' . $maxRow)->applyFromArray($dataStyle);
-
-                // Mapping warna berdasarkan level risiko
-                $colorMap = [
-                    'Low' => '008000', // Hijau Tua
-                    'Low to Moderate' => '90EE90', // Hijau Muda
-                    'Moderate' => 'FFFF00', // Kuning
-                    'Moderate to High' => 'FFA500', // Orange
-                    'High' => 'FF0000', // Merah
-                ];
-
-                // Looping data untuk menerapkan warna background
-                $row = 3;
-                foreach ($risikos as $risiko) {
-                    $levelRisiko = optional($risiko->riskAnalysis)->level_risiko;
+                // Border hanya untuk row yang berisi data (header + data aktual)
+                if ($risikosCount > 0) {
+                    $maxDataRow = 2 + $risikosCount; // Row 2 (header) + jumlah data aktual
+                    $sheet->getStyle('A3:L' . $maxDataRow)->applyFromArray($dataStyle);
                     
-                    if (isset($colorMap[$levelRisiko])) {
-                        $color = $colorMap[$levelRisiko];
-                        $sheet->getStyle('L' . $row)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB($color);
-                    }
-                    $row++;
+                    // Tambahkan pewarnaan background untuk Level Risiko BUMN
+                    $this->applyLevelRisikoColoring($sheet, $maxDataRow);
                 }
-            
+
                 foreach (range('A', 'L') as $column) {
-                  $sheet->getColumnDimension($column)->setAutoSize(true);
+                    $sheet->getColumnDimension($column)->setAutoSize(true);
                 }
             },
         ];
+    }
+
+    /**
+     * Apply coloring untuk Level Risiko BUMN berdasarkan nilai level risiko
+     */
+    private function applyLevelRisikoColoring($sheet, $maxRow)
+    {
+        // Kolom Level Risiko BUMN (L)
+        $levelRisikoColumn = 'L';
+        
+        // Mulai dari row 3 (setelah header)
+        for ($row = 3; $row <= $maxRow; $row++) {
+            $cellValue = $sheet->getCell($levelRisikoColumn . $row)->getValue();
+            $backgroundColor = $this->getLevelRisikoBackgroundColor($cellValue);
+            
+            if ($backgroundColor) {
+                $sheet->getStyle($levelRisikoColumn . $row)->applyFromArray([
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => $backgroundColor]
+                    ]
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Get background color berdasarkan level risiko
+     */
+    private function getLevelRisikoBackgroundColor($levelRisiko)
+    {
+        if (!$levelRisiko || $levelRisiko === '-') {
+            return null;
+        }
+        
+        $levelRisiko = strtolower(trim($levelRisiko));
+        
+        switch ($levelRisiko) {
+            case 'low':
+                return '92D050'; // Hijau Tua
+            case 'low to moderate':
+                return 'C6E0B4'; // Hijau Muda
+            case 'moderate':
+                return 'FFFF00'; // Kuning
+            case 'moderate to high':
+                return 'FFC000'; // Orange
+            case 'high':
+                return 'FF0000'; // Merah
+            default:
+                return null;
+        }
     }
 
     /**

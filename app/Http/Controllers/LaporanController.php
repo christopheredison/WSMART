@@ -6,8 +6,10 @@ use App\Models\Periode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use App\Models\Unit;
+use App\Models\Project;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\LaporanUnitExport;
+use App\Exports\LaporanProjectExport;
 use Illuminate\Support\Facades\Log;
 
 class LaporanController extends Controller
@@ -45,13 +47,45 @@ class LaporanController extends Controller
                 'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
             ]);
-            
-            // return Excel::download(new LaporanUnitExport($periodeId, $unitId), $fileName);
+        } catch (\Exception $e) {
+            Log::error('Gagal export laporan unit: ' . $e->getMessage());
+            return back()->with('error', 'Gagal membuat laporan Excel. Silakan coba lagi.');
+        }
+    }
 
+    public function project()
+    {
+        $projects = Project::all();
+
+        return view('laporan.project', compact('projects'));
+    }
+
+    public function projectExport(Request $request)
+    {
+        $request->validate([
+            'project_id'    => 'required|exists:projects,id',
+        ]);
+
+        try {
+            $projectId    = $request->input('project_id');
+            
+            $project    = Project::find($projectId);
+
+            $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $project->project_name) . '.xlsx';
+
+            $fileContents = Excel::raw(
+                new LaporanProjectExport($projectId),
+                \Maatwebsite\Excel\Excel::XLSX
+            );
+
+            return response($fileContents, 200, [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            ]);
         } catch (\Exception $e) {
             dd($e->getMessage());
-            // Log::error('Gagal export laporan unit: ' . $e->getMessage());
-            // return back()->with('error', 'Gagal membuat laporan Excel. Silakan coba lagi.');
+            Log::error('Gagal export laporan project: ' . $e->getMessage());
+            return back()->with('error', 'Gagal membuat laporan Excel. Silakan coba lagi.');
         }
     }
 }

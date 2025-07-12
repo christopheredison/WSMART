@@ -128,6 +128,19 @@
           </a>
         </li>
         @endcan --}}
+
+        @can('project_periode_list')
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->routeIs('laporan.project') ? 'active' : '' }}"
+            href="{{route('laporan.project')}}" role="button" data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon d-flex align-items-center w-100">
+              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <span class="nav-link-text">Laporan Project</span>
+            </span>
+          </a>
+        </li>
+        @endcan
+
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('metrik-strategi-risiko.index') ? 'active' : '' }}" href="{{route('metrik-strategi-risiko.index')}}" role="button"
             data-bs-toggle="" aria-expanded="false">
@@ -154,7 +167,7 @@
               <span class="nav-link-text">Penilaian RMI</span>
             </span>
           </a>
-        </li>        
+        </li>
         @can('kuesioner')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('kuesioner.index') ? 'active' : '' }}" href="{{route('kuesioner.index')}}" role="button"
@@ -174,7 +187,7 @@
               <span class="nav-link-text">Internal Control Testing</span>
             </span>
           </a>
-        </li>  
+        </li>
 
         @can('manajemen_master')
         <div class="row navbar-vertical-label-wrapper">
@@ -298,7 +311,7 @@
               </a>
             </li>
             @endcan
-            
+
             <li class="nav-item">
               <a class="nav-link {{ request()->is('periode') ? 'active' : '' }}" href="/periode">
                 <span class="nav-link-text">Periode Risiko</span>

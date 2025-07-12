@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Exports\Sheets\Unit;
+namespace App\Exports\Sheets\Project;
 
-use App\Models\IdentifikasiRisiko;
+use App\Models\ProjectRisk;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -13,17 +13,14 @@ use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
-    private $periodeId;
-    private $unitId;
+    private $projectId;
 
-    public function __construct(int $periodeId, int $unitId)
+    public function __construct(int $projectId)
     {
-        $this->periodeId = $periodeId;
-        $this->unitId = $unitId;
+        $this->projectId = $projectId;
     }
 
     /**
@@ -54,7 +51,7 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
 
                 // Row 1: Header utama
                 $sheet->setCellValue('A1', 'No');
-                $sheet->setCellValue('B1', 'Nama BUMN');
+                $sheet->setCellValue('B1', 'Nama Project');
                 $sheet->setCellValue('C1', 'No Risiko');
                 $sheet->setCellValue('D1', 'Peristiwa Risiko');
                 $sheet->setCellValue('E1', 'Risiko Inherent');
@@ -128,9 +125,8 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 ];
                 
                 // Hitung jumlah data aktual untuk border yang tepat
-                $risikosCount = \App\Models\IdentifikasiRisiko::where('periode_id', $this->periodeId)
-                    ->where('unit_id', $this->unitId)
-                    ->whereHas('riskAnalysis', function ($query) {
+                $risikosCount = ProjectRisk::where('project_periode_list_id', $this->projectId)
+                    ->whereHas('projectRiskAnalisa', function ($query) {
                         $query->where('kategori_dampak', 'Kuantitatif');
                     })
                     ->count();
@@ -190,7 +186,7 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
             case 'low':
                 return '92D050'; // Hijau Tua
             case 'low to moderate':
-                return 'C6E0B4'; // Hijau Muda
+                return 'C5E0B4'; // Hijau Muda
             case 'moderate':
                 return 'FFFF00'; // Kuning
             case 'moderate to high':
@@ -207,40 +203,40 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
      */
     public function collection()
     {
-        // Ambil data utama dan urutkan berdasarkan skala risiko tertinggi
-        $risikos = IdentifikasiRisiko::with([
-                'unit',
-                'peristiwaRisiko',
-                'riskAnalysis.skalaDampakObj',
-                'riskAnalysis.skalaProbabilitas'
-            ])
-            ->where('periode_id', $this->periodeId)
-            ->where('unit_id', $this->unitId)
-            ->whereHas('riskAnalysis', function ($query) {
+        // Ambil data risiko dengan kategori dampak kuantitatif
+        $risikos = ProjectRisk::with([
+            'projectPeriodeList.project',
+            'projectRiskAnalisa.skalaDampakObj',
+            'projectRiskAnalisa.skalaProbabilitas',
+            'peristiwaRisiko'
+        ])
+            ->where('project_id', $this->projectId)
+            ->whereHas('projectRiskAnalisa', function ($query) {
                 $query->where('kategori_dampak', 'Kuantitatif');
             })
             ->get()
-            ->sortByDesc('riskAnalysis.skala_risiko');
+            ->sortByDesc('projectRiskAnalisa.skala_risiko');
 
         $exportData = new Collection();
         $nomorUrut = 1;
 
         foreach ($risikos as $risiko) {
-            $analisa = $risiko->riskAnalysis;
-            
+            $project = $risiko->projectPeriodeList->project;
+            $analisa = $risiko->projectRiskAnalisa;
+
             $rowData = [
                 'no' => $nomorUrut,
-                'nama_bumn' => 'PT Wijaya Karya (Persero) Tbk',
+                'nama_project' => $project->project_name ?? '-',
                 'no_risiko' => $nomorUrut,
-                'peristiwa_risiko' => $risiko->peristiwa_risiko ?? '-',
+                'peristiwa_risiko' => $risiko->peristiwaRisiko->title ?? $risiko->deskripsi_peristiwa_risiko ?? '-',
                 'asumsi_perhitungan_dampak' => $analisa->asumsi_perhitungan_dampak ?? '-',
-                'nilai_dampak' => $this->formatCurrency($analisa->nilai_dampak ?? 0),
-                'skala_dampak' => $this->formatSkalaDampak($analisa),
-                'nilai_probabilitas' => $this->formatPercentage($analisa->nilai_probabilitas ?? 0),
-                'skala_probabilitas' => $this->formatSkalaProbabilitas($analisa),
-                'eksposur_risiko' => $this->formatCurrency($analisa->eksposur_risiko ?? 0),
-                'skala_risiko' => $analisa->skala_risiko ?? '-',
-                'level_risiko' => $analisa->level_risiko ?? '-',
+                'nilai_dampak' => $this->formatRupiah($analisa->nilai_dampak),
+                'skala_dampak_bumn' => $this->formatSkalaDampak($analisa),
+                'nilai_probabilitas' => $this->formatPercentage($analisa->nilai_probabilitas),
+                'skala_probabilitas_bumn' => $this->formatSkalaProbabilitas($analisa),
+                'eksposur_risiko' => $this->formatRupiah($analisa->eksposur_risiko),
+                'skala_risiko_bumn' => $analisa->skala_risiko ?? '-',
+                'level_risiko_bumn' => $analisa->level_risiko ?? '-'
             ];
 
             $exportData->push($rowData);
@@ -251,12 +247,14 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
     }
 
     /**
-     * Format currency to Rupiah
+     * Format nilai rupiah
      */
-    private function formatCurrency($value)
+    private function formatRupiah($value)
     {
-        if ($value == 0) return 'Rp0';
-        return 'Rp' . number_format($value, 0, ',', '.');
+        if ($value === null || $value === 0) {
+            return '-';
+        }
+        return 'Rp ' . number_format($value, 0, ',', '.');
     }
 
     /**
@@ -264,6 +262,9 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
      */
     private function formatPercentage($value)
     {
+        if ($value === null) {
+            return '-';
+        }
         return $value . '%';
     }
 
@@ -272,28 +273,34 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
      */
     private function formatSkalaDampak($analisa)
     {
-        $skala = $analisa->skala_dampak ?? '-';
-        $deskripsi = optional($analisa->skalaDampakObj)->deskripsi ?? '';
-        
-        if ($skala !== '-' && $deskripsi) {
-            return $skala . ' - ' . $deskripsi;
+        if (!$analisa->skala_dampak) {
+            return '-';
         }
         
-        return $skala;
+        $deskripsi = optional($analisa->skalaDampakObj)->deskripsi;
+        if ($deskripsi) {
+            return '(' . $analisa->skala_dampak . ') ' . $deskripsi;
+        }
+        
+        return $analisa->skala_dampak;
     }
 
     /**
-     * Format skala probabilitas dengan deskripsi
+     * Format skala probabilitas dengan tingkat dan skala
      */
     private function formatSkalaProbabilitas($analisa)
     {
-        $tingkat = optional($analisa->skalaProbabilitas)->tingkat ?? '-';
-        $skala = optional($analisa->skalaProbabilitas)->skala ?? '';
-        
-        if ($tingkat !== '-' && $skala) {
-            return $tingkat . ' - ' . $skala;
+        if (!$analisa->skalaProbabilitas) {
+            return '-';
         }
         
-        return $tingkat;
+        $tingkat = $analisa->skalaProbabilitas->tingkat;
+        $skala = $analisa->skalaProbabilitas->skala;
+        
+        if ($tingkat && $skala) {
+            return '(' . $tingkat . ') ' . $skala;
+        }
+        
+        return $tingkat ?: $skala ?: '-';
     }
 }
