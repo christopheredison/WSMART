@@ -57,8 +57,8 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
                 $sheet->setCellValue('E1', 'Risiko Inherent');
 
                 // Row 2: Sub-header untuk Risiko Inherent
-                $sheet->setCellValue('E2', 'Area Dampak');
-                $sheet->setCellValue('F2', 'Deskripsi Dampak');
+                $sheet->setCellValue('E2', 'Penjelasan Dampak Kualitatif');
+                $sheet->setCellValue('F2', 'Nilai Dampak');
                 $sheet->setCellValue('G2', 'Skala Dampak BUMN');
                 $sheet->setCellValue('H2', 'Nilai Probabilitas');
                 $sheet->setCellValue('I2', 'Skala Probabilitas BUMN');
@@ -66,78 +66,75 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
                 $sheet->setCellValue('K2', 'Skala Risiko BUMN');
                 $sheet->setCellValue('L2', 'Level Risiko BUMN');
 
-                // Merge sel header vertikal untuk kolom yang tidak punya sub-header (A-D)
-                $mergeColumns = ['A', 'B', 'C', 'D'];
-                foreach ($mergeColumns as $col) {
-                    $sheet->mergeCells("{$col}1:{$col}2");
-                }
-
-                // Merge sel header "Risiko Inherent" secara horizontal (dari E1 sampai L1)
+                // Merge sel header
+                $sheet->mergeCells('A1:A2');
+                $sheet->mergeCells('B1:B2');
+                $sheet->mergeCells('C1:C2');
+                $sheet->mergeCells('D1:D2');
                 $sheet->mergeCells('E1:L1');
 
-                // Atur style untuk header utama (Row 1) - Biru
+                // Style untuk header utama (biru muda)
                 $headerStyle = [
                     'alignment' => [
-                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical' => Alignment::VERTICAL_CENTER,
                     ],
                     'font' => ['bold' => true],
                     'fill' => [
-                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'fillType' => Fill::FILL_SOLID,
                         'startColor' => ['rgb' => '9BC2E6']
                     ],
                     'borders' => [
                         'allBorders' => [
-                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'borderStyle' => Border::BORDER_THIN,
                             'color' => ['rgb' => '000000']
                         ]
                     ]
                 ];
-                $sheet->getStyle('A1:L2')->applyFromArray($headerStyle);
+                $sheet->getStyle('A1:L1')->applyFromArray($headerStyle);
 
-                // Style khusus untuk sub-header (row 2 kolom E-L) - Background abu-abu
+                // Style untuk sub-header (abu-abu)
                 $subHeaderStyle = [
                     'alignment' => [
-                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical' => Alignment::VERTICAL_CENTER,
                     ],
                     'font' => ['bold' => true],
                     'fill' => [
-                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'fillType' => Fill::FILL_SOLID,
                         'startColor' => ['rgb' => 'DBDBDB']
                     ],
                     'borders' => [
                         'allBorders' => [
-                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'borderStyle' => Border::BORDER_THIN,
                             'color' => ['rgb' => '000000']
                         ]
                     ]
                 ];
-                $sheet->getStyle('E2:L2')->applyFromArray($subHeaderStyle);
+                $sheet->getStyle('A2:L2')->applyFromArray($subHeaderStyle);
+                $sheet->getStyle('A1:D1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('9BC2E6');
+
 
                 $dataStyle = [
                     'borders' => [
                         'allBorders' => [
-                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'borderStyle' => Border::BORDER_THIN,
                             'color' => ['rgb' => '000000']
                         ]
-                    ]
+                    ],
+                    'alignment' => [
+                        'vertical' => Alignment::VERTICAL_TOP,
+                        'wrapText' => true,
+                    ],
                 ];
-                
-                // Hitung jumlah data aktual untuk border yang tepat
-                $risikosCount = ProjectRisk::where('project_periode_list_id', $this->projectId)
-                    ->whereHas('projectRiskAnalisa', function ($query) {
-                        $query->where('kategori_dampak', 'Kualitatif');
-                    })
-                    ->count();
-                
-                // Border hanya untuk row yang berisi data (header + data aktual)
-                if ($risikosCount > 0) {
-                    $maxDataRow = 2 + $risikosCount; // Row 2 (header) + jumlah data aktual
-                    $sheet->getStyle('A3:L' . $maxDataRow)->applyFromArray($dataStyle);
+
+                $highestRow = $sheet->getHighestRow();
+                if ($highestRow > 2) { // Cek jika ada data di bawah header
+                    // Terapkan border ke semua sel data
+                    $sheet->getStyle('A3:L' . $highestRow)->applyFromArray($dataStyle);
                     
-                    // Tambahkan pewarnaan background untuk Level Risiko BUMN
-                    $this->applyLevelRisikoColoring($sheet, $maxDataRow);
+                    // Panggil fungsi pewarnaan background
+                    $this->applyLevelRisikoColoring($sheet, $highestRow);
                 }
 
                 foreach (range('A', 'L') as $column) {
@@ -186,7 +183,7 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
             case 'low':
                 return '92D050'; // Hijau Tua
             case 'low to moderate':
-                return 'C5E0B4'; // Hijau Muda
+                return 'C6E0B4'; // Hijau Muda
             case 'moderate':
                 return 'FFFF00'; // Kuning
             case 'moderate to high':
@@ -203,7 +200,6 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
      */
     public function collection()
     {
-        // Ambil data risiko dengan kategori dampak kualitatif
         $risikos = ProjectRisk::with([
             'projectPeriodeList.project',
             'projectRiskAnalisa.skalaDampakObj',
@@ -230,12 +226,12 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
                 'nama_project' => $project->project_name ?? '-',
                 'no_risiko' => $nomorUrut,
                 'peristiwa_risiko' => $risiko->peristiwaRisiko->title ?? $risiko->deskripsi_peristiwa_risiko ?? '-',
-                'area_dampak' => optional($analisa->areaDampakObj)->title ?? '-',
                 'deskripsi_dampak' => $analisa->deskripsi_dampak ?? '-',
+                'nilai_dampak' => $this->formatCurrency($analisa->nilai_dampak),
                 'skala_dampak_bumn' => $this->formatSkalaDampak($analisa),
                 'nilai_probabilitas' => $this->formatPercentage($analisa->nilai_probabilitas),
                 'skala_probabilitas_bumn' => $this->formatSkalaProbabilitas($analisa),
-                'eksposur_risiko' => $this->formatRupiah($analisa->eksposur_risiko),
+                'eksposur_risiko' => $this->formatCurrency($analisa->eksposur_risiko),
                 'skala_risiko_bumn' => $analisa->skala_risiko ?? '-',
                 'level_risiko_bumn' => $analisa->level_risiko ?? '-'
             ];
@@ -248,14 +244,12 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
     }
 
     /**
-     * Format nilai rupiah
+     * Format currency to Rupiah
      */
-    private function formatRupiah($value)
+    private function formatCurrency($value)
     {
-        if ($value === null || $value === 0) {
-            return '-';
-        }
-        return 'Rp ' . number_format($value, 0, ',', '.');
+        if ($value == 0) return 'Rp0';
+        return 'Rp' . number_format($value, 0, ',', '.');
     }
 
     /**
@@ -263,9 +257,6 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
      */
     private function formatPercentage($value)
     {
-        if ($value === null) {
-            return '-';
-        }
         return $value . '%';
     }
 
@@ -274,34 +265,28 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
      */
     private function formatSkalaDampak($analisa)
     {
-        if (!$analisa->skala_dampak) {
-            return '-';
+        $skala = $analisa->skala_dampak ?? '-';
+        $deskripsi = optional($analisa->skalaDampakObj)->deskripsi ?? '';
+        
+        if ($skala !== '-' && $deskripsi) {
+            return $skala . ' - ' . $deskripsi;
         }
         
-        $deskripsi = optional($analisa->skalaDampakObj)->deskripsi;
-        if ($deskripsi) {
-            return '(' . $analisa->skala_dampak . ') ' . $deskripsi;
-        }
-        
-        return $analisa->skala_dampak;
+        return $skala;
     }
 
     /**
-     * Format skala probabilitas dengan tingkat dan skala
+     * Format skala probabilitas dengan deskripsi
      */
     private function formatSkalaProbabilitas($analisa)
     {
-        if (!$analisa->skalaProbabilitas) {
-            return '-';
+        $tingkat = optional($analisa->skalaProbabilitas)->tingkat ?? '-';
+        $skala = optional($analisa->skalaProbabilitas)->skala ?? '';
+        
+        if ($tingkat !== '-' && $skala) {
+            return $tingkat . ' - ' . $skala;
         }
         
-        $tingkat = $analisa->skalaProbabilitas->tingkat;
-        $skala = $analisa->skalaProbabilitas->skala;
-        
-        if ($tingkat && $skala) {
-            return '(' . $tingkat . ') ' . $skala;
-        }
-        
-        return $tingkat ?: $skala ?: '-';
+        return $tingkat;
     }
 }

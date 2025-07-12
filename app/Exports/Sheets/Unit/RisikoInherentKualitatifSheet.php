@@ -233,7 +233,7 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
                 'nama_bumn' => 'PT Wijaya Karya (Persero) Tbk',
                 'no_risiko' => $nomorUrut,
                 'peristiwa_risiko' => $risiko->peristiwa_risiko ?? '-',
-                'penjelasan_dampak_kualitatif' => $analisa->deskripsi_dampak ?? $risiko->deskripsi_dampak ?? '-',
+                'deskripsi_dampak' => $analisa->deskripsi_dampak ?? $risiko->deskripsi_dampak ?? '-',
                 'nilai_dampak' => 'Rp0', // Untuk kualitatif selalu Rp0
                 'skala_dampak' => $this->formatSkalaDampak($analisa),
                 'nilai_probabilitas' => $this->formatPercentage($analisa->nilai_probabilitas ?? 0),
