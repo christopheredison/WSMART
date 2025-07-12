@@ -1572,6 +1572,22 @@ class RiskRegisterUnitController extends Controller
                 return $item->skala_dampak . '-' . $item->skala_probabilitas;
             });
 
-        return view('risk-register-unit.view', compact('user', 'risikos', 'riskMaps', 'formattedCurrentRiskMaps'));
+        $risk_tolerance = 0;
+        $risk_limit = 0;
+        $risiko = $risikos->first();
+
+        if ($risiko->riskAnalysis->kategori_dampak == 'Kuantitatif') {
+            $unit = $risiko->unit;
+            $periode = $risiko->periode;
+          
+            $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+            if ($riskLimitPeriode) {
+                $risk_limit = $riskLimitPeriode->risk_limit;
+                $risk_tolerance = $riskLimitPeriode->risk_limit;
+            }
+        }
+        
+        // dd($risk_limit, $risk_tolerance);
+        return view('risk-register-unit.view', compact('user', 'risikos', 'riskMaps', 'formattedCurrentRiskMaps', 'risk_limit', 'risk_tolerance'));
     }
 }

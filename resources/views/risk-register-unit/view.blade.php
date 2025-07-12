@@ -438,7 +438,7 @@
                                             @endif
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
                                             <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
-                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
+                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
                                         </tr>
                                     @endforeach
                                 @else
@@ -456,7 +456,7 @@
                             @if($totalBiaya > 0)
                                 <tr class="table-warning">
                                     <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
-                                    <td class="fw-bold">{{ 'Rp' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                                    <td class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
                                 </tr>
                             @endif
                         </tbody>
@@ -555,7 +555,7 @@
                         <div class="form-group mb-4">
                             <label class="form-label fw-bold">Risk Limit</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->risk_limit ? 'Rp' . number_format($analisa->risk_limit, 0, ',', '.') : 'Rp 0' }}
+                                {{ $risk_limit ? 'Rp ' . number_format($risk_limit, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>
@@ -582,7 +582,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Nilai Dampak</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->nilai_dampak ? 'Rp' . number_format($analisa->nilai_dampak, 0, ',', '.') : 'Rp 0' }}
+                                {{ $analisa->nilai_dampak ? 'Rp ' . number_format($analisa->nilai_dampak, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>
@@ -598,7 +598,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Eksposur Risiko</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->eksposur_risiko ? 'Rp' . number_format($analisa->eksposur_risiko, 0, ',', '.') : 'Rp 0' }}
+                                {{ $analisa->eksposur_risiko ? 'Rp ' . number_format($analisa->eksposur_risiko, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>
@@ -677,7 +677,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Nilai Dampak</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->{'nilai_dampak_residual_q' . $i} ? 'Rp' . number_format($analisa->{'nilai_dampak_residual_q' . $i}, 0, ',', '.') : 'Rp 0' }}
+                                {{ $analisa->{'nilai_dampak_residual_q' . $i} ? 'Rp ' . number_format($analisa->{'nilai_dampak_residual_q' . $i}, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>
@@ -693,7 +693,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Eksposur Risiko</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->{'eksposur_risiko_residual_q' . $i} ? 'Rp' . number_format($analisa->{'eksposur_risiko_residual_q' . $i}, 0, ',', '.') : 'Rp 0' }}
+                                {{ $analisa->{'eksposur_risiko_residual_q' . $i} ? 'Rp ' . number_format($analisa->{'eksposur_risiko_residual_q' . $i}, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>

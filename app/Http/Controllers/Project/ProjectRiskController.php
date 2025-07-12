@@ -586,11 +586,45 @@ class ProjectRiskController extends BasicCRUDController
                 return $item->skala_dampak . '-' . $item->skala_probabilitas;
             });
 
+        $risk_tolerance = 0;
+        $risk_limit = 0;
+        $project = $projectRisk->projectPeriodeList->project;
+
+        if($project->type==2){
+            $risk_tolerance = array_filter([
+                $project->rapk_100_rp, 
+                $project->rapk_70_90_rp, 
+                $project->rapk_30_50_rp, 
+                $project->rapk_0_10_rp, 
+                $project->rapk
+            ], function ($value) {
+                return $value !== null && $value != 0;
+            });
+            
+            $risk_tolerance = reset($risk_tolerance) ?: 0;
+            
+            $risk_tolerance = 2/100 *($risk_tolerance);
+        } else if($project->type==1){
+            $risk_tolerance = $project->rapt ?? 0;
+            $risk_tolerance = (2*$risk_tolerance/100);
+        } else{
+            $risk_tolerance = 0;
+        }
+
+        if($projectRisk->projectRiskAnalisa->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF){
+            $risk_limit = ($project->meta['omset'] ?? 0) * 0.03;
+        } else{
+            $risk_limit = 1/100*$risk_tolerance;
+        }  
+
+        // dd($risk_limit, $risk_tolerance);
         return view('project-risk.view', compact(
             'projectRisk', 
             'tahunMonitorings', 
             'formattedCurrentRiskMaps', 
-            'riskMaps'
+            'riskMaps',
+            'risk_limit',
+            'risk_tolerance',
         ));
     }
 

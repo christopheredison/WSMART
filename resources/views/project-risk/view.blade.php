@@ -388,7 +388,7 @@
                                             @endif
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
                                             <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
-                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
+                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
                                         </tr>
                                     @endforeach
                                 @else
@@ -406,7 +406,7 @@
                             @if($totalBiaya > 0)
                                 <tr class="table-warning">
                                     <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
-                                    <td class="fw-bold">{{ 'Rp' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                                    <td class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
                                 </tr>
                             @endif
                         </tbody>
@@ -505,10 +505,20 @@
                         <div class="form-group mb-4">
                             <label class="form-label fw-bold">Risk Limit</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->risk_limit ? 'Rp' . number_format($analisa->risk_limit, 0, ',', '.') : '-' }}
+                                {{ $risk_limit ? 'Rp ' . number_format($risk_limit, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>
+                    {{-- @if($analisa->kategori_dampak === \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF)
+                      <div class="col-md-4">
+                          <div class="form-group mb-4">
+                              <label class="form-label fw-bold">Risk Tolerance</label>
+                              <div class="p-3 bg-light rounded">
+                                  {{ $risk_tolerance ? 'Rp ' . number_format($risk_tolerance, 0, ',', '.') : 'Rp 0' }}
+                              </div>
+                          </div>
+                      </div>
+                    @endif --}}
                 </div>
             </div>
         </div>
@@ -532,7 +542,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Nilai Dampak</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->nilai_dampak ? 'Rp' . number_format($analisa->nilai_dampak, 0, ',', '.') : 'Rp 0' }}
+                                {{ $analisa->nilai_dampak ? 'Rp ' . number_format($analisa->nilai_dampak, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>
@@ -548,7 +558,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Eksposur Risiko</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->eksposur_risiko ? 'Rp' . number_format($analisa->eksposur_risiko, 0, ',', '.') : '-' }}
+                                {{ $analisa->eksposur_risiko ? 'Rp ' . number_format($analisa->eksposur_risiko, 0, ',', '.') : '-' }}
                             </div>
                         </div>
                     </div>
@@ -627,7 +637,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Nilai Dampak</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->nilai_dampak_residual ? 'Rp' . number_format($analisa->nilai_dampak_residual, 0, ',', '.') : 'Rp 0' }}
+                                {{ $analisa->nilai_dampak_residual ? 'Rp ' . number_format($analisa->nilai_dampak_residual, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>
@@ -643,7 +653,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Eksposur Risiko</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->eksposur_risiko_residual ? 'Rp' . number_format($analisa->eksposur_risiko_residual, 0, ',', '.') : '-' }}
+                                {{ $analisa->eksposur_risiko_residual ? 'Rp ' . number_format($analisa->eksposur_risiko_residual, 0, ',', '.') : '-' }}
                             </div>
                         </div>
                     </div>
@@ -736,7 +746,7 @@
                                     <td>{{ $loop->iteration }}</td>
                                     <td>{{ $monitoring->tahun ?? '-' }}</td>
                                     <td>Q{{ $monitoring->quarter ?? '-' }}</td>
-                                    <td>{{ $monitoring->nilai_dampak ? 'Rp' . number_format($monitoring->nilai_dampak, 0, ',', '.') : '-' }}</td>
+                                    <td>{{ $monitoring->nilai_dampak ? 'Rp ' . number_format($monitoring->nilai_dampak, 0, ',', '.') : '-' }}</td>
                                     <td>{{ $monitoring->nilai_probabilitas ?? '-' }}%</td>
                                     <td>
                                         <div class="p-2 rounded bg-{{ str_replace(' ', '-', str_replace('to ', '', strtolower($monitoring->level_risiko))) }}">
