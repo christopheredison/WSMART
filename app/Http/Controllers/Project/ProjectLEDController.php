@@ -83,9 +83,15 @@ class ProjectLEDController extends Controller
 
     public function create()
     {
+        $project = null;
         $projectSektors = ProjectSektor::all();
         $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get(); // Filter for project type
-        $projects = Project::all();
+        $projects = Project::with(['projectPeriodeList.projectRisks' => function($query) {
+            $query->with('penyebabRisikoProjects.perlakuanPenyebabRisiko');
+        }])->get();
+        if (request()->project_id) {
+            $project = $projects->where('id', request()->project_id)->first();
+        }
         $kategoriKejadians = KategoriKejadian::all();
         $kategoriRisikos = KategoriRisiko::all();
         $jenisRisikos = JenisRisiko::all();
@@ -98,7 +104,8 @@ class ProjectLEDController extends Controller
             'kategoriKejadians',
             'kategoriRisikos',
             'jenisRisikos',
-            'jabatans'
+            'jabatans',
+            'project'
         ));
     }
 
@@ -128,7 +135,7 @@ class ProjectLEDController extends Controller
             'nilai_premi' => 'required_if:status_asuransi,1|nullable|numeric',
             'nilai_klaim' => 'required_if:status_asuransi,1|nullable|numeric',
             'status_risk_register' => 'required|in:0,1',
-            'no_urut_risiko' => 'required_if:status_risk_register,1|nullable',
+            'no_urut_risiko' => 'required_if:status_risk_register,1|nullable|exists:project_risks,id',
             'biaya_risiko_inheren' => 'nullable|numeric',
             'biaya_upaya_perbaikan' => 'nullable|numeric',
             'hasil_perbaikan' => 'nullable|numeric',
@@ -144,6 +151,13 @@ class ProjectLEDController extends Controller
         try {
             $data = $request->all();
             $data['tahun'] = Carbon::parse($request->tanggal_kejadian)->format('Y');
+
+            $project = null;
+            if ($request->status_risk_register == 1) {
+                $riskRegister = ProjectRisk::find($request->no_urut_risiko);
+                $project = Project::find($riskRegister->project_id);
+                $data['project_id'] = $riskRegister->project_id;
+            }
             
             // Set default values for numeric fields
             $data['nilai_kerugian_finansial'] = $request->nilai_kerugian_finansial ?: 0;
@@ -162,6 +176,12 @@ class ProjectLEDController extends Controller
             }
             
             LossEventProject::create($data);
+
+            if ($project) {
+                return redirect()
+                ->route('project-led.index-by-project', ['projectId' => $project->id])
+                ->with('success', 'Data Loss Event Project berhasil ditambahkan');
+            }
 
             return redirect()
                 ->route('project-led.index')
