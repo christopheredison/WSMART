@@ -12,6 +12,12 @@ class Jabatan extends Model
 
     protected $guarded = [];
 
+    protected $fillable = [
+        'name',
+        'code',
+        'description',
+    ];
+
     public function levels()
     {
         return $this->belongsToMany(Level::class, 'jabatan_level');
