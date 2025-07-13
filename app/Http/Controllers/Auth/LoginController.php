@@ -109,7 +109,6 @@ class LoginController extends Controller
         if ($jabatan) {
             $userExist->update([
                 'jabatan_id' => $jabatan?->id,
-                'level_id' => $jabatan?->levels?->first()?->id,
             ]);
         }
 
