@@ -255,4 +255,11 @@ class UnitLEDController extends Controller
             ], 500);
         }
     }
+
+    public function show($id)
+    {
+        $lossEvent = LossEvent::with(['kategoriKejadian', 'kategoriRisiko', 'jenisRisiko'])->findOrFail($id);
+        
+        return view('unit-led.show', compact('lossEvent'));
+    }
 }
