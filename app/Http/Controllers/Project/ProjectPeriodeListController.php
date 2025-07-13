@@ -30,6 +30,8 @@ class ProjectPeriodeListController extends BasicCRUDController
             'label' => 'Proyek',
             'data' => 'project.project_name',
             'render' => '(data, type, row) => row.project?.project_name || "-"',
+            'searchable' => true,
+            'orderable' => false,
         ],
         'ok' => [
             'label' => 'Nilai OK',
@@ -56,6 +58,8 @@ class ProjectPeriodeListController extends BasicCRUDController
             'render' => <<<JS
                 (data) => data ? Intl.NumberFormat('id-ID').format(data) : '-'
                 JS,
+            'orderable' => false,
+            'searchable' => false,
         ],
         'project_risks_count' => [
             'label' => 'Jumlah Risiko',
@@ -87,6 +91,12 @@ class ProjectPeriodeListController extends BasicCRUDController
         $this->userProjectIdsx = $user->projects->pluck('id')->toArray();
 
         $this->callbackQuery = function ($query) use ($userProjectIds) {
+            if ($userProjectIds->count() > 0) {
+                $query->orderByRaw('CASE WHEN project_periode_lists.project_id IN (' . $userProjectIds->join(',') . ') THEN 1 ELSE 2 END');
+            } else {
+                $query->orderBy('project_id', 'desc');
+            }
+            $query->orderBy('updated_at', 'desc');
             if (!Gate::check('project_periode_view')) {
                 $query->whereIn('project_id', $userProjectIds);
             }
