@@ -128,6 +128,13 @@ return [
             'level' => 'debug',
             'days' => 14,
         ],
+
+        'verification' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/verification.log'),
+            'level' => 'debug',
+            'days' => 14,
+        ],
     ],
 
 ];

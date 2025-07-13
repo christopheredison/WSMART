@@ -513,6 +513,8 @@ Route::prefix('risk-register-unit')->group(function () {
 
     Route::get('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'analisa'])->name('risk-register-unit.analisa');
     Route::post('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'doAnalisa'])->name('risk-register-unit.do-analisa');
+
+    Route::post('/{riskRegister}/verifikasi', [RiskRegisterUnitController::class, 'verifikasi'])->name('risk-register-unit.verifikasi');
 });
 
 Route::group(['prefix' => 'ict', 'as' => 'ict.'], function () {
