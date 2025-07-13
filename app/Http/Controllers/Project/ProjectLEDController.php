@@ -24,10 +24,14 @@ use App\Models\Jabatan;
 class ProjectLEDController extends Controller
 {
     //
-    public function index(Request $request)
+    public function index(Request $request, $projectId = null)
     {
         if ($request->ajax()) {
             $data = LossEventProject::with(['peristiwaRisiko', 'kategoriKejadian']);
+
+            if ($projectId) {
+                $data->where('project_id', $projectId);
+            }
             
             if ($request->filled('tahun') && $request->tahun !== '') {
                 $data->where('tahun', $request->tahun);
@@ -68,8 +72,13 @@ class ProjectLEDController extends Controller
     
         $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
         $kategoriKejadians = KategoriKejadian::all();
+
+        $project = null;
+        if ($projectId) {
+            $project = Project::find($projectId);
+        }
     
-        return view('project-led.index', compact('peristiwaRisikos', 'kategoriKejadians'));
+        return view('project-led.index', compact('peristiwaRisikos', 'kategoriKejadians', 'projectId', 'project'));
     }
 
     public function create()

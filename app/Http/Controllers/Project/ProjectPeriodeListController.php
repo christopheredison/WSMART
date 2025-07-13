@@ -133,6 +133,17 @@ class ProjectPeriodeListController extends BasicCRUDController
             ];
         }
 
+        if (Gate::check('project_led_list')) {
+            $ledRoute = route('project-led.index-by-project', ['projectId' => ':id']);
+            $this->tableActions[] = [
+                'label' => 'Loss Event',
+                'action' => 'script',
+                'script' => <<<JS
+                projectData = fetchedData[\$(this).data('id')];window.location.href = "$ledRoute".replace(':id', projectData.project_id);
+                JS,
+            ];
+        }
+
         return parent::index();
     }
 

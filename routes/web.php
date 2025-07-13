@@ -398,6 +398,7 @@ Route::group(['middleware' => ['auth']], function() {
     Route::post('project-led', [ProjectLEDController::class, 'store'])->name('project-led.store');
     Route::delete('project-led/{id}', [ProjectLEDController::class, 'destroy'])->name('project-led.destroy');
     Route::resource('project-led', ProjectLEDController::class)->except(['create', 'show', 'edit']);
+    Route::get('project-leds/{projectId}', [ProjectLEDController::class, 'index'])->name('project-led.index-by-project');
 
     Route::get('/risk-map-setting', [RiskMapController::class, 'index'])->name('risk-map-setting.index');
     Route::put('/risk-map-setting/update', [RiskMapController::class, 'update'])->name('risk-map-setting.update');

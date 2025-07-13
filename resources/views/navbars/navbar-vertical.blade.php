@@ -107,7 +107,7 @@
         </li>
         @endcan
 
-        @can('project_led_list')
+        {{-- @can('project_led_list')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('project-led.index') ? 'active' : '' }}"
             href="{{route('project-led.index')}}" role="button" data-bs-toggle="" aria-expanded="false">
@@ -117,7 +117,7 @@
             </span>
           </a>
         </li>
-        @endcan
+        @endcan --}}
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('metrik-strategi-risiko.index') ? 'active' : '' }}" href="{{route('metrik-strategi-risiko.index')}}" role="button"
             data-bs-toggle="" aria-expanded="false">
