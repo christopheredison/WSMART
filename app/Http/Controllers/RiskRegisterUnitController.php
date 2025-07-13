@@ -35,6 +35,7 @@ class RiskRegisterUnitController extends Controller
 {
     public function index(Request $request)
     {
+        $unitId = auth()->user()->unit_id;
         // Ambil periode_id dari parameter URL
         $periodeId = $request->query('pid');
         
@@ -64,6 +65,9 @@ class RiskRegisterUnitController extends Controller
             $risikoQuery->where('periode_id', $periodeId);
         }
         
+        // Filter berdasarkan unit_id
+        $risikoQuery->where('unit_id', $unitId);
+
         // Ambil data risiko
         $risiko = $risikoQuery->get();
     

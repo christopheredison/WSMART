@@ -27,21 +27,21 @@
             <div class="col-4 col-sm-2">
               <label for="filter-unit" class="form-label d-none">Unit</label>
               <select id="filter-unit" class="form-select select2">
-                <option value="" selected>Unit</option>
+                <option value="" selected>Semua Unit</option>
                 @foreach($unit as $id => $name)
                 <option value="{{ $name }}">{{ $name }}</option>
                 @endforeach
               </select>
             </div>
-            @endcan
-            @can('risk_register_child_unit')
+            @else
             <div class="col-4 col-sm-2">
               <label for="filter-unit" class="form-label d-none">Unit</label>
-              <select id="filter-unit" class="form-select select2">
-                <option value="" selected>Unit</option>
-                @foreach($unitChild as $id => $name)
-                <option value="{{ $name }}">{{ $name }}</option>
-                @endforeach
+              <select id="filter-unit" class="form-select select2" disabled>
+                @php
+                $userUnitId = auth()->user()->unit_id;
+                $userUnitName = $unit[$userUnitId] ?? 'Unit Tidak Ditemukan';
+                @endphp
+                <option value="{{ $userUnitName }}" selected>{{ $userUnitName }}</option>
               </select>
             </div>
             @endcan
@@ -160,6 +160,10 @@
                   <a href="{{ route('risk-register-unit.analisa', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
                     title="Analisa Risiko">
                     <span class="bx bx-analyse text-warning"></span>
+                  </a>
+                  <a href="{{ route('risk-register-unit.perencanaan', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+                    title="Rencana Perlakuan Risiko">
+                    <span class="bx bx-task text-primary"></span>
                   </a>
                   @endcan
                   @can('risk_register_delete')
