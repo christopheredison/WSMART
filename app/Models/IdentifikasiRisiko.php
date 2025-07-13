@@ -37,6 +37,7 @@ class IdentifikasiRisiko extends Model
         'skala_risiko',
         'level_risiko',
         'status',
+        'step_verification',
         'is_corporate',
     ];
 
@@ -170,6 +171,7 @@ class IdentifikasiRisiko extends Model
     public const STATUS_DIKIRIM = 2;
     public const STATUS_TUNGGU_VERIFIKASI = 3;
     public const STATUS_TERVERIFIKASI = 4;
+    public const STATUS_REJECTED = 5;
 
     public const LEVEL_RISIKO_LOW = 'Low';
     public const LEVEL_RISIKO_LOW_TO_MODERATE = 'Low To Moderate';
@@ -230,4 +232,9 @@ class IdentifikasiRisiko extends Model
             }
         });
     }
+
+    public const PROGRESS_ON_REVIEW = 1;
+    public const PROGRESS_ON_REVISION_DELETED = 2;
+    public const PROGRESS_ON_ACCEPTED = 3;
+    public const PROGRESS_ON_FINAL = 4;
 }

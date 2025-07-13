@@ -16,15 +16,18 @@ class DataBatch extends Model
     const STATUS_VERIFIKASI = 4;
     const STATUS_REVISI = 5;
     const STATUS_UTAMA = 6;
-    const STATUS_VERIFIKASI_UNIVERSITAS = 7;
+    const STATUS_VERIFIKASI_CORPORATE = 7;
     const STATUS_FINISH = 8;
 
     // Kolom lain dari tabel yang dapat diisi
     protected $fillable = [
         'periode_id',
+        'type',
         'unit_id',
+        'project_id',
         'batch',
         'status',
+        'step_verification',
         'finish',
     ];
 }
