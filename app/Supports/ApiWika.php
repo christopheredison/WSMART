@@ -69,10 +69,21 @@ class ApiWika
 
     public function getProjects()
     {
-        $result = $this->apiRequest('GET', 'proyek', [
+        $result2 = $this->apiRequest('GET', 'proyek', [
+            'period' => date('Ym', strtotime('-2 month')),
+        ]);
+        $result2 = collect($result2['data'] ?? [])->keyBy('kode_spk')->toArray();
+        $result1 = $this->apiRequest('GET', 'proyek', [
+            'period' => date('Ym', strtotime('-1 month')),
+        ]);
+        $result1 = collect($result1['data'] ?? [])->keyBy('kode_spk')->toArray();
+        $result0 = $this->apiRequest('GET', 'proyek', [
             'period' => date('Ym'),
         ]);
+        $result0 = collect($result0['data'] ?? [])->keyBy('kode_spk')->toArray();
 
-        return $result['data'] ?? [];
+        $result = array_merge($result2, $result1, $result0);
+
+        return array_values($result);
     }
 }
