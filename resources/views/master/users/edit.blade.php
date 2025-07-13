@@ -89,6 +89,24 @@
               </div>
             </div>
             <div class="form-group col-12 col-md-7 d-flex">
+              <label class="form-label label-md-start col-md-4">Jabatan</label>
+              <div class="input-group has-validation">
+                <select class="form-select select2" name="jabatan_id" required data-placeholder="Jabatan">
+                  <option></option>
+                  @foreach($jabatans as $jabatan)
+                  <option value="{{ $jabatan->id }}" {{ $user->jabatan_id == $jabatan->id ? 'selected' : '' }} data-level="{{ $jabatan->levels->first()->name }}">{{ $jabatan->name }}</option>
+                  @endforeach
+                </select>
+                <div class="invalid-feedback">Silakan pilih jabatan.</div>
+              </div>
+            </div>
+            <div class="form-group col-12 col-md-7 d-flex">
+              <label class="form-label label-md-start col-md-4">Level</label>
+              <div class="input-group has-validation">
+                <input class="form-control" disabled name="level">
+              </div>
+            </div>
+            <div class="form-group col-12 col-md-7 d-flex">
               <label class="form-label label-md-start col-md-4" for="email">Email</label>
               <div class="input-group has-validation">
                 <input class="form-control" id="email" name="email" type="email" placeholder="Masukkan Email"
@@ -143,3 +161,14 @@
   </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+  $(document).ready(function() {
+    $('select[name="jabatan_id"]').change(function() {
+      const level = $(this).find('option:selected').data('level');
+      $('input[name="level"]').val(level);
+    }).change();
+  });
+</script>
+@endpush
