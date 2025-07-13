@@ -22,13 +22,13 @@
     </div>
     <div class="col-12">
         <div class="form-floating">
-            {{ Form::select('xopsi_perlakuan_risiko', \App\Models\OpsiPerlakuanRisiko::pluck('opsi_perlakuan_risiko', 'id'), '', ['class' => 'form-select', 'required']) }}
+            {{ Form::select('xopsi_perlakuan_risiko', \App\Models\OpsiPerlakuanRisiko::pluck('opsi_perlakuan_risiko', 'id'), '', ['class' => 'form-select', 'required', 'id' => 'opsi_perlakuan_risiko']) }}
             <label for="xopsi_perlakuan_risiko">Opsi Perlakuan Risiko</label>
         </div>
     </div>
     <div class="col-12">
         <div class="form-floating">
-            {{ Form::select('xjenis_rencana_perlakuan_risiko', \App\Models\JenisRencanaPerlakuanRisiko::pluck('jenis_rencana_perlakuan_risiko', 'id'), '', ['class' => 'form-select', 'required']) }}
+            {{ Form::select('xjenis_rencana_perlakuan_risiko', \App\Models\JenisRencanaPerlakuanRisiko::pluck('jenis_rencana_perlakuan_risiko', 'id'), '', ['class' => 'form-select', 'required', 'id' => 'jenis_rencana_perlakuan_risiko']) }}
             <label for="xjenis_rencana_perlakuan_risiko">Jenis Rencana Perlakuan Risiko</label>
         </div>
     </div>
