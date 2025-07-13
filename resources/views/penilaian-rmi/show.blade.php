@@ -74,8 +74,10 @@
                   <span class="badge bg-success">Selesai</span>
                 @endif
               </dd>
-            <dt class="col-sm-4">Score RMI</dt><dd class="col-sm-8">{{ $period->score_rmi }}</dd>
+            <dt class="col-sm-4">Score Dimension</dt><dd class="col-sm-8">{{ $period->score_rmi }}</dd>
             <dt class="col-sm-4">Deskripsi Score</dt><dd class="col-sm-8">{{ $period->score_rmi_desc }}</dd>
+            <dt class="col-sm-4">Score RMI</dt><dd class="col-sm-8">{{ $period->final_score_rmi }}</dd>
+
             <dt class="col-sm-4">Tanggal Update</dt><dd class="col-sm-8">{{ $period->updated_at->format('d M Y H:i') }}</dd>
           </dl>
         </div>

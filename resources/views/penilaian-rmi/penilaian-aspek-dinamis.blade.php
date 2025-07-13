@@ -12,7 +12,7 @@
                 @include('partials.icon-layer')
               </div>
             </div>
-            <h2 class="h3">Penilaian Aspek Dinamis - Periode {{ $period->year }}</h2>
+            <h2 class="h3">Penilaian Aspek Dimensi - Periode {{ $period->year }}</h2>
           </div>
         </div>
         <div class="card-body">

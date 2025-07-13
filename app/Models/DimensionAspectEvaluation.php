@@ -12,6 +12,7 @@ class DimensionAspectEvaluation extends Model
 
     protected $fillable = [
         'sub_dimension_id',
+        'dimension_id',
         'score_dimension',
         'score_dimension_desc',
     ];
@@ -19,5 +20,10 @@ class DimensionAspectEvaluation extends Model
     public function subDimension()
     {
         return $this->belongsTo(SubDimension::class, 'sub_dimension_id');
+    }
+    
+    public function dimension()
+    {
+        return $this->belongsTo(Dimension::class, 'dimension_id');
     }
 }

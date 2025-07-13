@@ -368,12 +368,12 @@ class PenilaianRMIController extends Controller
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Penilaian Aspek Dinamis berhasil diselesaikan.'
+                    'message' => 'Penilaian Aspek Dimensi berhasil diselesaikan.'
                 ]);
             }
             
             return redirect()->route('penilaian-rmi.index')
-                ->with('success', 'Penilaian Aspek Dinamis berhasil diselesaikan.');
+                ->with('success', 'Penilaian Aspek Dimensi berhasil diselesaikan.');
         }
         
         // Untuk simpan sementara
@@ -385,13 +385,13 @@ class PenilaianRMIController extends Controller
         }
         
         return redirect()->route('penilaian-rmi.index')
-            ->with('success', 'Penilaian Aspek Dinamis berhasil disimpan sementara.');
+            ->with('success', 'Penilaian Aspek Dimensi berhasil disimpan sementara.');
     }
 
     /**
      * Menghitung skor dimensi berdasarkan skor parameter
      */
-    private function calculateDimensionScores($periodId)
+    private function calculateDimensionScores_old($periodId)
     {
         // Ambil semua sub dimensi
         $subDimensions = SubDimension::all();
@@ -445,10 +445,71 @@ class PenilaianRMIController extends Controller
         }
     }
 
+    private function calculateDimensionScores($periodId)
+    {
+        // Ambil semua dimensi
+        $dimensions = Dimension::all();
+        
+        foreach ($dimensions as $dimension) {
+            // Ambil semua sub dimensi untuk dimensi ini
+            $subDimensions = SubDimension::where('dimension_id', $dimension->id)->get();
+            
+            if ($subDimensions->isEmpty()) {
+                continue;
+            }
+            
+            // Ambil semua parameter untuk sub dimensi ini
+            $parameterIds = MeasurementParameter::whereIn('sub_dimension_id', $subDimensions->pluck('id'))->pluck('id');
+            
+            if ($parameterIds->isEmpty()) {
+                continue;
+            }
+            
+            // Ambil skor parameter untuk periode ini
+            $parameterScores = ScoreParameter::where('period_id', $periodId)
+                ->whereIn('parameter_id', $parameterIds)
+                ->whereNull('deleted_at')
+                ->get();
+            
+            if ($parameterScores->isEmpty()) {
+                continue;
+            }
+            
+            // Hitung rata-rata skor parameter untuk dimensi ini
+            $totalScore = 0;
+            $countScore = 0;
+            
+            foreach ($parameterScores as $parameterScore) {
+                if ($parameterScore->score !== null) {
+                    $totalScore += $parameterScore->score;
+                    $countScore++;
+                }
+            }
+            
+            if ($countScore > 0) {
+                $averageScore = $totalScore / $countScore;
+                
+                // Tentukan deskripsi skor dimensi
+                $scoreDimensionDesc = $this->getScoreDimensionDesc($averageScore);
+                
+                // Soft delete skor dimensi lama jika ada
+                DimensionAspectEvaluation::where('dimension_id', $dimension->id)
+                    ->delete();
+                    
+                // Buat skor dimensi baru
+                DimensionAspectEvaluation::create([
+                    'dimension_id' => $dimension->id,
+                    'score_dimension' => $averageScore,
+                    'score_dimension_desc' => $scoreDimensionDesc,
+                ]);
+            }
+        }
+    }
+
     /**
      * Menghitung skor RMI berdasarkan skor dimensi
      */
-    private function calculateRMIScore($periodId)
+    private function calculateRMIScore_old($periodId)
     {
         // Ambil semua dimensi
         $dimensions = Dimension::all();
@@ -493,6 +554,42 @@ class PenilaianRMIController extends Controller
         // Hitung skor RMI
         if ($countDimension > 0) {
             $rmiScore = $totalScore / $countDimension;
+            
+            // Tentukan deskripsi skor RMI
+            $rmiScoreDesc = $this->getScoreRMIDesc($rmiScore);
+            
+            // Update skor RMI pada periode
+            $period = RMIPeriod::findOrFail($periodId);
+            $period->update([
+                'score_rmi' => $rmiScore,
+                'score_rmi_desc' => $rmiScoreDesc,
+            ]);
+        }
+    }
+
+    /**
+     * Menghitung skor RMI berdasarkan skor parameter secara keseluruhan
+     */
+    private function calculateRMIScore($periodId)
+    {
+        // Ambil semua skor parameter untuk periode ini
+        $parameterScores = ScoreParameter::where('period_id', $periodId)
+            ->whereNull('deleted_at')
+            ->get();
+        
+        $totalScore = 0;
+        $countScore = 0;
+        
+        foreach ($parameterScores as $parameterScore) {
+            if ($parameterScore->score !== null) {
+                $totalScore += $parameterScore->score;
+                $countScore++;
+            }
+        }
+        
+        // Hitung skor RMI
+        if ($countScore > 0) {
+            $rmiScore = $totalScore / $countScore;
             
             // Tentukan deskripsi skor RMI
             $rmiScoreDesc = $this->getScoreRMIDesc($rmiScore);
