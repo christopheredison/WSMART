@@ -48,6 +48,7 @@ class ApiWika
                 break;
         }
 
+        $response = null;
         try {
             $response = $client->request($method, $url, $options);
             $contents = $response->getBody()->getContents();
@@ -59,7 +60,7 @@ class ApiWika
             Log::error($e->getMessage());
         }
 
-        if (str_contains(implode(' ', $response->getHeader('Content-Type')), 'application/json')) {
+        if ($response && str_contains(implode(' ', $response->getHeader('Content-Type')), 'application/json')) {
             return json_decode($contents, true) ?? $contents;
         }
 
@@ -68,8 +69,10 @@ class ApiWika
 
     public function getProjects()
     {
-        return $this->apiRequest('GET', 'proyek', [
-            'period' => '202506',
-        ])['data'] ?? [];
+        $result = $this->apiRequest('GET', 'proyek', [
+            'period' => date('Ym'),
+        ]);
+
+        return $result['data'] ?? [];
     }
 }

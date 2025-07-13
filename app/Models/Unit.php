@@ -59,15 +59,20 @@ class Unit extends Model
         ];
 
         $divisiUnits = [];
+
+        $unitData = $units['data'];
+
+        $unitData = collect($unitData)->reverse()->keyBy('cost_center')->values()->toArray();
         
-        foreach ($units['data'] as $unit) {
+        foreach ($unitData as $unit) {
             if (!($unitTypes[$unit['cost_center_type']] ?? false)) {
                 continue;
             }
 
             $unit = Unit::updateOrCreate(
-                ['unit_api_id' => $unit['unit_id']],
+                ['cost_center' => $unit['cost_center']],
                 [
+                    'unit_api_id' => $unit['unit_id'],
                     'name' => $unit['cost_center_deskripsi'],
                     'unit_type_id' => $unitTypes[$unit['cost_center_type']],
                     'parent_id' => 0,
