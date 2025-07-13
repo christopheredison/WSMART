@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Master;
 
 use App\Http\Controllers\Controller;
+use App\Models\Jabatan;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use App\Models\User;
@@ -30,8 +31,9 @@ class UserController extends Controller
         $unit = Unit::pluck('name','id');
 
         $projects = Project::pluck('project_name','id');
+        $jabatans = Jabatan::with('levels')->get();
 
-        return view('master.users.create', compact('roles', 'roless','unit', 'projects'));
+        return view('master.users.create', compact('roles', 'roless','unit', 'projects', 'jabatans'));
     }
 
     public function store(Request $request)
@@ -78,6 +80,8 @@ class UserController extends Controller
 
         $unit = Unit::findOrFail($unitId);
 
+        $jabatan = Jabatan::with('levels')->find($request->jabatan_id);
+
         $user = User::create([
             'name' => $dataUser['nm_peg'] ?? $request->name,
             'email' => ($dataUser['email'] ?? null) ? $dataUser['email'] : $request->email,
@@ -87,6 +91,8 @@ class UserController extends Controller
             'unit_id' => $unitId,
             'unit_type_id' => $unit->unitType->id,
             'parent_id' => $unit->parent_id,
+            'jabatan_id' => $jabatan->id,
+            'level_id' => $jabatan?->levels?->first()?->id,
         ]);
 
         if ($request->has('user_projects')) {
@@ -106,8 +112,9 @@ class UserController extends Controller
         $unit = Unit::pluck('name','id');
         // dd($unit);
         $projects = Project::pluck('project_name','id');
+        $jabatans = Jabatan::with('levels')->get();
 
-        return view('master.users.edit', compact('user', 'roles', 'userRoles', 'roless', 'unit', 'projects'));
+        return view('master.users.edit', compact('user', 'roles', 'userRoles', 'roless', 'unit', 'projects', 'jabatans'));
     }
 
     public function update(Request $request, User $user)
@@ -123,12 +130,16 @@ class UserController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
+        $jabatan = Jabatan::find($request->jabatan_id)->with('levels')->first();
+
         $user->update([
             'name' => $request->name,
             'email' => $request->email,
             'unit_id' => $request->unit_id,
             'unit_type_id' => Unit::findOrFail($request->unit_id)->unitType->id,
             'parent_id' => Unit::findOrFail($request->unit_id)->parent_id,
+            'jabatan_id' => $request->jabatan_id,
+            'level_id' => $jabatan?->levels?->first()?->id,
         ]);
 
         if ($request->has('user_projects')) {
@@ -206,6 +217,11 @@ class UserController extends Controller
             }
         }
 
-        return response()->json(['data' => $dataUser]);
+        $jabatan = null;
+        if ($dataUser['kd_jabatan'] ?? false) {
+            $jabatan = Jabatan::where('code', $dataUser['kd_jabatan'])->first();
+        }
+
+        return response()->json(['data' => $dataUser, 'jabatan' => $jabatan]);
     }
 }
