@@ -11,9 +11,9 @@
                                 @include('partials.icon-layer')
                             </div>
                         </div>
-                        <h2 class="h3">Data Loss Event Project</h2>
+                        <h2 class="h3">Data Loss Event Project {{ $project?->project_name }}</h2>
                         <div class="col-auto ms-auto">
-                            <a class="btn btn-outline-info btn-sm" href="{{ route('project-led.create') }}">
+                            <a class="btn btn-outline-info btn-sm" href="{{ route('project-led.create', ['project_id' => $projectId]) }}">
                                 <span class="bx bx-plus"></span>
                                 <span class="ms-1">Tambah Data Loss Event</span>
                             </a>
@@ -92,7 +92,7 @@ $(document).ready(function() {
         processing: true,
         serverSide: true,
         ajax: {
-            url: '{{ route('project-led.index') }}',
+            url: '{{ $projectId ? route('project-led.index-by-project', $projectId) : route('project-led.index') }}',
             type: 'GET',
             data: function(d) {
                 d.tahun = $('#filter-tahun').val();

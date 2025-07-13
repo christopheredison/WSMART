@@ -14,6 +14,15 @@
         </div>
       </div>
       <div class="card-body">
+        @if($errors->any())
+        <div class="alert alert-danger">
+          <ul>
+            @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+          </ul>
+        </div>
+        @endif
         <div class="row g-2 align-items-md-center mb-5">
           <div class="col-12 col-md-2">
             <p class="mb-0 fw-medium">Nama Role</p>

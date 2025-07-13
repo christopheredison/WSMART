@@ -48,6 +48,7 @@ class ApiWika
                 break;
         }
 
+        $response = null;
         try {
             $response = $client->request($method, $url, $options);
             $contents = $response->getBody()->getContents();
@@ -59,7 +60,7 @@ class ApiWika
             Log::error($e->getMessage());
         }
 
-        if (str_contains(implode(' ', $response->getHeader('Content-Type')), 'application/json')) {
+        if ($response && str_contains(implode(' ', $response->getHeader('Content-Type')), 'application/json')) {
             return json_decode($contents, true) ?? $contents;
         }
 
@@ -68,8 +69,21 @@ class ApiWika
 
     public function getProjects()
     {
-        return $this->apiRequest('GET', 'proyek', [
-            'period' => '202506',
-        ])['data'] ?? [];
+        $result2 = $this->apiRequest('GET', 'proyek', [
+            'period' => date('Ym', strtotime('-2 month')),
+        ]);
+        $result2 = collect($result2['data'] ?? [])->keyBy('kode_spk')->toArray();
+        $result1 = $this->apiRequest('GET', 'proyek', [
+            'period' => date('Ym', strtotime('-1 month')),
+        ]);
+        $result1 = collect($result1['data'] ?? [])->keyBy('kode_spk')->toArray();
+        $result0 = $this->apiRequest('GET', 'proyek', [
+            'period' => date('Ym'),
+        ]);
+        $result0 = collect($result0['data'] ?? [])->keyBy('kode_spk')->toArray();
+
+        $result = array_merge($result2, $result1, $result0);
+
+        return array_values($result);
     }
 }

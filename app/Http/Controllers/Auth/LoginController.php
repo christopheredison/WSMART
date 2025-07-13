@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Jabatan;
+use App\Models\Project;
 use App\Models\Unit;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
@@ -100,6 +102,17 @@ class LoginController extends Controller
             ]);
         }
 
+        $nip = $userExist->nip;
+        $kdJabatan = $userExist->kd_jabatan;
+        $jabatan = Jabatan::with('levels')->where('code', $kdJabatan)->first();
+
+        if ($jabatan) {
+            $userExist->update([
+                'jabatan_id' => $jabatan?->id,
+                'level_id' => $jabatan?->levels?->first()?->id,
+            ]);
+        }
+
         $apiHC = new ApiHC();
         $response = $apiHC->apiRequest('GET', '/', [
             'client' => 'risk',
@@ -108,14 +121,21 @@ class LoginController extends Controller
             'nip' => $userExist->nip,
         ]);
 
-        $costCenter = $response['data'][0]['cost_center'] ?? null;
+        $costCenterParent = $response['data'][0]['cost_center_parent'] ?? null;
 
-        if ($costCenter) {
-            $unit = Unit::where('cost_center', $costCenter)->first();
+        if ($costCenterParent) {
+            $unit = Unit::where('cost_center', $costCenterParent)->first();
             $userExist->update([
                 'unit_type_id' => $unit?->unit_type_id ?: 0,
                 'unit_id' => $unit?->id ?: 0,
             ]);
+        }
+
+        $namaProyek = $responseData['nama_proyek'] ?? null;
+        $project = Project::where('project_name', $namaProyek)->first();
+
+        if ($project) {
+            $userExist->projects()->attach($project->id);
         }
 
         Auth::guard('web')->login($userExist);

@@ -261,5 +261,8 @@ return [
         'backups.index',
         
         'risk_monitoring_edit',
+
+        'jabatan_list',
+        'jabatan_create',
     ],
 ];
