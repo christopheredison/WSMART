@@ -8,16 +8,16 @@
                     <div class="d-flex align-items-center gap-3">
                         <div class="lead__icon bg-warning-subtle">
                             <div class="svg-icon svg-icon-warning">
-                                @include('partials.icon-tool')
+                                @include('partials.icon-layer')
                             </div>
                         </div>
-                        <h2 class="h3">Detail Loss Event Project {{ $project ? ' - ' . $project->name : '' }}</h2>
+                        <h2 class="h3">Detail Loss Event Unit</h2>
                         <div class="col-auto ms-auto">
-                            <a href="{{ route('project-led.edit', $lossEvent->id) }}" class="btn btn-info btn-sm">
+                            <a href="{{ route('unit-led.edit', $lossEvent->id) }}" class="btn btn-info btn-sm">
                                 <i class="bx bx-edit"></i>
                                 <span class="ms-1">Edit</span>
                             </a>
-                            <a href="{{ $project ? route('project-led.index-by-project', ['projectId' => $project->id]) : route('project-led.index') }}" class="btn btn-secondary btn-sm">
+                            <a href="{{ route('unit-led.index') }}" class="btn btn-secondary btn-sm">
                                 <i class="bx bx-arrow-back"></i>
                                 <span class="ms-1">Kembali</span>
                             </a>
@@ -36,7 +36,7 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Identifikasi Kejadian</label>
-                            <p class="form-control-plaintext">{{ $lossEvent->peristiwaRisiko->title ?? '-' }}</p>
+                            <p class="form-control-plaintext">{{ $lossEvent->identifikasi_kejadian ?? '-' }}</p>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Kategori Kejadian</label>
@@ -229,4 +229,4 @@
             </div>
         </div>
     </div>
-@endsection 
+@endsection

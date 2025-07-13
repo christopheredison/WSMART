@@ -27,21 +27,21 @@
             <div class="col-4 col-sm-2">
               <label for="filter-unit" class="form-label d-none">Unit</label>
               <select id="filter-unit" class="form-select select2">
-                <option value="" selected>Unit</option>
+                <option value="" selected>Semua Unit</option>
                 @foreach($unit as $id => $name)
                 <option value="{{ $name }}">{{ $name }}</option>
                 @endforeach
               </select>
             </div>
-            @endcan
-            @can('risk_register_child_unit')
+            @else
             <div class="col-4 col-sm-2">
               <label for="filter-unit" class="form-label d-none">Unit</label>
-              <select id="filter-unit" class="form-select select2">
-                <option value="" selected>Unit</option>
-                @foreach($unitChild as $id => $name)
-                <option value="{{ $name }}">{{ $name }}</option>
-                @endforeach
+              <select id="filter-unit" class="form-select select2" disabled>
+                @php
+                $userUnitId = auth()->user()->unit_id;
+                $userUnitName = $unit[$userUnitId] ?? 'Unit Tidak Ditemukan';
+                @endphp
+                <option value="{{ $userUnitName }}" selected>{{ $userUnitName }}</option>
               </select>
             </div>
             @endcan

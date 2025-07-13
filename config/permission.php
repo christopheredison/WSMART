@@ -261,8 +261,11 @@ return [
         'backups.index',
         
         'risk_monitoring_edit',
+
         'risk_register_verification',
         'risk_register_validation',
+        'jabatan_list',
+        'jabatan_create',
 
     ],
 ];

@@ -58,6 +58,15 @@
           </div>
         </div>
         <div class="card-body">
+          @if($errors->any())
+          <div class="alert alert-danger">
+            <ul>
+              @foreach($errors->all() as $error)
+              <li>{{ $error }}</li>
+              @endforeach
+            </ul>
+          </div>
+          @endif
           <div class="row g-3">
             <div class="form-group col-12 col-md-7 d-flex">
               <label class="form-label label-md-start col-md-4">Unit</label>

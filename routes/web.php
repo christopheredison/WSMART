@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\CapaianTckController;
 use App\Http\Controllers\CapaianTkmruController;
@@ -32,6 +33,7 @@ use App\Http\Controllers\StrategiRisiko\StrategiRisikoController;
 use App\Http\Controllers\VerifikatorController;
 use App\Http\Controllers\ValidatorController;
 use App\Http\Controllers\LossEventController;
+use App\Http\Controllers\Master\JabatanController;
 use App\Http\Controllers\Master\JenisKontrolEksistingController;
 use App\Http\Controllers\Master\JenisRencanaPerlakuanRisikoController;
 use App\Http\Controllers\Master\KontrolEksistingController;
@@ -88,6 +90,8 @@ Route::get('/top-navbar', function () {
 Route::get('/combo-navbar', function () {
     return view('navbar-combo');
 });
+
+Route::get('/callback-sso', [LoginController::class, 'callbackSSO']);
 
 Auth::routes();
 
@@ -361,6 +365,7 @@ Route::group(['middleware' => ['auth']], function() {
 
     Route::resource('capaian-tck', CapaianTckController::class);
     Route::resource('capaian-tkmru', CapaianTkmruController::class);
+    Route::resource('jabatan', JabatanController::class)->except(['create', 'show', 'edit', 'destroy', 'update']);
 
     Route::resource('project-divisi', ProjectDivisiController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-sektor', ProjectSektorController::class)->except(['create', 'show', 'edit']);
@@ -393,6 +398,7 @@ Route::group(['middleware' => ['auth']], function() {
     Route::post('project-led', [ProjectLEDController::class, 'store'])->name('project-led.store');
     Route::delete('project-led/{id}', [ProjectLEDController::class, 'destroy'])->name('project-led.destroy');
     Route::resource('project-led', ProjectLEDController::class)->except(['create', 'show', 'edit']);
+    Route::get('project-leds/{projectId}', [ProjectLEDController::class, 'index'])->name('project-led.index-by-project');
 
     Route::get('/risk-map-setting', [RiskMapController::class, 'index'])->name('risk-map-setting.index');
     Route::put('/risk-map-setting/update', [RiskMapController::class, 'update'])->name('risk-map-setting.update');

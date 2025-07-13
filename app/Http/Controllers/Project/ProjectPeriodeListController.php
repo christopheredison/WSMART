@@ -23,16 +23,22 @@ class ProjectPeriodeListController extends BasicCRUDController
             'label' => 'Kode',
             'data' => 'project.meta.profit_center',
             'render' => '(data, type, row) => row.project?.meta?.profit_center || "-"',
+            'orderable' => false,
+            'searchable' => false,
         ],
         'project_id' => [
             'label' => 'Proyek',
             'data' => 'project.project_name',
             'render' => '(data, type, row) => row.project?.project_name || "-"',
+            'searchable' => true,
+            'orderable' => false,
         ],
         'ok' => [
             'label' => 'Nilai OK',
             'data' => 'project.meta.omset',
             'render' => '(data, type, row) => row.project?.meta?.omset ? Intl.NumberFormat(\'id-ID\').format(row.project.meta.omset) : "-"',
+            'orderable' => false,
+            'searchable' => false,
         ],
         'tanggal_mulai' => [
             'label' => 'Tanggal Mulai',
@@ -43,6 +49,8 @@ class ProjectPeriodeListController extends BasicCRUDController
                 const options = { day: "numeric", month: "short", year: "numeric" };
                 return date.toLocaleDateString("id-ID", options);
             }',
+            'orderable' => false,
+            'searchable' => false,
         ],
         'skala_risiko' => [
             'label' => 'Nilai Risiko',
@@ -50,6 +58,8 @@ class ProjectPeriodeListController extends BasicCRUDController
             'render' => <<<JS
                 (data) => data ? Intl.NumberFormat('id-ID').format(data) : '-'
                 JS,
+            'orderable' => false,
+            'searchable' => false,
         ],
         'project_risks_count' => [
             'label' => 'Jumlah Risiko',
@@ -81,6 +91,12 @@ class ProjectPeriodeListController extends BasicCRUDController
         $this->userProjectIdsx = $user->projects->pluck('id')->toArray();
 
         $this->callbackQuery = function ($query) use ($userProjectIds) {
+            if ($userProjectIds->count() > 0) {
+                $query->orderByRaw('CASE WHEN project_periode_lists.project_id IN (' . $userProjectIds->join(',') . ') THEN 1 ELSE 2 END');
+            } else {
+                $query->orderBy('project_id', 'desc');
+            }
+            $query->orderBy('updated_at', 'desc');
             if (!Gate::check('project_periode_view')) {
                 $query->whereIn('project_id', $userProjectIds);
             }
@@ -133,6 +149,17 @@ class ProjectPeriodeListController extends BasicCRUDController
             ];
         }
 
+        if (Gate::check('project_led_list')) {
+            $ledRoute = route('project-led.index-by-project', ['projectId' => ':id']);
+            $this->tableActions[] = [
+                'label' => 'Loss Event',
+                'action' => 'script',
+                'script' => <<<JS
+                projectData = fetchedData[\$(this).data('id')];window.location.href = "$ledRoute".replace(':id', projectData.project_id);
+                JS,
+            ];
+        }
+
         return parent::index();
     }
 
@@ -166,7 +193,7 @@ class ProjectPeriodeListController extends BasicCRUDController
         });
 
         $tahunMonitorings = $projectPeriode->projectRisks->pluck('projectRiskMonitorings')->flatten()->pluck('tahun')->unique()->toArray();
-        $tahunMonitorings[] = $projectPeriode->periode?->tahun;
+        $tahunMonitorings[] = $projectPeriode->created_at->format('Y');
         sort($tahunMonitorings);
         $minTahun = min($tahunMonitorings);
         $maxTahun = max($tahunMonitorings);

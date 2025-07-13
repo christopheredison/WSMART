@@ -137,6 +137,18 @@ $(document).ready(function() {
         disableMobile: true
     });
 
+    // Mendapatkan elemen select untuk opsi perlakuan risiko dan jenis rencana perlakuan risiko
+    const opsiPerlakuanRisiko = document.getElementById('opsi_perlakuan_risiko');
+    const jenisRencanaPerlakuanRisiko = document.getElementById('jenis_rencana_perlakuan_risiko');
+    
+    // Menambahkan event listener untuk perubahan pada opsi perlakuan risiko
+    opsiPerlakuanRisiko.addEventListener('change', function() {
+        // Jika opsi perlakuan risiko yang dipilih adalah ID 3 (Accept/monitor)
+        if (this.value === '3') {
+            // Set jenis rencana perlakuan risiko ke ID 8 (Lainnya)
+            jenisRencanaPerlakuanRisiko.value = '8';
+        }
+    });
 })
 </script>
 @endpush

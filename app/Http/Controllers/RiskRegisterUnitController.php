@@ -41,6 +41,7 @@ class RiskRegisterUnitController extends Controller
 {
     public function index(Request $request)
     {
+        $unitId = auth()->user()->unit_id;
         // Ambil periode_id dari parameter URL
         $periodeId = $request->query('pid');
         $batchNotes = null;
