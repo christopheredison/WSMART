@@ -23,6 +23,8 @@ class ProjectPeriodeListController extends BasicCRUDController
             'label' => 'Kode',
             'data' => 'project.meta.profit_center',
             'render' => '(data, type, row) => row.project?.meta?.profit_center || "-"',
+            'orderable' => false,
+            'searchable' => false,
         ],
         'project_id' => [
             'label' => 'Proyek',
@@ -33,6 +35,8 @@ class ProjectPeriodeListController extends BasicCRUDController
             'label' => 'Nilai OK',
             'data' => 'project.meta.omset',
             'render' => '(data, type, row) => row.project?.meta?.omset ? Intl.NumberFormat(\'id-ID\').format(row.project.meta.omset) : "-"',
+            'orderable' => false,
+            'searchable' => false,
         ],
         'tanggal_mulai' => [
             'label' => 'Tanggal Mulai',
@@ -43,6 +47,8 @@ class ProjectPeriodeListController extends BasicCRUDController
                 const options = { day: "numeric", month: "short", year: "numeric" };
                 return date.toLocaleDateString("id-ID", options);
             }',
+            'orderable' => false,
+            'searchable' => false,
         ],
         'skala_risiko' => [
             'label' => 'Nilai Risiko',
