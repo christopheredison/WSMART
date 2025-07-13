@@ -62,7 +62,7 @@
                   <span class="bx bx-list-check"></span>
                 </a> -->
                 <a href="{{ route('penilaian-rmi.aspek-dinamis', $period->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
-                  title="Penilaian Aspek Dinamis">
+                  title="Penilaian Aspek Dimensi">
                   <span class="bx bx-bar-chart-alt-2"></span>
                 </a>
                 <a href="{{ route('penilaian-rmi.aspek-kinerja', $period->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"

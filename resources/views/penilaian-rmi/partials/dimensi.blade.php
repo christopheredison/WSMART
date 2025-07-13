@@ -21,6 +21,7 @@
                   aria-controls="dimension-content-{{ $dimension->id }}"
                   aria-selected="{{ $index == 0 ? 'true' : 'false' }}">
             {{ $dimension->name }}
+            {{--
             <span class="badge bg-primary ms-2">
               @php
                 $dimScore = 0;
@@ -32,6 +33,18 @@
                   }
                 }
                 echo $dimCount > 0 ? number_format($dimScore / $dimCount, 2) : '-';
+              @endphp
+            </span>
+            --}}
+            <span class="badge bg-primary ms-2">
+              @php
+                // Cari skor dimensi langsung dari tabel DimensionAspectEvaluation
+                $dimScore = null;
+                $dimensionEval = $dimensionScores->where('dimension_id', $dimension->id)->first();
+                if ($dimensionEval) {
+                  $dimScore = $dimensionEval->score_dimension;
+                }
+                echo $dimScore !== null ? number_format($dimScore, 2) : '-';
               @endphp
             </span>
           </button>
@@ -59,9 +72,11 @@
                         aria-controls="sub-content-{{ $subDimension->id }}"
                         aria-selected="{{ $subIndex == 0 ? 'true' : 'false' }}">
                   {{ $subDimension->name }}
+                  {{--
                   <span class="badge bg-info ms-2">
                     {{ isset($dimensionScores[$subDimension->id]) ? number_format($dimensionScores[$subDimension->id]->score_dimension, 2) : '-' }}
                   </span>
+                  --}}
                 </button>
               </li>
             @endforeach

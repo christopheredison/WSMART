@@ -14,7 +14,7 @@ return new class extends Migration
      */
     public function up()
     {
-        DB::transaction(function () {
+        //DB::transaction(function () {
             // Tabel risk_analyses
             Schema::table('risk_analyses', function (Blueprint $table) {
                 $table->unsignedBigInteger('nilai_dampak')->nullable()->change();
@@ -65,7 +65,7 @@ return new class extends Migration
                 $table->decimal('rapk', 20, 2)->nullable()->change();
                 $table->decimal('nk', 20, 2)->change();
             });
-        });
+        //});
     }
 
     /**
