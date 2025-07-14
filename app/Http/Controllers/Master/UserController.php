@@ -82,7 +82,7 @@ class UserController extends Controller
 
         $unit = Unit::findOrFail($unitId);
 
-        $jabatan = Jabatan::with('levels')->find($request->jabatan_id);
+        $jabatan = Jabatan::find($request->jabatan_id);
 
         $user = User::create([
             'name' => $dataUser['nm_peg'] ?? $request->name,
@@ -133,7 +133,7 @@ class UserController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
-        $jabatan = Jabatan::find($request->jabatan_id)->with('levels')->first();
+        $jabatan = Jabatan::find($request->jabatan_id)->first();
 
         $user->update([
             'name' => $request->name,
