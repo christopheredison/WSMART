@@ -7,7 +7,7 @@ use App\Models\ApprovalFlow;
 use App\Models\ApprovalStep;
 use Illuminate\Support\Facades\DB;
 
-class FlowSeeder extends Seeder
+class FlowAddSeeder extends Seeder
 {
     /**
      * Run the database seeds.
