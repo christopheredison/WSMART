@@ -10,6 +10,10 @@
       title="Analisa Risiko">
       <span class="bx bx-analyse text-warning"></span>
     </a>
+    <a href="{{ route('risk-register-unit.perencanaan', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+      title="Rencana Perlakuan Risiko">
+      <span class="bx bx-task text-primary"></span>
+    </a>
   @endcan
 @endif
 
