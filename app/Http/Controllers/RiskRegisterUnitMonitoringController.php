@@ -14,7 +14,7 @@ use App\Models\StrategiRisiko;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use App\Models\RisklimitPeriode;
+use App\Models\RiskLimitPeriode;
 
 class RiskRegisterUnitMonitoringController extends BasicCRUDController
 {
