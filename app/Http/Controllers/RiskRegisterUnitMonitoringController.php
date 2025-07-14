@@ -36,7 +36,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         //     abort(403);
         // }
 
-        $this->callbackQuery = function ($query) use ($period, $quarter) {
+        $this->callbackQuery = function ($query) use ($period, $quarter, $user) {
             $query->where('periode_id', $period->id)
                 ->where('unit_id', $user->unit_id)
                 ->with(['peristiwaRisiko', 'riskAnalysis.skalaProbabilitasResidualQ' . $quarter])
