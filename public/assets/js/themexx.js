@@ -18527,8 +18527,3 @@
   //------------------- End of Script -----------------
   // ==================================================
 })(jQuery);
-
-$(document).ready(function() {
-  $(".modal").modal({ show: true, focus: false });
-
-})
