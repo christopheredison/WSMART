@@ -133,7 +133,7 @@ class UserController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
-        $jabatan = Jabatan::find($request->jabatan_id)->first();
+        //$jabatan = Jabatan::find($request->jabatan_id)->first();
 
         $user->update([
             'name' => $request->name,
