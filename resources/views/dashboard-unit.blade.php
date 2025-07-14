@@ -139,7 +139,7 @@
                 </span>
               </div>
             </div>
-            <div class="title">Capaian TKMRU</div>
+            <div class="title">RMI SCORE</div>
           </div>
           <div class="card-body d-flex align-items-center">
             <div class="d-block w-100">

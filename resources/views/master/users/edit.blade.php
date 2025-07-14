@@ -91,7 +91,7 @@
             <div class="form-group col-12 col-md-7 d-flex">
               <label class="form-label label-md-start col-md-4">Jabatan</label>
               <div class="input-group has-validation">
-                <select class="form-select select2" name="jabatan_id" required data-placeholder="Jabatan">
+                <select class="form-select select2" name="jabatan_id" data-placeholder="Jabatan">
                   <option></option>
                   @foreach($jabatans as $jabatan)
                   <option value="{{ $jabatan->id }}" {{ $user->jabatan_id == $jabatan->id ? 'selected' : '' }}">{{ $jabatan->name }}</option>
