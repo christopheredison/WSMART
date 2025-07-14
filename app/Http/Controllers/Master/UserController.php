@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Master;
 
 use App\Http\Controllers\Controller;
 use App\Models\Jabatan;
+use App\Models\Level;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use App\Models\User;
@@ -31,9 +32,10 @@ class UserController extends Controller
         $unit = Unit::pluck('name','id');
 
         $projects = Project::pluck('project_name','id');
-        $jabatans = Jabatan::with('levels')->get();
+        $jabatans = Jabatan::get();
+        $levels = Level::get();
 
-        return view('master.users.create', compact('roles', 'roless','unit', 'projects', 'jabatans'));
+        return view('master.users.create', compact('roles', 'roless','unit', 'projects', 'jabatans', 'levels'));
     }
 
     public function store(Request $request)
@@ -92,7 +94,7 @@ class UserController extends Controller
             'unit_type_id' => $unit->unitType->id,
             'parent_id' => $unit->parent_id,
             'jabatan_id' => $jabatan->id,
-            'level_id' => $jabatan?->levels?->first()?->id,
+            'level_id' => $request->level_id, // Gunakan level_id dari request
         ]);
 
         if ($request->has('user_projects')) {
@@ -112,9 +114,10 @@ class UserController extends Controller
         $unit = Unit::pluck('name','id');
         // dd($unit);
         $projects = Project::pluck('project_name','id');
-        $jabatans = Jabatan::with('levels')->get();
+        $jabatans = Jabatan::get();
+        $levels = Level::get();
 
-        return view('master.users.edit', compact('user', 'roles', 'userRoles', 'roless', 'unit', 'projects', 'jabatans'));
+        return view('master.users.edit', compact('user', 'roles', 'userRoles', 'roless', 'unit', 'projects', 'jabatans', 'levels'));
     }
 
     public function update(Request $request, User $user)
@@ -139,7 +142,7 @@ class UserController extends Controller
             'unit_type_id' => Unit::findOrFail($request->unit_id)->unitType->id,
             'parent_id' => Unit::findOrFail($request->unit_id)->parent_id,
             'jabatan_id' => $request->jabatan_id,
-            'level_id' => $jabatan?->levels?->first()?->id,
+            'level_id' => $request->level_id,
         ]);
 
         if ($request->has('user_projects')) {
