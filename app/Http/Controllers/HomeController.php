@@ -6,6 +6,7 @@ use App\Models\CapaianTck;
 use App\Models\CapaianTkmru;
 use App\Models\IdentifikasiRisiko;
 use App\Models\LossEvent;
+use App\Models\LossEventProject;
 use App\Models\Periode;
 use App\Models\PeristiwaRisiko;
 use App\Models\PrioritasRisiko;
@@ -13,6 +14,7 @@ use App\Models\Project;
 use App\Models\ProjectPeriodeList;
 use App\Models\RiskMap;
 use App\Models\Unit;
+use App\Models\RMIPeriod;
 use Illuminate\Http\Request;
 use Auth;
 use Hash;
@@ -454,20 +456,67 @@ class HomeController extends Controller
         ])
             ->where('periode_id', $selectedPeriode->id)
             ->where('unit_id', $selectedUnitId)
-            ->get();
+            ->where('status_risiko', '>=', 3)
+            ->get()
+            ->sortBy([
+              ['riskAnalysis.skala_risiko', 'desc'],      // Prioritas 1
+              ['riskAnalysis.eksposur_risiko', 'desc'],   // Prioritas 2
+              ['id', 'asc'],                              // Prioritas 3
+            ])
+            ->values();
 
         $currentRiskMaps          = $risikos->pluck('currentRiskMaps');
         $formattedCurrentRiskMaps = [];
+        
         foreach ($risikos as $idx => $risk) {
-            $currentValue = $risk->current_risk_maps['inherent'];
-            for ($quarter = 1; $quarter <= 4; $quarter++) {
-                if ($nextValue = ($risk->current_risk_maps[$quarter] ?? null)) {
-                    $currentValue = $nextValue;
+            $getFallbackValue = function($targetQuarter) use ($risk) {
+                // Cek apakah quarter target memiliki data yang valid
+                if (isset($risk->current_risk_maps[$targetQuarter]) && 
+                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) && 
+                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_probabilitas'])) {
+                    return $risk->current_risk_maps[$targetQuarter];
                 }
-
-                $currentValue['quarter'] = $quarter;
-
-                $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
+                
+                // Jika tidak ada, cari dari quarter sebelumnya secara mundur
+                for ($q = $targetQuarter - 1; $q >= 1; $q--) {
+                    if (isset($risk->current_risk_maps[$q]) && 
+                        !is_null($risk->current_risk_maps[$q]['skala_dampak']) && 
+                        !is_null($risk->current_risk_maps[$q]['skala_probabilitas'])) {
+                        return $risk->current_risk_maps[$q];
+                    }
+                }
+                
+                // Jika semua quarter tidak ada, ambil dari inherent
+                if (isset($risk->current_risk_maps['inherent']) && 
+                    !is_null($risk->current_risk_maps['inherent']['skala_dampak']) && 
+                    !is_null($risk->current_risk_maps['inherent']['skala_probabilitas'])) {
+                    return $risk->current_risk_maps['inherent'];
+                }
+                
+                // Jika inherent juga tidak ada, fallback ke riskAnalysis
+                if ($risk->riskAnalysis) {
+                    return [
+                        'skala_dampak' => $risk->riskAnalysis->skala_dampak,
+                        'skala_probabilitas' => $risk->riskAnalysis->skala_probabilitas->tingkat ?? null,
+                        'skala_risiko' => $risk->riskAnalysis->skala_risiko,
+                        'level_risiko' => $risk->riskAnalysis->level_risiko,
+                    ];
+                }
+                
+                return null;
+            };
+            
+            // Generate data untuk setiap quarter
+            for ($quarter = 1; $quarter <= 4; $quarter++) {
+                $currentValue = $getFallbackValue($quarter);
+                
+                // Hanya tambahkan jika currentValue tidak null dan valid
+                if ($currentValue && 
+                    !is_null($currentValue['skala_dampak']) && 
+                    !is_null($currentValue['skala_probabilitas'])) {
+                    $currentValue['quarter'] = $quarter;
+                    $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
+                }
             }
         }
 
@@ -477,10 +526,28 @@ class HomeController extends Controller
                 return $item->skala_dampak . '-' . $item->skala_probabilitas;
             });
 
-        $lossEvents = LossEvent::with(['kategoriRisiko', 'jenisRisiko'])
-          ->where('unit_id', $selectedUnitId)
+        $lossEvents = LossEvent::where('unit_id', $selectedUnitId)
           ->whereYear('tanggal_kejadian', $tahun)
-          ->get();
+          ->with(['kategoriRisiko', 'jenisRisiko'])
+          ->get()
+          ->map(function ($event) {
+              $event->numeric_value = (int) preg_replace('/[^0-9]/', '', $event->nilai_kerugian_finansial);
+              return $event;
+          })
+          ->sortByDesc('numeric_value')
+          ->take(10)
+          ->map(function ($led) {
+              return [
+                  'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
+                  'nama_kejadian' => $led->nama_kejadian ?? '-',
+                  'identifikasi_kejadian' => $led->identifikasi_kejadian ?? '-',
+                  'kategori_kejadian' => $led->kategoriKejadian->kategori_kejadian ?? '-',
+                  'nilai_kerugian' => is_numeric($led->nilai_kerugian_finansial) ? 'Rp ' . number_format($led->nilai_kerugian_finansial, 0, ',', '.') : $led->nilai_kerugian_finansial,
+                  'unit_penanggung_jawab' => $led?->unitPenanggungJawabJabatan?->name ?? '-',
+              ];
+          })
+          ->values()
+          ->toArray();
 
         $dashboardData = [
           'rpr_c' => null,
@@ -491,29 +558,20 @@ class HomeController extends Controller
           'tkmru_date' => null,
           'tkmru' => null,
           'tkmru_notes' => null,
-          'top_risk' => $risikos->sortByDesc('riskAnalysis.skala_risiko')->take(5)->map(function ($item) use ($riskMaps, $selectedUnit) {
-            return [
-              'peristiwa' => $item->peristiwa_risiko ?? '-',
-              'deskripsi' => $item->deskripsi_peristiwa_risiko ?? '-',
-              'jenis_risiko' => $item->jenisRisiko->title ?? '-',
-              'tingkat_risiko' => $item->skala_risiko,
-              'warna_tingkat_risiko' => strtolower(str_replace(' ', '-', $riskMaps->where('nilai_risiko', $item->skala_risiko)->pluck('level_risiko')->first())),
-              'sasaran' => $item->target_capaian_kinerja ?? '-',
-              'kri' => $item->kris->first()?->kri,
-              'status_kri' => $item->kris->first()?->status_kri_terkini_q4,
-              'risk_owner' => $selectedUnit->name,
-            ];
-          })->values(),
-          'led' => $lossEvents->map(function ($led) {
-            return [
-              'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
-              'nama_kejadian' => $led->nama_kejadian ?? '-',
-              'identifikasi_kejadian' => $led->identifikasi_kejadian ?? '-',
-              'kategori_kejadian' => $led->kategoriKejadian->kategori_kejadian ?? '-',
-              'nilai_kerugian' => is_numeric($led->nilai_kerugian_finansial) ? number_format($led->nilai_kerugian_finansial, 0, ',', '.') : $led->nilai_kerugian_finansial,
-              'unit_penanggung_jawab' => $led?->unitPenanggungJawabJabatan?->name ?? '-',
-            ];
-          }),
+          // 'top_risk' => $risikos->sortByDesc('riskAnalysis.skala_risiko')->take(5)->map(function ($item) use ($riskMaps, $selectedUnit) {
+          //   return [
+          //     'peristiwa' => $item->peristiwa_risiko ?? '-',
+          //     'deskripsi' => $item->deskripsi_peristiwa_risiko ?? '-',
+          //     'jenis_risiko' => $item->jenisRisiko->title ?? '-',
+          //     'tingkat_risiko' => $item->skala_risiko,
+          //     'warna_tingkat_risiko' => strtolower(str_replace(' ', '-', $riskMaps->where('nilai_risiko', $item->skala_risiko)->pluck('level_risiko')->first())),
+          //     'sasaran' => $item->target_capaian_kinerja ?? '-',
+          //     'kri' => $item->kris->first()?->kri,
+          //     'status_kri' => $item->kris->first()?->status_kri_terkini_q4,
+          //     'risk_owner' => $selectedUnit->name,
+          //   ];
+          // })->values(),
+          'led' => $lossEvents,
         ];
 
         return view('dashboard-unit', compact(
@@ -663,21 +721,66 @@ class HomeController extends Controller
         ])
             ->where('periode_id', $selectedPeriode->id)
             ->where('is_corporate', 1)
-            //->where('unit_id', $selectedUnitId)
-            ->get();
+            ->get()
+            ->sortBy([
+              ['riskAnalysis.skala_risiko', 'desc'],      // Prioritas 1
+              ['riskAnalysis.eksposur_risiko', 'desc'],   // Prioritas 2
+              ['id', 'asc'],                              // Prioritas 3
+            ])
+            ->values();
 
         $currentRiskMaps          = $risikos->pluck('currentRiskMaps');
         $formattedCurrentRiskMaps = [];
+
         foreach ($risikos as $idx => $risk) {
-            $currentValue = $risk->current_risk_maps['inherent'];
-            for ($quarter = 1; $quarter <= 4; $quarter++) {
-                if ($nextValue = ($risk->current_risk_maps[$quarter] ?? null)) {
-                    $currentValue = $nextValue;
+            $getFallbackValue = function($targetQuarter) use ($risk) {
+                // Cek apakah quarter target memiliki data yang valid
+                if (isset($risk->current_risk_maps[$targetQuarter]) && 
+                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) && 
+                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_probabilitas'])) {
+                    return $risk->current_risk_maps[$targetQuarter];
                 }
-
-                $currentValue['quarter'] = $quarter;
-
-                $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
+                
+                // Jika tidak ada, cari dari quarter sebelumnya secara mundur
+                for ($q = $targetQuarter - 1; $q >= 1; $q--) {
+                    if (isset($risk->current_risk_maps[$q]) && 
+                        !is_null($risk->current_risk_maps[$q]['skala_dampak']) && 
+                        !is_null($risk->current_risk_maps[$q]['skala_probabilitas'])) {
+                        return $risk->current_risk_maps[$q];
+                    }
+                }
+                
+                // Jika semua quarter tidak ada, ambil dari inherent
+                if (isset($risk->current_risk_maps['inherent']) && 
+                    !is_null($risk->current_risk_maps['inherent']['skala_dampak']) && 
+                    !is_null($risk->current_risk_maps['inherent']['skala_probabilitas'])) {
+                    return $risk->current_risk_maps['inherent'];
+                }
+                
+                // Jika inherent juga tidak ada, fallback ke riskAnalysis
+                if ($risk->riskAnalysis) {
+                    return [
+                        'skala_dampak' => $risk->riskAnalysis->skala_dampak,
+                        'skala_probabilitas' => $risk->riskAnalysis->skala_probabilitas->tingkat ?? null,
+                        'skala_risiko' => $risk->riskAnalysis->skala_risiko,
+                        'level_risiko' => $risk->riskAnalysis->level_risiko,
+                    ];
+                }
+                
+                return null;
+            };
+            
+            // Generate data untuk setiap quarter
+            for ($quarter = 1; $quarter <= 4; $quarter++) {
+                $currentValue = $getFallbackValue($quarter);
+                
+                // Hanya tambahkan jika currentValue tidak null dan valid
+                if ($currentValue && 
+                    !is_null($currentValue['skala_dampak']) && 
+                    !is_null($currentValue['skala_probabilitas'])) {
+                    $currentValue['quarter'] = $quarter;
+                    $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
+                }
             }
         }
 
@@ -686,11 +789,74 @@ class HomeController extends Controller
             ->keyBy(function ($item) {
                 return $item->skala_dampak . '-' . $item->skala_probabilitas;
             });
+        
+        $period = RMIPeriod::with([
+            'penilaianCapaianKinerja.details.pilihan'
+          ])->where('year', $tahun)->first();
 
-        $lossEvents = LossEvent::with(['kategoriRisiko', 'jenisRisiko'])
-          //->where('unit_id', $selectedUnitId)
-          ->whereYear('tanggal_kejadian', $tahun)
-          ->get();
+        // Jika period RMI tidak ada
+        if (!$period) {
+            $period = (object) [
+                'id' => null,
+                'year' => $tahun,
+                'status' => 0,
+                'score_rmi' => '-',
+                'score_rmi_desc' => '-',
+                'final_score_rmi' => '-',
+                'updated_at' => now(),
+                'kinerja' => '-',
+                'kpmr' => '-',
+                'peringkat_komposit_risiko' => '-',
+                'nilai_konversi' => '-',
+                'penilaianCapaianKinerja' => (object) [
+                    'capaian_kinerja' => 0,
+                    'kpmr' => 0,
+                ]
+            ];
+        }
+
+        $lossEventsUnit = LossEvent::whereYear('tanggal_kejadian', $tahun)
+          ->with(['kategoriRisiko', 'jenisRisiko'])
+          ->get()
+          ->map(function ($event) {
+              $event->numeric_value = (int) preg_replace('/[^0-9]/', '', $event->nilai_kerugian_finansial);
+              return $event;
+          })
+          ->sortByDesc('numeric_value')
+          ->take(10)
+          ->map(function ($led) {
+              return [
+                  'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
+                  'nama_kejadian' => $led->nama_kejadian ?? '-',
+                  'identifikasi_kejadian' => $led->identifikasi_kejadian ?? '-',
+                  'kategori_kejadian' => $led->kategoriKejadian->kategori_kejadian ?? '-',
+                  'nilai_kerugian' => is_numeric($led->nilai_kerugian_finansial) ? 'Rp ' . number_format($led->nilai_kerugian_finansial, 0, ',', '.') : $led->nilai_kerugian_finansial,
+                  'unit_penanggung_jawab' => $led?->unitPenanggungJawabJabatan?->name ?? '-',
+              ];
+          })
+          ->values()
+          ->toArray();
+          
+        $lossEventsProject = LossEventProject::with(['kategoriRisiko', 'jenisRisiko'])
+          ->get()
+          ->map(function ($event) {
+              $event->numeric_value = (int) preg_replace('/[^0-9]/', '', $event->nilai_kerugian_finansial);
+              return $event;
+          })
+          ->sortByDesc('numeric_value')
+          ->take(10)
+          ->map(function ($led) {
+              return [
+                  'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
+                  'nama_kejadian' => $led->nama_kejadian ?? '-',
+                  'identifikasi_kejadian' => $led->peristiwaRisiko->title ?? '-',
+                  'kategori_kejadian' => $led->kategoriKejadian->kategori_kejadian ?? '-',
+                  'nilai_kerugian' => is_numeric($led->nilai_kerugian_finansial) ? 'Rp ' . number_format($led->nilai_kerugian_finansial, 0, ',', '.') : $led->nilai_kerugian_finansial,
+                  'unit_penanggung_jawab' => $led?->unitPenanggungJawabJabatan?->name ?? '-',
+              ];
+          })
+          ->values()
+          ->toArray();
 
         $dashboardData = [
           'rpr_c' => null,
@@ -701,29 +867,21 @@ class HomeController extends Controller
           'tkmru_date' => null,
           'tkmru' => null,
           'tkmru_notes' => null,
-          'top_risk' => $risikos->sortByDesc('riskAnalysis.skala_risiko')->take(5)->map(function ($item) use ($riskMaps, $selectedUnit) {
-            return [
-              'peristiwa' => $item->peristiwa_risiko ?? '-',
-              'deskripsi' => $item->deskripsi_peristiwa_risiko ?? '-',
-              'jenis_risiko' => $item->jenisRisiko->title ?? '-',
-              'tingkat_risiko' => $item->skala_risiko,
-              'warna_tingkat_risiko' => strtolower(str_replace(' ', '-', $riskMaps->where('nilai_risiko', $item->skala_risiko)->pluck('level_risiko')->first())),
-              'sasaran' => $item->target_capaian_kinerja ?? '-',
-              'kri' => $item->kris->first()?->kri,
-              'status_kri' => $item->kris->first()?->status_kri_terkini_q4,
-              'risk_owner' => $selectedUnit->name,
-            ];
-          })->values(),
-          'led' => $lossEvents->map(function ($led) {
-            return [
-              'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
-              'nama_kejadian' => $led->nama_kejadian ?? '-',
-              'identifikasi_kejadian' => $led->identifikasi_kejadian ?? '-',
-              'kategori_kejadian' => $led->kategoriKejadian->kategori_kejadian ?? '-',
-              'nilai_kerugian' => is_numeric($led->nilai_kerugian_finansial) ? number_format($led->nilai_kerugian_finansial, 0, ',', '.') : $led->nilai_kerugian_finansial,
-              'unit_penanggung_jawab' => $led?->unitPenanggungJawabJabatan?->name ?? '-',
-            ];
-          }),
+          // 'top_risk' => $risikos->sortByDesc('riskAnalysis.skala_risiko')->take(5)->map(function ($item) use ($riskMaps, $selectedUnit) {
+          //   return [
+          //     'peristiwa' => $item->peristiwa_risiko ?? '-',
+          //     'deskripsi' => $item->deskripsi_peristiwa_risiko ?? '-',
+          //     'jenis_risiko' => $item->jenisRisiko->title ?? '-',
+          //     'tingkat_risiko' => $item->skala_risiko,
+          //     'warna_tingkat_risiko' => strtolower(str_replace(' ', '-', $riskMaps->where('nilai_risiko', $item->skala_risiko)->pluck('level_risiko')->first())),
+          //     'sasaran' => $item->target_capaian_kinerja ?? '-',
+          //     'kri' => $item->kris->first()?->kri,
+          //     'status_kri' => $item->kris->first()?->status_kri_terkini_q4,
+          //     'risk_owner' => $selectedUnit->name,
+          //   ];
+          // })->values(),
+          'led' => $lossEventsUnit,
+          'ledProject' => $lossEventsProject,
         ];
 
         return view('dashboard-corporate', compact(
@@ -735,6 +893,7 @@ class HomeController extends Controller
           'risikos',
           'formattedCurrentRiskMaps',
           'riskMaps',
+          'period',
           'dashboardData',
         ));
     }
