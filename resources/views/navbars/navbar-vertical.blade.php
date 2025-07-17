@@ -84,7 +84,7 @@
           </a>
         </li>
 
-        <li class="nav-item single-indicator">
+        {{-- <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('unit-led.index') ? 'active' : '' }}"
             href="{{route('unit-led.index')}}" role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
@@ -92,7 +92,7 @@
               <span class="nav-link-text">Loss Event Divisi</span>
             </span>
           </a>
-        </li>
+        </li> --}}
 
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('laporan.unit') ? 'active' : '' }}"

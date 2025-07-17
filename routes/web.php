@@ -475,6 +475,7 @@ Route::group(['middleware' => ['auth']], function() {
     Route::post('unit-led', [UnitLEDController::class, 'store'])->name('unit-led.store');
     Route::delete('unit-led/{id}', [UnitLEDController::class, 'destroy'])->name('unit-led.destroy');
     Route::resource('unit-led', UnitLEDController::class)->except(['create', 'show', 'edit']);
+    Route::get('unit-leds/{unitId}', [UnitLEDController::class, 'index'])->name('unit-led.index-by-unit');
 
     Route::middleware('can:backups.index')->resource('backups', BackupController::class);
 	Route::post('backups/restore', [BackupController::class, 'restore'])->name('backups.restore');

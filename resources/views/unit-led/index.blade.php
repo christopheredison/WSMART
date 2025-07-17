@@ -11,9 +11,9 @@
                                 @include('partials.icon-layer')
                             </div>
                         </div>
-                        <h2 class="h3">Data Loss Event Unit</h2>
+                        <h2 class="h3">Data Loss Event Unit {{ $periode ? 'Periode ' . $periode->tahun : '' }}</h2>
                         <div class="col-auto ms-auto">
-                            <a class="btn btn-outline-info btn-sm" href="{{ route('unit-led.create') }}">
+                            <a class="btn btn-outline-info btn-sm" href="{{ route('unit-led.create', ['periode_id' => $periode->id]) }}">
                                 <span class="bx bx-plus"></span>
                                 <span class="ms-1">Tambah Data Loss Event</span>
                             </a>
@@ -22,6 +22,9 @@
                 </div>
                 <div class="card-body">
                     <div class="row" id="table-filter">
+                        @if ($periode)
+                            <input type="hidden" name="periode_id" id="filter-periode" value="{{ $periode->id }}">
+                        @else
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Periode</label>
                             <select class="form-select" id="filter-periode">
@@ -31,6 +34,7 @@
                                 @endforeach
                             </select>
                         </div>
+                        @endif
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Kategori Kejadian</label>
                             <select class="form-select" id="filter-kategori">

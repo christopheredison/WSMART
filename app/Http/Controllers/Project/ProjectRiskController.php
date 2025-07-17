@@ -952,6 +952,21 @@ class ProjectRiskController extends BasicCRUDController
             'jenis_rencana_perlakuan_risiko' => 'required|exists:jenis_rencana_perlakuan_risikos,id',
         ]);
 
+        $penyebabRisiko = PenyebabRisikoProject::with('risiko.project')->findOrFail($validated['penyebab_risiko_id']);
+
+        $project = $penyebabRisiko->risiko->project;
+        $batasNilai = $project->batas_nilai;
+
+        if ($batasNilai > 0) {
+            $biayaPerlakuanRisiko = $validated['biaya_perlakuan_risiko'];
+            $totalBiayaPerlakuanRisiko = $penyebabRisiko->perlakuanPenyebabRisiko()->sum('biaya_perlakuan_risiko') + $biayaPerlakuanRisiko;
+            if ($totalBiayaPerlakuanRisiko > $batasNilai) {
+                return response()->json([
+                    'message' => 'Total biaya perlakuan risiko tidak boleh lebih besar dari Rp. ' . number_format($batasNilai, 0, ',', '.'),
+                ], 422);
+            }
+        }
+
         //$timeline = explode(' to ', $validated['timeline_perlakuan_risiko']);
 
         //$startDate = $timeline[0] ?? null;

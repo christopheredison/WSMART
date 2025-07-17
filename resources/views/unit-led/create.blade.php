@@ -15,21 +15,50 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('unit-led.store') }}" method="post">
+                    <form action="{{ route('unit-led.store') }}" method="post" id="form-unit-led">
                         @csrf
                         <div class="row">
                             <!-- Periode -->
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Periode <span class="text-danger">*</span></label>
-                                <select class="form-select @error('periode_id') is-invalid @enderror" name="periode_id" required>
+                                @if ($periode)
+                                    <input type="hidden" name="periode_id" value="{{ $periode->id }}">
+                                @endif
+                                <select class="form-select @error('periode_id') is-invalid @enderror" name="periode_id" required {{ $periode ? 'disabled' : '' }}>
                                     <option value="">Pilih Periode</option>
-                                    @foreach($periodes as $periode)
-                                        <option value="{{ $periode->id }}" {{ old('periode_id') == $periode->id ? 'selected' : '' }}>
-                                            {{ $periode->tahun }}
+                                    @foreach($periodes as $periodeItem)
+                                        <option value="{{ $periodeItem->id }}" {{ old('periode_id', $periode?->id) == $periodeItem->id ? 'selected' : '' }}>
+                                            {{ $periodeItem->tahun }}
                                         </option>
                                     @endforeach
                                 </select>
                                 @error('periode_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6">
+                            </div>
+
+                            <!-- Status dalam Risk Register -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Status dalam Risk Register <span class="text-danger">*</span></label>
+                                <select class="form-select @error('status_risk_register') is-invalid @enderror" name="status_risk_register" id="status_risk_register" required>
+                                    <option value="">Pilih Status</option>
+                                    <option value="1" {{ old('status_risk_register') == '1' ? 'selected' : '' }}>Ya</option>
+                                    <option value="0" {{ old('status_risk_register') == '0' ? 'selected' : '' }}>Tidak</option>
+                                </select>
+                                @error('status_risk_register')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <!-- No Urut Risiko -->
+                            <div class="col-md-6 mb-3" id="no_urut_container" style="display: none;">
+                                <label class="form-label">Risk Register <span class="text-danger">*</span></label>
+                                <select class="form-select @error('no_urut_risiko') is-invalid @enderror" name="no_urut_risiko" id="risk_register_id" required>
+                                </select>
+                                @error('no_urut_risiko')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -292,29 +321,6 @@
                                 @enderror
                             </div>
 
-                            <!-- Status dalam Risk Register -->
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Status dalam Risk Register <span class="text-danger">*</span></label>
-                                <select class="form-select @error('status_risk_register') is-invalid @enderror" name="status_risk_register" id="status_risk_register" required>
-                                    <option value="">Pilih Status</option>
-                                    <option value="1" {{ old('status_risk_register') == '1' ? 'selected' : '' }}>Ya</option>
-                                    <option value="0" {{ old('status_risk_register') == '0' ? 'selected' : '' }}>Tidak</option>
-                                </select>
-                                @error('status_risk_register')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- No Urut Risiko -->
-                            <div class="col-md-6 mb-3" id="no_urut_container" style="display: none;">
-                                <label class="form-label">No Urut Risiko <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control @error('no_urut_risiko') is-invalid @enderror" 
-                                    name="no_urut_risiko" value="{{ old('no_urut_risiko') }}">
-                                @error('no_urut_risiko')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
                             <!-- Biaya Risiko Inheren -->
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Biaya Risiko Inheren (IDR)</label>
@@ -348,7 +354,7 @@
                             <!-- Submit Buttons -->
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">Simpan</button>
-                                <a href="{{ route('unit-led.index') }}" class="btn btn-secondary">Kembali</a>
+                                <a href="{{ $periode ? route('unit-led.index-by-unit', ['unitId' => $periode->id]) : route('unit-led.index') }}" class="btn btn-secondary">Kembali</a>
                             </div>
                         </div>
                     </form>
@@ -364,6 +370,8 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
+const dataPeriodes = @json($periodes);
+
 function handleJenisRisikoChange(select) {
     var kategoriId = $(select).find('option:selected').data('kategori');
     $('#kategori_risiko_id').val(kategoriId);
@@ -453,6 +461,61 @@ $(document).ready(function() {
             $('input[name="no_urut_risiko"]').prop('required', false);
         }
     });
+
+    
+    $(':input[name="periode_id"]').change(function() {
+        var periodeId = $(this).val();
+        var periode = dataPeriodes.find(periode => periode.id == periodeId);
+        if (periode) {
+            $('#risk_register_id').html('<option value="">Pilih Risk Register</option>' + periode.identifikasi_risikos.map(risk => `<option value="${risk.id}">${risk.deskripsi_peristiwa_risiko}</option>`).join(''));
+        } else {
+            $('#risk_register_id').html('<option value="">Tidak ada Risk Register</option>');
+        }
+    }).trigger('change');
+
+    $('#risk_register_id').change(function() {
+        let riskRegisterId = $(this).val();
+
+        const namaKejadianDom = $('#form-unit-led :input[name="nama_kejadian"]');
+        const tanggalKejadianDom = $('#form-unit-led :input[name="tanggal_kejadian"]');
+        const peristiwaRisikoDom = $('#form-unit-led :input[name="peristiwa_risiko_id"]');
+        const penyebabMasalahDom = $('#form-unit-led :input[name="penyebab_masalah"]');
+        const penangananKejadianDom = $('#form-unit-led :input[name="penanganan_kejadian"]');
+        const deskripsiKejadianDom = $('#form-unit-led :input[name="deskripsi_kejadian"]');
+
+        if (riskRegisterId) {
+            let periodeId = $(':input[name="periode_id"]').val();
+            let periode = dataPeriodes.find(periode => periode.id == periodeId);
+            if (periode) {
+                let riskRegister = periode.identifikasi_risikos.find(risk => risk.id == riskRegisterId);
+                if (riskRegister) {
+                    console.log(riskRegister);
+
+                    namaKejadianDom.val(riskRegister.deskripsi_peristiwa_risiko).prop('readonly', true).change();
+                    tanggalKejadianDom.val(riskRegister.perkiraan_waktu_terpapar_risiko_mulai).prop('readonly', true).change();
+                    peristiwaRisikoDom.val(riskRegister.peristiwa_risiko_id).prop('readonly', true).change();
+                    penyebabMasalahDom.val(riskRegister.penyebab_risikos?.map(penyebab => penyebab.penyebab_risiko).join('; ')).prop('readonly', true).change();
+                    penangananKejadianDom.val(riskRegister.penyebab_risikos?.map(penyebab => penyebab.perlakuan_penyebab_risiko?.map(perlakuan => perlakuan.rencana_perlakuan_risiko).filter(Boolean).join('; ')).filter(Boolean).join('; ')).prop('readonly', true).change();
+                    deskripsiKejadianDom.val(riskRegister.deskripsi_peristiwa_risiko).prop('readonly', true).change();
+                } else {
+                    namaKejadianDom.val('').prop('readonly', false).change();
+                    tanggalKejadianDom.val('').prop('readonly', false).change();
+                    peristiwaRisikoDom.val('').prop('readonly', false).change();
+                    penyebabMasalahDom.val('').prop('readonly', false).change();
+                    penangananKejadianDom.val('').prop('readonly', false).change();
+                    deskripsiKejadianDom.val('').prop('readonly', false).change();
+                }
+            }
+        } else {
+            namaKejadianDom.val('').prop('readonly', false).change();
+            tanggalKejadianDom.val('').prop('readonly', false).change();
+            peristiwaRisikoDom.val('').prop('readonly', false).change();
+            penyebabMasalahDom.val('').prop('readonly', false).change();
+            penangananKejadianDom.val('').prop('readonly', false).change();
+            deskripsiKejadianDom.val('').prop('readonly', false).change();
+        }
+    }).trigger('change');
+
 
     // Trigger initial state
     $('#kejadian_berulang').trigger('change');

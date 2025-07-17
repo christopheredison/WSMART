@@ -46,6 +46,7 @@ class Project extends Model
         'rapk_70_90_persen',
         'rapk_100_rp',
         'rapk_100_persen',
+        'batas_nilai',
     ];
 
     protected $casts = [
@@ -66,6 +67,7 @@ class Project extends Model
         'rapk_70_90_persen' => 'float',
         'rapk_100_rp' => 'float',
         'rapk_100_persen' => 'float',
+        'batas_nilai' => 'integer',
     ];
 
     // for autofill project
