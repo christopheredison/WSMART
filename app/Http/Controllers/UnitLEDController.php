@@ -18,7 +18,7 @@ use App\Models\Jabatan;
 
 class UnitLEDController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, $unitId)
     {
         if ($request->ajax()) {
             $data = LossEvent::with(['kategoriKejadian']);

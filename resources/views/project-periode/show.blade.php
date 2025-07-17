@@ -38,13 +38,19 @@
                             {{ Form::text('risk_limit', ($projectPeriode->project->meta['omset'] ?? 0) * 0.03, ['class' => 'form-control inputmask-general', 'readonly']) }}
                         </div>
                     </div>
+                    <div class="row d-flex align-items-center mt-3">
+                        <label class="col-md-3">Batas Nilai</label>
+                        <div class="col-md-9">
+                            {{ Form::text('batas_nilai', $projectPeriode->project->batas_nilai, ['class' => 'form-control inputmask-general', 'readonly']) }}
+                        </div>
+                    </div>
                 </div>
             </div>
-            {{--
+            
             <div class="mb-2 mt-4">
                 <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modalEdit">Edit</button>
             </div>
-            --}}
+           
         </div>
     </div>
     
