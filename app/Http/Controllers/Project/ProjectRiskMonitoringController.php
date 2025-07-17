@@ -240,6 +240,34 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     // handled outside
                 },
             ],
+            'month' => [
+                'label' => 'Bulan',
+                'type' => 'select',
+                'parameters' => [
+                    'month',
+                    [
+                        1 => 'Januari',
+                        2 => 'Februari',
+                        3 => 'Maret',
+                        4 => 'April',
+                        5 => 'Mei',
+                        6 => 'Juni',
+                        7 => 'Juli',
+                        8 => 'Agustus',
+                        9 => 'September',
+                        10 => 'Oktober',
+                        11 => 'November',
+                        12 => 'Desember',
+                    ],
+                    '',
+                    [
+                        'class' => 'form-select',
+                    ]
+                ],
+                'handler' => function ($query, $key, $value) {
+                    // handled outside
+                },
+            ],
         ];
 
         return parent::index();
@@ -464,6 +492,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'skala_risiko' => $request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden,
             'level_risiko' => $request->realisasi_level_risiko ?? $request->realisasi_level_risiko_hidden,
             'eksposure_risiko' => null,
+            'month' => $request->month,
         ];
 
         //dd($toCreate);
