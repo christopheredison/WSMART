@@ -41,7 +41,8 @@ class RiskRegisterUnitController extends Controller
 {
     public function index(Request $request)
     {
-        $unitId = auth()->user()->unit_id;
+        //$unitId = auth()->user()->unit_id;
+        $unitId = $request->query('unit_id') ?? auth()->user()->unit_id;
         // Ambil periode_id dari parameter URL
         $periodeId = $request->query('pid');
         $batchNotes = null;
@@ -54,8 +55,8 @@ class RiskRegisterUnitController extends Controller
         // Ambil data periode yang dipilih
         $selectedPeriode = Periode::find($periodeId);
         $user = auth()->user();
-        $unitTypeId = $user->unit_type_id;
-        $unitId = $user->unit_id;
+        $unitTypeId = $user->unit_type_id;//not use
+        //$unitId = $user->unit_id;
         $levelId = $user->level_id;
 
         // Cari ApprovalFlow untuk unit ini
@@ -221,9 +222,11 @@ class RiskRegisterUnitController extends Controller
             'dataBatch',
             'batchNotes',
             'levelId',
-            'avgQuantitativeExposure'
+            'avgQuantitativeExposure',
+            'unitId'
         ));
     }
+
     public function create(Request $request)
     {
         $user = auth()->user();
@@ -1197,13 +1200,25 @@ class RiskRegisterUnitController extends Controller
     {
         // Dapatkan data unit dan periode
         $user = auth()->user();
-        $unit_id = $user->unit_id;
+        //$unit_id = $user->unit_id;
+        $unit_id = $request->unit_id;
+        $periode_id = $request->periode_id;
+
+        if (!$unit_id) {
+            return redirect()->route('risk-register-unit.index', [
+                'pid' => $periode_id,
+                'unit_id' => $user->unit_id
+            ])
+                ->with('error', 'Unit belum dipilih. Silahkan pilih unit terlebih dahulu.');
+        }
         $level_id = $user->level_id;
         $periode_id = $request->periode_id;
         $send_type = $request->send_type ?? 'send';
 
         if (!$periode_id) {
-            return redirect()->route('risk-register-unit.index')
+            return redirect()->route('risk-register-unit.index', [
+                'unit_id' => $unit_id
+            ])
                 ->with('error', 'Periode tidak ditemukan');
         }
 
@@ -1212,12 +1227,14 @@ class RiskRegisterUnitController extends Controller
             $selected_risks = $request->input('selected_risks', []);
             
             if (empty($selected_risks)) {
-                return redirect()->route('risk-register-unit.index')
+                return redirect()->route('risk-register-unit.index', [
+                    'pid' => $periode_id,
+                    'unit_id' => $unit_id
+                ])
                     ->with('error', 'Tidak ada risiko yang dipilih');
             }
             
             //dd($selected_risks);
-
             IdentifikasiRisiko::whereIn('id', $selected_risks)
                 ->update(['status_risiko' => IdentifikasiRisiko::STATUS_RISIKO_MAIN]);
 
@@ -1230,11 +1247,14 @@ class RiskRegisterUnitController extends Controller
                 // Update status data batch menjadi selesai
                 $dataBatch->update([
                     'status' => DataBatch::STATUS_UTAMA,
-                    'finish' => true
+                    'finish' => false
                 ]);
             }    
 
-            return redirect()->route('risk-register-unit.index')
+            return redirect()->route('risk-register-unit.index', [
+                'pid' => $periode_id,
+                'unit_id' => $unit_id
+            ])
                 ->with('success', 'Risiko utama berhasil dikonfirmasi');    
         }
         else{
@@ -1280,7 +1300,10 @@ class RiskRegisterUnitController extends Controller
             }
 
             if ($belumLengkap) {
-                return redirect()->route('risk-register-unit.index', ['pid' => $periode_id])
+                return redirect()->route('risk-register-unit.index', [
+                    'pid' => $periode_id,
+                    'unit_id' => $unit_id
+                ])
                     ->with('error', 'Terdapat risiko yang belum dianalisa atau belum memiliki rencana perlakuan. Silahkan lengkapi terlebih dahulu.');
             }
 
@@ -1317,7 +1340,10 @@ class RiskRegisterUnitController extends Controller
                 }
 
                 // Kembali ke halaman index dan informasi bahwa pengiriman risiko sudah dilakukan
-                return redirect()->route('risk-register-unit.index', ['pid' => $periode_id])
+                return redirect()->route('risk-register-unit.index', [
+                    'pid' => $periode_id,
+                    'unit_id' => $unit_id
+                ])
                     ->with('success', 'Perbaikan risiko berhasil dilakukan. Risiko telah dikirim untuk diverifikasi.');
             }
             else{
@@ -1441,7 +1467,10 @@ class RiskRegisterUnitController extends Controller
                 }
 
                 // Kembali ke halaman index dan informasi bahwa pengiriman risiko sudah dilakukan
-                return redirect()->route('risk-register-unit.index', ['pid' => $periode_id])
+                return redirect()->route('risk-register-unit.index', [
+                    'pid' => $periode_id,
+                    'unit_id' => $unit_id
+                ])
                     ->with('success', 'Pengiriman risiko berhasil dilakukan. Risiko telah dikirim untuk diverifikasi.');
             }
         }
@@ -1452,11 +1481,11 @@ class RiskRegisterUnitController extends Controller
     public function verifikasi(Request $request, $riskRegisterId)
     {
         $user = auth()->user();
-        $unit_id = $user->unit_id;
+        //$unit_id = $user->unit_id;
         $level_id = $user->level_id;
         // Cari data identifikasi risiko
         $identifikasiRisiko = IdentifikasiRisiko::findOrFail($riskRegisterId);
-
+        $unit_id = $identifikasiRisiko->unit_id;
         $periode_id = $identifikasiRisiko->periode_id;
 
         $appFlow = $this->getFlowData($unit_id, $level_id);
@@ -1480,8 +1509,6 @@ class RiskRegisterUnitController extends Controller
             if (!Gate::check('risk_register_verification')) {
                 return redirect()->back()->with('error', 'Anda tidak memiliki izin untuk melakukan verifikasi risiko');
             }
-
-
             //batch perlu tahu bahwa masih ada risiko yang dikembalikan sehingga batch menjadi on revision
             $dataBatch = DataBatch::where('unit_id', $identifikasiRisiko->unit_id)
             ->where('periode_id', $identifikasiRisiko->periode_id)
@@ -1569,7 +1596,10 @@ class RiskRegisterUnitController extends Controller
             $riskNote->save();
 
             // Redirect dengan pesan sukses
-            return redirect()->route('risk-register-unit.index', ['pid' => $identifikasiRisiko->periode_id])
+            return redirect()->route('risk-register-unit.index', [
+                'pid' => $identifikasiRisiko->periode_id,
+                'unit_id' => $identifikasiRisiko->unit_id
+            ])
                 ->with('success', 'Verifikasi risiko berhasil dilakukan');
 
         } catch (\Exception $e) {

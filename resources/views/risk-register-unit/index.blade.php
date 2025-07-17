@@ -27,9 +27,8 @@
             <div class="col-4 col-sm-2">
               <label for="filter-unit" class="form-label d-none">Unit</label>
               <select id="filter-unit" class="form-select select2">
-                <option value="" selected>Semua Unit</option>
                 @foreach($unit as $id => $name)
-                <option value="{{ $name }}">{{ $name }}</option>
+                <option value="{{ $id }}" {{ $unitId == $id ? 'selected' : '' }}>{{ $name }}</option>
                 @endforeach
               </select>
             </div>
@@ -129,11 +128,6 @@
               @foreach ($risiko as $index => $item)
               <tr>
                 <td class="white-space-nowrap">
-                  @if($item->status_risiko== 2)
-                    <span class="badge bg-primary">Rekomendasi</span> 
-                  @elseif($item->status_risiko == 3 || $item->status_risiko == 4)
-                    <span class="badge bg-danger">Risiko Utama</span>
-                  @endif
                   @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
                   <div class="form-check mb-0"> 
                     <input class="form-check-input select-item" type="checkbox" name="selected_items[]"
@@ -142,6 +136,11 @@
                   @endif
                 </td>
                 <td class="index-number">
+                  @if($item->status_risiko== 2)
+                    <span class="badge bg-primary">Rekomendasi</span> 
+                  @elseif($item->status_risiko == 3 || $item->status_risiko == 4 || $item->status_risiko == 5)
+                    <span class="badge bg-danger">Risiko Utama</span>
+                  @endif
                   {{ $index + 1 }}
                 </td>
                 <td class="unit">
@@ -271,6 +270,7 @@
           @csrf
           <input type="hidden" name="periode_id" value="{{ $selectedPeriode->id ?? '' }}">
           @if($status == 5 && ($step_order == 0 || $step_order == null))
+              <input type="hidden" name="unit_id" value="{{ $unitId }}">
               <button id="revise-button" class="btn btn-submit btn-arrow-right">Kirim Perbaikan Risiko</button>
           @else
             <div style="display: none;">
@@ -281,11 +281,13 @@
             </div>
             @if($status==3 && ($step_order>=$min_verification))
             <input type="hidden" name="send_type" value="mainrisk">
+            <input type="hidden" name="unit_id" value="{{ $unitId }}">
             <button id="accept-button" class="btn btn-submit btn-arrow-right">Konfirmasi Risiko Utama</button>
             @elseif($status==6 && ($step_order>=$min_verification))
             <input type="hidden" name="send_type" value="corporate-risk">
             <button id="accept-button" class="btn btn-submit btn-arrow-right">Atur Risiko Korporat</button>
             @else
+            <input type="hidden" name="unit_id" value="{{ $unitId }}">
             <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button>
             @endif
           @endif
@@ -337,6 +339,7 @@
         <form id="form-kirim-perbaikan" action="{{ route('risk-register-unit.send') }}" method="POST">
           @csrf
           <input type="hidden" name="periode_id" value="{{ $selectedPeriode->id ?? '' }}">
+          <input type="hidden" name="unit_id" value="{{ $unitId }}">
           <input type="hidden" name="send_type" value="rev">
           <div class="mb-3">
             <label for="catatan-perbaikan" class="form-label">Catatan Perbaikan</label>
@@ -451,9 +454,21 @@ $(document).ready(function() {
 
   // Fungsi untuk menangani perubahan nilai di select unit
   $('#filter-unit').on('change', function() {
-    var unitId = $(this).val(); // Mendapatkan nilai unit yang dipilih
+    //var unitId = $(this).val(); // Mendapatkan nilai unit yang dipilih
     // Memfilter baris tabel berdasarkan nilai unit yang dipilih pada kolom 'Unit'
-    table.column(1).search(unitId).draw();
+    //table.column(1).search(unitId).draw();
+    const selectedUnitId = $(this).val();
+    const currentUrl = new URL(window.location.href);
+    
+    // Hapus parameter unit_id jika "Semua Unit" dipilih
+    if (selectedUnitId === '') {
+        currentUrl.searchParams.delete('unit_id');
+    } else {
+        currentUrl.searchParams.set('unit_id', selectedUnitId);
+    }
+    
+    // Refresh halaman dengan parameter baru
+    window.location.href = currentUrl.toString();
   });
 
   $('#filter-risk-event').on('change', function() {
