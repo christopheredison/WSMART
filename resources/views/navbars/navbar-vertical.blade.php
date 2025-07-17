@@ -31,7 +31,7 @@
         <li class="nav-item">
           @php $shouldDashboardOpen = in_array(url()->current(), [route('home'), route('home', 'universitas'),
           route('home', ['data' => 'fakultas']), route('home', ['data' => 'biro'])]) @endphp
-          <a class="nav-link dropdown-indicator {{ $shouldDashboardOpen ? '' : 'collapsed' }} {{ request()->is('dashboard-unit') || request()->is('dashboard-proyek') || request()->is('dashboard-anper') || request()->is('dashboard-kri') ? 'active' : '' }}"
+          <a class="nav-link dropdown-indicator {{ $shouldDashboardOpen ? '' : 'collapsed' }} {{ request()->is('dashboard-unit') || request()->is('dashboard-proyek') || request()->is('dashboard-anper') || request()->is('dashboard-kri-unit') || request()->is('dashboard-kri-project') ? 'active' : '' }}"
             href="#dashboard" role="button" data-bs-toggle="collapse"
             aria-expanded="{{ $shouldDashboardOpen ? 'true' : 'false' }}" aria-controls="dashboard">
             <div class="d-flex align-items-center">
@@ -40,7 +40,7 @@
             </div>
           </a>
           <ul
-            class="nav collapse {{ $shouldDashboardOpen ? 'show' : '' }} {{ request()->is('dashboard-unit') || request()->is('dashboard-proyek') || request()->is('dashboard-anper') || request()->is('dashboard-kri') ? 'show' : '' }}"
+            class="nav collapse {{ $shouldDashboardOpen ? 'show' : '' }} {{ request()->is('dashboard-unit') || request()->is('dashboard-proyek') || request()->is('dashboard-anper') || request()->is('dashboard-kri-unit') || request()->is('dashboard-kri-project') ? 'show' : '' }}"
             id="dashboard">
             @can('dashboard_universitas')
             <li class="nav-item">
@@ -66,8 +66,8 @@
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link {{ request()->is('dashboard-kri') ? 'active' : '' }} " href="/dashboard-kri">
-                <span class="nav-link-text">KRI</span>
+              <a class="nav-link {{ request()->is('dashboard-kri-unit') ? 'active' : '' }} " href="/dashboard-kri-unit">
+                <span class="nav-link-text">KRI Unit</span>
               </a>
             </li>
           </ul>

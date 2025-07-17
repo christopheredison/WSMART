@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\CapaianTck;
 use App\Models\CapaianTkmru;
 use App\Models\IdentifikasiRisiko;
+use App\Models\JenisRisiko;
+use App\Models\KRI;
 use App\Models\LossEvent;
 use App\Models\LossEventProject;
 use App\Models\Periode;
@@ -467,32 +469,32 @@ class HomeController extends Controller
 
         $currentRiskMaps          = $risikos->pluck('currentRiskMaps');
         $formattedCurrentRiskMaps = [];
-        
+
         foreach ($risikos as $idx => $risk) {
             $getFallbackValue = function($targetQuarter) use ($risk) {
                 // Cek apakah quarter target memiliki data yang valid
-                if (isset($risk->current_risk_maps[$targetQuarter]) && 
-                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) && 
+                if (isset($risk->current_risk_maps[$targetQuarter]) &&
+                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) &&
                     !is_null($risk->current_risk_maps[$targetQuarter]['skala_probabilitas'])) {
                     return $risk->current_risk_maps[$targetQuarter];
                 }
-                
+
                 // Jika tidak ada, cari dari quarter sebelumnya secara mundur
                 for ($q = $targetQuarter - 1; $q >= 1; $q--) {
-                    if (isset($risk->current_risk_maps[$q]) && 
-                        !is_null($risk->current_risk_maps[$q]['skala_dampak']) && 
+                    if (isset($risk->current_risk_maps[$q]) &&
+                        !is_null($risk->current_risk_maps[$q]['skala_dampak']) &&
                         !is_null($risk->current_risk_maps[$q]['skala_probabilitas'])) {
                         return $risk->current_risk_maps[$q];
                     }
                 }
-                
+
                 // Jika semua quarter tidak ada, ambil dari inherent
-                if (isset($risk->current_risk_maps['inherent']) && 
-                    !is_null($risk->current_risk_maps['inherent']['skala_dampak']) && 
+                if (isset($risk->current_risk_maps['inherent']) &&
+                    !is_null($risk->current_risk_maps['inherent']['skala_dampak']) &&
                     !is_null($risk->current_risk_maps['inherent']['skala_probabilitas'])) {
                     return $risk->current_risk_maps['inherent'];
                 }
-                
+
                 // Jika inherent juga tidak ada, fallback ke riskAnalysis
                 if ($risk->riskAnalysis) {
                     return [
@@ -502,17 +504,17 @@ class HomeController extends Controller
                         'level_risiko' => $risk->riskAnalysis->level_risiko,
                     ];
                 }
-                
+
                 return null;
             };
-            
+
             // Generate data untuk setiap quarter
             for ($quarter = 1; $quarter <= 4; $quarter++) {
                 $currentValue = $getFallbackValue($quarter);
-                
+
                 // Hanya tambahkan jika currentValue tidak null dan valid
-                if ($currentValue && 
-                    !is_null($currentValue['skala_dampak']) && 
+                if ($currentValue &&
+                    !is_null($currentValue['skala_dampak']) &&
                     !is_null($currentValue['skala_probabilitas'])) {
                     $currentValue['quarter'] = $quarter;
                     $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
@@ -735,28 +737,28 @@ class HomeController extends Controller
         foreach ($risikos as $idx => $risk) {
             $getFallbackValue = function($targetQuarter) use ($risk) {
                 // Cek apakah quarter target memiliki data yang valid
-                if (isset($risk->current_risk_maps[$targetQuarter]) && 
-                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) && 
+                if (isset($risk->current_risk_maps[$targetQuarter]) &&
+                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) &&
                     !is_null($risk->current_risk_maps[$targetQuarter]['skala_probabilitas'])) {
                     return $risk->current_risk_maps[$targetQuarter];
                 }
-                
+
                 // Jika tidak ada, cari dari quarter sebelumnya secara mundur
                 for ($q = $targetQuarter - 1; $q >= 1; $q--) {
-                    if (isset($risk->current_risk_maps[$q]) && 
-                        !is_null($risk->current_risk_maps[$q]['skala_dampak']) && 
+                    if (isset($risk->current_risk_maps[$q]) &&
+                        !is_null($risk->current_risk_maps[$q]['skala_dampak']) &&
                         !is_null($risk->current_risk_maps[$q]['skala_probabilitas'])) {
                         return $risk->current_risk_maps[$q];
                     }
                 }
-                
+
                 // Jika semua quarter tidak ada, ambil dari inherent
-                if (isset($risk->current_risk_maps['inherent']) && 
-                    !is_null($risk->current_risk_maps['inherent']['skala_dampak']) && 
+                if (isset($risk->current_risk_maps['inherent']) &&
+                    !is_null($risk->current_risk_maps['inherent']['skala_dampak']) &&
                     !is_null($risk->current_risk_maps['inherent']['skala_probabilitas'])) {
                     return $risk->current_risk_maps['inherent'];
                 }
-                
+
                 // Jika inherent juga tidak ada, fallback ke riskAnalysis
                 if ($risk->riskAnalysis) {
                     return [
@@ -766,17 +768,17 @@ class HomeController extends Controller
                         'level_risiko' => $risk->riskAnalysis->level_risiko,
                     ];
                 }
-                
+
                 return null;
             };
-            
+
             // Generate data untuk setiap quarter
             for ($quarter = 1; $quarter <= 4; $quarter++) {
                 $currentValue = $getFallbackValue($quarter);
-                
+
                 // Hanya tambahkan jika currentValue tidak null dan valid
-                if ($currentValue && 
-                    !is_null($currentValue['skala_dampak']) && 
+                if ($currentValue &&
+                    !is_null($currentValue['skala_dampak']) &&
                     !is_null($currentValue['skala_probabilitas'])) {
                     $currentValue['quarter'] = $quarter;
                     $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
@@ -789,7 +791,7 @@ class HomeController extends Controller
             ->keyBy(function ($item) {
                 return $item->skala_dampak . '-' . $item->skala_probabilitas;
             });
-        
+
         $period = RMIPeriod::with([
             'penilaianCapaianKinerja.details.pilihan'
           ])->where('year', $tahun)->first();
@@ -836,7 +838,7 @@ class HomeController extends Controller
           })
           ->values()
           ->toArray();
-          
+
         $lossEventsProject = LossEventProject::with(['kategoriRisiko', 'jenisRisiko'])
           ->get()
           ->map(function ($event) {
@@ -896,5 +898,386 @@ class HomeController extends Controller
           'period',
           'dashboardData',
         ));
+    }
+
+    public function dashboardKriUnit(Request $request)
+    {
+        $user = auth()->user();
+        $isAllUnit = Gate::check('risk_register_all_unit');
+
+        $periodes = Periode::orderBy('status')->orderBy('id', 'desc')->get();
+        $selectedPeriode = $request->periode_id ? $periodes->find($request->periode_id) : $periodes->first();
+
+        $units = Unit::query()
+            ->when(!$isAllUnit, function ($query) use ($user) {
+                $query->where('id', $user->unit_id);
+            })
+            ->get();
+
+        $selectedUnitId = null;
+        if ($isAllUnit) {
+            $selectedUnitId = $request->unit_id; // null untuk "semua unit"
+        } else {
+            $selectedUnitId = $user->unit_id;
+        }
+        $selectedUnit = $selectedUnitId ? Unit::find($selectedUnitId) : null;
+
+        $selectedQuarter = $request->quarter ?? 1;
+
+        $kriQuery = KRI::with([
+            'identifikasiRisiko' => function($query) {
+                $query->with(['unit', 'jenisRisiko']);
+            },
+            'kriUnitMonitorings' => function($query) {
+                $query->orderBy('id', 'desc');
+            }
+        ]);
+
+        if ($selectedPeriode) {
+            $kriQuery->whereHas('identifikasiRisiko', function($query) use ($selectedPeriode) {
+                $query->where('periode_id', $selectedPeriode->id);
+            });
+        }
+
+        if ($selectedUnitId) {
+            $kriQuery->whereHas('identifikasiRisiko', function($query) use ($selectedUnitId) {
+                $query->where('unit_id', $selectedUnitId);
+            });
+        } elseif (!$isAllUnit) {
+            $kriQuery->whereHas('identifikasiRisiko', function($query) use ($user) {
+                $query->where('unit_id', $user->unit_id);
+            });
+        }
+
+        $kriData = $kriQuery->get();
+
+        $processedKriData = $kriData->map(function($kri) use ($selectedQuarter) {
+            // Ambil monitoring status terakhir
+            // $latestMonitoring = $kri->kriUnitMonitorings->first();
+            // $monitoringStatusNumeric = $latestMonitoring ? $latestMonitoring->status_kri_terkini : $currentStatus;
+
+            return [
+                'kri' => $kri->kri,
+                'risiko' => $kri->identifikasiRisiko->peristiwa_risiko ?? '-',
+                'pemilik_risiko' => $kri->identifikasiRisiko->unit->name ?? '-',
+                'batas_aman' => $kri->batas_aman,
+                'batas_waspada' => $kri->batas_waspada,
+                'batas_bahaya' => $kri->batas_bahaya,
+                'kondisi_saat_ini' => $kri->{"nilai_kri_terkini_q{$selectedQuarter}"} ?? '-',
+                't2_t3_kbumn' => $kri->identifikasiRisiko->jenisRisiko->title ?? '-',
+                'status' => $kri->{"status_kri_terkini_q{$selectedQuarter}"},
+                'status_priority' => $this->getStatusPriorityFromKriStatus($kri->{"status_kri_terkini_q{$selectedQuarter}"}),
+                'kri_object' => $kri
+            ];
+        });
+
+        $sortedKriData = $processedKriData->sortBy('status_priority')->values();
+
+        $jenisRisikoData = $kriData->groupBy('identifikasiRisiko.jenisRisiko.title')->map(function($group, $jenisRisiko) use ($selectedQuarter) {
+            $amanCount = 0;
+            $waspadaCount = 0;
+            $bahayaCount = 0;
+
+            foreach($group as $kri) {
+                $currentStatusField = "status_kri_terkini_q{$selectedQuarter}";
+                $statusNumeric = $kri->{$currentStatusField} ?? null;
+
+                // Kalau pakai monitoring
+                // $currentStatusField = "status_kri_terkini_q{$selectedQuarter}";
+                // $currentStatusNumeric = $kri->$currentStatusField ?? $kri->getStatusKriAttribute();
+
+                // $latestMonitoring = $kri->kriUnitMonitorings->first();
+                // $finalStatusNumeric = $latestMonitoring ? $latestMonitoring->status_kri_terkini : $currentStatusNumeric;
+                // $finalStatusNumeric = $finalStatusNumeric ?? 1;
+
+                if (is_null($statusNumeric)) {
+                    continue;
+                }
+
+                switch ((int)$statusNumeric) {
+                    case 1:
+                        $amanCount++;
+                        break;
+                    case 2:
+                        $waspadaCount++;
+                        break;
+                    case 3:
+                        $bahayaCount++;
+                        break;
+                }
+            }
+
+            return [
+                'jenis_risiko_id' => $group->first()->identifikasiRisiko->jenis_risiko_id ?? null,
+                'jenis_risiko' => $jenisRisiko ?: 'Tidak Diketahui',
+                'aman' => $amanCount,
+                'waspada' => $waspadaCount,
+                'bahaya' => $bahayaCount,
+                'total' => $amanCount + $waspadaCount + $bahayaCount
+            ];
+        })->values();
+
+        $unitData = $kriData->groupBy('identifikasiRisiko.unit.name')->map(function($group, $unitName) use ($selectedQuarter) {
+            $amanCount = 0;
+            $waspadaCount = 0;
+            $bahayaCount = 0;
+
+            foreach($group as $kri) {
+                $currentStatusField = "status_kri_terkini_q{$selectedQuarter}";
+                $statusNumeric = $kri->{$currentStatusField} ?? null;
+
+                // Kalau pakai monitoring
+                // $currentStatusField = "status_kri_terkini_q{$selectedQuarter}";
+                // $currentStatusNumeric = $kri->$currentStatusField ?? $kri->getStatusKriAttribute();
+
+                // $latestMonitoring = $kri->kriUnitMonitorings->first();
+                // $finalStatusNumeric = $latestMonitoring ? $latestMonitoring->status_kri_terkini : $currentStatusNumeric;
+                // $finalStatusNumeric = $finalStatusNumeric ?? 1;
+
+                if (is_null($statusNumeric)) {
+                    continue;
+                }
+
+                switch ((int)$statusNumeric) {
+                    case 1:
+                        $amanCount++;
+                        break;
+                    case 2:
+                        $waspadaCount++;
+                        break;
+                    case 3:
+                        $bahayaCount++;
+                        break;
+                }
+            }
+
+            return [
+                'unit_id' => $group->first()->identifikasiRisiko->unit_id ?? null,
+                'unit_name' => $unitName ?: 'Tidak Diketahui',
+                'aman' => $amanCount,
+                'waspada' => $waspadaCount,
+                'bahaya' => $bahayaCount,
+                'total' => $amanCount + $waspadaCount + $bahayaCount
+            ];
+        })->values();
+
+        $jenisRisikoList = JenisRisiko::orderBy('title')->get();
+
+        return view('dashboard-kri-unit', compact(
+            'periodes',
+            'selectedPeriode',
+            'units',
+            'selectedUnit',
+            'selectedUnitId',
+            'selectedQuarter',
+            'sortedKriData',
+            'isAllUnit',
+            'jenisRisikoData',
+            'unitData',
+            'jenisRisikoList'
+        ));
+    }
+
+    public function dashboardKriProject(Request $request)
+    {
+        $user = auth()->user();
+        $currentYear = date('Y');
+        $yearList = [];
+        for ($i = $currentYear - 5; $i <= $currentYear + 5; $i++) {
+            $yearList[] = $i;
+        }
+
+        $selectedYear = $request->tahun ?? $currentYear;
+
+        $projects = Project::query()->get();
+
+        $selectedProjectId = null;
+        if ($request->project_id) {
+            $selectedProjectId = $request->project_id; // null untuk "semua project"
+        }
+
+        $selectedProject = $selectedProjectId ? Project::find($selectedProjectId) : null;
+
+        $selectedQuarter = $request->quarter ?? 1;
+
+        $kriQuery = KRIProject::with([
+            'risiko' => function($query) {
+                $query->with(['project', 'peristiwaRisiko']);
+            },
+            'kriProjectMonitorings' => function($query) use ($selectedYear) {
+                $query->whereHas('projectMonitoring', function($subQuery) use ($selectedYear) {
+                    $subQuery->where('tahun', $selectedYear);
+                })->orderBy('id', 'desc');
+            }
+        ]);
+
+        if ($selectedProjectId) {
+            $kriQuery->whereHas('risiko', function($query) use ($selectedProjectId) {
+                $query->where('project_id', $selectedProjectId);
+            });
+        }
+
+        $kriData = $kriQuery->get();
+
+        // Process and sort KRI data by status priority (bahaya > waspada > aman)
+        $processedKriData = $kriData->map(function($kri) use ($selectedQuarter, $selectedYear) {
+            $currentStatusField = "status_kri_terkini_q{$selectedQuarter}";
+            $currentStatusNumeric = $kri->$currentStatusField ?? 1;
+
+            $latestMonitoring = $kri->kriProjectMonitorings
+                ->filter(function($monitoring) use ($selectedQuarter, $selectedYear) {
+                    return $monitoring->projectMonitoring &&
+                          $monitoring->projectMonitoring->quarter == $selectedQuarter &&
+                          $monitoring->projectMonitoring->tahun == $selectedYear;
+                })
+                ->first();
+
+            $monitoringStatusNumeric = $latestMonitoring ? $latestMonitoring->status_kri_terkini : $currentStatusNumeric;
+
+            $finalStatusNumeric = $monitoringStatusNumeric ?? $currentStatusNumeric ?? 1;
+
+            return [
+                'kri' => $kri->kri,
+                'risiko' => $kri->risiko->peristiwaRisiko->title ?? '-',
+                'pemilik_risiko' => $kri->risiko->project->project_name ?? '-',
+                'batas_aman' => $kri->batas_aman,
+                'batas_waspada' => $kri->batas_waspada,
+                'batas_bahaya' => $kri->batas_bahaya,
+                'kondisi_saat_ini' => $finalStatusNumeric ?? '-',
+                'status' => $finalStatusNumeric,
+                'status_priority' => $this->getStatusPriorityFromKriStatus($finalStatusNumeric),
+                'kri_object' => $kri
+            ];
+        });
+
+        $sortedKriData = $processedKriData->sortBy('status_priority')->values();
+
+        $peristiwaRisikoData = $kriData->groupBy('risiko.peristiwaRisiko.title')->map(function($group, $peristiwaRisiko) use ($selectedQuarter, $selectedYear) {
+            $amanCount = 0;
+            $waspadaCount = 0;
+            $bahayaCount = 0;
+
+            foreach($group as $kri) {
+                $currentStatusField = "status_kri_terkini_q{$selectedQuarter}";
+                $currentStatusNumeric = $kri->$currentStatusField ?? 1;
+
+                $latestMonitoring = $kri->kriProjectMonitorings
+                    ->filter(function($monitoring) use ($selectedQuarter, $selectedYear) {
+                        return $monitoring->projectMonitoring &&
+                              $monitoring->projectMonitoring->quarter == $selectedQuarter &&
+                              $monitoring->projectMonitoring->tahun == $selectedYear;
+                    })
+                    ->first();
+
+                $finalStatusNumeric = $latestMonitoring ? $latestMonitoring->status_kri_terkini : $currentStatusNumeric;
+                $finalStatusNumeric = $finalStatusNumeric ?? 1;
+
+                switch ((int)$finalStatusNumeric) {
+                    case 1:
+                        $amanCount++;
+                        break;
+                    case 2:
+                        $waspadaCount++;
+                        break;
+                    case 3:
+                        $bahayaCount++;
+                        break;
+                }
+            }
+
+            return [
+                'peristiwa_risiko' => $peristiwaRisiko ?: 'Tidak Diketahui',
+                'aman' => $amanCount,
+                'waspada' => $waspadaCount,
+                'bahaya' => $bahayaCount,
+                'total' => $amanCount + $waspadaCount + $bahayaCount
+            ];
+        })->values();
+
+        $projectData = $kriData->groupBy('risiko.project.project_name')->map(function($group, $projectName) use ($selectedQuarter, $selectedYear) {
+            $amanCount = 0;
+            $waspadaCount = 0;
+            $bahayaCount = 0;
+
+            foreach($group as $kri) {
+                $currentStatusField = "status_kri_terkini_q{$selectedQuarter}";
+                $currentStatusNumeric = $kri->$currentStatusField ?? 1;
+
+                $latestMonitoring = $kri->kriProjectMonitorings
+                    ->filter(function($monitoring) use ($selectedQuarter, $selectedYear) {
+                        return $monitoring->projectMonitoring &&
+                              $monitoring->projectMonitoring->quarter == $selectedQuarter &&
+                              $monitoring->projectMonitoring->tahun == $selectedYear;
+                    })
+                    ->first();
+
+                $finalStatusNumeric = $latestMonitoring ? $latestMonitoring->status_kri_terkini : $currentStatusNumeric;
+                $finalStatusNumeric = $finalStatusNumeric ?? 1;
+
+                switch ((int)$finalStatusNumeric) {
+                    case 1:
+                        $amanCount++;
+                        break;
+                    case 2:
+                        $waspadaCount++;
+                        break;
+                    case 3:
+                        $bahayaCount++;
+                        break;
+                }
+            }
+
+            return [
+                'project_name' => $projectName ?: 'Tidak Diketahui',
+                'aman' => $amanCount,
+                'waspada' => $waspadaCount,
+                'bahaya' => $bahayaCount,
+                'total' => $amanCount + $waspadaCount + $bahayaCount
+            ];
+        })->values();
+
+        $peristiwaRisikoList = PeristiwaRisiko::orderBy('title')->get();
+
+        return view('dashboard-kri-project', compact(
+            'projects',
+            'selectedProject',
+            'selectedProjectId',
+            'selectedQuarter',
+            'selectedYear',
+            'yearList',
+            'sortedKriData',
+            'peristiwaRisikoData',
+            'projectData',
+            'peristiwaRisikoList'
+        ));
+    }
+
+    private function getStatusPriorityFromKriStatus($statusNumeric)
+    {
+        switch ((int)$statusNumeric) {
+            case 3: // bahaya
+                return 1;
+            case 2: // waspada
+                return 2;
+            case 1: // aman
+                return 3;
+            default:
+                return 4;
+        }
+    }
+
+    private function getStatusPriority($status)
+    {
+        $statusLower = strtolower($status);
+        switch ($statusLower) {
+            case 'bahaya':
+                return 1;
+            case 'waspada':
+                return 2;
+            case 'aman':
+                return 3;
+            default:
+                return 4;
+        }
     }
 }
