@@ -111,8 +111,18 @@ class CorporateRiskController extends Controller
                 ->first();
         }
 
-        $showRankingButton = $dataBatch && $dataBatch->status == DataBatch::STATUS_UTAMA;
-        $showCorporateButton = $dataBatch && $dataBatch->status == DataBatch::STATUS_VERIFIKASI_CORPORATE;
+        //$showRankingButton = $dataBatch && $dataBatch->status == DataBatch::STATUS_UTAMA;
+        //$showCorporateButton = $dataBatch && $dataBatch->status == DataBatch::STATUS_VERIFIKASI_CORPORATE;
+
+        $showRankingButton = false;
+        $showCorporateButton = false;
+        
+        if ($selectedPeriode) {
+            // Jika status_progress null, maka bisa ranking
+            $showRankingButton = is_null($selectedPeriode->status_progress);
+            // Jika status_progress = 1, maka verifikasi corporate
+            $showCorporateButton = $selectedPeriode->status_progress == 1;
+        }
 
         return view('corporate-risk.index', compact(
             'risikoMain', 
@@ -210,16 +220,22 @@ class CorporateRiskController extends Controller
         }
 
         // Update status DataBatch menjadi STATUS_VERIFIKASI_CORPORATE (7)
-        $dataBatch = DataBatch::where('periode_id', $periodeId)
-            ->where('type', 1) // type = 1 untuk unit/divisi
-            ->orderBy('batch', 'desc')
-            ->first();
+        // $dataBatch = DataBatch::where('periode_id', $periodeId)
+        //     ->where('type', 1) // type = 1 untuk unit/divisi
+        //     ->orderBy('batch', 'desc')
+        //     ->first();
 
-        if ($dataBatch) {
-            $dataBatch->update([
-                'status' => DataBatch::STATUS_VERIFIKASI_CORPORATE
+        // if ($dataBatch) {
+        //     $dataBatch->update([
+        //         'status' => DataBatch::STATUS_VERIFIKASI_CORPORATE
+        //     ]);
+        // }
+
+        //update status_progress di periode
+        Periode::where('id', $periodeId)
+            ->update([
+                'status_progress' => 1
             ]);
-        }
 
         return redirect()->route('corporate-risk.index', ['pid' => $periodeId])
             ->with('success', 'Ranking risiko berhasil dilakukan. Risiko yang memenuhi kriteria telah dijadikan risiko corporate.');
@@ -266,16 +282,21 @@ class CorporateRiskController extends Controller
         $periodeId = $request->periode_id;
 
         // Update status DataBatch menjadi STATUS_FINISH (8)
-        $dataBatch = DataBatch::where('periode_id', $periodeId)
-            ->where('type', 1) // type = 1 untuk unit/divisi
-            ->orderBy('batch', 'desc')
-            ->first();
+        // $dataBatch = DataBatch::where('periode_id', $periodeId)
+        //     ->where('type', 1) // type = 1 untuk unit/divisi
+        //     ->orderBy('batch', 'desc')
+        //     ->first();
 
-        if ($dataBatch) {
-            $dataBatch->update([
-                'status' => DataBatch::STATUS_FINISH
+        // if ($dataBatch) {
+        //     $dataBatch->update([
+        //         'status' => DataBatch::STATUS_FINISH
+        //     ]);
+        // }
+
+        Periode::where('id', $periodeId)
+            ->update([
+                'status_progress' => 2
             ]);
-        }
 
         // Update is_proyek menjadi 1 untuk risiko dengan status_risiko corporate
         IdentifikasiRisiko::where('periode_id', $periodeId)
