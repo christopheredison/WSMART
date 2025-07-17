@@ -39,6 +39,7 @@ class IdentifikasiRisiko extends Model
         'status',
         'step_verification',
         'is_corporate',
+        'previous_status_risiko',
     ];
 
     protected $guarded = [];
@@ -220,6 +221,12 @@ class IdentifikasiRisiko extends Model
     public const LEVEL_RISIKO_MODERATE = 'Moderate';
     public const LEVEL_RISIKO_MODERATE_TO_HIGH = 'Moderate To High';
     public const LEVEL_RISIKO_HIGH = 'High';
+
+    public const STATUS_RISIKO_REGULAR = 1;
+    public const STATUS_RISIKO_RECOMMENDATION = 2;
+    public const STATUS_RISIKO_MAIN = 3;
+    public const STATUS_RISIKO_CORPORATE_RECOMMENDATION = 4;
+    public const STATUS_RISIKO_CORPORATE = 5;
 
     public function refreshRealisasi()
     {

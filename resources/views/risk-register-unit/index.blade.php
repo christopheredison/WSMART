@@ -88,18 +88,27 @@
                 $pid = $selectedPeriode->id;
             @endphp
             @can('risk_register_create')
+              @if($status == null || $status == 1 || $status == 5)
               <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $pid]) }}" type="button"
                 class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
                 data-bs-title="Tambah Risiko">
                 <i class="bx bx-plus"></i>
                 <span class="ms-1">Tambah Risiko</span>
               </a>
+              @endif
             @endcan
             </div>
           </div>
           <table class="table dataTable" id="example" data-paging="true" data-info="true" data-filter="true">
             <thead>
               <tr>
+                <th class="no-sort white-space-nowrap">
+                   @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
+                  <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" id="select-all" />
+                  </div>
+                  @endif
+                </th>
                 <th class="white-space-nowrap">#</th>
                 <th class="sort" data-sort="unit">Unit</th>
                 <th class="sort" data-sort="unit_type">Sasaran</th>
@@ -107,6 +116,10 @@
                 <th class="sort mw-10r" data-sort="peristiwa_risiko">Peristiwa Risiko</th>
                 <th class="sort mw-10r" data-sort="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</th>
                 <th class="sort mw-10r" data-sort="kontrol_eksisting">Jenis Kontrol Eksisting</th>
+                <th class="sort mw-10r" data-sort="kategori dampak">Kategori Dampak</th>
+                <th class="sort mw-10r" data-sort="nilai_risiko_inherent">Nilai Risiko</th>
+                <th class="sort mw-10r" data-sort="eksposure_risiko_inherent">Eksposure Risiko</th>
+                <th class="sort mw-10r" data-sort="total_biaya_rencana_perlakuan">Total Biaya Rencana Perlakuan</th>
                 <th class="sort mw-15r" data-sort="waktu_terpapar">Waktu Terpapar</th>
                 <th class="sort" data-sort="status">Status</th>
                 <th class="no-sort white-space-nowrap" data-sort="action">Action</th>
@@ -115,13 +128,69 @@
             <tbody class="list" id="bulk-select-body">
               @foreach ($risiko as $index => $item)
               <tr>
-                <td class="index-number">{{ $index + 1 }}</td>
-                <td class="unit">{{ $item->unit->name ?? '-' }}</td>
+                <td class="white-space-nowrap">
+                  @if($item->status_risiko== 2)
+                    <span class="badge bg-primary">Rekomendasi</span> 
+                  @elseif($item->status_risiko == 3 || $item->status_risiko == 4)
+                    <span class="badge bg-danger">Risiko Utama</span>
+                  @endif
+                  @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
+                  <div class="form-check mb-0"> 
+                    <input class="form-check-input select-item" type="checkbox" name="selected_items[]"
+                      value="{{ $item->id }}" />
+                  </div>
+                  @endif
+                </td>
+                <td class="index-number">
+                  {{ $index + 1 }}
+                </td>
+                <td class="unit">
+                  {{ $item->unit->name ?? '-' }}
+                </td>
                 <td class="unit_type">{{ $item->target_capaian_kinerja ?? '-' }}</td>
                 <td class="kategori_jenis_risiko">{{ $item->kategoriRisiko->title ?? '-' }} - {{ $item->jenisRisiko->title ?? '-' }}</td>
                 <td class="peristiwa_risiko">{{ $item->peristiwa_risiko ?? '-' }}</td>
                 <td class="deskripsi_peristiwa_risiko">{{ $item->deskripsi_peristiwa_risiko }}</td>
                 <td class="kontrol_eksisting">{{ $item->jenisKontrolEksisting->jenis_kontrol ?? '-' }}</td>
+                <td class="kategori_dampak">{{ $item->riskAnalysis->kategori_dampak ?? '-' }}</td>
+                <td class="nilai_risiko" @if($item->riskAnalysis && $item->riskAnalysis->level_risiko)
+                    style="background-color: 
+                    @switch(strtolower($item->riskAnalysis->level_risiko))
+                        @case('low')
+                            #14A20E
+                            @break
+                        @case('low to moderate')
+                            #7CD020
+                            @break
+                        @case('moderate')
+                            #FCDB2C
+                            @break
+                        @case('moderate to high')
+                            #FEAC17
+                            @break
+                        @case('high')
+                            #EF6345
+                            @break
+                        @default
+                            transparent
+                    @endswitch
+                    ; color: @if(in_array(strtolower($item->riskAnalysis->level_risiko), ['low', 'low to moderate', 'moderate'])) #000000 @else #FFFFFF @endif;"
+                @endif
+                >{{ $item->riskAnalysis->skala_risiko ?? '-' }}</td>
+                <td class="eksposure_risiko">{{ $item->riskAnalysis->eksposur_risiko ? 'Rp ' . number_format($item->riskAnalysis->eksposur_risiko, 0, ',', '.') : '-' }}</td>
+                <td class="total_biaya_rencana_perlakuan">
+                  @php
+                    $totalBiaya = 0;
+                    if ($item->penyebabRisiko->count() > 0) {
+                      foreach ($item->penyebabRisiko as $penyebab) {
+                        foreach ($penyebab->perlakuanPenyebabRisikoUnit as $perlakuan) {
+                          $totalBiaya += $perlakuan->biaya_perlakuan_risiko ?? 0;
+                        }
+                      }
+                    }
+                  @endphp
+                  {{ $totalBiaya > 0 ? 'Rp ' . number_format($totalBiaya, 0, ',', '.') : '-' }}
+                </td>
                 <td class="waktu_terpapar">
                   {{ \Carbon\Carbon::parse($item->perkiraan_waktu_terpapar_risiko_mulai)->format('d/m/Y') }} -
                   {{ \Carbon\Carbon::parse($item->perkiraan_waktu_terpapar_risiko_akhir)->format('d/m/Y') }}
@@ -149,7 +218,7 @@
                   Accepted By {{ $levelName }}
                   @break
                   @case(4)
-                  Finish
+                  Accepted
                   @break
                   @case(5)
                   Need Revision or Rejected
@@ -190,6 +259,13 @@
           <strong>Informasi:</strong> Terdapat {{ $pending_risk }} risiko yang menunggu verifikasi/revisi.
         </div>
         @endif
+        {{-- Informasi Average Eksposure Risiko Unit --}}
+        @if($status == 3 && isset($avgQuantitativeExposure))
+        <div class="alert alert-primary mb-3">
+          <strong>Informasi:</strong> Rata-rata eksposur risiko kuantitatif: Rp {{ number_format($avgQuantitativeExposure, 0, ',', '.') }}
+        </div>
+        @endif
+
         @can('risk_register_send')
         <form id="send-form" action="{{ route('risk-register-unit.send') }}" method="POST" class="d-inline-block">
           @csrf
@@ -203,7 +279,15 @@
               kondisi 2: {{ ($levelId > 1 && intval($status) === 1) ? 'true' : 'false' }}<br>
               kondisi lengkap: {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && intval($status) === 1) ? 'true' : 'false' }}
             </div>
+            @if($status==3 && ($step_order>=$min_verification))
+            <input type="hidden" name="send_type" value="mainrisk">
+            <button id="accept-button" class="btn btn-submit btn-arrow-right">Konfirmasi Risiko Utama</button>
+            @elseif($status==6 && ($step_order>=$min_verification))
+            <input type="hidden" name="send_type" value="corporate-risk">
+            <button id="accept-button" class="btn btn-submit btn-arrow-right">Atur Risiko Korporat</button>
+            @else
             <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button>
+            @endif
           @endif
         </form>
         @endcan
@@ -379,7 +463,7 @@ $(document).ready(function() {
 
   $('#filter-risk-t2t3').on('change', function() {
     var riskEvent = $(this).val();
-    table.column(3).search(riskEvent).draw();
+    table.column(4).search(riskEvent).draw();
   });
 
   // Function to handle changes in the risk level filter
@@ -394,8 +478,54 @@ $(document).ready(function() {
     const status = {{ $status ?? 'null' }};
     const stepOrder = {{ $step_order ?? 'null' }};
 
-    // Jika status adalah 5 (revisi) dan step_order adalah 0 atau null, tampilkan modal kirim perbaikan
-    if (status === 5 && (stepOrder === 0 || stepOrder === null)) {
+    if(status === 6){
+      //redirect ke halaman risk corporate
+      window.location.href = "{{ route('corporate-risk.index') }}";
+    }
+    else if(status===3){
+      const selectedRisks = [];
+      document.querySelectorAll('.select-item:checked').forEach(function(checkbox) {
+        selectedRisks.push(checkbox.value);
+      });
+      
+      // Jika tidak ada risiko yang dipilih, tampilkan peringatan
+      if(selectedRisks.length === 0) {
+        Swal.fire({
+          title: "Peringatan",
+          text: "Silakan pilih minimal satu risiko untuk dijadikan risiko utama",
+          icon: "warning",
+        });
+        return;
+      }
+
+      // Hapus input hidden yang mungkin sudah ada sebelumnya
+      document.querySelectorAll('input[name="selected_risks[]"]').forEach(function(input) {
+        input.remove();
+      });
+
+      // Tambahkan input hidden untuk setiap risiko yang dipilih
+      selectedRisks.forEach(function(riskId) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'selected_risks[]';
+        input.value = riskId;
+        this.appendChild(input);
+      }, this);
+
+      Swal.fire({
+        title: "Apakah Anda yakin?",
+        text: "Terima Risiko Terpilih sebagai Risiko Utama?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Ya, terima risiko!",
+        cancelButtonText: "Tidak, batal",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.submit(); // Kirim form jika dikonfirmasi
+        }
+      });
+    }
+    else if (status === 5 && (stepOrder === 0 || stepOrder === null)) {// Jika status adalah 5 (revisi) dan step_order adalah 0 atau null, tampilkan modal kirim perbaikan
       const modal = new bootstrap.Modal(document.getElementById('modalKirimPerbaikanRisiko'));
       modal.show();
     } else {
@@ -412,6 +542,24 @@ $(document).ready(function() {
           this.submit(); // Kirim form jika dikonfirmasi
         }
       });
+    }
+  });
+
+  // Select/Deselect all checkboxes
+  $('#select-all').on('click', function() {
+    var rows = table.rows({
+      'search': 'applied'
+    }).nodes();
+    $('input[type="checkbox"]', rows).prop('checked', this.checked);
+  });
+
+  // Handle individual row selection
+  $('#example tbody').on('change', 'input[type="checkbox"]', function() {
+    if (!this.checked) {
+      var el = $('#select-all').get(0);
+      if (el && el.checked && ('indeterminate' in el)) {
+        el.indeterminate = true;
+      }
     }
   });
 });
