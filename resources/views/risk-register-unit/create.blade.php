@@ -511,6 +511,8 @@
             const form = $('#main-form');
             const url = form.attr('action');
             const data = new FormData(form[0]);
+            const $clickedButton = $(this);
+            const originalText = $clickedButton.html();
             
             data.append('action', action);
 
@@ -526,6 +528,12 @@
                 cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    if (window.isSubmitting) return false;
+                    window.isSubmitting = true;
+                    
+                    // Tampilkan loading state dan nonaktifkan tombol
+                    $clickedButton.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...');
+                    $('.btn-action').prop('disabled', true);
                     // Jika user menekan "Ya", lanjutkan request AJAX
                     $.ajax({
                         url: url,
@@ -540,21 +548,29 @@
                                     title: 'Berhasil',
                                     text: response.message || 'Data berhasil disimpan',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: 4500
                                 }).then(() => {
                                     window.location.href = response.redirect;
                                 });
                             } else {
+                                $('.btn-action').prop('disabled', false);
+                                $clickedButton.html(originalText);
+
                                 Swal.fire({
                                     icon: 'success',
                                     title: 'Berhasil',
                                     text: response.message || 'Data berhasil disimpan',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: 4500
                                 });
+                                
                             }
                         },
                         error: function(xhr) {
+                            window.isSubmitting = false;
+                            $('.btn-action').prop('disabled', false);
+                            $clickedButton.html(originalText);
+                            
                             const errors = xhr.responseJSON.errors;
                             if (errors) {
                                 let message = '<ul>';
