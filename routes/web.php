@@ -134,6 +134,8 @@ Route::group(['middleware' => ['auth']], function() {
 
     Route::get('/dashboard-proyek', [HomeController::class, 'dashboardProyek'])->name('dashboard-proyek');
 
+    Route::get('/dashboard-corporate', [HomeController::class, 'dashboardCorporate'])->name('dashboard-corporate');
+
     Route::get('/dashboard-anper', function () {
       return view('dashboard-anper');
     });
@@ -541,3 +543,9 @@ Route::group(['prefix' => 'ict', 'as' => 'ict.'], function () {
     Route::get('/{ictPlan}/report', [\App\Http\Controllers\ICT\ICTController::class, 'report'])->name('report');
     Route::post('/{ictPlan}/report', [\App\Http\Controllers\ICT\ICTController::class, 'storeReport'])->name('store-report');
 });
+// Tambahkan di dalam grup middleware auth
+Route::get('corporate-risk', [App\Http\Controllers\CorporateRiskController::class, 'index'])->name('corporate-risk.index');
+Route::post('corporate-risk/update-to-corporate', [App\Http\Controllers\CorporateRiskController::class, 'updateToCorporate'])->name('corporate-risk.update-to-corporate');
+Route::post('corporate-risk/ranking-risiko', [App\Http\Controllers\CorporateRiskController::class, 'rankingRisiko'])->name('corporate-risk.ranking-risiko');
+Route::post('corporate-risk/confirm-corporate', [App\Http\Controllers\CorporateRiskController::class, 'confirmCorporateRisks'])->name('corporate-risk.confirm-corporate');
+Route::post('corporate-risk/revert-from-corporate', [App\Http\Controllers\CorporateRiskController::class, 'revertFromCorporate'])->name('corporate-risk.revert-from-corporate');
