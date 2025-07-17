@@ -1651,16 +1651,50 @@ class RiskRegisterUnitController extends Controller
 
         $currentRiskMaps = $risikos->pluck('currentRiskMaps');
         $formattedCurrentRiskMaps = [];
-        foreach ($risikos as $idx => $risiko) {
-            $currentValue = $risiko->currentRiskMaps['inherent'];
-            for ($quarter = 1; $quarter <= 4; $quarter++) {
-                if ($nextValue = ($risiko->currentRiskMaps[$quarter] ?? null)) {
-                    $currentValue = $nextValue;
+        
+        foreach ($risikos as $idx => $risk) {
+            $getFallbackValue = function($targetQuarter) use ($risk) {
+                if (isset($risk->current_risk_maps[$targetQuarter]) && 
+                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) && 
+                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_probabilitas'])) {
+                    return $risk->current_risk_maps[$targetQuarter];
                 }
-
-                $currentValue['quarter'] = $quarter;
-
-                $formattedCurrentRiskMaps[$risiko->id][] = $currentValue;
+                
+                for ($q = $targetQuarter - 1; $q >= 1; $q--) {
+                    if (isset($risk->current_risk_maps[$q]) && 
+                        !is_null($risk->current_risk_maps[$q]['skala_dampak']) && 
+                        !is_null($risk->current_risk_maps[$q]['skala_probabilitas'])) {
+                        return $risk->current_risk_maps[$q];
+                    }
+                }
+                
+                if (isset($risk->current_risk_maps['inherent']) && 
+                    !is_null($risk->current_risk_maps['inherent']['skala_dampak']) && 
+                    !is_null($risk->current_risk_maps['inherent']['skala_probabilitas'])) {
+                    return $risk->current_risk_maps['inherent'];
+                }
+                
+                if ($risk->riskAnalysis) {
+                    return [
+                        'skala_dampak' => $risk->riskAnalysis->skala_dampak,
+                        'skala_probabilitas' => $risk->riskAnalysis->skala_probabilitas->tingkat ?? null,
+                        'skala_risiko' => $risk->riskAnalysis->skala_risiko,
+                        'level_risiko' => $risk->riskAnalysis->level_risiko,
+                    ];
+                }
+                
+                return null;
+            };
+            
+            for ($quarter = 1; $quarter <= 4; $quarter++) {
+                $currentValue = $getFallbackValue($quarter);
+                
+                if ($currentValue && 
+                    !is_null($currentValue['skala_dampak']) && 
+                    !is_null($currentValue['skala_probabilitas'])) {
+                    $currentValue['quarter'] = $quarter;
+                    $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
+                }
             }
         }
 

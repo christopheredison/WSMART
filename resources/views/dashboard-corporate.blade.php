@@ -32,7 +32,7 @@
   </div>
 
   <!--========================= Dashboard Chart Start =========================-->
-  <div class="col-12">
+  {{-- <div class="col-12">
     <div class="row g-3">
       <div class="col-6 col-md-3">
         <div class="card card-sm" id="kpi-card">
@@ -154,707 +154,400 @@
         </div>
       </div>
     </div>
-  </div>
+  </div> --}}
 </div>
 <!--========================= Dashboard Chart End =========================-->
 
 <!--========================= Dashboard Content Start =========================-->
-<div class="row g-3 dashboard-content">
-  <!-- Peta Risiko Inheren dan Residual -->
-  {{-- <div class="col-lg-6">
-    <div class="card" id="prir-card">
-      <div class="card-header border-0 pb-0 d-flex flex-between-center">
-        <h3 class="h4">Peta Risiko Inheren dan Residual</h3>
-        <span class="card-subtitle my-auto"></span>
+<div class="col-12 g-3 dashboard-content">
+  <!-- Profil Risiko -->
+  <div class="col-12 mb-3">
+    <div class="card">
+      <div class="card-header stepper border-0 pb-0">
+        <div class="nav-link active d-flex align-items-center p-0">
+          <span class="h3 mb-0">Profil Risiko</span>
+        </div>
       </div>
       <div class="card-body">
-        <div class="table-risk-map">
-          <table class="map-table">
-            <tbody>
-              <tr>
-                <td rowspan="5" class="side-title">
-                  <div class="divider m-0">
-                    <div class="divider-text">
-                      LIKELIHOOD
+        <div class="border p-3 mb-3">
+          @foreach (['High', 'Moderate to High', 'Moderate', 'Low to Moderate', 'Low'] as $level)
+          <div class="me-3 d-inline-flex align-items-center gap-2">
+            <span class="d-inline-block bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($level)))}}" style="width:20px; height:20px; border-radius: 3px;"></span>
+            <span>{{ $level }}</span>
+          </div>
+          @endforeach
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="row mb-3">
+                    <div class="col align-items-center d-flex">
+                        <h3 class="h4">Peta Risiko Inheren dan Residual</h3>
                     </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low-to-moderate" data-id="1" data-posisi-risiko="7">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate" data-id="2" data-posisi-risiko="12">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate-to-high" data-id="3" data-posisi-risiko="17">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell high" data-id="4" data-posisi-risiko="22">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell high" data-id="5" data-posisi-risiko="25">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="data-cell low" data-id="6" data-posisi-risiko="4">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low-to-moderate" data-id="7" data-posisi-risiko="9">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate" data-id="8" data-posisi-risiko="14">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate-to-high" data-id="9" data-posisi-risiko="19">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell high" data-id="10" data-posisi-risiko="24">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="data-cell low" data-id="11" data-posisi-risiko="3">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low-to-moderate" data-id="12" data-posisi-risiko="8">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate" data-id="13" data-posisi-risiko="13">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate-to-high" data-id="14" data-posisi-risiko="18">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell high" data-id="15" data-posisi-risiko="23">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="data-cell low" data-id="16" data-posisi-risiko="2">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low-to-moderate" data-id="17" data-posisi-risiko="6">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low-to-moderate" data-id="18" data-posisi-risiko="11">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate-to-high" data-id="19" data-posisi-risiko="16">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell high" data-id="20" data-posisi-risiko="21">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="data-cell low" data-id="21" data-posisi-risiko="1">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low" data-id="22" data-posisi-risiko="5">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low-to-moderate" data-id="23" data-posisi-risiko="10">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate" data-id="24" data-posisi-risiko="15">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell high" data-id="25" data-posisi-risiko="20">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td class="useless-cell"></td>
-                <td colspan="5" class="footer-title">
-                  <div class="divider m-0">
-                    <div class="divider-text">
-                      IMPACT
+                    <div class="col-1">
+                        <select class="form-select" style="visibility: hidden;">
+                        </select>
                     </div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- begin::Legend -->
-          <div class="risk-map-legend d-flex flex-center gap-3">
-            <div class="d-flex align-items-center gap-1">
-              <i class='bx bx-circle inherent'></i>
-              Inherent
-            </div>
-            <div class="d-flex align-items-center gap-1">
-              <i class='bx bxs-circle residual'></i>
-              Residual
-            </div>
-            <div class="d-flex align-items-center gap-1">
-              <i class='bx bxs-circle current'></i>
-              Current
-            </div>
-          </div>
-          <!-- end::Legend -->
-
-        </div>
-        <div class="d-block">
-          <div class="alert alert-info">Strategi Perlakuan</div>
-          <div class="table-responsive scrollbar">
-            <table class="table table-strategi">
-              <thead>
-                <tr>
-                  <th rowspan="2" class="left-align">Kode & Peristiwa Risiko</th>
-                  <th colspan="2" class="white-space-nowrap">Posisi Risiko
-                  </th>
-                  <th rowspan="2" class="left-align">Strategi Perlakuan Risiko (Rencana)</th>
-                  <th rowspan="2" class="white-space-nowrap">Tenggat Waktu</th>
-                </tr>
-                <tr>
-                  <th>IRE</th>
-                  <th>RRE</th>
-                </tr>
-              </thead>
-              <tbody>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div> --}}
-  <!--============================ Peta Risiko Terkini (Current) ============================-->
-  {{-- <div class="col-lg-6">
-    <div class="card" id="prsi-card">
-      <div class="card-header border-0 pb-0 d-flex flex-between-center">
-        <h3 class="h4">Peta Risiko Terkini (Current)</h3>
-        <span class="card-subtitle"></span>
-      </div>
-      <div class="card-body">
-        <div class="table-risk-map">
-          <table class="map-table">
-            <tbody>
-              <tr>
-                <td rowspan="5" class="side-title">
-                  <div class="divider m-0">
-                    <div class="divider-text">
-                      LIKELIHOOD
+                </div>
+                <div class="table-risk-map" id="inherentMap">
+                    <table class="map-table">
+                        <tbody>
+                            @for($likelihood = 5; $likelihood >= 1; $likelihood--)
+                                <tr>
+                                @if ($likelihood == 5)
+                                    <td rowspan="5" class="side-title">
+                                        <div class="divider m-0">
+                                            <div class="divider-text">
+                                                LIKELIHOOD
+                                            </div>
+                                        </div>
+                                    </td>
+                                @endif
+                                @for($impact = 1; $impact <= 5; $impact++)
+                                    @php
+                                    $riskMap = $riskMaps[$impact . '-' . $likelihood] ?? null;
+                                    @endphp
+                                    <td>
+                                        <div class="data-cell {{strtolower(str_replace(' ', '-', $riskMap['level_risiko']))}}" data-id="{{ ($likelihood - 1) * 5 + $impact }}" data-posisi-risiko="{{ $riskMap['nilai_risiko'] }}" data-matrix='{{ $impact }}-{{ $likelihood }}'>
+                                            <div class="kode-peristiwa"></div>
+                                            <div class="posisi-risiko">{{ $riskMap['nilai_risiko'] }}</div>
+                                        </div>
+                                    </td>
+                                @endfor
+                                </tr>
+                            @endfor
+                            <tr>
+                                <td class="useless-cell"></td>
+                                <td colspan="5" class="footer-title">
+                                    <div class="divider m-0">
+                                        <div class="divider-text">
+                                            IMPACT
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+  
+                    <!-- begin::Legend -->
+                    <div class="risk-map-legend d-flex flex-center gap-3">
+                        <div class="d-flex align-items-center gap-1">
+                            <i class='bx bx-circle inherent'></i>
+                            Inherent
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <i class='bx bxs-circle residual'></i>
+                            Residual
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <i class="bx bxs-circle current"></i>
+                            Current
+                        </div>
                     </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low-to-moderate" data-id="1" data-posisi-risiko="7">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate" data-id="2" data-posisi-risiko="12">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate-to-high" data-id="3" data-posisi-risiko="17">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell high" data-id="4" data-posisi-risiko="22">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell high" data-id="5" data-posisi-risiko="25">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="data-cell low" data-id="6" data-posisi-risiko="4">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low-to-moderate" data-id="7" data-posisi-risiko="9">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate" data-id="8" data-posisi-risiko="14">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate-to-high" data-id="9" data-posisi-risiko="19">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell high" data-id="10" data-posisi-risiko="24">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="data-cell low" data-id="11" data-posisi-risiko="3">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low-to-moderate" data-id="12" data-posisi-risiko="8">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate" data-id="13" data-posisi-risiko="13">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate-to-high" data-id="14" data-posisi-risiko="18">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell high" data-id="15" data-posisi-risiko="23">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="data-cell low" data-id="16" data-posisi-risiko="2">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low-to-moderate" data-id="17" data-posisi-risiko="6">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low-to-moderate" data-id="18" data-posisi-risiko="11">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate-to-high" data-id="19" data-posisi-risiko="16">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell high" data-id="20" data-posisi-risiko="21">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="data-cell low" data-id="21" data-posisi-risiko="1">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low" data-id="22" data-posisi-risiko="5">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell low-to-moderate" data-id="23" data-posisi-risiko="10">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell moderate" data-id="24" data-posisi-risiko="15">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-                <td>
-                  <div class="data-cell high" data-id="25" data-posisi-risiko="20">
-                    <div class="kode-peristiwa"></div>
-                    <div class="posisi-risiko"></div>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td class="useless-cell"></td>
-                <td colspan="5" class="footer-title">
-                  <div class="divider m-0">
-                    <div class="divider-text">IMPACT</div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- begin::Legend -->
-          <div class="risk-map-legend d-flex flex-center gap-3">
-            <div class="d-flex align-items-center gap-1">
-              <i class='bx bx-circle inherent'></i>
-              Inherent
+                    <!-- end::Legend -->
+                </div>
             </div>
-            <div class="d-flex align-items-center gap-1">
-              <i class='bx bxs-circle residual'></i>
-              Residual
-            </div>
-            <div class="d-flex align-items-center gap-1">
-              <i class='bx bxs-circle current'></i>
-              Current
-            </div>
-          </div>
-          <!-- end::Legend -->
-
-        </div>
-        <div class="d-block">
-          <div class="alert alert-info">Strategi Perlakuan</div>
-          <div class="table-responsive scrollbar">
-            <table class="table table-strategi">
-              <thead>
-                <tr>
-                  <th rowspan="2" class="left-align">Kode & Peristiwa Risiko</th>
-                  <th colspan="2" class="white-space-nowrap">Posisi Risiko</th>
-                  <th rowspan="2" class="left-align">Strategi Perlakuan Risiko (Rencana)</th>
-                  <th rowspan="2" class="white-space-nowrap">Tenggat Waktu</th>
-                </tr>
-                <tr>
-                  <th>CRE</th>
-                  <th>RRE</th>
-                </tr>
-              </thead>
-              <tbody>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div> --}}
-
-  <div class="card mt-5">
-    <div class="card-header stepper border-0 pb-0">
-      <div class="nav-link active d-flex align-items-center p-0">
-        <span class="h3 mb-0">Peta Risiko Inheren dan Residual</span>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="border p-3 mb-3">
-        @foreach (['High', 'Moderate to High', 'Moderate', 'Low to Moderate', 'Low'] as $level)
-        <div class="me-3 d-inline-flex align-items-center gap-2">
-          <span class="d-inline-block bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($level)))}}" style="width:20px; height:20px; border-radius: 3px;"></span>
-          <span>{{ $level }}</span>
-        </div>
-        @endforeach
-      </div>
-      <div class="row">
-          <div class="col-md-6">
+            <div class="col-md-6">
               <div class="row mb-3">
-                  <div class="col align-items-center d-flex">
-                      <h3 class="h4">Peta Risiko Inheren dan Residual</h3>
-                  </div>
-                  <div class="col-1">
-                      <select class="form-select" style="visibility: hidden;">
-                      </select>
-                  </div>
+                <div class="col align-items-center d-flex">
+                  <h3 class="h4">Peta Risiko Terkini (Current)</h3>
+                </div>
+                <div class="col">
+                  <select class="form-select" id="quarterSelect">
+                    <option value="1">Quarter 1</option>
+                    <option value="2">Quarter 2</option>
+                    <option value="3">Quarter 3</option>
+                    <option value="4">Quarter 4</option>
+                  </select>
+                </div>
               </div>
-              <div class="table-risk-map" id="inherentMap">
-                  <table class="map-table">
-                      <tbody>
-                          @for($likelihood = 5; $likelihood >= 1; $likelihood--)
-                              <tr>
-                              @if ($likelihood == 5)
-                                  <td rowspan="5" class="side-title">
-                                      <div class="divider m-0">
-                                          <div class="divider-text">
-                                              LIKELIHOOD
-                                          </div>
-                                      </div>
-                                  </td>
-                              @endif
-                              @for($impact = 1; $impact <= 5; $impact++)
-                                  @php
-                                  $riskMap = $riskMaps[$impact . '-' . $likelihood] ?? null;
-                                  @endphp
-                                  <td>
-                                      <div class="data-cell {{strtolower(str_replace(' ', '-', $riskMap['level_risiko']))}}" data-id="{{ ($likelihood - 1) * 5 + $impact }}" data-posisi-risiko="{{ $riskMap['nilai_risiko'] }}" data-matrix='{{ $impact }}-{{ $likelihood }}'>
-                                          <div class="kode-peristiwa"></div>
-                                          <div class="posisi-risiko">{{ $riskMap['nilai_risiko'] }}</div>
-                                      </div>
-                                  </td>
-                              @endfor
-                              </tr>
-                          @endfor
-                          <tr>
-                              <td class="useless-cell"></td>
-                              <td colspan="5" class="footer-title">
-                                  <div class="divider m-0">
-                                      <div class="divider-text">
-                                          IMPACT
-                                      </div>
-                                  </div>
-                              </td>
-                          </tr>
-                      </tbody>
-                  </table>
-                  
-                  <!-- begin::Legend -->
-                  <div class="risk-map-legend d-flex flex-center gap-3">
-                      <div class="d-flex align-items-center gap-1">
-                          <i class='bx bx-circle inherent'></i>
-                          Inherent
-                      </div>
-                      <div class="d-flex align-items-center gap-1">
-                          <i class='bx bxs-circle residual'></i>
-                          Residual
-                      </div>
-                      <div class="d-flex align-items-center gap-1">
-                          <i class="bx bxs-circle current"></i>
-                          Current
-                      </div>
-                  </div>
-                  <!-- end::Legend -->
-              </div>
-          </div>
-          <div class="col-md-6">
-            <div class="row mb-3">
-              <div class="col align-items-center d-flex">
-                <h3 class="h4">Peta Risiko Terkini (Current)</h3>
-              </div>
-              <div class="col">
-                <select class="form-select" id="quarterSelect">
-                  <option value="1">Quarter 1</option>
-                  <option value="2">Quarter 2</option>
-                  <option value="3">Quarter 3</option>
-                  <option value="4">Quarter 4</option>
-                </select>
-              </div>
-            </div>
-            <div class="table-risk-map" id="currentMap">
-              <table class="map-table">
-                <tbody>
-                  @for($likelihood = 5; $likelihood >= 1; $likelihood--)
+              <div class="table-risk-map" id="currentMap">
+                <table class="map-table">
+                  <tbody>
+                    @for($likelihood = 5; $likelihood >= 1; $likelihood--)
+                      <tr>
+                      @if ($likelihood == 5)
+                        <td rowspan="5" class="side-title">
+                          <div class="divider m-0">
+                            <div class="divider-text">
+                              LIKELIHOOD
+                            </div>
+                          </div>
+                        </td>
+                      @endif
+                      @for($impact = 1; $impact <= 5; $impact++)
+                        @php
+                        $riskMap = $riskMaps[$impact . '-' . $likelihood] ?? null;
+                        @endphp
+                        <td>
+                          <div class="data-cell {{strtolower(str_replace(' ', '-', $riskMap['level_risiko']))}}" data-id="{{ ($likelihood - 1) * 5 + $impact }}" data-posisi-risiko="{{ $riskMap['nilai_risiko'] }}" data-matrix='{{ $impact }}-{{ $likelihood }}'>
+                            <div class="kode-peristiwa"></div>
+                            <div class="posisi-risiko">{{ $riskMap['nilai_risiko'] }}</div>
+                          </div>
+                        </td>
+                      @endfor
+                      </tr>
+                    @endfor
                     <tr>
-                    @if ($likelihood == 5)
-                      <td rowspan="5" class="side-title">
+                      <td class="useless-cell"></td>
+                      <td colspan="5" class="footer-title">
                         <div class="divider m-0">
                           <div class="divider-text">
-                            LIKELIHOOD
+                            IMPACT
                           </div>
                         </div>
                       </td>
-                    @endif
-                    @for($impact = 1; $impact <= 5; $impact++)
-                      @php
-                      $riskMap = $riskMaps[$impact . '-' . $likelihood] ?? null;
-                      @endphp
-                      <td>
-                        <div class="data-cell {{strtolower(str_replace(' ', '-', $riskMap['level_risiko']))}}" data-id="{{ ($likelihood - 1) * 5 + $impact }}" data-posisi-risiko="{{ $riskMap['nilai_risiko'] }}" data-matrix='{{ $impact }}-{{ $likelihood }}'>
-                          <div class="kode-peristiwa"></div>
-                          <div class="posisi-risiko">{{ $riskMap['nilai_risiko'] }}</div>
-                        </div>
-                      </td>
-                    @endfor
                     </tr>
-                  @endfor
-                  <tr>
-                    <td class="useless-cell"></td>
-                    <td colspan="5" class="footer-title">
-                      <div class="divider m-0">
-                        <div class="divider-text">
-                          IMPACT
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-                
-              <!-- begin::Legend -->
-              <div class="risk-map-legend d-flex flex-center gap-3">
-                <div class="d-flex align-items-center gap-1">
-                  <i class='bx bx-circle inherent'></i>
-                  Inherent
+                  </tbody>
+                </table>
+  
+                <!-- begin::Legend -->
+                <div class="risk-map-legend d-flex flex-center gap-3">
+                  <div class="d-flex align-items-center gap-1">
+                    <i class='bx bx-circle inherent'></i>
+                    Inherent
+                  </div>
+                  <div class="d-flex align-items-center gap-1">
+                    <i class='bx bxs-circle residual'></i>
+                    Residual
+                  </div>
+                  <div class="d-flex align-items-center gap-1">
+                    <i class="bx bxs-circle current"></i>
+                    Current
+                  </div>
                 </div>
-                <div class="d-flex align-items-center gap-1">
-                  <i class='bx bxs-circle residual'></i>
-                  Residual
-                </div>
-                <div class="d-flex align-items-center gap-1">
-                  <i class="bx bxs-circle current"></i>
-                  Current
-                </div>
+                <!-- end::Legend -->
               </div>
-              <!-- end::Legend -->
+            </div>
+        </div>
+        <div class="d-block mt-3">
+          <div class="table-responsive scrollbar">
+            <table class="table table-strategi">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Peristiwa Risiko</th>
+                  <th>Deskripsi Peristiwa Risiko</th>
+                  <th>Nilai Dampak Inherent</th>
+                  <th>Skala Dampak Inherent</th>
+                  <th>Nilai Probabilitas Inherent</th>
+                  <th>Skala Probabilitas Inherent</th>
+                  <th>Nilai Risiko Inherent</th>
+                  <th>Eksposur Risiko Inherent</th>
+                  <th>Level Risiko Inherent</th>
+                  <th>Nilai Dampak Residual</th>
+                  <th>Skala Dampak Residual</th>
+                  <th>Nilai Probabilitas Residual</th>
+                  <th>Skala Probabilitas Residual</th>
+                  <th>Nilai Risiko Residual</th>
+                  <th>Eksposur Risiko Residual</th>
+                  <th>Level Risiko Residual</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach($risikos as $risiko)
+                <tr>
+                  <td>{{ $loop->iteration }}</td>
+                  <td>
+                    <a href="{{ route('risk-register-unit.view', $risiko->id) }}">
+                      {{ $risiko->peristiwa_risiko ?? '-' }}  
+                    </a>
+                  </td>
+                  <td>{{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}</td>
+                  <td>{{ $risiko->riskAnalysis?->nilai_dampak ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak, 0, ',', '.') : 'Rp 0' }}</td>
+                  <td>
+                    {{ $risiko->riskAnalysis?->skalaDampakObj?->tingkat
+                      ? '(' . $risiko->riskAnalysis?->skalaDampakObj?->tingkat . ') ' . $risiko->riskAnalysis?->skalaDampakObj?->deskripsi
+                      : '-' }}
+                  </td>
+                  <td>{{ $risiko->riskAnalysis?->nilai_probabilitas ?? '-' }}</td>
+                  <td>
+                    {{ $risiko->riskAnalysis?->skalaProbabilitas?->tingkat
+                        ? '(' . $risiko->riskAnalysis?->skalaProbabilitas?->tingkat . ') ' . $risiko->riskAnalysis?->skalaProbabilitas?->skala
+                        : '-' }}
+                  </td>
+                  <td>{{ $risiko->riskAnalysis?->skala_risiko ?? '-' }}</td>
+                  <td>{{ $risiko->riskAnalysis?->eksposur_risiko ? 'Rp ' . number_format($risiko->riskAnalysis->eksposur_risiko, 0, ',', '.') : 'Rp 0' }}</td>
+                  <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($risiko->riskAnalysis?->level_risiko)))}}">{{ $risiko->riskAnalysis?->level_risiko ?? '-' }}</td>
+                  <td>{{ $risiko->riskAnalysis?->nilai_dampak_residual ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak_residual, 0, ',', '.') : 'Rp 0' }}</td>
+                  <td>
+                    {{ $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->tingkat
+                      ? '(' . $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->tingkat . ') ' . $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->deskripsi
+                      : '-' }}
+                  </td>
+                  <td>{{ $risiko->riskAnalysis?->nilai_probabilitas_residual ?? '-' }}</td>
+                  <td>
+                    {{ $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->tingkat
+                      ? '(' . $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->tingkat . ') ' . $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->skala
+                      : '-' }}
+                  </td>
+                  <td>{{ $risiko->riskAnalysis?->skala_risiko_residual ?? '-' }}</td>
+                  <td>{{ $risiko->riskAnalysis?->eksposur_risiko_residual ? 'Rp ' . number_format($risiko->riskAnalysis->eksposur_risiko_residual, 0, ',', '.') : 'Rp 0' }}</td>
+                  <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($risiko->riskAnalysis?->level_risiko_residual)))}}">{{ $risiko->riskAnalysis?->level_risiko_residual ?? '-' }}</td>
+                </tr>
+                @endforeach
+                @if ($risikos->isEmpty())
+                <tr>
+                  <td colspan="15" class="text-center p-3">Tidak ada data</td>
+                </tr>
+                @endif
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!--============================ Penilaian RMI ============================-->
+  <div class="col-12 mb-3">
+    <div class="card">
+      <div class="card-header stepper border-0 pb-0">
+        <div class="nav-link active d-flex align-items-center p-0">
+          <span class="h3 mb-0">Peta Komposit Risiko</span>
+        </div>
+      </div>
+      <div class="card-body">
+        {{-- 1. Informasi Periode & Ringkasan --}}
+        <div class="row g-4 mb-4">
+          <div class="col-md-6">
+            <div class="card border-primary shadow-sm">
+              <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                Informasi Periode RMI
+                @if ($period->id)
+                <a href="{{ route('penilaian-rmi.show', $period->id) }}" class="btn-input-icon text-white" data-bs-toggle="tooltip"
+                    title="Lihat Detail">
+                    <span class="bx bx-show"></span>
+                </a>
+                @endif
+              </div>
+              <div class="card-body">
+                <dl class="row mb-0">
+                  <dt class="col-sm-4">Tahun Periode</dt><dd class="col-sm-8">{{ $period->year }}</dd>
+                  <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8">
+                      @if($period->status==1)
+                        <span class="badge bg-warning">Dalam Proses</span>
+                      @else
+                        <span class="badge bg-success">Selesai</span>
+                      @endif
+                    </dd>
+                  <dt class="col-sm-4">Score Dimension</dt><dd class="col-sm-8">{{ $period->score_rmi }}</dd>
+                  <dt class="col-sm-4">Deskripsi Score</dt><dd class="col-sm-8">{{ $period->score_rmi_desc }}</dd>
+                  <dt class="col-sm-4">Score RMI</dt><dd class="col-sm-8">{{ $period->final_score_rmi }}</dd>
+      
+                  <dt class="col-sm-4">Tanggal Update</dt><dd class="col-sm-8">{{ $period->updated_at->format('d M Y H:i') }}</dd>
+                </dl>
+              </div>
             </div>
           </div>
-      </div>
-      <div class="d-block mt-3">
-        <div class="table-responsive scrollbar">
-          <table class="table table-strategi">
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Peristiwa Risiko</th>
-                <th>Deskripsi Peristiwa Risiko</th>
-                <th>Nilai Dampak Inherent</th>
-                <th>Skala Dampak Inherent</th>
-                <th>Nilai Probabilitas Inherent</th>
-                <th>Skala Probabilitas Inherent</th>
-                <th>Nilai Risiko Inherent</th>
-                <th>Level Risiko Inherent</th>
-                <th>Nilai Dampak Residual</th>
-                <th>Skala Dampak Residual</th>
-                <th>Nilai Probabilitas Residual</th>
-                <th>Skala Probabilitas Residual</th>
-                <th>Nilai Risiko Residual</th>
-                <th>Level Risiko Residual</th>
-              </tr>
-            </thead>
-            <tbody>
-              @foreach($risikos as $risiko)
-              <tr>
-                <td>{{ $loop->iteration }}</td>
-                <td>{{ $risiko->peristiwa_risiko ?? '-' }}</td>
-                <td>{{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}</td>
-                <td>{{ $risiko->riskAnalysis?->nilai_dampak ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak, 0, ',', '.') : 'Rp 0' }}</td>
-                <td>
-                  {{ $risiko->riskAnalysis?->skalaDampakObj?->tingkat 
-                    ? '(' . $risiko->riskAnalysis?->skalaDampakObj?->tingkat . ') ' . $risiko->riskAnalysis?->skalaDampakObj?->deskripsi 
-                    : '-' }}
-                </td>
-                <td>{{ $risiko->riskAnalysis?->nilai_probabilitas ?? '-' }}</td>
-                <td>
-                  {{ $risiko->riskAnalysis?->skalaProbabilitas?->tingkat 
-                      ? '(' . $risiko->riskAnalysis?->skalaProbabilitas?->tingkat . ') ' . $risiko->riskAnalysis?->skalaProbabilitas?->skala 
-                      : '-' }}
-                </td>
-                <td>{{ $risiko->riskAnalysis?->skala_risiko ?? '-' }}</td>
-                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($risiko->riskAnalysis?->level_risiko)))}}">{{ $risiko->riskAnalysis?->level_risiko ?? '-' }}</td>
-                <td>{{ $risiko->riskAnalysis?->nilai_dampak_residual ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak_residual, 0, ',', '.') : '-' }}</td>
-                <td>
-                  {{ $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->tingkat 
-                    ? '(' . $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->tingkat . ') ' . $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->deskripsi 
-                    : '-' }}
-                </td>
-                <td>{{ $risiko->riskAnalysis?->nilai_probabilitas_residual ?? '-' }}</td>
-                <td>
-                  {{ $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->tingkat 
-                    ? '(' . $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->tingkat . ') ' . $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->skala 
-                    : '-' }}
-                </td>
-                <td>{{ $risiko->riskAnalysis?->skala_risiko_residual ?? '-' }}</td>
-                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($risiko->riskAnalysis?->level_risiko_residual)))}}">{{ $risiko->riskAnalysis?->level_risiko_residual ?? '-' }}</td>
-              </tr>
-              @endforeach
-              @if ($risikos->isEmpty())
-              <tr>
-                <td colspan="15" class="text-center p-3">Tidak ada data</td>
-              </tr>
-              @endif
-            </tbody>
-          </table>
+      
+          <div class="col-md-6">
+            <div class="card border-primary shadow-sm">
+              <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                Ringkasan Kinerja &amp; KPMR
+                @if ($period->id)
+                <a href="{{ route('penilaian-rmi.show', $period->id) }}" class="btn-input-icon text-white" data-bs-toggle="tooltip"
+                    title="Lihat Detail">
+                    <span class="bx bx-show"></span>
+                </a>
+                @endif
+              </div>
+              <div class="card-body">
+                <dl class="row mb-0">
+                  <dt class="col-sm-6">Kinerja</dt><dd class="col-sm-6">{{ $period->kinerja }}</dd>
+                  <dt class="col-sm-6">KPMR</dt><dd class="col-sm-6">{{ $period->kpmr }}</dd>
+                  <dt class="col-sm-6">Peringkat Komposit Risiko</dt><dd class="col-sm-6">{{ $period->peringkat_komposit_risiko }}</dd>
+                  <dt class="col-sm-6">Nilai Konversi</dt><dd class="col-sm-6">{{ $period->nilai_konversi }}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {{-- Peta Komposit Risiko --}}
+        <div class="card shadow-sm">
+          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            Peta Komposit Risiko
+            @if ($period->id)
+            <a href="{{ route('penilaian-rmi.show', $period->id) }}" class="btn-input-icon text-white" data-bs-toggle="tooltip"
+                title="Lihat Detail">
+                <span class="bx bx-show"></span>
+            </a>
+            @endif
+          </div>
+          <div class="card-body table-responsive p-0">
+            <table class="table table-bordered text-center mb-0">
+              <thead>
+                <tr class="bg-teal text-white">
+                  <th rowspan="2" class="align-middle">Kinerja →</th>
+                  <th colspan="5">Kualitas Penerapan Manajemen Risiko →</th>
+                </tr>
+                <tr class="bg-navy text-white">
+                  <th class="map-cell">Strong</th>
+                  <th class="map-cell">Satisfactory</th>
+                  <th class="map-cell">Fair</th>
+                  <th class="map-cell">Marginal</th>
+                  <th class="map-cell">Unsatisfactory</th>
+                </tr>
+              </thead>
+              <tbody>
+                @php
+                  // Matriks 5×5
+                  $matrix = [
+                    [1,1,2,3,3],
+                    [1,2,2,3,4],
+                    [2,2,3,4,4],
+                    [2,3,4,4,5],
+                    [3,3,4,5,5],
+                  ];
+      
+                  $rowLabels   = ['Sangat Baik','Baik','Cukup','Kurang','Buruk'];
+                  $valueClasses = [
+                    1 => 'bg-strong',
+                    2 => 'bg-satisfactory',
+                    3 => 'bg-fair',
+                    4 => 'bg-marginal',
+                    5 => 'bg-unsatisfactory',
+                  ];
+      
+                  // Dapatkan ID skala (1–5) dari PenilaianCapaianKinerja
+                  $pen  = $period->penilaianCapaianKinerja;
+                  $kRow = ($pen?->capaian_kinerja ?? 1) - 1;
+                  $kCol = ($pen?->kpmr ?? 1) - 1;
+                @endphp
+      
+                @foreach($matrix as $r => $cols)
+                  <tr>
+                    {{-- Label baris --}}
+                    <th class="align-middle">{{ $rowLabels[$r] }}</th>
+      
+                    @foreach($cols as $c => $cell)
+                      @php
+                        // cek sel aktif berdasarkan (baris=kRow, kolom=kCol)
+                        $isCurrent = ($r === $kRow && $c === $kCol);
+                        // kelas berdasarkan nilai sel (1–5)
+                        $bgClass = $valueClasses[$cell] ?? '';
+                      @endphp
+      
+                      <td class="map-cell {{ $bgClass }}{{ $isCurrent ? ' current' : '' }}">
+                        {{ $cell }}
+                        @if($isCurrent)
+                          <i class="bi bi-geo-alt-fill text-dark"></i>
+                        @endif
+                      </td>
+                    @endforeach
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <!--============================ Top 5 Risk ============================-->
-  <div class="col-12">
+  {{-- <div class="col-12">
     <div class="card" id="top-risk-card">
       <div class="card-header border-0 pb-0">
         <div class="d-flex align-items-center gap-3">
@@ -890,10 +583,10 @@
         </div>
       </div>
     </div>
-  </div>
+  </div> --}}
 
-  <!--============================ Loss Event Data ============================-->
-  <div class="col-12">
+  <!--============================ Loss Event Data Unit ============================-->
+  <div class="col-12 mb-3">
     <div class="card" id="led-card">
       <div class="card-header border-0 pb-0">
         <div class="d-flex align-items-center gap-3">
@@ -904,7 +597,7 @@
               </span>
             </div>
           </div>
-          <h3>Loss Event Data</h3>
+          <h3>Top 10 Loss Event Data Divisi</h3>
         </div>
         <hr class="mb-2 mt-xxl-5">
       </div>
@@ -926,16 +619,47 @@
               </tr> --}}
             </thead>
             <tbody>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!--============================ Loss Event Data Project ============================-->
+  <div class="col-12">
+    <div class="card" id="led-project-card">
+      <div class="card-header border-0 pb-0">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-info-subtle rounded-3 p-2">
+            <div class="lead__icon lead__icon_sm">
+              <span class="svg-icon svg-icon-2x svg-icon-info">
+                @include('partials.icon-abs05')
+              </span>
+            </div>
+          </div>
+          <h3>Top 10 Loss Event Data Project</h3>
+        </div>
+        <hr class="mb-2 mt-xxl-5">
+      </div>
+      <div class="card-body pt-0">
+        <div class="table-responsive scrollbar">
+          <table class="table">
+            <thead>
+              <tr>
+                <th rowspan="2">Tanggal Kejadian</th>
+                <th rowspan="2">Nama Kejadian</th>
+                <th rowspan="2">Identifikasi Kejadian</th>
+                <th rowspan="2">Kategori Kejadian</th>
+                <th rowspan="2">Nilai Kerugian</th>
+                <th rowspan="2">Pihak Terkait</th>
+              </tr>
               {{-- <tr>
-                <td>04/11/2024</td>
-                <td>Lorem ipsum odor amet, consectetuer adipiscing elit. Natoque habitant habitant donec sodales
-                  porttitor dictumst.</td>
-                <td>Risiko Pendidikan</td>
-                <td>5.000.000.000</td>
-                <td>2.000.000.000</td>
-                <td>Consectetur mauris praesent risus condimentum libero diam aenean.</td>
-                <td>LKPG</td>
+                <th class="no-sort text-center py-2">Finansial (IDR)</th>
+                <th class="no-sort text-center py-2">Non Finansial</th>
               </tr> --}}
+            </thead>
+            <tbody>
             </tbody>
           </table>
         </div>
@@ -1010,6 +734,46 @@
 #currentMap.show-q4 .current-q4 {
     display: block;
 }
+
+/* Style Penilaian PMI */
+/* 1. Layout fixed & kolom pertama sempit */
+.card .table-peta {
+  table-layout: fixed;
+  width: 100%;
+}
+.table-peta th:first-child,
+.table-peta td:first-child {
+  width: 120px;
+  white-space: nowrap;
+}
+
+/* 2. Semua kolom peta dibagi rata */
+.table-peta th:not(:first-child),
+.table-peta td.map-cell {
+  width: calc((100% - 120px)/5);
+}
+
+/* 3. Kotak peta */
+.map-cell {
+  padding: .25rem;
+  height: 40px;
+  vertical-align: middle;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* 4. Warna berdasarkan nilai */
+.bg-strong         { background-color: #3cbf87 !important; }  /* untuk “1” */
+.bg-satisfactory   { background-color: #a8e6cf !important; }  /* untuk “2” */
+.bg-fair           { background-color: #ffec99 !important; }  /* untuk “3” */
+.bg-marginal       { background-color: #ffc078 !important; }  /* untuk “4” */
+.bg-unsatisfactory { background-color: #ffa8a8 !important; }  /* untuk “5” */
+
+/* 5. Highlight sel terpilih */
+.map-cell.current {
+  border: 2px solid #d63384 !important;
+}
 </style>
 @endpush
 
@@ -1047,39 +811,41 @@ $(document).ready(function() {
     // }
     // $('#jkk-card .last-changes').html(dashboardData.jkk_date);
     // $('#jkk-card #jkk-counter').html(1);
-    const jkkCount = dashboardData.led.length;
-    $('#jkk-card #jkk-counter').html(jkkCount);
-    let latestLedDate = 'N/A';
-    let previousJkkCount = dashboardData.led;
 
-    if (dashboardData.led.length > 0) {
-      const dates = dashboardData.led.map(item => new Date(item.tanggal_kejadian));
-      const maxDate = new Date(Math.max(...dates));
-      latestLedDate = maxDate.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
-    }
+    // Realisasi Perlakuan Kerusakan
+    // const jkkCount = dashboardData.led.length;
+    // $('#jkk-card #jkk-counter').html(jkkCount);
+    // let latestLedDate = 'N/A';
+    // let previousJkkCount = dashboardData.led;
 
-    $('#jkk-card .last-changes').html(latestLedDate);
+    // if (dashboardData.led.length > 0) {
+    //   const dates = dashboardData.led.map(item => new Date(item.tanggal_kejadian));
+    //   const maxDate = new Date(Math.max(...dates));
+    //   latestLedDate = maxDate.toLocaleDateString('en-GB', {
+    //     day: '2-digit',
+    //     month: 'short',
+    //     year: 'numeric'
+    //   });
+    // }
 
-    if (typeof previousJkkCount === 'number' && previousJkkCount !== null) {
-      if (jkkCount > previousJkkCount) {
-        $('#jkk-card .changes-summary').html(
-          `<span class="up-label">${jkkCount}</span>`);
-      } else if (jkkCount < previousJkkCount) {
-        $('#jkk-card .changes-summary').html(
-          `<span class="down-label">${jkkCount}</span>`);
-      } else {
-        $('#jkk-card .changes-summary').html(
-          `<span class="neutral-label">${jkkCount}</span>`);
-      }
-    } else {
-      // Jika tidak ada data pembanding
-      $('#jkk-card .changes-summary').html(
-        `<span class="up-label">${jkkCount}</span>`);
-    }
+    // $('#jkk-card .last-changes').html(latestLedDate);
+
+    // if (typeof previousJkkCount === 'number' && previousJkkCount !== null) {
+    //   if (jkkCount > previousJkkCount) {
+    //     $('#jkk-card .changes-summary').html(
+    //       `<span class="up-label">${jkkCount}</span>`);
+    //   } else if (jkkCount < previousJkkCount) {
+    //     $('#jkk-card .changes-summary').html(
+    //       `<span class="down-label">${jkkCount}</span>`);
+    //   } else {
+    //     $('#jkk-card .changes-summary').html(
+    //       `<span class="neutral-label">${jkkCount}</span>`);
+    //   }
+    // } else {
+    //   // Jika tidak ada data pembanding
+    //   $('#jkk-card .changes-summary').html(
+    //     `<span class="up-label">${jkkCount}</span>`);
+    // }
 
     // Capaian TKMRU
     // if (dashboardData.tkmru_c >= 0) {
@@ -1093,49 +859,72 @@ $(document).ready(function() {
     // $('#tkmru-card #tkmru-notes').html(dashboardData.tkmru_notes);
 
     // TOP RISK
-    $('#top-risk-card .table tbody').html('');
-    if (!dashboardData.top_risk.length) {
-      $('#top-risk-card .table tbody').append(`
-              <tr>
-                  <td colspan="8" class="dt-empty">No data available</td>
-              </tr>
-          `);
-    } else {
-      dashboardData.top_risk.forEach((risk) => {
-        $('#top-risk-card .table tbody').append(`
-                <tr>
-                    <td>${risk.peristiwa}</td>
-                    <td>${risk.deskripsi}</td>
-                    <td>${risk.jenis_risiko}</td>
-                    <td class="level_risiko text-center">
-                        <div class="badge ${risk.warna_tingkat_risiko}">${risk.tingkat_risiko}</div>
-                    </td>
-                    <td>${risk.sasaran}</td>
-                    <td>${risk.kri}</td>
-                    <td class="text-center">
-                        <div class="status-container ${risk.status_kri}">
-                            <div class="status-green"></div>
-                            <div class="status-yellow"></div>
-                            <div class="status-red"></div>
-                        </div>
-                    </td>
-                    <td>${risk.risk_owner}</td>
-                </tr>
-            `);
-      });
-    }
-
-    // Lost Event Data
+    // $('#top-risk-card .table tbody').html('');
+    // if (!dashboardData.top_risk.length) {
+    //   $('#top-risk-card .table tbody').append(`
+    //           <tr>
+    //               <td colspan="8" class="dt-empty">No data available</td>
+    //           </tr>
+    //       `);
+    // } else {
+    //   dashboardData.top_risk.forEach((risk) => {
+    //     $('#top-risk-card .table tbody').append(`
+    //             <tr>
+    //                 <td>${risk.peristiwa}</td>
+    //                 <td>${risk.deskripsi}</td>
+    //                 <td>${risk.jenis_risiko}</td>
+    //                 <td class="level_risiko text-center">
+    //                     <div class="badge ${risk.warna_tingkat_risiko}">${risk.tingkat_risiko}</div>
+    //                 </td>
+    //                 <td>${risk.sasaran}</td>
+    //                 <td>${risk.kri}</td>
+    //                 <td class="text-center">
+    //                     <div class="status-container ${risk.status_kri}">
+    //                         <div class="status-green"></div>
+    //                         <div class="status-yellow"></div>
+    //                         <div class="status-red"></div>
+    //                     </div>
+    //                 </td>
+    //                 <td>${risk.risk_owner}</td>
+    //             </tr>
+    //         `);
+    //   });
+    // }
+    
+    // Lost Event Data Divisi
     $('#led-card .table tbody').html('');
-    if (!dashboardData.led) {
+    if (dashboardData.led.length == 0) {
       $('#led-card .table tbody').append(`
               <tr>
-                  <td colspan="7" class="dt-empty">No data available</td>
+                  <td colspan="7" class="dt-empty text-center">No data available</td>
               </tr>
           `);
     } else {
       dashboardData.led.forEach((led) => {
         $('#led-card .table tbody').append(`
+                <tr>
+                    <td>${led.tanggal_kejadian}</td>
+                    <td>${led.nama_kejadian}</td>
+                    <td>${led.identifikasi_kejadian}</td>
+                    <td>${led.kategori_kejadian}</td>
+                    <td>${led.nilai_kerugian}</td>
+                    <td>${led.unit_penanggung_jawab}</td>
+                </tr>
+            `);
+      });
+    }
+
+    // Lost Event Data Project
+    $('#led-project-card .table tbody').html('');
+    if (dashboardData.ledProject.length == 0) {
+      $('#led-project-card .table tbody').append(`
+              <tr>
+                  <td colspan="7" class="dt-empty text-center">No data available</td>
+              </tr>
+          `);
+    } else {
+      dashboardData.ledProject.forEach((led) => {
+        $('#led-project-card .table tbody').append(`
                 <tr>
                     <td>${led.tanggal_kejadian}</td>
                     <td>${led.nama_kejadian}</td>
@@ -1304,7 +1093,7 @@ $(document).ready(function() {
   }
 
   const initInputFilter = () => {
-    $('#periode_selector, #unit_selector').on('change', function() {
+    $('#periode_selector').on('change', function() {
       $('#filterForm').submit();
     });
   }
@@ -1323,7 +1112,7 @@ $(document).ready(function() {
             if (!cellI.data('kode-peristiwa-inherent')) {
                 cellI.data('kode-peristiwa-inherent', []);
             }
-            
+
             cellI.data('kode-peristiwa-inherent').push(code);
             cellI.data('has-inherent', true);
         }
@@ -1332,7 +1121,7 @@ $(document).ready(function() {
             if (!cellR.data('kode-peristiwa-residual')) {
                 cellR.data('kode-peristiwa-residual', []);
             }
-            
+
             cellR.data('kode-peristiwa-residual').push(code);
             cellR.data('has-residual', true);
         }
@@ -1346,7 +1135,7 @@ $(document).ready(function() {
                 if (!cellC.data('kode-peristiwa-current-q' + currentRiskMap.quarter)) {
                     cellC.data('kode-peristiwa-current-q' + currentRiskMap.quarter, []);
                 }
-                
+
                 cellC.data('kode-peristiwa-current-q' + currentRiskMap.quarter).push(code);
                 cellC.data('has-current', true);
             }
@@ -1509,8 +1298,8 @@ $(document).ready(function() {
       $('#currentMap').addClass('show-q' + quarter);
   }).change();
 
-  initKpiChart();
-  initRprChart();
+  // initKpiChart();
+  // initRprChart();
   refreshSummary();
   initInputFilter();
   initializeMaps();
