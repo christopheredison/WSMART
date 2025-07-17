@@ -140,9 +140,8 @@ Route::group(['middleware' => ['auth']], function() {
       return view('dashboard-anper');
     });
 
-    Route::get('/dashboard-kri', function () {
-      return view('dashboard-kri');
-    });
+    Route::get('/dashboard-kri-unit', [HomeController::class, 'dashboardKriUnit'])->name('dashboard-kri-unit');
+    Route::get('/dashboard-kri-project', [HomeController::class, 'dashboardKriProject'])->name('dashboard-kri-project');
 
     Route::group(['middleware' => ['can:manajemen_user']],function ()
     {
