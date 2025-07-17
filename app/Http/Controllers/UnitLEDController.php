@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\IdentifikasiRisiko;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Auth;
@@ -18,7 +19,7 @@ use App\Models\Jabatan;
 
 class UnitLEDController extends Controller
 {
-    public function index(Request $request, $unitId)
+    public function index(Request $request, $unitId = null)
     {
         if ($request->ajax()) {
             $data = LossEvent::with(['kategoriKejadian']);
@@ -59,18 +60,28 @@ class UnitLEDController extends Controller
     
         $periodes = Periode::orderBy('tahun', 'desc')->get();
         $kategoriKejadians = KategoriKejadian::all();
+        $periode = null;
+        if ($unitId) {
+            $periode = Periode::findOrFail($unitId);
+        }
     
-        return view('unit-led.index', compact('periodes', 'kategoriKejadians'));
+        return view('unit-led.index', compact('periodes', 'kategoriKejadians', 'periode'));
     }
 
     public function create()
     {
-        $periodes = Periode::orderBy('tahun', 'desc')->get();
+        $periodes = Periode::orderBy('tahun', 'desc')->with('identifikasiRisikos.penyebabRisikos.perlakuanPenyebabRisiko')->get();
         $kategoriKejadians = KategoriKejadian::all();
         $jenisRisikos = JenisRisiko::with('kategoriRisiko')->get();
         $jabatans = Jabatan::all();
+        $periode = null;
+        $identifikasiRisikos = [];
+        if (request()->periode_id) {
+            $user = request()->user();
+            $periode = Periode::findOrFail(request()->periode_id);
+        }
         
-        return view('unit-led.create', compact('periodes', 'kategoriKejadians', 'jenisRisikos', 'jabatans'));
+        return view('unit-led.create', compact('periodes', 'kategoriKejadians', 'jenisRisikos', 'jabatans', 'periode'));
     }
 
     public function store(Request $request)
@@ -153,12 +164,13 @@ class UnitLEDController extends Controller
     public function edit($id)
     {
         $lossEvent = LossEvent::findOrFail($id);
-        $periodes = Periode::orderBy('tahun', 'desc')->get();
+        $periodes = Periode::orderBy('tahun', 'desc')->with('identifikasiRisikos.penyebabRisikos.perlakuanPenyebabRisiko')->get();
         $kategoriKejadians = KategoriKejadian::all();
         $jenisRisikos = JenisRisiko::with('kategoriRisiko')->get();
         $jabatans = Jabatan::all();
+        $periode = $lossEvent->periode;
 
-        return view('unit-led.edit', compact('lossEvent', 'periodes', 'kategoriKejadians', 'jenisRisikos', 'jabatans'));
+        return view('unit-led.edit', compact('lossEvent', 'periodes', 'kategoriKejadians', 'jenisRisikos', 'jabatans', 'periode'));
     }
 
     public function update(Request $request, $id)
