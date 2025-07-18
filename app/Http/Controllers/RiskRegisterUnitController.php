@@ -811,13 +811,14 @@ class RiskRegisterUnitController extends Controller
 
         // Validasi input
         $validated = $request->validate($validationRules);
-
+        $unit = $identifikasiRisiko->unit;
+        $periode = $identifikasiRisiko->periode;
+        $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
         if ($request->kategori_dampak == 'Kuantitatif') {
-            $unit = $identifikasiRisiko->unit;
-            $periode = $identifikasiRisiko->periode;
+            
             $risk_limit = 0;
 
-            $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+            
             if ($riskLimitPeriode) {
                 $risk_limit = $riskLimitPeriode->risk_limit;
                 $risk_tolerance = $riskLimitPeriode->risk_limit;
@@ -937,7 +938,15 @@ class RiskRegisterUnitController extends Controller
         }
         $toUpdate['skala_risiko'] = $riskMap->nilai_risiko;
         $toUpdate['level_risiko'] = $riskMap->level_risiko;
-        $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
+
+        //$toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
+        if ($request->kategori_dampak == 'Kualitatif') {
+            // Untuk kualitatif, gunakan skala dampak * skala probabilitas
+            $toUpdate['eksposur_risiko'] = floatval($toUpdate['skala_dampak']) * (1/100) * floatval($toUpdate['nilai_probabilitas']) * ($riskLimitPeriode->risk_limit ?: 0);
+        } else {
+            // Untuk kuantitatif, gunakan nilai dampak * probabilitas
+            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
+        }
 
         $tingkatSkalaProbabilitasResiduals = [];
         for ($i = 1; $i <= 4; $i++) {
