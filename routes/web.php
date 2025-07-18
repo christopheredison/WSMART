@@ -61,6 +61,7 @@ use App\Http\Controllers\PenilaianRMIController;
 use App\Http\Controllers\RiskRegisterUnitController;
 use App\Http\Controllers\RiskRegisterUnitMonitoringController;
 use App\Http\Controllers\UnitLEDController;
+use App\Http\Controllers\RiskContextController;
 
 
 
@@ -485,6 +486,20 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('project', [App\Http\Controllers\LaporanController::class, 'project'])->name('laporan.project');
     Route::post('project', [App\Http\Controllers\LaporanController::class, 'projectExport'])->name('laporan.project.export');
   });
+
+  Route::prefix('risk-context')->group(function () {
+        Route::get('/', [RiskContextController::class, 'index'])->name('risk-context.index');
+        Route::get('/create', [RiskContextController::class, 'create'])->name('risk-context.create');
+        Route::post('/store', [RiskContextController::class, 'store'])->name('risk-context.store');
+        Route::get('/edit/{id}', [RiskContextController::class, 'edit'])->name('risk-context.edit');
+        Route::put('/update/{id}', [RiskContextController::class, 'update'])->name('risk-context.update');
+        Route::get('/show/{id}', [RiskContextController::class, 'show'])->name('risk-context.show');
+        Route::delete('/destroy/{id}', [RiskContextController::class, 'destroy'])->name('risk-context.destroy');
+        
+        // New routes for update or create functionality
+        Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreate'])->name('risk-context.update-or-create');
+        Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdate'])->name('risk-context.store-or-update');
+    });
 });
 
 // Route untuk Measurement Parameter
@@ -549,3 +564,4 @@ Route::post('corporate-risk/update-to-corporate', [App\Http\Controllers\Corporat
 Route::post('corporate-risk/ranking-risiko', [App\Http\Controllers\CorporateRiskController::class, 'rankingRisiko'])->name('corporate-risk.ranking-risiko');
 Route::post('corporate-risk/confirm-corporate', [App\Http\Controllers\CorporateRiskController::class, 'confirmCorporateRisks'])->name('corporate-risk.confirm-corporate');
 Route::post('corporate-risk/revert-from-corporate', [App\Http\Controllers\CorporateRiskController::class, 'revertFromCorporate'])->name('corporate-risk.revert-from-corporate');
+
