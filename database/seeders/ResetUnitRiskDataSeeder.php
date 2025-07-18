@@ -14,20 +14,20 @@ class ResetUnitRiskDataSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1) Daftar tabel yang akan di-reset
+        // 1) Daftar tabel yang akan di-reset (urutan penting untuk FK)
         $tables = [
-            'data_batches',
-            'data_batch_notes',
-            'identifikasi_risikos',
-            'risk_analyses',
-            'penyebab_risikos',
-            'perlakuan_penyebab_risiko_units',
-            'perlakuan_penyebab_risiko_unit_documents',
-            'perlakuan_penyebab_unit_monitorings',
-            'key_risk_indicators',
             'k_r_i_unit_monitorings',
+            'perlakuan_penyebab_unit_monitorings',
+            'perlakuan_penyebab_risiko_unit_documents',
+            'perlakuan_penyebab_risiko_units',
+            'key_risk_indicators',
             'kontrol_eksistings',
             'risk_notes',
+            'penyebab_risikos',
+            'risk_analyses',
+            'identifikasi_risikos',
+            'data_batch_notes',
+            'data_batches',
         ];
 
         // 2) Ambil nama koneksi default (sesuai DB_CONNECTION di .env)
@@ -48,16 +48,18 @@ class ResetUnitRiskDataSeeder extends Seeder
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         }
         elseif ($driver === 'pgsql') {
-            // Disable triggers (FK), truncate + restart sequence, lalu enable triggers
-            DB::statement('SET session_replication_role = replica;');
+            // Untuk PostgreSQL, gunakan pendekatan yang tidak memerlukan privilege khusus
             foreach ($tables as $tbl) {
-                DB::statement(sprintf(
-                    'TRUNCATE TABLE "%s" RESTART IDENTITY CASCADE;',
-                    $tbl
-                ));
-                $this->command->line("– Truncated {$tbl} (Postgres)");
+                try {
+                    // Coba truncate dulu (jika ada privilege)
+                    DB::statement(sprintf('TRUNCATE TABLE "%s" RESTART IDENTITY CASCADE;', $tbl));
+                    $this->command->line("– Truncated {$tbl} (Postgres)");
+                } catch (\Exception $e) {
+                    // Jika gagal, gunakan DELETE
+                    DB::table($tbl)->delete();
+                    $this->command->line("– Deleted all records from {$tbl} (Postgres - fallback)");
+                }
             }
-            DB::statement('SET session_replication_role = DEFAULT;');
         }
         else {
             $this->command->error("❌ Unsupported database driver: {$driver}");
