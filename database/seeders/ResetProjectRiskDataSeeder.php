@@ -14,16 +14,16 @@ class ResetProjectRiskDataSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1) Daftar tabel yang akan di-reset
+        // 1) Daftar tabel yang akan di-reset (urutan penting untuk FK)
         $tables = [
-            'project_risks',
-            'project_risk_analisas',
-            'project_risk_monitorings',
             'project_risk_monitoring_documents',
+            'project_risk_monitorings',
             'project_risk_rencana_perlakuans',
-            'project_periode_lists',
-            'penyebab_risiko_projects',
             'loss_event_projects',
+            'penyebab_risiko_projects',
+            'project_risk_analisas',
+            'project_risks',
+            'project_periode_lists',
         ];
 
         // 2) Ambil nama koneksi default (sesuai DB_CONNECTION di .env)
@@ -44,16 +44,18 @@ class ResetProjectRiskDataSeeder extends Seeder
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         }
         elseif ($driver === 'pgsql') {
-            // Disable triggers (FK), truncate + restart sequence, lalu enable triggers
-            DB::statement('SET session_replication_role = replica;');
+            // Untuk PostgreSQL, gunakan DELETE instead of TRUNCATE untuk menghindari privilege issue
             foreach ($tables as $tbl) {
-                DB::statement(sprintf(
-                    'TRUNCATE TABLE "%s" RESTART IDENTITY CASCADE;',
-                    $tbl
-                ));
-                $this->command->line("– Truncated {$tbl} (Postgres)");
+                try {
+                    // Coba truncate dulu (jika ada privilege)
+                    DB::statement(sprintf('TRUNCATE TABLE "%s" RESTART IDENTITY CASCADE;', $tbl));
+                    $this->command->line("– Truncated {$tbl} (Postgres)");
+                } catch (\Exception $e) {
+                    // Jika gagal, gunakan DELETE
+                    DB::table($tbl)->delete();
+                    $this->command->line("– Deleted all records from {$tbl} (Postgres - fallback)");
+                }
             }
-            DB::statement('SET session_replication_role = DEFAULT;');
         }
         else {
             $this->command->error("❌ Unsupported database driver: {$driver}");
