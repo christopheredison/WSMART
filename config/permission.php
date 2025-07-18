@@ -267,5 +267,6 @@ return [
         'jabatan_list',
         'jabatan_create',
 
+        'corporate_risk_view',
     ],
 ];
