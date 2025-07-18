@@ -42,14 +42,11 @@
           <ul
             class="nav collapse {{ $shouldDashboardOpen ? 'show' : '' }} {{ request()->is('dashboard-unit') || request()->is('dashboard-proyek') || request()->is('dashboard-anper') || request()->is('dashboard-kri') ? 'show' : '' }}"
             id="dashboard">
-            @can('dashboard_universitas')
             <li class="nav-item">
-              <a class="nav-link {{ (url()->current() == route('home', 'universitas')) ? 'active' : '' }}"
-                href="{{ route('home', 'universitas') }}">
+              <a class="nav-link {{ request()->is('dashboard-corporate') ? 'active' : '' }}" href="/dashboard-corporate">
                 <span class="nav-link-text">Corporate</span>
               </a>
             </li>
-            @endcan
             <li class="nav-item">
               <a class="nav-link {{ request()->is('dashboard-unit') ? 'active' : '' }}" href="/dashboard-unit">
                 <span class="nav-link-text">Unit</span>
@@ -73,7 +70,17 @@
           </ul>
         </li>
         <!-- Dashboard Menu End -->
-
+        @can('corporate_risk_view')
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->is('corporate-risk') ? 'active' : '' }}" href="/corporate-risk"
+            role="button" data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon">
+              <i class="menu-icon tf-icons bx bx-grid-alt"></i>
+              <span class="nav-link-text">Risk Register Corporate</span>
+            </span>
+          </a>
+        </li>
+        @endcan
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->is('risk-register-unit') ? 'active' : '' }}" href="/risk-register-unit/periods"
             role="button" data-bs-toggle="" aria-expanded="false">
