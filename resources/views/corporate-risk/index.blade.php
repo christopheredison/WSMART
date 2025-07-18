@@ -254,7 +254,7 @@
                     ; color: @if(in_array(strtolower($item->riskAnalysis->level_risiko), ['low', 'low to moderate', 'moderate'])) #000000 @else #FFFFFF @endif;"
                 @endif
                 >{{ $item->riskAnalysis->skala_risiko ?? '-' }}</td>
-                <td class="eksposure_risiko">{{ $item->riskAnalysis->eksposur_risiko ? 'Rp ' . number_format($item->riskAnalysis->eksposur_risiko, 0, ',', '.') : '-' }}</td>
+                <td class="eksposure_risiko">{{ $item->riskAnalysis && $item->riskAnalysis->eksposur_risiko ? 'Rp ' . number_format($item->riskAnalysis->eksposur_risiko, 0, ',', '.') : '-' }}</td>
                 <td class="total_biaya_rencana_perlakuan">
                   @php
                     $totalBiaya = 0;

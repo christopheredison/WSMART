@@ -168,8 +168,7 @@
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
                                 <input class="form-control update-trigger inputmask-rupiah" type="text" id="realisasi_nilai_dampak" name="realisasi_nilai_dampak"
-                                value="{{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}" 
-                                data-max="{{ $riskAnalysis->nilai_dampak }}" 
+                                value="{{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}"  
                                 {{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? 'disabled' : '' }}
                                 {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'max=' . $riskAnalysis->nilai_dampak : '' }}
                                 min="0"
@@ -593,21 +592,21 @@ $(document).ready(function() {
     const nilaiProbabilitasInherent = {{ $riskAnalysis->nilai_probabilitas ?? 0 }};
     
     // Validasi saat memilih skala dampak
-    $('#realisasi_skala_dampak').on('change', function(e) {
-        // Skip validasi jika perubahan dari hitungRealisasiSkalaDampak()
-        if (e.originalEvent === undefined) return;
+    // $('#realisasi_skala_dampak').on('change', function(e) {
+    //     // Skip validasi jika perubahan dari hitungRealisasiSkalaDampak()
+    //     if (e.originalEvent === undefined) return;
 
-        const selectedValue = parseInt($(this).val());
-        if (selectedValue > skalaDampakInherent) {
-            Swal.fire({
-                title: 'Peringatan',
-                text: 'Nilai skala dampak realisasi tidak boleh lebih besar dari skala dampak inherent',
-                icon: 'warning',
-                confirmButtonText: 'OK'
-            });
-            $(this).val('').trigger('change');
-        }
-    });
+    //     const selectedValue = parseInt($(this).val());
+    //     if (selectedValue > skalaDampakInherent) {
+    //         Swal.fire({
+    //             title: 'Peringatan',
+    //             text: 'Nilai skala dampak realisasi tidak boleh lebih besar dari skala dampak inherent',
+    //             icon: 'warning',
+    //             confirmButtonText: 'OK'
+    //         });
+    //         $(this).val('').trigger('change');
+    //     }
+    // });
 
     // Validasi nilai probabilitas
     $('#realisasi_nilai_probabilitas').on('change', function() {

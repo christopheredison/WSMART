@@ -340,6 +340,22 @@ class RiskRegisterUnitController extends Controller
             'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
         ]);
 
+        $peristiwa_risiko = $request->peristiwa_risiko;
+        $unitId = auth()->user()->unit_id;
+
+        // Pengecekan tidak boleh ada peristiwa risiko yang sama di periode dan unit yang sama
+        $existingRisk = IdentifikasiRisiko::where('unit_id', $unitId)
+            ->where('periode_id', $request->periode_id)
+            ->where('peristiwa_risiko', $peristiwa_risiko)
+            ->first();
+
+        if ($existingRisk) {
+            return response()->json([
+                'message' => 'Peristiwa risiko "' . $peristiwa_risiko . '" sudah ada untuk unit ini pada periode yang sama. Silakan gunakan peristiwa risiko yang berbeda atau edit data yang sudah ada.',
+                'redirect' => 'back'
+            ], 422);
+        }
+
         try {
             // Konversi format tanggal
             $waktuMulai = null;

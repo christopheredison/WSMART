@@ -170,8 +170,7 @@
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
                                 <input class="form-control update-trigger inputmask-rupiah" type="text" id="realisasi_nilai_dampak" name="realisasi_nilai_dampak"
-                                value="{{ $projectRiskAnalisa->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}" 
-                                data-max="{{ $projectRiskAnalisa->nilai_dampak }}" 
+                                value="{{ $projectRiskAnalisa->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}"
                                 {{ $projectRiskAnalisa->kategori_dampak == 'Kualitatif' ? 'disabled' : '' }}
                                 {{ $projectRiskAnalisa->kategori_dampak == 'Kuantitatif' ? 'max=' . $projectRiskAnalisa->nilai_dampak : '' }}
                                 min="0"
