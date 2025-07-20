@@ -261,16 +261,17 @@ class RiskRegisterUnitController extends Controller
             ->with('riskAnalysis')
             ->get();
 
-        $currentRiskMaps = $risikos->pluck('currentRiskMaps');
+        $currentRiskMaps = $risikos->pluck('currentRiskMapsMonth');
         $formattedCurrentRiskMaps = [];
         foreach ($risikos as $idx => $risiko) {
-            $currentValue = $risiko->currentRiskMaps['inherent'];
-            for ($quarter = 1; $quarter <= 4; $quarter++) {
-                if ($nextValue = ($risiko->currentRiskMaps[$quarter] ?? null)) {
+            $currentValue = $risiko->currentRiskMapsMonth['inherent'];
+            for ($month = 1; $month <= 12; $month++) {
+                if ($nextValue = ($risiko->currentRiskMapsMonth[$month] ?? null)) {
                     $currentValue = $nextValue;
                 }
 
-                $currentValue['quarter'] = $quarter;
+                $currentValue['quarter'] = ceil($month / 3);
+                $currentValue['month'] = $month;
 
                 $formattedCurrentRiskMaps[$risiko->id][] = $currentValue;
             }

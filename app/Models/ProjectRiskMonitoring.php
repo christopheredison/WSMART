@@ -20,6 +20,7 @@ class ProjectRiskMonitoring extends Model
         'skala_risiko',
         'level_risiko',
         'eksposure_risiko',
+        'month',
     ];
 
     protected $casts = [

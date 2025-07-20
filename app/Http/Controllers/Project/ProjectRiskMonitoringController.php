@@ -37,7 +37,8 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             $query->where('project_periode_list_id', $projectPeriode->id)
                 ->with(['peristiwaRisiko', 'projectRiskAnalisa', 'projectRiskAnalisa.skalaProbabilitas', 'projectRiskAnalisa.skalaProbabilitasResidual', 'projectRiskMonitoring.skalaProbabilitas', 'projectRiskMonitoring' => function ($query) {
                     $query->where('quarter', request()->input('filters.quarter') ?: 1)
-                        ->where('tahun', request()->input('filters.tahun') ?: date('Y'));
+                        ->where('tahun', request()->input('filters.tahun') ?: date('Y'))
+                        ->where('month', request()->input('filters.month') ?: '');
                 }]);
         };
 
@@ -145,25 +146,25 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         ];
 
         if (Gate::check('project_monitoring_view')) {
-            $showRoute = route('projects.monitorings.show', ['project' => request()->route('project'), 'monitoring' => ':id', 'quarter' => ':quarter', 'tahun' => ':tahun']);
+            $showRoute = route('projects.monitorings.show', ['project' => request()->route('project'), 'monitoring' => ':id', 'quarter' => ':quarter', 'tahun' => ':tahun', 'month' => ':month']);
             $this->tableActions[] = [
                 'label' => 'View',
                 'btn_icon' => false,
                 'action' => 'script',
                 'script' => <<<JS
-                    window.location.href = "$showRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Atahun', $('#table-filter select[name="tahun"]').val());
+                    window.location.href = "$showRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Atahun', $('#table-filter select[name="tahun"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
             ];
         }
 
         if (Gate::check('project_monitoring_edit')) {
-            $monitoringRoute = route('projects.monitorings.edit', ['project' => request()->route('project'), 'monitoring' => ':id', 'quarter' => ':quarter', 'tahun' => ':tahun']);
+            $monitoringRoute = route('projects.monitorings.edit', ['project' => request()->route('project'), 'monitoring' => ':id', 'quarter' => ':quarter', 'tahun' => ':tahun', 'month' => ':month']);
             $this->tableActions[] = [
                 'label' => 'Monitoring',
                 'btn_icon' => false,
                 'action' => 'script',
                 'script' => <<<JS
-                    window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Atahun', $('#table-filter select[name="tahun"]').val());
+                    window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Atahun', $('#table-filter select[name="tahun"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
             ];
         }
@@ -205,6 +206,21 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     ]
                 ],
             ],
+            'tahun' => [
+                'label' => 'Tahun',
+                'type' => 'select',
+                'parameters' => [
+                    'tahun',
+                    $optionTahuns,
+                    '',
+                    [
+                        'class' => 'form-select',
+                    ]
+                ],
+                'handler' => function ($query, $key, $value) {
+                    // handled outside
+                },
+            ],
             'quarter' => [
                 'label' => 'Quarter',
                 'type' => 'select',
@@ -225,12 +241,12 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     // handled outside
                 },
             ],
-            'tahun' => [
-                'label' => 'Tahun',
+            'month' => [
+                'label' => 'Bulan',
                 'type' => 'select',
                 'parameters' => [
-                    'tahun',
-                    $optionTahuns,
+                    'month',
+                    [],
                     '',
                     [
                         'class' => 'form-select',
@@ -242,6 +258,48 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ],
         ];
 
+        $this->extraScripts[] = <<<HTML
+            <script>
+                $(document).ready(function() {
+                    $('#table-filter select[name="quarter"]').on('change', function() {
+                        const quarter = $(this).val();
+                        if (quarter) {
+                            const allMonths = {
+                                '1': {
+                                    '1': 'Januari',
+                                    '2': 'Februari',
+                                    '3': 'Maret',
+                                },
+                                '2': {
+                                    '4': 'April',
+                                    '5': 'Mei',
+                                    '6': 'Juni',
+                                },
+                                '3': {
+                                    '7': 'Juli',
+                                    '8': 'Agustus',
+                                    '9': 'September',
+                                },
+                                '4': {
+                                    '10': 'Oktober',
+                                    '11': 'November',
+                                    '12': 'Desember',
+                                },
+                            };
+                            $('#table-filter select[name="month"]').empty();
+                            const months = allMonths[quarter];
+                            $.each(months, function(key, value) {
+                                $('#table-filter select[name="month"]').append('<option value="' + key + '">' + value + '</option>');
+                            });
+                        } else {
+                            $('#table-filter select[name="month"]').empty();
+                            $('#table-filter select[name="month"]').append('<option value="">Semua Bulan</option>');
+                        }
+                    }).change();
+                });
+            </script>
+        HTML;
+
         return parent::index();
     }
 
@@ -250,6 +308,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $projectPeriode = ProjectPeriodeList::findOrfail(request()->route('project'));
         $tahun = request()->tahun ?: date('Y');
         $user = request()->user();
+        $month = request()->month ?: '';
 
         if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriode))) {
             abort(403);
@@ -259,36 +318,40 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $projectRisk = $projectPeriode->projectRisks()
             ->with([
                 'peristiwaRisiko',
-                'kriProjects' => function ($query) use ($quarter, $tahun) {
+                'kriProjects' => function ($query) use ($quarter, $tahun, $month) {
                     $query->select('k_r_i_projects.*', 'id as status_kri_terkini', 'id as nilai_kri_terkini');
-                    $query->with('kriProjectMonitorings', function ($query) use ($quarter, $tahun) {
-                        $query->with('projectMonitoring')->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun) {
+                    $query->with('kriProjectMonitorings', function ($query) use ($quarter, $tahun, $month) {
+                        $query->with('projectMonitoring')->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun, $month) {
                             $query->where('quarter', $quarter)
-                                ->where('tahun', $tahun);
+                                ->where('tahun', $tahun)
+                                ->where('month', $month);
                         });
                     });
                 },
-                'penyebabRisikoProjects.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $tahun) {
+                'penyebabRisikoProjects.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $tahun, $month) {
                         $query->select('perlakuan_penyebab_risikos.*', 'id as deskripsi_perlakuan_risiko', 'id as jenis_program_rkap_id', 'id as jenis_program_rkap', 'id as timeline_perlakuan_risiko', 'id as progress_rencana_perlakuan_risiko', 'id as realisasi_biaya_perlakuan_risiko');
-                        $query->with(['lastMonitoring' => function ($query) use ($quarter, $tahun) {
-                            $query->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun) {
+                        $query->with(['lastMonitoring' => function ($query) use ($quarter, $tahun, $month) {
+                            $query->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun, $month) {
                                 $query->where('quarter', $quarter)
-                                    ->where('tahun', $tahun);
+                                    ->where('tahun', $tahun)
+                                    ->where('month', $month);
                             });
                         }]);
                         $query->with([
                             'documents',
-                            'perlakuanPenyebabMonitorings' => function ($query) use ($quarter, $tahun) {
-                                $query->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun) {
+                            'perlakuanPenyebabMonitorings' => function ($query) use ($quarter, $tahun, $month) {
+                                $query->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun, $month) {
                                     $query->where('quarter', $quarter)
-                                        ->where('tahun', $tahun);
+                                        ->where('tahun', $tahun)
+                                        ->where('month', $month);
                                 })->with('projectMonitoring');
                             },
                         ]);
                 },
-                'projectRiskMonitoring' => function ($query) use ($quarter, $tahun) {
+                'projectRiskMonitoring' => function ($query) use ($quarter, $tahun, $month) {
                     $query->where('quarter', $quarter)
-                        ->where('tahun', $tahun);
+                        ->where('tahun', $tahun)
+                        ->where('month', $month);
                 },
             ])
             ->findOrFail(request()->route('monitoring'));
@@ -360,6 +423,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'skalaProbabilitas' => $skalaProbabilitas,
             'quarter' => $quarter,
             'tahun' => $tahun,
+            'month' => $month,
             'risk_tolerance' => $risk_tolerance,
             'risk_limit' => $risk_limit
         ]);
@@ -377,20 +441,22 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $quarter = request()->input('quarter') ?: 1;
         $tahun = request()->input('tahun') ?: date('Y');
+        $month = request()->input('month') ?: '';
         $projectRisk = $projectPeriode->projectRisks()
             ->with([
                 'peristiwaRisiko',
                 'penyebabRisikoProjects',
-                'kriProjects' => function ($query) use ($quarter, $tahun) {
-                    $query->with('kriProjectMonitorings', function ($query) use ($quarter, $tahun) {
-                        $query->with('projectMonitoring')->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun) {
+                'kriProjects' => function ($query) use ($quarter, $tahun, $month) {
+                    $query->with('kriProjectMonitorings', function ($query) use ($quarter, $tahun, $month) {
+                        $query->with('projectMonitoring')->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun, $month) {
                             $query->where('quarter', $quarter)
-                                ->where('tahun', $tahun);
+                                ->where('tahun', $tahun)
+                                ->where('month', $month);
                         });
                     });
                 },
                 'kriProjects',
-                'penyebabRisikoProjects.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $tahun) {
+                'penyebabRisikoProjects.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $tahun, $month) {
                         $query->select('perlakuan_penyebab_risikos.*', 'id as deskripsi_perlakuan_risiko', 'id as jenis_program_rkap', 'id as timeline_perlakuan_risiko');
                         // $query->with(['lastMonitoring' => function ($query) use ($quarter, $tahun) {
                         //     $query->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun) {
@@ -401,10 +467,11 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                         //]);
                         $query->with([
                             'documents',
-                            'perlakuanPenyebabMonitorings' => function ($query) use ($quarter, $tahun) {
-                                $query->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun) {
+                            'perlakuanPenyebabMonitorings' => function ($query) use ($quarter, $tahun, $month) {
+                                $query->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun, $month) {
                                     $query->where('quarter', $quarter)
-                                        ->where('tahun', $tahun);
+                                        ->where('tahun', $tahun)
+                                        ->where('month', $month);
                                 })->with('projectMonitoring');
                             },
                         ]);
@@ -417,7 +484,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $riskMaps = RiskMap::get()->keyBy(function($item) {
             return $item->skala_dampak . '-' . $item->skala_probabilitas;
         });
-        $projectMonitoring = $projectRisk->projectRiskMonitoring()->where('quarter', $quarter)->where('tahun', $tahun)->first();
+        $projectMonitoring = $projectRisk->projectRiskMonitoring()->where('quarter', $quarter)->where('tahun', $tahun)->where('month', $month)->first();
 
         $files = $projectMonitoring?->perlakuanPenyebabRisikoDocuments->groupBy('perlakuan_penyebab_risiko_id') ?: [];
 
@@ -437,12 +504,14 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'quarter' => $quarter,
             'tahun' => $tahun,
             'files' => $files,
+            'month' => $month,
         ]);
     }
 
     public function update(Request $request, $resource) {
         $quarter = request()->input('quarter') ?: 1;
         $tahun = request()->input('tahun') ?: date('Y');
+        $month = request()->input('month') ?: '';
         $projectPeriode = ProjectPeriodeList::findOrfail(request()->route('project'));
 
         $user = request()->user();
@@ -464,6 +533,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'skala_risiko' => $request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden,
             'level_risiko' => $request->realisasi_level_risiko ?? $request->realisasi_level_risiko_hidden,
             'eksposure_risiko' => null,
+            'month' => $month,
         ];
 
         //dd($toCreate);

@@ -31,8 +31,9 @@
                 <div class="card-body">
                     <i class='bx bx-alarm-exclamation fs-1 mb-3 text-white'></i>
                     <h4>Periode Monitoring</h4>
-                    <h3 class="mb-0">Quarter {{ $quarter }}</h3>
+                    <h3 class="mb-0">Quarter {{ $quarter }} - {{ __('basic.month.' . $month) }}</h3>
                     <input type="hidden" name="periode_monitoring" value="{{ $quarter }}">
+                    <input type="hidden" name="month" value="{{ $month }}">
                 </div>
             </div>
         </div>
