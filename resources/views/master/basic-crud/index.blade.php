@@ -246,9 +246,13 @@ $(document).ready(function() {
         ],
     });
 
-    // Filter
+    // Filter with timeout
+    let filterTimeout;
     $('#table-filter :input').on('change', function() {
-        $('.ajax-datatable').DataTable().ajax.reload();
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(() => {
+            $('.ajax-datatable').DataTable().ajax.reload();
+        }, 300);
     });
 
     // Action Button
@@ -433,4 +437,9 @@ $(document).ready(function() {
     @endif
 });
 </script>
+@if ($extraScripts)
+@foreach ($extraScripts as $script)
+{!! $script !!}
+@endforeach
+@endif
 @endpush

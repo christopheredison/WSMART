@@ -27,6 +27,7 @@ abstract class BasicCRUDController extends Controller
     protected $indexTitle = null;
     protected $datatableCallback = null;
     protected $tableLegend = [];
+    protected $extraScripts = [];
 
     public function __construct()
     {
@@ -104,6 +105,7 @@ abstract class BasicCRUDController extends Controller
             'defaultOrder' => $this->defaultOrder ?? [[1, 'asc']],
             'indexTitle' => $this->indexTitle,
             'tableLegend' => $this->tableLegend,
+            'extraScripts' => $this->extraScripts,
         ]);
     }
 

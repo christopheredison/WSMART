@@ -124,7 +124,8 @@ class ProjectPeriodeListController extends BasicCRUDController
 
         if (Gate::check('project_periode_view')) {
             $this->tableActions[] = [
-                'label' => 'View',
+                'btn_icon' => true,
+                'label' => '<i class="bx bx-show" title="View"></i>',
                 'action' => 'link',
                 'url' => route('project-periode-list.show', ':id'),
                 'active_state' => '(data, type, row) => row.has_view',
@@ -133,7 +134,8 @@ class ProjectPeriodeListController extends BasicCRUDController
 
         if (Gate::check('project_risk_list')) {
             $this->tableActions[] = [
-                'label' => 'Risk Register',
+                'btn_icon' => true,
+                'label' => '<i class="bx bx-list-check" title="Risk Register"></i>',
                 'action' => 'link',
                 'url' => route('projects.risks.index', ['project' => ':id']),
                 'active_state' => '(data, type, row) => row.has_risk_register',
@@ -142,7 +144,8 @@ class ProjectPeriodeListController extends BasicCRUDController
 
         if (Gate::check('project_monitoring_list')) {
             $this->tableActions[] = [
-                'label' => 'Monitoring',
+                'btn_icon' => true,
+                'label' => '<i class="bx bx-radar" title="Monitoring"></i>',
                 'action' => 'link',
                 'url' => route('projects.monitorings.index', ['project' => ':id']),
                 'active_state' => '(data, type, row) => row.has_monitoring',
@@ -152,7 +155,8 @@ class ProjectPeriodeListController extends BasicCRUDController
         if (Gate::check('project_led_list')) {
             $ledRoute = route('project-led.index-by-project', ['projectId' => ':id']);
             $this->tableActions[] = [
-                'label' => 'Loss Event',
+                'btn_icon' => true,
+                'label' => '<i class="bx bx-dock-bottom" title="Loss Event"></i>',
                 'action' => 'script',
                 'script' => <<<JS
                 projectData = fetchedData[\$(this).data('id')];window.location.href = "$ledRoute".replace(':id', projectData.project_id);
