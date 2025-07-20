@@ -31,22 +31,24 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $user = request()->user();
         $quarter = request()->input('filters.quarter') ?: 4;
+        $month = request()->input('filters.month') ?: '';
 
         // if (!(Gate::check('risk_monitoring_list') || $user->hasProject($period))) {
         //     abort(403);
         // }
 
-        $this->callbackQuery = function ($query) use ($period, $quarter, $user) {
+        $this->callbackQuery = function ($query) use ($period, $quarter, $user, $month) {
             $query->where('periode_id', $period->id)
                 ->where('unit_id', $user->unit_id)
                 ->with(['peristiwaRisiko', 'riskAnalysis.skalaProbabilitasResidualQ' . $quarter])
-                ->with(['lastMonitoringRisiko' => function ($query) use ($quarter) {
+                ->with(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
                     $query->where('quarter', $quarter)
+                        ->where('month', $month)
                         ->with('skalaProbabilitas');
                 }]);
         };
 
-        $this->datatableCallback = function ($datatable) use ($quarter) {
+        $this->datatableCallback = function ($datatable) use ($quarter, $month) {
             $datatable->addColumn('nilai_dampak_residual', function ($row) use ($quarter) {
                     return $row->riskAnalysis?->{'nilai_dampak_residual_q' . $quarter};
                 })->addColumn('skala_dampak_residual', function ($row) use ($quarter) {
@@ -132,25 +134,25 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         ];
 
         if (Gate::check('risk_monitoring_view')) {
-            $showRoute = route('risk-register-unit.monitorings.show', ['period' => request()->route('period'), 'monitoring' => ':id', 'quarter' => ':quarter']);
+            $showRoute = route('risk-register-unit.monitorings.show', ['period' => request()->route('period'), 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
             $this->tableActions[] = [
                 'label' => 'View',
                 'btn_icon' => false,
                 'action' => 'script',
                 'script' => <<<JS
-                    window.location.href = "$showRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Atahun', $('#table-filter select[name="tahun"]').val());
+                    window.location.href = "$showRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
             ];
         }
 
         if (Gate::check('risk_monitoring_input')) {
-            $monitoringRoute = route('risk-register-unit.monitorings.edit', ['period' => request()->route('period'), 'monitoring' => ':id', 'quarter' => ':quarter']);
+            $monitoringRoute = route('risk-register-unit.monitorings.edit', ['period' => request()->route('period'), 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
             $this->tableActions[] = [
                 'label' => 'Monitoring',
                 'btn_icon' => false,
                 'action' => 'script',
                 'script' => <<<JS
-                    window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Atahun', $('#table-filter select[name="tahun"]').val());
+                    window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
             ];
         }
@@ -192,7 +194,64 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     // handled outside
                 },
             ],
+            'month' => [
+                'label' => 'Bulan',
+                'type' => 'select',
+                'parameters' => [
+                    'month',
+                    [],
+                    '',
+                    [
+                        'class' => 'form-select',
+                    ]
+                ],
+                'handler' => function ($query, $key, $value) {
+                    // handled outside
+                },
+            ],
         ];
+
+        $this->extraScripts[] = <<<HTML
+            <script>
+                $(document).ready(function() {
+                    $('#table-filter select[name="quarter"]').on('change', function() {
+                        const quarter = $(this).val();
+                        if (quarter) {
+                            const allMonths = {
+                                '1': {
+                                    '1': 'Januari',
+                                    '2': 'Februari',
+                                    '3': 'Maret',
+                                },
+                                '2': {
+                                    '4': 'April',
+                                    '5': 'Mei',
+                                    '6': 'Juni',
+                                },
+                                '3': {
+                                    '7': 'Juli',
+                                    '8': 'Agustus',
+                                    '9': 'September',
+                                },
+                                '4': {
+                                    '10': 'Oktober',
+                                    '11': 'November',
+                                    '12': 'Desember',
+                                },
+                            };
+                            $('#table-filter select[name="month"]').empty();
+                            const months = allMonths[quarter];
+                            $.each(months, function(key, value) {
+                                $('#table-filter select[name="month"]').append('<option value="' + key + '">' + value + '</option>');
+                            });
+                        } else {
+                            $('#table-filter select[name="month"]').empty();
+                            $('#table-filter select[name="month"]').append('<option value="">Semua Bulan</option>');
+                        }
+                    }).change();
+                });
+            </script>
+        HTML;
 
         return parent::index();
     }
@@ -201,7 +260,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
     {
         $period = Periode::findOrfail(request()->route('period'));
         $user = request()->user();
-
+        $month = request()->input('month') ?: '';
         // if (!(Gate::check('risk_monitoring_edit') || $user->hasProject($period))) {
         //     abort(403);
         // }
@@ -213,19 +272,22 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $unit = $risk->unit;
         $periode = $risk->periode;
 
-        $risk->load(['lastMonitoringRisiko' => function ($query) use ($quarter) {
+        $risk->load(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
             $query->where('quarter', $quarter);
+            $query->where('month', $month);
             $query->with('perlakuanPenyebabRisikos', 'perlakuanPenyebabMonitorings', 'kriUnitMonitorings');
-        }])->load(['penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter) {
+        }])->load(['penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
             $query->select('perlakuan_penyebab_risiko_units.*', 'id as deskripsi_perlakuan_risiko', 'id as jenis_program_rkap', 'id as jenis_program_rkap_id', 'id as timeline_perlakuan_risiko');
-            $query->with(['lastMonitoring' => function ($query) use ($quarter) {
-                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter) {
+            $query->with(['lastMonitoring' => function ($query) use ($quarter, $month) {
+                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
                     $query->where('quarter', $quarter);
+                    $query->where('month', $month);
                 });
             }]);
-            $query->with(['perlakuanPenyebabMonitorings' => function ($query) use ($quarter) {
-                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter) {
+            $query->with(['perlakuanPenyebabMonitorings' => function ($query) use ($quarter, $month) {
+                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
                     $query->where('quarter', $quarter);
+                    $query->where('month', $month);
                 });
             }]);
             $query->with(['documents']);
@@ -279,6 +341,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'period' => $period,
             'risk' => $risk,
             'quarter' => $quarter,
+            'month' => $month,
             'riskAnalysis' => optional($risk->riskAnalysis),
             'riskMonitoring' => $risk->lastMonitoringRisiko,
             'skalaDampaks' => $skalaDampaks,
@@ -292,6 +355,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
     {
         $period = Periode::findOrfail(request()->route('period'));
         $user = request()->user();
+        $month = request()->input('month') ?: '';
 
         if (!(Gate::check('risk_monitoring_view') || $user->hasProject($period))) {
             abort(403);
@@ -301,19 +365,22 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $risk = $period->identifikasiRisikos()
             ->findOrFail(request()->route('monitoring'));
 
-        $risk->load(['lastMonitoringRisiko' => function ($query) use ($quarter) {
+        $risk->load(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
             $query->where('quarter', $quarter);
+            $query->where('month', $month);
             $query->with('perlakuanPenyebabRisikos', 'perlakuanPenyebabMonitorings', 'kriUnitMonitorings');
-        }])->load(['penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter) {
+        }])->load(['penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
             $query->select('perlakuan_penyebab_risiko_units.*', 'id as deskripsi_perlakuan_risiko', 'id as jenis_program_rkap', 'id as jenis_program_rkap_id', 'id as timeline_perlakuan_risiko');
-            $query->with(['lastMonitoring' => function ($query) use ($quarter) {
-                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter) {
+            $query->with(['lastMonitoring' => function ($query) use ($quarter, $month) {
+                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
                     $query->where('quarter', $quarter);
+                    $query->where('month', $month);
                 });
             }]);
-            $query->with(['perlakuanPenyebabMonitorings' => function ($query) use ($quarter) {
-                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter) {
+            $query->with(['perlakuanPenyebabMonitorings' => function ($query) use ($quarter, $month) {
+                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
                     $query->where('quarter', $quarter);
+                    $query->where('month', $month);
                 });
             }]);
             $query->with(['documents']);
@@ -331,6 +398,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'period' => $period,
             'risk' => $risk,
             'quarter' => $quarter,
+            'month' => $month,
             'riskAnalysis' => optional($risk->riskAnalysis),
             'riskMonitoring' => $risk->lastMonitoringRisiko,
             'skalaDampaks' => $skalaDampaks,
@@ -344,6 +412,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         //dd($request->all());
         $quarter = request()->input('quarter') ?: 1;
         $period = Periode::findOrfail(request()->route('period'));
+        $month = request()->input('month') ?: '';
 
         $user = request()->user();
 
@@ -356,6 +425,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ->findOrFail(request()->route('monitoring'));
         $toCreate = [
             'quarter' => $quarter,
+            'month' => $month,
             'tahun' => request()->input('tahun') ?: date('Y'),
             'nilai_dampak' => str_replace(['Rp', '.', ' '], '', ($request->realisasi_nilai_dampak ?: 0)),
             'skala_dampak' => $request->realisasi_skala_dampak ?? $request->realisasi_skala_dampak_hidden,
