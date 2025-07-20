@@ -19,10 +19,21 @@ use App\Models\Jabatan;
 
 class UnitLEDController extends Controller
 {
+    /**
+     * Display a listing of the resource.
+     *
+     * @param Request $request
+     * @param string|null $unitId, $unitId is periode_id
+     * @return \Illuminate\Http\Response
+     */
     public function index(Request $request, $unitId = null)
     {
         if ($request->ajax()) {
             $data = LossEvent::with(['kategoriKejadian']);
+
+            $user = $request->user();
+
+            $data->where('unit_id', $user->unit_id);
             
             if ($request->filled('periode_id') && $request->periode_id !== '') {
                 $data->where('periode_id', $request->periode_id);
