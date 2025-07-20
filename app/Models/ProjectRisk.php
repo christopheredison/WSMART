@@ -214,6 +214,33 @@ class ProjectRisk extends Model
         return $currentRiskMaps;
     }
 
+    public function getCurrentRiskMapsMonthAttribute() {
+        $tahuns = $this->projectRiskMonitorings()->pluck('tahun')->unique();
+        $currentRiskMaps = [
+            'inherent' => [
+                'skala_dampak' => $this->projectRiskAnalisa?->skala_dampak,
+                'skala_probabilitas' => $this->projectRiskAnalisa?->skalaProbabilitas?->tingkat,
+                'quarter' => 0,
+                'tahun' => 0,
+            ],
+        ];
+        $currentRiskMap = $currentRiskMaps['inherent'];
+        foreach ($tahuns as $tahun) {
+            for ($month = 1; $month <= 12; $month++) {
+                $projectMonitoring = $this->projectRiskMonitorings->where('month', $month)->where('tahun', $tahun)->first();
+                $currentRiskMaps[$tahun . '-' . $month] = [
+                    'skala_dampak' => $projectMonitoring?->skala_dampak ?? $currentRiskMap['skala_dampak'],
+                    'skala_probabilitas' => $projectMonitoring?->skalaProbabilitas?->tingkat ?? $currentRiskMap['skala_probabilitas'],
+                    'month' => $month,
+                    'tahun' => $tahun,
+                ];
+                $currentRiskMap = $currentRiskMaps[$tahun . '-' . $month];
+            }
+        }
+
+        return $currentRiskMaps;
+    }
+
     public function refreshRealisasi()
     {
         $this->load('penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings.projectMonitoring', 'kriProjects.kriProjectMonitorings.projectMonitoring');

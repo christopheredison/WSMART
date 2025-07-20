@@ -193,7 +193,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             ->findOrFail($resource);
 
         $projectPeriode->projectRisks->each(function($projectRisk) {
-            $projectRisk->append('currentRiskMaps');
+            $projectRisk->append('currentRiskMapsMonth');
         });
 
         $tahunMonitorings = $projectPeriode->projectRisks->pluck('projectRiskMonitorings')->flatten()->pluck('tahun')->unique()->toArray();
@@ -206,18 +206,19 @@ class ProjectPeriodeListController extends BasicCRUDController
             $tahunMonitorings[] = $tahun;
         }
 
-        $currentRiskMaps = $projectPeriode->projectRisks->pluck('currentRiskMaps');
+        $currentRiskMaps = $projectPeriode->projectRisks->pluck('currentRiskMapsMonth');
         $formattedCurrentRiskMaps = [];
         foreach ($projectPeriode->projectRisks as $idx => $projectRisk) {
             $currentValue = $projectRisk->currentRiskMaps['inherent'];
             foreach ($tahunMonitorings as $tahun) {
-                for ($quarter = 1; $quarter <= 4; $quarter++) {
-                    if ($nextValue = ($projectRisk->currentRiskMaps[$tahun . '-' . $quarter] ?? null)) {
+                for ($month = 1; $month <= 12; $month++) {
+                    if ($nextValue = ($projectRisk->currentRiskMapsMonth[$tahun . '-' . $month] ?? null)) {
                         $currentValue = $nextValue;
                     }
 
                     $currentValue['tahun'] = $tahun;
-                    $currentValue['quarter'] = $quarter;
+                    $currentValue['quarter'] = ceil($month / 3);
+                    $currentValue['month'] = $month;
 
                     $formattedCurrentRiskMaps[$projectRisk->id][$tahun][] = $currentValue;
                 }
