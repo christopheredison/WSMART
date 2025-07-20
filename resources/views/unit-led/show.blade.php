@@ -17,7 +17,7 @@
                                 <i class="bx bx-edit"></i>
                                 <span class="ms-1">Edit</span>
                             </a>
-                            <a href="{{ route('unit-led.index') }}" class="btn btn-secondary btn-sm">
+                            <a href="{{ $lossEvent->periode_id ? route('unit-led.index-by-unit', ['unitId' => $lossEvent->periode_id]) : route('unit-led.index') }}" class="btn btn-secondary btn-sm">
                                 <i class="bx bx-arrow-back"></i>
                                 <span class="ms-1">Kembali</span>
                             </a>

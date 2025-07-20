@@ -257,10 +257,28 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'label' => 'Risk Limit',
                 'parameters' => [
                     'risk_limit',
-                    $projectPeriode->risk_limit,
+                    ($projectPeriode->project->meta['omset'] ?? 0) * 0.03,
                     [
                         'class' => 'form-control inputmask-general',
                         'placeholder' => 'Masukkan Risk Limit',
+                        'required' => true,
+                        'step' => '0.01',
+                        'autocomplete' => 'off',
+                        'readonly' => true,
+                        'disabled' => true,
+                    ]
+                ],
+            ],
+            [
+                'name' => 'batas_nilai',
+                'type' => 'text',
+                'label' => 'Batas Nilai',
+                'parameters' => [
+                    'batas_nilai',
+                    $projectPeriode->project->batas_nilai,
+                    [
+                        'class' => 'form-control inputmask-general',
+                        'placeholder' => 'Masukkan Batas Nilai',
                         'required' => true,
                         'step' => '0.01',
                         'autocomplete' => 'off',

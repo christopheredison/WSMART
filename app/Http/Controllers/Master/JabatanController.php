@@ -55,21 +55,12 @@ class JabatanController extends BasicCRUDController
             ->restore();
 
         foreach ($jabatanData as $jabatan) {
-            $jabatanObj = $this->model::updateOrCreate([
+            $this->model::updateOrCreate([
                 'code' => $jabatan['id_jabatan'],
             ], [
                 'name' => $jabatan['nama_jabatan'],
                 'description' => '',
             ]);
-
-            $level = Level::updateOrCreate([
-                'code' => $jabatan['id_level_jabatan'],
-            ], [
-                'name' => $jabatan['nama_level_jabatan'],
-                'description' => '',
-            ]);
-
-            $jabatanObj->levels()->sync($level->id);
         }
 
         $existingCodes = collect($jabatanData)->pluck('id_jabatan')->toArray();

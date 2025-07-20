@@ -53,6 +53,10 @@
                   <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
                     <span class="bx bx-radar"></span>
                   </a>
+                  <a href="{{ route('unit-led.index-by-unit', ['unitId' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+                    title="Loss Event">
+                    <span class="bx bx-dock-bottom"></span>
+                  </a>
                 </td>
               </tr>
               @endforeach

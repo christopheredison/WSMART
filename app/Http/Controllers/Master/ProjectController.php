@@ -119,14 +119,14 @@ class ProjectController extends BasicCRUDController
     public function update(Request $request, $resource)
     {
         $request->validate([
-            'risk_limit' => 'numeric|min:0',
+            'batas_nilai' => 'numeric|min:0',
         ]);
 
-        $toUpdate['risk_limit'] = $request->risk_limit;
-        
+        $toUpdate['batas_nilai'] = $request->batas_nilai;
+
         $data = $this->model::with('projectPeriodeList')->findOrfail($resource);
 
-        $data->projectPeriodeList->update($toUpdate);
+        $data->update($toUpdate);
 
         return $data;
     }
