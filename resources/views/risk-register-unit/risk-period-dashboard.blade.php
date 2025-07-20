@@ -104,11 +104,11 @@
                             <h3 class="h4">Peta Risiko Terkini (Current)</h3>
                         </div>
                         <div class="col">
-                            <select class="form-select" id="quarterSelect">
-                                <option value="1">Quarter 1</option>
-                                <option value="2">Quarter 2</option>
-                                <option value="3">Quarter 3</option>
-                                <option value="4">Quarter 4</option>
+                            <select class="form-select" id="monthSelect">
+                                @for ($month = 1; $month <= 12; $month++)
+                                    @php $quarter = ceil($month / 3); @endphp
+                                    <option value="{{ $month }}">Q{{ $quarter }} - {{ __('basic.month.' . $month) }}</option>
+                                @endfor
                             </select>
                         </div>
                     </div>
@@ -271,25 +271,15 @@
     padding: 2px 5px;
     border-radius: 5px;
 }
-#currentMap .current-q1, #currentMap .current-q2, #currentMap .current-q3, #currentMap .current-q4 {
+#currentMap .current-m1, #currentMap .current-m2, #currentMap .current-m3, #currentMap .current-m4, #currentMap .current-m5, #currentMap .current-m6, #currentMap .current-m7, #currentMap .current-m8, #currentMap .current-m9, #currentMap .current-m10, #currentMap .current-m11, #currentMap .current-m12 {
     display: none;
 }
 
-#currentMap.show-q1 .current-q1 {
+@for ($month = 1; $month <= 12; $month++)
+#currentMap.show-m{{ $month }} .current-m{{ $month }} {
     display: block;
 }
-
-#currentMap.show-q2 .current-q2 {
-    display: block;
-}
-
-#currentMap.show-q3 .current-q3 {
-    display: block;
-}
-
-#currentMap.show-q4 .current-q4 {
-    display: block;
-}
+@endfor
 </style>
 
 @endpush
@@ -397,11 +387,11 @@ $(document).ready(function () {
             const cellC = $(`#currentMap.table-risk-map .data-cell[data-matrix="${matrixC}"]`);
 
             if (cellC.length) {
-                if (!cellC.data('kode-peristiwa-current-q' + currentRiskMap.quarter)) {
-                    cellC.data('kode-peristiwa-current-q' + currentRiskMap.quarter, []);
+                if (!cellC.data('kode-peristiwa-current-m' + currentRiskMap.month)) {
+                    cellC.data('kode-peristiwa-current-m' + currentRiskMap.month, []);
                 }
 
-                cellC.data('kode-peristiwa-current-q' + currentRiskMap.quarter).push(code);
+                cellC.data('kode-peristiwa-current-m' + currentRiskMap.month).push(code);
                 cellC.data('has-current', true);
             }
         });
@@ -430,31 +420,12 @@ $(document).ready(function () {
         cellsC.each((index, cell) => {
             let html = '';
             let kodePeristiwaCurrent = null;
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-q1');
-            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
-                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                    html += `<span class="box-current current-q1">R${kodePeristiwaCurrent[i]}</span>`;
-                }
-            }
-
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-q2');
-            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
-                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                    html += `<span class="box-current current-q2">R${kodePeristiwaCurrent[i]}</span>`;
-                }
-            }
-
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-q3');
-            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
-                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                    html += `<span class="box-current current-q3">R${kodePeristiwaCurrent[i]}</span>`;
-                }
-            }
-
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-q4');
-            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
-                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                    html += `<span class="box-current current-q4">R${kodePeristiwaCurrent[i]}</span>`;
+            for (let month = 1; month <= 12; month++) {
+                kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-m' + month);
+                if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
+                    for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
+                        html += `<span class="box-current current-m${month}">R${kodePeristiwaCurrent[i]}</span>`;
+                    }
                 }
             }
 
@@ -462,11 +433,11 @@ $(document).ready(function () {
         });
     });
 
-    $('#quarterSelect,#tahunSelect').on('change', function() {
-        const quarter = $('#quarterSelect').val();
+    $('#monthSelect,#tahunSelect').on('change', function() {
+        const month = $('#monthSelect').val();
         const tahun = $('#tahunSelect').val();
         $('#currentMap').prop('class', 'table-risk-map');
-        $('#currentMap').addClass('show-q' + quarter);
+        $('#currentMap').addClass('show-m' + month);
     }).change();
 
     flatpickr('.flatpickr-range', {
@@ -504,8 +475,8 @@ $(document).ready(function () {
 
         const namaUnit = "{{ str_replace(' ', '-', strtolower($user->unit->name)) }}";
         const tahun = "{{ $periode->tahun }}";
-        const quarter = $('#quarterSelect').val();
-        const fileName = `peta-risiko-${namaUnit}-tahun-${tahun}-q${quarter}.pdf`;
+        const month = $('#monthSelect').val();
+        const fileName = `peta-risiko-${namaUnit}-tahun-${tahun}-q${month}.pdf`;
 
         button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...');
 

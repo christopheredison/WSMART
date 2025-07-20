@@ -144,11 +144,11 @@
                             <h3 class="h4">Peta Risiko Terkini (Current)</h3>
                         </div>
                         <div class="col">
-                            <select class="form-select" id="quarterSelect">
-                                <option value="1">Quarter 1</option>
-                                <option value="2">Quarter 2</option>
-                                <option value="3">Quarter 3</option>
-                                <option value="4">Quarter 4</option>
+                            <select class="form-select" id="monthSelect">
+                                @for ($month = 1; $month <= 12; $month++)
+                                    @php $quarter = ceil($month / 3); @endphp
+                                    <option value="{{ $month }}">Q{{ $quarter }} - {{ __('basic.month.' . $month) }}</option>
+                                @endfor
                             </select>
                         </div>
                         <div class="col">
@@ -319,48 +319,29 @@
     padding: 2px 5px;
     border-radius: 5px;
 }
-#currentMap .current-q1, #currentMap .current-q2, #currentMap .current-q3, #currentMap .current-q4 {
+#currentMap .current-m1, #currentMap .current-m2, #currentMap .current-m3, #currentMap .current-m4, #currentMap .current-m5, #currentMap .current-m6, #currentMap .current-m7, #currentMap .current-m8, #currentMap .current-m9, #currentMap .current-m10, #currentMap .current-m11, #currentMap .current-m12 {
     display: none;
 }
 
-#currentMap.show-q1 .current-q1 {
+@for ($month = 1; $month <= 12; $month++)
+#currentMap.show-m{{ $month }} .current-m{{ $month }} {
     display: block;
 }
-
-#currentMap.show-q2 .current-q2 {
-    display: block;
-}
-
-#currentMap.show-q3 .current-q3 {
-    display: block;
-}
-
-#currentMap.show-q4 .current-q4 {
-    display: block;
-}
+@endfor
 </style>
 
 @foreach ($tahunMonitorings as $tahunMonitoring)
 <style>
-#currentMap .current-{{ $tahunMonitoring }}-q1, #currentMap .current-{{ $tahunMonitoring }}-q2, #currentMap .current-{{ $tahunMonitoring }}-q3, #currentMap .current-{{ $tahunMonitoring }}-q4 {
+#currentMap .current-{{ $tahunMonitoring }}-m1, #currentMap .current-{{ $tahunMonitoring }}-m2, #currentMap .current-{{ $tahunMonitoring }}-m3, #currentMap .current-{{ $tahunMonitoring }}-m4, #currentMap .current-{{ $tahunMonitoring }}-m5, #currentMap .current-{{ $tahunMonitoring }}-m6, #currentMap .current-{{ $tahunMonitoring }}-m7, #currentMap .current-{{ $tahunMonitoring }}-m8, #currentMap .current-{{ $tahunMonitoring }}-m9, #currentMap .current-{{ $tahunMonitoring }}-m10, #currentMap .current-{{ $tahunMonitoring }}-m11, #currentMap .current-{{ $tahunMonitoring }}-m12 {
     display: none;
 }
 
-#currentMap.show-{{ $tahunMonitoring }}-q1 .current-{{ $tahunMonitoring }}-q1 {
+@for ($month = 1; $month <= 12; $month++)
+#currentMap.show-{{ $tahunMonitoring }}-m{{ $month }} .current-{{ $tahunMonitoring }}-m{{ $month }} {
     display: block;
 }
+@endfor
 
-#currentMap.show-{{ $tahunMonitoring }}-q2 .current-{{ $tahunMonitoring }}-q2 {
-    display: block;
-}
-
-#currentMap.show-{{ $tahunMonitoring }}-q3 .current-{{ $tahunMonitoring }}-q3 {
-    display: block;
-}
-
-#currentMap.show-{{ $tahunMonitoring }}-q4 .current-{{ $tahunMonitoring }}-q4 {
-    display: block;
-}
 </style>
 @endforeach
 @endpush
@@ -448,11 +429,11 @@ $(document).ready(function () {
                 const cellC = $(`#currentMap.table-risk-map .data-cell[data-matrix="${matrixC}"]`);
 
                 if (cellC.length) {
-                    if (!cellC.data('kode-peristiwa-current-' + tahun + '-q' + currentRiskMap.quarter)) {
-                        cellC.data('kode-peristiwa-current-' + tahun + '-q' + currentRiskMap.quarter, []);
+                    if (!cellC.data('kode-peristiwa-current-' + tahun + '-m' + currentRiskMap.month)) {
+                        cellC.data('kode-peristiwa-current-' + tahun + '-m' + currentRiskMap.month, []);
                     }
                     
-                    cellC.data('kode-peristiwa-current-' + tahun + '-q' + currentRiskMap.quarter).push(code);
+                    cellC.data('kode-peristiwa-current-' + tahun + '-m' + currentRiskMap.month).push(code);
                     cellC.data('has-current', true);
                 }
             });
@@ -483,44 +464,25 @@ $(document).ready(function () {
             let html = '';
             let kodePeristiwaCurrent = null;
             @foreach ($tahunMonitorings as $tahun)
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-{{ $tahun }}-q1');
+            @for ($month = 1; $month <= 12; $month++)
+            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-{{ $tahun }}-m{{ $month }}');
             if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
                 for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                    html += `<span class="box-current current-{{ $tahun }}-q1">R${kodePeristiwaCurrent[i]}</span>`;
+                    html += `<span class="box-current current-{{ $tahun }}-m{{ $month }}">R${kodePeristiwaCurrent[i]}</span>`;
                 }
             }
-
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-{{ $tahun }}-q2');
-            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
-                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                    html += `<span class="box-current current-{{ $tahun }}-q2">R${kodePeristiwaCurrent[i]}</span>`;
-                }
-            }
-
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-{{ $tahun }}-q3');
-            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
-                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                    html += `<span class="box-current current-{{ $tahun }}-q3">R${kodePeristiwaCurrent[i]}</span>`;
-                }
-            }
-
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-{{ $tahun }}-q4');
-            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
-                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                    html += `<span class="box-current current-{{ $tahun }}-q4">R${kodePeristiwaCurrent[i]}</span>`;
-                }
-            }
+            @endfor
             @endforeach
 
             $(cell).find('.kode-peristiwa').html(html);
         });
     });
 
-    $('#quarterSelect,#tahunSelect').on('change', function() {
-        const quarter = $('#quarterSelect').val();
+    $('#monthSelect,#tahunSelect').on('change', function() {
+        const month = $('#monthSelect').val();
         const tahun = $('#tahunSelect').val();
         $('#currentMap').prop('class', 'table-risk-map');
-        $('#currentMap').addClass('show-' + tahun + '-q' + quarter);
+        $('#currentMap').addClass('show-' + tahun + '-m' + month);
     }).change();
     
     flatpickr('.flatpickr-range', {

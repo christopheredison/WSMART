@@ -210,6 +210,31 @@ class IdentifikasiRisiko extends Model
         return $currentRiskMaps;
     }
 
+    public function getCurrentRiskMapsMonthAttribute() {
+        $currentRiskMaps = [
+            'inherent' => [
+                'skala_dampak' => $this->riskAnalysis?->skala_dampak,
+                'skala_probabilitas' => $this->riskAnalysis?->skalaProbabilitas?->tingkat,
+                'quarter' => 0,
+            ],
+        ];
+
+        $currentRiskMap = $currentRiskMaps['inherent'];
+
+        for ($month = 1; $month <= 12; $month++) {
+            $projectMonitoring = $this->monitoringRisikos->where('month', $month)->first();
+            $currentRiskMaps[$month] = [
+                'skala_dampak' => $projectMonitoring?->skala_dampak ?? $currentRiskMap['skala_dampak'],
+                'skala_probabilitas' => $projectMonitoring?->skalaProbabilitas?->tingkat ?? $currentRiskMap['skala_probabilitas'],
+                'month' => $month,
+            ];
+
+            $currentRiskMap = $currentRiskMaps[$month];
+        }
+
+        return $currentRiskMaps;
+    }
+
     public const STATUS_INPUT_DATA = 1;
     public const STATUS_DIKIRIM = 2;
     public const STATUS_TUNGGU_VERIFIKASI = 3;

@@ -9,6 +9,7 @@ class UnitRiskMonitoring extends Model
     protected $fillable = [
         'identifikasi_risiko_id',
         'quarter',
+        'month',
         'nilai_dampak',
         'skala_dampak',
         'nilai_probabilitas',
