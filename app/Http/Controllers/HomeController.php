@@ -609,6 +609,9 @@ class HomeController extends Controller
             $tahunMonitorings[] = $projectPeriode->created_at->format('Y');
         }
         sort($tahunMonitorings);
+        if (empty($tahunMonitorings)) {
+            $tahunMonitorings = [date('Y')];
+        }
         $minTahun = min($tahunMonitorings);
         $maxTahun = max($tahunMonitorings);
         $tahunMonitorings = [];
