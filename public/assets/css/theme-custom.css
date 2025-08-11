@@ -11471,7 +11471,7 @@ html:not(.layout-menu-collapsed) .bg-menu-theme .menu-inner .menu-item .menu-lin
 
 /*------------------------- Layout -------------------------*/
 .content .main {
-  padding: 1rem 0 2rem;
+  padding: 3rem 0 2rem;
 }
 .layout-content-navbar .content-wrapper {
   padding-top: 3.5rem;

@@ -546,14 +546,14 @@ $(document).ready(function() {
         });
 
         var flatpickrInstance1 = flatpickr("#xtimelineRange1", {
-            altInput: true,
+            altInput: false,
             altFormat: "j F Y",
             dateFormat: "d/m/Y",
             disableMobile: true
         });
 
         var flatpickrInstance2 = flatpickr("#xtimelineRange2", {
-            altInput: true,
+            altInput: false,
             altFormat: "j F Y",
             dateFormat: "d/m/Y",
             disableMobile: true

@@ -21,7 +21,7 @@
                     <form action="{{ route('project-led.update', $lossEvent->id) }}" method="post" id="form-edit-led">
                         @csrf
                         @method('PUT')
-                        
+                        <input type="hidden" name="create_risk_from_led" id="create_risk_from_led_input" value="0">
                         <input type="hidden" name="project_id" value="{{ $lossEvent->project_id }}">
 
                         <div class="row">
@@ -213,14 +213,14 @@ $(document).ready(function() {
     let penyebabData = @json($penyebabData);
 
     var flatpickrMulai = flatpickr("#timelineRange1", {
-        altInput: true,
+        altInput: false,
         altFormat: "j F Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
-        altInput: true,
+        altInput: false,
         altFormat: "j F Y",
         dateFormat: "d/m/Y",
         disableMobile: true
@@ -473,15 +473,34 @@ $(document).ready(function() {
         e.preventDefault();
         const form = this;
 
+        // Swal.fire({
+        //     title: 'Update Data?',
+        //     text: "Apakah Anda yakin ingin menyimpan perubahan ini?",
+        //     icon: 'warning',
+        //     showCancelButton: true,
+        //     confirmButtonText: 'Ya, Update!',
+        //     cancelButtonText: 'Batal'
+        // }).then((result) => {
+        //     if (result.isConfirmed) {
+        //         form.submit();
+        //     }
+        // });
+
         Swal.fire({
-            title: 'Update Data?',
-            text: "Apakah Anda yakin ingin menyimpan perubahan ini?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, Update!',
+            title: 'Konfirmasi Penyimpanan',
+            text: "Apakah Loss Event ini akan menjadi Risiko baru di Project?",
+            icon: 'question',
+            showDenyButton: true,
+            showCancelButton: false,
+            confirmButtonText: 'Ya, Jadikan Risiko',
+            denyButtonText: `Tidak, Simpan LED Saja`,
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
+                $('#create_risk_from_led_input').val('1');
+                form.submit();
+            } else if (result.isDenied) {
+                $('#create_risk_from_led_input').val('0');
                 form.submit();
             }
         });

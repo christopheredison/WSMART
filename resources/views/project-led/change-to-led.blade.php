@@ -249,14 +249,14 @@
 <script>
 $(document).ready(function() {
     var flatpickrMulai = flatpickr("#timelineRange1", {
-        altInput: true,
+        altInput: false,
         altFormat: "j F Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
-        altInput: true,
+        altInput: false,
         altFormat: "j F Y",
         dateFormat: "d/m/Y",
         disableMobile: true

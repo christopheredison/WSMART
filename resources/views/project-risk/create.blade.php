@@ -505,7 +505,7 @@
 
         var flatpickrIns = flatpickr("#timepicker2", {
             //mode: "range",
-            altInput: true,
+            altInput: false,
             altFormat: "j F Y",
             dateFormat: "d/m/Y",
             //maxDate: endOfYear,
@@ -514,7 +514,7 @@
 
         var flatpickrIns = flatpickr("#timepicker3", {
             //mode: "range",
-            altInput: true,
+            altInput: false,
             altFormat: "j F Y",
             dateFormat: "d/m/Y",
             //maxDate: endOfYear,

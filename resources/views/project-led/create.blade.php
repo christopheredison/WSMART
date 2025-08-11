@@ -212,14 +212,14 @@
 <script>
 $(document).ready(function() {
     var flatpickrMulai = flatpickr("#timelineRange1", {
-        altInput: true,
+        altInput: false,
         altFormat: "j F Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
-        altInput: true,
+        altInput: false,
         altFormat: "j F Y",
         dateFormat: "d/m/Y",
         disableMobile: true
@@ -283,7 +283,7 @@ $(document).ready(function() {
     }
 
     renderPenyebabTable();
-    flatpickr(".flatpickr-date", { altInput: true, altFormat: "j F Y", dateFormat: "Y-m-d" });
+    flatpickr(".flatpickr-date", { altInput: false, altFormat: "j F Y", dateFormat: "Y-m-d" });
     $('.inputmask-rupiah').inputmask({ alias: 'numeric', groupSeparator: '.', autoGroup: true, digits: 0, prefix: 'Rp ', placeholder: '0', rightAlign: false, autoUnmask: true, removeMaskOnSubmit: true });
 
     $('#btn-tambah-penyebab').on('click', function() {
@@ -481,7 +481,7 @@ $(document).ready(function() {
             text: "Apakah Loss Event ini akan menjadi Risiko baru di Project?",
             icon: 'question',
             showDenyButton: true,
-            showCancelButton: true,
+            showCancelButton: false,
             confirmButtonText: 'Ya, Jadikan Risiko',
             denyButtonText: `Tidak, Simpan LED Saja`,
             cancelButtonText: 'Batal'

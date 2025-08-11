@@ -121,7 +121,7 @@ $(document).ready(function() {
 
     var flatpickrIns1 = flatpickr("#timelineRange1", {
         //mode: "range",
-        altInput: true,
+        altInput: false,
         altFormat: "j F Y",
         dateFormat: "d/m/Y",
         //maxDate: endOfYear,
@@ -130,7 +130,7 @@ $(document).ready(function() {
 
     var flatpickrIns2 = flatpickr("#timelineRange2", {
         //mode: "range",
-        altInput: true,
+        altInput: false,
         altFormat: "j F Y",
         dateFormat: "d/m/Y",
         //maxDate: endOfYear,
