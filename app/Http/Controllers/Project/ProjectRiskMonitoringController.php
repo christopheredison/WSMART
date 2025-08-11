@@ -35,7 +35,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $this->callbackQuery = function ($query) use ($projectPeriode) {
             $query->where('project_periode_list_id', $projectPeriode->id)
-                ->with(['peristiwaRisiko', 'projectRiskAnalisa', 'projectRiskAnalisa.skalaProbabilitas', 'projectRiskAnalisa.skalaProbabilitasResidual', 'projectRiskMonitoring.skalaProbabilitas', 'projectRiskMonitoring' => function ($query) {
+                ->with(['peristiwaRisiko', 'projectRiskAnalisa', 'projectRiskAnalisa.risiko', 'projectRiskAnalisa.skalaProbabilitas', 'projectRiskAnalisa.skalaProbabilitasResidual', 'projectRiskMonitoring.skalaProbabilitas', 'projectRiskMonitoring' => function ($query) {
                     $query->where('quarter', request()->input('filters.quarter') ?: 1)
                         ->where('tahun', request()->input('filters.tahun') ?: date('Y'))
                         ->where('month', request()->input('filters.month') ?: '');
@@ -143,6 +143,17 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'searchable' => false,
                 'render' => '(data, type, row) => row.project_risk_monitoring?.skala_risiko || "-"',
             ],
+            'is_closed' => [
+                'label' => 'Status',
+                'data' => 'projectRiskAnalisa.risiko.is_closed',
+                'sortable' => false,
+                'searchable' => false,
+                'render' => '(data, type, row) => row.project_risk_analisa?.risiko?.is_closed ? `<div class="badge bg-danger rounded-pill px-2 mt-auto">
+                  Closed
+                </div>` : `<div class="badge bg-success rounded-pill px-2 mt-auto">
+                  Open
+                </div>`',
+            ],
         ];
 
         if (Gate::check('project_monitoring_view')) {
@@ -166,6 +177,16 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'script' => <<<JS
                     window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Atahun', $('#table-filter select[name="tahun"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
+                'active_state' => '(data, type, row) => row.is_closed != 1',
+            ];
+        }
+        
+        if (request()->routeIs('projects.monitorings.index')) {
+            $this->tableActions[] = [
+                'label' => 'Change',
+                'btn_icon' => false,
+                'action' => 'change_to_led',
+                'active_state' => '(data, type, row) => row.is_closed != 1',
             ];
         }
         /*

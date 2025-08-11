@@ -102,6 +102,7 @@
                             </button>
                         </div>
                         {{ Form::select('area_dampak', \App\Models\AreaDampak::project()->get()->pluck('title', 'id'),  $analisa->area_dampak, ['placeholder' => 'Pilih area Dampak', 'class' => 'form-select', 'required' => true, 'id' => 'area_dampak']) }}
+                        <input type="hidden" name="skala_dampak_hidden" id="skala_dampak_hidden" value="{{ $analisa->skala_dampak }}">
                     </div>
                     <div class="col-md-4" id="div_risk_limit">
                         <label>Risk Limit</label>

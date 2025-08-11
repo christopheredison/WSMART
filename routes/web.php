@@ -377,6 +377,8 @@ Route::group(['middleware' => ['auth']], function() {
     Route::post('projects/{project}/risks/{risk}/analisa', [ProjectRiskController::class, 'doAnalisa'])->name('projects.risks.do-analisa')->middleware('can:project_risk_edit');
     Route::resource('projects/{project}/monitorings', ProjectRiskMonitoringController::class)->names('projects.monitorings')->only(['index', 'show', 'edit', 'update']);
     Route::resource('projects-monitorings/{monitoring}/q-{quarter}/documents', ProjectRiskMonitoringDocumentController::class)->names('projects.monitorings.documents')->only(['index', 'show', 'store', 'destroy']);
+    Route::get('projects/{project}/risks/{risk}/loss-events/create', [ProjectLEDController::class, 'riskChangeToLed'])->name('projects.loss-events.create')->middleware('can:project_risk_edit');
+    Route::post('projects/{project}/risks/{risk}/loss-events/create', [ProjectLEDController::class, 'riskChangeToLedStore'])->name('projects.loss-events.store')->middleware('can:project_risk_edit');
     Route::resource('master-kri', MasterKriController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-periode-list', ProjectPeriodeListController::class)->except(['create', 'edit']);
     Route::resource('jenis-kontrol-eksisting', JenisKontrolEksistingController::class)->except(['create', 'show', 'edit']);
