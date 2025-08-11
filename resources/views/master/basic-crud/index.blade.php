@@ -146,6 +146,13 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
+@php
+    $hasChangeToLedAction = collect($tableActions ?? [])->contains('action', 'change_to_led');
+@endphp
+
+@if($hasChangeToLedAction)
+    const ledCreateRoute = "{{ route('projects.loss-events.create', ['project' => request()->route('project'), 'risk' => ':risk_id']) }}";
+@endif
 const fetchedData = [];
 $(document).ready(function() {
     const datatableColumns = [
@@ -260,7 +267,7 @@ $(document).ready(function() {
         const action = $(this).data('action');
         const id = $(this).data('id');
         switch (action) {
-            case 'edit_data':
+            case 'edit_data': {
                 $('#modalEdit').modal('show');
                 const formEdit = $('#formEdit');
                 formEdit.data('id', id);
@@ -272,8 +279,9 @@ $(document).ready(function() {
                 }
                 @endforeach
                 break;
+            }
             @if(\Route::has($baseRoute . 'destroy'))
-            case 'delete_data':
+            case 'delete_data': {
                 Swal.fire({
                     title: "Apakah Anda yakin?",
                     text: "Data yang dihapus tidak dapat dikembalikan!",
@@ -313,9 +321,10 @@ $(document).ready(function() {
                     }
                 });
                 break;
+            }
             @endif
             @if(\Route::has($baseRoute . 'store'))
-            case 'sync_data':
+            case 'sync_data': {
                 Swal.fire({
                     title: "Apakah Anda yakin?",
                     text: "Proses sinkronsi akan menambahkan data baru, memperbarui data yang sudah ada, dan menghapus data yang tidak ada!",
@@ -365,7 +374,34 @@ $(document).ready(function() {
                     }
                 });
                 break;
+            }
             @endif
+            case 'change_to_led': {
+                let label = 'Apakah Risiko ini terjadi dan menjadi Loss Event?';
+                const rowData = fetchedData[id];
+                if (rowData && rowData?.peristiwa_risiko?.title) {
+                  label = `Apakah Risiko ${rowData?.peristiwa_risiko?.title} - ${rowData?.deskripsi_peristiwa_risiko} ini terjadi dan menjadi Loss Event?`;  
+                }
+                Swal.fire({
+                    title: 'Konfirmasi Perubahan',
+                    html: label,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: "Ya, Ubah ke Loss Event",
+                    cancelButtonText: "Tidak, Batal",
+                    buttonsStyling: false,
+                    customClass: {
+                        confirmButton: 'btn btn-success me-2',
+                        cancelButton: 'btn btn-danger'
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const finalUrl = ledCreateRoute.replace(':risk_id', id);
+                        window.location.href = finalUrl;
+                    }
+                });
+                break;
+            }
         }
     });
 

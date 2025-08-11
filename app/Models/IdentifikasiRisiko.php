@@ -40,6 +40,7 @@ class IdentifikasiRisiko extends Model
         'step_verification',
         'is_corporate',
         'previous_status_risiko',
+        'is_closed',
     ];
 
     protected $guarded = [];

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Project;
 use App\Http\Controllers\Master\BasicCRUDController;
 use App\Models\Draft;
 use App\Models\JenisKontrolEksisting;
+use App\Models\JenisRisiko;
 use App\Models\KontrolEksisting;
 use App\Models\MasterKRI;
 use App\Models\PenilaianEfektivitasKontrol;
@@ -269,10 +270,11 @@ class ProjectRiskController extends BasicCRUDController
         $masterKris = MasterKRI::get();
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
         $kontrolEksistings = KontrolEksisting::get();
+        $jenisRisikos = JenisRisiko::get();
         
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
         
-        return view('project-risk.create', compact('periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList'));
+        return view('project-risk.create', compact('periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos'));
     }
 
     public function store(Request $request)
@@ -291,6 +293,8 @@ class ProjectRiskController extends BasicCRUDController
         if ($request->action === 'save' || $request->action === 'savenext') {
             $request->validate([
                 'peristiwa_risiko_id' => 'required',
+                'kategori_risiko_id' => 'required',
+                'jenis_risiko_id' => 'required',
                 'deskripsi_peristiwa_risiko' => [
                     'required',
                     Rule::unique('project_risks')->where(function ($query) use ($project) {
@@ -329,8 +333,8 @@ class ProjectRiskController extends BasicCRUDController
                 'penilaian_efektifitas_kontrol' => $request->penilaian_efektifitas_kontrol,
                 'perkiraan_waktu_terpapar_risiko_mulai' => $perkiraanWaktuTerpaparRisikoMulai,
                 'perkiraan_waktu_terpapar_risiko_akhir' => $perkiraanWaktuTerpaparRisikoAkhir,
-                'kategori_risiko_id' => 0,
-                'jenis_risiko_id' => 0,
+                'kategori_risiko_id' => $request->kategori_risiko_id,
+                'jenis_risiko_id' => $request->jenis_risiko_id,
                 'kontrol_eksisting' => '',
             ];
 
@@ -425,8 +429,9 @@ class ProjectRiskController extends BasicCRUDController
         $kontrolEksistings = KontrolEksisting::whereIn('id', $kontrolEksistingIds)->get();
         
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
+        $jenisRisikos = JenisRisiko::get();
 
-        return view('project-risk.edit', compact('projectRisk', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList'));
+        return view('project-risk.edit', compact('projectRisk', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos'));
     }
 
     public function update(Request $request, $resource)
@@ -446,6 +451,8 @@ class ProjectRiskController extends BasicCRUDController
         if ($request->action === 'save') {
             $request->validate([
                 'peristiwa_risiko_id' => 'required',
+                'kategori_risiko_id' => 'required',
+                'jenis_risiko_id' => 'required',
                 'deskripsi_peristiwa_risiko' => 'required|unique:project_risks,deskripsi_peristiwa_risiko,' . $projectRisk->id,
                 'jenis_kontrol_eksisting_id' => 'required',
                 'penilaian_efektifitas_kontrol' => 'required',
@@ -468,6 +475,8 @@ class ProjectRiskController extends BasicCRUDController
                 'periode_id' => 0,
                 'user_id' => $user->id,
                 'project_id' => $project->id,
+                'kategori_risiko_id' => $request->kategori_risiko_id,
+                'jenis_risiko_id' => $request->jenis_risiko_id,
                 'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
                 'project_periode_list_id' => $projectPeriodeList->id,
                 'deskripsi_peristiwa_risiko' => $request->deskripsi_peristiwa_risiko,

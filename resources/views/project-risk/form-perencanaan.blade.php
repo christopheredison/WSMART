@@ -37,9 +37,11 @@
             {{ Form::text('biaya_perlakuan_risiko', null, ['class' => 'form-control inputmask-rupiah', 'required']) }}
             <label for="biaya_perlakuan_risiko">Biaya Perlakuan Risiko</label>
         </div>
+        @if(isset($analisa) && $analisa?->nilai_dampak > 0)
         <div class="invalid-feedback">
             Biaya perlakuan risiko tidak boleh melebihi nilai dampak (Rp. {{ number_format($analisa->nilai_dampak, 0, ',', '.') }})
         </div>
+        @endif
     </div>
     <div class="col-12 col-md-6">
         <div class="form-floating">

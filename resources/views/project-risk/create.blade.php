@@ -45,6 +45,22 @@
                                 </select>
                             </div>
                         </div>
+                        <div class="col-md-12">
+                            <div class="form-group d-lg-flex">
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Jenis Risiko T2 & T3 KBUMN</label>
+                                <input type="hidden" name="kategori_risiko_id" value="{{ old('kategori_risiko_id') }}" id="kategori_risiko_id">
+                                <select class="form-select select2 @error('jenis_risiko_id') is-invalid @enderror" name="jenis_risiko_id" id="jenis_risiko_id" required>
+                                    <option value="">Pilih Jenis Risiko</option>
+                                    @foreach($jenisRisikos as $jenis)
+                                        <option value="{{ $jenis->id }}" 
+                                            data-kategori="{{ $jenis->kategori_risiko_id }}"
+                                            {{ old('jenis_risiko_id') == $jenis->id ? 'selected' : '' }}>
+                                            {{ $jenis->kategoriRisiko->title ?? '' }} – {{ $jenis->title }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
                         <div class="col-12">
                             <div class="form-group form-floating">
                                 <textarea class="form-control" id="deskripsi_peristiwa_risiko" name="deskripsi_peristiwa_risiko" rows="3"
@@ -288,8 +304,30 @@
     }
 
     $(document).ready(function() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);            
+            const penyebabRisikoFromUrl = urlParams.get('penyebab_risiko');
+
+            if (penyebabRisikoFromUrl) {
+                const firstPenyebabInput = $('input[name="penyebab_risiko[]"]').first();
+                
+                if (firstPenyebabInput.length) {
+                    firstPenyebabInput.val(penyebabRisikoFromUrl);
+                }
+            }
+        } catch (e) {
+            console.error("Gagal membaca parameter URL:", e);
+        }
+
         const masterKris = @json($masterKris->keyBy('id'));
         const kontrolExistings = @json($kontrolEksistings->keyBy('id'));
+        
+        $('#jenis_risiko_id').on('change', function() {
+            var selectedOption = $(this).find('option:selected');
+            var kategoriId = selectedOption.data('kategori');
+            $('#kategori_risiko_id').val(kategoriId);
+        });
+
         // Add Column Penyebab Risiko
         let row = 0;
 
@@ -322,7 +360,7 @@
         $('#add-column-kri').click(function() {
             row++;
             const peristiwaRisikoId = $('#peristiwa_risiko').val();
-            
+
             let html = `
                 <div class="row g-2">
                     <div class="col-12 col-lg-11">
@@ -415,7 +453,7 @@
 
         function fetchKontrolEksisting() {
             let peristiwaRisikoId = $('#peristiwa_risiko').val();
-            
+
             if (!peristiwaRisikoId) {
                 $('#table-kontrol tbody').empty();
                 $('.table-empty').show();
@@ -548,7 +586,7 @@
             const form = $('#main-form');
             const url = form.attr('action');
             const data = new FormData(form[0]);
-            
+
             data.append('action', action);
 
             // Tampilkan konfirmasi sebelum mengirim request

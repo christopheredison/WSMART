@@ -278,6 +278,14 @@
                     </div>
                     <div class="col-12">
                         <div class="form-group">
+                            <label class="form-label fw-bold">Jenis Risiko T2 & T3 KBUMN</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $projectRisk->kategoriRisiko->title ?? '-' }} – {{ $projectRisk->jenisRisiko->title ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-group">
                             <label class="form-label fw-bold">Deskripsi Peristiwa Risiko</label>
                             <div class="p-3 bg-light rounded">
                                 {{ $projectRisk->deskripsi_peristiwa_risiko ?? '-' }}
