@@ -321,6 +321,20 @@
     }
 
     $(document).ready(function() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);            
+            const penyebabRisikoFromUrl = urlParams.get('penyebab_risiko');
+
+            if (penyebabRisikoFromUrl) {
+                const firstPenyebabInput = $('input[name="penyebab_risiko[]"]').first();
+                
+                if (firstPenyebabInput.length) {
+                    firstPenyebabInput.val(penyebabRisikoFromUrl);
+                }
+            }
+        } catch (e) {
+            console.error("Gagal membaca parameter URL:", e);
+        }
         const masterKris = @json($masterKris->keyBy('id'));
         const kontrolExistings = @json($kontrolEksistings->keyBy('id'));
         // Add Column Penyebab Risiko

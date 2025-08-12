@@ -35,7 +35,12 @@ if (!(!$permissions || \Gate::any($permissions))) {
     </a>
     @break
 @case('change_to_led')
-    <button type="button" class="btn btn-link btn-muted-primary  btn-action px-1 py-0" data-action="change_to_led" data-id="{{ $id }}" data-peristiwa="">
+    <button type="button" class="btn btn-link btn-muted-primary  btn-action px-1 py-0" data-action="change_to_led" data-id="{{ $id }}">
+        <span>{!! $action['label'] !!}</span>
+    </button>
+    @break
+@case('change_to_led_unit')
+    <button type="button" class="btn btn-link btn-muted-primary  btn-action px-1 py-0" data-action="change_to_led_unit" data-id="{{ $id }}">
         <span>{!! $action['label'] !!}</span>
     </button>
     @break

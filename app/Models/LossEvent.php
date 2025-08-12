@@ -41,4 +41,9 @@ class LossEvent extends Model
     {
         return $this->belongsTo(Jabatan::class, 'unit_penanggung_jawab_jabatan_id');
     }
+
+    public function penyebabRisikoLeds()
+    {
+        return $this->hasMany(PenyebabRisikoUnitLed::class, 'loss_event_unit_id');
+    }
 }

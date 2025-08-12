@@ -533,7 +533,7 @@ class ProjectLEDController extends Controller
 
         DB::beginTransaction();
         try {
-            $lossEvent->update($request->except(['_token', '_method', 'penyebab_data']));
+            $lossEvent->update($request->except(['_token', '_method', 'penyebab_data', 'create_risk_from_led']));
 
             $penyebabDataFromRequest = json_decode($request->input('penyebab_data'), true) ?? [];
             $existingPenyebabIds = $lossEvent->penyebabRisikoProjectLeds()->pluck('id')->toArray();
@@ -737,7 +737,7 @@ class ProjectLEDController extends Controller
                       'output_perlakuan_risiko' => $perlakuan->output_perlakuan_risiko,
                       'biaya_perlakuan_risiko' => $perlakuan->biaya_perlakuan_risiko,
                       'pic' => $perlakuan->pic_jabatan_id,
-                      'pic_name' => $perlakuan->picJabatan->name ?? $perlakuan->pic,
+                      'pic_name' => $perlakuan->pic ?? '',
                       'timeline_mulai_perlakuan_risiko' => \Carbon\Carbon::parse($perlakuan->timeline_perlakuan_risiko_start)->format('d/m/Y'),
                       'timeline_selesai_perlakuan_risiko' => \Carbon\Carbon::parse($perlakuan->timeline_perlakuan_risiko_end)->format('d/m/Y'),
                       'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,

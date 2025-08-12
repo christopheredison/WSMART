@@ -153,6 +153,14 @@
 @if($hasChangeToLedAction)
     const ledCreateRoute = "{{ route('projects.loss-events.create', ['project' => request()->route('project'), 'risk' => ':risk_id']) }}";
 @endif
+
+@php
+    $hasChangeToLedUnitAction = collect($tableActions ?? [])->contains('action', 'change_to_led_unit');
+@endphp
+
+@if($hasChangeToLedUnitAction)
+    const ledCreateRoute = "{{ route('risk-register-unit.loss-events.create', ['riskRegister' => ':riskRegister']) }}";
+@endif
 const fetchedData = [];
 $(document).ready(function() {
     const datatableColumns = [
@@ -397,6 +405,32 @@ $(document).ready(function() {
                 }).then((result) => {
                     if (result.isConfirmed) {
                         const finalUrl = ledCreateRoute.replace(':risk_id', id);
+                        window.location.href = finalUrl;
+                    }
+                });
+                break;
+            }
+            case 'change_to_led_unit': {
+                let label = 'Apakah Risiko ini terjadi dan menjadi Loss Event?';
+                const rowData = fetchedData[id];
+                if (rowData && rowData?.peristiwa_risiko) {
+                  label = `Apakah Risiko ${rowData?.peristiwa_risiko} - ${rowData?.deskripsi_peristiwa_risiko} ini terjadi dan menjadi Loss Event?`;  
+                }
+                Swal.fire({
+                    title: 'Konfirmasi Perubahan',
+                    html: label,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: "Ya, Ubah ke Loss Event",
+                    cancelButtonText: "Tidak, Batal",
+                    buttonsStyling: false,
+                    customClass: {
+                        confirmButton: 'btn btn-success me-2',
+                        cancelButton: 'btn btn-danger'
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const finalUrl = ledCreateRoute.replace(':riskRegister', id);
                         window.location.href = finalUrl;
                     }
                 });
