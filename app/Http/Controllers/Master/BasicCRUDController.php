@@ -28,6 +28,7 @@ abstract class BasicCRUDController extends Controller
     protected $datatableCallback = null;
     protected $tableLegend = [];
     protected $extraScripts = [];
+    protected $importConfig = null;
 
     public function __construct()
     {
@@ -106,6 +107,7 @@ abstract class BasicCRUDController extends Controller
             'indexTitle' => $this->indexTitle,
             'tableLegend' => $this->tableLegend,
             'extraScripts' => $this->extraScripts,
+            'importConfig' => $this->importConfig,
         ]);
     }
 

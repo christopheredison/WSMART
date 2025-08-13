@@ -68,6 +68,13 @@
                                 <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</label>
                             </div>
                         </div>
+                        <div class="col-12">
+                            <div class="form-group form-floating">
+                                <textarea class="form-control" id="wbs" name="wbs" rows="3"
+                                    value="{{ old('wbs') }}" placeholder="Deskripsi Peristiwa Risiko" required></textarea>
+                                <label for="wbs">WBS</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

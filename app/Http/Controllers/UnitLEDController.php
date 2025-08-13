@@ -93,12 +93,13 @@ class UnitLEDController extends Controller
         $jabatans = Jabatan::all();
         $periode = null;
         $identifikasiRisikos = [];
+        $user = request()->user();
+        $unitId = $user->unit_id;
         if (request()->periode_id) {
-            $user = request()->user();
             $periode = Periode::findOrFail(request()->periode_id);
         }
         
-        return view('unit-led.create', compact('periodes', 'kategoriKejadians', 'jenisRisikos', 'jabatans', 'periode'));
+        return view('unit-led.create', compact('periodes', 'kategoriKejadians', 'jenisRisikos', 'jabatans', 'periode', 'unitId'));
     }
 
     // public function store(Request $request)

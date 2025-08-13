@@ -9,6 +9,85 @@ Breadcrumbs::for('home', function (BreadcrumbTrail $trail) {
     $trail->push('Home', route('home'));
 });
 
+// Periode Divisi
+Breadcrumbs::for('risk-register-unit.periods', function (BreadcrumbTrail $trail) {
+    $trail->push('Periode Divisi', route('risk-register-unit.periods'));
+});
+
+// Periode Divisi > View Periode Divisi
+Breadcrumbs::for('risk-register-unit.periods.show', function (BreadcrumbTrail $trail, $period) {
+    $trail->parent('risk-register-unit.periods');
+    $trail->push('Risk Register Divisi', route('risk-register-unit.periods.show', [$period]));
+});
+
+// Periode Divisi > Risk Register Divisi
+Breadcrumbs::for('risk-register-unit.index', function (BreadcrumbTrail $trail) {
+    $trail->parent('risk-register-unit.periods');
+    $trail->push('Risk Register Divisi', route('risk-register-unit.index'));
+});
+
+// Periode Divisi > Risk Register Divisi > Tambah Risk Register
+Breadcrumbs::for('risk-register-unit.create', function (BreadcrumbTrail $trail) {
+    $trail->parent('risk-register-unit.index');
+    $trail->push('Tambah Risk Register', route('risk-register-unit.create'));
+});
+
+// Periode Divisi > Risk Register Divisi > Edit Risk Register
+Breadcrumbs::for('risk-register-unit.edit', function (BreadcrumbTrail $trail, $riskRegister) {
+    $trail->parent('risk-register-unit.index');
+    $trail->push('Edit Risk Register', route('risk-register-unit.edit', [$riskRegister]));
+});
+
+// Periode Divisi > Risk Register Divisi > Analisa Risiko
+Breadcrumbs::for('risk-register-unit.analisa', function (BreadcrumbTrail $trail, $riskRegister) {
+    $trail->parent('risk-register-unit.index');
+    $trail->push('Analisa Risiko', route('risk-register-unit.analisa', [$riskRegister]));
+});
+
+// Periode Divisi > Risk Register Divisi > Perencanaan Risiko
+Breadcrumbs::for('risk-register-unit.perencanaan', function (BreadcrumbTrail $trail, $riskRegister) {
+    $trail->parent('risk-register-unit.index');
+    $trail->push('Rencana Perlakuan Risiko', route('risk-register-unit.perencanaan', [$riskRegister]));
+});
+
+// Periode Divisi > Risk Register Divisi > View Risiko
+Breadcrumbs::for('risk-register-unit.view', function (BreadcrumbTrail $trail, $riskRegister) {
+    $trail->parent('risk-register-unit.index');
+    $trail->push('View Risiko', route('risk-register-unit.view', [$riskRegister]));
+});
+
+// Periode Divisi > Data Monitoring
+Breadcrumbs::for('risk-register-unit.monitorings.index', function (BreadcrumbTrail $trail, $period) {
+    $trail->parent('risk-register-unit.periods');
+    $trail->push('Data Monitoring', route('risk-register-unit.monitorings.index', [$period]));
+});
+
+// Periode Divisi > Data Monitoring > View Data Monitoring
+Breadcrumbs::for('risk-register-unit.monitorings.show', function (BreadcrumbTrail $trail, $period, $monitoring) {
+    $trail->parent('risk-register-unit.monitorings.index', $period);
+    $trail->push('View Data Monitoring', route('risk-register-unit.monitorings.show', [$period, $monitoring]));
+});
+
+// Periode Divisi > Data Monitoring > Edit Data Monitoring
+Breadcrumbs::for('risk-register-unit.monitorings.edit', function (BreadcrumbTrail $trail, $period, $monitoring) {
+    $trail->parent('risk-register-unit.monitorings.index', $period);
+    $trail->push('Edit Data Monitoring', route('risk-register-unit.monitorings.edit', [$period, $monitoring]));
+});
+
+// Periode Divisi > Loss Event Divisi
+Breadcrumbs::for('unit-led.index-by-unit', function (BreadcrumbTrail $trail, $unitId) {
+    $trail->parent('risk-register-unit.periods');
+    $trail->push('Loss Event Divisi', route('unit-led.index-by-unit', [$unitId]));
+});
+
+// Periode Divisi > Loss Event Divisi > Tambah Loss Event Divisi
+Breadcrumbs::for('unit-led.create', function (BreadcrumbTrail $trail, $unitId) {
+    // Kirimkan $unitId ke parent, karena parent membutuhkannya
+    $trail->parent('unit-led.index-by-unit', $unitId); 
+    // Route 'create' tidak butuh parameter
+    $trail->push('Tambah Loss Event Divisi', route('unit-led.create')); 
+});
+
 // Project Periode List
 Breadcrumbs::for('project-periode-list.index', function (BreadcrumbTrail $trail) {
     $trail->push('Project List', route('project-periode-list.index'));
@@ -76,8 +155,9 @@ Breadcrumbs::for('projects.monitorings.documents.index', function (BreadcrumbTra
 });
 
 // projects.leds.index
-Breadcrumbs::for('project-led.index', function (BreadcrumbTrail $trail) {
-    $trail->push('Loss Event Project', route('project-led.index'));
+Breadcrumbs::for('project-led.index-by-project', function (BreadcrumbTrail $trail, $projectId) {
+    $trail->parent('project-periode-list.index');
+    $trail->push('Loss Event Project', route('project-led.index-by-project', $projectId));
 });
 
 Breadcrumbs::for('project-led.create', function (BreadcrumbTrail $trail) {

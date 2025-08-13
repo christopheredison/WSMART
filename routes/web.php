@@ -375,6 +375,8 @@ Route::group(['middleware' => ['auth']], function() {
     Route::post('projects/{project}/risks/{risk}/rencana', [ProjectRiskController::class, 'doRencana'])->name('projects.risks.do-rencana')->middleware('can:project_risk_edit');
     Route::get('projects/{project}/risks/{risk}/analisa', [ProjectRiskController::class, 'analisa'])->name('projects.risks.analisa')->middleware('can:project_risk_edit');
     Route::post('projects/{project}/risks/{risk}/analisa', [ProjectRiskController::class, 'doAnalisa'])->name('projects.risks.do-analisa')->middleware('can:project_risk_edit');
+    Route::post('projects/{project}/risks/import-tender', [ProjectRiskController::class, 'importTender'])->name('projects.risks.import-tender');
+    
     Route::resource('projects/{project}/monitorings', ProjectRiskMonitoringController::class)->names('projects.monitorings')->only(['index', 'show', 'edit', 'update']);
     Route::resource('projects-monitorings/{monitoring}/q-{quarter}/documents', ProjectRiskMonitoringDocumentController::class)->names('projects.monitorings.documents')->only(['index', 'show', 'store', 'destroy']);
     Route::get('projects/{project}/risks/{risk}/loss-events/create', [ProjectLEDController::class, 'riskChangeToLed'])->name('projects.loss-events.create')->middleware('can:project_risk_edit');
@@ -554,3 +556,4 @@ Route::post('corporate-risk/update-to-corporate', [App\Http\Controllers\Corporat
 Route::post('corporate-risk/ranking-risiko', [App\Http\Controllers\CorporateRiskController::class, 'rankingRisiko'])->name('corporate-risk.ranking-risiko');
 Route::post('corporate-risk/confirm-corporate', [App\Http\Controllers\CorporateRiskController::class, 'confirmCorporateRisks'])->name('corporate-risk.confirm-corporate');
 Route::post('corporate-risk/revert-from-corporate', [App\Http\Controllers\CorporateRiskController::class, 'revertFromCorporate'])->name('corporate-risk.revert-from-corporate');
+Route::get('/download-tender-template', [ProjectRiskController::class, 'downloadTenderTemplate'])->name('download-tender-template');

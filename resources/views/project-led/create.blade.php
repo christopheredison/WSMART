@@ -27,7 +27,7 @@
 
                             <div class="col-md-6 mb-3">
                                 <label for="peristiwa_risiko_id" class="form-label">Identifikasi Kejadian <span class="text-danger">*</span></label>
-                                <select class="form-select" name="peristiwa_risiko_id" id="peristiwa_risiko_id" required>
+                                <select class="form-select select2" name="peristiwa_risiko_id" id="peristiwa_risiko_id" required>
                                     <option value="">Pilih Identifikasi Kejadian</option>
                                     @foreach($peristiwaRisikos as $risiko)
                                         <option value="{{ $risiko->id }}" {{ old('peristiwa_risiko_id') == $risiko->id ? 'selected' : '' }}>
