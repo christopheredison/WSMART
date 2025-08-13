@@ -21,6 +21,7 @@ class IdentifikasiRisiko extends Model
         'rencana_kegiatan',
         'peristiwa_risiko',
         'deskripsi_peristiwa_risiko',
+        'wbs',
         'deskripsi_rencana_kegiatan',
         'type',
         'jenis_kontrol_eksisting_id',

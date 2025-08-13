@@ -647,6 +647,16 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $projectRisk->refreshRealisasi();
         $projectPeriode->refreshNilai();
 
+        if ($request->is_closed == '1') {
+          $projectRisk->update([
+            'is_closed' => true,
+          ]);
+
+          // if ($request->kamus_risiko == '1') {
+          //   // Tambah ke kamus risiko
+          // }
+        }
+
         return response()->json([
             'message' => 'Data berhasil disimpan',
         ]);

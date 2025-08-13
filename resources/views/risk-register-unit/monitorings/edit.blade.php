@@ -530,6 +530,7 @@ const perlakuanPenyebabRisikos = @json($risk->penyebabRisikos->pluck('perlakuanP
 const kriProjects = @json($risk->kris->keyBy('id'));
 const quarter = {{ $quarter }};
 const riskMonitoring = @json($riskMonitoring);
+const namaRisiko = @json($risk->peristiwa_risiko);
 
 function getSkalaProbabilitasByValue(value) {
     const skalaProbabilitases = @json($skalaProbabilitas);
@@ -587,6 +588,52 @@ function convertDateFormat(dateStr) {
   return `${day}/${month}/${year}`;
 }
 
+function submitForm(isClosed, kamusRisiko = null) {
+    $('.dom-edited').remove();
+            
+    const formData = new FormData($('#main-form')[0]);
+    formData.append('perlakuan_penyebab_risikos', JSON.stringify(perlakuanPenyebabRisikos));
+    formData.append('kri_projects', JSON.stringify(kriProjects));
+    formData.append('quarter', quarter);
+    formData.append('_method', 'PUT');
+
+    // Append new data for isClosed and kamusRisiko
+    formData.append('is_closed', isClosed);
+    if (kamusRisiko !== null) {
+        formData.append('kamus_risiko', kamusRisiko);
+    }
+
+    $.ajax({
+        url: '{{ route('risk-register-unit.monitorings.update', ['period' => request()->route('period'), 'monitoring' => request()->route('monitoring')]) }}',
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function(response) {
+            Swal.fire({
+                title: 'Berhasil',
+                text: response.message,
+                icon: 'success',
+                confirmButtonText: 'OK',
+            }).then(() => {
+                window.location.href = '{{ route('risk-register-unit.monitorings.index', ['period' => request()->route('period')]) }}';
+            });
+        },
+        error: function(xhr) {
+            let errorMessage = 'Terjadi kesalahan.';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            }
+            Swal.fire({
+                title: 'Error',
+                text: errorMessage,
+                icon: 'error',
+                confirmButtonText: 'OK',
+            });
+        }
+    });
+}
+
 $(document).ready(function() {
     // Simpan nilai skala dampak inherent dan probabilitas inherent
     const skalaDampakInherent = {{ $riskAnalysis->skalaDampakObj?->tingkat ?? 0 }};
@@ -635,55 +682,38 @@ $(document).ready(function() {
                 return;
             }
 
-            // for (let i in perlakuanPenyebabRisikos) {
-            //     let perlakuanPenyebabRisiko = perlakuanPenyebabRisikos[i];
-            //     if (!perlakuanPenyebabRisiko.deskripsi_perlakuan_risiko) {
-            //         Swal.fire('Error', 'Semua update realisasi harus diisi', 'error');
-            //         return;
-            //     }
-            // }
-
-            // for (let i in kriProjects) {
-            //     let kriProject = kriProjects[i];
-            //     if (!kriProject.status_kri_terkini_q{{$quarter}}) {
-            //         Swal.fire('Error', 'Semua update kri harus diisi', 'error');
-            //         return;
-            //     }
-            // }
-
-            $('.dom-edited').remove();
-            
-            const formData = new FormData($('#main-form')[0]);
-            formData.append('perlakuan_penyebab_risikos', JSON.stringify(perlakuanPenyebabRisikos));
-            formData.append('kri_projects', JSON.stringify(kriProjects));
-            formData.append('quarter', quarter);
-            formData.append('_method', 'PUT');
-            $.ajax({
-                url: '{{ route('risk-register-unit.monitorings.update', ['period' => request()->route('period'), 'monitoring' => request()->route('monitoring')]) }}',
-                type: 'POST',
-                data: formData,
-                contentType: false,
-                processData: false,
-                success: function(response) {
-                    Swal.fire({
-                        title: 'Berhasil',
-                        text: response.message,
-                        icon: 'success',
-                        confirmButtonText: 'OK',
-                    }).then(() => {
-                        window.location.href = '{{ route('risk-register-unit.monitorings.index', ['period' => request()->route('period')]) }}';
-                    });
+            Swal.fire({
+                title: `Apakah Risiko "${namaRisiko}" ini masih open atau close?`,
+                icon: 'question',
+                showDenyButton: true,
+                confirmButtonText: 'Open Risiko',
+                denyButtonText: 'Close Risiko',
+                customClass: {
+                    confirmButton: 'btn btn-success mx-2 px-5',
+                    denyButton: 'btn btn-danger mx-2 px-5'
                 },
-                error: function(xhr) {
-                    let errorMessage = 'Terjadi kesalahan.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
+                buttonsStyling: false,
+            }).then((result) => {
+                if (result.isConfirmed) { // User clicked "Open"
+                    submitForm(0);
+                } else if (result.isDenied) { // User clicked "Close"
                     Swal.fire({
-                        title: 'Error',
-                        text: errorMessage,
-                        icon: 'error',
-                        confirmButtonText: 'OK',
+                        title: `Apakah penanganan untuk risiko "${namaRisiko}" efektif?`,
+                        icon: 'question',
+                        showDenyButton: true,
+                        confirmButtonText: 'Ya, Efektif',
+                        denyButtonText: 'Tidak',
+                        customClass: {
+                            confirmButton: 'btn btn-success mx-2 px-5',
+                            denyButton: 'btn btn-danger mx-2 px-5'
+                        },
+                        buttonsStyling: false,
+                    }).then((effectivenessResult) => {
+                        if (effectivenessResult.isConfirmed) { // Clicked "Ya, Efektif"
+                            submitForm(1, 1);
+                        } else if (effectivenessResult.isDenied) { // Clicked "Tidak"
+                            submitForm(1, 0);
+                        }
                     });
                 }
             });

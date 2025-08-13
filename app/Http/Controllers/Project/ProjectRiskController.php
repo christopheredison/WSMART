@@ -654,6 +654,40 @@ class ProjectRiskController extends BasicCRUDController
         ));
     }
 
+    public function destroy($id) {
+        try {
+            // Cari data identifikasi risiko
+            $projectRisk = ProjectRisk::findOrFail($id);
+
+            // Cek apakah user memiliki akses untuk menghapus
+            // if (!Gate::check('risk_register_delete') && $risiko->user_id != auth()->id()) {
+            //     return redirect()->route('risk-register-unit.index')->with('error', 'Anda tidak memiliki izin untuk menghapus data ini');
+            // }
+
+            // Hapus data terkait
+            // Hapus analisis risiko jika ada
+            if ($projectRisk->projectRiskAnalisas) {
+                $projectRisk->projectRiskAnalisas()->delete();
+            }
+
+            // Hapus penyebab risiko
+            $projectRisk->penyebabRisikoProjects()->delete();
+
+            // Hapus KRI
+            $projectRisk->kriProjects()->delete();
+            $projectRisk->projectRiskRencanaPerlakuans()->delete();
+            $projectRisk->projectRiskMonitorings()->delete();
+            $projectRisk->projectKontrolEksistings()->delete();
+
+            // Hapus data identifikasi risiko
+            $projectRisk->delete();
+
+            return redirect()->back()->with('success', 'Data risiko berhasil dihapus');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat menghapus data: ' . $e->getMessage());
+        }
+    }
+
     public function analisa(Request $request, $resource) {
         $projectRisk = ProjectRisk::findOrFail(request()->route('risk'));
         $projectPeriodeList = ProjectPeriodeList::findOrFail(request()->route('project'));

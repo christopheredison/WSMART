@@ -551,6 +551,16 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $risk->refreshRealisasi();
 
+        if ($request->is_closed == '1') {
+          $risk->update([
+            'is_closed' => true,
+          ]);
+
+          // if ($request->kamus_risiko == '1') {
+          //   // Tambah ke kamus risiko
+          // }
+        }
+
         return response()->json([
             'message' => 'Data berhasil disimpan',
         ]);
