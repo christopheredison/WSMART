@@ -485,7 +485,6 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('unit-leds/{unitId}', [UnitLEDController::class, 'index'])->name('unit-led.index-by-unit');
 
     Route::get('kamus-risiko-unit', [KamusRisikoUnitController::class, 'index'])->name('kamus-risiko-unit.index');
-    Route::get('kamus-risiko-unit/periods/{period}', [KamusRisikoUnitController::class, 'periods'])->name('kamus-risiko-unit.periods');
     Route::post('kamus-risiko-unit/add-risk', [KamusRisikoUnitController::class, 'addRisk'])->name('kamus-risiko-unit.add-risk');
     Route::get('kamus-risiko-unit/export', [KamusRisikoUnitController::class, 'exportExcel'])->name('kamus-risiko-unit.export');
 
