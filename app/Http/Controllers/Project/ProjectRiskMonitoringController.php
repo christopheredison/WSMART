@@ -13,6 +13,7 @@ use App\Models\Project;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use App\Models\KamusRisikoProject;
 
 class ProjectRiskMonitoringController extends BasicCRUDController
 {
@@ -24,8 +25,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
     public function index() {
         $this->baseRouteParams = ['project' => request()->route('project')];
-        $projectPeriode = ProjectPeriodeList::with('projectRisks.peristiwaRisiko')->findOrfail(request()->route('project'));
+        $projectPeriode = ProjectPeriodeList::with('project', 'projectRisks.peristiwaRisiko')->findOrfail(request()->route('project'));
         $cb = fn ($fn) => $fn;
+        $this->indexSubtitle = $projectPeriode->project->project_name;
 
         $user = request()->user();
 
@@ -652,9 +654,12 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'is_closed' => true,
           ]);
 
-          // if ($request->kamus_risiko == '1') {
-          //   // Tambah ke kamus risiko
-          // }
+          if ($request->kamus_risiko == '1') {
+              KamusRisikoProject::updateOrCreate(
+                  ['project_risk_id' => $projectRisk->id],
+                  ['project_id' => $projectRisk->project_id],
+              );
+          }
         }
 
         return response()->json([

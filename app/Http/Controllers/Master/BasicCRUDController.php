@@ -25,10 +25,12 @@ abstract class BasicCRUDController extends Controller
     protected $cardFooter = null;
     protected $defaultOrder = null;
     protected $indexTitle = null;
+    protected $indexSubtitle = null;
     protected $datatableCallback = null;
     protected $tableLegend = [];
     protected $extraScripts = [];
     protected $importConfig = null;
+    protected $extraViewData = [];
 
     public function __construct()
     {
@@ -105,9 +107,11 @@ abstract class BasicCRUDController extends Controller
             'cardFooter' => $this->cardFooter,
             'defaultOrder' => $this->defaultOrder ?? [[1, 'asc']],
             'indexTitle' => $this->indexTitle,
+            'indexSubtitle' => $this->indexSubtitle,
             'tableLegend' => $this->tableLegend,
             'extraScripts' => $this->extraScripts,
             'importConfig' => $this->importConfig,
+            'extraViewData' => $this->extraViewData,
         ]);
     }
 

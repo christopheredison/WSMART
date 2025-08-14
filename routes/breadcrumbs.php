@@ -88,6 +88,12 @@ Breadcrumbs::for('unit-led.create', function (BreadcrumbTrail $trail, $unitId) {
     $trail->push('Tambah Loss Event Divisi', route('unit-led.create')); 
 });
 
+// Periode Divisi > Risk Register Divisi >Kamus Risiko Unit
+Breadcrumbs::for('kamus-risiko-unit.index', function (BreadcrumbTrail $trail) {
+    $trail->parent('risk-register-unit.index');
+    $trail->push('Kamus Risiko Unit', route('kamus-risiko-unit.index'));
+});
+
 // Project Periode List
 Breadcrumbs::for('project-periode-list.index', function (BreadcrumbTrail $trail) {
     $trail->push('Project List', route('project-periode-list.index'));
@@ -173,6 +179,12 @@ Breadcrumbs::for('project-led.edit', function (BreadcrumbTrail $trail, $id) {
 Breadcrumbs::for('project-led.show', function (BreadcrumbTrail $trail, $id) {
     $trail->parent('project-led.index');
     $trail->push('Detail Loss Event Project', route('project-led.show', $id));
+});
+
+// Kamus Risiko Project
+Breadcrumbs::for('kamus-risiko-project.index', function (BreadcrumbTrail $trail) {
+    $trail->parent('project-periode-list.index');
+    $trail->push('Kamus Risiko Project', route('kamus-risiko-project.index'));
 });
 
 // rmi-period.index

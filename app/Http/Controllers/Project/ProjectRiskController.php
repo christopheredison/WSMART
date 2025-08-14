@@ -108,8 +108,9 @@ class ProjectRiskController extends BasicCRUDController
     public function index() {
         $this->baseRouteParams = ['project' => request()->route('project')];
 
-        $projectPeriodeList = ProjectPeriodeList::findOrFail(request()->route('project'));
+        $projectPeriodeList = ProjectPeriodeList::with('project')->findOrFail(request()->route('project'));
         $user = request()->user();
+        $this->indexSubtitle = $projectPeriodeList->project->project_name;
 
         if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriodeList))) {
             abort(403);
@@ -223,6 +224,7 @@ class ProjectRiskController extends BasicCRUDController
                 'label' => '<span class="bx bx-trash text-danger"></span>',
                 'btn_icon' => true,
                 'action' => 'delete',
+                'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']),
                 'permissions' => ['project_risk_delete'],
             ];
         }
@@ -654,37 +656,31 @@ class ProjectRiskController extends BasicCRUDController
         ));
     }
 
-    public function destroy($id) {
+    public function destroy($resource) {
         try {
-            // Cari data identifikasi risiko
-            $projectRisk = ProjectRisk::findOrFail($id);
+            $projectRisk = ProjectRisk::findOrFail(request()->route('risk'));
 
-            // Cek apakah user memiliki akses untuk menghapus
-            // if (!Gate::check('risk_register_delete') && $risiko->user_id != auth()->id()) {
-            //     return redirect()->route('risk-register-unit.index')->with('error', 'Anda tidak memiliki izin untuk menghapus data ini');
-            // }
-
-            // Hapus data terkait
-            // Hapus analisis risiko jika ada
-            if ($projectRisk->projectRiskAnalisas) {
-                $projectRisk->projectRiskAnalisas()->delete();
+            if (!Gate::check('project_risk_delete')) {
+                return response()->json([
+                    'message' => 'Anda tidak memiliki izin untuk menghapus data ini'
+                ], 403);
             }
 
-            // Hapus penyebab risiko
+            $projectRisk->projectRiskAnalisas()->delete();
             $projectRisk->penyebabRisikoProjects()->delete();
-
-            // Hapus KRI
             $projectRisk->kriProjects()->delete();
             $projectRisk->projectRiskRencanaPerlakuans()->delete();
             $projectRisk->projectRiskMonitorings()->delete();
             $projectRisk->projectKontrolEksistings()->delete();
-
-            // Hapus data identifikasi risiko
             $projectRisk->delete();
 
-            return redirect()->back()->with('success', 'Data risiko berhasil dihapus');
+            return response()->json([
+                'message' => 'Data risiko proyek berhasil dihapus.'
+            ], 200);
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat menghapus data: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat menghapus data.'
+            ], 500);
         }
     }
 

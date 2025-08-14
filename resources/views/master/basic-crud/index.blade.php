@@ -43,7 +43,12 @@
                                 @include('partials.icon-layer')
                             </div>
                         </div>
-                        <h2 class="h3">Data {!! $indexTitle ?? $resourceName !!}</h2>
+                        <div>
+                          <h2 class="h3">Data {!! $indexTitle ?? $resourceName !!}</h2>
+                          @if (!empty($indexSubtitle))
+                              <div class="ff-preheading mb-0 mt-1">{{ $indexSubtitle }}</div>
+                          @endif
+                        </div>
                         <div class="ms-auto d-flex align-items-center gap-2">
                         @if($createType && \Gate::check( $basePermission . '_create'))
                             @if ($createType == 'modal')
@@ -91,6 +96,14 @@
                               <span class="bx bx-upload"></span>
                               <span class="ms-1">{{ $importConfig['buttonText'] ?? 'Import Data' }}</span>
                             </button>
+                          </div>
+                        @endif
+                        @if (!empty($extraViewData['showKamusRisikoButton']))
+                          <div class="col-auto ms-auto">
+                            <a href="{{ route('kamus-risiko-project.index') }}" class="btn btn-outline-danger btn-sm">
+                              <span class="bx bx-book-bookmark"></span>
+                              <span class="ms-1">Kamus Risiko</span>
+                            </a>
                           </div>
                         @endif
                         </div>

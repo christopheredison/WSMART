@@ -15,6 +15,7 @@ use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use App\Models\RiskLimitPeriode;
+use App\Models\KamusRisikoUnit;
 
 class RiskRegisterUnitMonitoringController extends BasicCRUDController
 {
@@ -556,9 +557,11 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'is_closed' => true,
           ]);
 
-          // if ($request->kamus_risiko == '1') {
-          //   // Tambah ke kamus risiko
-          // }
+          if ($request->kamus_risiko == '1') {
+              KamusRisikoUnit::updateOrCreate(
+                  ['risiko_id' => $risk->id],
+              );
+          }
         }
 
         return response()->json([

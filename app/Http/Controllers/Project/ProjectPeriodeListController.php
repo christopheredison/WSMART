@@ -164,6 +164,8 @@ class ProjectPeriodeListController extends BasicCRUDController
             ];
         }
 
+        $this->extraViewData['showKamusRisikoButton'] = true;
+        
         return parent::index();
     }
 

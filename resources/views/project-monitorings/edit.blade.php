@@ -450,8 +450,9 @@
                 <div class="col-auto order-1">
                     <a href="{{ route('projects.monitorings.index', ['project' => $projectPeriode->id]) }}" class="btn btn-outline-secondary">Batal</a>
                 </div>
-                <div class="col-auto order-3 px-0 px-md-1 d-flex">
+                <div class="col-auto order-3 px-0 px-md-1 d-flex gap-2">
                     <button type="button" data-action="save" class="btn btn-primary ms-auto btn-action">Simpan</button>
+                    <button type="button" data-action="save-and-close" class="btn btn-secondary btn-action">Simpan dan Close Risiko</button>
                 </div>
             </div>
         </div>
@@ -616,39 +617,64 @@ $(document).ready(function() {
                 return;
             }
 
+            submitForm(0);
+            // Swal.fire({
+            //     title: `Apakah Risiko "${namaRisiko}" ini masih open atau close?`,
+            //     icon: 'question',
+            //     showDenyButton: true,
+            //     confirmButtonText: 'Open Risiko',
+            //     denyButtonText: 'Close Risiko',
+            //     customClass: {
+            //         confirmButton: 'btn btn-success mx-2 px-5',
+            //         denyButton: 'btn btn-danger mx-2 px-5'
+            //     },
+            //     buttonsStyling: false,
+            // }).then((result) => {
+            //     if (result.isConfirmed) { // User clicked "Open"
+            //         submitForm(0);
+            //     } else if (result.isDenied) { // User clicked "Close"
+            //         Swal.fire({
+            //             title: `Apakah penanganan untuk risiko "${namaRisiko}" efektif?`,
+            //             icon: 'question',
+            //             showDenyButton: true,
+            //             confirmButtonText: 'Ya, Efektif',
+            //             denyButtonText: 'Tidak',
+            //             customClass: {
+            //                 confirmButton: 'btn btn-success mx-2 px-5',
+            //                 denyButton: 'btn btn-danger mx-2 px-5'
+            //             },
+            //             buttonsStyling: false,
+            //         }).then((effectivenessResult) => {
+            //             if (effectivenessResult.isConfirmed) { // Clicked "Ya, Efektif"
+            //                 submitForm(1, 1);
+            //             } else if (effectivenessResult.isDenied) { // Clicked "Tidak"
+            //                 submitForm(1, 0);
+            //             }
+            //         });
+            //     }
+            // });
+        } else if (action === 'save-and-close') {
+            if (!$('#main-form')[0].checkValidity()) {
+                $('#main-form')[0].reportValidity();
+                return;
+            }
+
             Swal.fire({
-                title: `Apakah Risiko "${namaRisiko}" ini masih open atau close?`,
+                title: `Apakah penanganan untuk risiko "${namaRisiko}" efektif?`,
                 icon: 'question',
                 showDenyButton: true,
-                confirmButtonText: 'Open Risiko',
-                denyButtonText: 'Close Risiko',
+                confirmButtonText: 'Ya, Efektif',
+                denyButtonText: 'Tidak',
                 customClass: {
                     confirmButton: 'btn btn-success mx-2 px-5',
                     denyButton: 'btn btn-danger mx-2 px-5'
                 },
                 buttonsStyling: false,
-            }).then((result) => {
-                if (result.isConfirmed) { // User clicked "Open"
-                    submitForm(0);
-                } else if (result.isDenied) { // User clicked "Close"
-                    Swal.fire({
-                        title: `Apakah penanganan untuk risiko "${namaRisiko}" efektif?`,
-                        icon: 'question',
-                        showDenyButton: true,
-                        confirmButtonText: 'Ya, Efektif',
-                        denyButtonText: 'Tidak',
-                        customClass: {
-                            confirmButton: 'btn btn-success mx-2 px-5',
-                            denyButton: 'btn btn-danger mx-2 px-5'
-                        },
-                        buttonsStyling: false,
-                    }).then((effectivenessResult) => {
-                        if (effectivenessResult.isConfirmed) { // Clicked "Ya, Efektif"
-                            submitForm(1, 1);
-                        } else if (effectivenessResult.isDenied) { // Clicked "Tidak"
-                            submitForm(1, 0);
-                        }
-                    });
+            }).then((effectivenessResult) => {
+                if (effectivenessResult.isConfirmed) { // Jika "Ya, Efektif"
+                    submitForm(1, 1);
+                } else if (effectivenessResult.isDenied) { // Jika "Tidak"
+                    submitForm(1, 0);
                 }
             });
         } else if (action === 'update-kri') {

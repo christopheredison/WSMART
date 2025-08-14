@@ -6,12 +6,19 @@
             <div class="card">
                 <div class="card-header">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="lead__icon bg-warning-subtle">
-                            <div class="svg-icon svg-icon-warning">
-                                @include('partials.icon-layer')
+                        <div class="bg-info-subtle p-2 rounded-4">
+                          <div class="lead__icon">
+                            <div class="svg-icon svg-icon-2x svg-icon-info">
+                              @include('partials.icon-layer')
                             </div>
+                          </div>
                         </div>
-                        <h2 class="h3">Data Loss Event Unit {{ $periode ? 'Periode ' . $periode->tahun : '' }}</h2>
+                        <div class="d-block">
+                          <h2 class="">Data Loss Event Unit</h2>
+                          @if(isset($periode))
+                          <div class="ff-preheading">Periode: {{ $periode->tahun }}</div>
+                          @endif
+                        </div>
                         <div class="col-auto ms-auto">
                             <a class="btn btn-outline-info btn-sm" href="{{ route('unit-led.create', ['periode_id' => $periode->id]) }}">
                                 <span class="bx bx-plus"></span>

@@ -61,7 +61,8 @@ use App\Http\Controllers\PenilaianRMIController;
 use App\Http\Controllers\RiskRegisterUnitController;
 use App\Http\Controllers\RiskRegisterUnitMonitoringController;
 use App\Http\Controllers\UnitLEDController;
-
+use App\Http\Controllers\KamusRisikoProjectController;
+use App\Http\Controllers\KamusRisikoUnitController;
 
 
 /*
@@ -403,6 +404,9 @@ Route::group(['middleware' => ['auth']], function() {
     Route::delete('project-led/{id}', [ProjectLEDController::class, 'destroy'])->name('project-led.destroy');
     Route::resource('project-led', ProjectLEDController::class)->except(['create', 'show', 'edit']);
     Route::get('project-leds/{projectId}', [ProjectLEDController::class, 'index'])->name('project-led.index-by-project');
+    Route::get('kamus-risiko-project', [KamusRisikoProjectController::class, 'index'])->name('kamus-risiko-project.index');
+    Route::post('kamus-risiko-project/add-risk', [KamusRisikoProjectController::class, 'addRisk'])->name('kamus-risiko-project.add-risk');
+    Route::get('kamus-risiko-project/export', [KamusRisikoProjectController::class, 'exportExcel'])->name('kamus-risiko-project.export');
 
     Route::get('/risk-map-setting', [RiskMapController::class, 'index'])->name('risk-map-setting.index');
     Route::put('/risk-map-setting/update', [RiskMapController::class, 'update'])->name('risk-map-setting.update');
@@ -479,6 +483,11 @@ Route::group(['middleware' => ['auth']], function() {
     Route::delete('unit-led/{id}', [UnitLEDController::class, 'destroy'])->name('unit-led.destroy');
     Route::resource('unit-led', UnitLEDController::class)->except(['create', 'show', 'edit']);
     Route::get('unit-leds/{unitId}', [UnitLEDController::class, 'index'])->name('unit-led.index-by-unit');
+
+    Route::get('kamus-risiko-unit', [KamusRisikoUnitController::class, 'index'])->name('kamus-risiko-unit.index');
+    Route::get('kamus-risiko-unit/periods/{period}', [KamusRisikoUnitController::class, 'periods'])->name('kamus-risiko-unit.periods');
+    Route::post('kamus-risiko-unit/add-risk', [KamusRisikoUnitController::class, 'addRisk'])->name('kamus-risiko-unit.add-risk');
+    Route::get('kamus-risiko-unit/export', [KamusRisikoUnitController::class, 'exportExcel'])->name('kamus-risiko-unit.export');
 
     Route::middleware('can:backups.index')->resource('backups', BackupController::class);
 	Route::post('backups/restore', [BackupController::class, 'restore'])->name('backups.restore');
