@@ -1204,18 +1204,18 @@ class RiskRegisterUnitController extends Controller
 
             // Hapus data terkait
             // Hapus kontrol eksisting
-            $identifikasiRisiko->kontrolEksistings()->delete();
+            // $identifikasiRisiko->kontrolEksistings()->delete();
 
-            // Hapus penyebab risiko
-            $identifikasiRisiko->penyebabRisiko()->delete();
+            // // Hapus penyebab risiko
+            // $identifikasiRisiko->penyebabRisiko()->delete();
 
-            // Hapus KRI
-            $identifikasiRisiko->kris()->delete();
+            // // Hapus KRI
+            // $identifikasiRisiko->kris()->delete();
 
-            // Hapus analisis risiko jika ada
-            if ($identifikasiRisiko->riskAnalysis) {
-                $identifikasiRisiko->riskAnalysis->delete();
-            }
+            // // Hapus analisis risiko jika ada
+            // if ($identifikasiRisiko->riskAnalysis) {
+            //     $identifikasiRisiko->riskAnalysis->delete();
+            // }
 
             // Hapus data identifikasi risiko
             $identifikasiRisiko->delete();

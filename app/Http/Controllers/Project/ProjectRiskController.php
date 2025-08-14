@@ -666,12 +666,12 @@ class ProjectRiskController extends BasicCRUDController
                 ], 403);
             }
 
-            $projectRisk->projectRiskAnalisas()->delete();
-            $projectRisk->penyebabRisikoProjects()->delete();
-            $projectRisk->kriProjects()->delete();
-            $projectRisk->projectRiskRencanaPerlakuans()->delete();
-            $projectRisk->projectRiskMonitorings()->delete();
-            $projectRisk->projectKontrolEksistings()->delete();
+            // $projectRisk->projectRiskAnalisas()->delete();
+            // $projectRisk->penyebabRisikoProjects()->delete();
+            // $projectRisk->kriProjects()->delete();
+            // $projectRisk->projectRiskRencanaPerlakuans()->delete();
+            // $projectRisk->projectRiskMonitorings()->delete();
+            // $projectRisk->projectKontrolEksistings()->delete();
             $projectRisk->delete();
 
             return response()->json([
