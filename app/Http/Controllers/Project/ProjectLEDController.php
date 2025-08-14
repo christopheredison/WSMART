@@ -273,7 +273,7 @@ class ProjectLEDController extends Controller
                                 'output_perlakuan_risiko' => $perlakuan['output_perlakuan_risiko'],
                                 'biaya_perlakuan_risiko' => $this->cleanRupiah($perlakuan['biaya_perlakuan_risiko']),
                                 'pic' => $jabatan ? $jabatan->name : '',
-                                'pic_jabatan_id' => $perlakuan['pic'],
+                                'pic_jabatan_id' => $jabatan ? $jabatan->id : null,
                                 'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
                                 'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
                                 'opsi_perlakuan_risiko' => $perlakuan['opsi_perlakuan_risiko'],
@@ -309,7 +309,6 @@ class ProjectLEDController extends Controller
                     'penilaian_efektifitas_kontrol' => 0,
                     'kontrol_eksisting' => '',
                 ]);
-                $led->update(['project_risk_id' => $newProjectRisk->id]);
 
                 // Buat ProjectRiskAnalisa
                 $kategoriDampak = ($request->nilai_kerugian_finansial > 0) ? 'Kuantitatif' : 'Kualitatif';
@@ -328,13 +327,15 @@ class ProjectLEDController extends Controller
                         ]);
                         if (!empty($penyebab['perlakuan']) && is_array($penyebab['perlakuan'])) {
                             foreach ($penyebab['perlakuan'] as $perlakuan) {
+                                $jabatan = Jabatan::find($perlakuan['pic']);
+
                                 $riskPenyebab->perlakuanPenyebabRisiko()->create([
                                     'penyebab_risiko_id' => $riskPenyebab->id,
                                     'rencana_perlakuan_risiko' => $perlakuan['rencana_perlakuan_risiko'],
                                     'output_perlakuan_risiko' => $perlakuan['output_perlakuan_risiko'],
                                     'biaya_perlakuan_risiko' => $this->cleanRupiah($perlakuan['biaya_perlakuan_risiko']),
-                                    'pic' => $perlakuan['pic'],
-                                    'pic_jabatan_id' => $perlakuan['pic_jabatan_id'],
+                                    'pic' => $jabatan ? $jabatan->name : '',
+                                    'pic_jabatan_id' => $jabatan ? $jabatan->id : null,
                                     'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
                                     'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
                                     'opsi_perlakuan_risiko' => $perlakuan['opsi_perlakuan_risiko'],
@@ -506,7 +507,7 @@ class ProjectLEDController extends Controller
             'nilai_premi' => $this->cleanRupiah($request->nilai_premi),
             'nilai_klaim' => $this->cleanRupiah($request->nilai_klaim),
         ]);
-
+        // dd($request->all());
         $validator = Validator::make($request->all(), [
             'nama_kejadian' => 'required|string|max:255',
             'peristiwa_risiko_id' => 'required|exists:peristiwa_risikos,id',
@@ -532,7 +533,7 @@ class ProjectLEDController extends Controller
 
         DB::beginTransaction();
         try {
-            $lossEvent->update($request->except(['_token', '_method', 'penyebab_data']));
+            $lossEvent->update($request->except(['_token', '_method', 'penyebab_data', 'create_risk_from_led']));
 
             $penyebabDataFromRequest = json_decode($request->input('penyebab_data'), true) ?? [];
             $existingPenyebabIds = $lossEvent->penyebabRisikoProjectLeds()->pluck('id')->toArray();
@@ -565,15 +566,15 @@ class ProjectLEDController extends Controller
                         foreach ($penyebabItem['perlakuan'] as $perlakuanItem) {
                             $isNewPerlakuan = !isset($perlakuanItem['id']) || str_starts_with($perlakuanItem['id'], 'temp_p_');
                             $jabatan = Jabatan::find($perlakuanItem['pic']);
-                            $startDate = !empty($perlakuanItem['timeline_mulai_perlakuan_risiko']) ? Carbon::parse($perlakuanItem['timeline_mulai_perlakuan_risiko'])->format('Y-m-d') : null;
-                            $endDate = !empty($perlakuanItem['timeline_selesai_perlakuan_risiko']) ? Carbon::parse($perlakuanItem['timeline_selesai_perlakuan_risiko'])->format('Y-m-d') : null;
+                            $startDate = !empty($perlakuanItem['timeline_mulai_perlakuan_risiko']) ? Carbon::createFromFormat('d/m/Y', $perlakuanItem['timeline_mulai_perlakuan_risiko'])->format('Y-m-d') : null;
+                            $endDate = !empty($perlakuanItem['timeline_selesai_perlakuan_risiko']) ? Carbon::createFromFormat('d/m/Y', $perlakuanItem['timeline_selesai_perlakuan_risiko'])->format('Y-m-d') : null;
 
                             $perlakuanData = [
                                 'rencana_perlakuan_risiko' => $perlakuanItem['rencana_perlakuan_risiko'],
                                 'output_perlakuan_risiko' => $perlakuanItem['output_perlakuan_risiko'],
                                 'biaya_perlakuan_risiko' => $this->cleanRupiah($perlakuanItem['biaya_perlakuan_risiko']),
                                 'pic' => $jabatan ? $jabatan->name : null,
-                                'pic_jabatan_id' => $perlakuanItem['pic'],
+                                'pic_jabatan_id' => $jabatan ? $jabatan->id : null,
                                 'timeline_perlakuan_risiko_start' => $startDate,
                                 'timeline_perlakuan_risiko_end' => $endDate,
                                 'opsi_perlakuan_risiko' => $perlakuanItem['opsi_perlakuan_risiko'],
@@ -608,6 +609,75 @@ class ProjectLEDController extends Controller
             $penyebabToDelete = array_diff($existingPenyebabIds, $requestPenyebabIds);
             if (!empty($penyebabToDelete)) {
               PenyebabRisikoProjectLed::destroy($penyebabToDelete);
+            }
+
+            // JIKA USER MEMILIH "YA", BUAT PROJECT RISK BARU
+            if ($request->input('create_risk_from_led') == '1') {
+                $projectPeriodeList = ProjectPeriodeList::with('project')->findOrFail($lossEvent->project_id);
+                $project = $projectPeriodeList->project;
+                $user = auth()->user();
+
+                // Buat ProjectRisk baru
+                $newProjectRisk = $projectPeriodeList->projectRisks()->create([
+                    'unit_type_id' => $user->unit_type_id,
+                    'unit_id' => $user->unit_id,
+                    'periode_id' => 0,
+                    'user_id' => $user->id,
+                    'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
+                    'deskripsi_peristiwa_risiko' => $request->nama_kejadian,
+                    'jenis_risiko_id' => $request->jenis_risiko_id,
+                    'kategori_risiko_id' => $request->kategori_risiko_id,
+                    'perkiraan_waktu_terpapar_risiko_mulai' => $request->tanggal_kejadian,
+                    'perkiraan_waktu_terpapar_risiko_akhir' => $request->tanggal_kejadian,
+                    'project_id' => $project->id,
+                    'target_capaian_kinerja' => '',
+                    'project_periode_list_id' => $projectPeriodeList->id,
+                    'jenis_kontrol_eksisting_id' => 0,
+                    'penilaian_efektifitas_kontrol' => 0,
+                    'kontrol_eksisting' => '',
+                ]);
+
+                // Hubungkan Loss Event ke Project Risk yang baru dibuat
+                $lossEvent->update(['project_risk_id' => $newProjectRisk->id]);
+
+                // Buat ProjectRiskAnalisa
+                $kategoriDampak = ($request->nilai_kerugian_finansial > 0) ? 'Kuantitatif' : 'Kualitatif';
+                $newProjectRisk->projectRiskAnalisa()->create([
+                    'kategori_dampak' => $kategoriDampak,
+                    'deskripsi_dampak' => ($kategoriDampak == 'Kualitatif') ? $request->penjelasan_kerugian : null,
+                    'asumsi_perhitungan_dampak' => ($kategoriDampak == 'Kuantitatif') ? $request->penjelasan_kerugian : null,
+                    'nilai_dampak' => $request->nilai_kerugian_finansial ?? 0,
+                ]);
+
+                // Salin data penyebab dan perlakuan ke ProjectRisk yang baru
+                if (is_array($penyebabDataFromRequest)) {
+                    foreach ($penyebabDataFromRequest as $penyebab) {
+                        $riskPenyebab = $newProjectRisk->penyebabRisikoProjects()->create([
+                            'penyebab_risiko' => $penyebab['penyebab_risiko'],
+                        ]);
+                        if (!empty($penyebab['perlakuan']) && is_array($penyebab['perlakuan'])) {
+                            foreach ($penyebab['perlakuan'] as $perlakuan) {
+                                $jabatan = Jabatan::find($perlakuan['pic']);
+                                $riskPenyebab->perlakuanPenyebabRisiko()->create([
+                                    'penyebab_risiko_id' => $riskPenyebab->id,
+                                    'rencana_perlakuan_risiko' => $perlakuan['rencana_perlakuan_risiko'],
+                                    'output_perlakuan_risiko' => $perlakuan['output_perlakuan_risiko'],
+                                    'biaya_perlakuan_risiko' => $this->cleanRupiah($perlakuan['biaya_perlakuan_risiko']),
+                                    'pic' => $jabatan ? $jabatan->name : '',
+                                    'pic_jabatan_id' => $jabatan ? $jabatan->id : null,
+                                    'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
+                                    'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
+                                    'opsi_perlakuan_risiko' => $perlakuan['opsi_perlakuan_risiko'],
+                                    'jenis_rencana_perlakuan_risiko' => $perlakuan['jenis_rencana_perlakuan_risiko'],
+                                ]);
+                            }
+                        }
+                    }
+                }
+
+                DB::commit();
+                return redirect()->route('projects.risks.edit', ['project' => $projectPeriodeList->id, 'risk' => $newProjectRisk->id])
+                    ->with('success', 'Loss Event berhasil diperbarui dan Project Risk baru telah ditambahkan.');
             }
 
             DB::commit();
@@ -667,7 +737,7 @@ class ProjectLEDController extends Controller
                       'output_perlakuan_risiko' => $perlakuan->output_perlakuan_risiko,
                       'biaya_perlakuan_risiko' => $perlakuan->biaya_perlakuan_risiko,
                       'pic' => $perlakuan->pic_jabatan_id,
-                      'pic_name' => $perlakuan->picJabatan->name ?? $perlakuan->pic,
+                      'pic_name' => $perlakuan->pic ?? '',
                       'timeline_mulai_perlakuan_risiko' => \Carbon\Carbon::parse($perlakuan->timeline_perlakuan_risiko_start)->format('d/m/Y'),
                       'timeline_selesai_perlakuan_risiko' => \Carbon\Carbon::parse($perlakuan->timeline_perlakuan_risiko_end)->format('d/m/Y'),
                       'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
@@ -702,7 +772,6 @@ class ProjectLEDController extends Controller
           'nilai_premi' => $this->cleanRupiah($request->nilai_premi),
           'nilai_klaim' => $this->cleanRupiah($request->nilai_klaim),
         ]);
-        // dd($request->all());
 
         $validator = Validator::make($request->all(), [
             'nama_kejadian' => 'required|string',
@@ -769,7 +838,7 @@ class ProjectLEDController extends Controller
                                 'output_perlakuan_risiko' => $perlakuanItem['output_perlakuan_risiko'],
                                 'biaya_perlakuan_risiko' => $this->cleanRupiah($perlakuanItem['biaya_perlakuan_risiko']),
                                 'pic' => $jabatan ? $jabatan->name : '',
-                                'pic_jabatan_id' => $perlakuanItem['pic'],
+                                'pic_jabatan_id' => $jabatan ? $jabatan->id : null,
                                 'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuanItem['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
                                 'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuanItem['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
                                 'opsi_perlakuan_risiko' => $perlakuanItem['opsi_perlakuan_risiko'],

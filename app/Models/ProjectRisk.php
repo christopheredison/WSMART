@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProjectRisk extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'unit_type_id',//berelasi ke model UnitType (table unit_types)
@@ -18,6 +20,7 @@ class ProjectRisk extends Model
         'kategori_risiko_id', //berelasi ke model KategoriRisiko (table kategori_risikos)
         'jenis_risiko_id', //berelasi ke model JenisRisiko (table jenis_risikos)
         'peristiwa_risiko_id', //berelasi ke model PeristiwaRisiko (table peristiwa_risikos)
+        'wbs',
         'project_periode_list_id', //berelasi ke model ProjectPeriodeList (table project_periode_lists)
         'target_capaian_kinerja', //berelasi ke model Tck (table tcks) -> sudah diupdate jadi text
         'rencana_kegiatan',

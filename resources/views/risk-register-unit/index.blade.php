@@ -81,21 +81,29 @@
                 <option value="Low">Low</option>
               </select>
             </div>
-            <div class="col-auto ms-auto">
-            @php
-                // diasumsikan di view Anda ada $selectedPeriode
-                $pid = $selectedPeriode->id;
-            @endphp
-            @can('risk_register_create')
-              @if($status == null || $status == 1 || $status == 5)
-              <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $pid]) }}" type="button"
-                class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
-                data-bs-title="Tambah Risiko">
-                <i class="bx bx-plus"></i>
-                <span class="ms-1">Tambah Risiko</span>
-              </a>
-              @endif
-            @endcan
+            <div class="col-auto ms-auto d-flex gap-2 align-items-center">
+              <div class="col-auto ms-auto">
+                <a href="{{ route('kamus-risiko-unit.index') }}" class="btn btn-outline-danger btn-sm">
+                  <span class="bx bx-book-bookmark"></span>
+                  <span class="ms-1">Kamus Risiko</span>
+                </a>
+              </div>
+              <div class="col-auto ms-auto">
+              @php
+                  // diasumsikan di view Anda ada $selectedPeriode
+                  $pid = $selectedPeriode->id;
+              @endphp
+              @can('risk_register_create')
+                @if($status == null || $status == 1 || $status == 5)
+                <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $pid]) }}" type="button"
+                  class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
+                  data-bs-title="Tambah Risiko">
+                  <span class="bx bx-plus"></span>
+                  <span class="ms-1">Tambah Risiko</span>
+                </a>
+                @endif
+              @endcan
+              </div>
             </div>
           </div>
           <table class="table dataTable" id="example" data-paging="true" data-info="true" data-filter="true">

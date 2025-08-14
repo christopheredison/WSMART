@@ -44,7 +44,7 @@
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Kategori Kejadian <span class="text-danger">*</span></label>
-                                <select class="form-select" name="kategori_kejadian_id" required>
+                                <select class="form-select select2" name="kategori_kejadian_id" required>
                                     <option value="">Pilih Kategori Kejadian</option>
                                     @foreach($kategoriKejadians as $kategori)
                                         <option value="{{ $kategori->id }}" {{ old('kategori_kejadian_id') == $kategori->id ? 'selected' : '' }}>
@@ -56,7 +56,7 @@
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Sumber Penyebab Kejadian <span class="text-danger">*</span></label>
-                                <select class="form-select" name="sumber_penyebab_kejadian" required>
+                                <select class="form-select select2" name="sumber_penyebab_kejadian" required>
                                     <option value="">Pilih Sumber Penyebab</option>
                                     <option value="1" {{ old('sumber_penyebab_kejadian') == '1' ? 'selected' : '' }}>Internal</option>
                                     <option value="2" {{ old('sumber_penyebab_kejadian') == '2' ? 'selected' : '' }}>Eksternal</option>
@@ -65,7 +65,7 @@
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Kategori Risiko BUMN <span class="text-danger">*</span></label>
-                                <select class="form-select" name="kategori_risiko_bumn" required>
+                                <select class="form-select select2" name="kategori_risiko_bumn" required>
                                     <option value="">Pilih Kategori Risiko BUMN</option>
                                     <option value="1" {{ old('kategori_risiko_bumn') == '1' ? 'selected' : '' }}>Financial</option>
                                     <option value="2" {{ old('kategori_risiko_bumn') == '2' ? 'selected' : '' }}>Operational</option>
@@ -85,7 +85,7 @@
 
                                 @else
                                     <input type="hidden" name="kategori_risiko_id" id="kategori_risiko_id_dynamic">
-                                    <select class="form-select" name="jenis_risiko_id" id="jenis_risiko_id_dynamic" required>
+                                    <select class="form-select select2" name="jenis_risiko_id" id="jenis_risiko_id_dynamic" required>
                                         <option value="">Pilih Jenis Risiko...</option>
                                         @foreach($jenisRisikos as $jenis)
                                             <option value="{{ $jenis->id }}" data-kategori="{{ $jenis->kategori_risiko_id }}">
@@ -249,14 +249,14 @@
 <script>
 $(document).ready(function() {
     var flatpickrMulai = flatpickr("#timelineRange1", {
-        altInput: true,
+        altInput: false,
         altFormat: "j F Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
-        altInput: true,
+        altInput: false,
         altFormat: "j F Y",
         dateFormat: "d/m/Y",
         disableMobile: true
@@ -373,7 +373,7 @@ $(document).ready(function() {
             if (result.isConfirmed) {
                 penyebabData = penyebabData.filter(p => p.id != idToDelete);
                 renderPenyebabTable();
-                Swal.fire('Terhapus!', 'Penyebab berhasil dihapus.', 'success');
+                // Swal.fire('Terhapus!', 'Penyebab berhasil dihapus.', 'success');
             }
         });
     });

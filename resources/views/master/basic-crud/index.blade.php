@@ -1,6 +1,38 @@
 @extends('layouts.default')
 @section('dashboard')
     @include('partials.success-message')
+    @if(session('import_summary'))
+        @php $summary = session('import_summary'); @endphp
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <h4 class="alert-heading">Ringkasan Import</h4>
+            <p>
+                - <strong>Berhasil:</strong> {{ $summary['success'] }} baris <br>
+                - <strong>Dilewati:</strong> {{ $summary['skipped'] }} baris <br>
+                - <strong>Gagal:</strong> {{ $summary['failed'] }} baris
+            </p>
+
+            @if(!empty($summary['skipped_rows']))
+                <hr>
+                <h6>Detail Baris yang Dilewati:</h6>
+                <ul class="mb-0 small" style="padding-left: 20px;"> 
+                    @foreach($summary['skipped_rows'] as $skipped_info)
+                        <li>{{ $skipped_info }}</li>
+                    @endforeach
+                </ul>
+            @endif
+            
+            @if(!empty($summary['failed_rows']))
+                <hr>
+                <h6>Detail Kegagalan:</h6>
+                <ul class="mb-0 small" style="padding-left: 20px;"> 
+                    @foreach($summary['failed_rows'] as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            @endif
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -11,7 +43,13 @@
                                 @include('partials.icon-layer')
                             </div>
                         </div>
-                        <h2 class="h3">Data {!! $indexTitle ?? $resourceName !!}</h2>
+                        <div>
+                          <h2 class="h3">Data {!! $indexTitle ?? $resourceName !!}</h2>
+                          @if (!empty($indexSubtitle))
+                              <div class="ff-preheading mb-0 mt-1">{{ $indexSubtitle }}</div>
+                          @endif
+                        </div>
+                        <div class="ms-auto d-flex align-items-center gap-2">
                         @if($createType && \Gate::check( $basePermission . '_create'))
                             @if ($createType == 'modal')
                                 @if($createFields)
@@ -52,6 +90,23 @@
                                 </div>
                             @endif
                         @endif
+                        @if (!empty($importConfig))
+                          <div id="bulk-select-replace-element" class="col-auto ms-auto">
+                            <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#importDataModal">
+                              <span class="bx bx-upload"></span>
+                              <span class="ms-1">{{ $importConfig['buttonText'] ?? 'Import Data' }}</span>
+                            </button>
+                          </div>
+                        @endif
+                        @if (!empty($extraViewData['showKamusRisikoButton']))
+                          <div class="col-auto ms-auto">
+                            <a href="{{ route('kamus-risiko-project.index') }}" class="btn btn-outline-danger btn-sm">
+                              <span class="bx bx-book-bookmark"></span>
+                              <span class="ms-1">Kamus Risiko</span>
+                            </a>
+                          </div>
+                        @endif
+                        </div>
                     </div>
                 </div>
 
@@ -133,6 +188,59 @@
     @if ($editFields)
     @include('master.basic-crud._modal_edit', ['fields' => $editFields, 'action' => route($baseRoute . 'update', array_merge($baseRouteParams ?? [], [':id']))])
     @endif
+
+    @if (!empty($importConfig))
+    <div class="modal fade" id="importDataModal" tabindex="-1" aria-labelledby="importDataModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importDataModalLabel">{{ $importConfig['title'] }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="import-form" action="{{ $importConfig['route'] }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-body">
+                        {{-- Langkah 1: Download Template --}}
+                        <div class="">
+                            <h6 class="mb-2">Langkah 1: Unduh Template</h6>
+                            <p class="mb-2">
+                                Unduh template Excel yang sudah disiapkan untuk memastikan data Anda sesuai format. Template ini berisi sheet
+                                <strong>Standarisasi Risiko</strong> dan <strong>Taksonomi</strong> sebagai acuan.
+                            </p>
+                            @if ($importConfig['templateUrl'])
+                                <a href="{{ $importConfig['templateUrl'] }}" class="btn btn-sm btn-primary" download>
+                                    <span class="bx bx-download me-1"></span>
+                                    Download Template
+                                </a>
+                            @endif
+                        </div>
+                        <div class="alert alert-info text-info py-2 px-3 small d-flex align-items-center mt-3" role="alert">
+                            <span class="bx bx-info-circle me-2 fs-5"></span>
+                            <div>
+                                <strong>Penting:</strong> Pengisian data pada setiap sheet dimulai dari <strong>baris ke-3</strong>. Baris 1 & 2 adalah header dan tidak boleh diubah.
+                            </div>
+                        </div>
+
+                        {{-- Langkah 2: Upload File --}}
+                        <div class="mt-5">
+                            <h6 class="mb-2">Langkah 2: Unggah File</h6>
+                            <label for="file" class="form-label">Pilih file Excel yang sudah Anda isi:</label>
+                            <input class="form-control" type="file" id="file" name="file" required accept=".xlsx,.xls,.csv">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" id="submit-import-btn" class="btn btn-success">
+                            <span id="import-loading" class="spinner-border spinner-border-sm me-2 d-none" style="width: 0.75rem; height: 0.75rem;" role="status" aria-hidden="true"></span>
+                            <span class="bx bx-upload me-1"></span>
+                            <span id="import-text">Mulai Import</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
 @endsection
 
 @push('styles')
@@ -152,6 +260,14 @@
 
 @if($hasChangeToLedAction)
     const ledCreateRoute = "{{ route('projects.loss-events.create', ['project' => request()->route('project'), 'risk' => ':risk_id']) }}";
+@endif
+
+@php
+    $hasChangeToLedUnitAction = collect($tableActions ?? [])->contains('action', 'change_to_led_unit');
+@endphp
+
+@if($hasChangeToLedUnitAction)
+    const ledCreateRoute = "{{ route('risk-register-unit.loss-events.create', ['riskRegister' => ':riskRegister']) }}";
 @endif
 const fetchedData = [];
 $(document).ready(function() {
@@ -402,6 +518,32 @@ $(document).ready(function() {
                 });
                 break;
             }
+            case 'change_to_led_unit': {
+                let label = 'Apakah Risiko ini terjadi dan menjadi Loss Event?';
+                const rowData = fetchedData[id];
+                if (rowData && rowData?.peristiwa_risiko) {
+                  label = `Apakah Risiko ${rowData?.peristiwa_risiko} - ${rowData?.deskripsi_peristiwa_risiko} ini terjadi dan menjadi Loss Event?`;  
+                }
+                Swal.fire({
+                    title: 'Konfirmasi Perubahan',
+                    html: label,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: "Ya, Ubah ke Loss Event",
+                    cancelButtonText: "Tidak, Batal",
+                    buttonsStyling: false,
+                    customClass: {
+                        confirmButton: 'btn btn-success me-2',
+                        cancelButton: 'btn btn-danger'
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const finalUrl = ledCreateRoute.replace(':riskRegister', id);
+                        window.location.href = finalUrl;
+                    }
+                });
+                break;
+            }
         }
     });
 
@@ -471,6 +613,12 @@ $(document).ready(function() {
         @endforeach
     });
     @endif
+
+    $('#import-form').on('submit', function() {
+        $('#submit-import-btn').prop('disabled', true);
+        $('#import-loading').removeClass('d-none');
+        $('#import-text').text('Loading...');
+    });
 });
 </script>
 @if ($extraScripts)

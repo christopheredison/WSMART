@@ -90,6 +90,6 @@ class LossEventProject extends Model
 
     public function penyebabRisikoProjectLeds()
     {
-        return $this->hasMany(PenyebabRisikoProjectLed::class);
+        return $this->hasMany(PenyebabRisikoProjectLed::class, 'loss_event_project_id');
     }
 }

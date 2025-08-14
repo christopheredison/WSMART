@@ -316,6 +316,7 @@ class RiskRegisterUnitController extends Controller
             'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
+            'wbs' => 'required|string',
             'penyebab_risiko' => 'required|array',
             'penyebab_risiko.*' => 'required|string',
             //'master_kri_id' => 'nullable|array',
@@ -394,6 +395,7 @@ class RiskRegisterUnitController extends Controller
 
             $identifikasiRisiko->peristiwa_risiko = $request->peristiwa_risiko;
             $identifikasiRisiko->deskripsi_peristiwa_risiko = $request->deskripsi_peristiwa_risiko;
+            $identifikasiRisiko->wbs = $request->wbs;
             $identifikasiRisiko->jenis_kontrol_eksisting_id = $request->jenis_kontrol_eksisting_id;
             //$identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting;
             $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
@@ -1057,6 +1059,7 @@ class RiskRegisterUnitController extends Controller
             'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
+            'wbs' => 'required|string',
             'penyebab_risiko' => 'required|array',
             'penyebab_risiko.*' => 'required|string',
             'key_risk_indicator' => 'nullable|array',
@@ -1105,6 +1108,7 @@ class RiskRegisterUnitController extends Controller
 
             $identifikasiRisiko->peristiwa_risiko = $request->peristiwa_risiko;
             $identifikasiRisiko->deskripsi_peristiwa_risiko = $request->deskripsi_peristiwa_risiko;
+            $identifikasiRisiko->wbs = $request->wbs;
             $identifikasiRisiko->jenis_kontrol_eksisting_id = $request->jenis_kontrol_eksisting_id;
             $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
             $identifikasiRisiko->penilaian_efektifitas_kontrol = $request->penilaian_efektifitas_kontrol;

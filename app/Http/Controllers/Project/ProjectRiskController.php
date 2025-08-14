@@ -29,6 +29,13 @@ use App\Models\LossEventProject;
 use App\Models\Jabatan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use App\Imports\ProjectTenderImport;
+use App\Imports\TenderTemplateImport;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\DB;
 
 class ProjectRiskController extends BasicCRUDController
 {
@@ -101,8 +108,9 @@ class ProjectRiskController extends BasicCRUDController
     public function index() {
         $this->baseRouteParams = ['project' => request()->route('project')];
 
-        $projectPeriodeList = ProjectPeriodeList::findOrFail(request()->route('project'));
+        $projectPeriodeList = ProjectPeriodeList::with('project')->findOrFail(request()->route('project'));
         $user = request()->user();
+        $this->indexSubtitle = $projectPeriodeList->project->project_name;
 
         if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriodeList))) {
             abort(403);
@@ -216,6 +224,7 @@ class ProjectRiskController extends BasicCRUDController
                 'label' => '<span class="bx bx-trash text-danger"></span>',
                 'btn_icon' => true,
                 'action' => 'delete',
+                'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']),
                 'permissions' => ['project_risk_delete'],
             ];
         }
@@ -249,6 +258,14 @@ class ProjectRiskController extends BasicCRUDController
             HTML;
 
         $this->defaultOrder = [[7, 'desc']];
+
+        $this->importConfig = [
+          'buttonText' => 'Upload Risiko Tender',
+          'route' => route('projects.risks.import-tender', ['project' => $projectPeriodeList->id]),
+          'title' => 'Upload Risiko Tender dari Excel',
+          'instructions' => 'Pastikan file Excel Anda memiliki template yang sesuai.',
+          'templateUrl' => route('download-tender-template'),
+        ];
 
         return parent::index();
     }
@@ -301,6 +318,7 @@ class ProjectRiskController extends BasicCRUDController
                         return $query->where('project_id', $project->id);
                     })
                 ],
+                'wbs' => 'required',
                 'target_capaian_kinerja' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
                 'penilaian_efektifitas_kontrol' => 'required',
@@ -454,6 +472,7 @@ class ProjectRiskController extends BasicCRUDController
                 'kategori_risiko_id' => 'required',
                 'jenis_risiko_id' => 'required',
                 'deskripsi_peristiwa_risiko' => 'required|unique:project_risks,deskripsi_peristiwa_risiko,' . $projectRisk->id,
+                'wbs' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
                 'penilaian_efektifitas_kontrol' => 'required',
                 //'perkiraan_waktu_terpapar_risiko' => 'required',
@@ -635,6 +654,34 @@ class ProjectRiskController extends BasicCRUDController
             'risk_limit',
             'risk_tolerance',
         ));
+    }
+
+    public function destroy($resource) {
+        try {
+            $projectRisk = ProjectRisk::findOrFail(request()->route('risk'));
+
+            if (!Gate::check('project_risk_delete')) {
+                return response()->json([
+                    'message' => 'Anda tidak memiliki izin untuk menghapus data ini'
+                ], 403);
+            }
+
+            $projectRisk->projectRiskAnalisas()->delete();
+            $projectRisk->penyebabRisikoProjects()->delete();
+            $projectRisk->kriProjects()->delete();
+            $projectRisk->projectRiskRencanaPerlakuans()->delete();
+            $projectRisk->projectRiskMonitorings()->delete();
+            $projectRisk->projectKontrolEksistings()->delete();
+            $projectRisk->delete();
+
+            return response()->json([
+                'message' => 'Data risiko proyek berhasil dihapus.'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat menghapus data.'
+            ], 500);
+        }
     }
 
     public function analisa(Request $request, $resource) {
@@ -1135,6 +1182,76 @@ class ProjectRiskController extends BasicCRUDController
             return response()->json([
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function importTender(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        $projectPeriodeListId = $request->route('project');
+        $projectPeriodeList = ProjectPeriodeList::with('project')->findOrFail($projectPeriodeListId);
+
+        DB::beginTransaction();
+        try {
+            $import = new ProjectTenderImport(
+                $projectPeriodeList,
+                auth()->user()
+            );
+
+            Excel::import($import, $request->file('file'));
+
+            DB::commit();
+
+            $summary = [
+                'success' => $import->getSuccessCount(),
+                'skipped' => $import->getSkippedCount(),
+                'failed' => $import->getFailedCount(),
+                'skipped_rows' => $import->getSkippedRows(),
+                'failed_rows' => $import->getFailedRows()
+            ];
+
+            return redirect()->back()->with('import_summary', $summary);
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            DB::rollBack();
+            $failures = $e->failures();
+            $errorMessages = [];
+            foreach ($failures as $failure) {
+                $errorMessages[] = 'Baris ' . $failure->row() . ': ' . implode(', ', $failure->errors());
+            }
+            return back()->with('error', 'Terjadi kesalahan validasi: ' . implode(' | ', $errorMessages));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Import Tender Gagal: ' . $e->getMessage() . ' di baris ' . $e->getLine());
+            return back()->with('error', 'Terjadi kesalahan saat mengimpor data: ' . $e->getMessage());
+        }
+    }
+
+    public function downloadTenderTemplate(Request $request)
+    {
+        try {
+            $peristiwaRisikoData = PeristiwaRisiko::where('type', 2)->get();
+            $jenisRisikoData = JenisRisiko::with('kategoriRisiko')->get();
+            $templatePath = storage_path('app/public/templates/template-tender.xlsx');
+
+            // Pastikan file template ada
+            if (!file_exists($templatePath)) {
+                return response()->json(['error' => 'Template file not found'], 404);
+            }
+
+            $outputFileName = 'Dokumen Upload Tender.xlsx';
+            $modifier = new TenderTemplateImport($templatePath, $peristiwaRisikoData, $jenisRisikoData);
+            $spreadsheet = $modifier->getModifiedSpreadsheet();
+
+            return response()->streamDownload(function () use ($spreadsheet) {
+                $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+                $writer->save('php://output');
+            }, $outputFileName);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error processing template: ' . $e->getMessage()], 500);
         }
     }
     

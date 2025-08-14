@@ -15,6 +15,7 @@ use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use App\Models\RiskLimitPeriode;
+use App\Models\KamusRisikoUnit;
 
 class RiskRegisterUnitMonitoringController extends BasicCRUDController
 {
@@ -40,7 +41,10 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $this->callbackQuery = function ($query) use ($period, $quarter, $user, $month) {
             $query->where('periode_id', $period->id)
                 ->where('unit_id', $user->unit_id)
-                ->with(['peristiwaRisiko', 'riskAnalysis.skalaProbabilitasResidualQ' . $quarter])
+                ->with([
+                  // 'peristiwaRisiko', 
+                  'riskAnalysis.skalaProbabilitasResidualQ' . $quarter]
+                )
                 ->with(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
                     $query->where('quarter', $quarter)
                         ->where('month', $month)
@@ -73,8 +77,8 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ],
             'peristiwa_risiko' => [
                 'label' => 'Peristiwa Risiko',
-                'data' => 'peristiwaRisiko.title',
-                'render' => '(data, type, row) => row.peristiwa_risiko?.title || "-"',
+                'data' => 'peristiwa_risiko',
+                'render' => '(data, type, row) => row.peristiwa_risiko || "-"',
             ],
             'deskripsi_peristiwa_risiko' => [
                 'label' => 'Deskripsi Peristiwa Risiko',
@@ -131,6 +135,17 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'searchable' => false,
                 'render' => '(data, type, row) => row.last_monitoring_risiko?.skala_risiko || "-"',
             ],
+            'is_closed' => [
+                'label' => 'Status',
+                'data' => 'is_closed',
+                'sortable' => false,
+                'searchable' => false,
+                'render' => '(data, type, row) => row?.is_closed ? `<div class="badge bg-danger rounded-pill px-2 mt-auto">
+                  Closed
+                </div>` : `<div class="badge bg-success rounded-pill px-2 mt-auto">
+                  Open
+                </div>`',
+            ],
         ];
 
         if (Gate::check('risk_monitoring_view')) {
@@ -154,7 +169,17 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'script' => <<<JS
                     window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
+                'active_state' => '(data, type, row) => row.is_closed != 1',
             ];
+
+            if (request()->routeIs('risk-register-unit.monitorings.index')) {
+                $this->tableActions[] = [
+                    'label' => 'Change',
+                    'btn_icon' => false,
+                    'action' => 'change_to_led_unit',
+                    'active_state' => '(data, type, row) => row.is_closed != 1',
+                ];
+            }
         }
 
         $peristiwaRisikos = $period->identifikasiRisikos->map(function($identifikasiRisiko) {
@@ -526,6 +551,18 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         }
 
         $risk->refreshRealisasi();
+
+        if ($request->is_closed == '1') {
+          $risk->update([
+            'is_closed' => true,
+          ]);
+
+          if ($request->kamus_risiko == '1') {
+              KamusRisikoUnit::updateOrCreate(
+                  ['risiko_id' => $risk->id],
+              );
+          }
+        }
 
         return response()->json([
             'message' => 'Data berhasil disimpan',
