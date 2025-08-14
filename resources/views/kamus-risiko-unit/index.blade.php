@@ -13,9 +13,6 @@
       </div>
       <div class="d-block">
         <h2>Kamus Risiko Divisi</h2>
-        {{-- @if ($period)
-          <div class="ff-preheading">Periode: {{ $period ? $period->periode : '' }}</div>
-        @endif --}}
       </div>
     </div>
     <div class="card-body">
@@ -229,59 +226,123 @@ $(document).ready(function() {
             $('#unit-select-error').removeClass('d-none');
             return;
         }
-        
-        // unitSelectModal.hide();
+        $('#unit-select-error').addClass('d-none');
 
         const targetUnit = allUnits.find(p => p.id == targetUnitId);
         const targetUnitName = targetUnit ? targetUnit.name : 'N/A';
-        
+
         Swal.fire({
             title: 'Konfirmasi Ambil Risiko',
-            html: `Anda yakin ingin menyalin risiko <br><b>"${riskDescription}"</b><br> ke proyek <br><b>"${targetUnitName}"</b>?`,
+            html: `Anda yakin ingin menyalin risiko <br><b>"${riskDescription}"</b><br> ke divisi <br><b>"${targetUnitName}"</b>?`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
             confirmButtonText: 'Ya, Tambahkan!',
             cancelButtonText: 'Batal'
         }).then((confirmResult) => {
             if (confirmResult.isConfirmed) {
-                unitSelectModal.hide();
-                Swal.fire({
-                    title: 'Memproses...',
-                    text: 'Mohon tunggu sebentar.',
-                    allowOutsideClick: false,
-                    didOpen: () => Swal.showLoading()
-                });
-                
-                $.ajax({
-                    url: "{{ route('kamus-risiko-unit.add-risk') }}",
-                    type: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                        original_risk_id: originalRiskId,
-                        target_unit_id: targetUnitId
-                    },
-                    success: function(response) {
-                        Swal.fire({ 
-                          icon: 'success', 
-                          title: 'Berhasil!', 
-                          text: response.message
-                        }).then(() => {
-                          // const redirectUrlTemplate = "{{ route('projects.risks.index', ['project' => ':projectId']) }}";
-                          // const redirectUrl = redirectUrlTemplate.replace(':projectId', response.redirect_project_id);
-                          // window.localtion.href = redirectUrl;
-                        });
-                    },
-                    error: function(xhr) {
-                        const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : 'Terjadi kesalahan.';
-                        Swal.fire({ icon: 'error', title: 'Gagal!', text: errorMsg });
-                    }
-                });
+                sendAddRiskRequest(originalRiskId, targetUnitId, false); // Awalnya, overwrite = false
             }
         });
+        
+        // Swal.fire({
+        //     title: 'Konfirmasi Ambil Risiko',
+        //     html: `Anda yakin ingin menyalin risiko <br><b>"${riskDescription}"</b><br> ke proyek <br><b>"${targetUnitName}"</b>?`,
+        //     icon: 'warning',
+        //     showCancelButton: true,
+        //     confirmButtonColor: '#3085d6',
+        //     cancelButtonColor: '#d33',
+        //     confirmButtonText: 'Ya, Tambahkan!',
+        //     cancelButtonText: 'Batal'
+        // }).then((confirmResult) => {
+        //     if (confirmResult.isConfirmed) {
+        //         unitSelectModal.hide();
+        //         Swal.fire({
+        //             title: 'Memproses...',
+        //             text: 'Mohon tunggu sebentar.',
+        //             allowOutsideClick: false,
+        //             didOpen: () => Swal.showLoading()
+        //         });
+                
+        //         $.ajax({
+        //             url: "{{ route('kamus-risiko-unit.add-risk') }}",
+        //             type: 'POST',
+        //             data: {
+        //                 _token: '{{ csrf_token() }}',
+        //                 original_risk_id: originalRiskId,
+        //                 target_unit_id: targetUnitId
+        //             },
+        //             success: function(response) {
+        //                 Swal.fire({ 
+        //                   icon: 'success', 
+        //                   title: 'Berhasil!', 
+        //                   text: response.message
+        //                 }).then(() => {
+        //                   // const redirectUrlTemplate = "{{ route('projects.risks.index', ['project' => ':projectId']) }}";
+        //                   // const redirectUrl = redirectUrlTemplate.replace(':projectId', response.redirect_project_id);
+        //                   // window.localtion.href = redirectUrl;
+        //                 });
+        //             },
+        //             error: function(xhr) {
+        //                 const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : 'Terjadi kesalahan.';
+        //                 Swal.fire({ icon: 'error', title: 'Gagal!', text: errorMsg });
+        //             }
+        //         });
+        //     }
+        // });
     });
 
+    function sendAddRiskRequest(originalRiskId, targetUnitId, isOverwriting) {
+        Swal.fire({
+            title: 'Memproses...',
+            text: 'Mohon tunggu sebentar.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+        
+        $.ajax({
+            url: "{{ route('kamus-risiko-unit.add-risk') }}",
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                original_risk_id: originalRiskId,
+                target_unit_id: targetUnitId,
+                overwrite: isOverwriting ? 1 : 0 // Kirim status overwrite
+            },
+            success: function(response) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: response.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.href = response.redirect_url;
+                });
+            },
+            error: function(xhr) {
+                if (xhr.status === 409) {
+                    Swal.fire({
+                        title: 'Risiko Sudah Ada!',
+                        text: xhr.responseJSON.message + " Apakah Anda ingin menggantinya dengan data dari kamus?",
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#dc3545',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Ya, Ganti Data!',
+                        cancelButtonText: 'Tidak, Batal'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Kirim ulang request dengan flag overwrite = true
+                            sendAddRiskRequest(originalRiskId, targetUnitId, true);
+                        }
+                    });
+                } else {
+                    const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : 'Terjadi kesalahan.';
+                    Swal.fire({ icon: 'error', title: 'Gagal!', text: errorMsg });
+                }
+            }
+        });
+    }
 });
 </script>
 @endpush

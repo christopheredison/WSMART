@@ -151,7 +151,7 @@ class KamusRisikoProjectController extends Controller
             DB::beginTransaction();
 
             $originalRisk = ProjectRisk::with([
-                'penyebabRisikoProjects', 
+                'penyebabRisikoProjects.perlakuanPenyebabRisiko', 
                 'kriProjects',
                 'projectRiskAnalisa'
             ])->findOrFail($request->original_risk_id);
@@ -193,10 +193,15 @@ class KamusRisikoProjectController extends Controller
 
             // 3. Duplikasi Penyebab Risiko
             foreach ($originalRisk->penyebabRisikoProjects as $originalPenyebab) {
-                $newPenyebab = $originalPenyebab->replicate()->fill([
-                    'risiko_id' => $newRisk->id
-                ]);
+                $newPenyebab = $originalPenyebab->replicate();
+                $newPenyebab->risiko_id = $newRisk->id;
                 $newPenyebab->save();
+
+                foreach ($originalPenyebab->perlakuanPenyebabRisiko as $originalPerlakuan) {
+                    $newPerlakuan = $originalPerlakuan->replicate();
+                    $newPerlakuan->penyebab_risiko_id = $newPenyebab->id;
+                    $newPerlakuan->save();
+                }
             }
 
             // 4. Duplikasi KRI
