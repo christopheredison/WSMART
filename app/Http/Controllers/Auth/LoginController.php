@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Jabatan;
 use App\Models\Project;
+use App\Models\Role;
 use App\Models\Unit;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
@@ -89,6 +90,25 @@ class LoginController extends Controller
                     'meta' => $responseData
                 ]);
             }
+
+            $kdJabatan = $userExist->kd_jabatan;
+            $jabatan = Jabatan::with('levels')->where('code', $kdJabatan)->first();
+    
+            if ($jabatan) {
+                $defaultLevel = env('DEF_LEVEL');
+                $userExist->update([
+                    'jabatan_id' => $jabatan?->id,
+                    'level_id' => $jabatan?->levels?->first()?->id ?: $defaultLevel,
+                ]);
+            }
+
+            $defaultRole = env('DEF_ROLE');
+            if ($defaultRole) {
+                $role = Role::find($defaultRole);
+                if ($role) {
+                    $userExist->roles()->attach($role->id);
+                }
+            }
         } else {
             $userExist->update([
                 'name' => $responseData['full_name'],
@@ -99,17 +119,6 @@ class LoginController extends Controller
                 'jabatan' => $responseData['jabatan'] ?? null,
                 'kd_jabatan' => $responseData['kd_jabatan'] ?? null,
                 'meta' => $responseData
-            ]);
-        }
-
-        $nip = $userExist->nip;
-        $kdJabatan = $userExist->kd_jabatan;
-        $jabatan = Jabatan::with('levels')->where('code', $kdJabatan)->first();
-
-        if ($jabatan) {
-            $userExist->update([
-                'jabatan_id' => $jabatan?->id,
-                'level_id' => $jabatan?->levels?->first()?->id,
             ]);
         }
 
