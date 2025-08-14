@@ -1235,7 +1235,8 @@ class ProjectRiskController extends BasicCRUDController
         try {
             $peristiwaRisikoData = PeristiwaRisiko::where('type', 2)->get();
             $jenisRisikoData = JenisRisiko::with('kategoriRisiko')->get();
-            $templatePath = storage_path('app/public/templates/template-tender.xlsx');
+            // $templatePath = storage_path('app/public/templates/template-tender.xlsx');
+            $templatePath = resource_path('templates/template-tender.xlsx');
 
             // Pastikan file template ada
             if (!file_exists($templatePath)) {
