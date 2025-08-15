@@ -925,14 +925,14 @@ class ProjectRiskController extends BasicCRUDController
             //$toUpdate['nilai_dampak'] = 0;
             //$toUpdate['nilai_dampak_residual'] = 0;
 
-            $toUpdate['eksposur_risiko'] = $toUpdate['skala_dampak'] * $toUpdate['nilai_probabilitas'] * $toUpdate['risk_limit'];
-            $toUpdate['eksposur_risiko_residual'] = $toUpdate['skala_dampak_residual'] * $toUpdate['nilai_probabilitas_residual'] * $toUpdate['risk_limit'];
+            $toUpdate['eksposur_risiko'] = ($toUpdate['skala_dampak'] * (1/100)) * $toUpdate['nilai_probabilitas'] / 100 * $toUpdate['risk_limit'];
+            $toUpdate['eksposur_risiko_residual'] = ($toUpdate['skala_dampak_residual'] * (1/100)) * $toUpdate['nilai_probabilitas_residual'] / 100 * $toUpdate['risk_limit'];
         } elseif ($request->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
             //$toUpdate['nilai_dampak'] = $request->nilai_dampak;
             //$toUpdate['nilai_dampak_residual'] = $request->nilai_dampak_residual;
 
-            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
-            $toUpdate['eksposur_risiko_residual'] = $toUpdate['nilai_dampak_residual'] * $toUpdate['nilai_probabilitas_residual'];
+            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'] / 100;
+            $toUpdate['eksposur_risiko_residual'] = $toUpdate['nilai_dampak_residual'] * $toUpdate['nilai_probabilitas_residual'] / 100;
         }
   
         $analisa->update($toUpdate);
