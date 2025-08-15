@@ -90,13 +90,34 @@ class ProjectPeriodeListController extends BasicCRUDController
         $userProjectIds = $user->projects->pluck('id');
         $this->userProjectIdsx = $user->projects->pluck('id')->toArray();
 
+        // $this->callbackQuery = function ($query) use ($userProjectIds) {
+        //     if ($userProjectIds->count() > 0) {
+        //         $query->orderByRaw('CASE WHEN project_periode_lists.project_id IN (' . $userProjectIds->join(',') . ') THEN 1 ELSE 2 END');
+        //     } else {
+        //         $query->orderBy('project_id', 'desc');
+        //     }
+        //     $query->orderBy('updated_at', 'desc');
+        //     if (!Gate::check('project_periode_view')) {
+        //         $query->whereIn('project_id', $userProjectIds);
+        //     }
+        // };
+
         $this->callbackQuery = function ($query) use ($userProjectIds) {
-            if ($userProjectIds->count() > 0) {
-                $query->orderByRaw('CASE WHEN project_periode_lists.project_id IN (' . $userProjectIds->join(',') . ') THEN 1 ELSE 2 END');
+            $query->reorder();
+
+            if ($userProjectIds->isNotEmpty()) {
+                $idList = $userProjectIds->join(',');
+                $query->orderByRaw("
+                    CASE 
+                        WHEN project_periode_lists.project_id IN ({$idList}) THEN 1 
+                        ELSE 2 
+                    END ASC, 
+                    updated_at DESC
+                ");
             } else {
-                $query->orderBy('project_id', 'desc');
+                $query->orderBy('updated_at', 'desc');
             }
-            $query->orderBy('updated_at', 'desc');
+
             if (!Gate::check('project_periode_view')) {
                 $query->whereIn('project_id', $userProjectIds);
             }

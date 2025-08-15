@@ -354,6 +354,7 @@ class ProjectRiskController extends BasicCRUDController
                 'kategori_risiko_id' => $request->kategori_risiko_id,
                 'jenis_risiko_id' => $request->jenis_risiko_id,
                 'kontrol_eksisting' => '',
+                'wbs' => $request->wbs
             ];
 
             $projectRisk = ProjectRisk::create($toStore);
@@ -503,6 +504,7 @@ class ProjectRiskController extends BasicCRUDController
                 'penilaian_efektifitas_kontrol' => $request->penilaian_efektifitas_kontrol,
                 'perkiraan_waktu_terpapar_risiko_mulai' => $perkiraanWaktuTerpaparRisikoMulai,
                 'perkiraan_waktu_terpapar_risiko_akhir' => $perkiraanWaktuTerpaparRisikoAkhir,
+                'wbs' => $request->wbs,
             ];
 
             $projectRisk->update($toUpdate);
