@@ -95,22 +95,42 @@ class RisikoTenderSheetImport implements ToCollection, WithHeadingRow
                 $nilaiDampakInherent = $this->parent->cleanRupiah($row['dampak_risiko_inherent_kuantitatif'] ?? 0);
                 $kategoriDampak = $nilaiDampakInherent > 0 ? ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF : ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF;
                 
-                $riskLimit = ($this->parent->projectPeriodeList->project->meta['omset'] ?? 0) * 0.03;
+                $risk_limit = ($this->parent->projectPeriodeList->project->meta['omset'] ?? 0) * 0.03;
+                $risk_tolerance = 0;
                 
                 // Inherent
-                $skalaDampakInherent = $kategoriDampak == 'Kuantitatif' ? $this->parent->hitungSkalaDampak($nilaiDampakInherent, $riskLimit) : trim($row['tingkat_dampak_risiko_inherent']);
+                $skalaDampakInherent = $kategoriDampak == 'Kuantitatif' ? $this->parent->hitungSkalaDampak($nilaiDampakInherent, $risk_limit) : trim($row['tingkat_dampak_risiko_inherent']);
                 $nilaiProbabilitasInherent = trim($row['nilai_probabilitas_inherent']);
                 $skalaProbabilitasInherent = SkalaProbabilitas::getSkalaByValue($nilaiProbabilitasInherent);
                 $riskMapInherent = $riskMaps->get($skalaDampakInherent . '-' . $skalaProbabilitasInherent?->tingkat);
+                
+                $eksposurRisikoInherent = 0;
+                $kualitatifRiskLimit = 0;
+                if ($kategoriDampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
+                    $eksposurRisikoInherent = $nilaiDampakInherent * ($nilaiProbabilitasInherent / 100);
+                } elseif ($kategoriDampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF) {
+                    $kualitatifRiskLimit = (1 / 100) * $risk_tolerance;
+                    $eksposurRisikoInherent = $skalaDampakInherent * ($nilaiProbabilitasInherent / 100) * $kualitatifRiskLimit;
+                }
 
                 // Residual
                 $nilaiDampakResidual = $this->parent->cleanRupiah($row['dampak_risiko_residual'] ?? 0);
-                $skalaDampakResidual = $kategoriDampak == 'Kuantitatif' ? $this->parent->hitungSkalaDampak($nilaiDampakResidual, $riskLimit) : trim($row['tingkat_dampak_risiko_residual']);
+                $skalaDampakResidual = $kategoriDampak == 'Kuantitatif' ? $this->parent->hitungSkalaDampak($nilaiDampakResidual, $risk_limit) : trim($row['tingkat_dampak_risiko_residual']);
                 $nilaiProbabilitasResidual = trim($row['nilai_probabilitas_residual']);
                 $skalaProbabilitasResidual = SkalaProbabilitas::getSkalaByValue($nilaiProbabilitasResidual);
                 $riskMapResidual = $riskMaps->get($skalaDampakResidual . '-' . $skalaProbabilitasResidual?->tingkat);
                 
+                $eksposurRisikoResidual = 0;
+                if ($kategoriDampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
+                    $eksposurRisikoResidual = $nilaiDampakResidual * ($nilaiProbabilitasResidual / 100);
+                } elseif ($kategoriDampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF) {
+                    $kualitatifRiskLimit = (1 / 100) * $risk_tolerance;
+                    $eksposurRisikoResidual = $skalaDampakResidual * ($nilaiProbabilitasResidual / 100) * $kualitatifRiskLimit;
+                }
+                
                 $analisaData = [
+                    'kategori_dampak' => $kategoriDampak,
+                    'risk_limit' => $kategoriDampak === 'Kuantitatif' ? $risk_limit : ($kualitatifRiskLimit ?? 0),
                     'deskripsi_dampak' => trim($row['dampak_risiko_inherent_kualitatif']),
                     'nilai_dampak' => $nilaiDampakInherent,
                     'asumsi_perhitungan_dampak' => trim($row['formula_perhitungan_dampak_risiko_inherent']),
@@ -119,7 +139,7 @@ class RisikoTenderSheetImport implements ToCollection, WithHeadingRow
                     'skala_probabilitas_id' => $skalaProbabilitasInherent?->id,
                     'skala_risiko' => $riskMapInherent?->nilai_risiko,
                     'level_risiko' => $riskMapInherent?->level_risiko,
-                    'eksposur_risiko' => $nilaiDampakInherent * ($nilaiProbabilitasInherent / 100),
+                    'eksposur_risiko' => $eksposurRisikoInherent,
 
                     'deskripsi_dampak_residual' => trim($row['penjelasan_dampak_risiko_residual']),
                     'nilai_dampak_residual' => $nilaiDampakResidual,
@@ -128,7 +148,7 @@ class RisikoTenderSheetImport implements ToCollection, WithHeadingRow
                     'skala_probabilitas_residual_id' => $skalaProbabilitasResidual?->id,
                     'skala_risiko_residual' => $riskMapResidual?->nilai_risiko,
                     'level_risiko_residual' => $riskMapResidual?->level_risiko,
-                    'eksposur_risiko_residual' => $nilaiDampakResidual * ($nilaiProbabilitasResidual / 100),
+                    'eksposur_risiko_residual' => $eksposurRisikoResidual,
                 ];
 
                 $projectRisk->projectRiskAnalisa()->create($analisaData);
