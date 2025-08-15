@@ -64,9 +64,29 @@ abstract class BasicCRUDController extends Controller
                 call_user_func($this->callbackQuery, $query);
             }
 
+            // OLD CODE
+            // if (!empty($this->userProjectIdsx)) {
+            //     $query->orderByRaw("FIELD(project_id, " . implode(',', $this->userProjectIdsx) . ") DESC")
+            //           ->orderBy('id', 'ASC'); // Fallback jika tidak ada aturan default
+            // }
+
+            // NEW SUPPORT MYSQL AND POSTGRESSQL
             if (!empty($this->userProjectIdsx)) {
-                $query->orderByRaw("FIELD(project_id, " . implode(',', $this->userProjectIdsx) . ") DESC")
-                      ->orderBy('id', 'ASC'); // Fallback jika tidak ada aturan default
+                // 1. Sanitasi input untuk memastikan semua ID adalah integer
+                $safeIds = array_map('intval', $this->userProjectIdsx);
+                $idList = implode(',', $safeIds);
+
+                // 2. Hanya jalankan jika ada ID yang valid
+                if (!empty($idList)) {
+                    // 3. Gunakan CASE statement yang kompatibel dengan MySQL & PostgreSQL
+                    $query->orderByRaw("
+                        CASE
+                            WHEN project_id IN ({$idList}) THEN 1
+                            ELSE 2
+                        END ASC,
+                        id ASC
+                    ");
+                }
             }
 
             if ($this->availableFilters && $filters = request()->filters) {
