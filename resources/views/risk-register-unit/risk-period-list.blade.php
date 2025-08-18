@@ -17,6 +17,19 @@
           <h2>Risk Register Divisi</h2>
         </div>
       </div>
+      <div class="card-header border-bottom">
+          <div class="d-flex align-items-center gap-3">
+              <h6 class="mb-0">Keterangan :</h6>
+              <div class="d-flex gap-3">
+                  @foreach($tableLegend as $legend)
+                  <div class="d-flex align-items-center gap-1">
+                      {!! $legend['icon'] !!}
+                      <span>{{ $legend['label'] }}</span>
+                  </div>
+                  @endforeach
+              </div>
+          </div>
+      </div>
       <div class="card-body dt-header-true">
         <div class="table-responsive-sm scrollbar">
           <table class="table table-hover dataTable" id="example" data-paging="true" data-info="true" data-filter="true">
@@ -53,7 +66,7 @@
                   <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
                     <span class="bx bx-radar"></span>
                   </a>
-                  <a href="{{ route('unit-led.index-by-unit', ['unitId' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+                  <a href="{{ route('unit-led.index-by-periode', ['periode' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
                     title="Loss Event">
                     <span class="bx bx-dock-bottom"></span>
                   </a>

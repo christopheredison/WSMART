@@ -58,12 +58,12 @@
                                 <label for="deskripsi_perlakuan_risiko">Deskripsi Perlakuan Risiko</label>
                             </div>
                         </div>
-                        <div class="col-12">
+                        {{-- <div class="col-12">
                             <div class="form-floating">
                                 {{ Form::select('jenis_program_rkap_id', \App\Models\JenisProgramDalamRKAP::pluck('jenis_program_rkap', 'id'), '', ['class' => 'form-select', 'required']) }}
                                 <label for="jenis_program_rkap_id">Jenis Program RKAP</label>
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="col-12">
                             <div class="form-floating">
                                 <input type="text" class="form-control" id="timelineInput" name="timeline_perlakuan_risiko" required>

@@ -340,6 +340,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $quarter = request()->quarter ?: 1;
         $projectRisk = $projectPeriode->projectRisks()
             ->with([
+                'projectRiskAnalisa',
                 'peristiwaRisiko',
                 'kriProjects' => function ($query) use ($quarter, $tahun, $month) {
                     $query->select('k_r_i_projects.*', 'id as status_kri_terkini', 'id as nilai_kri_terkini');
@@ -378,6 +379,55 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 },
             ])
             ->findOrFail(request()->route('monitoring'));
+
+        $analisa = $projectRisk->projectRiskAnalisa;
+        $namaRisikoLengkap = $projectRisk->peristiwaRisiko->title;
+        if (!empty($projectRisk->deskripsi_peristiwa_risiko)) {
+            $namaRisikoLengkap .= ' - ' . $projectRisk->deskripsi_peristiwa_risiko;
+        }
+
+        // Validasi Analisa Risiko
+        if (!$analisa) {
+            return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
+                ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum dianalisa. Harap lengkapi analisa risiko terlebih dahulu.');
+        }
+
+        $requiredAnalisaFields = [
+            'kategori_dampak', 'nilai_dampak', 'nilai_probabilitas', 'skala_dampak',
+            'nilai_dampak_residual', 'nilai_probabilitas_residual', 'skala_dampak_residual'
+        ];
+
+        foreach ($requiredAnalisaFields as $field) {
+            if (is_null($analisa->{$field})) {
+                return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
+                    ->with('error', 'Analisa untuk risiko "' . $namaRisikoLengkap . '" belum lengkap. Harap lengkapi semua field analisa inheren dan residual.');
+            }
+        }
+        
+        // Validasi Rencana Perlakuan Risiko
+        $penyebabRisikos = $projectRisk->penyebabRisikoProjects;
+        
+        if ($penyebabRisikos->isEmpty()) {
+            return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
+                ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum memiliki data penyebab dan rencana perlakuan.');
+        }
+        
+        $hasValidPerlakuan = false;
+        foreach ($penyebabRisikos as $penyebab) {
+            if (!empty($penyebab->penyebab_risiko) && $penyebab->perlakuanPenyebabRisiko->isNotEmpty()) {
+                foreach ($penyebab->perlakuanPenyebabRisiko as $perlakuan) {
+                    if (!empty($perlakuan->rencana_perlakuan_risiko)) {
+                        $hasValidPerlakuan = true;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        if (!$hasValidPerlakuan) {
+            return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
+                ->with('error', 'Risiko "' . $namaRisikoLengkap . '" harus memiliki minimal satu penyebab dengan rencana perlakuan yang sudah diisi.');
+        }
 
         $peristiwaRisiko = $projectRisk->peristiwaRisiko;
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
@@ -650,16 +700,29 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $projectPeriode->refreshNilai();
 
         if ($request->is_closed == '1') {
-          $projectRisk->update([
-            'is_closed' => true,
-          ]);
+            $efektivitas = 0.0; 
 
-          if ($request->kamus_risiko == '1') {
-              KamusRisikoProject::updateOrCreate(
-                  ['project_risk_id' => $projectRisk->id],
-                  ['project_id' => $projectRisk->project_id],
-              );
-          }
+            $analisa = $projectRisk->projectRiskAnalisa;
+            $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
+            $skala_risiko_rencana = (float) optional($analisa)->skala_risiko_residual;
+            $skala_risiko_realisasi = (float) ($request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden ?? 0);
+
+            $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
+
+            // Hindari pembagian dengan nol
+            if ($selisih_inherent_rencana != 0) {
+                $efektivitas = ($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana;
+            }
+
+            $projectRisk->update([
+                'is_closed' => true,
+                'efektivitas_perlakuan_risiko' => $efektivitas
+            ]);
+
+            KamusRisikoProject::updateOrCreate(
+                ['project_risk_id' => $projectRisk->id],
+                ['project_id' => $projectRisk->project_id],
+            );
         }
 
         return response()->json([

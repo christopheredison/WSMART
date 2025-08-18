@@ -20,6 +20,19 @@
           @endif
         </div>
       </div>
+      <div class="card-header border-bottom">
+          <div class="d-flex align-items-center gap-3">
+              <h6 class="mb-0">Keterangan :</h6>
+              <div class="d-flex gap-3">
+                  @foreach($tableLegend as $legend)
+                  <div class="d-flex align-items-center gap-1">
+                      {!! $legend['icon'] !!}
+                      <span>{{ $legend['label'] }}</span>
+                  </div>
+                  @endforeach
+              </div>
+          </div>
+      </div>
       <div class="card-body dt-header-true">
         <div id="tableExample3">
           <div class="row g-2 mb-1">

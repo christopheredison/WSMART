@@ -95,7 +95,7 @@ class RiskRegisterUnitController extends Controller
             'peristiwaRisiko',
             //'tck',
             'riskAnalysis',
-        ]);
+        ])->where('unit_type_id', 1);
 
         // Filter berdasarkan periode jika ada
         if ($periodeId) {
@@ -110,7 +110,7 @@ class RiskRegisterUnitController extends Controller
         $risiko = $risikoQuery->get();
 
         // Data untuk filter
-        $unit = Unit::pluck('name', 'id');
+        $unit = Unit::where('unit_type_id', 1)->pluck('name', 'id');
         $unitChild = Unit::where('parent_id', '!=', null)->pluck('name', 'id');
         $peristiwaRisiko = PeristiwaRisiko::pluck('title', 'id');
         $jenisRisiko = JenisRisiko::pluck('title','id');
@@ -208,6 +208,29 @@ class RiskRegisterUnitController extends Controller
             }
         }
 
+        $tableLegend = [
+            [
+              'icon' => '<span class="bx bx-show-alt"></span>',
+              'label' => 'View'
+            ],
+            [
+              'icon' => '<span class="bx bx-message-square-edit"></span>',
+              'label' => 'Edit'
+            ],
+            [
+              'icon' => '<span class="bx bx-analyse text-warning"></span>',
+              'label' => 'Analisa'
+            ],
+            [
+              'icon' => '<span class="bx bx-task text-primary"></span>',
+              'label' => 'Perencanaan'
+            ],
+            [
+              'icon' => '<span class="bx bx-trash text-danger"></span>',
+              'label' => 'Hapus'
+            ],
+        ];
+
         return view('risk-register-unit.index', compact(
             'risiko',
             'unit',
@@ -223,7 +246,8 @@ class RiskRegisterUnitController extends Controller
             'batchNotes',
             'levelId',
             'avgQuantitativeExposure',
-            'unitId'
+            'unitId',
+            'tableLegend',
         ));
     }
 
@@ -268,7 +292,26 @@ class RiskRegisterUnitController extends Controller
         // Ambil periode aktif jika ada
         $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
 
-        return view('risk-register-unit.risk-period-list', compact('periodes', 'activePeriode'));
+        $tableLegend = [
+            [
+              'icon' => '<span class="bx bx-show"></span>',
+              'label' => 'View'
+            ],
+            [
+              'icon' => '<span class="bx bx-list-check"></span>',
+              'label' => 'Risk Register'
+            ],
+            [
+              'icon' => '<span class="bx bx-radar"></span>',
+              'label' => 'Monitoring'
+            ],
+            [
+              'icon' => '<span class="bx bx-dock-bottom"></span>',
+              'label' => 'Loss Event'
+            ],
+        ];
+
+        return view('risk-register-unit.risk-period-list', compact('periodes', 'activePeriode', 'tableLegend'));
     }
 
     public function riskPeriodeDashboard($period)
@@ -316,7 +359,7 @@ class RiskRegisterUnitController extends Controller
             'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
-            'wbs' => 'required|string',
+            'wbs' => 'nullable|string',
             'penyebab_risiko' => 'required|array',
             'penyebab_risiko.*' => 'required|string',
             //'master_kri_id' => 'nullable|array',
@@ -482,6 +525,9 @@ class RiskRegisterUnitController extends Controller
                 }
             }
 
+            $identifikasiRisiko->riskAnalysis()->create([]);
+            $identifikasiRisiko->rencanaPerlakuanRisiko()->create([]);
+            
             // Tentukan redirect berdasarkan action
             $action = $request->input('action', 'save');
 
@@ -1059,7 +1105,7 @@ class RiskRegisterUnitController extends Controller
             'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
-            'wbs' => 'required|string',
+            'wbs' => 'nullable|string',
             'penyebab_risiko' => 'required|array',
             'penyebab_risiko.*' => 'required|string',
             'key_risk_indicator' => 'nullable|array',
@@ -1768,7 +1814,7 @@ class RiskRegisterUnitController extends Controller
         $risk_limit = 0;
         $risiko = $risikos->first();
 
-        if ($risiko->riskAnalysis->kategori_dampak == 'Kuantitatif') {
+        if ($risiko->riskAnalysis && $risiko->riskAnalysis->kategori_dampak == 'Kuantitatif') {
             $unit = $risiko->unit;
             $periode = $risiko->periode;
           

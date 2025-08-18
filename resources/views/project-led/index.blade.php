@@ -16,7 +16,7 @@
                           <div class="ff-preheading mb-0 mt-1">{{ $project?->project_name }}</div>
                         </div>
                         <div class="col-auto ms-auto">
-                            <a class="btn btn-outline-info btn-sm" href="{{ route('project-led.create', ['project_id' => $projectId]) }}">
+                            <a class="btn btn-outline-info btn-sm" href="{{ route('project-led.create', ['project' => $projectId]) }}">
                                 <span class="bx bx-plus"></span>
                                 <span class="ms-1">Tambah Data Loss Event</span>
                             </a>

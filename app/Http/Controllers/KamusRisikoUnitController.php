@@ -56,6 +56,18 @@ class KamusRisikoUnitController extends Controller
                 });
             }
 
+            if ($request->filled('efektivitas')) {
+                $query->whereHas('identifikasiRisiko', function ($q) use ($request) {
+                    if ($request->efektivitas == 'efektif') {
+                        // 'Efektif' jika nilainya lebih dari 0
+                        $q->where('efektivitas_perlakuan_risiko', '>', 0);
+                    } elseif ($request->efektivitas == 'tidak_efektif') {
+                        // 'Tidak Efektif' jika nilainya 0 atau kurang dari 0 (negatif)
+                        $q->where('efektivitas_perlakuan_risiko', '<=', 0);
+                    }
+                });
+            }
+
             return datatables()->of($query)
                 ->addIndexColumn()
                 ->addColumn('action', function ($row) {
@@ -108,7 +120,18 @@ class KamusRisikoUnitController extends Controller
                     return '<span class="badge-level ' . e($css_class) . '">' . e($analisa->level_risiko_residual) . ' (' . e($analisa->skala_risiko_residual) . ')</span>';
                 })
                 ->addColumn('realisasi_eksposur_risiko', fn($row) => 'Rp ' . number_format($row->identifikasiRisiko->riskAnalysis->eksposur_risiko_residual ?? 0, 0, ',', '.'))
-                ->rawColumns(['action', 'level_risiko_inheren', 'realisasi_level_risiko'])
+                ->addColumn('efektivitas', function ($row) {
+                    $efektivitas = $row->identifikasiRisiko->efektivitas_perlakuan_risiko;
+
+                    if (is_null($efektivitas)) {
+                        return '-';
+                    }
+
+                    $class = $efektivitas > 0 ? 'text-success' : ($efektivitas < 0 ? 'text-danger' : 'text-warning');
+                    
+                    return '<span class="fw-bold ' . $class . '">' . $efektivitas . '</span>';
+                })
+                ->rawColumns(['action', 'level_risiko_inheren', 'realisasi_level_risiko', 'efektivitas'])
                 ->make(true);
         }
 
@@ -229,16 +252,30 @@ class KamusRisikoUnitController extends Controller
 
     public function exportExcel(Request $request)
     {
-        $filters = $request->only([
-            'unit_id',
-            'peristiwa_risiko',
-            'jenis_risiko_id',
-            'level_risiko',
-            'deskripsi_risiko',
-        ]);
-
-        $fileName = 'Kamus_Risiko_Divisi_' . date('d-m-Y') . '.xlsx';
-
-        return Excel::download(new KamusRisikoUnitExport($filters), $fileName);
+        try {
+            $filters = $request->only([
+                'unit_id',
+                'peristiwa_risiko',
+                'jenis_risiko_id',
+                'level_risiko',
+                'deskripsi_risiko',
+            ]);
+    
+            $fileName = 'Kamus_Risiko_Divisi_' . date('d-m-Y_H-i-s') . '.xlsx';
+    
+            $fileContents = Excel::raw(
+                new KamusRisikoUnitExport($filters),
+                \Maatwebsite\Excel\Excel::XLSX
+            );
+    
+            return response($fileContents, 200, [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Gagal export Kamus Risiko Divisi: ' . $e->getMessage());
+            return response()->json(['message' => 'Terjadi kesalahan saat membuat file Excel.'], 500);
+        }
     }
 }

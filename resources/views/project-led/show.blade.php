@@ -11,14 +11,14 @@
                                 @include('partials.icon-tool')
                             </div>
                         </div>
-                        <h2 class="h3">Detail Loss Event Project {{ $project ? ' - ' . $project->name : '' }}</h2>
+                        <h2 class="h3">Detail Loss Event Project {{ $project ? ' - ' . $project->project_name : '' }}</h2>
                         <div class="col-auto ms-auto">
-                            <a href="{{ route('project-led.edit', $lossEvent->id) }}" class="btn btn-info btn-sm">
-                                <i class="bx bx-edit"></i>
+                            <a href="{{ route('project-led.edit', ['project' => $lossEvent->project_id, 'id' => $lossEvent->id]) }}" class="btn btn-info btn-sm">
+                                <span class="bx bx-edit"></span>
                                 <span class="ms-1">Edit</span>
                             </a>
                             <a href="{{ $project ? route('project-led.index-by-project', ['projectId' => $project->id]) : route('project-led.index') }}" class="btn btn-secondary btn-sm">
-                                <i class="bx bx-arrow-back"></i>
+                                <span class="bx bx-arrow-back"></span>
                                 <span class="ms-1">Kembali</span>
                             </a>
                         </div>

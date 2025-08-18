@@ -244,7 +244,7 @@ class ProjectRiskController extends BasicCRUDController
         $this->tableColumns['nilai_dampak']['render'] = <<<JS
             (data, type, row) => {
                 const formatCurrency = (value) => {
-                    if (!value) return '-';
+                    if (value === null || value === '') return '-';
                     return 'Rp ' + parseInt(value).toLocaleString('id-ID', { minimumFractionDigits: 0 });
                 };
                 return formatCurrency(row.project_risk_analisa?.nilai_dampak);
@@ -585,7 +585,7 @@ class ProjectRiskController extends BasicCRUDController
             ->where('project_periode_list_id', request()->route('project'))
             ->findOrFail(request()->route('risk'));
 
-        $projectRisk->append('currentRiskMaps');
+        $projectRisk->append('currentRiskMapsMonth');
 
         $tahunMonitorings = $projectRisk->projectRiskMonitorings->pluck('tahun')->unique()->toArray();
         $tahunMonitorings[] = $projectRisk->created_at->year;
@@ -594,17 +594,21 @@ class ProjectRiskController extends BasicCRUDController
         $maxTahun = !empty($tahunMonitorings) ? max($tahunMonitorings) : date('Y');
         $tahunMonitorings = range($minTahun, $maxTahun);
         
+        $currentRiskMaps = $projectRisk->currentRiskMapsMonth;
         $formattedCurrentRiskMaps = [];
         $currentValue = $projectRisk->currentRiskMaps['inherent'] ?? null;
 
         if ($currentValue) {
             foreach ($tahunMonitorings as $tahun) {
-                for ($quarter = 1; $quarter <= 4; $quarter++) {
-                    if ($nextValue = ($projectRisk->currentRiskMaps[$tahun . '-' . $quarter] ?? null)) {
+                for ($month = 1; $month <= 12; $month++) {
+                    if ($nextValue = ($projectRisk->currentRiskMapsMonth[$tahun . '-' . $month] ?? null)) {
                         $currentValue = $nextValue;
                     }
-                    $currentValue['tahun']   = $tahun;
-                    $currentValue['quarter'] = $quarter;
+    
+                    $currentValue['tahun'] = $tahun;
+                    $currentValue['quarter'] = ceil($month / 3);
+                    $currentValue['month'] = $month;
+    
                     $formattedCurrentRiskMaps[$projectRisk->id][$tahun][] = $currentValue;
                 }
             }
@@ -1248,11 +1252,16 @@ class ProjectRiskController extends BasicCRUDController
             $outputFileName = 'Dokumen Upload Tender.xlsx';
             $modifier = new TenderTemplateImport($templatePath, $peristiwaRisikoData, $jenisRisikoData);
             $spreadsheet = $modifier->getModifiedSpreadsheet();
+            $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        
+            ob_start();
+            $writer->save('php://output');
+            $fileContents = ob_get_clean();
 
-            return response()->streamDownload(function () use ($spreadsheet) {
-                $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-                $writer->save('php://output');
-            }, $outputFileName);
+            return response($fileContents, 200, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $outputFileName . '"',
+            ]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error processing template: ' . $e->getMessage()], 500);
         }

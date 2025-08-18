@@ -23,30 +23,20 @@ class PenyebabRisikoSheetImport implements ToCollection, WithHeadingRow
 
         foreach ($rows as $index => $row) {
             if ($index == 0) {
-                continue; // lanjut ke baris ke-3
+                continue;
             }
             
             $rowNumber = $index + 2;
 
-            // Jika tidak ada data perlakuan sama sekali di baris ini, lewati
-            if (empty($row['perlakuan_risiko'])) {
-                // Jika kolom lain juga kosong, lewati sepenuhnya
-                if (empty($row['no_risiko']) && empty($row['penyebab_risiko'])) {
-                    continue;
-                }
-            }
-            
             try {
-                // Cek apakah ini baris untuk grup "Penyebab Risiko" yang BARU.
-                // Cirinya adalah kolom 'no_risiko' dan 'penyebab_risiko' tidak kosong.
-                if (!empty($row['no_risiko']) && !empty($row['penyebab_risiko'])) {
+                if (!empty(trim($row['no_risiko'])) && !empty(trim($row['penyebab_risiko']))) {
                     $noRisiko = trim($row['no_risiko']);
                     
                     $projectRiskId = $this->parent->riskMapping[$noRisiko] ?? null;
 
                     if (!$projectRiskId) {
                         $this->parent->failedCount++;
-                        $this->parent->failedRows[] = "Penyebab Risiko Baris $rowNumber: No Risiko '$noRisiko' tidak ditemukan di sheet Risiko Tender.";
+                        $this->parent->failedRows[] = "Penyebab Risiko Baris $rowNumber: No Risiko '$noRisiko' tidak ditemukan di sheet 'Risiko Tender'.";
                         $currentPenyebab = null;
                         continue;
                     }
@@ -57,7 +47,7 @@ class PenyebabRisikoSheetImport implements ToCollection, WithHeadingRow
                     ]);
                 }
 
-                if (!empty($row['perlakuan_risiko'])) {
+                if (!empty(trim($row['perlakuan_risiko']))) {
                     if ($currentPenyebab) {
                         $currentPenyebab->perlakuanPenyebabRisiko()->create([
                             'penyebab_risiko_id' => $currentPenyebab->id,
@@ -66,13 +56,13 @@ class PenyebabRisikoSheetImport implements ToCollection, WithHeadingRow
                         ]);
                     } else {
                         $this->parent->failedCount++;
-                        $this->parent->failedRows[] = "Penyebab Risiko Baris $rowNumber: Mencoba menambahkan perlakuan pada penyebab risiko yang tidak valid atau tidak ditemukan.";
+                        $this->parent->failedRows[] = "Penyebab Risiko Baris $rowNumber: Perlakuan Risiko ditemukan tanpa ada 'Penyebab Risiko' yang valid di atasnya.";
                     }
                 }
                 
             } catch (\Exception $e) {
                 $this->parent->failedCount++;
-                $this->parent->failedRows[] = "Penyebab Risiko Baris $rowNumber: " . $e->getMessage();
+                $this->parent->failedRows[] = "Penyebab Risiko Baris $rowNumber: Terjadi error - " . $e->getMessage();
                 Log::error("Import Error on Penyebab Risiko Row $rowNumber: " . $e->getMessage());
                 $currentPenyebab = null;
             }

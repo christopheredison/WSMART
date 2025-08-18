@@ -59,7 +59,7 @@
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Kategori Kejadian <span class="text-danger">*</span></label>
-                                <select class="form-select" name="kategori_kejadian_id" required>
+                                <select class="form-select select2" name="kategori_kejadian_id" required>
                                     <option value="">Pilih Kategori Kejadian</option>
                                     @foreach($kategoriKejadians as $kategori)
                                         <option value="{{ $kategori->id }}" @if(old('kategori_kejadian_id', $lossEvent->kategori_kejadian_id) == $kategori->id) selected @endif>
@@ -71,7 +71,7 @@
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Sumber Penyebab Kejadian <span class="text-danger">*</span></label>
-                                <select class="form-select" name="sumber_penyebab_kejadian" required>
+                                <select class="form-select select2" name="sumber_penyebab_kejadian" required>
                                     <option value="">Pilih Sumber Penyebab</option>
                                     <option value="1" @if(old('sumber_penyebab_kejadian', $lossEvent->sumber_penyebab_kejadian) == 1) selected @endif>Internal</option>
                                     <option value="2" @if(old('sumber_penyebab_kejadian', $lossEvent->sumber_penyebab_kejadian) == 2) selected @endif>Eksternal</option>
@@ -80,7 +80,7 @@
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Kategori Risiko BUMN <span class="text-danger">*</span></label>
-                                <select class="form-select" name="kategori_risiko_bumn" required>
+                                <select class="form-select select2" name="kategori_risiko_bumn" required>
                                     <option value="">Pilih Kategori Risiko BUMN</option>
                                     <option value="1" @if(old('kategori_risiko_bumn', $lossEvent->kategori_risiko_bumn) == 1) selected @endif>Financial</option>
                                     <option value="2" @if(old('kategori_risiko_bumn', $lossEvent->kategori_risiko_bumn) == 2) selected @endif>Operational</option>
@@ -91,7 +91,7 @@
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Kategori Risiko T2 & T3 BUMN <span class="text-danger">*</span></label>
                                 <input type="hidden" name="kategori_risiko_id" id="kategori_risiko_id" value="{{ old('kategori_risiko_id', $lossEvent->kategori_risiko_id) }}">
-                                <select class="form-select" name="jenis_risiko_id" id="jenis_risiko_id" required>
+                                <select class="form-select select2" name="jenis_risiko_id" id="jenis_risiko_id" required>
                                     <option value="">Pilih Jenis Risiko</option>
                                     @foreach($jenisRisikos as $jenis)
                                         <option value="{{ $jenis->id }}" data-kategori="{{ $jenis->kategori_risiko_id }}" @if(old('jenis_risiko_id', $lossEvent->jenis_risiko_id) == $jenis->id) selected @endif>
@@ -178,7 +178,7 @@
                         </div>
 
                         <div class="col-12 mt-4">
-                            <a href="{{ route('unit-led.index-by-unit', ['unitId' => auth()->user()->unit_id]) }}" class="btn btn-secondary">Batal</a>
+                            <a href="{{ route('unit-led.index-by-periode', ['periode' => $lossEvent->periode_id]) }}" class="btn btn-secondary">Batal</a>
                             <button type="submit" class="btn btn-primary">Update Data</button>
                         </div>
                     </form>

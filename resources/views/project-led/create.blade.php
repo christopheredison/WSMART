@@ -169,7 +169,7 @@
                         </div>
 
                         <div class="col-12 mt-4">
-                            <a href="{{ route('project-led.index') }}" class="btn btn-secondary">Batal</a>
+                            <a href="{{ route('project-led.index-by-project', ['projectId' => $project->id]) }}" class="btn btn-secondary">Batal</a>
                             <button type="button" class="btn btn-primary" id="save-led-button">Simpan</button>
                         </div>
                     </form>
@@ -283,7 +283,14 @@ $(document).ready(function() {
     }
 
     renderPenyebabTable();
-    flatpickr(".flatpickr-date", { altInput: false, altFormat: "j F Y", dateFormat: "Y-m-d" });
+    flatpickr(".flatpickr-date", 
+      {
+        altInput: false,
+        altFormat: "j F Y",
+        dateFormat: "Y-m-d",
+        maxDate: 'today',
+      }
+    );
     $('.inputmask-rupiah').inputmask({ alias: 'numeric', groupSeparator: '.', autoGroup: true, digits: 0, prefix: 'Rp ', placeholder: '0', rightAlign: false, autoUnmask: true, removeMaskOnSubmit: true });
 
     $('#btn-tambah-penyebab').on('click', function() {
