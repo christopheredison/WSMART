@@ -32,7 +32,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $user = request()->user();
         $quarter = request()->input('filters.quarter') ?: 4;
-        $month = request()->input('filters.month') ?: '';
+        $month = request()->input('filters.month') ?: null;
 
         // if (!(Gate::check('risk_monitoring_list') || $user->hasProject($period))) {
         //     abort(403);
@@ -48,7 +48,9 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 )
                 ->with(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
                     $query->where('quarter', $quarter)
-                        ->where('month', $month)
+                        ->when($month, function ($q) use ($month) {
+                            return $q->where('month', $month);
+                        })
                         ->with('skalaProbabilitas');
                 }]);
         };
