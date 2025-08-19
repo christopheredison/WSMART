@@ -9,7 +9,7 @@
   <!-- ===============================================-->
   <!--    Document Title-->
   <!-- ===============================================-->
-  <title>Aplikasi Manajemen Risiko WIKA</title>
+  <title>WIKA Sistem MAnagement Risiko Terintegrasi (W-SMART)</title>
 
   <!-- ===============================================-->
   <!--    Favicons-->
