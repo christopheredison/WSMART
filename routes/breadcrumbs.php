@@ -104,6 +104,91 @@ Breadcrumbs::for('kamus-risiko-unit.index', function (BreadcrumbTrail $trail) {
     $trail->push('Kamus Risiko Unit', route('kamus-risiko-unit.index'));
 });
 
+// Periode Anak Perusahaan
+Breadcrumbs::for('risk-register-ap.periods', function (BreadcrumbTrail $trail) {
+    $trail->push('Periode Anak Perusahaan', route('risk-register-ap.periods'));
+});
+
+// Periode Anak Perusahaan > View Periode Anak Perusahaan
+Breadcrumbs::for('risk-register-ap.periods.show', function (BreadcrumbTrail $trail, $period) {
+    $trail->parent('risk-register-ap.periods');
+    $trail->push('Risk Register Anak Perusahaan', route('risk-register-ap.periods.show', [$period]));
+});
+
+// Periode Anak Perusahaan > Risk Register Anak Perusahaan
+Breadcrumbs::for('risk-register-ap.index', function (BreadcrumbTrail $trail) {
+    $trail->parent('risk-register-ap.periods');
+    $trail->push('Risk Register Anak Perusahaan', route('risk-register-ap.index'));
+});
+
+// Periode Anak Perusahaan > Risk Register Anak Perusahaan > Tambah Risk Register
+Breadcrumbs::for('risk-register-ap.create', function (BreadcrumbTrail $trail) {
+    $trail->parent('risk-register-ap.index');
+    $trail->push('Tambah Risk Register', route('risk-register-ap.create'));
+});
+
+// Periode Anak Perusahaan > Risk Register Anak Perusahaan > Edit Risk Register
+Breadcrumbs::for('risk-register-ap.edit', function (BreadcrumbTrail $trail, $riskRegister) {
+    $trail->parent('risk-register-ap.index');
+    $trail->push('Edit Risk Register', route('risk-register-ap.edit', [$riskRegister]));
+});
+
+// Periode Anak Perusahaan > Risk Register Anak Perusahaan > Analisa Risiko
+Breadcrumbs::for('risk-register-ap.analisa', function (BreadcrumbTrail $trail, $riskRegister) {
+    $trail->parent('risk-register-ap.index');
+    $trail->push('Analisa Risiko', route('risk-register-ap.analisa', [$riskRegister]));
+});
+
+// Periode Anak Perusahaan > Risk Register Anak Perusahaan > Perencanaan Risiko
+Breadcrumbs::for('risk-register-ap.perencanaan', function (BreadcrumbTrail $trail, $riskRegister) {
+    $trail->parent('risk-register-ap.index');
+    $trail->push('Rencana Perlakuan Risiko', route('risk-register-ap.perencanaan', [$riskRegister]));
+});
+
+// Periode Anak Perusahaan > Risk Register Anak Perusahaan > View Risiko
+Breadcrumbs::for('risk-register-ap.view', function (BreadcrumbTrail $trail, $riskRegister) {
+    $trail->parent('risk-register-ap.index');
+    $trail->push('View Risiko', route('risk-register-ap.view', [$riskRegister]));
+});
+
+// Periode Anak Perusahaan > Data Monitoring
+Breadcrumbs::for('risk-register-ap.monitorings.index', function (BreadcrumbTrail $trail, $period) {
+    $trail->parent('risk-register-ap.periods');
+    $trail->push('Data Monitoring', route('risk-register-ap.monitorings.index', [$period]));
+});
+
+// Periode Anak Perusahaan > Data Monitoring > View Data Monitoring
+Breadcrumbs::for('risk-register-ap.monitorings.show', function (BreadcrumbTrail $trail, $period, $monitoring) {
+    $trail->parent('risk-register-ap.monitorings.index', $period);
+    $trail->push('View Data Monitoring', route('risk-register-ap.monitorings.show', [$period, $monitoring]));
+});
+
+// Periode Anak Perusahaan > Data Monitoring > Edit Data Monitoring
+Breadcrumbs::for('risk-register-ap.monitorings.edit', function (BreadcrumbTrail $trail, $period, $monitoring) {
+    $trail->parent('risk-register-ap.monitorings.index', $period);
+    $trail->push('Edit Data Monitoring', route('risk-register-ap.monitorings.edit', [$period, $monitoring]));
+});
+
+// Periode Anak Perusahaan > Loss Event Anak Perusahaan
+// Breadcrumbs::for('unit-led.index-by-ap', function (BreadcrumbTrail $trail, $unitId) {
+//     $trail->parent('risk-register-ap.periods');
+//     $trail->push('Loss Event Anak Perusahaan', route('unit-led.index-by-ap', [$unitId]));
+// });
+
+// // Periode Anak Perusahaan > Loss Event Anak Perusahaan > Tambah Loss Event Anak Perusahaan
+// Breadcrumbs::for('unit-led.create', function (BreadcrumbTrail $trail, $unitId) {
+//     // Kirimkan $unitId ke parent, karena parent membutuhkannya
+//     $trail->parent('unit-led.index-by-ap', $unitId); 
+//     // Route 'create' tidak butuh parameter
+//     $trail->push('Tambah Loss Event Anak Perusahaan', route('unit-led.create')); 
+// });
+
+// // Periode Anak Perusahaan > Risk Register Anak Perusahaan > Kamus Risiko Unit
+// Breadcrumbs::for('kamus-risiko-unit.index', function (BreadcrumbTrail $trail) {
+//     $trail->parent('risk-register-ap.index');
+//     $trail->push('Kamus Risiko Anak Perusahaan', route('kamus-risiko-unit.index'));
+// });
+
 // Project Periode List
 Breadcrumbs::for('project-periode-list.index', function (BreadcrumbTrail $trail) {
     $trail->push('Project List', route('project-periode-list.index'));
