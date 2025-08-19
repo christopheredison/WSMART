@@ -26,11 +26,30 @@
                 </div>
                 <div class="card-body">
                     <div class="row g-3 gx-md-5">
+                        {{--
                         <div class="col-md-12">
                             <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko</label>
                                 <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
                                     value="{{ old('target_capaian_kinerja') }}" placeholder="Sasaran Risiko" required></textarea>
+                            </div>
+                        </div>
+                        --}}
+                        <div class="col-md-12">
+                            <div class="form-group d-lg-flex">
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko</label>
+                                <div class="w-100">
+                                    <select class="form-select select2" id="sasaran_proyek_id" name="sasaran_proyek_id">
+                                        <option value="">Pilih Sasaran Risiko</option>
+                                        @foreach($sasaranProyeks as $sasaranProyek)
+                                            <option value="{{ $sasaranProyek->id }}" data-kpi="{{ $sasaranProyek->kpi_desc }}">{{ $sasaranProyek->kpi_desc }}</option>
+                                        @endforeach
+                                        <option value="other">Sasaran Lainnya</option>
+                                    </select>
+                                    <textarea class="form-control mt-2 d-none" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
+                                        placeholder="Masukkan Sasaran Risiko Lainnya"></textarea>
+                                    <input type="hidden" id="kpi_desc_selected" name="kpi_desc_selected">
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-12">
@@ -311,6 +330,33 @@
     }
 
     $(document).ready(function() {
+        $('.select2').select2({
+            width: '100%',
+            placeholder: 'Pilih Sasaran Risiko'
+        });
+
+        // Handle perubahan pada dropdown sasaran_proyek_id
+        $('#sasaran_proyek_id').on('change', function() {
+            const selectedValue = $(this).val();
+            const targetTextarea = $('#target_capaian_kinerja');
+            const kpiDescSelected = $('#kpi_desc_selected');
+
+            if (selectedValue === 'other') {
+                // Jika opsi "Lainnya" dipilih, tampilkan textarea
+                targetTextarea.removeClass('d-none').attr('required', true);
+                kpiDescSelected.val('');
+            } else if (selectedValue) {
+                // Jika opsi lain dipilih, sembunyikan textarea dan isi dengan nilai dari data-kpi
+                const kpiDesc = $(this).find('option:selected').data('kpi');
+                targetTextarea.addClass('d-none').attr('required', false);
+                kpiDescSelected.val(kpiDesc);
+            } else {
+                // Jika tidak ada opsi yang dipilih
+                targetTextarea.addClass('d-none').attr('required', false);
+                kpiDescSelected.val('');
+            }
+        });
+
         try {
             const urlParams = new URLSearchParams(window.location.search);            
             const penyebabRisikoFromUrl = urlParams.get('penyebab_risiko');

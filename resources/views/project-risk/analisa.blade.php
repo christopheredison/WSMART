@@ -87,8 +87,7 @@
                         <label>Kategori Dampak</label>
                         {{ Form::select('kategori_dampak', 
                             [ 
-                                \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF => 'Kuantitatif', 
-                                \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF => 'Kualitatif' 
+                                \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF => 'Kuantitatif'
                             ],  
                             $analisa->kategori_dampak ?? \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF, 
                             ['id' => 'kategoriDampak', 'placeholder' => 'Pilih kategori Dampak', 'class' => 'form-select', 'required' => true]

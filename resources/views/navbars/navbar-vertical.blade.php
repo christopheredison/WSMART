@@ -42,31 +42,45 @@
           <ul
             class="nav collapse {{ $shouldDashboardOpen ? 'show' : '' }} {{ request()->is('dashboard-unit') || request()->is('dashboard-proyek') || request()->is('dashboard-anper') || request()->is('dashboard-kri-unit') || request()->is('dashboard-kri-project') ? 'show' : '' }}"
             id="dashboard">
+            @can('corporate_dashboard_menu')
             <li class="nav-item">
               <a class="nav-link {{ request()->is('dashboard-corporate') ? 'active' : '' }}" href="/dashboard-corporate">
                 <span class="nav-link-text">Corporate</span>
               </a>
             </li>
+            @endcan
+
+            @can('unit_dashboard_menu')
             <li class="nav-item">
               <a class="nav-link {{ request()->is('dashboard-unit') ? 'active' : '' }}" href="/dashboard-unit">
-                <span class="nav-link-text">Unit</span>
+                <span class="nav-link-text">Divisi</span>
               </a>
             </li>
+            @endcan
+
+            @can('proyek_dashboard_menu')
             <li class="nav-item"><a class="nav-link {{ request()->is('dashboard-proyek') ? 'active' : '' }}"
                 href="/dashboard-proyek">
                 <span class="nav-link-text">Proyek</span>
               </a>
             </li>
+            @endcan
+
+            @can('ap_dashboard_menu')
             <li class="nav-item">
               <a class="nav-link {{ request()->is('dashboard-anper') ? 'active' : '' }} " href="/dashboard-anper">
                 <span class="nav-link-text">Anak Perusahaan</span>
               </a>
             </li>
+            @endcan
+
+            @can('kri_dashboard_menu')
             <li class="nav-item">
               <a class="nav-link {{ request()->is('dashboard-kri-unit') ? 'active' : '' }} " href="/dashboard-kri-unit">
                 <span class="nav-link-text">KRI Unit</span>
               </a>
             </li>
+            @endcan
           </ul>
         </li>
         <!-- Dashboard Menu End -->
@@ -81,6 +95,8 @@
           </a>
         </li>
         @endcan
+
+        @can('unit_menu')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->is('risk-register-unit') ? 'active' : '' }}" href="/risk-register-unit/periods"
             role="button" data-bs-toggle="" aria-expanded="false">
@@ -110,7 +126,9 @@
             </span>
           </a>
         </li>
+        @endcan
 
+        @can('proyek_menu')
         <!-- Ranking Risiko Menu Start -->
         @can('project_periode_list')
         <li class="nav-item single-indicator">
@@ -148,6 +166,9 @@
         </li>
         @endcan
 
+        @endcan
+        
+        @can('rmd_menu')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('metrik-strategi-risiko.index') ? 'active' : '' }}" href="{{route('metrik-strategi-risiko.index')}}" role="button"
             data-bs-toggle="" aria-expanded="false">
@@ -195,7 +216,8 @@
             </span>
           </a>
         </li>
-
+        @endcan 
+        
         @can('manajemen_master')
         <div class="row navbar-vertical-label-wrapper">
           <div class="col-auto navbar-vertical-label">
