@@ -46,6 +46,7 @@ class LossEventProject extends Model
         'biaya_risiko_inheren',
         'biaya_upaya_perbaikan',
         'hasil_perbaikan',
+        'version',
     ];
 
     public function projectSektor()
@@ -85,5 +86,10 @@ class LossEventProject extends Model
     public function unitPenanggungJawabJabatan()
     {
         return $this->belongsTo(Jabatan::class, 'unit_penanggung_jawab_jabatan_id');
+    }
+
+    public function penyebabRisikoProjectLeds()
+    {
+        return $this->hasMany(PenyebabRisikoProjectLed::class, 'loss_event_project_id');
     }
 }

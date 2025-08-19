@@ -5,12 +5,14 @@
         title="View Data">
         <i class="bx bx-show"></i>
     </a>
-    <a href="{{ route('project-led.edit', $row->id) }}" 
-        class="btn btn-sm btn-info" 
-        data-bs-toggle="tooltip" 
-        title="Edit Data">
-        <i class="bx bx-edit"></i>
-    </a>
+    @if ($row->version > 0) 
+      <a href="{{ route('project-led.edit', ['project' => $row->project_id ,'id' => $row->id]) }}" 
+          class="btn btn-sm btn-info" 
+          data-bs-toggle="tooltip" 
+          title="Edit Data">
+          <i class="bx bx-edit"></i>
+      </a>
+    @endif
     <button class="btn btn-sm btn-danger" 
         onclick="deleteData({{ $row->id }})" 
         data-bs-toggle="tooltip" 

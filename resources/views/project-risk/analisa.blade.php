@@ -102,6 +102,7 @@
                             </button>
                         </div>
                         {{ Form::select('area_dampak', \App\Models\AreaDampak::project()->get()->pluck('title', 'id'),  $analisa->area_dampak, ['placeholder' => 'Pilih area Dampak', 'class' => 'form-select', 'required' => true, 'id' => 'area_dampak']) }}
+                        <input type="hidden" name="skala_dampak_hidden" id="skala_dampak_hidden" value="{{ $analisa->skala_dampak }}">
                     </div>
                     <div class="col-md-4" id="div_risk_limit">
                         <label>Risk Limit</label>
@@ -548,6 +549,32 @@ $(document).ready(function() {
         });
     });
 
+    $('#skala_dampak').on('change', function () {
+        if ($('#kategoriDampak').val() !== '{{ \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF }}') {
+            return;
+        }
+
+        const selectedSkalaDampak = parseInt($(this).val());
+        const $skalaDampakResidual = $('#skala_dampak_residual');
+        const currentValueResidual = parseInt($skalaDampakResidual.val());
+
+        if (isNaN(selectedSkalaDampak)) {
+            $skalaDampakResidual.find('option').prop('disabled', false);
+            return;
+        }
+
+        if (currentValueResidual > selectedSkalaDampak) {
+            $skalaDampakResidual.val('').trigger('change');
+        }
+        
+        $skalaDampakResidual.find('option').each(function () {
+            if (!$(this).val()) return;
+
+            const optionValue = parseInt($(this).val());
+            $(this).prop('disabled', optionValue > selectedSkalaDampak);
+        });
+    });
+
     // Event listener untuk dropdown kategori dampak
     $('#kategoriDampak').on('change', function () {
         const selectedValue = $(this).val(); // Ambil nilai yang dipilih
@@ -590,6 +617,8 @@ $(document).ready(function() {
             $('#asumsi_perhitungan_dampak').prop('required', false);
             $('#asumsi_perhitungan_dampak_residual').prop('required', false);
         }
+
+        $('#skala_dampak').trigger('change');
     });
 
     // Trigger perubahan awal untuk set label saat halaman dimuat
@@ -726,10 +755,15 @@ $(document).ready(function() {
         var nilaiDampak = parseRupiahToNumber($('#nilai_dampak').val()); // Ambil nilai dampak tanpa format
         var nilaiResidual = parseRupiahToNumber($(this).val()); // Ambil nilai dampak residual tanpa format
 
-        console.log(nilaiDampak);
+        // console.log(nilaiDampak);
 
         if (nilaiResidual > nilaiDampak) {
-            alert('Nilai Dampak Residual tidak boleh lebih besar dari Nilai Dampak (Maksimal Sama)!');
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Nilai Dampak Residual tidak boleh lebih besar dari Nilai Dampak Inheren.',
+                icon: 'warning',
+                confirmButtonText: 'Mengerti'
+            });
             $(this).val($('#nilai_dampak').val()); // Set nilainya sama dengan nilai dampak
         }
     });
@@ -737,6 +771,52 @@ $(document).ready(function() {
     // Panggil fungsi saat halaman pertama kali dimuat
     updateSkalaDampak();
 
+    $('[name="nilai_probabilitas"], [name="nilai_probabilitas_residual"]').on('input change blur', function() {
+        const input = $(this);
+        const isResidual = input.attr('name') === 'nilai_probabilitas_residual';
+
+        const maxValue = 100;
+        let currentValue = parseFloat(input.val());
+
+        if (!isNaN(currentValue) && currentValue > maxValue) {
+            input.val(maxValue);
+            input.trigger('change'); 
+        }
+
+        const nilaiProbabilitasInput = $('[name="nilai_probabilitas"]');
+        const nilaiProbabilitasResidualInput = $('[name="nilai_probabilitas_residual"]');
+        
+        const nilaiProbabilitas = parseFloat(nilaiProbabilitasInput.val()) || 0;
+        const nilaiResidual = parseFloat(nilaiProbabilitasResidualInput.val()) || 0;
+
+        if (isResidual && nilaiProbabilitasResidualInput.val() !== '' && nilaiResidual > nilaiProbabilitas) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Nilai Probabilitas Residual tidak boleh lebih besar dari Nilai Probabilitas Inherent.',
+                icon: 'warning',
+                confirmButtonText: 'Mengerti'
+            }).then(() => {
+                nilaiProbabilitasResidualInput.val(nilaiProbabilitas).trigger('change');
+                nilaiProbabilitasResidualInput.focus();
+            });
+        }
+
+        if (!isResidual) {
+            validateProbabilitasResidual();
+        }
+    });
+
+    // Fungsi pembantu untuk dipanggil saat nilai inherent berubah
+    function validateProbabilitasResidual() {
+        const nilaiProbabilitasInput = $('[name="nilai_probabilitas"]');
+        const nilaiProbabilitasResidualInput = $('[name="nilai_probabilitas_residual"]');
+        const nilaiProbabilitas = parseFloat(nilaiProbabilitasInput.val()) || 0;
+        const nilaiResidual = parseFloat(nilaiProbabilitasResidualInput.val()) || 0;
+
+        if (nilaiProbabilitasResidualInput.val() !== '' && nilaiResidual > nilaiProbabilitas) {
+            nilaiProbabilitasResidualInput.val(nilaiProbabilitas).trigger('change');
+        }
+    }
 
     $('#btnCalculatePoisson').on('click', function() {
         const $button = $(this);

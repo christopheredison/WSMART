@@ -300,6 +300,14 @@
                             </div>
                         </div>
                     </div>
+                    {{-- <div class="col-12">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">WBS</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko->wbs ?? '-' }}
+                            </div>
+                        </div>
+                    </div> --}}
                 </div>
             </div>
         </div>

@@ -1,6 +1,38 @@
 @extends('layouts.default')
 @section('dashboard')
     @include('partials.success-message')
+    @if(session('import_summary'))
+        @php $summary = session('import_summary'); @endphp
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <h4 class="alert-heading">Ringkasan Import</h4>
+            <p>
+                - <strong>Berhasil:</strong> {{ $summary['success'] }} baris <br>
+                - <strong>Dilewati:</strong> {{ $summary['skipped'] }} baris <br>
+                - <strong>Gagal:</strong> {{ $summary['failed'] }} baris
+            </p>
+
+            @if(!empty($summary['skipped_rows']))
+                <hr>
+                <h6>Detail Baris yang Dilewati:</h6>
+                <ul class="mb-0 small" style="padding-left: 20px;"> 
+                    @foreach($summary['skipped_rows'] as $skipped_info)
+                        <li>{{ $skipped_info }}</li>
+                    @endforeach
+                </ul>
+            @endif
+            
+            @if(!empty($summary['failed_rows']))
+                <hr>
+                <h6>Detail Kegagalan:</h6>
+                <ul class="mb-0 small" style="padding-left: 20px;"> 
+                    @foreach($summary['failed_rows'] as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            @endif
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -11,7 +43,13 @@
                                 @include('partials.icon-layer')
                             </div>
                         </div>
-                        <h2 class="h3">Data {!! $indexTitle ?? $resourceName !!}</h2>
+                        <div>
+                          <h2 class="h3">Data {!! $indexTitle ?? $resourceName !!}</h2>
+                          @if (!empty($indexSubtitle))
+                              <div class="ff-preheading mb-0 mt-1">{{ $indexSubtitle }}</div>
+                          @endif
+                        </div>
+                        <div class="ms-auto d-flex align-items-center gap-2">
                         @if($createType && \Gate::check( $basePermission . '_create'))
                             @if ($createType == 'modal')
                                 @if($createFields)
@@ -52,6 +90,23 @@
                                 </div>
                             @endif
                         @endif
+                        @if (!empty($importConfig))
+                          <div id="bulk-select-replace-element" class="col-auto ms-auto">
+                            <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#importDataModal">
+                              <span class="bx bx-upload"></span>
+                              <span class="ms-1">{{ $importConfig['buttonText'] ?? 'Import Data' }}</span>
+                            </button>
+                          </div>
+                        @endif
+                        @if (!empty($extraViewData['showKamusRisikoButton']))
+                          <div class="col-auto ms-auto">
+                            <a href="{{ route('kamus-risiko-project.index') }}" class="btn btn-outline-danger btn-sm">
+                              <span class="bx bx-book-bookmark"></span>
+                              <span class="ms-1">Kamus Risiko</span>
+                            </a>
+                          </div>
+                        @endif
+                        </div>
                     </div>
                 </div>
 
@@ -133,6 +188,10 @@
     @if ($editFields)
     @include('master.basic-crud._modal_edit', ['fields' => $editFields, 'action' => route($baseRoute . 'update', array_merge($baseRouteParams ?? [], [':id']))])
     @endif
+
+    @if (!empty($importConfig))
+    @include('project-risk._modal_import_tender', ['importConfig' => $importConfig])
+    @endif
 @endsection
 
 @push('styles')
@@ -146,6 +205,21 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
+@php
+    $hasChangeToLedAction = collect($tableActions ?? [])->contains('action', 'change_to_led');
+@endphp
+
+@if($hasChangeToLedAction)
+    const ledCreateRoute = "{{ route('projects.loss-events.create', ['project' => request()->route('project'), 'risk' => ':risk_id']) }}";
+@endif
+
+@php
+    $hasChangeToLedUnitAction = collect($tableActions ?? [])->contains('action', 'change_to_led_unit');
+@endphp
+
+@if($hasChangeToLedUnitAction)
+    const ledCreateRoute = "{{ route('risk-register-unit.loss-events.create', ['riskRegister' => ':riskRegister']) }}";
+@endif
 const fetchedData = [];
 $(document).ready(function() {
     const datatableColumns = [
@@ -260,7 +334,7 @@ $(document).ready(function() {
         const action = $(this).data('action');
         const id = $(this).data('id');
         switch (action) {
-            case 'edit_data':
+            case 'edit_data': {
                 $('#modalEdit').modal('show');
                 const formEdit = $('#formEdit');
                 formEdit.data('id', id);
@@ -272,8 +346,9 @@ $(document).ready(function() {
                 }
                 @endforeach
                 break;
+            }
             @if(\Route::has($baseRoute . 'destroy'))
-            case 'delete_data':
+            case 'delete_data': {
                 Swal.fire({
                     title: "Apakah Anda yakin?",
                     text: "Data yang dihapus tidak dapat dikembalikan!",
@@ -313,9 +388,10 @@ $(document).ready(function() {
                     }
                 });
                 break;
+            }
             @endif
             @if(\Route::has($baseRoute . 'store'))
-            case 'sync_data':
+            case 'sync_data': {
                 Swal.fire({
                     title: "Apakah Anda yakin?",
                     text: "Proses sinkronsi akan menambahkan data baru, memperbarui data yang sudah ada, dan menghapus data yang tidak ada!",
@@ -365,7 +441,60 @@ $(document).ready(function() {
                     }
                 });
                 break;
+            }
             @endif
+            case 'change_to_led': {
+                let label = 'Apakah Risiko ini terjadi dan menjadi Loss Event?';
+                const rowData = fetchedData[id];
+                if (rowData && rowData?.peristiwa_risiko?.title) {
+                  label = `Apakah Risiko ${rowData?.peristiwa_risiko?.title} - ${rowData?.deskripsi_peristiwa_risiko} ini terjadi dan menjadi Loss Event?`;  
+                }
+                Swal.fire({
+                    title: 'Konfirmasi Perubahan',
+                    html: label,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: "Ya, Ubah ke Loss Event",
+                    cancelButtonText: "Tidak, Batal",
+                    buttonsStyling: false,
+                    customClass: {
+                        confirmButton: 'btn btn-success me-2',
+                        cancelButton: 'btn btn-danger'
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const finalUrl = ledCreateRoute.replace(':risk_id', id);
+                        window.location.href = finalUrl;
+                    }
+                });
+                break;
+            }
+            case 'change_to_led_unit': {
+                let label = 'Apakah Risiko ini terjadi dan menjadi Loss Event?';
+                const rowData = fetchedData[id];
+                if (rowData && rowData?.peristiwa_risiko) {
+                  label = `Apakah Risiko ${rowData?.peristiwa_risiko} - ${rowData?.deskripsi_peristiwa_risiko} ini terjadi dan menjadi Loss Event?`;  
+                }
+                Swal.fire({
+                    title: 'Konfirmasi Perubahan',
+                    html: label,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: "Ya, Ubah ke Loss Event",
+                    cancelButtonText: "Tidak, Batal",
+                    buttonsStyling: false,
+                    customClass: {
+                        confirmButton: 'btn btn-success me-2',
+                        cancelButton: 'btn btn-danger'
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const finalUrl = ledCreateRoute.replace(':riskRegister', id);
+                        window.location.href = finalUrl;
+                    }
+                });
+                break;
+            }
         }
     });
 
@@ -435,6 +564,73 @@ $(document).ready(function() {
         @endforeach
     });
     @endif
+
+    $('#import-form').on('submit', function() {
+        $('#submit-import-btn').prop('disabled', true);
+        $('#import-loading').removeClass('d-none');
+        $('#import-text').text('Loading...');
+    });
+
+    $('#download-template-btn').on('click', function() {
+        const button = $(this);
+        const url = button.data('url');
+
+        showDownloadLoading();
+
+        $.ajax({
+            url: url,
+            type: 'GET',
+            xhrFields: {
+                responseType: 'blob'
+            },
+            success: function(data, status, xhr) {
+                hideDownloadLoading();
+
+                const disposition = xhr.getResponseHeader('Content-Disposition');
+                let filename = 'template.xlsx';
+                if (disposition && disposition.indexOf('attachment') !== -1) {
+                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                    const matches = filenameRegex.exec(disposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+
+                const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = downloadUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(downloadUrl);
+                document.body.removeChild(a);
+            },
+            error: function(xhr, status, error) {
+                hideDownloadLoading();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal Mengunduh',
+                    text: 'Terjadi kesalahan saat menyiapkan file template. Silakan coba lagi.',
+                });
+            }
+        });
+    });
+
+    function showDownloadLoading() {
+        $('#download-template-btn').prop('disabled', true);
+        $('#download-spinner').removeClass('d-none');
+        $('#download-icon').addClass('d-none');
+        $('#download-text').text('Menyiapkan...');
+    }
+
+    function hideDownloadLoading() {
+        $('#download-template-btn').prop('disabled', false);
+        $('#download-spinner').addClass('d-none');
+        $('#download-icon').removeClass('d-none');
+        $('#download-text').text('Download Template');
+    }
 });
 </script>
 @if ($extraScripts)

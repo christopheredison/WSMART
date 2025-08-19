@@ -23,7 +23,7 @@
           <div class="row g-3">
             <div class="col-md-5">
               <label for="periode_id" class="form-label">Periode</label>
-              <select name="periode_id" id="periode_id" class="form-select" required>
+              <select name="periode_id" id="periode_id" class="form-select select2" required>
                 <option value="">Pilih Periode...</option>
                 @foreach ($periodes as $periode)
                   <option value="{{ $periode->id }}">{{ $periode->tahun }}</option>
@@ -32,7 +32,7 @@
             </div>
             <div class="col-md-5">
               <label for="unit_id" class="form-label">Divisi / Unit</label>
-              <select name="unit_id" id="unit_id" class="form-select" required>
+              <select name="unit_id" id="unit_id" class="form-select select2" required>
                 <option value="">Pilih Divisi...</option>
                 @if (is_iterable($units))
                   @foreach ($units as $unit)

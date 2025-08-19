@@ -47,7 +47,7 @@
 @can('risk_register_delete')
   <button type="button" class="btn-input-icon" data-bs-toggle="modal"
     data-bs-target="#modalDelete{{ $item->id }}">
-    <span class="bx bx-trash" data-bs-toggle="tooltip" title="Delete"></span>
+    <span class="bx bx-trash text-danger" data-bs-toggle="tooltip" title="Delete"></span>
   </button>
   @php
   $itemId = $item->id;

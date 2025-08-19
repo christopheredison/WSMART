@@ -45,7 +45,7 @@
                         <div class="col-12">
                             <div class="form-group d-lg-flex">
                                 <div class="form-floating flex-grow-1">
-                                    <select class="form-select" id="jenis_risiko_id" name="jenis_risiko_id" required>
+                                    <select class="form-select select2" id="jenis_risiko_id" name="jenis_risiko_id" required>
                                         <option value="" selected disabled>Pilih Jenis Risiko</option>
                                         @foreach($jenisRisiko as $id => $title)
                                             @php
@@ -74,6 +74,13 @@
                                 <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</label>
                             </div>
                         </div>
+                        {{-- <div class="col-12">
+                            <div class="form-group form-floating">
+                                <textarea class="form-control" id="wbs" name="wbs" rows="3"
+                                    value="{{ old('wbs') }}" placeholder="WBS" required></textarea>
+                                <label for="wbs">WBS</label>
+                            </div>
+                        </div> --}}
                     </div>
                 </div>
             </div>
@@ -321,6 +328,20 @@
     }
 
     $(document).ready(function() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);            
+            const penyebabRisikoFromUrl = urlParams.get('penyebab_risiko');
+
+            if (penyebabRisikoFromUrl) {
+                const firstPenyebabInput = $('input[name="penyebab_risiko[]"]').first();
+                
+                if (firstPenyebabInput.length) {
+                    firstPenyebabInput.val(penyebabRisikoFromUrl);
+                }
+            }
+        } catch (e) {
+            console.error("Gagal membaca parameter URL:", e);
+        }
         const masterKris = @json($masterKris->keyBy('id'));
         const kontrolExistings = @json($kontrolEksistings->keyBy('id'));
         // Add Column Penyebab Risiko
