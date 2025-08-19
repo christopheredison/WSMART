@@ -447,9 +447,6 @@
             <div class="col-auto order-1">
                 <a href="{{ route('risk-register-unit.monitorings.index', ['period' => request()->route('period')]) }}" class="btn btn-outline-secondary">Batal</a>
             </div>
-            <div class="col-auto order-3 px-0 px-md-1 d-flex">
-                <button type="button" data-action="save" class="btn btn-primary ms-auto btn-action">Simpan</button>
-            </div>
         </div>
     </div>
 

@@ -197,7 +197,7 @@
                             @foreach($risikos as $risiko)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td>{{ $risiko->peristiwaRisiko?->title ?? '-' }}</td>
+                                <td>{{ $risiko->peristiwa_risiko ?? '-' }}</td>
                                 <td>{{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}</td>
                                 <td>{{ $risiko->riskAnalysis?->nilai_dampak ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak, 0, ',', '.') : '-' }}</td>
                                 <td>
