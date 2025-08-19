@@ -61,7 +61,8 @@ use App\Http\Controllers\PenilaianRMIController;
 use App\Http\Controllers\RiskRegisterUnitController;
 use App\Http\Controllers\RiskRegisterUnitMonitoringController;
 use App\Http\Controllers\UnitLEDController;
-
+use App\Http\Controllers\KamusRisikoProjectController;
+use App\Http\Controllers\KamusRisikoUnitController;
 
 
 /*
@@ -375,8 +376,12 @@ Route::group(['middleware' => ['auth']], function() {
     Route::post('projects/{project}/risks/{risk}/rencana', [ProjectRiskController::class, 'doRencana'])->name('projects.risks.do-rencana')->middleware('can:project_risk_edit');
     Route::get('projects/{project}/risks/{risk}/analisa', [ProjectRiskController::class, 'analisa'])->name('projects.risks.analisa')->middleware('can:project_risk_edit');
     Route::post('projects/{project}/risks/{risk}/analisa', [ProjectRiskController::class, 'doAnalisa'])->name('projects.risks.do-analisa')->middleware('can:project_risk_edit');
+    Route::post('projects/{project}/risks/import-tender', [ProjectRiskController::class, 'importTender'])->name('projects.risks.import-tender');
+    
     Route::resource('projects/{project}/monitorings', ProjectRiskMonitoringController::class)->names('projects.monitorings')->only(['index', 'show', 'edit', 'update']);
     Route::resource('projects-monitorings/{monitoring}/q-{quarter}/documents', ProjectRiskMonitoringDocumentController::class)->names('projects.monitorings.documents')->only(['index', 'show', 'store', 'destroy']);
+    Route::get('projects/{project}/risks/{risk}/loss-events/create', [ProjectLEDController::class, 'riskChangeToLed'])->name('projects.loss-events.create')->middleware('can:project_risk_edit');
+    Route::post('projects/{project}/risks/{risk}/loss-events', [ProjectLEDController::class, 'riskChangeToLedStore'])->name('projects.loss-events.store')->middleware('can:project_risk_edit');
     Route::resource('master-kri', MasterKriController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-periode-list', ProjectPeriodeListController::class)->except(['create', 'edit']);
     Route::resource('jenis-kontrol-eksisting', JenisKontrolEksistingController::class)->except(['create', 'show', 'edit']);
@@ -392,13 +397,16 @@ Route::group(['middleware' => ['auth']], function() {
     Route::resource('question', QuestionController::class)->except(['create', 'edit']);
     Route::resource('kuesioner', KuesionerController::class)->except(['create', 'store', 'destroy']);
 
-    Route::get('project-led/create', [ProjectLEDController::class, 'create'])->name('project-led.create');
+    Route::get('project-led/{project}/create', [ProjectLEDController::class, 'create'])->name('project-led.create');
     Route::get('project-led/{id}', [ProjectLEDController::class, 'show'])->name('project-led.show');
-    Route::get('project-led/{id}/edit', [ProjectLEDController::class, 'edit'])->name('project-led.edit');
+    Route::get('project-led/{project}/edit/{id}', [ProjectLEDController::class, 'edit'])->name('project-led.edit');
     Route::post('project-led', [ProjectLEDController::class, 'store'])->name('project-led.store');
     Route::delete('project-led/{id}', [ProjectLEDController::class, 'destroy'])->name('project-led.destroy');
     Route::resource('project-led', ProjectLEDController::class)->except(['create', 'show', 'edit']);
     Route::get('project-leds/{projectId}', [ProjectLEDController::class, 'index'])->name('project-led.index-by-project');
+    Route::get('kamus-risiko-project', [KamusRisikoProjectController::class, 'index'])->name('kamus-risiko-project.index');
+    Route::post('kamus-risiko-project/add-risk', [KamusRisikoProjectController::class, 'addRisk'])->name('kamus-risiko-project.add-risk');
+    Route::post('kamus-risiko-project/export', [KamusRisikoProjectController::class, 'exportExcel'])->name('kamus-risiko-project.export');
 
     Route::get('/risk-map-setting', [RiskMapController::class, 'index'])->name('risk-map-setting.index');
     Route::put('/risk-map-setting/update', [RiskMapController::class, 'update'])->name('risk-map-setting.update');
@@ -468,13 +476,18 @@ Route::group(['middleware' => ['auth']], function() {
     Route::delete('/sasaran-strategi/{sasaran}', [SasaranStrategiBisnisController::class, 'destroy'])->name('sasaran-strategi.destroy');
     Route::put('/strategi-bisnis/{strategiBisnis}', [SasaranStrategiBisnisController::class, 'updateStatus'])->name('strategi-bisnis.update-status');
 
-    Route::get('unit-led/create', [UnitLEDController::class, 'create'])->name('unit-led.create');
-    Route::get('unit-led/{id}', [UnitLEDController::class, 'show'])->name('unit-led.show');
-    Route::get('unit-led/{id}/edit', [UnitLEDController::class, 'edit'])->name('unit-led.edit');
+    Route::get('unit-led/', [UnitLEDController::class, 'index'])->name('unit-led.index');
+    Route::get('unit-led/{periode}', [UnitLEDController::class, 'index'])->name('unit-led.index-by-periode');
+    Route::get('unit-led/{periode}/create', [UnitLEDController::class, 'create'])->name('unit-led.create');
     Route::post('unit-led', [UnitLEDController::class, 'store'])->name('unit-led.store');
+    Route::get('unit-led/{periode}/{id}/show', [UnitLEDController::class, 'show'])->name('unit-led.show');
+    Route::get('unit-led/{periode}/{id}/edit', [UnitLEDController::class, 'edit'])->name('unit-led.edit');
+    Route::put('unit-led/{id}', [UnitLEDController::class, 'update'])->name('unit-led.update');
     Route::delete('unit-led/{id}', [UnitLEDController::class, 'destroy'])->name('unit-led.destroy');
-    Route::resource('unit-led', UnitLEDController::class)->except(['create', 'show', 'edit']);
-    Route::get('unit-leds/{unitId}', [UnitLEDController::class, 'index'])->name('unit-led.index-by-unit');
+
+    Route::get('kamus-risiko-unit', [KamusRisikoUnitController::class, 'index'])->name('kamus-risiko-unit.index');
+    Route::post('kamus-risiko-unit/add-risk', [KamusRisikoUnitController::class, 'addRisk'])->name('kamus-risiko-unit.add-risk');
+    Route::get('kamus-risiko-unit/export', [KamusRisikoUnitController::class, 'exportExcel'])->name('kamus-risiko-unit.export');
 
     Route::middleware('can:backups.index')->resource('backups', BackupController::class);
 	Route::post('backups/restore', [BackupController::class, 'restore'])->name('backups.restore');
@@ -528,6 +541,9 @@ Route::prefix('risk-register-unit')->group(function () {
     Route::post('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'doAnalisa'])->name('risk-register-unit.do-analisa');
 
     Route::post('/{riskRegister}/verifikasi', [RiskRegisterUnitController::class, 'verifikasi'])->name('risk-register-unit.verifikasi');
+
+    Route::get('/{riskRegister}/loss-events/create', [UnitLEDController::class, 'riskChangeToLed'])->name('risk-register-unit.loss-events.create')->middleware('can:risk_register_list');
+    Route::post('/{riskRegister}/loss-events', [UnitLEDController::class, 'riskChangeToLedStore'])->name('risk-register-unit.loss-events.store')->middleware('can:risk_register_list');
 });
 
 Route::group(['prefix' => 'ict', 'as' => 'ict.'], function () {
@@ -549,3 +565,4 @@ Route::post('corporate-risk/update-to-corporate', [App\Http\Controllers\Corporat
 Route::post('corporate-risk/ranking-risiko', [App\Http\Controllers\CorporateRiskController::class, 'rankingRisiko'])->name('corporate-risk.ranking-risiko');
 Route::post('corporate-risk/confirm-corporate', [App\Http\Controllers\CorporateRiskController::class, 'confirmCorporateRisks'])->name('corporate-risk.confirm-corporate');
 Route::post('corporate-risk/revert-from-corporate', [App\Http\Controllers\CorporateRiskController::class, 'revertFromCorporate'])->name('corporate-risk.revert-from-corporate');
+Route::get('/download-tender-template', [ProjectRiskController::class, 'downloadTenderTemplate'])->name('download-tender-template');

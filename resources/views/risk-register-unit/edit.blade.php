@@ -45,7 +45,7 @@
                         <div class="col-12">
                             <div class="form-group d-lg-flex">
                                 <div class="form-floating flex-grow-1">
-                                    <select class="form-select" id="jenis_risiko_id" name="jenis_risiko_id" required>
+                                    <select class="form-select select2" id="jenis_risiko_id" name="jenis_risiko_id" required>
                                         <option value="" selected disabled>Pilih Jenis Risiko</option>
                                         @foreach($jenisRisiko as $id => $title)
                                             @php
@@ -73,6 +73,12 @@
                                 <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</label>
                             </div>
                         </div>
+                        {{-- <div class="col-12">
+                            <div class="form-group form-floating">
+                                <textarea class="form-control" id="wbs" name="wbs" rows="3" placeholder="WBS" required>{{ $identifikasiRisiko->wbs }}</textarea>
+                                <label for="wbs">WBS</label>
+                            </div>
+                        </div> --}}
                     </div>
                 </div>
             </div>
@@ -80,7 +86,7 @@
         <!-- ::DataRisiko End -->
         
         <!-- ::Peristiwa Risiko Start -->
-        <div class="col-12">
+        {{-- <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
@@ -107,7 +113,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> --}}
         <!-- ::Peristiwa Risiko End -->
         
         <!-- ::Penyebab Risiko Start -->
@@ -116,7 +122,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">3</span>
+                            <span class="nav-item-circle">2</span>
                         </span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
@@ -125,7 +131,7 @@
                     <div class="row gy-3 gx-xxl-6 mb-3">
                         <div class="col-12">
                             <div class="form-group d-lg-flex mb-4">
-                                <label class="form-label label-lg-start col-lg-5 col-xl-4">Penyebab Risiko</label>
+                                {{-- <label class="form-label label-lg-start col-lg-5 col-xl-4">Penyebab Risiko</label> --}}
                                 <div class="w-100">
                                     <div id="penyebab-risiko-body">
                                         @forelse($identifikasiRisiko->penyebabRisiko as $index => $penyebab)
@@ -196,7 +202,7 @@
                     <div class="row gy-3 gx-xxl-6 mb-3">
                         <div class="col-12">
                             <div class="form-group d-lg-flex mb-4">
-                                <label class="form-label label-lg-start col-lg-5 col-xl-4">Key Risk Indicator</label>
+                                {{-- <label class="form-label label-lg-start col-lg-5 col-xl-4">Key Risk Indicator</label> --}}
                                 <div class="w-100">
                                     <div id="kri-body">
                                         @forelse($identifikasiRisiko->kris as $index => $kri)

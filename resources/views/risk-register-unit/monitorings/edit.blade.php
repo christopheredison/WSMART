@@ -168,28 +168,36 @@
                         </div>
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
-                                <input class="form-control update-trigger inputmask-rupiah" type="text" id="realisasi_nilai_dampak" name="realisasi_nilai_dampak"
-                                value="{{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}"  
-                                {{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? 'disabled' : '' }}
-                                {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'max=' . $riskAnalysis->nilai_dampak : '' }}
-                                min="0"
-                                oninput="if(this.value > {{ $riskAnalysis->nilai_dampak }} && '{{ $riskAnalysis->kategori_dampak }}' === 'Kuantitatif') this.value = {{ $riskAnalysis->nilai_dampak }};"
-                                required>
+                                <input 
+                                  class="form-control update-trigger inputmask-rupiah" 
+                                  type="text" 
+                                  id="realisasi_nilai_dampak" 
+                                  name="realisasi_nilai_dampak"
+                                  value="{{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}"  
+                                  {{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? 'disabled' : '' }}
+                                  {{-- {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'max=' . $riskAnalysis->nilai_dampak : '' }} --}}
+                                  min="0"
+                                  {{-- oninput="if(this.value > {{ $riskAnalysis->nilai_dampak }} && '{{ $riskAnalysis->kategori_dampak }}' === 'Kuantitatif') this.value = {{ $riskAnalysis->nilai_dampak }};" --}}
+                                  required
+                                >
                                 <label for="">Realisasi Nilai Dampak</label>
                             </div>
                             <div class="form-floating">
                                 <input type="hidden" name="realisasi_skala_dampak" id="realisasi_skala_dampak_hidden">
-                                <select class="form-select js-select-hide-search update-trigger" name="realisasi_skala_dampak"
-                                id="realisasi_skala_dampak" {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'disabled' : '' }}>
-                                <option selected disabled>Skala Dampak</option>
-                                @foreach($skalaDampaks as $tingkat => $deskripsi)
-                                <option value="{{ $tingkat }}" 
-                                    {{ $riskMonitoring?->skala_dampak == $tingkat ? 'selected' : '' }}
-                                    {{ $tingkat > $riskAnalysis->skalaDampakObj?->tingkat ? 'disabled' : '' }}>
-                                    {{ $tingkat }} - {{ $deskripsi }}
-                                    {{ $tingkat > $riskAnalysis->skalaDampakObj?->tingkat ? '(Melebihi Skala Inherent)' : '' }}
-                                </option>
-                                @endforeach
+                                <select 
+                                  class="form-select js-select-hide-search update-trigger" 
+                                  name="realisasi_skala_dampak"
+                                  id="realisasi_skala_dampak" {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'disabled' : '' }}
+                                >
+                                  <option selected disabled>Skala Dampak</option>
+                                  @foreach($skalaDampaks as $tingkat => $deskripsi)
+                                  <option value="{{ $tingkat }}" 
+                                      {{ $riskMonitoring?->skala_dampak == $tingkat ? 'selected' : '' }}
+                                      {{ $tingkat > $riskAnalysis->skalaDampakObj?->tingkat ? 'disabled' : '' }}>
+                                      {{ $tingkat }} - {{ $deskripsi }}
+                                      {{ $tingkat > $riskAnalysis->skalaDampakObj?->tingkat ? '(Melebihi Skala Inherent)' : '' }}
+                                  </option>
+                                  @endforeach
                                 </select>
                                 <label for="">Realisasi Skala Dampak</label>
                             </div>
@@ -461,8 +469,9 @@
                 <div class="col-auto order-1">
                     <a href="{{ route('risk-register-unit.monitorings.index', ['period' => request()->route('period')]) }}" class="btn btn-outline-secondary">Batal</a>
                 </div>
-                <div class="col-auto order-3 px-0 px-md-1 d-flex">
+                <div class="col-auto order-3 px-0 px-md-1 d-flex gap-2">
                     <button type="button" data-action="save" class="btn btn-primary ms-auto btn-action">Simpan</button>
+                    <button type="button" data-action="save-and-close" class="btn btn-secondary btn-action">Simpan dan Close Risiko</button>
                 </div>
             </div>
         </div>
@@ -530,6 +539,7 @@ const perlakuanPenyebabRisikos = @json($risk->penyebabRisikos->pluck('perlakuanP
 const kriProjects = @json($risk->kris->keyBy('id'));
 const quarter = {{ $quarter }};
 const riskMonitoring = @json($riskMonitoring);
+const namaRisiko = @json($risk->peristiwa_risiko);
 
 function getSkalaProbabilitasByValue(value) {
     const skalaProbabilitases = @json($skalaProbabilitas);
@@ -587,6 +597,87 @@ function convertDateFormat(dateStr) {
   return `${day}/${month}/${year}`;
 }
 
+function validateRealisasiForm() {
+    let isValid = true;
+    let firstErrorField = null;
+
+    const fieldsToValidate = [
+        '#realisasi_nilai_dampak',
+        '#realisasi_skala_dampak',
+        '#realisasi_nilai_probabilitas'
+    ];
+
+    fieldsToValidate.forEach(function(fieldSelector) {
+        const field = $(fieldSelector);
+        field.removeClass('is-invalid');
+        field.closest('.form-floating').find('.invalid-feedback').remove();
+
+        if (field.val() === '' || field.val() === null) {
+            isValid = false;
+            field.addClass('is-invalid');
+            field.closest('.form-floating').append('<div class="invalid-feedback d-block">Field ini wajib diisi.</div>');
+
+            if (firstErrorField === null) {
+                firstErrorField = field;
+            }
+        }
+
+    });
+
+    if (!isValid && firstErrorField) {
+    $('html, body').animate({
+            scrollTop: firstErrorField.offset().top - 150 
+        }, 500);
+        
+        firstErrorField.focus();
+    }
+
+    return isValid;
+}
+
+function submitForm(isClosed) {
+    $('.dom-edited').remove();
+            
+    const formData = new FormData($('#main-form')[0]);
+    formData.append('perlakuan_penyebab_risikos', JSON.stringify(perlakuanPenyebabRisikos));
+    formData.append('kri_projects', JSON.stringify(kriProjects));
+    formData.append('quarter', quarter);
+    formData.append('_method', 'PUT');
+
+    // Append new data for isClosed
+    formData.append('is_closed', isClosed);
+
+    $.ajax({
+        url: '{{ route('risk-register-unit.monitorings.update', ['period' => request()->route('period'), 'monitoring' => request()->route('monitoring')]) }}',
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function(response) {
+            Swal.fire({
+                title: 'Berhasil',
+                text: response.message,
+                icon: 'success',
+                confirmButtonText: 'OK',
+            }).then(() => {
+                window.location.href = '{{ route('risk-register-unit.monitorings.index', ['period' => request()->route('period')]) }}';
+            });
+        },
+        error: function(xhr) {
+            let errorMessage = 'Terjadi kesalahan.';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            }
+            Swal.fire({
+                title: 'Error',
+                text: errorMessage,
+                icon: 'error',
+                confirmButtonText: 'OK',
+            });
+        }
+    });
+}
+
 $(document).ready(function() {
     // Simpan nilai skala dampak inherent dan probabilitas inherent
     const skalaDampakInherent = {{ $riskAnalysis->skalaDampakObj?->tingkat ?? 0 }};
@@ -629,62 +720,27 @@ $(document).ready(function() {
 
     $('.btn-action').on('click', function() {
         const action = $(this).data('action');
-        if (action === 'save') {
-            if (!$('#main-form')[0].checkValidity()) {
-                $('#main-form')[0].reportValidity();
+        if (action === 'save' || action === 'save-and-close') {
+            // validasi terlebih dahulu
+            if (!validateRealisasiForm()) {
                 return;
             }
 
-            // for (let i in perlakuanPenyebabRisikos) {
-            //     let perlakuanPenyebabRisiko = perlakuanPenyebabRisikos[i];
-            //     if (!perlakuanPenyebabRisiko.deskripsi_perlakuan_risiko) {
-            //         Swal.fire('Error', 'Semua update realisasi harus diisi', 'error');
-            //         return;
-            //     }
-            // }
+            const isClosing = (action === 'save-and-close');
+            const swalConfig = {
+                title: 'Konfirmasi',
+                text: isClosing 
+                    ? `Apakah Anda yakin ingin menyimpan dan menutup risiko "${namaRisiko}" ini?` 
+                    : 'Apakah Anda yakin ingin menyimpan data ini?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Lanjutkan',
+                cancelButtonText: 'Batal',
+            };
 
-            // for (let i in kriProjects) {
-            //     let kriProject = kriProjects[i];
-            //     if (!kriProject.status_kri_terkini_q{{$quarter}}) {
-            //         Swal.fire('Error', 'Semua update kri harus diisi', 'error');
-            //         return;
-            //     }
-            // }
-
-            $('.dom-edited').remove();
-            
-            const formData = new FormData($('#main-form')[0]);
-            formData.append('perlakuan_penyebab_risikos', JSON.stringify(perlakuanPenyebabRisikos));
-            formData.append('kri_projects', JSON.stringify(kriProjects));
-            formData.append('quarter', quarter);
-            formData.append('_method', 'PUT');
-            $.ajax({
-                url: '{{ route('risk-register-unit.monitorings.update', ['period' => request()->route('period'), 'monitoring' => request()->route('monitoring')]) }}',
-                type: 'POST',
-                data: formData,
-                contentType: false,
-                processData: false,
-                success: function(response) {
-                    Swal.fire({
-                        title: 'Berhasil',
-                        text: response.message,
-                        icon: 'success',
-                        confirmButtonText: 'OK',
-                    }).then(() => {
-                        window.location.href = '{{ route('risk-register-unit.monitorings.index', ['period' => request()->route('period')]) }}';
-                    });
-                },
-                error: function(xhr) {
-                    let errorMessage = 'Terjadi kesalahan.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-                    Swal.fire({
-                        title: 'Error',
-                        text: errorMessage,
-                        icon: 'error',
-                        confirmButtonText: 'OK',
-                    });
+            Swal.fire(swalConfig).then((result) => {
+                if (result.isConfirmed) {
+                    submitForm(isClosing ? 1 : 0);
                 }
             });
         } else if (action === 'update-kri') {
@@ -945,6 +1001,12 @@ $(document).ready(function() {
         const id = $('#formUpdateKri :input[name="kri_project_id"]').val();
         const nilaiKri = $('#formUpdateKri :input[name="nilai_kri"]').val();
         const statusKri = $('#formUpdateKri :input[name="status_kri"]').val();
+        const statusMap = {
+            '1': 'Aman',
+            '2': 'Waspada',
+            '3': 'Bahaya'
+        };
+        const statusText = statusMap[statusKri] || '-';
 
         // update kri
         kriProjects[id]['nilai_kri_terkini_q' + quarter] = nilaiKri;
@@ -953,7 +1015,7 @@ $(document).ready(function() {
         // update DOM
         const tr = $('#table-kri tr[data-id="' + id + '"]');
         tr.find('.display-nilai-kri').text(nilaiKri);
-        tr.find('.display-kondisi').text(statusKri);
+        tr.find('.display-kondisi').text(statusText);
 
         $('#modalUpdateKri').modal('hide');
     });
@@ -1074,7 +1136,6 @@ $(document).ready(function() {
             // Set nilai skala dampak dan trigger change event
             skalaDampakSelect.val(skala).trigger('change');
             // Disable select dan pindahkan nilai ke hidden input
-            //skalaDampakSelect.prop('disabled', true);
             skalaDampakSelect.prop('disabled', true);
             skalaDampakHidden.val(skala);
         } else {

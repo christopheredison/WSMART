@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Project;
 use App\Http\Controllers\Master\BasicCRUDController;
 use App\Models\Draft;
 use App\Models\JenisKontrolEksisting;
+use App\Models\JenisRisiko;
 use App\Models\KontrolEksisting;
 use App\Models\MasterKRI;
 use App\Models\PenilaianEfektivitasKontrol;
@@ -28,6 +29,13 @@ use App\Models\LossEventProject;
 use App\Models\Jabatan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use App\Imports\ProjectTenderImport;
+use App\Imports\TenderTemplateImport;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\DB;
 
 class ProjectRiskController extends BasicCRUDController
 {
@@ -100,8 +108,9 @@ class ProjectRiskController extends BasicCRUDController
     public function index() {
         $this->baseRouteParams = ['project' => request()->route('project')];
 
-        $projectPeriodeList = ProjectPeriodeList::findOrFail(request()->route('project'));
+        $projectPeriodeList = ProjectPeriodeList::with('project')->findOrFail(request()->route('project'));
         $user = request()->user();
+        $this->indexSubtitle = $projectPeriodeList->project->project_name;
 
         if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriodeList))) {
             abort(403);
@@ -215,6 +224,7 @@ class ProjectRiskController extends BasicCRUDController
                 'label' => '<span class="bx bx-trash text-danger"></span>',
                 'btn_icon' => true,
                 'action' => 'delete',
+                'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']),
                 'permissions' => ['project_risk_delete'],
             ];
         }
@@ -234,7 +244,7 @@ class ProjectRiskController extends BasicCRUDController
         $this->tableColumns['nilai_dampak']['render'] = <<<JS
             (data, type, row) => {
                 const formatCurrency = (value) => {
-                    if (!value) return '-';
+                    if (value === null || value === '') return '-';
                     return 'Rp ' + parseInt(value).toLocaleString('id-ID', { minimumFractionDigits: 0 });
                 };
                 return formatCurrency(row.project_risk_analisa?.nilai_dampak);
@@ -248,6 +258,14 @@ class ProjectRiskController extends BasicCRUDController
             HTML;
 
         $this->defaultOrder = [[7, 'desc']];
+
+        $this->importConfig = [
+          'buttonText' => 'Upload Risiko Tender',
+          'route' => route('projects.risks.import-tender', ['project' => $projectPeriodeList->id]),
+          'title' => 'Upload Risiko Tender dari Excel',
+          'instructions' => 'Pastikan file Excel Anda memiliki template yang sesuai.',
+          'templateUrl' => route('download-tender-template'),
+        ];
 
         return parent::index();
     }
@@ -269,10 +287,11 @@ class ProjectRiskController extends BasicCRUDController
         $masterKris = MasterKRI::get();
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
         $kontrolEksistings = KontrolEksisting::get();
+        $jenisRisikos = JenisRisiko::get();
         
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
         
-        return view('project-risk.create', compact('periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList'));
+        return view('project-risk.create', compact('periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos'));
     }
 
     public function store(Request $request)
@@ -291,12 +310,15 @@ class ProjectRiskController extends BasicCRUDController
         if ($request->action === 'save' || $request->action === 'savenext') {
             $request->validate([
                 'peristiwa_risiko_id' => 'required',
+                'kategori_risiko_id' => 'required',
+                'jenis_risiko_id' => 'required',
                 'deskripsi_peristiwa_risiko' => [
                     'required',
                     Rule::unique('project_risks')->where(function ($query) use ($project) {
                         return $query->where('project_id', $project->id);
                     })
                 ],
+                'wbs' => 'required',
                 'target_capaian_kinerja' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
                 'penilaian_efektifitas_kontrol' => 'required',
@@ -329,9 +351,10 @@ class ProjectRiskController extends BasicCRUDController
                 'penilaian_efektifitas_kontrol' => $request->penilaian_efektifitas_kontrol,
                 'perkiraan_waktu_terpapar_risiko_mulai' => $perkiraanWaktuTerpaparRisikoMulai,
                 'perkiraan_waktu_terpapar_risiko_akhir' => $perkiraanWaktuTerpaparRisikoAkhir,
-                'kategori_risiko_id' => 0,
-                'jenis_risiko_id' => 0,
+                'kategori_risiko_id' => $request->kategori_risiko_id,
+                'jenis_risiko_id' => $request->jenis_risiko_id,
                 'kontrol_eksisting' => '',
+                'wbs' => $request->wbs
             ];
 
             $projectRisk = ProjectRisk::create($toStore);
@@ -425,8 +448,9 @@ class ProjectRiskController extends BasicCRUDController
         $kontrolEksistings = KontrolEksisting::whereIn('id', $kontrolEksistingIds)->get();
         
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
+        $jenisRisikos = JenisRisiko::get();
 
-        return view('project-risk.edit', compact('projectRisk', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList'));
+        return view('project-risk.edit', compact('projectRisk', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos'));
     }
 
     public function update(Request $request, $resource)
@@ -446,7 +470,10 @@ class ProjectRiskController extends BasicCRUDController
         if ($request->action === 'save') {
             $request->validate([
                 'peristiwa_risiko_id' => 'required',
+                'kategori_risiko_id' => 'required',
+                'jenis_risiko_id' => 'required',
                 'deskripsi_peristiwa_risiko' => 'required|unique:project_risks,deskripsi_peristiwa_risiko,' . $projectRisk->id,
+                'wbs' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
                 'penilaian_efektifitas_kontrol' => 'required',
                 //'perkiraan_waktu_terpapar_risiko' => 'required',
@@ -468,6 +495,8 @@ class ProjectRiskController extends BasicCRUDController
                 'periode_id' => 0,
                 'user_id' => $user->id,
                 'project_id' => $project->id,
+                'kategori_risiko_id' => $request->kategori_risiko_id,
+                'jenis_risiko_id' => $request->jenis_risiko_id,
                 'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
                 'project_periode_list_id' => $projectPeriodeList->id,
                 'deskripsi_peristiwa_risiko' => $request->deskripsi_peristiwa_risiko,
@@ -475,6 +504,7 @@ class ProjectRiskController extends BasicCRUDController
                 'penilaian_efektifitas_kontrol' => $request->penilaian_efektifitas_kontrol,
                 'perkiraan_waktu_terpapar_risiko_mulai' => $perkiraanWaktuTerpaparRisikoMulai,
                 'perkiraan_waktu_terpapar_risiko_akhir' => $perkiraanWaktuTerpaparRisikoAkhir,
+                'wbs' => $request->wbs,
             ];
 
             $projectRisk->update($toUpdate);
@@ -555,7 +585,7 @@ class ProjectRiskController extends BasicCRUDController
             ->where('project_periode_list_id', request()->route('project'))
             ->findOrFail(request()->route('risk'));
 
-        $projectRisk->append('currentRiskMaps');
+        $projectRisk->append('currentRiskMapsMonth');
 
         $tahunMonitorings = $projectRisk->projectRiskMonitorings->pluck('tahun')->unique()->toArray();
         $tahunMonitorings[] = $projectRisk->created_at->year;
@@ -564,17 +594,21 @@ class ProjectRiskController extends BasicCRUDController
         $maxTahun = !empty($tahunMonitorings) ? max($tahunMonitorings) : date('Y');
         $tahunMonitorings = range($minTahun, $maxTahun);
         
+        $currentRiskMaps = $projectRisk->currentRiskMapsMonth;
         $formattedCurrentRiskMaps = [];
         $currentValue = $projectRisk->currentRiskMaps['inherent'] ?? null;
 
         if ($currentValue) {
             foreach ($tahunMonitorings as $tahun) {
-                for ($quarter = 1; $quarter <= 4; $quarter++) {
-                    if ($nextValue = ($projectRisk->currentRiskMaps[$tahun . '-' . $quarter] ?? null)) {
+                for ($month = 1; $month <= 12; $month++) {
+                    if ($nextValue = ($projectRisk->currentRiskMapsMonth[$tahun . '-' . $month] ?? null)) {
                         $currentValue = $nextValue;
                     }
-                    $currentValue['tahun']   = $tahun;
-                    $currentValue['quarter'] = $quarter;
+    
+                    $currentValue['tahun'] = $tahun;
+                    $currentValue['quarter'] = ceil($month / 3);
+                    $currentValue['month'] = $month;
+    
                     $formattedCurrentRiskMaps[$projectRisk->id][$tahun][] = $currentValue;
                 }
             }
@@ -626,6 +660,34 @@ class ProjectRiskController extends BasicCRUDController
             'risk_limit',
             'risk_tolerance',
         ));
+    }
+
+    public function destroy($resource) {
+        try {
+            $projectRisk = ProjectRisk::findOrFail(request()->route('risk'));
+
+            if (!Gate::check('project_risk_delete')) {
+                return response()->json([
+                    'message' => 'Anda tidak memiliki izin untuk menghapus data ini'
+                ], 403);
+            }
+
+            // $projectRisk->projectRiskAnalisas()->delete();
+            // $projectRisk->penyebabRisikoProjects()->delete();
+            // $projectRisk->kriProjects()->delete();
+            // $projectRisk->projectRiskRencanaPerlakuans()->delete();
+            // $projectRisk->projectRiskMonitorings()->delete();
+            // $projectRisk->projectKontrolEksistings()->delete();
+            $projectRisk->delete();
+
+            return response()->json([
+                'message' => 'Data risiko proyek berhasil dihapus.'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat menghapus data.'
+            ], 500);
+        }
     }
 
     public function analisa(Request $request, $resource) {
@@ -869,14 +931,14 @@ class ProjectRiskController extends BasicCRUDController
             //$toUpdate['nilai_dampak'] = 0;
             //$toUpdate['nilai_dampak_residual'] = 0;
 
-            $toUpdate['eksposur_risiko'] = $toUpdate['skala_dampak'] * $toUpdate['nilai_probabilitas'] * $toUpdate['risk_limit'];
-            $toUpdate['eksposur_risiko_residual'] = $toUpdate['skala_dampak_residual'] * $toUpdate['nilai_probabilitas_residual'] * $toUpdate['risk_limit'];
+            $toUpdate['eksposur_risiko'] = ($toUpdate['skala_dampak'] * (1/100)) * $toUpdate['nilai_probabilitas'] / 100 * $toUpdate['risk_limit'];
+            $toUpdate['eksposur_risiko_residual'] = ($toUpdate['skala_dampak_residual'] * (1/100)) * $toUpdate['nilai_probabilitas_residual'] / 100 * $toUpdate['risk_limit'];
         } elseif ($request->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
             //$toUpdate['nilai_dampak'] = $request->nilai_dampak;
             //$toUpdate['nilai_dampak_residual'] = $request->nilai_dampak_residual;
 
-            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
-            $toUpdate['eksposur_risiko_residual'] = $toUpdate['nilai_dampak_residual'] * $toUpdate['nilai_probabilitas_residual'];
+            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'] / 100;
+            $toUpdate['eksposur_risiko_residual'] = $toUpdate['nilai_dampak_residual'] * $toUpdate['nilai_probabilitas_residual'] / 100;
         }
   
         $analisa->update($toUpdate);
@@ -1126,6 +1188,82 @@ class ProjectRiskController extends BasicCRUDController
             return response()->json([
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function importTender(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        $projectPeriodeListId = $request->route('project');
+        $projectPeriodeList = ProjectPeriodeList::with('project')->findOrFail($projectPeriodeListId);
+
+        DB::beginTransaction();
+        try {
+            $import = new ProjectTenderImport(
+                $projectPeriodeList,
+                auth()->user()
+            );
+
+            Excel::import($import, $request->file('file'));
+
+            DB::commit();
+
+            $summary = [
+                'success' => $import->getSuccessCount(),
+                'skipped' => $import->getSkippedCount(),
+                'failed' => $import->getFailedCount(),
+                'skipped_rows' => $import->getSkippedRows(),
+                'failed_rows' => $import->getFailedRows()
+            ];
+
+            return redirect()->back()->with('import_summary', $summary);
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            DB::rollBack();
+            $failures = $e->failures();
+            $errorMessages = [];
+            foreach ($failures as $failure) {
+                $errorMessages[] = 'Baris ' . $failure->row() . ': ' . implode(', ', $failure->errors());
+            }
+            return back()->with('error', 'Terjadi kesalahan validasi: ' . implode(' | ', $errorMessages));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Import Tender Gagal: ' . $e->getMessage() . ' di baris ' . $e->getLine());
+            return back()->with('error', 'Terjadi kesalahan saat mengimpor data: ' . $e->getMessage());
+        }
+    }
+
+    public function downloadTenderTemplate(Request $request)
+    {
+        try {
+            $peristiwaRisikoData = PeristiwaRisiko::where('type', 2)->get();
+            $jenisRisikoData = JenisRisiko::with('kategoriRisiko')->get();
+            // $templatePath = storage_path('app/public/templates/template-tender.xlsx');
+            $templatePath = resource_path('templates/template-tender.xlsx');
+
+            // Pastikan file template ada
+            if (!file_exists($templatePath)) {
+                return response()->json(['error' => 'Template file not found'], 404);
+            }
+
+            $outputFileName = 'Dokumen Upload Tender.xlsx';
+            $modifier = new TenderTemplateImport($templatePath, $peristiwaRisikoData, $jenisRisikoData);
+            $spreadsheet = $modifier->getModifiedSpreadsheet();
+            $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        
+            ob_start();
+            $writer->save('php://output');
+            $fileContents = ob_get_clean();
+
+            return response($fileContents, 200, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $outputFileName . '"',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error processing template: ' . $e->getMessage()], 500);
         }
     }
     

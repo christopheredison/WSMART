@@ -99,11 +99,11 @@
                             <h3 class="h4">Peta Risiko Terkini (Current)</h3>
                         </div>
                         <div class="col">
-                            <select class="form-select" id="quarterSelect">
-                                <option value="1">Quarter 1</option>
-                                <option value="2">Quarter 2</option>
-                                <option value="3">Quarter 3</option>
-                                <option value="4">Quarter 4</option>
+                            <select class="form-select" id="monthSelect">
+                                @for ($month = 1; $month <= 12; $month++)
+                                    @php $quarter = ceil($month / 3); @endphp
+                                    <option value="{{ $month }}">Q{{ $quarter }} - {{ __('basic.month.' . $month) }}</option>
+                                @endfor
                             </select>
                         </div>
                         <div class="col">
@@ -278,9 +278,25 @@
                     </div>
                     <div class="col-12">
                         <div class="form-group">
+                            <label class="form-label fw-bold">Jenis Risiko T2 & T3 KBUMN</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $projectRisk->kategoriRisiko->title ?? '-' }} – {{ $projectRisk->jenisRisiko->title ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-group">
                             <label class="form-label fw-bold">Deskripsi Peristiwa Risiko</label>
                             <div class="p-3 bg-light rounded">
                                 {{ $projectRisk->deskripsi_peristiwa_risiko ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">WBS</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $projectRisk->wbs ?? '-' }}
                             </div>
                         </div>
                     </div>
@@ -734,10 +750,11 @@
                                 <th width="5%">#</th>
                                 <th width="15%">Tahun</th>
                                 <th width="15%">Quarter</th>
-                                <th width="20%">Nilai Dampak</th>
-                                <th width="15%">Nilai Probabilitas</th>
-                                <th width="15%">Level Risiko</th>
-                                <th width="15%">Status</th>
+                                <th width="15%">Bulan</th>
+                                <th width="20%">Realisasi Nilai Dampak</th>
+                                <th width="15%">Realisasi Nilai Probabilitas</th>
+                                <th width="15%">Realisasi Level Risiko</th>
+                                {{-- <th width="15%">Status</th> --}}
                             </tr>
                         </thead>
                         <tbody>
@@ -746,6 +763,13 @@
                                     <td>{{ $loop->iteration }}</td>
                                     <td>{{ $monitoring->tahun ?? '-' }}</td>
                                     <td>Q{{ $monitoring->quarter ?? '-' }}</td>
+                                    <td>
+                                        @if($monitoring->month)
+                                            @lang('basic.month.' . $monitoring->month)
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
                                     <td>{{ $monitoring->nilai_dampak ? 'Rp ' . number_format($monitoring->nilai_dampak, 0, ',', '.') : '-' }}</td>
                                     <td>{{ $monitoring->nilai_probabilitas ?? '-' }}%</td>
                                     <td>
@@ -753,13 +777,13 @@
                                             <span class="text-white fw-bold">{{ $monitoring->level_risiko ?? '-' }}</span>
                                         </div>
                                     </td>
-                                    <td>
+                                    {{-- <td>
                                         @if($monitoring->status)
                                             <span class="badge bg-success">Aktif</span>
                                         @else
                                             <span class="badge bg-secondary">Non-Aktif</span>
                                         @endif
-                                    </td>
+                                    </td> --}}
                                 </tr>
                             @endforeach
                         </tbody>
@@ -809,25 +833,15 @@
     padding: 2px 5px;
     border-radius: 5px;
 }
-#currentMap .current-q1, #currentMap .current-q2, #currentMap .current-q3, #currentMap .current-q4 {
+#currentMap .current-m1, #currentMap .current-m2, #currentMap .current-m3, #currentMap .current-m4, #currentMap .current-m5, #currentMap .current-m6, #currentMap .current-m7, #currentMap .current-m8, #currentMap .current-m9, #currentMap .current-m10, #currentMap .current-m11, #currentMap .current-m12 {
     display: none;
 }
 
-#currentMap.show-q1 .current-q1 {
+@for ($month = 1; $month <= 12; $month++)
+#currentMap.show-m{{ $month }} .current-m{{ $month }} {
     display: block;
 }
-
-#currentMap.show-q2 .current-q2 {
-    display: block;
-}
-
-#currentMap.show-q3 .current-q3 {
-    display: block;
-}
-
-#currentMap.show-q4 .current-q4 {
-    display: block;
-}
+@endfor
 
 .table-warning {
     background-color: #fff3cd !important;
@@ -845,25 +859,16 @@
 
 @foreach ($tahunMonitorings as $tahunMonitoring)
 <style>
-#currentMap .current-{{ $tahunMonitoring }}-q1, #currentMap .current-{{ $tahunMonitoring }}-q2, #currentMap .current-{{ $tahunMonitoring }}-q3, #currentMap .current-{{ $tahunMonitoring }}-q4 {
+#currentMap .current-{{ $tahunMonitoring }}-m1, #currentMap .current-{{ $tahunMonitoring }}-m2, #currentMap .current-{{ $tahunMonitoring }}-m3, #currentMap .current-{{ $tahunMonitoring }}-m4, #currentMap .current-{{ $tahunMonitoring }}-m5, #currentMap .current-{{ $tahunMonitoring }}-m6, #currentMap .current-{{ $tahunMonitoring }}-m7, #currentMap .current-{{ $tahunMonitoring }}-m8, #currentMap .current-{{ $tahunMonitoring }}-m9, #currentMap .current-{{ $tahunMonitoring }}-m10, #currentMap .current-{{ $tahunMonitoring }}-m11, #currentMap .current-{{ $tahunMonitoring }}-m12 {
     display: none;
 }
 
-#currentMap.show-{{ $tahunMonitoring }}-q1 .current-{{ $tahunMonitoring }}-q1 {
+@for ($month = 1; $month <= 12; $month++)
+#currentMap.show-{{ $tahunMonitoring }}-m{{ $month }} .current-{{ $tahunMonitoring }}-m{{ $month }} {
     display: block;
 }
+@endfor
 
-#currentMap.show-{{ $tahunMonitoring }}-q2 .current-{{ $tahunMonitoring }}-q2 {
-    display: block;
-}
-
-#currentMap.show-{{ $tahunMonitoring }}-q3 .current-{{ $tahunMonitoring }}-q3 {
-    display: block;
-}
-
-#currentMap.show-{{ $tahunMonitoring }}-q4 .current-{{ $tahunMonitoring }}-q4 {
-    display: block;
-}
 </style>
 @endforeach
 @endpush
@@ -881,7 +886,6 @@ $(document).ready(function () {
             const code = (idx + 1).toString();
 
             // Peta Inheren & Residual
-            // Perhatikan penyesuaian nama relasi: 'projectRiskAnalisa'
             const matrixI = risk.project_risk_analisa?.skala_dampak + '-' + risk.project_risk_analisa?.skala_probabilitas?.tingkat;
             const matrixR = risk.project_risk_analisa?.skala_dampak_residual + '-' + risk.project_risk_analisa?.skala_probabilitas_residual?.tingkat;
 
@@ -895,28 +899,21 @@ $(document).ready(function () {
                         const matrixC = currentRiskMap.skala_dampak + '-' + currentRiskMap.skala_probabilitas;
                         $(`#currentMap .data-cell[data-matrix="${matrixC}"]`)
                             .find('.kode-peristiwa')
-                            .append(`<span class="box-current current-${tahun}-q${currentRiskMap.quarter}">R${code}</span>`);
+                            .append(`<span class="box-current current-${tahun}-m${currentRiskMap.month}">R${code}</span>`);
                     });
                 });
             }
         });
     }
 
-    function handleFilterChange() {
-        const quarter = $('#quarterSelect').val();
+    $('#monthSelect, #tahunSelect').on('change', function() {
+        const month = $('#monthSelect').val();
         const tahun = $('#tahunSelect').val();
-        const currentMap = $('#currentMap');
-        
-        currentMap.removeClass((index, className) => (className.match(/(^|\s)show-\S+/g) || []).join(' '));
-        if(tahun && quarter) {
-            currentMap.addClass('show-' + tahun + '-q' + quarter);
-        }
-    }
-
-    $('#quarterSelect, #tahunSelect').on('change', handleFilterChange);
+        $('#currentMap').prop('class', 'table-risk-map');
+        $('#currentMap').addClass('show-' + tahun + '-m' + month);
+    }).change();
 
     initializeMaps();
-    handleFilterChange();
 });
 </script>
 @endpush

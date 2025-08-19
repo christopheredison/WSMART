@@ -20,6 +20,19 @@
           @endif
         </div>
       </div>
+      <div class="card-header border-bottom">
+          <div class="d-flex align-items-center gap-3">
+              <h6 class="mb-0">Keterangan :</h6>
+              <div class="d-flex gap-3">
+                  @foreach($tableLegend as $legend)
+                  <div class="d-flex align-items-center gap-1">
+                      {!! $legend['icon'] !!}
+                      <span>{{ $legend['label'] }}</span>
+                  </div>
+                  @endforeach
+              </div>
+          </div>
+      </div>
       <div class="card-body dt-header-true">
         <div id="tableExample3">
           <div class="row g-2 mb-1">
@@ -81,21 +94,29 @@
                 <option value="Low">Low</option>
               </select>
             </div>
-            <div class="col-auto ms-auto">
-            @php
-                // diasumsikan di view Anda ada $selectedPeriode
-                $pid = $selectedPeriode->id;
-            @endphp
-            @can('risk_register_create')
-              @if($status == null || $status == 1 || $status == 5)
-              <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $pid]) }}" type="button"
-                class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
-                data-bs-title="Tambah Risiko">
-                <i class="bx bx-plus"></i>
-                <span class="ms-1">Tambah Risiko</span>
-              </a>
-              @endif
-            @endcan
+            <div class="col-auto ms-auto d-flex gap-2 align-items-center">
+              <div class="col-auto ms-auto">
+                <a href="{{ route('kamus-risiko-unit.index') }}" class="btn btn-outline-danger btn-sm">
+                  <span class="bx bx-book-bookmark"></span>
+                  <span class="ms-1">Kamus Risiko</span>
+                </a>
+              </div>
+              <div class="col-auto ms-auto">
+              @php
+                  // diasumsikan di view Anda ada $selectedPeriode
+                  $pid = $selectedPeriode->id;
+              @endphp
+              @can('risk_register_create')
+                @if($status == null || $status == 1 || $status == 5)
+                <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $pid]) }}" type="button"
+                  class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
+                  data-bs-title="Tambah Risiko">
+                  <span class="bx bx-plus"></span>
+                  <span class="ms-1">Tambah Risiko</span>
+                </a>
+                @endif
+              @endcan
+              </div>
             </div>
           </div>
           <table class="table dataTable" id="example" data-paging="true" data-info="true" data-filter="true">

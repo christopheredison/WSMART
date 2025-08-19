@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class IdentifikasiRisiko extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'unit_type_id',
@@ -21,6 +22,7 @@ class IdentifikasiRisiko extends Model
         'rencana_kegiatan',
         'peristiwa_risiko',
         'deskripsi_peristiwa_risiko',
+        'wbs',
         'deskripsi_rencana_kegiatan',
         'type',
         'jenis_kontrol_eksisting_id',
@@ -40,6 +42,8 @@ class IdentifikasiRisiko extends Model
         'step_verification',
         'is_corporate',
         'previous_status_risiko',
+        'is_closed',
+        'efektivitas_perlakuan_risiko',
     ];
 
     protected $guarded = [];

@@ -13,6 +13,7 @@ use App\Models\Project;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use App\Models\KamusRisikoProject;
 
 class ProjectRiskMonitoringController extends BasicCRUDController
 {
@@ -24,8 +25,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
     public function index() {
         $this->baseRouteParams = ['project' => request()->route('project')];
-        $projectPeriode = ProjectPeriodeList::with('projectRisks.peristiwaRisiko')->findOrfail(request()->route('project'));
+        $projectPeriode = ProjectPeriodeList::with('project', 'projectRisks.peristiwaRisiko')->findOrfail(request()->route('project'));
         $cb = fn ($fn) => $fn;
+        $this->indexSubtitle = $projectPeriode->project->project_name;
 
         $user = request()->user();
 
@@ -35,7 +37,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $this->callbackQuery = function ($query) use ($projectPeriode) {
             $query->where('project_periode_list_id', $projectPeriode->id)
-                ->with(['peristiwaRisiko', 'projectRiskAnalisa', 'projectRiskAnalisa.skalaProbabilitas', 'projectRiskAnalisa.skalaProbabilitasResidual', 'projectRiskMonitoring.skalaProbabilitas', 'projectRiskMonitoring' => function ($query) {
+                ->with(['peristiwaRisiko', 'projectRiskAnalisa', 'projectRiskAnalisa.risiko', 'projectRiskAnalisa.skalaProbabilitas', 'projectRiskAnalisa.skalaProbabilitasResidual', 'projectRiskMonitoring.skalaProbabilitas', 'projectRiskMonitoring' => function ($query) {
                     $query->where('quarter', request()->input('filters.quarter') ?: 1)
                         ->where('tahun', request()->input('filters.tahun') ?: date('Y'))
                         ->where('month', request()->input('filters.month') ?: '');
@@ -143,6 +145,17 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'searchable' => false,
                 'render' => '(data, type, row) => row.project_risk_monitoring?.skala_risiko || "-"',
             ],
+            'is_closed' => [
+                'label' => 'Status',
+                'data' => 'projectRiskAnalisa.risiko.is_closed',
+                'sortable' => false,
+                'searchable' => false,
+                'render' => '(data, type, row) => row.project_risk_analisa?.risiko?.is_closed ? `<div class="badge bg-danger rounded-pill px-2 mt-auto">
+                  Closed
+                </div>` : `<div class="badge bg-success rounded-pill px-2 mt-auto">
+                  Open
+                </div>`',
+            ],
         ];
 
         if (Gate::check('project_monitoring_view')) {
@@ -166,6 +179,16 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'script' => <<<JS
                     window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Atahun', $('#table-filter select[name="tahun"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
+                'active_state' => '(data, type, row) => row.is_closed != 1',
+            ];
+        }
+        
+        if (request()->routeIs('projects.monitorings.index')) {
+            $this->tableActions[] = [
+                'label' => 'Change',
+                'btn_icon' => false,
+                'action' => 'change_to_led',
+                'active_state' => '(data, type, row) => row.is_closed != 1',
             ];
         }
         /*
@@ -317,6 +340,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $quarter = request()->quarter ?: 1;
         $projectRisk = $projectPeriode->projectRisks()
             ->with([
+                'projectRiskAnalisa',
                 'peristiwaRisiko',
                 'kriProjects' => function ($query) use ($quarter, $tahun, $month) {
                     $query->select('k_r_i_projects.*', 'id as status_kri_terkini', 'id as nilai_kri_terkini');
@@ -355,6 +379,55 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 },
             ])
             ->findOrFail(request()->route('monitoring'));
+
+        $analisa = $projectRisk->projectRiskAnalisa;
+        $namaRisikoLengkap = $projectRisk->peristiwaRisiko->title;
+        if (!empty($projectRisk->deskripsi_peristiwa_risiko)) {
+            $namaRisikoLengkap .= ' - ' . $projectRisk->deskripsi_peristiwa_risiko;
+        }
+
+        // Validasi Analisa Risiko
+        if (!$analisa) {
+            return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
+                ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum dianalisa. Harap lengkapi analisa risiko terlebih dahulu.');
+        }
+
+        $requiredAnalisaFields = [
+            'kategori_dampak', 'nilai_dampak', 'nilai_probabilitas', 'skala_dampak',
+            'nilai_dampak_residual', 'nilai_probabilitas_residual', 'skala_dampak_residual'
+        ];
+
+        foreach ($requiredAnalisaFields as $field) {
+            if (is_null($analisa->{$field})) {
+                return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
+                    ->with('error', 'Analisa untuk risiko "' . $namaRisikoLengkap . '" belum lengkap. Harap lengkapi semua field analisa inheren dan residual.');
+            }
+        }
+        
+        // Validasi Rencana Perlakuan Risiko
+        $penyebabRisikos = $projectRisk->penyebabRisikoProjects;
+        
+        if ($penyebabRisikos->isEmpty()) {
+            return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
+                ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum memiliki data penyebab dan rencana perlakuan.');
+        }
+        
+        $hasValidPerlakuan = false;
+        foreach ($penyebabRisikos as $penyebab) {
+            if (!empty($penyebab->penyebab_risiko) && $penyebab->perlakuanPenyebabRisiko->isNotEmpty()) {
+                foreach ($penyebab->perlakuanPenyebabRisiko as $perlakuan) {
+                    if (!empty($perlakuan->rencana_perlakuan_risiko)) {
+                        $hasValidPerlakuan = true;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        if (!$hasValidPerlakuan) {
+            return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
+                ->with('error', 'Risiko "' . $namaRisikoLengkap . '" harus memiliki minimal satu penyebab dengan rencana perlakuan yang sudah diisi.');
+        }
 
         $peristiwaRisiko = $projectRisk->peristiwaRisiko;
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
@@ -625,6 +698,32 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $projectRisk->refreshRealisasi();
         $projectPeriode->refreshNilai();
+
+        if ($request->is_closed == '1') {
+            $efektivitas = 0.0; 
+
+            $analisa = $projectRisk->projectRiskAnalisa;
+            $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
+            $skala_risiko_rencana = (float) optional($analisa)->skala_risiko_residual;
+            $skala_risiko_realisasi = (float) ($request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden ?? 0);
+
+            $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
+
+            // Hindari pembagian dengan nol
+            if ($selisih_inherent_rencana != 0) {
+                $efektivitas = ($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana;
+            }
+
+            $projectRisk->update([
+                'is_closed' => true,
+                'efektivitas_perlakuan_risiko' => $efektivitas
+            ]);
+
+            KamusRisikoProject::updateOrCreate(
+                ['project_risk_id' => $projectRisk->id],
+                ['project_id' => $projectRisk->project_id],
+            );
+        }
 
         return response()->json([
             'message' => 'Data berhasil disimpan',

@@ -15,6 +15,7 @@ use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use App\Models\RiskLimitPeriode;
+use App\Models\KamusRisikoUnit;
 
 class RiskRegisterUnitMonitoringController extends BasicCRUDController
 {
@@ -31,7 +32,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $user = request()->user();
         $quarter = request()->input('filters.quarter') ?: 4;
-        $month = request()->input('filters.month') ?: '';
+        $month = request()->input('filters.month') ?: null;
 
         // if (!(Gate::check('risk_monitoring_list') || $user->hasProject($period))) {
         //     abort(403);
@@ -40,10 +41,16 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $this->callbackQuery = function ($query) use ($period, $quarter, $user, $month) {
             $query->where('periode_id', $period->id)
                 ->where('unit_id', $user->unit_id)
-                ->with(['peristiwaRisiko', 'riskAnalysis.skalaProbabilitasResidualQ' . $quarter])
+                ->where('unit_type_id', 1)
+                ->with([
+                  // 'peristiwaRisiko', 
+                  'riskAnalysis.skalaProbabilitasResidualQ' . $quarter]
+                )
                 ->with(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
                     $query->where('quarter', $quarter)
-                        ->where('month', $month)
+                        ->when($month, function ($q) use ($month) {
+                            return $q->where('month', $month);
+                        })
                         ->with('skalaProbabilitas');
                 }]);
         };
@@ -73,8 +80,8 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ],
             'peristiwa_risiko' => [
                 'label' => 'Peristiwa Risiko',
-                'data' => 'peristiwaRisiko.title',
-                'render' => '(data, type, row) => row.peristiwa_risiko?.title || "-"',
+                'data' => 'peristiwa_risiko',
+                'render' => '(data, type, row) => row.peristiwa_risiko || "-"',
             ],
             'deskripsi_peristiwa_risiko' => [
                 'label' => 'Deskripsi Peristiwa Risiko',
@@ -131,6 +138,17 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'searchable' => false,
                 'render' => '(data, type, row) => row.last_monitoring_risiko?.skala_risiko || "-"',
             ],
+            'is_closed' => [
+                'label' => 'Status',
+                'data' => 'is_closed',
+                'sortable' => false,
+                'searchable' => false,
+                'render' => '(data, type, row) => row?.is_closed ? `<div class="badge bg-danger rounded-pill px-2 mt-auto">
+                  Closed
+                </div>` : `<div class="badge bg-success rounded-pill px-2 mt-auto">
+                  Open
+                </div>`',
+            ],
         ];
 
         if (Gate::check('risk_monitoring_view')) {
@@ -154,7 +172,17 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'script' => <<<JS
                     window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
+                'active_state' => '(data, type, row) => row.is_closed != 1',
             ];
+
+            if (request()->routeIs('risk-register-unit.monitorings.index')) {
+                $this->tableActions[] = [
+                    'label' => 'Change',
+                    'btn_icon' => false,
+                    'action' => 'change_to_led_unit',
+                    'active_state' => '(data, type, row) => row.is_closed != 1',
+                ];
+            }
         }
 
         $peristiwaRisikos = $period->identifikasiRisikos->map(function($identifikasiRisiko) {
@@ -526,6 +554,31 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         }
 
         $risk->refreshRealisasi();
+
+        if ($request->is_closed == '1') {
+            $efektivitas = 0;
+
+            $analisa = $risk->riskAnalysis;
+            $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
+            $skala_risiko_rencana = (float) optional($analisa)['skala_risiko_residual_q' . $quarter];
+            $skala_risiko_realisasi = (float) ($request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden ?? 0);
+
+            $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
+
+            // Hindari pembagian dengan nol
+            if ($selisih_inherent_rencana != 0) {
+                $efektivitas = ($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana;
+            }
+
+            $risk->update([
+                'is_closed' => true,
+                'efektivitas_perlakuan_risiko' => $efektivitas
+            ]);
+
+            KamusRisikoUnit::updateOrCreate(
+                ['risiko_id' => $risk->id],
+            );
+        }
 
         return response()->json([
             'message' => 'Data berhasil disimpan',
