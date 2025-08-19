@@ -75,6 +75,16 @@ use App\Http\Controllers\KamusRisikoUnitController;
 | contains the "web" middleware group. Now create something great!
 |
 */
+Route::get('/loginnonsso', function () {
+    if (Auth::check()) {
+        // Jika pengguna sudah login, arahkan ke halaman home
+        return redirect()->route('home');
+    } else {
+        // Jika pengguna belum login, arahkan ke halaman welcome
+        return view('welcome');
+        //return redirect('https://wzone.wika.co.id/');
+    }
+});
 
 Route::get('/', function () {
     if (Auth::check()) {
