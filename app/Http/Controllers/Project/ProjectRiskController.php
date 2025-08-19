@@ -312,12 +312,7 @@ class ProjectRiskController extends BasicCRUDController
                 'peristiwa_risiko_id' => 'required',
                 'kategori_risiko_id' => 'required',
                 'jenis_risiko_id' => 'required',
-                'deskripsi_peristiwa_risiko' => [
-                    'required',
-                    Rule::unique('project_risks')->where(function ($query) use ($project) {
-                        return $query->where('project_id', $project->id);
-                    })
-                ],
+                'deskripsi_peristiwa_risiko' => 'required',
                 'wbs' => 'required',
                 'target_capaian_kinerja' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
@@ -401,7 +396,7 @@ class ProjectRiskController extends BasicCRUDController
 
         } elseif ($request->action === 'draft') {
             $request->validate([
-                'deskripsi_peristiwa_risiko' => 'required|unique:project_risks,deskripsi_peristiwa_risiko',
+                'deskripsi_peristiwa_risiko' => 'required',
             ]);
 
             $key = $request->draft_key ?: uniqid();
@@ -472,7 +467,7 @@ class ProjectRiskController extends BasicCRUDController
                 'peristiwa_risiko_id' => 'required',
                 'kategori_risiko_id' => 'required',
                 'jenis_risiko_id' => 'required',
-                'deskripsi_peristiwa_risiko' => 'required|unique:project_risks,deskripsi_peristiwa_risiko,' . $projectRisk->id,
+                'deskripsi_peristiwa_risiko' => 'required',
                 'wbs' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
                 'penilaian_efektifitas_kontrol' => 'required',
@@ -546,7 +541,7 @@ class ProjectRiskController extends BasicCRUDController
         } elseif ($request->action === 'draft') {
 
             $request->validate([
-                'deskripsi_peristiwa_risiko' => 'required|unique:project_risks,deskripsi_peristiwa_risiko,' . $projectRisk->id,
+                'deskripsi_peristiwa_risiko' => 'required',
             ]);
 
             $key = $request->draft_key ?: uniqid();
