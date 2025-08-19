@@ -51,7 +51,7 @@
   </button>
   @php
   $itemId = $item->id;
-  $innerItemText = $item->peristiwaRisiko?->title ?: '-';
+  $innerItemText = $item->peristiwa_risiko ?: '-';
   $formAction = route('risk-register-unit.destroy', $item->id);
   @endphp
   @include('partials.modal-delete-alert')
