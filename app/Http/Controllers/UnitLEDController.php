@@ -258,7 +258,7 @@ class UnitLEDController extends Controller
                                 'pic_jabatan_id' => $jabatan ? $jabatan->id : null,
                                 'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
                                 'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
-                                'opsi_perlakuan_risiko' => $perlakuan['opsi_perlakuan_risiko'],
+                                // 'opsi_perlakuan_risiko' => $perlakuan['opsi_perlakuan_risiko'],
                                 'jenis_rencana_perlakuan_risiko' => $perlakuan['jenis_rencana_perlakuan_risiko'],
                             ]);
                         }
@@ -310,7 +310,7 @@ class UnitLEDController extends Controller
                                     'pic_jabatan_id' => $jabatan ? $jabatan->id : null,
                                     'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
                                     'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
-                                    'opsi_perlakuan_risiko' => $perlakuan['opsi_perlakuan_risiko'],
+                                    // 'opsi_perlakuan_risiko' => $perlakuan['opsi_perlakuan_risiko'],
                                     'jenis_rencana_perlakuan_risiko' => $perlakuan['jenis_rencana_perlakuan_risiko'],
                                 ]);
                             }
@@ -357,7 +357,7 @@ class UnitLEDController extends Controller
                         'pic_name' => $perlakuan->pic,
                         'timeline_mulai_perlakuan_risiko' => $perlakuan->timeline_perlakuan_risiko_start ? Carbon::parse($perlakuan->timeline_perlakuan_risiko_start)->format('d/m/Y') : '',
                         'timeline_selesai_perlakuan_risiko' => $perlakuan->timeline_perlakuan_risiko_end ? Carbon::parse($perlakuan->timeline_perlakuan_risiko_end)->format('d/m/Y') : '',
-                        'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
+                        // 'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
                         'jenis_rencana_perlakuan_risiko' => $perlakuan->jenis_rencana_perlakuan_risiko,
                     ];
                 })
@@ -536,7 +536,7 @@ class UnitLEDController extends Controller
                                 'pic_jabatan_id' => $jabatan ? $jabatan->id : null,
                                 'timeline_perlakuan_risiko_start' => $startDate,
                                 'timeline_perlakuan_risiko_end' => $endDate,
-                                'opsi_perlakuan_risiko' => $perlakuanItem['opsi_perlakuan_risiko'],
+                                // 'opsi_perlakuan_risiko' => $perlakuanItem['opsi_perlakuan_risiko'],
                                 'jenis_rencana_perlakuan_risiko' => $perlakuanItem['jenis_rencana_perlakuan_risiko'],
                             ];
 
@@ -614,7 +614,7 @@ class UnitLEDController extends Controller
                                     'pic_jabatan_id' => $jabatan ? $jabatan->id : null,
                                     'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
                                     'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
-                                    'opsi_perlakuan_risiko' => $perlakuan['opsi_perlakuan_risiko'],
+                                    // 'opsi_perlakuan_risiko' => $perlakuan['opsi_perlakuan_risiko'],
                                     'jenis_rencana_perlakuan_risiko' => $perlakuan['jenis_rencana_perlakuan_risiko'],
                                 ]);
                             }
@@ -686,7 +686,7 @@ class UnitLEDController extends Controller
                         'pic_name' => $perlakuan->pic,
                         'timeline_mulai_perlakuan_risiko' => \Carbon\Carbon::parse($perlakuan->timeline_perlakuan_risiko_start)->format('d/m/Y'),
                         'timeline_selesai_perlakuan_risiko' => \Carbon\Carbon::parse($perlakuan->timeline_perlakuan_risiko_end)->format('d/m/Y'),
-                        'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
+                        // 'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
                         'jenis_rencana_perlakuan_risiko' => $perlakuan->jenis_rencana_perlakuan_risiko,
                     ];
                 })
@@ -784,7 +784,7 @@ class UnitLEDController extends Controller
                                 'pic_jabatan_id' => $jabatan ? $jabatan->id : null,
                                 'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuanItem['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
                                 'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuanItem['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
-                                'opsi_perlakuan_risiko' => $perlakuanItem['opsi_perlakuan_risiko'],
+                                // 'opsi_perlakuan_risiko' => $perlakuanItem['opsi_perlakuan_risiko'],
                                 'jenis_rencana_perlakuan_risiko' => $perlakuanItem['jenis_rencana_perlakuan_risiko'],
                             ]);
                         }
@@ -810,7 +810,7 @@ class UnitLEDController extends Controller
                 )->with('success', 'Loss Event berhasil dibuat. Silakan tambahkan risiko baru.');
             }
 
-            return redirect()->route('risk-register-unit.monitorings.index', ['period' => $risiko->periode_id])
+            return redirect()->route('risk-register-unit.monitorings.index', ['period' => $riskRegister->periode_id])
             ->with('success', 'Risiko berhasil diubah menjadi Loss Event.');
         } catch (\Exception $e) {
             DB::rollBack();
