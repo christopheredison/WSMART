@@ -143,33 +143,53 @@ class ProjectPeriodeListController extends BasicCRUDController
 
         $projectOptions = $projectOptions->get()->pluck('project_name', 'id')->toArray();
 
+        $this->tableLegend= [];
+
         if (Gate::check('project_periode_view')) {
             $this->tableActions[] = [
                 'btn_icon' => true,
-                'label' => '<i class="bx bx-show" title="View"></i>',
+                'label' => '<span class="bx bx-show" title="View"></span>',
                 'action' => 'link',
                 'url' => route('project-periode-list.show', ':id'),
                 'active_state' => '(data, type, row) => row.has_view',
+                'title' => 'View Project'
+            ];
+
+            $this->tableLegend[] = [
+              'icon' => '<span class="bx bx-show-alt"></span>',
+              'label' => 'View Project'
             ];
         }
 
         if (Gate::check('project_risk_list')) {
             $this->tableActions[] = [
                 'btn_icon' => true,
-                'label' => '<i class="bx bx-list-check" title="Risk Register"></i>',
+                'label' => '<span class="bx bx-list-check" title="Risk Register"></span>',
                 'action' => 'link',
                 'url' => route('projects.risks.index', ['project' => ':id']),
                 'active_state' => '(data, type, row) => row.has_risk_register',
+                'title' => 'Risk Register'
+            ];
+            
+            $this->tableLegend[] = [
+              'icon' => '<span class="bx bx-list-check"></span>',
+              'label' => 'Risk Register'
             ];
         }
 
         if (Gate::check('project_monitoring_list')) {
             $this->tableActions[] = [
                 'btn_icon' => true,
-                'label' => '<i class="bx bx-radar" title="Monitoring"></i>',
+                'label' => '<span class="bx bx-radar" title="Monitoring"></span>',
                 'action' => 'link',
                 'url' => route('projects.monitorings.index', ['project' => ':id']),
                 'active_state' => '(data, type, row) => row.has_monitoring',
+                'title' => 'Monitoring'
+            ];
+
+            $this->tableLegend[] = [
+              'icon' => '<span class="bx bx-radar"></span>',
+              'label' => 'Monitoring'
             ];
         }
 
@@ -177,12 +197,19 @@ class ProjectPeriodeListController extends BasicCRUDController
             $ledRoute = route('project-led.index-by-project', ['projectId' => ':id']);
             $this->tableActions[] = [
                 'btn_icon' => true,
-                'label' => '<i class="bx bx-dock-bottom" title="Loss Event"></i>',
+                'label' => '<span class="bx bx-dock-bottom" title="Loss Event"></span>',
                 'action' => 'script',
                 'script' => <<<JS
                 projectData = fetchedData[\$(this).data('id')];window.location.href = "$ledRoute".replace(':id', projectData.project_id);
                 JS,
+                'title' => 'Loss Event'
             ];
+
+            $this->tableLegend[] = [
+              'icon' => '<span class="bx bx-dock-bottom"></span>',
+              'label' => 'Loss Event'
+            ];
+            
         }
 
         $this->extraViewData['showKamusRisikoButton'] = true;

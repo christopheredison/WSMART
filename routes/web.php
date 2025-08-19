@@ -397,16 +397,16 @@ Route::group(['middleware' => ['auth']], function() {
     Route::resource('question', QuestionController::class)->except(['create', 'edit']);
     Route::resource('kuesioner', KuesionerController::class)->except(['create', 'store', 'destroy']);
 
-    Route::get('project-led/create', [ProjectLEDController::class, 'create'])->name('project-led.create');
+    Route::get('project-led/{project}/create', [ProjectLEDController::class, 'create'])->name('project-led.create');
     Route::get('project-led/{id}', [ProjectLEDController::class, 'show'])->name('project-led.show');
-    Route::get('project-led/{id}/edit', [ProjectLEDController::class, 'edit'])->name('project-led.edit');
+    Route::get('project-led/{project}/edit/{id}', [ProjectLEDController::class, 'edit'])->name('project-led.edit');
     Route::post('project-led', [ProjectLEDController::class, 'store'])->name('project-led.store');
     Route::delete('project-led/{id}', [ProjectLEDController::class, 'destroy'])->name('project-led.destroy');
     Route::resource('project-led', ProjectLEDController::class)->except(['create', 'show', 'edit']);
     Route::get('project-leds/{projectId}', [ProjectLEDController::class, 'index'])->name('project-led.index-by-project');
     Route::get('kamus-risiko-project', [KamusRisikoProjectController::class, 'index'])->name('kamus-risiko-project.index');
     Route::post('kamus-risiko-project/add-risk', [KamusRisikoProjectController::class, 'addRisk'])->name('kamus-risiko-project.add-risk');
-    Route::get('kamus-risiko-project/export', [KamusRisikoProjectController::class, 'exportExcel'])->name('kamus-risiko-project.export');
+    Route::post('kamus-risiko-project/export', [KamusRisikoProjectController::class, 'exportExcel'])->name('kamus-risiko-project.export');
 
     Route::get('/risk-map-setting', [RiskMapController::class, 'index'])->name('risk-map-setting.index');
     Route::put('/risk-map-setting/update', [RiskMapController::class, 'update'])->name('risk-map-setting.update');
@@ -476,13 +476,14 @@ Route::group(['middleware' => ['auth']], function() {
     Route::delete('/sasaran-strategi/{sasaran}', [SasaranStrategiBisnisController::class, 'destroy'])->name('sasaran-strategi.destroy');
     Route::put('/strategi-bisnis/{strategiBisnis}', [SasaranStrategiBisnisController::class, 'updateStatus'])->name('strategi-bisnis.update-status');
 
-    Route::get('unit-led/create', [UnitLEDController::class, 'create'])->name('unit-led.create');
-    Route::get('unit-led/{id}', [UnitLEDController::class, 'show'])->name('unit-led.show');
-    Route::get('unit-led/{id}/edit', [UnitLEDController::class, 'edit'])->name('unit-led.edit');
+    Route::get('unit-led/', [UnitLEDController::class, 'index'])->name('unit-led.index');
+    Route::get('unit-led/{periode}', [UnitLEDController::class, 'index'])->name('unit-led.index-by-periode');
+    Route::get('unit-led/{periode}/create', [UnitLEDController::class, 'create'])->name('unit-led.create');
     Route::post('unit-led', [UnitLEDController::class, 'store'])->name('unit-led.store');
+    Route::get('unit-led/{periode}/{id}/show', [UnitLEDController::class, 'show'])->name('unit-led.show');
+    Route::get('unit-led/{periode}/{id}/edit', [UnitLEDController::class, 'edit'])->name('unit-led.edit');
+    Route::put('unit-led/{id}', [UnitLEDController::class, 'update'])->name('unit-led.update');
     Route::delete('unit-led/{id}', [UnitLEDController::class, 'destroy'])->name('unit-led.destroy');
-    Route::resource('unit-led', UnitLEDController::class)->except(['create', 'show', 'edit']);
-    Route::get('unit-leds/{unitId}', [UnitLEDController::class, 'index'])->name('unit-led.index-by-unit');
 
     Route::get('kamus-risiko-unit', [KamusRisikoUnitController::class, 'index'])->name('kamus-risiko-unit.index');
     Route::post('kamus-risiko-unit/add-risk', [KamusRisikoUnitController::class, 'addRisk'])->name('kamus-risiko-unit.add-risk');

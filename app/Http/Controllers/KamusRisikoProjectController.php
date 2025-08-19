@@ -54,6 +54,18 @@ class KamusRisikoProjectController extends Controller
                 });
             }
 
+            if ($request->filled('efektivitas')) {
+                $query->whereHas('projectRisk', function ($q) use ($request) {
+                    if ($request->efektivitas == 'efektif') {
+                        // 'Efektif' jika nilainya lebih dari 0
+                        $q->where('efektivitas_perlakuan_risiko', '>', 0);
+                    } elseif ($request->efektivitas == 'tidak_efektif') {
+                        // 'Tidak Efektif' jika nilainya 0 atau kurang dari 0 (negatif)
+                        $q->where('efektivitas_perlakuan_risiko', '<=', 0);
+                    }
+                });
+            }
+
             return datatables()->of($query)
                 ->addIndexColumn()
                 ->addColumn('action', function ($row) {
@@ -121,7 +133,18 @@ class KamusRisikoProjectController extends Controller
                 ->addColumn('realisasi_eksposur_risiko', function ($row) {
                     return 'Rp ' . number_format($row->projectRisk->projectRiskAnalisa->eksposur_risiko_residual ?? 0, 0, ',', '.');
                 })
-                ->rawColumns(['action', 'level_risiko_inheren', 'realisasi_level_risiko'])
+                ->addColumn('efektivitas', function ($row) {
+                    $efektivitas = $row->projectRisk->efektivitas_perlakuan_risiko;
+
+                    if (is_null($efektivitas)) {
+                        return '-';
+                    }
+
+                    $class = $efektivitas > 0 ? 'text-success' : ($efektivitas < 0 ? 'text-danger' : 'text-warning');
+                    
+                    return '<span class="fw-bold ' . $class . '">' . $efektivitas . '</span>';
+                })
+                ->rawColumns(['action', 'level_risiko_inheren', 'realisasi_level_risiko', 'efektivitas'])
                 ->make(true);
         }
 
@@ -224,16 +247,30 @@ class KamusRisikoProjectController extends Controller
 
     public function exportExcel(Request $request)
     {
-        $filters = $request->only([
-            'project_id',
-            'peristiwa_risiko_id',
-            'jenis_risiko_id',
-            'level_risiko',
-            'deskripsi_risiko',
-        ]);
+        try {
+            $filters = $request->only([
+                'project_id',
+                'peristiwa_risiko_id',
+                'jenis_risiko_id',
+                'level_risiko',
+                'deskripsi_risiko',
+            ]);
+    
+            $fileName = 'Kamus_Risiko_Proyek_' . date('d-m-Y_H-i-s') . '.xlsx';
+    
+            $fileContents = Excel::raw(
+                new KamusRisikoProjectExport($filters),
+                \Maatwebsite\Excel\Excel::XLSX
+            );
+    
+            return response($fileContents, 200, [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            ]);
 
-        $fileName = 'Kamus_Risiko_Proyek_' . date('d-m-Y') . '.xlsx';
-
-        return Excel::download(new KamusRisikoProjectExport($filters), $fileName);
+        } catch (\Exception $e) {
+            Log::error('Gagal export Kamus Risiko Proyek: ' . $e->getMessage());
+            return response()->json(['message' => 'Terjadi kesalahan saat membuat file Excel.'], 500);
+        }
     }
 }

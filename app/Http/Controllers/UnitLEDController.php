@@ -85,7 +85,7 @@ class UnitLEDController extends Controller
         return view('unit-led.index', compact('periodes', 'kategoriKejadians', 'periode'));
     }
 
-    public function create()
+    public function create($periode)
     {
         $periodes = Periode::orderBy('tahun', 'desc')->with('identifikasiRisikos.penyebabRisikos.perlakuanPenyebabRisiko')->get();
         $kategoriKejadians = KategoriKejadian::all();
@@ -95,8 +95,8 @@ class UnitLEDController extends Controller
         $identifikasiRisikos = [];
         $user = request()->user();
         $unitId = $user->unit_id;
-        if (request()->periode_id) {
-            $periode = Periode::findOrFail(request()->periode_id);
+        if (request()->periode) {
+            $periode = Periode::findOrFail(request()->periode);
         }
         
         return view('unit-led.create', compact('periodes', 'kategoriKejadians', 'jenisRisikos', 'jabatans', 'periode', 'unitId'));
@@ -325,7 +325,7 @@ class UnitLEDController extends Controller
 
             // Jika user memilih "Tidak", cukup simpan LED
             DB::commit();
-            return redirect()->route('unit-led.index-by-unit', ['unitId' => $user->unit_id])
+            return redirect()->route('unit-led.index-by-periode', ['periode' => $request->periode_id])
                 ->with('success', 'Data Loss Event Divisi berhasil ditambahkan.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -333,7 +333,7 @@ class UnitLEDController extends Controller
         }
     }
 
-    public function edit($id)
+    public function edit($periode, $id)
     {
         $lossEvent = LossEvent::with('penyebabRisikoLeds.perlakuanPenyebabRisiko')->findOrFail($id);
         $periodes = Periode::orderBy('tahun', 'desc')->with('identifikasiRisikos.penyebabRisikos.perlakuanPenyebabRisiko')->get();
@@ -628,7 +628,7 @@ class UnitLEDController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('unit-led.index-by-unit', ['unitId' => $user->unit_id])
+            return redirect()->route('unit-led.index-by-periode', ['periode' => $request->periode_id])
                 ->with('success', 'Data Loss Event Divisi berhasil diperbarui.');
 
         } catch (\Exception $e) {
@@ -655,7 +655,7 @@ class UnitLEDController extends Controller
         }
     }
 
-    public function show($id)
+    public function show($periode, $id)
     {
         $lossEvent = LossEvent::with(['kategoriKejadian', 'kategoriRisiko', 'jenisRisiko'])->findOrFail($id);
         

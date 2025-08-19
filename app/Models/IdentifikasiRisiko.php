@@ -43,6 +43,7 @@ class IdentifikasiRisiko extends Model
         'is_corporate',
         'previous_status_risiko',
         'is_closed',
+        'efektivitas_perlakuan_risiko',
     ];
 
     protected $guarded = [];

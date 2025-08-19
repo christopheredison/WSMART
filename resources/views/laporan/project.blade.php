@@ -23,7 +23,7 @@
           <div class="row g-3">
             <div class="col-md-5">
               <label for="project_id" class="form-label">Project</label>
-              <select name="project_id" id="project_id" class="form-select" required>
+              <select name="project_id" id="project_id" class="form-select select2" required>
                 <option value="">Pilih Project...</option>
                 @if (is_iterable($projects))
                   @foreach ($projects as $project)

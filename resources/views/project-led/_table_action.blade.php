@@ -6,7 +6,7 @@
         <i class="bx bx-show"></i>
     </a>
     @if ($row->version > 0) 
-      <a href="{{ route('project-led.edit', $row->id) }}" 
+      <a href="{{ route('project-led.edit', ['project' => $row->project_id ,'id' => $row->id]) }}" 
           class="btn btn-sm btn-info" 
           data-bs-toggle="tooltip" 
           title="Edit Data">

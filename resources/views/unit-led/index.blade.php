@@ -20,7 +20,7 @@
                           @endif
                         </div>
                         <div class="col-auto ms-auto">
-                            <a class="btn btn-outline-info btn-sm" href="{{ route('unit-led.create', ['periode_id' => $periode->id]) }}">
+                            <a class="btn btn-outline-info btn-sm" href="{{ route('unit-led.create', ['periode' => $periode->id]) }}">
                                 <span class="bx bx-plus"></span>
                                 <span class="ms-1">Tambah Data Loss Event</span>
                             </a>

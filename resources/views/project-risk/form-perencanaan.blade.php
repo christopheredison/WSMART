@@ -22,7 +22,27 @@
     </div>
     <div class="col-12">
         <div class="form-floating">
-            {{ Form::select('opsi_perlakuan_risiko', \App\Models\OpsiPerlakuanRisiko::pluck('opsi_perlakuan_risiko', 'id'), '', ['class' => 'form-select', 'required']) }}
+            @php
+                $allOpsi = \App\Models\OpsiPerlakuanRisiko::all();
+
+                $opsiMapping = [
+                    'low'               => ['Accept/monitor'],
+                    'low to moderate'   => ['Reduce/mitigate', 'Accept/monitor'],
+                    'moderate'          => ['Reduce/mitigate'],
+                    'moderate to high'  => ['Reduce/mitigate', 'Transfer/sharing'],
+                    'high'              => ['Reduce/mitigate', 'Avoid/hindari'],
+                ];
+
+                $currentLevel = strtolower(optional($analisa)->level_risiko ?? '');
+                $allowedOpsiNames = $opsiMapping[$currentLevel] ?? [];
+            @endphp
+            <select name="opsi_perlakuan_risiko" id="opsi_perlakuan_risiko" class="form-select" required>
+                  @foreach ($allOpsi as $opsi)
+                      @if (in_array(trim($opsi->opsi_perlakuan_risiko), $allowedOpsiNames))
+                          <option value="{{ $opsi->id }}">{{ $opsi->opsi_perlakuan_risiko }}</option>
+                      @endif
+                  @endforeach
+            </select>
             <label for="opsi_perlakuan_risiko">Opsi Perlakuan Risiko</label>
         </div>
     </div>
@@ -67,4 +87,10 @@
             <label for="timelineRange2">Waktu Selesai Perlakuan Risiko</label>
         </div>
     </div>
+    {{-- <div class="col-12">
+        <div class="form-floating">
+            {{ Form::select('divisi_terkait', \App\Models\Jabatan::pluck('name', 'id'), '', ['class' => 'form-select select2', 'required', 'multiple' => 'multiple']) }}
+            <label for="divisi_terkait">Divisi Terkait</label>
+        </div>
+    </div> --}}
 </div>

@@ -95,8 +95,8 @@ class ProjectLEDController extends Controller
         $projects = Project::with(['projectPeriodeList.projectRisks' => function($query) {
             $query->with('penyebabRisikoProjects.perlakuanPenyebabRisiko');
         }])->get();
-        if (request()->project_id) {
-            $project = $projects->where('id', request()->project_id)->first();
+        if (request()->project) {
+            $project = $projects->where('id', request()->project)->first();
         }
         $kategoriKejadians = KategoriKejadian::all();
         $kategoriRisikos = KategoriRisiko::all();
@@ -361,7 +361,7 @@ class ProjectLEDController extends Controller
         }
     }
     
-    public function edit($id)
+    public function edit($project, $id)
     {
         $lossEvent = LossEventProject::with('penyebabRisikoProjectLeds.perlakuanPenyebabRisiko')->findOrFail($id);
         $projectSektors = ProjectSektor::all();

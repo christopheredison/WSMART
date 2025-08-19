@@ -352,7 +352,7 @@
                             <!-- Submit Buttons -->
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">Update</button>
-                                <a href="{{ $lossEvent->periode_id ? route('unit-led.index-by-unit', ['unitId' => $lossEvent->periode_id]) : route('unit-led.index') }}" class="btn btn-secondary">Kembali</a>
+                                <a href="{{ $lossEvent->periode_id ? route('unit-led.index-by-periode', ['periode' => $lossEvent->periode_id]) : route('unit-led.index') }}" class="btn btn-secondary">Kembali</a>
                             </div>
                         </div>
                     </form>

@@ -16,6 +16,7 @@
     </div>
     <div class="card-body">
         <form id="filter-form">
+            @csrf
             <div class="row g-3">
                 <div class="col-md-4">
                     <label for="project_id" class="form-label">Proyek</label>
@@ -53,15 +54,24 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-8">
+                <div class="col-md-4">
                     <label for="deskripsi_risiko" class="form-label">Deskripsi Risiko</label>
                     <input type="text" name="deskripsi_risiko" id="deskripsi_risiko" class="form-control" placeholder="Cari berdasarkan deskripsi...">
                 </div>
+                <div class="col-md-4">
+                    <label for="efektivitas" class="form-label">Efektivitas Risiko</label>
+                    <select name="efektivitas" id="efektivitas" class="form-select select2">
+                        <option value="">Semua Status</option>
+                        <option value="efektif">Efektif</option>
+                        <option value="tidak_efektif">Tidak Efektif</option>
+                    </select>
+                </div>
             </div>
             <div class="mt-4 d-flex justify-content-between">
-              <a href="{{ route('kamus-risiko-project.export') }}" id="export-excel-btn" class="btn btn-sm btn-danger">
-                  <span class="bx bxs-file-export me-1"></span> Export to Excel
-              </a>
+              <button type="button" id="export-excel-btn" class="btn btn-sm btn-danger d-flex align-items-center">
+                  <span id="export-icon" class="bx bxs-file-export me-1"></span>
+                  <span id="export-text">Export to Excel</span>
+              </button>
               <div class="d-flex justify-content-center gap-2">
                   <button type="button" id="reset-filter-btn" class="btn btn-sm btn-secondary">Reset Filter</button>
                   <button type="submit" class="btn btn-sm btn-primary">Filter Data Risiko</button>
@@ -93,6 +103,7 @@
                         <th>Realisasi Skala Probabilitas</th>
                         <th>Realisasi Level Risiko</th>
                         <th>Realisasi Eksposur Risiko</th>
+                        <th>Efektivitas Risiko</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -157,6 +168,7 @@ $(document).ready(function() {
                 d.jenis_risiko_id = $('#jenis_risiko_id').val();
                 d.level_risiko = $('#level_risiko').val();
                 d.deskripsi_risiko = $('#deskripsi_risiko').val();
+                d.efektivitas = $('#efektivitas').val();
             }
         },
         columns: [
@@ -176,6 +188,7 @@ $(document).ready(function() {
             { data: 'realisasi_skala_probabilitas', name: 'projectRisk.projectRiskAnalisa.skala_probabilitas_residual' },
             { data: 'realisasi_level_risiko', name: 'projectRisk.projectRiskAnalisa.level_risiko_residual' },
             { data: 'realisasi_eksposur_risiko', name: 'projectRisk.projectRiskAnalisa.eksposur_risiko_residual' },
+            { data: 'efektivitas', name: 'projectRisk.efektivitas_perlakuan_risiko' },
         ],
         order: [[2, 'asc']] // Default order by Proyek name
     });
@@ -197,11 +210,77 @@ $(document).ready(function() {
     $('#export-excel-btn').on('click', function(e) {
         e.preventDefault();
 
-        const filterParams = $('#filter-form').serialize();
-        const baseUrl = $(this).attr('href');
-        const downloadUrl = baseUrl + '?' + filterParams;
-        window.location.href = downloadUrl;
+        showExportLoading();
+
+        $.ajax({
+            url: '{{ route("kamus-risiko-project.export") }}',
+            type: 'POST',
+            data: $('#filter-form').serialize(), // Mengambil semua data filter dari form
+            xhrFields: {
+                responseType: 'blob' // Response akan berupa file binary
+            },
+            success: function(data, status, xhr) {
+                hideExportLoading();
+                const blob = new Blob([data], { 
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+                });
+                
+                const disposition = xhr.getResponseHeader('Content-Disposition');
+                let filename = 'Kamus_Risiko_Proyek.xlsx'; // Nama default
+                
+                if (disposition && disposition.indexOf('filename=') !== -1) {
+                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                    const matches = filenameRegex.exec(disposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            },
+            error: function(xhr, status, error) {
+                hideExportLoading();
+                let errorMsg = 'Gagal membuat laporan Excel. Silakan coba lagi.';
+                // Coba parse response error jika ada
+                const reader = new FileReader();
+                reader.onload = function() {
+                    try {
+                        const json = JSON.parse(this.result);
+                        if (json && json.message) {
+                            errorMsg = json.message;
+                        }
+                    } catch (e) {
+                        // Biarkan pesan error default
+                    }
+                    Swal.fire({
+                        title: 'Error!',
+                        text: errorMsg,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                    });
+                }
+                reader.readAsText(xhr.response);
+            }
+        });
     });
+
+    function showExportLoading() {
+        $('#export-excel-btn').prop('disabled', true);
+        $('#export-text').text('Generating...');
+    }
+    
+    function hideExportLoading() {
+        $('#export-excel-btn').prop('disabled', false);
+        $('#export-text').text('Export to Excel');
+    }
 
     // Action button "Ambil Risiko"
     $('#kamus-risiko-table').on('click', '.btn-ambil-risiko', function () {

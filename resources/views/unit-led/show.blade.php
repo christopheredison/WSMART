@@ -13,12 +13,12 @@
                         </div>
                         <h2 class="h3">Detail Loss Event Unit</h2>
                         <div class="col-auto ms-auto">
-                            <a href="{{ route('unit-led.edit', $lossEvent->id) }}" class="btn btn-info btn-sm">
-                                <i class="bx bx-edit"></i>
+                            <a href="{{ route('unit-led.edit', ['periode' => $lossEvent->periode_id, 'id' => $lossEvent->id]) }}" class="btn btn-info btn-sm">
+                                <span class="bx bx-edit"></span>
                                 <span class="ms-1">Edit</span>
                             </a>
-                            <a href="{{ $lossEvent->periode_id ? route('unit-led.index-by-unit', ['unitId' => $lossEvent->periode_id]) : route('unit-led.index') }}" class="btn btn-secondary btn-sm">
-                                <i class="bx bx-arrow-back"></i>
+                            <a href="{{ route('unit-led.index-by-periode', ['periode' => $lossEvent->periode_id]) }}" class="btn btn-secondary btn-sm">
+                                <span class="bx bx-arrow-back"></span>
                                 <span class="ms-1">Kembali</span>
                             </a>
                         </div>

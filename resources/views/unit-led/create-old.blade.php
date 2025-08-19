@@ -354,7 +354,7 @@
                             <!-- Submit Buttons -->
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">Simpan</button>
-                                <a href="{{ $periode ? route('unit-led.index-by-unit', ['unitId' => $periode->id]) : route('unit-led.index') }}" class="btn btn-secondary">Kembali</a>
+                                <a href="{{ route('unit-led.index-by-periode', ['periode' => $periode->id]) }}" class="btn btn-secondary">Kembali</a>
                             </div>
                         </div>
                     </form>

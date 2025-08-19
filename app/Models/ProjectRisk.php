@@ -39,6 +39,7 @@ class ProjectRisk extends Model
         'level_risiko',
         'status',
         'is_closed',
+        'efektivitas_perlakuan_risiko',
     ];
 
     public const STATUS_INPUT_DATA = 1;
