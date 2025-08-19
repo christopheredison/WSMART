@@ -46,11 +46,14 @@
                     </div>
                 </div>
             </div>
-            
-            <div class="mb-2 mt-4">
-                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modalEdit">Edit</button>
-            </div>
-           
+            @php
+              $userProjects = $user->projects->pluck('id')->toArray();
+            @endphp
+            @if ($userProjects && in_array($projectPeriode->project->id, $userProjects))
+              <div class="mb-2 mt-4">
+                  <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modalEdit">Edit</button>
+              </div>
+            @endif
         </div>
     </div>
     
