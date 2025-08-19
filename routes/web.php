@@ -82,7 +82,8 @@ Route::get('/', function () {
         return redirect()->route('home');
     } else {
         // Jika pengguna belum login, arahkan ke halaman welcome
-        return view('welcome');
+        //return view('welcome');
+        return redirect('https://wzone.wika.co.id/');
     }
 });
 Route::get('/top-navbar', function () {
