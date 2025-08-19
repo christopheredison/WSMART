@@ -36,6 +36,7 @@ use App\Imports\ProjectTenderImport;
 use App\Imports\TenderTemplateImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
+use App\Models\SasaranProyek;
 
 class ProjectRiskController extends BasicCRUDController
 {
@@ -287,11 +288,12 @@ class ProjectRiskController extends BasicCRUDController
         $masterKris = MasterKRI::get();
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
         $kontrolEksistings = KontrolEksisting::get();
-        $jenisRisikos = JenisRisiko::get();
+        $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();
+        $sasaranProyeks = SasaranProyek::get();
         
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
         
-        return view('project-risk.create', compact('periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos'));
+        return view('project-risk.create', compact('periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos', 'sasaranProyeks'));
     }
 
     public function store(Request $request)
@@ -319,7 +321,7 @@ class ProjectRiskController extends BasicCRUDController
                     })
                 ],
                 'wbs' => 'required',
-                'target_capaian_kinerja' => 'required',
+                //'target_capaian_kinerja' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
                 'penilaian_efektifitas_kontrol' => 'required',
                 'perkiraan_waktu_mulai_terpapar_risiko' => 'required',
@@ -337,6 +339,27 @@ class ProjectRiskController extends BasicCRUDController
             $perkiraanWaktuTerpaparRisikoMulai = DateTime::createFromFormat('d/m/Y', $perkiraanWaktuMulaiTerpaparRisiko)->format('Y-m-d');
             $perkiraanWaktuTerpaparRisikoAkhir = DateTime::createFromFormat('d/m/Y', $perkiraanWaktuSelesaiTerpaparRisiko)->format('Y-m-d');
 
+            // Handle sasaran_proyek_id
+            $sasaranProyekId = null;
+            $targetCapaianKinerja = '';
+
+            if ($request->sasaran_proyek_id === 'other') {
+                // Jika opsi "Lainnya" dipilih, buat data SasaranProyek baru
+                // $sasaranProyek = SasaranProyek::create([
+                //     'costcenter_code' => $project->costcenter_code ?? 'MANUAL-INPUT',
+                //     'kpi_desc' => $request->target_capaian_kinerja,
+                // ]);
+                //$sasaranProyekId = $sasaranProyek->id;
+                $targetCapaianKinerja = $request->target_capaian_kinerja;
+            } else if ($request->sasaran_proyek_id) {
+                // Jika opsi yang sudah ada dipilih
+                $sasaranProyekId = $request->sasaran_proyek_id;
+                $targetCapaianKinerja = $request->kpi_desc_selected;
+            } else {
+                // Fallback jika tidak ada yang dipilih
+                $targetCapaianKinerja = $request->target_capaian_kinerja;
+            }
+
             $toStore = [
                 'unit_type_id' => $user->unit_type_id,
                 'unit_id' => $user->unit_id,
@@ -344,7 +367,9 @@ class ProjectRiskController extends BasicCRUDController
                 'user_id' => $user->id,
                 'project_id' => $project->id,
                 'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
-                'target_capaian_kinerja' => $request->target_capaian_kinerja,
+                //'target_capaian_kinerja' => $request->target_capaian_kinerja,
+                'target_capaian_kinerja' => $targetCapaianKinerja,
+                'sasaran_proyek_id' => $sasaranProyekId,
                 'project_periode_list_id' => $projectPeriodeList->id,
                 'deskripsi_peristiwa_risiko' => $request->deskripsi_peristiwa_risiko,
                 'jenis_kontrol_eksisting_id' => $request->jenis_kontrol_eksisting_id,
@@ -439,6 +464,9 @@ class ProjectRiskController extends BasicCRUDController
 
         $project = $projectPeriodeList->project;
 
+        // Ambil semua data SasaranProyek untuk dropdown
+        $sasaranProyeks = SasaranProyek::get();
+
         $peristiwaRisikos = PeristiwaRisiko::get();
 
         $masterKris = MasterKRI::get();
@@ -448,9 +476,10 @@ class ProjectRiskController extends BasicCRUDController
         $kontrolEksistings = KontrolEksisting::whereIn('id', $kontrolEksistingIds)->get();
         
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
-        $jenisRisikos = JenisRisiko::get();
+        
+        $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();
 
-        return view('project-risk.edit', compact('projectRisk', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos'));
+        return view('project-risk.edit', compact('projectRisk', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos', 'sasaranProyeks'));
     }
 
     public function update(Request $request, $resource)
@@ -505,6 +534,8 @@ class ProjectRiskController extends BasicCRUDController
                 'perkiraan_waktu_terpapar_risiko_mulai' => $perkiraanWaktuTerpaparRisikoMulai,
                 'perkiraan_waktu_terpapar_risiko_akhir' => $perkiraanWaktuTerpaparRisikoAkhir,
                 'wbs' => $request->wbs,
+                //'target_capaian_kinerja' => $targetCapaianKinerja,
+                //'sasaran_proyek_id' => $sasaranProyekId,
             ];
 
             $projectRisk->update($toUpdate);

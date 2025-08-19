@@ -40,6 +40,7 @@ class ProjectRisk extends Model
         'status',
         'is_closed',
         'efektivitas_perlakuan_risiko',
+        'sasaran_proyek_id',
     ];
 
     public const STATUS_INPUT_DATA = 1;
@@ -298,5 +299,10 @@ class ProjectRisk extends Model
                 ]);
             }
         });
+    }
+
+    public function sasaranProyek()
+    {
+        return $this->belongsTo(SasaranProyek::class, 'sasaran_proyek_id');
     }
 }
