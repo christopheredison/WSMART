@@ -14,7 +14,7 @@
               @include('partials.logo',["width"=>150])
             </div>
             <div class="col-md-8">
-              <h1 class="mb-4">Sistem Informasi<br>Manajemen Risiko (SIMR)</h1>
+              <h1 class="mb-4">WIKA Sistem MAnagement Risiko Terintegrasi<br />(W-SMART)</h1>
               <h5>PT Wijaya Karya (Persero) Tbk</h5>
             </div>
           </div>
