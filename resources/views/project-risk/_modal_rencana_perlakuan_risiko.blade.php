@@ -33,18 +33,18 @@
                                 <label for="output_perlakuan_risiko" class="form-label">Output Perlakuan Risiko</label>
                             </div>
                         </div>
-                        {{-- <div class="col-12">
+                        <div class="col-12">
                             <div class="form-floating">
                                 {{ Form::select('opsi_perlakuan_risiko', \App\Models\OpsiPerlakuanRisiko::pluck('opsi_perlakuan_risiko', 'id'), '', ['class' => 'form-select', 'placeholder' => 'Pilih Opsi Perlakuan Risiko', 'required' => true]) }}
                                 <label for="output_perlakuan_risiko" class="form-label">Opsi Perlakuan Risiko</label>
                             </div>
-                        </div> --}}
-                        <div class="col-12">
+                        </div>
+                        {{-- <div class="col-12">
                             <div class="form-floating">
                                 {{ Form::select('jenis_rencana_perlakuan_risiko', \App\Models\JenisRencanaPerlakuanRisiko::pluck('jenis_rencana_perlakuan_risiko', 'id'), '', ['class' => 'form-select', 'placeholder' => 'Pilih Jenis Rencana Perlakuan Risiko', 'required' => true]) }}
                                 <label for="output_perlakuan_risiko" class="form-label">Jenis Rencana Perlakuan Risiko</label>
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="col-12 col-md-6">
                             <div class="form-floating">
                                 {{ Form::text('biaya_perlakuan_risiko', null, ['class' => 'form-control inputmask-rupiah', 'placeholder' => 'Masukkan biaya dalam rupiah', 'required' => 'required']) }}

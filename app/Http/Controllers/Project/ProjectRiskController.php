@@ -1010,8 +1010,8 @@ class ProjectRiskController extends BasicCRUDController
             //'timeline_perlakuan_risiko' => 'required|string',
             'timeline_mulai_perlakuan_risiko' => 'required',
             'timeline_selesai_perlakuan_risiko' => 'required',
-            // 'opsi_perlakuan_risiko' => 'required|exists:opsi_perlakuan_risikos,id',
-            'jenis_rencana_perlakuan_risiko' => 'required|exists:jenis_rencana_perlakuan_risikos,id',
+            'opsi_perlakuan_risiko' => 'required|exists:opsi_perlakuan_risikos,id',
+            // 'jenis_rencana_perlakuan_risiko' => 'required|exists:jenis_rencana_perlakuan_risikos,id',
         ]);
 
         $penyebabRisiko = PenyebabRisikoProject::with('risiko.project')->findOrFail($validated['penyebab_risiko_id']);
@@ -1073,8 +1073,8 @@ class ProjectRiskController extends BasicCRUDController
             'pic_jabatan_id' => $validated['pic'],
             'timeline_perlakuan_risiko_start' => $startDate,
             'timeline_perlakuan_risiko_end' => $endDate,
-            // 'opsi_perlakuan_risiko' => $validated['opsi_perlakuan_risiko'],
-            'jenis_rencana_perlakuan_risiko' => $validated['jenis_rencana_perlakuan_risiko'],
+            'opsi_perlakuan_risiko' => $validated['opsi_perlakuan_risiko'],
+            // 'jenis_rencana_perlakuan_risiko' => $validated['jenis_rencana_perlakuan_risiko'],
         ]);
 
         //return response()->json(['message' => 'Rencana untuk penyebab risiko id : '.$request->penyebab_risiko_id.'  berhasil ditambahkan! ']);
@@ -1113,8 +1113,8 @@ class ProjectRiskController extends BasicCRUDController
             'penyebab_risiko' => $perlakuan->penyebabRisikoProject->penyebab_risiko ?? null, // Dapatkan nama penyebab risiko
             'rencana_perlakuan_risiko' => $perlakuan->rencana_perlakuan_risiko,
             'output_perlakuan_risiko' => $perlakuan->output_perlakuan_risiko,
-            // 'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
-            'jenis_rencana_perlakuan_risiko' => $perlakuan->jenis_rencana_perlakuan_risiko,
+            'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
+            // 'jenis_rencana_perlakuan_risiko' => $perlakuan->jenis_rencana_perlakuan_risiko,
             'biaya_perlakuan_risiko' => $perlakuan->biaya_perlakuan_risiko,
             'pic' => $perlakuan->pic,
             'pic_jabatan_id' => $perlakuan->pic_jabatan_id,
@@ -1128,8 +1128,8 @@ class ProjectRiskController extends BasicCRUDController
         $validated = $request->validate([
             'xrencana_perlakuan_risiko' => 'required',
             'xoutput_perlakuan_risiko' => 'required',
-            // 'xopsi_perlakuan_risiko' => 'required',
-            'xjenis_rencana_perlakuan_risiko' => 'required',
+            'xopsi_perlakuan_risiko' => 'required',
+            // 'xjenis_rencana_perlakuan_risiko' => 'required',
             'xbiaya_perlakuan_risiko' => 'required|numeric',
             'xpic' => 'required',
             //'xtimeline_perlakuan_risiko' => 'required',
@@ -1156,8 +1156,8 @@ class ProjectRiskController extends BasicCRUDController
             $data = [
                 'rencana_perlakuan_risiko' => $validated['xrencana_perlakuan_risiko'],
                 'output_perlakuan_risiko' => $validated['xoutput_perlakuan_risiko'],
-                // 'opsi_perlakuan_risiko' => $validated['xopsi_perlakuan_risiko'],
-                'jenis_rencana_perlakuan_risiko' => $validated['xjenis_rencana_perlakuan_risiko'],
+                'opsi_perlakuan_risiko' => $validated['xopsi_perlakuan_risiko'],
+                // 'jenis_rencana_perlakuan_risiko' => $validated['xjenis_rencana_perlakuan_risiko'],
                 'biaya_perlakuan_risiko' => $validated['xbiaya_perlakuan_risiko'],
                 'pic' => $jabatan_name,
                 'pic_jabatan_id' => $validated['xpic'],
