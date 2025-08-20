@@ -11,7 +11,7 @@
         <div class="col-2 col-md-1">
           @include('partials.logo')
         </div>
-        <h1 class="my-auto col-md-8 fs-md-5 fs-xl-6 fs-xxl-8">Sistem Informasi Manajemen Risiko (SIMR)</h1>
+        <h4 class="my-auto col-md-8 fs-md-5 fs-xl-6 fs-xxl-8">WIKA Sistem MAnagement Risiko Terintegrasi<br />(W-SMART)</h4>
       </div>
     </div>
   </div>
