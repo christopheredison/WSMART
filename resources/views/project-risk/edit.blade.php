@@ -31,7 +31,7 @@
                             <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko</label>
                                 <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
-                                    value="{{ old('target_capaian_kinerja', $projectRisk->target_capaian_kinerja) }}" placeholder="Sasaran Risiko" required></textarea>
+                                    value="{{ old('target_capaian_kinerja', $projectRisk->target_capaian_kinerja) }}" placeholder="Sasaran Risiko" disabled></textarea>
                             </div>
                         </div>
                         <div class="col-md-12">
@@ -305,6 +305,12 @@
     $(document).ready(function() {
         const masterKris = @json($masterKris->keyBy('id'));
         const kontrolExistings = @json($kontrolEksistings->keyBy('id'));
+        
+        $('#jenis_risiko_id').on('change', function() {
+            var selectedOption = $(this).find('option:selected');
+            var kategoriId = selectedOption.data('kategori');
+            $('#kategori_risiko_id').val(kategoriId);
+        });
 
         $('#jenis_risiko_id').on('change', function() {
             var selectedOption = $(this).find('option:selected');

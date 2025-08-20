@@ -45,3 +45,36 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Docker Configuration - Tambahan baru
+# Environment files untuk database switching
+.env.mysql
+.env.postgres
+.env.local
+.env.development
+.env.staging
+.env.mysql.example
+.env.postgres.example
+
+# Docker Compose override files
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.dev.yml
+docker-compose.prod.yml
+
+# Docker volumes dan data
+/docker/data/
+/docker/logs/
+/docker/mysql/
+/docker/postgres/
+/docker/redis/
+
+# Docker build context yang tidak perlu
+.dockerignore
+
+# Script switching database (opsional)
+switch-db.bat
+switch-db.sh
+
+# Docker Compose environment file
+.env.docker

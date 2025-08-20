@@ -268,5 +268,17 @@ return [
         'jabatan_create',
 
         'corporate_risk_view',
+
+        'corporate_dashboard_menu',
+        'unit_dashboard_menu',
+        'proyek_dashboard_menu',
+        'ap_dashboard_menu',
+        'kri_dashboard_menu',
+        'corporate_menu',
+        'unit_menu',
+        'proyek_menu',
+        'ap_menu',
+        'rmd_menu',
+        'setting_menu',
     ],
 ];
