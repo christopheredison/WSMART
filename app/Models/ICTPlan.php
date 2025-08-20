@@ -17,7 +17,9 @@ class ICTPlan extends Model
         'risiko_id',
         'type',
         'business_process',
-        'metode_pengujian'
+        'metode_pengujian',
+        'status',
+        'rejection_reason',
     ];
 
     /**

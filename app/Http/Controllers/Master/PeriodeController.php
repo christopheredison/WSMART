@@ -13,8 +13,9 @@ class PeriodeController extends Controller
     public function index()
     {
         $periode = Periode::with('riskLimitPeriodes')->get();
-        $unitWithRiskLimit = Unit::where('unit_type_id', 1)->get();
-        return view('master.periode.index', compact('periode', 'unitWithRiskLimit'));
+        $unitsType1 = Unit::where('unit_type_id', 1)->get();
+        $unitsType2 = Unit::where('unit_type_id', 2)->get();
+        return view('master.periode.index', compact('periode', 'unitsType1', 'unitsType2'));
     }
 
     public function changeActivePeriod(Request $request)

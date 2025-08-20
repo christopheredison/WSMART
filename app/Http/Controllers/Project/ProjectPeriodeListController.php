@@ -348,6 +348,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 return $item->skala_dampak . '-' . $item->skala_probabilitas;
             });
 
-        return view('project-periode.show', compact('projectPeriode', 'tahunMonitorings', 'formattedCurrentRiskMaps', 'editFields', 'riskMaps'));
+        $user = Auth()->user();
+        return view('project-periode.show', compact('projectPeriode', 'tahunMonitorings', 'formattedCurrentRiskMaps', 'editFields', 'riskMaps', 'user'));
     }
 }

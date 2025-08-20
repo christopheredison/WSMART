@@ -947,11 +947,11 @@ $(document).ready(function() {
 
     $('#btnSimpanUpdateRealisasi').on('click', function() {
         // Gunakan fungsi validasi dari _modal_penyebab.blade.php jika tersedia
-        if (typeof validateRealisasiForm === 'function') {
-            if (!validateRealisasiForm()) {
-                return;
-            }
-        }
+        // if (typeof validateRealisasiForm === 'function') {
+        //     if (!validateRealisasiForm()) {
+        //         return;
+        //     }
+        // }
         
         if (!$('#formUpdateRealisasi')[0].checkValidity()) {
             $('#formUpdateRealisasi')[0].reportValidity();

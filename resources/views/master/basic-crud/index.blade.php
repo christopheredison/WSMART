@@ -220,6 +220,14 @@
 @if($hasChangeToLedUnitAction)
     const ledCreateRoute = "{{ route('risk-register-unit.loss-events.create', ['riskRegister' => ':riskRegister']) }}";
 @endif
+
+@php
+    $hasChangeToLedApAction = collect($tableActions ?? [])->contains('action', 'change_to_led_ap');
+@endphp
+
+@if($hasChangeToLedApAction)
+    const ledCreateRoute = "{{ route('risk-register-ap.loss-events.create', ['riskRegister' => ':riskRegister']) }}";
+@endif
 const fetchedData = [];
 $(document).ready(function() {
     const datatableColumns = [
@@ -470,6 +478,32 @@ $(document).ready(function() {
                 break;
             }
             case 'change_to_led_unit': {
+                let label = 'Apakah Risiko ini terjadi dan menjadi Loss Event?';
+                const rowData = fetchedData[id];
+                if (rowData && rowData?.peristiwa_risiko) {
+                  label = `Apakah Risiko ${rowData?.peristiwa_risiko} - ${rowData?.deskripsi_peristiwa_risiko} ini terjadi dan menjadi Loss Event?`;  
+                }
+                Swal.fire({
+                    title: 'Konfirmasi Perubahan',
+                    html: label,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: "Ya, Ubah ke Loss Event",
+                    cancelButtonText: "Tidak, Batal",
+                    buttonsStyling: false,
+                    customClass: {
+                        confirmButton: 'btn btn-success me-2',
+                        cancelButton: 'btn btn-danger'
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const finalUrl = ledCreateRoute.replace(':riskRegister', id);
+                        window.location.href = finalUrl;
+                    }
+                });
+                break;
+            }
+            case 'change_to_led_ap': {
                 let label = 'Apakah Risiko ini terjadi dan menjadi Loss Event?';
                 const rowData = fetchedData[id];
                 if (rowData && rowData?.peristiwa_risiko) {

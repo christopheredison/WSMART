@@ -280,5 +280,8 @@ return [
         'ap_menu',
         'rmd_menu',
         'setting_menu',
+
+        'ict_input',
+        'ict_approval',
     ],
 ];

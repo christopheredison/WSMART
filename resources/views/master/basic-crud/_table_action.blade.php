@@ -44,4 +44,9 @@ if (!(!$permissions || \Gate::any($permissions))) {
         <span>{!! $action['label'] !!}</span>
     </button>
     @break
+@case('change_to_led_ap')
+    <button type="button" class="btn btn-link btn-muted-primary  btn-action px-1 py-0" data-action="change_to_led_ap" data-id="{{ $id }}">
+        <span>{!! $action['label'] !!}</span>
+    </button>
+    @break
 @endswitch

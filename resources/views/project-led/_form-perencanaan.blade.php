@@ -26,12 +26,12 @@
             <label for="opsi_perlakuan_risiko">Opsi Perlakuan Risiko <span class="text-danger">*</span></label>
         </div>
     </div>
-    <div class="col-12">
+    {{-- <div class="col-12">
         <div class="form-floating">
             {{ Form::select('jenis_rencana_perlakuan_risiko', \App\Models\JenisRencanaPerlakuanRisiko::pluck('jenis_rencana_perlakuan_risiko', 'id'), '', ['class' => 'form-select', 'required', 'id' => 'jenis_rencana_perlakuan_risiko']) }}
             <label for="jenis_rencana_perlakuan_risiko">Jenis Rencana Perlakuan Risiko <span class="text-danger">*</span></label>
         </div>
-    </div>
+    </div> --}}
     <div class="col-12 col-md-6">
         <div class="form-floating">
             {{ Form::text('biaya_perlakuan_risiko', null, ['class' => 'form-control inputmask-rupiah', 'required']) }}

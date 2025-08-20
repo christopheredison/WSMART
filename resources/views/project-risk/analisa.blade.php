@@ -370,6 +370,10 @@ function refreshSkalaAndLevelRisiko(residual = false) {
     const skalaDampak = $('[name="skala_dampak' + (residual ? '_residual' : '') + '"]').val();
     const skalaProbabilitas = $('[name="skala_probabilitas' + (residual ? '_residual' : '') + '"]').data('tingkat');
 
+    if (!skalaDampak || !skalaProbabilitas) {
+        return; 
+    }
+
     const riskMap = riskMaps[skalaDampak + '-' + skalaProbabilitas];
     if  (riskMap) {
         domSkalaRisiko.val(riskMap.nilai_risiko);
@@ -393,9 +397,10 @@ $(document).ready(function() {
         }
         refreshEksposureRisiko();
         refreshEksposureRisiko(true);
+        refreshSkalaAndLevelRisiko();
     }).change();
 
-    $('[name="nilai_probabilitas"]').on('change', function() {
+    $('[name="nilai_probabilitas"]').on('input change', function() {
         const value = $(this).val();
         const skalaProbabilitas = getSkalaProbabilitasByValue(value);
 
@@ -407,7 +412,7 @@ $(document).ready(function() {
         refreshEksposureRisiko();
     }).change();
 
-    $('[name="nilai_probabilitas_residual"]').on('change', function() {
+    $('[name="nilai_probabilitas_residual"]').on('input change', function() {
         const value = $(this).val();
         const skalaProbabilitas = getSkalaProbabilitasByValue(value);
 
@@ -419,14 +424,13 @@ $(document).ready(function() {
         refreshEksposureRisiko(true);
     }).change();
 
-    $('[name="nilai_dampak"],[name="skala_dampak"]').on('change', function() {
+    $('[name="nilai_dampak"],[name="skala_dampak"]').on('input change', function() {
         //console.log('change nilai dampak');
         refreshEksposureRisiko();
         refreshSkalaAndLevelRisiko();
-        
     }).change();
 
-    $('[name="nilai_dampak_residual"],[name="skala_dampak_residual"]').on('change', function() {
+    $('[name="nilai_dampak_residual"],[name="skala_dampak_residual"]').on('input change', function() {
         refreshEksposureRisiko(true);
         refreshSkalaAndLevelRisiko(true);
     }).change();
@@ -714,7 +718,7 @@ $(document).ready(function() {
     }
 
     // Event listener untuk perubahan nilai dampak, nilai dampak residual, kategori dampak, dan risk limit
-    $('[name="nilai_dampak"], [name="nilai_dampak_residual"], [name="kategori_dampak"]').on('change', function() {
+    $('[name="nilai_dampak"], [name="nilai_dampak_residual"], [name="kategori_dampak"]').on('input change', function() {
         updateSkalaDampak();
     });
 
@@ -750,7 +754,7 @@ $(document).ready(function() {
         $('#nilai_dampak_residual').val(''); // Reset nilai dampak residual setiap kali nilai dampak diubah
     });
 
-    $('#nilai_dampak_residual').on('blur', function () {
+    $('#nilai_dampak_residual').on('input change', function () {
         var nilaiDampak = parseRupiahToNumber($('#nilai_dampak').val()); // Ambil nilai dampak tanpa format
         var nilaiResidual = parseRupiahToNumber($(this).val()); // Ambil nilai dampak residual tanpa format
 

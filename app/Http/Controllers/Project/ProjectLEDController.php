@@ -25,6 +25,7 @@ use App\Models\PerlakuanPenyebabRisikoProjectLed;
 use App\Models\ProjectRiskAnalisa;
 use App\Models\PenyebabRisikoProject;
 use App\Models\PerlakuanPenyebabRisikoProject;
+use App\Models\KamusRisikoProject;
 use Illuminate\Support\Facades\DB;
 
 class ProjectLEDController extends Controller
@@ -277,7 +278,7 @@ class ProjectLEDController extends Controller
                                 'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
                                 'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
                                 'opsi_perlakuan_risiko' => $perlakuan['opsi_perlakuan_risiko'],
-                                'jenis_rencana_perlakuan_risiko' => $perlakuan['jenis_rencana_perlakuan_risiko'],
+                                // 'jenis_rencana_perlakuan_risiko' => $perlakuan['jenis_rencana_perlakuan_risiko'],
                             ]);
                         }
                     }
@@ -339,7 +340,7 @@ class ProjectLEDController extends Controller
                                     'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
                                     'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
                                     'opsi_perlakuan_risiko' => $perlakuan['opsi_perlakuan_risiko'],
-                                    'jenis_rencana_perlakuan_risiko' => $perlakuan['jenis_rencana_perlakuan_risiko'],
+                                    // 'jenis_rencana_perlakuan_risiko' => $perlakuan['jenis_rencana_perlakuan_risiko'],
                                 ]);
                             }
                         }
@@ -391,7 +392,7 @@ class ProjectLEDController extends Controller
                         'timeline_mulai_perlakuan_risiko' => $perlakuan->timeline_perlakuan_risiko_start ? Carbon::parse($perlakuan->timeline_perlakuan_risiko_start)->format('d/m/Y') : '',
                         'timeline_selesai_perlakuan_risiko' => $perlakuan->timeline_perlakuan_risiko_end ? Carbon::parse($perlakuan->timeline_perlakuan_risiko_end)->format('d/m/Y') : '',
                         'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
-                        'jenis_rencana_perlakuan_risiko' => $perlakuan->jenis_rencana_perlakuan_risiko,
+                        // 'jenis_rencana_perlakuan_risiko' => $perlakuan->jenis_rencana_perlakuan_risiko,
                     ];
                 })
             ];
@@ -578,7 +579,7 @@ class ProjectLEDController extends Controller
                                 'timeline_perlakuan_risiko_start' => $startDate,
                                 'timeline_perlakuan_risiko_end' => $endDate,
                                 'opsi_perlakuan_risiko' => $perlakuanItem['opsi_perlakuan_risiko'],
-                                'jenis_rencana_perlakuan_risiko' => $perlakuanItem['jenis_rencana_perlakuan_risiko'],
+                                // 'jenis_rencana_perlakuan_risiko' => $perlakuanItem['jenis_rencana_perlakuan_risiko'],
                             ];
 
                             if ($isNewPerlakuan) {
@@ -668,7 +669,7 @@ class ProjectLEDController extends Controller
                                     'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
                                     'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuan['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
                                     'opsi_perlakuan_risiko' => $perlakuan['opsi_perlakuan_risiko'],
-                                    'jenis_rencana_perlakuan_risiko' => $perlakuan['jenis_rencana_perlakuan_risiko'],
+                                    // 'jenis_rencana_perlakuan_risiko' => $perlakuan['jenis_rencana_perlakuan_risiko'],
                                 ]);
                             }
                         }
@@ -741,7 +742,7 @@ class ProjectLEDController extends Controller
                       'timeline_mulai_perlakuan_risiko' => \Carbon\Carbon::parse($perlakuan->timeline_perlakuan_risiko_start)->format('d/m/Y'),
                       'timeline_selesai_perlakuan_risiko' => \Carbon\Carbon::parse($perlakuan->timeline_perlakuan_risiko_end)->format('d/m/Y'),
                       'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
-                      'jenis_rencana_perlakuan_risiko' => $perlakuan->jenis_rencana_perlakuan_risiko,
+                      // 'jenis_rencana_perlakuan_risiko' => $perlakuan->jenis_rencana_perlakuan_risiko,
                   ];
               })
           ];
@@ -842,7 +843,7 @@ class ProjectLEDController extends Controller
                                 'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuanItem['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
                                 'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuanItem['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
                                 'opsi_perlakuan_risiko' => $perlakuanItem['opsi_perlakuan_risiko'],
-                                'jenis_rencana_perlakuan_risiko' => $perlakuanItem['jenis_rencana_perlakuan_risiko'],
+                                // 'jenis_rencana_perlakuan_risiko' => $perlakuanItem['jenis_rencana_perlakuan_risiko'],
                             ]);
                         }
                     }
@@ -852,6 +853,13 @@ class ProjectLEDController extends Controller
             // Cek apakah risiko perlu di-close
             if ($request->input('is_closed') == '1') {
                 $risk->update(['is_closed' => true]);
+
+                KamusRisikoProject::updateOrCreate(
+                    [
+                      'project_id' => $project->id,
+                      'project_risk_id' => $risk->id,
+                    ],
+                );
             }
 
             DB::commit();

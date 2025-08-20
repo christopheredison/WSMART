@@ -534,17 +534,20 @@ $(document).ready(function() {
             if (oldValueRiskLimit) {
                 $('#risk_limit').val(oldValueRiskLimit);
             }
-            if ($('[name="nilai_dampak"]').data('oldValue')) {
-                $('[name="nilai_dampak"]').prop('readonly', false).val($('[name="nilai_dampak"]').data('oldValue'));
+            $('[name="nilai_dampak"]').prop('readonly', false);
+            if (typeof $('[name="nilai_dampak"]').data('oldValue') !== 'undefined') {
+                $('[name="nilai_dampak"]').val($('[name="nilai_dampak"]').data('oldValue'));
             }
             $('[name="skala_dampak"]').prop('disabled', true).data('oldValue', $('[name="skala_dampak"]').val());
             for (let i = 1; i <= 4; i++) {
-                if ($(`[name="nilai_dampak_residual_q${i}"]`).data('oldValue')) {
-                    $(`[name="nilai_dampak_residual_q${i}"]`).prop('readonly', false).val($(`[name="nilai_dampak_residual_q${i}"]`).data('oldValue'));
+                $(`[name="nilai_dampak_residual_q${i}"]`).prop('readonly', false);
+                if (typeof $(`[name="nilai_dampak_residual_q${i}"]`).data('oldValue') !== 'undefined') {
+                    $(`[name="nilai_dampak_residual_q${i}"]`).val($(`[name="nilai_dampak_residual_q${i}"]`).data('oldValue'));
                 }
                 $(`[name="skala_dampak_residual_q${i}"]`).prop('disabled', true).data('oldValue', $(`[name="skala_dampak_residual_q${i}"]`).val());
             }
         }
+        updateSkalaDampak();
         refreshEksposureRisiko();
         refreshEksposureRisiko(true);
     }).change();
