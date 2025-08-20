@@ -497,6 +497,15 @@ function validateForm() {
         isValid = false;
     }
 
+    const nilaiProbabilitas = parseFloat($('[name="nilai_probabilitas"]').val());
+    if (isNaN(nilaiProbabilitas) || nilaiProbabilitas <= 0) {
+        addFieldError('nilai_probabilitas', 'Nilai Probabilitas Inheren wajib diisi.');
+        isValid = false;
+    } else if (nilaiProbabilitas > 100) {
+        addFieldError('nilai_probabilitas', 'Nilai Probabilitas Inheren tidak boleh melebihi 100.');
+        isValid = false;
+    }
+
     // Validasi Bagian Residual (Q1-Q4)
     let isAnyQuarterFilled = false;
     let partialErrors = false;
@@ -517,6 +526,9 @@ function validateForm() {
             // Semua quarter yang diisi sebagian, wajib diisi probabilitas dan skala dampaknya
             if (!nilaiProbRes || parseFloat(nilaiProbRes) <= 0) {
                 addFieldError(`nilai_probabilitas_residual_q${i}`, 'Nilai Probabilitas wajib diisi.');
+                isThisQuarterComplete = false;
+            } else if (parseFloat(nilaiProbRes) > 100) {
+                addFieldError(`nilai_probabilitas_residual_q${i}`, 'Nilai Probabilitas tidak boleh melebihi 100.');
                 isThisQuarterComplete = false;
             }
             if (!skalaDampakRes) {
@@ -610,7 +622,7 @@ function validateResidualValues() {
             icon: 'error',
             title: 'Validasi Gagal',
             html: errors.map(e => `<div style="text-align: left; color: #dc3545; margin-bottom: 5px;">❌ ${e}</div>`).join(''),
-            confirmButtonText: 'Mengerti'
+            confirmButtonText: 'OK'
         });
         return false;
     }
@@ -888,6 +900,14 @@ $(document).ready(function() {
             refreshEksposureRisiko(true, i);
         }).change();
     }
+
+    const probabilityFields = 'input[name="nilai_probabilitas"], input[name^="nilai_probabilitas_residual_q"]';
+    $(document).on('input', probabilityFields, function() {
+        let value = parseFloat($(this).val());
+        if (!isNaN(value) && value > 100) {
+            $(this).val(100);
+        }
+    });
 
     $('[name="nilai_probabilitas"]').on('change', function() {
         const value = $(this).val();
