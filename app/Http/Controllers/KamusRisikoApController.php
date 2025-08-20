@@ -4,21 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\IdentifikasiRisiko;
 use App\Models\JenisRisiko;
-use App\Models\KamusRisikoUnit;
+use App\Models\KamusRisikoAp;
 use App\Models\Periode;
 use App\Models\Unit;
 use Illuminate\Http\Request;
-use App\Exports\KamusRisikoUnitExport;
+use App\Exports\KamusRisikoApExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class KamusRisikoUnitController extends Controller
+class KamusRisikoApController extends Controller
 {
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = KamusRisikoUnit::with([
+            $query = KamusRisikoAp::with([
                 'identifikasiRisiko.unit',
                 'identifikasiRisiko.jenisRisiko.kategoriRisiko',
                 'identifikasiRisiko.riskAnalysis'
@@ -71,7 +71,7 @@ class KamusRisikoUnitController extends Controller
             return datatables()->of($query)
                 ->addIndexColumn()
                 ->addColumn('action', function ($row) {
-                      $detailUrl = route('risk-register-unit.view', ['riskRegister' => $row->risiko_id]);
+                      $detailUrl = route('risk-register-ap.view', ['riskRegister' => $row->risiko_id]);
 
                       $btn_view = '<a href="' . $detailUrl . '" target="_blank" class="btn btn-sm btn-info d-flex align-items-center justify-content-center" title="View Detail">
                                       <span class="bx bx-show me-1"></span>
@@ -112,7 +112,7 @@ class KamusRisikoUnitController extends Controller
                 })
                 ->addColumn('realisasi_nilai_dampak', fn($row) => 'Rp ' . number_format($row->identifikasiRisiko->riskAnalysis->nilai_dampak_residual ?? 0, 0, ',', '.'))
                 ->addColumn('realisasi_skala_dampak', fn($row) => $row->identifikasiRisiko->riskAnalysis->skala_dampak_residual ?? '-')
-                ->addColumn('realisasi_skala_probabilitas', fn($row) => $row->identifikasiRisiko->riskAnalysis?->skalaProbabilitasResidual?->tingkat ?? '-')
+                ->addColumn('realisasi_skala_probabilitas', fn($row) => $row->identifikasiRisiko->riskAnalysis->skala_probabilitas_residual ?? '-')
                 ->addColumn('realisasi_level_risiko', function ($row) {
                     $analisa = $row->identifikasiRisiko->riskAnalysis;
                     if (!$analisa || !$analisa->level_risiko_residual) return '-';
@@ -136,7 +136,7 @@ class KamusRisikoUnitController extends Controller
         }
 
         // Data untuk filter
-        $units = Unit::where('unit_type_id', 1)->orderBy('name')->get(['id', 'name']);
+        $units = Unit::where('unit_type_id', 2)->orderBy('name')->get(['id', 'name']);
         $jenisRisikos = JenisRisiko::with('kategoriRisiko')->get();
         $levelRisikos = [
             IdentifikasiRisiko::LEVEL_RISIKO_LOW => 'Low',
@@ -146,7 +146,7 @@ class KamusRisikoUnitController extends Controller
             IdentifikasiRisiko::LEVEL_RISIKO_HIGH => 'High',
         ];
 
-        return view('kamus-risiko-unit.index', compact('units', 'jenisRisikos', 'levelRisikos'));
+        return view('kamus-risiko-ap.index', compact('units', 'jenisRisikos', 'levelRisikos'));
     }
 
     public function addRisk(Request $request)
@@ -178,7 +178,7 @@ class KamusRisikoUnitController extends Controller
             if ($existingRisk && !$request->input('overwrite', false)) {
                 return response()->json([
                     'conflict' => true,
-                    'message' => 'Peristiwa risiko "' . $originalRisk->peristiwa_risiko . '" sudah ada untuk unit/divisi ini pada periode yang sama.'
+                    'message' => 'Peristiwa risiko "' . $originalRisk->peristiwa_risiko . '" sudah ada untuk unit/divisi anak perusahaan ini pada periode yang sama.'
                 ], 409);
             }
 
@@ -236,8 +236,8 @@ class KamusRisikoUnitController extends Controller
             
             DB::commit();
 
-            $redirectUrl = route('risk-register-unit.index', ['pid' => $newRisk->period_id]);
-            $message = $request->input('overwrite') ? 'Risiko lama berhasil diganti dengan risiko baru.' : 'Risiko berhasil ditambahkan ke divisi yang dipilih.';
+            $redirectUrl = route('risk-register-ap.index', ['pid' => $newRisk->period_id]);
+            $message = $request->input('overwrite') ? 'Risiko lama berhasil diganti dengan risiko baru.' : 'Risiko berhasil ditambahkan ke divisi anak perusahaan yang dipilih.';
 
             return response()->json([
                 'message' => $message,
@@ -259,13 +259,12 @@ class KamusRisikoUnitController extends Controller
                 'jenis_risiko_id',
                 'level_risiko',
                 'deskripsi_risiko',
-                'efektivitas',
             ]);
     
-            $fileName = 'Kamus_Risiko_Divisi_' . date('d-m-Y_H-i-s') . '.xlsx';
+            $fileName = 'Kamus_Risiko_AP_' . date('d-m-Y_H-i-s') . '.xlsx';
     
             $fileContents = Excel::raw(
-                new KamusRisikoUnitExport($filters),
+                new KamusRisikoApExport($filters),
                 \Maatwebsite\Excel\Excel::XLSX
             );
     
@@ -275,7 +274,7 @@ class KamusRisikoUnitController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            Log::error('Gagal export Kamus Risiko Divisi: ' . $e->getMessage());
+            Log::error('Gagal export Kamus Risiko Divisi Anak Perusahaan: ' . $e->getMessage());
             return response()->json(['message' => 'Terjadi kesalahan saat membuat file Excel.'], 500);
         }
     }

@@ -106,6 +106,18 @@
             </span>
           </a>
         </li>
+        @endcan
+        @can('ap_menu')
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->is('risk-register-ap') ? 'active' : '' }}" href="/risk-register-ap/periods"
+            role="button" data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon">
+              <i class="menu-icon tf-icons bx bx-grid-alt"></i>
+              <span class="nav-link-text">Risk Register Anak Perusahaan</span>
+            </span>
+          </a>
+        </li>
+        @endcan
 
         {{-- <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('unit-led.index') ? 'active' : '' }}"
@@ -117,12 +129,25 @@
           </a>
         </li> --}}
 
+        @can('unit_menu')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('laporan.unit') ? 'active' : '' }}"
             href="{{route('laporan.unit')}}" role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
               <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
               <span class="nav-link-text">Laporan Divisi</span>
+            </span>
+          </a>
+        </li>
+        @endcan
+
+        @can('ap_menu')
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->routeIs('laporan.ap') ? 'active' : '' }}"
+            href="{{route('laporan.ap')}}" role="button" data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon d-flex align-items-center w-100">
+              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <span class="nav-link-text">Laporan Anak Perusahaan</span>
             </span>
           </a>
         </li>
@@ -167,7 +192,7 @@
         @endcan
 
         @endcan
-        
+
         @can('rmd_menu')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('metrik-strategi-risiko.index') ? 'active' : '' }}" href="{{route('metrik-strategi-risiko.index')}}" role="button"
@@ -216,8 +241,8 @@
             </span>
           </a>
         </li>
-        @endcan 
-        
+        @endcan
+
         @can('manajemen_master')
         <div class="row navbar-vertical-label-wrapper">
           <div class="col-auto navbar-vertical-label">

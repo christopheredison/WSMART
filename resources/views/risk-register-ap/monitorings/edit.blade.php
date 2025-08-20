@@ -467,7 +467,7 @@
         <div class="col-12 mt-5">
             <div class="row g-2">
                 <div class="col-auto order-1">
-                    <a href="{{ route('risk-register-unit.monitorings.index', ['period' => request()->route('period')]) }}" class="btn btn-outline-secondary">Batal</a>
+                    <a href="{{ route('risk-register-ap.monitorings.index', ['period' => request()->route('period')]) }}" class="btn btn-outline-secondary">Batal</a>
                 </div>
                 <div class="col-auto order-3 px-0 px-md-1 d-flex gap-2">
                     <button type="button" data-action="save" class="btn btn-primary ms-auto btn-action">Simpan</button>
@@ -559,6 +559,7 @@ function refreshSkalaAndLevelRisiko() {
     if (isNaN(skalaDampak)) {
         skalaDampak = parseFloat($('#realisasi_skala_dampak_hidden').val());
     }
+    console.log('skalaDampak : ' + skalaDampak);
     const skalaProbabilitas = getSkalaProbabilitasByValue(nilaiProbabilitas);
 
     const domSkalaProbabilitas = $('#realisasi_skala_probabilitas');
@@ -648,7 +649,7 @@ function submitForm(isClosed) {
     formData.append('is_closed', isClosed);
 
     $.ajax({
-        url: '{{ route('risk-register-unit.monitorings.update', ['period' => request()->route('period'), 'monitoring' => request()->route('monitoring')]) }}',
+        url: '{{ route('risk-register-ap.monitorings.update', ['period' => request()->route('period'), 'monitoring' => request()->route('monitoring')]) }}',
         type: 'POST',
         data: formData,
         contentType: false,
@@ -660,7 +661,7 @@ function submitForm(isClosed) {
                 icon: 'success',
                 confirmButtonText: 'OK',
             }).then(() => {
-                window.location.href = '{{ route('risk-register-unit.monitorings.index', ['period' => request()->route('period')]) }}';
+                window.location.href = '{{ route('risk-register-ap.monitorings.index', ['period' => request()->route('period')]) }}';
             });
         },
         error: function(xhr) {
@@ -722,9 +723,9 @@ $(document).ready(function() {
         const action = $(this).data('action');
         if (action === 'save' || action === 'save-and-close') {
             // validasi terlebih dahulu
-            if (!validateRealisasiForm()) {
-                return;
-            }
+            // if (!validateRealisasiForm()) {
+            //     return;
+            // }
 
             const isClosing = (action === 'save-and-close');
             const swalConfig = {

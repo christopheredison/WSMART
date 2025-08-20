@@ -23,7 +23,7 @@
       <div class="card-body">
         <div class="row g-0 mb-3">
           <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-            <form action="{{ route('change-active-period') }}" method="POST">
+            <form action="{{ route('change-active-period') }}" method="POST" class="no-swal">
               @csrf
               <div class="btn-group w-100">
                 <select class="form-select js-select-hide-search" name="periode" id="periode">
@@ -189,7 +189,7 @@
   <div class="modal-dialog modal-lg" role="document">
     <div class="modal-content">
       <div class="modal-header flex-between-center">
-        <h2 class="h4">Set Risk Limit</h2>
+        <h2 class="h4">Set Risk Limit - Periode <span id="periode-tahun-title"></span></h2>
         <div class="lead__icon lead__icon_sm">
           <div class="svg-icon svg-icon-secondary">
             @include('partials.icon-tool')
@@ -199,28 +199,67 @@
       <form method="POST" action="{{ route('periode.update-risk-limit', ':id') }}" id="formRiskLimit">
         @csrf
         @method('PUT')
-        @foreach ($unitWithRiskLimit as $unit)
-        <input type="hidden" class="holder-risk-limit risk_limit_{{ $unit->id }}" name="risk_limits[{{ $unit->id }}]">
-        @endforeach
+        <div id="hidden-inputs-container">
+            @foreach ($unitsType1 as $unit)
+            <input type="hidden" class="holder-risk-limit" name="risk_limits[{{ $unit->id }}]" id="holder_risk_limit_{{ $unit->id }}">
+            @endforeach
+            @foreach ($unitsType2 as $unit)
+            <input type="hidden" class="holder-risk-limit" name="risk_limits[{{ $unit->id }}]" id="holder_risk_limit_{{ $unit->id }}">
+            @endforeach
+        </div>
+
         <div class="modal-body">
-          <table class="table table-hover mb-md-0" id="tableRiskLimit">
-            <thead>
-              <tr>
-                <th>Unit</th>
-                <th>Risk Limit</th>
-              </tr>
-            </thead>
-            <tbody>
-              @foreach($unitWithRiskLimit as $unit)
-              <tr>
-                <td>{{ $unit->name }}</td>
-                <td>
-                  <input type="text" class="form-control inputmask-rupiah risk_limit_{{ $unit->id }} input-risk-limit" name="risk_limits[{{ $unit->id }}]">
-                </td>
-              </tr>
-              @endforeach
-            </tbody>
-          </table>
+          <ul class="nav nav-tabs" id="riskLimitTab" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="type1-tab" data-bs-toggle="tab" data-bs-target="#type1" type="button" role="tab" aria-controls="type1" aria-selected="true">Divisi</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="type2-tab" data-bs-toggle="tab" data-bs-target="#type2" type="button" role="tab" aria-controls="type2" aria-selected="false">Anak Perusahaan</button>
+            </li>
+          </ul>
+
+          <div class="tab-content pt-3">
+            <div class="tab-pane active" id="type1" role="tabpanel" aria-labelledby="type1-tab">
+              <table class="table table-hover mb-md-0" id="tableRiskLimitType1" style="width:100%">
+                <thead>
+                  <tr>
+                    <th>Unit</th>
+                    <th>Risk Limit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach($unitsType1 as $unit)
+                  <tr>
+                    <td>{{ $unit->name }}</td>
+                    <td>
+                      <input type="text" class="form-control inputmask-rupiah input-risk-limit" id="risk_limit_input_{{ $unit->id }}" data-unit-id="{{ $unit->id }}">
+                    </td>
+                  </tr>
+                  @endforeach
+                </tbody>
+              </table>
+            </div>
+            <div class="tab-pane" id="type2" role="tabpanel" aria-labelledby="type2-tab">
+              <table class="table table-hover mb-md-0" id="tableRiskLimitType2" style="width:100%">
+                <thead>
+                  <tr>
+                    <th>Unit</th>
+                    <th>Risk Limit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach($unitsType2 as $unit)
+                  <tr>
+                    <td>{{ $unit->name }}</td>
+                    <td>
+                      <input type="text" class="form-control inputmask-rupiah input-risk-limit" id="risk_limit_input_{{ $unit->id }}" data-unit-id="{{ $unit->id }}">
+                    </td>
+                  </tr>
+                  @endforeach
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
@@ -327,16 +366,51 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    $('.btn-action').on('click', function() {
-        const periodeId = $(this).data('periode-id');
-        const action = $(this).data('action');
-        if (action === 'risk-limit') {
-            $('#formRiskLimit').attr('action', '{{ route('periode.update-risk-limit', ':id') }}'.replace(':id', periodeId));
-            let periode = periodes.find(periode => periode.id === periodeId);
-            @foreach($unitWithRiskLimit as $unit)
-            $('.risk_limit_{{ $unit->id }}').val((periode.risk_limit_periodes.find(riskLimit => riskLimit.unit_id === {{ $unit->id }})?.risk_limit) || 0);
-            @endforeach
-            $('#modalRiskLimit').modal('show');
+    $('.btn-action[data-action="risk-limit"]').on('click', function() {
+      const periodeId = $(this).data('periode-id');
+      const form = $('#formRiskLimit');
+      const modal = $('#modalRiskLimit');
+      const selectedPeriode = periodes.find(p => p.id === periodeId);
+      
+      if (!selectedPeriode) {
+        console.error('Data periode tidak ditemukan untuk ID:', periodeId);
+        return;
+      }
+      
+      // Set action URL form secara dinamis
+      const actionUrl = '{{ route('periode.update-risk-limit', ':id') }}'.replace(':id', periodeId);
+       form.attr('action', actionUrl);
+      
+      // Set judul modal
+      modal.find('#periode-tahun-title').text(selectedPeriode.tahun);
+      
+      // Reset semua input (terlihat dan tersembunyi) ke nilai default
+      form.find('.input-risk-limit').val('');
+      form.find('.holder-risk-limit').val('');
+
+      // Isi input dengan data yang sudah ada
+      if (selectedPeriode.risk_limit_periodes && selectedPeriode.risk_limit_periodes.length > 0) {
+          selectedPeriode.risk_limit_periodes.forEach(function(riskLimit) {
+          // Isi input yang terlihat
+          $(`#risk_limit_input_${riskLimit.unit_id}`).val(riskLimit.risk_limit);
+          // Isi juga input yang tersembunyi
+          $(`#holder_risk_limit_${riskLimit.unit_id}`).val(riskLimit.risk_limit);
+        });
+      }
+      // Memicu re-apply mask setelah nilai di set
+      $('.inputmask-rupiah').trigger('input');
+      modal.modal('show');
+    });
+
+    $('#formRiskLimit').on('input', '.input-risk-limit', function() {
+        const unitId = $(this).data('unit-id');
+        const unmaskedValue = $(this).inputmask('unmaskedvalue');
+        
+        // Targetkan input tersembunyi yang benar menggunakan ID
+        const targetHiddenInput = $('#holder_risk_limit_' + unitId);
+
+        if(targetHiddenInput.length) {
+            targetHiddenInput.val(unmaskedValue);
         }
     });
 
@@ -345,7 +419,7 @@ document.addEventListener('DOMContentLoaded', function() {
       $('.holder-risk-limit[name="' + name + '"]').val($(this).val());
     });
 
-    $('#tableRiskLimit').DataTable({
+    $('#tableRiskLimitType1').DataTable({
         paging: true,
         searching: true,
         info: true,
@@ -354,17 +428,33 @@ document.addEventListener('DOMContentLoaded', function() {
         pageLength: 10,
         lengthMenu: [10, 25, 50, 100],
         columnDefs: [{ orderable: false, targets: [0, 1] }],
-        drawCallback: function() {
-          $('.input-risk-limit').on('input', function() {
-            const name = $(this).attr('name');
-            $('.holder-risk-limit[name="' + name + '"]').val($(this).val());
-          });
-
-          $('.input-risk-limit').each(function() {
-            const name = $(this).attr('name');
-            $(this).val($('.holder-risk-limit[name="' + name + '"]').val());
-          });
-      }
+    });
+    
+    $('#tableRiskLimitType2').DataTable({
+        paging: true,
+        searching: true,
+        info: true,
+        order: [],
+        lengthChange: true,
+        pageLength: 10,
+        lengthMenu: [10, 25, 50, 100],
+        columnDefs: [{ orderable: false, targets: [0, 1] }],
+    });
+    $('#formRiskLimit').on('submit', function(e) {
+        e.preventDefault();
+        const form = this;
+        Swal.fire({
+            title: 'Konfirmasi',
+            text: 'Apakah Anda yakin untuk menyimpan perubahan Risk Limit?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Simpan!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
     });
 });
 </script>
