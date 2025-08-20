@@ -19,7 +19,7 @@
         </div>
         <div>
           <a href="{{ route('ict.index') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bx bx-arrow-back"></i> Kembali
+            <span class="bx bx-arrow-back me-1"></span> Kembali
           </a>
         </div>
       </div>
@@ -193,13 +193,13 @@
         <div class="row">
           <div class="col-12 text-end">
             <a href="{{ route('ict.edit', $ictPlan->id) }}" class="btn btn-warning me-2">
-              <i class="bx bx-edit"></i> Edit ICT Plan
+              <span class="bx bx-edit me-1"></span> Edit ICT Plan
             </a>
             <a href="{{ route('ict.testing', $ictPlan->id) }}" class="btn btn-primary me-2">
-              <i class="bx bx-test-tube"></i> Pelaksanaan Pengujian
+              <span class="bx bx-test-tube me-1"></span> Pelaksanaan Pengujian
             </a>
             <a href="{{ route('ict.report', $ictPlan->id) }}" class="btn btn-success">
-              <i class="bx bx-file"></i> {{ $ictReport ? 'Update Laporan' : 'Buat Laporan' }}
+              <span class="bx bx-file me-1"></span> {{ $ictReport ? 'Update Laporan' : 'Buat Laporan' }}
             </a>
           </div>
         </div>

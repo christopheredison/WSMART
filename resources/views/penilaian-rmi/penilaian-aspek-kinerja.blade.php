@@ -120,7 +120,7 @@
 
                 <div class="d-flex justify-content-end">
                   <button type="submit" name="action" value="save_capaian" formnovalidate class="btn btn-primary">
-                    Simpan Capaian & Lanjut <i class="bx bx-chevron-right ms-1"></i>
+                    Simpan Capaian & Lanjut <span class="bx bx-chevron-right ms-1"></span>
                   </button>
                 </div>
               </div>
@@ -202,10 +202,10 @@
 
                 <div class="d-flex justify-content-between">
                   <button type="submit" name="action" value="back_to_capaian" formnovalidate class="btn btn-outline-secondary">
-                    <i class="bx bx-chevron-left me-1"></i> Kembali ke Capaian
+                    <span class="bx bx-chevron-left me-1"></span> Kembali ke Capaian
                   </button>
                   <button type="submit" name="action" value="save_kpmr" formnovalidate class="btn btn-primary">
-                    Simpan KPMR & Lanjut <i class="bx bx-chevron-right ms-1"></i>
+                    Simpan KPMR & Lanjut <span class="bx bx-chevron-right ms-1"></span>
                   </button>
                 </div>
               </div>
@@ -262,10 +262,10 @@
                 
                 <div class="d-flex justify-content-between">
                   <button type="submit" name="action" value="back_to_kpmr" formnovalidate class="btn btn-outline-secondary">
-                    <i class="bx bx-chevron-left me-1"></i> Kembali ke KPMR
+                    <span class="bx bx-chevron-left me-1"></span> Kembali ke KPMR
                   </button>
                   <button type="submit" name="action" value="finish_final_rating" class="btn btn-success">
-                    Selesai & Simpan <i class="bx bx-save ms-1"></i>
+                    Selesai & Simpan <span class="bx bx-save ms-1"></span>
                   </button>
                 </div>
               </div>
