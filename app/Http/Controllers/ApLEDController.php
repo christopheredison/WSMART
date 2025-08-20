@@ -21,6 +21,7 @@ use App\Models\PerlakuanPenyebabRisikoApLed;
 use App\Models\RiskAnalysis;
 use App\Models\PenyebabRisiko;
 use App\Models\JenisKontrolEksisting;
+use App\Models\KamusRisikoAp;
 use Illuminate\Support\Facades\DB;
 
 class ApLEDController extends Controller
@@ -634,6 +635,10 @@ class ApLEDController extends Controller
             // Cek apakah risiko perlu di-close
             if ($request->input('is_closed') == '1') {
                 $riskRegister->update(['is_closed' => true]);
+
+                KamusRisikoAp::updateOrCreate([
+                    'risiko_id' => $riskRegister->id,
+                ]);
             }
 
             DB::commit();

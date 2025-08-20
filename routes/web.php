@@ -594,7 +594,7 @@ Route::prefix('risk-register-ap')->group(function () {
 });
 Route::get('kamus-risiko-ap', [KamusRisikoApController::class, 'index'])->name('kamus-risiko-ap.index');
 Route::post('kamus-risiko-ap/add-risk', [KamusRisikoApController::class, 'addRisk'])->name('kamus-risiko-ap.add-risk');
-Route::get('kamus-risiko-ap/export', [KamusRisikoApController::class, 'exportExcel'])->name('kamus-risiko-ap.export');
+Route::post('kamus-risiko-ap/export', [KamusRisikoApController::class, 'exportExcel'])->name('kamus-risiko-ap.export');
 Route::get('ap-led/', [ApLEDController::class, 'index'])->name('ap-led.index');
 Route::get('ap-led/{periode}', [ApLEDController::class, 'index'])->name('ap-led.index-by-periode');
 Route::get('ap-led/{periode}/create', [ApLEDController::class, 'create'])->name('ap-led.create');

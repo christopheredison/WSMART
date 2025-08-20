@@ -117,7 +117,7 @@
                         <div class="row mt-4">
                             <div class="col-12 mb-3">
                                 <label for="penjelasan_kerugian" class="form-label">Penjelasan Kerugian <span class="text-danger">*</span></label>
-                                <textarea class="form-control" name="penjelasan_kerugian" rows="3" required readonly>@if($risiko->riskAnalysis?->kategori_dampak == 'Kuantitatif'){{ $risiko->riskAnalysis->asumsi_perhitungan_dampak }}@else{{ $risiko->riskAnalysis?->deskripsi_dampak }}@endif</textarea>
+                                <textarea class="form-control" name="penjelasan_kerugian" rows="3" required>@if($risiko->riskAnalysis?->kategori_dampak == 'Kuantitatif'){{ $risiko->riskAnalysis->asumsi_perhitungan_dampak }}@else{{ $risiko->riskAnalysis?->deskripsi_dampak }}@endif</textarea>
                             </div>
 
                             <div class="col-12 mb-3">
