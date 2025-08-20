@@ -498,7 +498,7 @@ Route::group(['middleware' => ['auth']], function() {
 
     Route::get('kamus-risiko-unit', [KamusRisikoUnitController::class, 'index'])->name('kamus-risiko-unit.index');
     Route::post('kamus-risiko-unit/add-risk', [KamusRisikoUnitController::class, 'addRisk'])->name('kamus-risiko-unit.add-risk');
-    Route::get('kamus-risiko-unit/export', [KamusRisikoUnitController::class, 'exportExcel'])->name('kamus-risiko-unit.export');
+    Route::post('kamus-risiko-unit/export', [KamusRisikoUnitController::class, 'exportExcel'])->name('kamus-risiko-unit.export');
 
     Route::middleware('can:backups.index')->resource('backups', BackupController::class);
 	Route::post('backups/restore', [BackupController::class, 'restore'])->name('backups.restore');

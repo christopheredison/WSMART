@@ -25,6 +25,7 @@ use App\Models\PerlakuanPenyebabRisikoProjectLed;
 use App\Models\ProjectRiskAnalisa;
 use App\Models\PenyebabRisikoProject;
 use App\Models\PerlakuanPenyebabRisikoProject;
+use App\Models\KamusRisikoProject;
 use Illuminate\Support\Facades\DB;
 
 class ProjectLEDController extends Controller
@@ -852,6 +853,13 @@ class ProjectLEDController extends Controller
             // Cek apakah risiko perlu di-close
             if ($request->input('is_closed') == '1') {
                 $risk->update(['is_closed' => true]);
+
+                KamusRisikoProject::updateOrCreate(
+                    [
+                      'project_id' => $project->id,
+                      'project_risk_id' => $risk->id,
+                    ],
+                );
             }
 
             DB::commit();

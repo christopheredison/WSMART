@@ -97,7 +97,7 @@ class KamusRisikoUnitExport implements FromQuery, WithHeadings, WithMapping, Sho
             $analisa?->skala_risiko ?? '-',
             $analisa?->nilai_dampak_residual ?? 0,
             $analisa?->skala_dampak_residual ?? '-',
-            $analisa?->skala_probabilitas_residual ?? '-',
+            $analisa?->skalaProbabilitasResidual?->tingkat ?? '-',
             $analisa?->level_risiko_residual ?? '-',
             $analisa?->eksposur_risiko_residual ?? 0,
             $risiko?->efektivitas_perlakuan_risiko ?? '-',

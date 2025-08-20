@@ -21,6 +21,7 @@ use App\Models\PerlakuanPenyebabRisikoUnitLed;
 use App\Models\RiskAnalysis;
 use App\Models\PenyebabRisiko;
 use App\Models\JenisKontrolEksisting;
+use App\Models\KamusRisikoUnit;
 use Illuminate\Support\Facades\DB;
 
 class UnitLEDController extends Controller
@@ -795,6 +796,10 @@ class UnitLEDController extends Controller
             // Cek apakah risiko perlu di-close
             if ($request->input('is_closed') == '1') {
                 $riskRegister->update(['is_closed' => true]);
+
+                KamusRisikoUnit::updateOrCreate(
+                    ['risiko_id' => $riskRegister->id],
+                );
             }
 
             DB::commit();

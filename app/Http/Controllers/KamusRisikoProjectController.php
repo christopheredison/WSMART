@@ -122,7 +122,7 @@ class KamusRisikoProjectController extends Controller
                     return $row->projectRisk->projectRiskAnalisa->skala_dampak_residual ?? '-';
                 })
                 ->addColumn('realisasi_skala_probabilitas', function ($row) {
-                    return $row->projectRisk->projectRiskAnalisa->skala_probabilitas_residual ?? '-';
+                    return $row->projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat ?? '-';
                 })
                 ->addColumn('realisasi_level_risiko', function ($row) {
                     $analisa = $row->projectRisk->projectRiskAnalisa;

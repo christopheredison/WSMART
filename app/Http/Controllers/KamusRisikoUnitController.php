@@ -112,7 +112,7 @@ class KamusRisikoUnitController extends Controller
                 })
                 ->addColumn('realisasi_nilai_dampak', fn($row) => 'Rp ' . number_format($row->identifikasiRisiko->riskAnalysis->nilai_dampak_residual ?? 0, 0, ',', '.'))
                 ->addColumn('realisasi_skala_dampak', fn($row) => $row->identifikasiRisiko->riskAnalysis->skala_dampak_residual ?? '-')
-                ->addColumn('realisasi_skala_probabilitas', fn($row) => $row->identifikasiRisiko->riskAnalysis->skala_probabilitas_residual ?? '-')
+                ->addColumn('realisasi_skala_probabilitas', fn($row) => $row->identifikasiRisiko->riskAnalysis?->skalaProbabilitasResidual?->tingkat ?? '-')
                 ->addColumn('realisasi_level_risiko', function ($row) {
                     $analisa = $row->identifikasiRisiko->riskAnalysis;
                     if (!$analisa || !$analisa->level_risiko_residual) return '-';

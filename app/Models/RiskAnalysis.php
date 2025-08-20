@@ -90,6 +90,10 @@ class RiskAnalysis extends Model
     {
         return $this->belongsTo(SkalaProbabilitas::class, 'skala_probabilitas_id');
     }
+    public function skalaProbabilitasResidual()
+    {
+        return $this->belongsTo(SkalaProbabilitas::class, 'skala_probabilitas_residual_id');
+    }
     public function skalaProbabilitasResidualQ1()
     {
         return $this->belongsTo(SkalaProbabilitas::class, 'skala_probabilitas_residual_id_q1');
