@@ -242,6 +242,12 @@
 @push('scripts')
 <script>
   $(document).ready(function() {
+    flatpickr(".flatpickr-date", {
+        altInput: true,
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
+        disableMobile: true
+    });
     
     // Fungsi untuk menghasilkan kesimpulan akhir berdasarkan kecukupan dan efektivitas
     function generateKesimpulanAkhir(index) {

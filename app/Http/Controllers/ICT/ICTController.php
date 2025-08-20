@@ -15,14 +15,29 @@ use App\Models\KontrolEksisting;
 use App\Models\ProjectKontrolEksisting;
 use App\Models\ICTDo;
 use App\Models\ICTReport;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 
 class ICTController extends Controller
 {
     public function index()
     {
         // Ambil data ICTPlan dengan relasi planControls
-        $ictPlans = ICTPlan::with(['planControls'])->get();
+        $query = ICTPlan::with(['planControls']);
         
+        // Cek permission
+        if (Gate::denies('ict_approval')) {
+            // User 'ict_input' hanya melihat data draft atau yang di-reject
+            $query->whereIn('status', ['draft', 'rejected']);
+        }
+
+        $ictPlans = $query->get();
+        
+        // Cek status keseluruhan untuk logika tombol di view
+        $hasPendingApproval = ICTPlan::where('status', 'pending_approval')->exists();
+        $hasDrafts = ICTPlan::where('status', 'draft')->exists();
+        $hasRejected = ICTPlan::where('status', 'rejected')->exists();
+
         // Data untuk tampilan
         $data = [];
         
@@ -61,14 +76,23 @@ class ICTController extends Controller
                 'business_process' => $plan->business_process,
                 'key_controls' => $keyControls,
                 'metode_pengujian' => $plan->metode_pengujian,
+                'status' => $plan->status,
+                'rejection_reason' => $plan->rejection_reason,
             ];
         }
         
-        return view('ict.index', compact('data'));
+        return view('ict.index', compact('data', 'hasPendingApproval', 'hasDrafts', 'hasRejected'));
     }
 
     public function create()
     {
+        $this->authorize('ict_input');
+        
+        // Tambahan: Cegah penambahan data jika ada yang sedang menunggu approval
+        if (ICTPlan::where('status', 'pending_approval')->exists()) {
+            return redirect()->route('ict.index')->with('error', 'Tidak dapat menambah data baru. Terdapat data yang sedang menunggu persetujuan.');
+        }
+
         // Data untuk dropdown type
         $types = [
             1 => 'Unit',
@@ -362,5 +386,60 @@ class ICTController extends Controller
             
             return redirect()->route('ict.index')->with('error', 'Terjadi kesalahan saat menghapus ICT Plan: ' . $e->getMessage());
         }
+    }
+
+    public function submitAll(Request $request)
+    {
+        $this->authorize('ict_input');
+
+        ICTPlan::whereIn('status', ['draft', 'rejected'])->update([
+            'status' => 'pending_approval',
+            // 'rejection_reason' => null
+        ]);
+
+        return redirect()->route('ict.index')->with('success', 'Semua data ICT Plan berhasil dikirim untuk verifikasi.');
+    }
+
+    public function approveAll(Request $request)
+    {
+        $this->authorize('ict_approval');
+
+        $plansToApprove = ICTPlan::where('status', 'pending_approval')->pluck('sasaran_bumn');
+
+        if ($plansToApprove->isEmpty()) {
+            return redirect()->route('ict.index')->with('error', 'Tidak ada data yang perlu disetujui saat ini.');
+        }
+
+        $approvedCount = $plansToApprove->count();
+        ICTPlan::where('status', 'pending_approval')->update(['status' => 'approved']);
+        $approvedItemsString = $plansToApprove->implode(', ');
+        $successMessage = "Berhasil menyetujui {$approvedCount} data ICT Plan: {$approvedItemsString}.";
+
+        return redirect()->route('ict.index')->with('success', $successMessage);
+    }
+
+    public function rejectAll(Request $request)
+    {
+        $this->authorize('ict_approval');
+
+        $plansToReject = ICTPlan::where('status', 'pending_approval')->pluck('sasaran_bumn');
+
+        if ($plansToReject->isEmpty()) {
+            return redirect()->route('ict.index')->with('error', 'Tidak ada data yang perlu ditolak saat ini.');
+        }
+
+        $request->validate([
+            'rejection_reason' => 'required|string|min:10',
+        ]);
+
+        $rejectedCount = $plansToReject->count();
+        ICTPlan::where('status', 'pending_approval')->update([
+            'status' => 'rejected',
+            'rejection_reason' => $request->rejection_reason,
+        ]);
+        $rejectedItemsString = $plansToReject->implode(', ');
+        $successMessage = "Berhasil menolak {$rejectedCount} data ICT Plan: {$rejectedItemsString}.";
+
+        return redirect()->route('ict.index')->with('success', $successMessage);
     }
 }

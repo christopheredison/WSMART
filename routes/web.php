@@ -569,6 +569,9 @@ Route::group(['prefix' => 'ict', 'as' => 'ict.'], function () {
     Route::post('/{ictPlan}/testing', [\App\Http\Controllers\ICT\ICTController::class, 'storeTesting'])->name('store-testing');
     Route::get('/{ictPlan}/report', [\App\Http\Controllers\ICT\ICTController::class, 'report'])->name('report');
     Route::post('/{ictPlan}/report', [\App\Http\Controllers\ICT\ICTController::class, 'storeReport'])->name('store-report');
+    Route::post('/submit-all', [\App\Http\Controllers\ICT\ICTController::class, 'submitAll'])->name('submitAll');
+    Route::post('/approve-all', [\App\Http\Controllers\ICT\ICTController::class, 'approveAll'])->name('approveAll');
+    Route::post('/reject-all', [\App\Http\Controllers\ICT\ICTController::class, 'rejectAll'])->name('rejectAll');
 });
 // Tambahkan di dalam grup middleware auth
 Route::get('corporate-risk', [App\Http\Controllers\CorporateRiskController::class, 'index'])->name('corporate-risk.index');
