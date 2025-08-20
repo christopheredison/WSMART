@@ -254,6 +254,7 @@ class KamusRisikoProjectController extends Controller
                 'jenis_risiko_id',
                 'level_risiko',
                 'deskripsi_risiko',
+                'efektivitas',
             ]);
     
             $fileName = 'Kamus_Risiko_Proyek_' . date('d-m-Y_H-i-s') . '.xlsx';

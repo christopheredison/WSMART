@@ -41,6 +41,15 @@ class KamusRisikoUnitExport implements FromQuery, WithHeadings, WithMapping, Sho
         if (!empty($this->filters['deskripsi_risiko'])) {
             $query->whereHas('identifikasiRisiko', fn($q) => $q->where('deskripsi_peristiwa_risiko', 'like', '%' . $this->filters['deskripsi_risiko'] . '%'));
         }
+        if (!empty($this->filters['efektivitas'])) {
+            $query->whereHas('identifikasiRisiko', function ($q) {
+                if ($this->filters['efektivitas'] == 'efektif') {
+                    $q->where('efektivitas_perlakuan_risiko', '>', 0);
+                } elseif ($this->filters['efektivitas'] == 'tidak_efektif') {
+                    $q->where('efektivitas_perlakuan_risiko', '<=', 0);
+                }
+            });
+        }
 
         return $query;
     }
@@ -63,6 +72,7 @@ class KamusRisikoUnitExport implements FromQuery, WithHeadings, WithMapping, Sho
             'Realisasi Skala Probabilitas',
             'Realisasi Level Risiko',
             'Realisasi Eksposur Risiko',
+            'Efektivitas',
         ];
     }
 
@@ -90,6 +100,7 @@ class KamusRisikoUnitExport implements FromQuery, WithHeadings, WithMapping, Sho
             $analisa?->skala_probabilitas_residual ?? '-',
             $analisa?->level_risiko_residual ?? '-',
             $analisa?->eksposur_risiko_residual ?? 0,
+            $risiko?->efektivitas_perlakuan_risiko ?? '-',
         ];
     }
 }
