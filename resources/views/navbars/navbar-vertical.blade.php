@@ -106,7 +106,8 @@
             </span>
           </a>
         </li>
-
+        @endcan
+        @can('ap_menu')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->is('risk-register-ap') ? 'active' : '' }}" href="/risk-register-ap/periods"
             role="button" data-bs-toggle="" aria-expanded="false">
@@ -116,6 +117,7 @@
             </span>
           </a>
         </li>
+        @endcan
 
         {{-- <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('unit-led.index') ? 'active' : '' }}"
@@ -127,6 +129,7 @@
           </a>
         </li> --}}
 
+        @can('unit_menu')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('laporan.unit') ? 'active' : '' }}"
             href="{{route('laporan.unit')}}" role="button" data-bs-toggle="" aria-expanded="false">
@@ -136,6 +139,9 @@
             </span>
           </a>
         </li>
+        @endcan
+
+        @can('ap_menu')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('laporan.ap') ? 'active' : '' }}"
             href="{{route('laporan.ap')}}" role="button" data-bs-toggle="" aria-expanded="false">
@@ -145,6 +151,7 @@
             </span>
           </a>
         </li>
+        @endcan
 
         @can('proyek_menu')
         <!-- Ranking Risiko Menu Start -->
