@@ -462,8 +462,10 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('penilaian-rmi/{id}/aspek-kinerja', 'App\Http\Controllers\PenilaianRMIController@aspekKinerja')
         ->name('penilaian-rmi.aspek-kinerja');
     // Proses simpan Aspek Kinerja
-    Route::post('{id}/aspek-kinerja', [PenilaianRMIController::class,'storeAspekKinerja'])
-         ->name('penilaian-rmi.aspek-kinerja.store');    
+    Route::post('penilaian-rmi/{id}/aspek-kinerja', [PenilaianRMIController::class,'storeAspekKinerja'])->name('penilaian-rmi.aspek-kinerja.store');    
+    Route::delete('penilaian-rmi/{id}/aspek-kinerja/delete-document/{docId}', [PenilaianRMIController::class,'deleteAspekKinerjaDocument'])->name('penilaian-rmi.aspek-kinerja.delete-document');
+    Route::put('penilaian-rmi/{period}/update-penilaian', [PenilaianRMIController::class, 'updatePenilaian'])
+    ->name('penilaian-rmi.update-penilaian');  
 
     // Metrik Strategi Risiko
     Route::get('metrik-strategi-risiko/{id}/parameter', 'App\Http\Controllers\MetrikStrategiRisikoController@parameter')

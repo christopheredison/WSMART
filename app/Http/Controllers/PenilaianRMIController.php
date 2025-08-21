@@ -22,6 +22,7 @@ use App\Models\SkalaKinerja;
 use App\Models\SkalaKPMR;
 use App\Models\FinalRating;
 use App\Models\FinalRatingPeriod;
+use App\Models\RMIPeriodDocument;
 
 class PenilaianRMIController extends Controller
 {
@@ -101,7 +102,8 @@ class PenilaianRMIController extends Controller
     {
         // 1. Ambil periode + eager load penilaian kinerja + detail + pilihan
         $period = RMIPeriod::with([
-            'penilaianCapaianKinerja.details.pilihan'
+            'penilaianCapaianKinerja.details.pilihan',
+            'documents'
         ])->findOrFail($id);
 
         // 2. Aspek Dimensi (tetap seperti existing)
@@ -800,6 +802,10 @@ class PenilaianRMIController extends Controller
         // Tambahkan validasi final_rating_id hanya jika action adalah finish_final_rating
         if ($request->action == 'finish_final_rating') {
             $rules['final_rating_id'] = 'required|exists:final_ratings,id';
+            $rules['documents'] = 'nullable|array';
+            $rules['documents.*'] = 'file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:5120';
+            $rules['document_descriptions'] = 'nullable|array';
+            $rules['document_descriptions.*'] = 'nullable|string|max:255';
         }
 
         $data = $request->validate($rules);
@@ -976,6 +982,23 @@ class PenilaianRMIController extends Controller
                     'total_score_kinerja' => $totalScoreKinerja
                 ]
             );
+
+            if ($request->hasFile('documents')) {
+                foreach ($request->file('documents') as $index => $file) {
+                    if ($file && $file->isValid()) {
+                        $originalFilename = $file->getClientOriginalName();
+                        $path = $file->store("rmi_period_docs/{$periodId}", 'public');
+                        
+                        RMIPeriodDocument::create([
+                            'rmi_period_id' => $periodId,
+                            'file_name' => $originalFilename,
+                            'file_path' => $path,
+                            'mimetype' => $file->getMimeType(),
+                            'description' => $data['document_descriptions'][$index] ?? null,
+                        ]);
+                    }
+                }
+            }
             
             // Update RMIPeriod
             $period->update([
@@ -1016,5 +1039,29 @@ class PenilaianRMIController extends Controller
             return redirect()->route('penilaian-rmi.index')
                             ->with('success','Penilaian Aspek Kinerja & KPMR selesai disimpan.');
         }
+    }
+
+    public function deleteAspekKinerjaDocument($id, $docId)
+    {
+        $document = RMIPeriodDocument::findOrFail($docId);
+        Storage::disk('public')->delete($document->file_path);
+        $document->delete();
+        
+        return response()->json(['success' => true, 'message' => 'Dokumen berhasil dihapus.']);
+    }
+
+    public function updatePenilaian(Request $request, RMIPeriod $period)
+    {
+        $validated = $request->validate([
+            'penilaian' => 'nullable|string|max:255',
+            'tipe_penilaian' => 'nullable|integer|in:1,2',
+        ]);
+
+        $period->update([
+            'penilaian' => $validated['penilaian'],
+            'tipe_penilaian' => $validated['tipe_penilaian'],
+        ]);
+
+        return redirect()->route('penilaian-rmi.index')->with('success', 'Data Penilaian untuk periode ' . $period->year . ' berhasil diperbarui.');
     }
 }

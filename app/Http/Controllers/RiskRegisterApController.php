@@ -991,11 +991,9 @@ class RiskRegisterApController extends Controller
 
         //$toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
         if ($request->kategori_dampak == 'Kualitatif') {
-            // Untuk kualitatif, gunakan skala dampak * skala probabilitas
-            $toUpdate['eksposur_risiko'] = floatval($toUpdate['skala_dampak']) * (1/100) * floatval($toUpdate['nilai_probabilitas']) * ($riskLimitPeriode->risk_limit ?: 0);
+            $toUpdate['eksposur_risiko'] = floatval($toUpdate['skala_dampak']) * (1/100) * (floatval($toUpdate['nilai_probabilitas']) / 100) * ($riskLimitPeriode->risk_limit ?: 0);
         } else {
-            // Untuk kuantitatif, gunakan nilai dampak * probabilitas
-            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
+            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * ($toUpdate['nilai_probabilitas'] / 100);
         }
 
         $tingkatSkalaProbabilitasResiduals = [];

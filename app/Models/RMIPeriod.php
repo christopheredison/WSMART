@@ -27,6 +27,8 @@ class RMIPeriod extends Model
         'start_date',
         'end_date',
         'status',  // 1 : Dalam Proses, 2 : Selesai
+        'penilaian',
+        'tipe_penilaian', // 1 : Eksternal, 2 : Internal
     ];
 
     protected $casts = [
@@ -52,5 +54,10 @@ class RMIPeriod extends Model
     public function penilaianCapaianKinerja()
     {
         return $this->hasOne(PenilaianCapaianKinerja::class, 'rmi_period_id');
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(RMIPeriodDocument::class, 'rmi_period_id');
     }
 }
