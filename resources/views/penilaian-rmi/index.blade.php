@@ -70,6 +70,19 @@
                 title="Penilaian Aspek Kinerja">
                 <span class="bx bx-line-chart"></span>
               </a>
+              <button 
+                  type="button" 
+                  class="btn-input-icon"
+                  data-bs-toggle="modal"
+                  data-bs-target="#penilaianModal"
+                  data-period-id="{{ $period->id }}"
+                  data-penilaian="{{ $period->penilaian }}"
+                  data-tipe-penilaian="{{ $period->tipe_penilaian }}"
+                  data-period-year="{{ $period->year }}"
+                  title="Atur Data Penilaian"
+              >
+                <span class="bx bxs-edit-alt"></span>
+              </button>
             </td>
           </tr>
         @endforeach
@@ -80,4 +93,68 @@
   {{ $periods->links() }}
 </div>
 
+<div class="modal fade" id="penilaianModal" tabindex="-1" aria-labelledby="penilaianModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="penilaianModalLabel">Atur Data Penilaian Periode <span id="modalPeriodYear"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <!-- Form akan di-submit ke route yang kita buat -->
+      <form id="penilaianForm" method="POST" action="">
+        @csrf
+        @method('PUT')
+        <div class="modal-body">
+          <div class="mb-3">
+              <label for="penilaian" class="form-label">Input Penilai</label>
+              <input type="text" class="form-control" id="penilaian" name="penilaian" placeholder="Masukkan nama penilai...">
+          </div>
+          <div class="mb-3">
+              <label for="tipe_penilaian" class="form-label">Tipe Penilai</label>
+              <select class="form-select" id="tipe_penilaian" name="tipe_penilaian">
+                  <option value="">-- Pilih Tipe --</option>
+                  <option value="1">Eksternal</option>
+                  <option value="2">Internal</option>
+              </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 @endsection
+
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const penilaianModal = document.getElementById('penilaianModal');
+  if (penilaianModal) {
+    penilaianModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+
+      const periodId = button.getAttribute('data-period-id');
+      const periodYear = button.getAttribute('data-period-year');
+      const penilaian = button.getAttribute('data-penilaian');
+      const tipePenilaian = button.getAttribute('data-tipe-penilaian');
+
+      const form = penilaianModal.querySelector('#penilaianForm');
+      const modalTitleYear = penilaianModal.querySelector('#modalPeriodYear');
+      const penilaianInput = penilaianModal.querySelector('#penilaian');
+      const tipePenilaianSelect = penilaianModal.querySelector('#tipe_penilaian');
+      const actionUrl = `{{ url('penilaian-rmi') }}/${periodId}/update-penilaian`;
+
+      form.setAttribute('action', actionUrl);
+
+      modalTitleYear.textContent = periodYear;
+      penilaianInput.value = penilaian;
+      tipePenilaianSelect.value = tipePenilaian;
+    });
+  }
+});
+</script>
+@endpush

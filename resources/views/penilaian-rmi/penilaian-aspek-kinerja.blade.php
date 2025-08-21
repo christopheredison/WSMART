@@ -36,7 +36,7 @@
             </li>
           </ul>
 
-          <form action="{{ route('penilaian-rmi.aspek-kinerja.store', $period->id) }}" method="POST">
+          <form action="{{ route('penilaian-rmi.aspek-kinerja.store', $period->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
             <div class="tab-content">
 
@@ -213,7 +213,7 @@
               {{-- STEP 3: Penilaian Tingkat Kesehatan Peringkat Akhir --}}
               <div class="tab-pane fade {{ session('active_tab')=='final_rating' ? 'show active' : '' }}" id="final-rating">
                 <h4 class="mb-3">Penilaian Tingkat Kesehatan Peringkat Akhir</h4>
-                
+
                 <div class="card mb-4">
                   <div class="card-header bg-success text-white">
                     <h5 class="mb-0">Pilih Final Rating</h5>
@@ -222,13 +222,13 @@
                     @php
                       $existingFinalRatingId = $finalRatingPeriod->final_rating_id ?? old('final_rating_id');
                       $existingConversionScore = null;
-                      
+
                       if ($existingFinalRatingId) {
                         $selectedRating = $finalRatings->firstWhere('id', $existingFinalRatingId);
                         $existingConversionScore = $selectedRating ? $selectedRating->conversion_score : null;
                       }
                     @endphp
-                    
+
                     <div class="row mb-3">
                       <div class="col-md-6">
                         <label for="final_rating_id" class="form-label">Final Rating</label>
@@ -246,7 +246,7 @@
                         <input type="text" id="conversion_score" class="form-control" value="{{ $existingConversionScore }}" readonly>
                       </div>
                     </div>
-                    
+
                     @if($period->nilai_konversi)
                     <div class="alert alert-info">
                       <p class="mb-0"><strong>Informasi Perhitungan:</strong></p>
@@ -257,9 +257,37 @@
                       </ul>
                     </div>
                     @endif
+
+                    <div class="mt-4">
+                      <h6 class="form-label">Upload dokumen pendukung (opsional)</h6>
+                      <div id="document-uploads-container" style="display: none;">
+                        {{-- Tempat untuk input file yang disembunyikan --}}
+                      </div>
+                      <table class="table table-bordered">
+                        <thead>
+                          <tr>
+                            <th scope="col">Nama Dokumen</th>
+                            <th scope="col">Deskripsi (Opsional)</th>
+                            <th scope="col" style="width: 80px;">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody id="final-rating-documents-tbody">
+                          {{-- Baris dokumen akan ditambahkan di sini oleh JavaScript --}}
+                        </tbody>
+                        <tfoot>
+                          <tr>
+                            <td colspan="3" class="text-center">
+                              <button type="button" class="btn btn-link btn-sm py-1" id="btnAddFinalRatingDocument">
+                                <span class="bx bx-plus me-1"></span>Tambah Dokumen
+                              </button>
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
                   </div>
                 </div>
-                
+
                 <div class="d-flex justify-content-between">
                   <button type="submit" name="action" value="back_to_kpmr" formnovalidate class="btn btn-outline-secondary">
                     <span class="bx bx-chevron-left me-1"></span> Kembali ke KPMR
@@ -293,23 +321,23 @@
   const displayConversionScore = document.getElementById('display-conversion-score');
   const displayBobotKonversi = document.getElementById('display-bobot-konversi');
   const displayTotalScore = document.getElementById('display-total-score');
-  
+
   if (finalRatingSelect) {
     finalRatingSelect.addEventListener('change', function() {
       const selectedOption = this.options[this.selectedIndex];
       const conversionScore = selectedOption.getAttribute('data-conversion-score') || '0';
-      
+
       conversionScoreInput.value = conversionScore;
-      
+
       if (displayConversionScore) {
         displayConversionScore.textContent = conversionScore;
       }
-      
+
       if (displayBobotKonversi) {
         const bobotKonversi = Math.round(parseFloat(conversionScore) * 0.5 * 100) / 100;
         displayBobotKonversi.textContent = bobotKonversi;
       }
-      
+
       if (displayTotalScore) {
         const nilaiKonversi = {{ $period->nilai_konversi ?? 0 }};
         const bobotKonversi = Math.round(parseFloat(conversionScore) * 0.5 * 100) / 100;
@@ -318,6 +346,86 @@
       }
     });
   }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const addDocumentButton = document.getElementById('btnAddFinalRatingDocument');
+    const documentsTbody = document.getElementById('final-rating-documents-tbody');
+    const uploadsContainer = document.getElementById('document-uploads-container');
+    const maxFiles = 10;
+
+    addDocumentButton.addEventListener('click', function() {
+      if (documentsTbody.rows.length >= maxFiles) {
+        alert(`Anda hanya dapat mengunggah maksimal ${maxFiles} dokumen.`);
+        return;
+      }
+
+      const index = Date.now(); // Indeks unik untuk setiap baris
+
+      // Buat input file
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.name = `documents[${index}]`;
+      fileInput.id = `doc-file-${index}`;
+      fileInput.style.display = 'none';
+      uploadsContainer.appendChild(fileInput);
+
+      // Buat baris tabel baru
+      const newRow = documentsTbody.insertRow();
+      newRow.setAttribute('data-index', index);
+
+      newRow.innerHTML = `
+        <td><span class="filename">Pilih file...</span></td>
+        <td>
+          <input type="text" name="document_descriptions[${index}]" class="form-control form-control-sm" placeholder="Deskripsi singkat dokumen">
+        </td>
+        <td>
+          <button type="button" class="btn btn-link btn-sm text-danger btn-remove-doc">Hapus</button>
+        </td>
+      `;
+
+      // Event listener untuk input file
+      fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+          const fileName = this.files[0].name;
+          // Batasi ukuran file (contoh: 5MB)
+          const fileSize = this.files[0].size / 1024 / 1024; // dalam MB
+          if (fileSize > 5) {
+              alert('Ukuran file tidak boleh lebih dari 5MB.');
+              this.value = ''; // Reset input file
+              return;
+          }
+          newRow.querySelector('.filename').textContent = fileName;
+        }
+      });
+
+      // Klik input file secara programatik
+      fileInput.click();
+
+      // Sembunyikan tombol tambah jika sudah mencapai batas
+      if (documentsTbody.rows.length >= maxFiles) {
+        addDocumentButton.style.display = 'none';
+      }
+    });
+
+    // Event delegation untuk tombol hapus
+    documentsTbody.addEventListener('click', function(e) {
+      if (e.target && e.target.classList.contains('btn-remove-doc')) {
+        const row = e.target.closest('tr');
+        const index = row.getAttribute('data-index');
+        const fileInputToRemove = document.getElementById(`doc-file-${index}`);
+
+        if (fileInputToRemove) {
+          fileInputToRemove.remove();
+        }
+        row.remove();
+
+        // Tampilkan kembali tombol tambah
+        if (documentsTbody.rows.length < maxFiles) {
+          addDocumentButton.style.display = 'inline-block';
+        }
+      }
+    });
+  });
 </script>
 @endpush
 
