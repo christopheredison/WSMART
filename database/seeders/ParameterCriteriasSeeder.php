@@ -41,7 +41,7 @@ class ParameterCriteriasSeeder extends Seeder
                 DB::statement("ALTER TABLE parameter_criterias ALTER COLUMN id SET NOT NULL");
                 DB::statement("ALTER TABLE parameter_criterias ALTER COLUMN id DROP IDENTITY IF EXISTS");
                 
-                // Gunakan pendekatan parsing untuk PostgreSQL dengan waktu sekarang
+                // Gunakan pendekatan parsing untuk PostgreSQL
                 $this->parseAndInsertData($sql);
                 
                 // Cari ID maksimum
@@ -76,6 +76,9 @@ class ParameterCriteriasSeeder extends Seeder
         $now = now(); // Dapatkan waktu sekarang
         
         foreach ($matches[1] as $match) {
+            // Hapus backtick dari string untuk menghindari masalah dengan PostgreSQL
+            $match = str_replace('`', '', $match);
+            
             $values = explode(',', $match);
             
             // Pastikan ada minimal 7 nilai (id, parameter_id, criteria_statement, min_score, max_score, created_at, updated_at)
