@@ -20,68 +20,63 @@ class ParameterCriteriaDetailsSeeder extends Seeder
         $this->disableForeignKeyChecks();
         
         // Truncate tabel untuk menghapus data yang ada
-        DB::table('parameter_criteria_details')->truncate();
+        try {
+            // Untuk PostgreSQL, coba gunakan TRUNCATE dengan RESTART IDENTITY CASCADE
+            if (DB::connection()->getDriverName() === 'pgsql') {
+                DB::statement('TRUNCATE TABLE parameter_criteria_details RESTART IDENTITY CASCADE');
+            } else {
+                DB::table('parameter_criteria_details')->truncate();
+            }
+        } catch (\Exception $e) {
+            // Jika gagal truncate, gunakan DELETE sebagai fallback
+            DB::table('parameter_criteria_details')->delete();
+            
+            // Reset sequence untuk PostgreSQL jika truncate gagal
+            if (DB::connection()->getDriverName() === 'pgsql') {
+                try {
+                    DB::statement('ALTER SEQUENCE parameter_criteria_details_id_seq RESTART WITH 1');
+                } catch (\Exception $seqEx) {
+                    // Jika reset sequence gagal, lanjutkan saja
+                }
+            }
+        }
         
         // Aktifkan kembali foreign key checks
         $this->enableForeignKeyChecks();
 
-        // Baca file SQL
+        // Baca file SQL dan gunakan DB::unprepared untuk mengeksekusi SQL langsung
         $path = database_path('seeders/sql/parameter_criteria_details.sql');
         $sql = File::get($path);
         
-        // Ekstrak data INSERT dari file SQL
-        preg_match_all("/\(([^\)]+)\)/", $sql, $matches);
-        
-        $data = [];
-        foreach ($matches[1] as $match) {
-            $values = explode(',', $match);
+        // Untuk PostgreSQL, kita perlu memodifikasi SQL agar sesuai dengan format PostgreSQL
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            // Ubah format SQL dari MySQL ke PostgreSQL
+            // 1. Ganti backtick dengan double quote
+            $sql = str_replace('`', '"', $sql);
             
-            // Pastikan ada 7 nilai (id, parameter_criteria_id, criteria, level, created_at, updated_at, deleted_at)
-            if (count($values) >= 6) {
-                $id = trim($values[0]);
-                $parameter_criteria_id = trim($values[1]);
-                $criteria = trim($values[2], " '");
-                $level = trim($values[3]);
-                $created_at = trim($values[4], " '");
-                $updated_at = trim($values[5], " '");
-                $deleted_at = count($values) > 6 ? (trim($values[6]) === 'NULL' ? null : trim($values[6], " '")) : null;
+            // 2. Nonaktifkan identity column sementara untuk memungkinkan insert dengan ID eksplisit
+            DB::statement("ALTER TABLE parameter_criteria_details ALTER COLUMN id DROP IDENTITY IF EXISTS");
+            
+            try {
+                // 3. Eksekusi SQL yang sudah dimodifikasi
+                DB::unprepared($sql);
                 
-                $data[] = [
-                    'id' => $id,
-                    'parameter_criteria_id' => $parameter_criteria_id,
-                    'criteria' => $criteria,
-                    'level' => $level,
-                    'created_at' => $created_at,
-                    'updated_at' => $updated_at,
-                    'deleted_at' => $deleted_at
-                ];
-            }
-        }
-        
-        // Insert data ke database PostgreSQL dengan ID yang sudah ditentukan
-        if (!empty($data)) {
-            // Untuk PostgreSQL, kita perlu menonaktifkan identity column sementara
-            if (DB::connection()->getDriverName() === 'pgsql') {
-                DB::statement("ALTER TABLE parameter_criteria_details DISABLE TRIGGER ALL");
-                DB::statement("ALTER TABLE parameter_criteria_details ALTER COLUMN id SET NOT NULL");
-                DB::statement("ALTER TABLE parameter_criteria_details ALTER COLUMN id DROP IDENTITY IF EXISTS");
-            }
-            
-            // Insert data dengan ID yang sudah ditentukan
-            DB::table('parameter_criteria_details')->insert($data);
-            
-            // Untuk PostgreSQL, aktifkan kembali identity column
-            if (DB::connection()->getDriverName() === 'pgsql') {
-                // Cari ID maksimum
+                // 4. Cari ID maksimum untuk mengatur sequence
                 $maxId = DB::table('parameter_criteria_details')->max('id');
                 if ($maxId) {
                     // Set sequence ke nilai maksimum + 1
                     DB::statement("SELECT setval('parameter_criteria_details_id_seq', $maxId, true)");
                 }
-                DB::statement("ALTER TABLE parameter_criteria_details ALTER COLUMN id SET NOT NULL");
+                
+                // 5. Aktifkan kembali identity column
                 DB::statement("ALTER TABLE parameter_criteria_details ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY");
-                DB::statement("ALTER TABLE parameter_criteria_details ENABLE TRIGGER ALL");
+            } catch (\Exception $e) {
+                // Jika terjadi error, tampilkan pesan error
+                $this->command->error("Error inserting data: " . $e->getMessage());
             }
+        } else {
+            // Untuk MySQL, eksekusi SQL langsung
+            DB::unprepared($sql);
         }
     }
 }
