@@ -34,16 +34,10 @@ class ParameterCriteriasSeeder extends Seeder
         $path = database_path('seeders/sql/parameter_criterias.sql');
         $sql = File::get($path);
         
-        // Untuk PostgreSQL, kita perlu memodifikasi SQL untuk menggunakan double quotes
+        // Untuk PostgreSQL, kita perlu menggunakan pendekatan parsing
         if (DB::connection()->getDriverName() === 'pgsql') {
-            // Ganti format SQL untuk PostgreSQL
-            // Ganti nama tabel dan kolom dengan double quotes
-            $sql = str_replace('INSERT INTO `parameter_criterias`', 'INSERT INTO "parameter_criterias"', $sql);
-            $sql = str_replace('(`id`, `parameter_id`, `criteria_statement`, `min_score`, `max_score`, `created_at`, `updated_at`, `deleted_at`)', 
-                               '("id", "parameter_id", "criteria_statement", "min_score", "max_score", "created_at", "updated_at", "deleted_at")', $sql);
-            
-            // Nonaktifkan identity column sementara tanpa menggunakan DISABLE TRIGGER ALL
             try {
+                // Nonaktifkan identity column sementara tanpa menggunakan DISABLE TRIGGER ALL
                 DB::statement("ALTER TABLE parameter_criterias ALTER COLUMN id SET NOT NULL");
                 DB::statement("ALTER TABLE parameter_criterias ALTER COLUMN id DROP IDENTITY IF EXISTS");
                 
@@ -65,8 +59,8 @@ class ParameterCriteriasSeeder extends Seeder
                 $this->parseAndInsertData($sql);
             }
         } else {
-            // Untuk database lain (MySQL), gunakan pendekatan parsing
-            $this->parseAndInsertData($sql);
+            // Untuk database lain (MySQL), gunakan DB::unprepared
+            DB::unprepared($sql);
         }
     }
     
@@ -82,7 +76,7 @@ class ParameterCriteriasSeeder extends Seeder
         foreach ($matches[1] as $match) {
             $values = explode(',', $match);
             
-            // Pastikan ada 7 nilai (id, parameter_id, criteria_statement, min_score, max_score, created_at, updated_at, deleted_at)
+            // Pastikan ada 8 nilai (id, parameter_id, criteria_statement, min_score, max_score, created_at, updated_at, deleted_at)
             if (count($values) >= 7) {
                 $id = trim($values[0]);
                 $parameter_id = trim($values[1]);
@@ -108,7 +102,10 @@ class ParameterCriteriasSeeder extends Seeder
         
         // Insert data ke database
         if (!empty($data)) {
-            DB::table('parameter_criterias')->insert($data);
+            // Insert data dalam batch untuk efisiensi
+            foreach (array_chunk($data, 50) as $chunk) {
+                DB::table('parameter_criterias')->insert($chunk);
+            }
         }
     }
 }
