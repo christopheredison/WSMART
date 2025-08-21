@@ -30,8 +30,8 @@ class ParameterCriteriasSeeder extends Seeder
         // Aktifkan kembali foreign key checks
         $this->enableForeignKeyChecks();
 
-        // Baca file SQL
-        $path = database_path('seeders/sql/parameter_criterias.sql');
+        // Baca file SQL yang diperbarui
+        $path = database_path('seeders/sql/parameter_criterias_updated.sql');
         $sql = File::get($path);
         
         // Untuk PostgreSQL, kita perlu menggunakan pendekatan parsing
@@ -41,7 +41,7 @@ class ParameterCriteriasSeeder extends Seeder
                 DB::statement("ALTER TABLE parameter_criterias ALTER COLUMN id SET NOT NULL");
                 DB::statement("ALTER TABLE parameter_criterias ALTER COLUMN id DROP IDENTITY IF EXISTS");
                 
-                // Gunakan pendekatan parsing untuk PostgreSQL karena masalah format datetime
+                // Gunakan pendekatan parsing untuk PostgreSQL dengan waktu sekarang
                 $this->parseAndInsertData($sql);
                 
                 // Cari ID maksimum
@@ -73,29 +73,29 @@ class ParameterCriteriasSeeder extends Seeder
         preg_match_all("/\(([^\)]+)\)/", $sql, $matches);
         
         $data = [];
+        $now = now(); // Dapatkan waktu sekarang
+        
         foreach ($matches[1] as $match) {
             $values = explode(',', $match);
             
-            // Pastikan ada 8 nilai (id, parameter_id, criteria_statement, min_score, max_score, created_at, updated_at, deleted_at)
+            // Pastikan ada minimal 7 nilai (id, parameter_id, criteria_statement, min_score, max_score, created_at, updated_at)
             if (count($values) >= 7) {
                 $id = trim($values[0]);
                 $parameter_id = trim($values[1]);
                 $criteria_statement = trim($values[2], " '");
                 $min_score = trim($values[3]);
                 $max_score = trim($values[4]);
-                $created_at = trim($values[5], " '");
-                $updated_at = trim($values[6], " '");
-                $deleted_at = count($values) > 7 ? (trim($values[7]) === 'NULL' ? null : trim($values[7], " '")) : null;
                 
+                // Gunakan waktu sekarang untuk created_at dan updated_at
                 $data[] = [
                     'id' => $id,
                     'parameter_id' => $parameter_id,
                     'criteria_statement' => $criteria_statement,
                     'min_score' => $min_score,
                     'max_score' => $max_score,
-                    'created_at' => $created_at,
-                    'updated_at' => $updated_at,
-                    'deleted_at' => $deleted_at
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'deleted_at' => null
                 ];
             }
         }
