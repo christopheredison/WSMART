@@ -36,24 +36,19 @@ class ParameterCriteriasSeeder extends Seeder
         
         // Untuk PostgreSQL, kita perlu memodifikasi SQL untuk menggunakan double quotes
         if (DB::connection()->getDriverName() === 'pgsql') {
-            // Ganti backtick dengan double quotes untuk PostgreSQL
-            $sql = str_replace('`parameter_criterias`', '"parameter_criterias"', $sql);
-            $sql = str_replace('`id`', '"id"', $sql);
-            $sql = str_replace('`parameter_id`', '"parameter_id"', $sql);
-            $sql = str_replace('`criteria_statement`', '"criteria_statement"', $sql);
-            $sql = str_replace('`min_score`', '"min_score"', $sql);
-            $sql = str_replace('`max_score`', '"max_score"', $sql);
-            $sql = str_replace('`created_at`', '"created_at"', $sql);
-            $sql = str_replace('`updated_at`', '"updated_at"', $sql);
-            $sql = str_replace('`deleted_at`', '"deleted_at"', $sql);
+            // Ganti format SQL untuk PostgreSQL
+            // Ganti nama tabel dan kolom dengan double quotes
+            $sql = str_replace('INSERT INTO `parameter_criterias`', 'INSERT INTO "parameter_criterias"', $sql);
+            $sql = str_replace('(`id`, `parameter_id`, `criteria_statement`, `min_score`, `max_score`, `created_at`, `updated_at`, `deleted_at`)', 
+                               '("id", "parameter_id", "criteria_statement", "min_score", "max_score", "created_at", "updated_at", "deleted_at")', $sql);
             
             // Nonaktifkan identity column sementara tanpa menggunakan DISABLE TRIGGER ALL
             try {
                 DB::statement("ALTER TABLE parameter_criterias ALTER COLUMN id SET NOT NULL");
                 DB::statement("ALTER TABLE parameter_criterias ALTER COLUMN id DROP IDENTITY IF EXISTS");
                 
-                // Eksekusi SQL langsung
-                DB::unprepared($sql);
+                // Gunakan pendekatan parsing untuk PostgreSQL karena masalah format datetime
+                $this->parseAndInsertData($sql);
                 
                 // Cari ID maksimum
                 $maxId = DB::table('parameter_criterias')->max('id');
