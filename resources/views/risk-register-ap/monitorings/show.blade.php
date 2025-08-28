@@ -232,7 +232,7 @@
                         </div>
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
-                                <input disabled="disabled" class="form-control" type="text" name="nilai_dampak_inherent"
+                                <input disabled="disabled" class="form-control" type="text" name="nilai_dampak_residual"
                                 value="Rp {{ number_format($riskAnalysis->{'nilai_dampak_residual_q' . $quarter}, strpos($riskAnalysis->{'nilai_dampak_residual_q' . $quarter}, '.') !== false ? 2 : 0, ',', '.') }}">
                                 <label for="">Target Nilai Dampak</label>
                             </div>
@@ -290,7 +290,7 @@
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
                                 <input class="form-control update-trigger inputmask-rupiah" type="text" id="realisasi_nilai_dampak" name="realisasi_nilai_dampak"
-                                value="{{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}" 
+                                value="Rp {{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}" 
                                 data-max="{{ $riskAnalysis->nilai_dampak }}" 
                                 {{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? 'disabled' : '' }}
                                 {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'max=' . $riskAnalysis->nilai_dampak : '' }}
@@ -415,10 +415,16 @@
                                         <td>{{ $perlakuanMonitoring->created_at }}</td>
                                         <td>{{ $perlakuanMonitoring->timeline_perlakuan_risiko_start }}</td>
                                         <td>{{ $perlakuanPenyebab->pic }}</td>
-                                        <td>{{ $perlakuanPenyebab->rencana_perlakuan_risiko }}</td>
-                                        <td>{{ $perlakuanPenyebab->biaya_perlakuan_risiko }}</td>
+                                        <td>
+                                          {{ $perlakuanPenyebab->rencana_perlakuan_risiko }}
+                                        </td>
+                                        <td>
+                                          {{ $perlakuanPenyebab->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuanPenyebab->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                        </td>
                                         <td>{{ $perlakuanMonitoring->deskripsi_perlakuan_risiko }}</td>
-                                        <td>{{ $perlakuanMonitoring->realisasi_biaya_perlakuan_risiko }}</td>
+                                        <td>
+                                          {{ $perlakuanMonitoring->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuanMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                        </td>
                                         <td>{{ $perlakuanMonitoring->progress_rencana_perlakuan_risiko }}</td>
                                         <td>
                                             <button type="button" 
@@ -428,7 +434,7 @@
                                                 title="Detail Mitigasi"
                                                 data-perlakuan-id="{{ $perlakuanPenyebab->id }}"
                                                 data-id="{{ $perlakuanMonitoring->id }}">
-                                                 <span class="bx bx-show text-primary"></span>
+                                                <span class="bx bx-show text-primary"></span>
                                         </button>
                                         </td>
                                     </tr>

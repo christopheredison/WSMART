@@ -20,7 +20,7 @@ if (!(!$permissions || \Gate::any($permissions))) {
     @endif
     @break
 @case('delete')
-    <button type="button" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'btn btn-link' }} btn-action" data-action="delete_data" data-id="{{ $id }}">
+    <button type="button" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'btn btn-link' }} btn-action" data-action="delete_data" data-id="{{ $id }}" data-bg-toggle="tooltip" title="{{ $action['title'] ?? 'Hapus' }}">
         {!! $action['label'] !!}
     </button>
     @break
@@ -30,7 +30,7 @@ if (!(!$permissions || \Gate::any($permissions))) {
     </a>
     @break 
 @case('script')
-    <a href="javascript:void(0)" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'hover-underline px-1' }}" data-id="{{ $id }}" onclick="{{ $action['script'] }}">
+    <a href="javascript:void(0)" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'hover-underline px-1' }}" data-id="{{ $id }}" onclick="{{ $action['script'] }}" data-bs-toggle="tooltip" title="{{ $action['title'] ?? '' }}">
         {!! $action['label'] !!}
     </a>
     @break

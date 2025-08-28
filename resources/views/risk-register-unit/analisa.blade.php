@@ -518,7 +518,8 @@ $(document).ready(function() {
     $('[name="kategori_dampak"]').on('change', function() {
         const value = $(this).val();
         if (value === "Kualitatif") {
-            $('#risk_limit').data('oldValue', $('#risk_limit').val()).val(0);
+            // $('#risk_limit').data('oldValue', $('#risk_limit').val()).val(0);
+            $('#risk_limit').data('oldValue', $('#risk_limit').val());
             $('[name="nilai_dampak"]').prop('readonly', true).data('oldValue', $('[name="nilai_dampak"]').val()).val(0);
             if ($('[name="skala_dampak"]').data('oldValue')) {
                 $('[name="skala_dampak"]').prop('disabled', false).val($('[name="skala_dampak"]').data('oldValue'));

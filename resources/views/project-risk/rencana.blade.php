@@ -76,10 +76,10 @@
                                         <button class="btn btn-link text-danger" type="button" data-action="delete" data-id="{{ $perlakuan->id }}">Hapus</button>   
                                     </div> --}}
                                     <div class="d-flex gap-2">
-                                        <button class="btn btn-link text-primary p-0" type="button" data-action="edit" data-id="{{ $perlakuan->id }}" title="Edit">
+                                        <button class="btn btn-link text-primary p-0" type="button" data-action="edit" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Edit Rencana Perlakuan">
                                             <i class="bx bx-edit-alt fs-5"></i>
                                         </button>
-                                        <button class="btn btn-link text-danger p-0" type="button" data-action="delete" data-id="{{ $perlakuan->id }}" title="Hapus">
+                                        <button class="btn btn-link text-danger p-0" type="button" data-action="delete" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Hapus Rencana Perlakuan">
                                             <i class="bx bx-trash fs-5"></i>
                                         </button>   
                                     </div>
@@ -89,7 +89,7 @@
                                         <button class="btn btn-primary" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}">Tambah Rencana Perlakuan</button>
                                     </td> --}}
                                     <td rowspan="{{ $penyebab->perlakuanPenyebabRisiko->count() }}" class="text-center">
-                                        <button class="btn btn-primary btn-sm" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}" title="Tambah Rencana Perlakuan">
+                                        <button class="btn btn-primary btn-sm" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}" data-bs-toggle="tooltip" data-bs-title="Tambah Rencana Perlakuan">
                                             <i class="bx bx-plus-circle"></i>
                                         </button>
                                     </td>
@@ -104,7 +104,7 @@
                                 <button class="btn btn-primary" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}">Input Rencana Perlakuan</button>
                             </td> --}}
                             <td class="text-center">
-                                <button class="btn btn-primary btn-sm" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}" title="Input Rencana Perlakuan">
+                                <button class="btn btn-primary btn-sm" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}" data-bs-toggle="tooltip" data-bs-title="Tambah Rencana Perlakuan">
                                     <i class="bx bx-plus-circle"></i>
                                 </button>
                             </td>
@@ -463,7 +463,7 @@ $(document).ready(function() {
         // }
 
         // Reset input rupiah
-        $('#formTambahRencana .inputmask-rupiah').val('');
+        $('#formTambahRencana .inputmask-rupiah').val('0');
 
         $('#penyebabRisikoId').val(penyebabId); // Set nilai penyebab risiko di input hidden
         $('input[name="penyebab_risiko"]').val(penyebabNama);

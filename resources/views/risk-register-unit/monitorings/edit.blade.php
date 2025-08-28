@@ -293,12 +293,16 @@
                                         <tr data-id="{{ $perlakuan->id }}">
                                         @endif
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
-                                            <td><span class="inputmask-fixed">{{ $perlakuan->biaya_perlakuan_risiko ?: '-' }}</span></td>
+                                            <td>
+                                              <span class="inputmask-fixed">
+                                                {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') :  '-' }}
+                                              </span>
+                                            </td>
                                             <td class="display-progress inputmask-fixed">
                                                 {{ $perlakuan->{'progress_rencana_perlakuan_risiko_q' . $quarter} ?? '-' }}
                                             </td>
                                             <td class="display-biaya inputmask-fixed">
-                                                {{ $perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter} ?? '-' }}
+                                                {{ $perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter} ? 'Rp ' . number_format($perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter}, 0, ',', '.') : '-' }}
                                             </td>
                                             <td class="display-timeline">{{ $lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
                                             <td style="white-space:nowrap" class="column-action">
@@ -450,7 +454,7 @@
                                                     title="Detail Mitigasi"
                                                     data-perlakuan-id="{{ $perlakuanPenyebab->id }}"
                                                     data-id="{{ $perlakuanMonitoring->id }}">
-                                                     <span class="bx bx-show text-primary"></span>
+                                                    <span class="bx bx-show text-primary"></span>
                                             </button>
                                             </td>
                                         </tr>
@@ -466,12 +470,14 @@
 
         <div class="col-12 mt-5">
             <div class="row g-2">
-                <div class="col-auto order-1">
+                <div class="col-auto">
                     <a href="{{ route('risk-register-unit.monitorings.index', ['period' => request()->route('period')]) }}" class="btn btn-outline-secondary">Batal</a>
                 </div>
-                <div class="col-auto order-3 px-0 px-md-1 d-flex gap-2">
+                <div class="col-auto">
                     <button type="button" data-action="save" class="btn btn-primary ms-auto btn-action">Simpan</button>
-                    <button type="button" data-action="save-and-close" class="btn btn-secondary btn-action">Simpan dan Close Risiko</button>
+                </div>
+                <div class="col-auto ms-auto">
+                    <button type="button" data-action="save-and-close" class="btn btn-danger btn-action">Simpan dan Close Risiko</button>
                 </div>
             </div>
         </div>

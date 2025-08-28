@@ -89,7 +89,7 @@
           <a class="nav-link {{ request()->is('corporate-risk') ? 'active' : '' }}" href="/corporate-risk"
             role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon">
-              <i class="menu-icon tf-icons bx bx-grid-alt"></i>
+              <i class="menu-icon tf-icons bx bx-buildings"></i>
               <span class="nav-link-text">Risk Register Corporate</span>
             </span>
           </a>
@@ -101,7 +101,7 @@
           <a class="nav-link {{ request()->is('risk-register-unit') ? 'active' : '' }}" href="/risk-register-unit/periods"
             role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon">
-              <i class="menu-icon tf-icons bx bx-grid-alt"></i>
+              <i class="menu-icon tf-icons bx bx-sitemap"></i>
               <span class="nav-link-text">Risk Register Divisi</span>
             </span>
           </a>
@@ -112,7 +112,7 @@
           <a class="nav-link {{ request()->is('risk-register-ap') ? 'active' : '' }}" href="/risk-register-ap/periods"
             role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon">
-              <i class="menu-icon tf-icons bx bx-grid-alt"></i>
+              <i class="menu-icon tf-icons bx bx-git-branch"></i>
               <span class="nav-link-text">Risk Register Anak Perusahaan</span>
             </span>
           </a>
@@ -134,7 +134,7 @@
           <a class="nav-link {{ request()->routeIs('laporan.unit') ? 'active' : '' }}"
             href="{{route('laporan.unit')}}" role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
-              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <i class="menu-icon tf-icons bx bxs-report"></i>
               <span class="nav-link-text">Laporan Divisi</span>
             </span>
           </a>
@@ -146,7 +146,7 @@
           <a class="nav-link {{ request()->routeIs('laporan.ap') ? 'active' : '' }}"
             href="{{route('laporan.ap')}}" role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
-              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <i class="menu-icon tf-icons bx bxs-report"></i>
               <span class="nav-link-text">Laporan Anak Perusahaan</span>
             </span>
           </a>
@@ -160,7 +160,7 @@
           <a class="nav-link {{ request()->routeIs('project-periode-list.index') ? 'active' : '' }}"
             href="{{route('project-periode-list.index')}}" role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
-              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <i class="menu-icon tf-icons bx bx-list-ul"></i>
               <span class="nav-link-text">Project List</span>
             </span>
           </a>
@@ -184,7 +184,7 @@
           <a class="nav-link {{ request()->routeIs('laporan.project') ? 'active' : '' }}"
             href="{{route('laporan.project')}}" role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
-              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <i class="menu-icon tf-icons bx bxs-report"></i>
               <span class="nav-link-text">Laporan Project</span>
             </span>
           </a>
@@ -198,7 +198,7 @@
           <a class="nav-link {{ request()->routeIs('metrik-strategi-risiko.index') ? 'active' : '' }}" href="{{route('metrik-strategi-risiko.index')}}" role="button"
             data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
-              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <i class="menu-icon tf-icons bx bx-target-lock"></i>
               <span class="nav-link-text">Metrik Strategi Risiko</span>
             </span>
           </a>
@@ -207,7 +207,7 @@
           <a class="nav-link {{ request()->routeIs('sasaran-strategi.index') ? 'active' : '' }}" href="{{route('sasaran-strategi.index')}}" role="button"
             data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
-              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <i class="menu-icon tf-icons bx bx-bullseye"></i>
               <span class="nav-link-text">Seleksi Sasaran & Strategi Bisnis</span>
             </span>
           </a>
@@ -216,7 +216,7 @@
           <a class="nav-link {{ request()->routeIs('penilaian-rmi.index') ? 'active' : '' }}" href="{{route('penilaian-rmi.index')}}" role="button"
             data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
-              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <i class="menu-icon tf-icons bx bx-check-shield"></i>
               <span class="nav-link-text">Penilaian RMI</span>
             </span>
           </a>
@@ -226,7 +226,7 @@
           <a class="nav-link {{ request()->routeIs('kuesioner.index') ? 'active' : '' }}" href="{{route('kuesioner.index')}}" role="button"
             data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
-              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <i class="menu-icon tf-icons bx bx-poll"></i>
               <span class="nav-link-text">Kuesioner</span>
             </span>
           </a>
@@ -236,7 +236,7 @@
           <a class="nav-link {{ request()->routeIs('ict.index') ? 'active' : '' }}" href="{{route('ict.index')}}" role="button"
             data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
-              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
+              <i class="menu-icon tf-icons bx bx-shield-quarter"></i>
               <span class="nav-link-text">Internal Control Testing</span>
             </span>
           </a>

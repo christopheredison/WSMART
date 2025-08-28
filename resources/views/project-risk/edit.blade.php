@@ -30,17 +30,35 @@
                         <div class="col-md-12">
                             <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko</label>
-                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
-                                    value="{{ old('target_capaian_kinerja', $projectRisk->target_capaian_kinerja) }}" placeholder="Sasaran Risiko" disabled></textarea>
+                                <div class="w-100">
+                                    <select class="form-select select2" id="sasaran_proyek_id" name="sasaran_proyek_id">
+                                        <option value="">Pilih Sasaran Risiko</option>
+                                        @foreach($sasaranProyeks as $sasaranProyek)
+                                            <option value="{{ $sasaranProyek->id }}" data-kpi="{{ $sasaranProyek->kpi_desc }}" {{ old('sasaran_proyek_id', $projectRisk->sasaran_proyek_id) == $sasaranProyek->id ? 'selected' : '' }}>
+                                                {{ $sasaranProyek->kpi_desc }}
+                                            </option>
+                                        @endforeach
+                                        
+                                        <option value="other">Sasaran Lainnya</option>
+                                    </select>
+
+                                    <textarea class="form-control mt-2 d-none" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
+                                        placeholder="Masukkan Sasaran Risiko Lainnya">{{ old('target_capaian_kinerja', $projectRisk->target_capaian_kinerja) }}</textarea>
+
+                                    <input type="hidden" id="kpi_desc_selected" name="kpi_desc_selected">
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-12">
                             <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Peristiwa Risiko</label>
-                                <input type="hidden" name="peristiwa_risiko_id" id="peristiwa_risiko" value="{{ old('peristiwa_risiko_id', $projectRisk->peristiwa_risiko_id) }}">
-                                <input type="text" class="form-control" 
-                                    value="{{ $projectRisk->peristiwaRisiko?->title }}" 
-                                    readonly>
+                                <select class="form-select select2 js-select-hide-search" name="peristiwa_risiko_id"
+                                    id="peristiwa_risiko" required>
+                                    <option selected>Pilih</option>
+                                    @foreach ($peristiwaRisikos as $peristiwaRisiko)
+                                        <option value="{{ $peristiwaRisiko->id }}" {{ old('peristiwa_risiko_id', $projectRisk->peristiwa_risiko_id) == $peristiwaRisiko->id ? 'selected' : '' }}>{{ $peristiwaRisiko->title }}</option>
+                                    @endforeach
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-12">
@@ -62,14 +80,14 @@
                         <div class="col-12">
                             <div class="form-group form-floating">
                                 <textarea class="form-control" id="deskripsi_peristiwa_risiko" name="deskripsi_peristiwa_risiko" rows="3"
-                                    value="{{ old('deskripsi_peristiwa_risiko') }}" placeholder="Deskripsi Peristiwa Risiko" required></textarea>
+                                    placeholder="Deskripsi Peristiwa Risiko" required>{{ old('deskripsi_peristiwa_risiko', $projectRisk->deskripsi_peristiwa_risiko) }}</textarea>
                                 <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</label>
                             </div>
                         </div>
                         <div class="col-12">
                             <div class="form-group form-floating">
                                 <textarea class="form-control" id="wbs" name="wbs" rows="3"
-                                    value="{{ old('wbs') }}" placeholder="WBS" required></textarea>
+                                    placeholder="WBS" required>{{ old('wbs', $projectRisk->wbs) }}</textarea>
                                 <label for="wbs">WBS</label>
                             </div>
                         </div>
@@ -303,6 +321,34 @@
     }
 
     $(document).ready(function() {
+        const selectedValueFromPHP = @json(old('sasaran_proyek_id', $projectRisk->sasaran_proyek_id));
+
+        $('#sasaran_proyek_id').on('change', function() {
+            const selectedValue = $(this).val();
+            const targetTextarea = $('#target_capaian_kinerja');
+            const kpiDescSelected = $('#kpi_desc_selected');
+
+            if (selectedValue === 'other') {
+                targetTextarea.removeClass('d-none').attr('required', true);
+                kpiDescSelected.val('');
+            } else if (selectedValue) {
+                const kpiDesc = $(this).find('option:selected').data('kpi');
+                targetTextarea.addClass('d-none').attr('required', false);
+                kpiDescSelected.val(kpiDesc);
+            } else {
+                targetTextarea.addClass('d-none').attr('required', false);
+                kpiDescSelected.val('');
+            }
+        });
+
+        setTimeout(function() {
+            if (selectedValueFromPHP === null || selectedValueFromPHP == 0) {
+                $('#sasaran_proyek_id').val('other').trigger('change');
+            } else if (selectedValueFromPHP) {
+                $('#sasaran_proyek_id').val(selectedValueFromPHP).trigger('change');
+            }
+        }, 100);
+
         const masterKris = @json($masterKris->keyBy('id'));
         const kontrolExistings = @json($kontrolEksistings->keyBy('id'));
         
