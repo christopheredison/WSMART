@@ -184,7 +184,7 @@ class ProjectRiskController extends BasicCRUDController
             ];
 
             $this->tableActions[] = [
-                'label' => '<span class="bx bx-show-alt" data-bs-toggle="tooltip" title="View"></span>',
+                'label' => '<span class="bx bx-show-alt" title="View"></span>',
                 'btn_icon' => true,
                 'action' => 'link',
                 'url' => route('projects.risks.view', ['project' => request()->route('project'), 'risk' => ':id']),
@@ -495,7 +495,7 @@ class ProjectRiskController extends BasicCRUDController
         $project = $projectPeriodeList->project;
         $periode = $projectPeriodeList->periode;
 
-        if ($request->action === 'save') {
+        if ($request->action === 'save' || $request->action === 'savenext') {
             $request->validate([
                 'peristiwa_risiko_id' => 'required',
                 'kategori_risiko_id' => 'required',
@@ -582,9 +582,15 @@ class ProjectRiskController extends BasicCRUDController
                 ]);
             }
 
-            return [
-                'redirect' => route('projects.risks.index', ['project' => $projectPeriodeList->id]),
-            ];
+            if ($request->action === 'savenext') {
+              return [
+                  'redirect' => route('projects.risks.analisa', ['project' => $projectPeriodeList->id, 'risk' => $projectRisk->id]),
+              ];
+            } else {
+              return [
+                  'redirect' => route('projects.risks.index', ['project' => $projectPeriodeList->id]),
+              ];
+            }
 
         } elseif ($request->action === 'draft') {
 

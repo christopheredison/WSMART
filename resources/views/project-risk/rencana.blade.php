@@ -331,11 +331,14 @@
     </div> --}}
 
     <div class="col-12">
-        <div class="row g-2">
-            <div class="col-auto order-1">
+        <div class="d-flex justify-content-between">
+            <div>
+                <a href="{{ route('projects.risks.analisa', ['project' => $projectPeriodeList->id, 'risk' => $projectRisk->id]) }}" class="btn btn-secondary me-2">
+                    <span class="bx bx-chevron-left" style="line-height: 0.8;"></span> Kembali ke Analisa
+                </a>
                 <a href="{{ route('projects.risks.index', ['project' => $projectPeriodeList->id]) }}" class="btn btn-outline-secondary">Selesai</a>
             </div>
-            <div class="col-auto order-3 px-0 px-md-1 d-flex">
+            <div>
                 <a href="{{ route('projects.risks.create', ['project' => $projectPeriodeList->id]) }}" class="btn btn-primary ms-auto btn-action">Lanjut Ke Pengisian Risiko Baru</a>
             </div>
         </div>

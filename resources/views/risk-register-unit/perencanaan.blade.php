@@ -184,12 +184,15 @@
     @endfor
 
     <div class="col-12">
-        <div class="row g-2">
-            <div class="col-auto order-1">
+        <div class="d-flex justify-content-between">
+            <div>
+                <a href="{{ route('risk-register-unit.analisa', $identifikasiRisiko->id) }}" class="btn btn-secondary me-2">
+                    <span class="bx bx-chevron-left" style="line-height: 0.8;"></span> Kembali ke Analisa
+                </a>
                 <a href="{{ route('risk-register-unit.index') }}" class="btn btn-outline-secondary">Selesai</a>
             </div>
-            <div class="col-auto order-3 px-0 px-md-1 d-flex">
-                <a href="{{ route('risk-register-unit.create') }}" class="btn btn-primary ms-auto btn-action">Lanjut Ke Pengisian Risiko Baru</a>
+            <div>
+                <a href="{{ route('risk-register-unit.create') }}" class="btn btn-primary btn-action">Lanjut Ke Pengisian Risiko Baru</a>
             </div>
         </div>
     </div>

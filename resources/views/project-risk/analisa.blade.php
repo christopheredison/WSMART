@@ -256,14 +256,16 @@
     </form>
 
     <div class="col-12">
-        <div class="row g-2">
-            <div class="col-auto order-1">
+        <div class="row g-2 justify-content-between">
+            <div class="col-auto">
+                <a href="{{ route('projects.risks.edit', ['project' => $projectPeriodeList->id, 'risk' => $projectRisk->id]) }}" class="btn btn-secondary me-2">
+                    <span class="bx bx-chevron-left" style="line-height: 0.8;"></span> Kembali ke Identifikasi
+                </a>
                 <a href="{{ route('projects.risks.index', ['project' => $projectPeriodeList->id]) }}" class="btn btn-outline-secondary">Batal</a>
             </div>
-            <div class="col-auto order-3 px-0 px-md-1 d-flex">
+
+            <div class="col-auto">
                 <button type="button" data-action="save" class="btn btn-warning bg-warning ms-auto btn-action">Simpan dan Keluar</button>
-            </div>
-            <div class="col-auto order-3 px-0 px-md-1 d-flex">
                 <button type="button" data-action="savenext" class="btn btn-primary ms-auto btn-action">Simpan dan Lanjut Ke Rencana Perlakuan</button>
             </div>
         </div>

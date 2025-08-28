@@ -259,15 +259,17 @@
     </form>
 
     <div class="col-12">
-        <div class="row g-2">
-            <div class="col-auto order-1">
+        <div class="row g-2 justify-content-between">
+            <div class="col-auto">
+                <a href="{{ route('risk-register-unit.edit', $identifikasiRisiko->id) }}" class="btn btn-secondary me-2">
+                    <span class="bx bx-chevron-left" style="line-height: 0.8;"></span> Kembali ke Identifikasi
+                </a>
                 <a href="{{ route('risk-register-unit.index', ['pid' => $identifikasiRisiko->periode_id]) }}" class="btn btn-outline-secondary">Batal</a>
             </div>
-            <div class="col-auto order-3 px-0 px-md-1 d-flex">
-                <button type="button" data-action="save" class="btn btn-warning bg-warning ms-auto btn-action">Simpan dan Keluar</button>
-            </div>
-            <div class="col-auto order-3 px-0 px-md-1 d-flex">
-                <button type="button" data-action="savenext" class="btn btn-primary ms-auto btn-action">Simpan dan Lanjut Ke Rencana Perlakuan</button>
+
+            <div class="col-auto">
+                <button type="button" data-action="save" class="btn btn-warning bg-warning me-2 btn-action">Simpan dan Keluar</button>
+                <button type="button" data-action="savenext" class="btn btn-primary btn-action">Simpan dan Lanjut Ke Rencana Perlakuan</button>
             </div>
         </div>
     </div>
