@@ -94,7 +94,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'data' => 'nilai_dampak_residual',
                 'sortable' => false,
                 'searchable' => false,
-                'render' => '(data, type, row) => Intl.NumberFormat().format(data) || "-"',
+                'render' => '(data, type, row) => "Rp" + Intl.NumberFormat("id-ID").format(data) || "-"',
             ],
             'skala_dampak' => [
                 'label' => 'Skala Dampak Residual',
@@ -198,7 +198,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     ['' => 'Semua Peristiwa Risiko'] + $peristiwaRisikos->pluck('title', 'id')->toArray(),
                     '',
                     [
-                        'class' => 'form-select',
+                        'class' => 'form-select select2',
                     ]
                 ],
             ],
@@ -215,7 +215,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     ],
                     '',
                     [
-                        'class' => 'form-select',
+                        'class' => 'form-select select2 js-select-hide-search',
                     ]
                 ],
                 'handler' => function ($query, $key, $value) {
@@ -230,7 +230,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     [],
                     '',
                     [
-                        'class' => 'form-select',
+                        'class' => 'form-select select2 js-select-hide-search',
                     ]
                 ],
                 'handler' => function ($query, $key, $value) {

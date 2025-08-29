@@ -93,7 +93,7 @@
                         <input type="hidden" name="penyebab_data" id="penyebab_data_input">
                         <div class="card mt-3">
                             <div class="card-header p-3 d-flex justify-content-between align-items-center">
-                              <h5 class="mb-0">Penyebab dan Penanganan Risiko</h5>
+                              <h5 class="mb-0">Penyebab dan Penanganan Saat Kejadian</h5>
                               <button type="button" class="btn btn-outline-primary" id="btn-tambah-penyebab">
                                   Tambah Penyebab
                               </button>
@@ -122,7 +122,7 @@
 
                             <div class="col-12 mb-3">
                                 <label class="form-label">Nilai Kerugian (IDR)</label>
-                                <input type="text" class="form-control inputmask-rupiah" name="nilai_kerugian_finansial" readonly
+                                <input type="text" class="form-control inputmask-rupiah" name="nilai_kerugian_finansial"
                                       value="@if($risiko->riskAnalysis?->kategori_dampak == 'Kuantitatif'){{ $risiko->riskAnalysis->nilai_dampak }}@else{{ 0 }}@endif">
                             </div>
 
@@ -195,7 +195,7 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <form id="formRencana">
-                    <div class="modal-header"><h5 class="modal-title" id="modalRencanaLabel">Tambah Rencana Perlakuan</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-header"><h5 class="modal-title" id="modalRencanaLabel">Tambah Penanganan Saat Kejadian</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                     <div class="modal-body">
                         @include('project-led._form-perencanaan')
                     </div>
@@ -324,7 +324,7 @@ $(document).ready(function() {
         const idToDelete = $(this).data('id');
         Swal.fire({
             title: 'Apakah Anda yakin?',
-            text: "Anda akan menghapus penyebab ini beserta semua rencana perlakuannya!",
+            text: "Anda akan menghapus penyebab ini beserta semua Penanganan Saat Kejadiannya!",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -347,7 +347,7 @@ $(document).ready(function() {
         const penyebab = penyebabData.find(p => p.id == currentPenyebabId);
         if (!penyebab) return;
         
-        $('#modalRencanaLabel').text('Tambah Rencana Perlakuan');
+        $('#modalRencanaLabel').text('Tambah Penanganan Saat Kejadian');
         
         const form = $('#formRencana');
         form[0].reset();
@@ -372,7 +372,7 @@ $(document).ready(function() {
         const form = $('#formRencana');
         form.find('.is-invalid').removeClass('is-invalid');
         
-        $('#modalRencanaLabel').text('Edit Rencana Perlakuan');
+        $('#modalRencanaLabel').text('Edit Penanganan Saat Kejadian');
         
         form.find('[name="penyebab_risiko_text"]').val(penyebab.penyebab_risiko);
         form.find('[name="rencana_perlakuan_risiko"]').val(perlakuan.rencana_perlakuan_risiko);
@@ -449,7 +449,7 @@ $(document).ready(function() {
         
         Swal.fire({
             title: 'Apakah Anda yakin?',
-            text: "Anda akan menghapus rencana perlakuan ini.",
+            text: "Anda akan menghapus Penanganan Saat Kejadian ini.",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -461,7 +461,7 @@ $(document).ready(function() {
                 const penyebab = penyebabData.find(p => p.id == penyebabId);
                 penyebab.perlakuan = penyebab.perlakuan.filter(pl => pl.id != perlakuanId);
                 renderPenyebabTable();
-                // Swal.fire('Terhapus!', 'Rencana perlakuan berhasil dihapus.', 'success');
+                // Swal.fire('Terhapus!', 'Penanganan Saat Kejadian berhasil dihapus.', 'success');
             }
         });
     });

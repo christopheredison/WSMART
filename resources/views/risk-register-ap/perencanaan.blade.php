@@ -76,10 +76,10 @@
                                         <button class="btn btn-link text-danger" type="button" data-action="delete" data-id="{{ $perlakuan->id }}">Hapus</button>   
                                     </div> --}}
                                     <div class="d-flex gap-2">
-                                        <button class="btn btn-link text-primary p-0" type="button" data-action="edit" data-id="{{ $perlakuan->id }}" title="Edit">
+                                        <button class="btn btn-link text-primary p-0" type="button" data-action="edit" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Edit Rencana Perlakuan">
                                             <i class="bx bx-edit-alt fs-5"></i>
                                         </button>
-                                        <button class="btn btn-link text-danger p-0" type="button" data-action="delete" data-id="{{ $perlakuan->id }}" title="Hapus">
+                                        <button class="btn btn-link text-danger p-0" type="button" data-action="delete" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Hapus Rencana Perlakuan">
                                             <i class="bx bx-trash fs-5"></i>
                                         </button>   
                                     </div>
@@ -89,7 +89,7 @@
                                         <button class="btn btn-primary" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}">Tambah Rencana Perlakuan</button>
                                     </td> --}}
                                     <td rowspan="{{ $penyebab->perlakuanPenyebabRisiko?->count() }}" class="text-center">
-                                        <button class="btn btn-primary btn-sm" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}" title="Tambah Rencana Perlakuan">
+                                        <button class="btn btn-primary btn-sm" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}" data-bs-toggle="tooltip" data-bs-title="Tambah Rencana Perlakuan">
                                             <i class="bx bx-plus-circle"></i>
                                         </button>
                                     </td>
@@ -104,7 +104,7 @@
                                 <button class="btn btn-primary" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}">Input Rencana Perlakuan</button>
                             </td> --}}
                             <td class="text-center">
-                                <button class="btn btn-primary btn-sm" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}" title="Input Rencana Perlakuan">
+                                <button class="btn btn-primary btn-sm" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}" data-bs-toggle="tooltip" data-bs-title="Tambah Rencana Perlakuan">
                                     <i class="bx bx-plus-circle"></i>
                                 </button>
                             </td>
@@ -184,12 +184,15 @@
     @endfor
 
     <div class="col-12">
-        <div class="row g-2">
-            <div class="col-auto order-1">
+        <div class="d-flex justify-content-between">
+            <div>
+                <a href="{{ route('risk-register-ap.analisa', $identifikasiRisiko->id) }}" class="btn btn-secondary me-2">
+                    <span class="bx bx-chevron-left" style="line-height: 0.8;"></span> Kembali ke Analisa
+                </a>
                 <a href="{{ route('risk-register-ap.index') }}" class="btn btn-outline-secondary">Selesai</a>
             </div>
-            <div class="col-auto order-3 px-0 px-md-1 d-flex">
-                <a href="{{ route('risk-register-ap.create') }}" class="btn btn-primary ms-auto btn-action">Lanjut Ke Pengisian Risiko Baru</a>
+            <div>
+                <a href="{{ route('risk-register-ap.create') }}" class="btn btn-primary btn-action">Lanjut Ke Pengisian Risiko Baru</a>
             </div>
         </div>
     </div>
@@ -292,7 +295,7 @@ $(document).ready(function() {
         // }
 
         // Reset input rupiah
-        $('#formTambahRencana .inputmask-rupiah').val('');
+        $('#formTambahRencana .inputmask-rupiah').val('0');
 
         $('#penyebabRisikoId').val(penyebabId); // Set nilai penyebab risiko di input hidden
         $('input[name="penyebab_risiko"]').val(penyebabNama);

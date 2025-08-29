@@ -230,6 +230,8 @@
 @endif
 const fetchedData = [];
 $(document).ready(function() {
+    $("body").tooltip({ selector: '[data-bs-toggle=tooltip]' });
+
     const datatableColumns = [
         {
             data: 'id',

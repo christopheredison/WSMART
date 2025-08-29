@@ -887,11 +887,8 @@ class RiskRegisterApController extends Controller
             $toMerge = [
                 'skala_dampak' => $this->calculateSkalaDampak($request->nilai_dampak * 100 / $risk_limit),
             ];
-            //echo "risk limit = " . $risk_limit . "\n";
             for ($i = 1; $i <= 4; $i++) {
-                //echo "nilai_dampak_residual_q" . $i . " = " . $request->{'nilai_dampak_residual_q' . $i} . "\n";
                 $calculateSkala = $this->calculateSkalaDampak($request->{'nilai_dampak_residual_q' . $i} * 100 / $risk_limit);
-                //echo "skala dampak residual q" . $i . " = " . $calculateSkala . "\n";
                 $toMerge['skala_dampak_residual_q' . $i] = $calculateSkala;
             }
 
@@ -991,9 +988,29 @@ class RiskRegisterApController extends Controller
 
         //$toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
         if ($request->kategori_dampak == 'Kualitatif') {
+            // Rumus: skalaDampak * (1/100) * (nilaiProbabilitas / 100) * riskTolerance
             $toUpdate['eksposur_risiko'] = floatval($toUpdate['skala_dampak']) * (1/100) * (floatval($toUpdate['nilai_probabilitas']) / 100) * ($riskLimitPeriode->risk_limit ?: 0);
         } else {
+            // Rumus: (nilaiDampak * nilaiProbabilitas) / 100
             $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * ($toUpdate['nilai_probabilitas'] / 100);
+        }
+
+        for ($i = 1; $i <= 4; $i++) {
+            $nilaiProbResidual = $request->{'nilai_probabilitas_residual_q' . $i};
+            
+            // Lanjutkan perhitungan hanya jika ada nilai probabilitas di kuartal ini
+            if (!is_null($nilaiProbResidual) && $nilaiProbResidual !== '') {
+                if ($request->kategori_dampak == 'Kualitatif') {
+                    $skalaDampakResidual = $request->{'skala_dampak_residual_q' . $i};
+                    $toUpdate['eksposur_risiko_residual_q' . $i] = floatval($skalaDampakResidual) * (1/100) * (floatval($nilaiProbResidual) / 100) * ($riskLimitPeriode->risk_limit ?: 0);
+                } else { // Kategori Kuantitatif
+                    $nilaiDampakResidual = $request->{'nilai_dampak_residual_q' . $i};
+                    $toUpdate['eksposur_risiko_residual_q' . $i] = $nilaiDampakResidual * ($nilaiProbResidual / 100);
+                }
+            } else {
+                // Jika tidak ada nilai probabilitas, set eksposur ke null
+                $toUpdate['eksposur_risiko_residual_q' . $i] = null;
+            }
         }
 
         $tingkatSkalaProbabilitasResiduals = [];
