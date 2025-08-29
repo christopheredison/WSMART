@@ -204,12 +204,21 @@
                                 <label for="">Realisasi Skala Dampak</label>
                             </div>
                             <div class="form-floating">
-                                <input class="form-control update-trigger" type="number" id="realisasi_nilai_probabilitas"
-                                name="realisasi_nilai_probabilitas" value="{{ $riskMonitoring?->nilai_probabilitas }}"
-                                data-max="{{ $projectRiskAnalisa->nilai_probabilitas }}" 
-                                max="{{ $projectRiskAnalisa->nilai_probabilitas }}"
-                                min="0"
-                                oninput="if(this.value > {{ $projectRiskAnalisa->nilai_probabilitas }}) this.value = {{ $projectRiskAnalisa->nilai_probabilitas }};">
+                                <input 
+                                  class="form-control update-trigger" 
+                                  type="number" 
+                                  id="realisasi_nilai_probabilitas"
+                                  name="realisasi_nilai_probabilitas" 
+                                  value="{{ $riskMonitoring?->nilai_probabilitas }}"
+                                  {{-- data-max="{{ $projectRiskAnalisa->nilai_probabilitas }}"  --}}
+                                  {{-- max="{{ $projectRiskAnalisa->nilai_probabilitas }}" --}}
+                                  {{-- min="0" --}}
+                                  {{-- oninput="if(this.value > {{ $projectRiskAnalisa->nilai_probabilitas }}) this.value = {{ $projectRiskAnalisa->nilai_probabilitas }};" --}}
+                                  data-max="100" 
+                                  max="100"
+                                  min="0"
+                                  oninput="if(this.value > 100) this.value = 100;"
+                                >
                                 <label for="">Realisasi Nilai Probabilitas (%)</label>
                             </div>
                             <div class="form-floating">
@@ -641,19 +650,19 @@ $(document).ready(function() {
         }
     });
 
-    // Validasi nilai probabilitas
-    $('#realisasi_nilai_probabilitas').on('change', function() {
-        const value = parseFloat($(this).val());
-        if (value > nilaiProbabilitasInherent) {
-            Swal.fire({
-                title: 'Peringatan',
-                text: 'Nilai probabilitas realisasi tidak boleh lebih besar dari nilai probabilitas inherent',
-                icon: 'warning',
-                confirmButtonText: 'OK'
-            });
-            $(this).val(nilaiProbabilitasInherent).trigger('change');
-        }
-    });
+    // // Validasi nilai probabilitas
+    // $('#realisasi_nilai_probabilitas').on('change', function() {
+    //     const value = parseFloat($(this).val());
+    //     if (value > nilaiProbabilitasInherent) {
+    //         Swal.fire({
+    //             title: 'Peringatan',
+    //             text: 'Nilai probabilitas realisasi tidak boleh lebih besar dari nilai probabilitas inherent',
+    //             icon: 'warning',
+    //             confirmButtonText: 'OK'
+    //         });
+    //         $(this).val(nilaiProbabilitasInherent).trigger('change');
+    //     }
+    // });
 
     $('#section-realisasi').on('change', '.update-trigger', function() {
         refreshSkalaAndLevelRisiko();

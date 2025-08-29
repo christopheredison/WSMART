@@ -437,11 +437,11 @@ $(document).ready(function() {
         refreshSkalaAndLevelRisiko(true);
     }).change();
 
-    $('[name="skala_probabilitas"]').on('change', function() {
+    $('[name="skala_probabilitas"]').on('input change', function() {
         refreshSkalaAndLevelRisiko();
     }).change();
 
-    $('[name="skala_probabilitas_residual"]').on('change', function() {
+    $('[name="skala_probabilitas_residual"]').on('input change', function() {
         refreshSkalaAndLevelRisiko(true);
     }).change();
 
@@ -767,7 +767,7 @@ $(document).ready(function() {
                 title: 'Peringatan!',
                 text: 'Nilai Dampak Residual tidak boleh lebih besar dari Nilai Dampak Inheren.',
                 icon: 'warning',
-                confirmButtonText: 'Mengerti'
+                confirmButtonText: 'OK'
             });
             $(this).val($('#nilai_dampak').val()); // Set nilainya sama dengan nilai dampak
         }
@@ -799,7 +799,7 @@ $(document).ready(function() {
                 title: 'Peringatan!',
                 text: 'Nilai Probabilitas Residual tidak boleh lebih besar dari Nilai Probabilitas Inherent.',
                 icon: 'warning',
-                confirmButtonText: 'Mengerti'
+                confirmButtonText: 'OK'
             }).then(() => {
                 nilaiProbabilitasResidualInput.val(nilaiProbabilitas).trigger('change');
                 nilaiProbabilitasResidualInput.focus();
