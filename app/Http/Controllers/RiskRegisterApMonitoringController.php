@@ -11,6 +11,7 @@ use App\Models\RiskMap;
 use App\Models\SkalaDampak;
 use App\Models\SkalaProbabilitas;
 use App\Models\StrategiRisiko;
+use App\Models\Unit;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -34,13 +35,25 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         $quarter = request()->input('filters.quarter') ?: 4;
         $month = request()->input('filters.month') ?: null;
 
-        // if (!(Gate::check('risk_monitoring_list') || $user->hasProject($period))) {
-        //     abort(403);
-        // }
+        $targetUnitId = null;
+        $isApAdmin = Gate::check('ap_admin');
 
-        $this->callbackQuery = function ($query) use ($period, $quarter, $user, $month) {
+        if ($isApAdmin) {
+            if (request()->filled('filters.unit_id')) {
+                $targetUnitId = request()->input('filters.unit_id');
+            } elseif (request()->filled('unit_id')) {
+                $targetUnitId = request()->input('unit_id');
+            } else {
+                $firstUnit = Unit::where('unit_type_id', 2)->orderBy('id', 'asc')->first();
+                $targetUnitId = $firstUnit ? $firstUnit->id : null;
+            }
+        } else {
+            $targetUnitId = $user->unit_id;
+        }
+
+        $this->callbackQuery = function ($query) use ($period, $quarter, $user, $month, $targetUnitId) {
             $query->where('periode_id', $period->id)
-                ->where('unit_id', $user->unit_id)
+                ->where('unit_id', $targetUnitId)
                 ->where('unit_type_id', 2)
                 ->with([
                   // 'peristiwaRisiko', 
@@ -54,6 +67,56 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                         ->with('skalaProbabilitas');
                 }]);
         };
+
+        $unitFilterOptions = [];
+        $unitFilterAttributes = ['class' => 'form-select select2'];
+
+        if ($isApAdmin) {
+            $unitFilterOptions = Unit::where('unit_type_id', 2)->pluck('name', 'id')->toArray();
+        } else {
+            if ($user->unit) {
+                $unitFilterOptions = [$user->unit_id => $user->unit->name];
+            }
+            $unitFilterAttributes['disabled'] = true;
+        }
+
+        $filters = [];
+        $filters['unit_id'] = [
+            'label' => 'Anak Perusahaan',
+            'type' => 'select',
+            'parameters' => [
+                'unit_id',
+                $unitFilterOptions,
+                $targetUnitId,
+                $unitFilterAttributes,
+            ],
+            'handler' => function ($query, $key, $value) { /* handled outside */ },
+        ];
+
+        $filters['quarter'] = [
+            'label' => 'Quarter',
+            'type' => 'select',
+            'parameters' => [
+                'quarter',
+                [
+                    1 => 'Monitoring Quarter 1',
+                    2 => 'Monitoring Quarter 2',
+                    3 => 'Monitoring Quarter 3',
+                    4 => 'Monitoring Quarter 4',
+                ],
+                '',
+                ['class' => 'form-select select2 js-select-hide-search']
+            ],
+            'handler' => function ($query, $key, $value) { /* handled outside */ },
+        ];
+        $filters['month'] = [
+            'label' => 'Bulan',
+            'type' => 'select',
+            'parameters' => [ 'month', [], '', ['class' => 'form-select select2 js-select-hide-search']],
+            'handler' => function ($query, $key, $value) { /* handled outside */ },
+        ];
+
+        $this->availableFilters = $filters;
 
         $this->datatableCallback = function ($datatable) use ($quarter, $month) {
             $datatable->addColumn('nilai_dampak_residual', function ($row) use ($quarter) {
@@ -188,56 +251,6 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         $peristiwaRisikos = $period->identifikasiRisikos->map(function($identifikasiRisiko) {
             return $identifikasiRisiko->peristiwaRisiko;
         })->flatten()->unique('id');
-
-        $this->availableFilters = [
-            'peristiwa_risiko_id' => [
-                'label' => 'Peristiwa Risiko',
-                'type' => 'select',
-                'parameters' => [
-                    'peristiwa_risiko_id',
-                    ['' => 'Semua Peristiwa Risiko'] + $peristiwaRisikos->pluck('title', 'id')->toArray(),
-                    '',
-                    [
-                        'class' => 'form-select select2',
-                    ]
-                ],
-            ],
-            'quarter' => [
-                'label' => 'Quarter',
-                'type' => 'select',
-                'parameters' => [
-                    'quarter',
-                    [
-                        1 => 'Monitoring Quarter 1',
-                        2 => 'Monitoring Quarter 2',
-                        3 => 'Monitoring Quarter 3',
-                        4 => 'Monitoring Quarter 4',
-                    ],
-                    '',
-                    [
-                        'class' => 'form-select select2 js-select-hide-search',
-                    ]
-                ],
-                'handler' => function ($query, $key, $value) {
-                    // handled outside
-                },
-            ],
-            'month' => [
-                'label' => 'Bulan',
-                'type' => 'select',
-                'parameters' => [
-                    'month',
-                    [],
-                    '',
-                    [
-                        'class' => 'form-select select2 js-select-hide-search',
-                    ]
-                ],
-                'handler' => function ($query, $key, $value) {
-                    // handled outside
-                },
-            ],
-        ];
 
         $this->extraScripts[] = <<<HTML
             <script>
