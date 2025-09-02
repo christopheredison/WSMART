@@ -20,7 +20,13 @@
                           @endif
                         </div>
                         <div class="col-auto ms-auto">
-                            <a class="btn btn-outline-info btn-sm" href="{{ route('ap-led.create', ['periode' => $periode->id]) }}">
+                            @php
+                                $createRouteParams = ['periode' => $periode->id ?? null];
+                                if ($isApAdmin && isset($targetUnitId)) {
+                                    $createRouteParams['unit_id'] = $targetUnitId;
+                                }
+                            @endphp
+                            <a class="btn btn-outline-info btn-sm" href="{{ route('ap-led.create', $createRouteParams) }}">
                                 <span class="bx bx-plus"></span>
                                 <span class="ms-1">Tambah Data Loss Event</span>
                             </a>
@@ -43,8 +49,22 @@
                         </div>
                         @endif
                         <div class="col-md-3 mb-3">
+                            <label class="form-label">Anak Perusahaan</label>
+                            @if($isApAdmin)
+                                <select class="form-select select2" id="filter-unit">
+                                    @foreach($units as $id => $name)
+                                        <option value="{{ $id }}" {{ $targetUnitId == $id ? 'selected' : '' }}>{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <select class="form-select" id="filter-unit" disabled>
+                                    <option value="{{ auth()->user()->unit_id }}">{{ auth()->user()->unit->name }}</option>
+                                </select>
+                            @endif
+                        </div>
+                        <div class="col-md-3 mb-3">
                             <label class="form-label">Kategori Kejadian</label>
-                            <select class="form-select" id="filter-kategori">
+                            <select class="form-select select2" id="filter-kategori">
                                 <option value="">Semua</option>
                                 @foreach($kategoriKejadians as $kategori)
                                     <option value="{{ $kategori->id }}">{{ $kategori->kategori_kejadian }}</option>
@@ -65,7 +85,7 @@
                                 <th class="sort" data-sort="identifikasi_kejadian">Identifikasi Kejadian</th>
                                 <th class="sort" data-sort="kategori_kejadian">Kategori Kejadian</th>
                                 <th class="sort" data-sort="nilai_kerugian">Nilai Kerugian</th>
-                                <th class="sort" data-sort="unit_penanggung_jawab">Pihak Terkait</th>
+                                {{-- <th class="sort" data-sort="unit_penanggung_jawab">Pihak Terkait</th> --}}
                                 <th class="white-space-nowrap" data-sort="action">Action</th>
                             </tr>
                         </thead>
@@ -93,6 +113,7 @@ $(document).ready(function() {
             url: '{{ route("ap-led.index") }}',
             type: 'GET',
             data: function(d) {
+                d.unit_id = $('#filter-unit').val();
                 d.periode_id = $('#filter-periode').val();
                 d.kategori_id = $('#filter-kategori').val();
             }
@@ -111,7 +132,7 @@ $(document).ready(function() {
             {data: 'identifikasi_kejadian', name: 'identifikasi_kejadian'},
             {data: 'kategori_kejadian', name: 'kategori_kejadian'},
             {data: 'nilai_kerugian', name: 'nilai_kerugian'},
-            {data: 'unit_penanggung_jawab', name: 'unit_penanggung_jawab'},
+            // {data: 'unit_penanggung_jawab', name: 'unit_penanggung_jawab'},
             {
                 data: 'action',
                 orderable: false,

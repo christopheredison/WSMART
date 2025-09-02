@@ -148,9 +148,9 @@
                                         <select class="form-select" name="frekuensi_kejadian">
                                             <option value="">Pilih</option>
                                             @for($i=1; $i<=5; $i++)
-                                                <option value="{{ $i }}" @if(old('frekuensi_kejadian', $lossEvent->frekuensi_kejadian) == $i) selected @endif>{{ $i }} kali</option>
+                                                <option value="{{ $i }}" @if(old('frekuensi_kejadian', $lossEvent->frekuensi_kejadian) == $i) selected @endif>{{ $i }} kali per tahun</option>
                                             @endfor
-                                            <option value="6" @if(old('frekuensi_kejadian', $lossEvent->frekuensi_kejadian) == 6) selected @endif>6 kali atau lebih</option>
+                                            <option value="6" @if(old('frekuensi_kejadian', $lossEvent->frekuensi_kejadian) == 6) selected @endif>6 kali atau lebih per tahun</option>
                                         </select>
                                     </div>
                                 </div>

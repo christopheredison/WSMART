@@ -65,7 +65,7 @@
                                 <th class="sort" data-sort="identifikasi_kejadian">Identifikasi Kejadian</th>
                                 <th class="sort" data-sort="kategori_kejadian">Kategori Kejadian</th>
                                 <th class="sort" data-sort="nilai_kerugian">Nilai Kerugian</th>
-                                <th class="sort" data-sort="unit_penanggung_jawab">Pihak Terkait</th>
+                                {{-- <th class="sort" data-sort="unit_penanggung_jawab">Pihak Terkait</th> --}}
                                 <th class="white-space-nowrap" data-sort="action">Action</th>
                             </tr>
                         </thead>
@@ -111,7 +111,7 @@ $(document).ready(function() {
             {data: 'identifikasi_kejadian', name: 'identifikasi_kejadian'},
             {data: 'kategori_kejadian', name: 'kategori_kejadian'},
             {data: 'nilai_kerugian', name: 'nilai_kerugian'},
-            {data: 'unit_penanggung_jawab', name: 'unit_penanggung_jawab'},
+            // {data: 'unit_penanggung_jawab', name: 'unit_penanggung_jawab'},
             {
                 data: 'action',
                 orderable: false,

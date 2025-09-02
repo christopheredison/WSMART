@@ -70,9 +70,9 @@ class ProjectLEDController extends Controller
                     }
                     return 'Rp 0';
                 })
-                ->editColumn('unit_penanggung_jawab', function($row) {
-                    return $row->unit_penanggung_jawab ?? '-';
-                })
+                // ->editColumn('unit_penanggung_jawab', function($row) {
+                //     return $row->unit_penanggung_jawab ?? '-';
+                // })
                 ->rawColumns(['action'])
                 ->make(true);
         }
@@ -711,7 +711,14 @@ class ProjectLEDController extends Controller
 
     public function show($id)
     {
-        $lossEvent = LossEventProject::with(['peristiwaRisiko', 'kategoriKejadian', 'kategoriRisiko', 'jenisRisiko'])->findOrFail($id);
+        $lossEvent = LossEventProject::with([
+          'peristiwaRisiko', 
+          'kategoriKejadian', 
+          'kategoriRisiko', 
+          'jenisRisiko',
+          'penyebabRisikoProjectLeds.perlakuanPenyebabRisiko',
+        ])->findOrFail($id);
+        
         $project = Project::find($lossEvent->project_id);
         return view('project-led.show', compact('lossEvent', 'project'));
     }
