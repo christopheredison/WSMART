@@ -1,3 +1,17 @@
+@push('styles')
+<style>
+  .xrelated-divisions .select2-container .select2-selection--multiple {
+    min-height: 62px;
+    padding-top: 1.625rem;
+    padding-bottom: 0;
+    padding-inline: 0.5rem;
+  }
+  .select2-container--open .select2-dropdown {
+    z-index: 9999;
+  }
+</style>
+@endpush
+
 <div class="row g-2">
     <!-- Hidden Input for penyebab_risiko_id -->
     {{ Form::hidden('xpenyebab_risiko_id', '', ['id' => 'xpenyebabRisikoId']) }}
@@ -60,17 +74,16 @@
     </div>
     <div class="col-12 col-md-6">
         <div class="form-floating">
-            {{ Form::select('xpic', \App\Models\Jabatan::pluck('name', 'id'), '', ['class' => 'form-select', 'required']) }}
+            {{ Form::select('xpic', \App\Models\Jabatan::pluck('name', 'id'), '', ['id' => 'picEdit', 'class' => 'form-select select2', 'required']) }}
             <label for="xpic">PIC</label>
         </div>
     </div>
-    {{-- <div class="col-12 col-md-6">
-        <div class="form-floating">
-            <input type="text" class="form-control" id="xtimelineRange" name="xtimeline_perlakuan_risiko" required>
-            <label for="xtimelineRange">Timeline Perlakuan Risiko</label>
+    <div class="col-12">
+        <div class="form-floating xrelated-divisions">
+            {{ Form::select('xdivisi_terkait[]', \App\Models\Unit::where('unit_type_id', 1)->pluck('name', 'id'), '', ['id' => 'divisiTerkaitEdit', 'class' => 'form-select select2', 'multiple' => 'multiple', 'style' => 'width: 100%']) }}
+            <label for="xdivisi_terkait">Divisi Terkait</label>
         </div>
-    </div> --}}
-
+    </div>
     <div class="col-12 col-md-6">
         <div class="form-floating">
             <input type="text" class="form-control" id="xtimelineRange1" name="xtimeline_mulai_perlakuan_risiko" required>

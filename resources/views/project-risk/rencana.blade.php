@@ -41,6 +41,7 @@
                     <th>Rencana Perlakuan</th>
                     <th>Biaya</th>
                     <th>PIC</th>
+                    <th>Divisi Terkait</th>
                     <th>Timeline Perlakuan Risiko</th>
                     <th>Action</th>
                     <th></th> <!-- Kolom untuk "Rencana Perlakuan Risiko" -->
@@ -69,6 +70,9 @@
                                 <td>{{ $perlakuan->rencana_perlakuan_risiko }}</td>
                                 <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
                                 <td>{{ $perlakuan->pic }}</td>
+                                <td>
+                                    {{ $perlakuan?->divisiTerkaitUnits->pluck('name')->implode(', ') ?: '-' }}
+                                </td>
                                 <td>{{ $perlakuan->waktu_perlakuan_risiko }}</td>
                                 <td class="action-cell">
                                     {{-- <div>
@@ -116,7 +120,7 @@
                 <tr>
                     <td colspan="3" class="text-end fw-bold">Total Biaya Perlakuan:</td>
                     <td class="fw-bold">{{ 'Rp' . number_format($totalBiaya, 0, ',', '.') }}</td>
-                    <td colspan="3"></td>
+                    <td colspan="4"></td>
                 </tr>
             </tfoot>
         </table>
@@ -377,6 +381,21 @@
 <script>
 const penyebabRisikoProject = @json($projectRisk->penyebabRisikoProjects->keyBy('id'));
 $(document).ready(function() {
+    $('#picTambah').select2({
+        dropdownParent: $('#modalTambahRencana')
+    });
+
+    $('#divisiTerkaitTambah').select2({
+        dropdownParent: $('#modalTambahRencana')
+    });
+
+    $('#picEdit').select2({
+        dropdownParent: $('#modalEditRencana')
+    });
+    
+    $('#divisiTerkaitEdit').select2({
+        dropdownParent: $('#modalEditRencana')
+    });
     // $('button[data-action="perencanaan"]').on('click', function() {
     //     const id = $(this).data('id');
     //     const penyebabRisiko = penyebabRisikoProject[id];
@@ -575,7 +594,12 @@ $(document).ready(function() {
                 $('#formEditRencana [name="xopsi_perlakuan_risiko"]').val(response.opsi_perlakuan_risiko);
                 $('#formEditRencana [name="xjenis_rencana_perlakuan_risiko"]').val(response.jenis_rencana_perlakuan_risiko);
                 $('#formEditRencana [name="xbiaya_perlakuan_risiko"]').val(response.biaya_perlakuan_risiko);
-                $('#formEditRencana [name="xpic"]').val(response.pic_jabatan_id);
+
+                // $('#formEditRencana [name="xpic"]').val(response.pic_jabatan_id);
+                $('#picEdit').val(response.pic_jabatan_id);
+                $('#picEdit').trigger('change');
+                $('#divisiTerkaitEdit').val(response.divisi_terkait);
+                $('#divisiTerkaitEdit').trigger('change');
                 
                 if (response.timeline_perlakuan_risiko_start && response.timeline_perlakuan_risiko_end) {
                     // flatpickrInstance.setDate([
