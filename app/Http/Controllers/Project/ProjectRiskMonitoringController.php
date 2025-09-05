@@ -66,42 +66,12 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'sortable' => false,
                 'searchable' => true,
             ],
-            /*
-            'nilai_dampak' => [
-                'label' => 'Nilai Dampak Inherent',
-                'data' => 'projectRiskAnalisa.nilai_dampak',
-                'sortable' => true,
-                'searchable' => false,
-                'render' => '(data, type, row) => Intl.NumberFormat().format(row.project_risk_analisa?.nilai_dampak) || "-"',
-            ],
-            'skala_dampak' => [
-                'label' => 'Skala Dampak Inherent',
-                'data' => 'projectRiskAnalisa.skala_dampak',
-                'sortable' => true,
-                'searchable' => false,
-                'render' => '(data, type, row) => row.project_risk_analisa?.skala_dampak || "-"',
-            ],
-            'skala_probabilitas' => [
-                'label' => 'Skala Probabilitas Inherent',
-                'data' => 'projectRiskAnalisa.skalaProbabilitas.tingkat',
-                'sortable' => false,
-                'searchable' => false,
-                'render' => '(data, type, row) => row.project_risk_analisa?.skala_probabilitas?.tingkat || "-"',
-            ],
-            'skala_risiko' => [
-                'label' => 'Skala Risiko Inherent',
-                'data' => 'projectRiskAnalisa.skala_risiko',
-                'sortable' => false,
-                'searchable' => false,
-                'render' => '(data, type, row) => row.project_risk_analisa?.skala_risiko || "-"',
-            ],
-            */
             'nilai_dampak' => [
                 'label' => 'Nilai Dampak Residual',
                 'data' => 'projectRiskAnalisa.nilai_dampak_residual',
                 'sortable' => true,
                 'searchable' => false,
-                'render' => '(data, type, row) => Intl.NumberFormat().format(row.project_risk_analisa?.nilai_dampak_residual) || "-"',
+                'render' => '(data, type, row) => "Rp" + Intl.NumberFormat("id-ID").format(row.project_risk_analisa?.nilai_dampak_residual) || "-"',
             ],
             'skala_dampak' => [
                 'label' => 'Skala Dampak Residual',
@@ -225,7 +195,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     ['' => 'Semua Peristiwa Risiko'] + $peristiwaRisikos->pluck('title', 'id')->toArray(),
                     '',
                     [
-                        'class' => 'form-select',
+                        'class' => 'form-select select2',
                     ]
                 ],
             ],
@@ -237,7 +207,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     $optionTahuns,
                     '',
                     [
-                        'class' => 'form-select',
+                        'class' => 'form-select select2',
                     ]
                 ],
                 'handler' => function ($query, $key, $value) {
@@ -257,7 +227,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     ],
                     '',
                     [
-                        'class' => 'form-select',
+                        'class' => 'form-select select2 js-select-hide-search',
                     ]
                 ],
                 'handler' => function ($query, $key, $value) {
@@ -272,7 +242,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     [],
                     '',
                     [
-                        'class' => 'form-select',
+                        'class' => 'form-select select2 js-select-hide-search',
                     ]
                 ],
                 'handler' => function ($query, $key, $value) {

@@ -1,3 +1,17 @@
+@push('styles')
+<style>
+  .related-divisions .select2-container .select2-selection--multiple {
+    min-height: 62px;
+    padding-top: 1.625rem;
+    padding-bottom: 0;
+    padding-inline: 0.5rem;
+  }
+  .select2-container--open .select2-dropdown {
+    z-index: 9999;
+  }
+</style>
+@endpush
+
 <div class="row g-2">
     <!-- Hidden Input for penyebab_risiko_id -->
     {{ Form::hidden('penyebab_risiko_id', '', ['id' => 'penyebabRisikoId']) }}
@@ -65,16 +79,16 @@
     </div>
     <div class="col-12 col-md-6">
         <div class="form-floating">
-            {{ Form::select('pic', \App\Models\Jabatan::pluck('name', 'id'), '', ['class' => 'form-select', 'required']) }}
+            {{ Form::select('pic', \App\Models\Jabatan::pluck('name', 'id'), '', ['id' => 'picTambah', 'class' => 'form-select select2', 'required']) }}
             <label for="pic">PIC</label>
         </div>
     </div>
-    {{-- <div class="col-12 col-md-6">
-        <div class="form-floating">
-            <input type="text" class="form-control" id="timelineRange" name="timeline_perlakuan_risiko" required>
-            <label for="timelineRange">Timeline Perlakuan Risiko</label>
+    <div class="col-12">
+        <div class="form-floating related-divisions">
+            {{ Form::select('divisi_terkait[]', \App\Models\Unit::where('unit_type_id', 1)->pluck('name', 'id'), '', ['id' => 'divisiTerkaitTambah', 'class' => 'form-select select2', 'multiple' => 'multiple', 'style' => 'width: 100%']) }}
+            <label for="divisi_terkait">Divisi Terkait</label>
         </div>
-    </div> --}}
+    </div>
     <div class="col-12 col-md-6">
         <div class="form-floating">
             <input type="text" class="form-control" id="timelineRange1" name="timeline_mulai_perlakuan_risiko" required>
@@ -87,10 +101,4 @@
             <label for="timelineRange2">Waktu Selesai Perlakuan Risiko</label>
         </div>
     </div>
-    {{-- <div class="col-12">
-        <div class="form-floating">
-            {{ Form::select('divisi_terkait', \App\Models\Jabatan::pluck('name', 'id'), '', ['class' => 'form-select select2', 'required', 'multiple' => 'multiple']) }}
-            <label for="divisi_terkait">Divisi Terkait</label>
-        </div>
-    </div> --}}
 </div>

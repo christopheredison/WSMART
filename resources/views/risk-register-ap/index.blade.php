@@ -36,7 +36,7 @@
       <div class="card-body dt-header-true">
         <div id="tableExample3">
           <div class="row g-2 mb-1">
-            @can('risk_register_all_unit')
+            @can('ap_admin')
             <div class="col-4 col-sm-2">
               <label for="filter-unit" class="form-label d-none">Unit</label>
               <select id="filter-unit" class="form-select select2">
@@ -96,24 +96,27 @@
             </div>
             <div class="col-auto ms-auto d-flex gap-2 align-items-center">
               <div class="col-auto ms-auto">
-                <a href="{{ route('kamus-risiko-ap.index') }}" class="btn btn-outline-danger btn-sm">
+                <a href="{{ route('kamus-risiko-ap.index') }}" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Kamus Risiko">
                   <span class="bx bx-book-bookmark"></span>
                   <span class="ms-1">Kamus Risiko</span>
                 </a>
               </div>
               <div class="col-auto ms-auto">
               @php
-                  // diasumsikan di view Anda ada $selectedPeriode
                   $pid = $selectedPeriode->id;
+                  $routeParams = ['pid' => $pid];
+                  if (auth()->user()->can('ap_admin') && isset($unitId)) {
+                      $routeParams['unit_id'] = $unitId;
+                  }
               @endphp
               @can('risk_register_create')
                 @if($status == null || $status == 1 || $status == 5)
-                <a id="add-risk-button" href="{{ route('risk-register-ap.create', ['pid' => $pid]) }}" type="button"
-                  class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
-                  data-bs-title="Tambah Risiko">
-                  <span class="bx bx-plus"></span>
-                  <span class="ms-1">Tambah Risiko</span>
-                </a>
+                  <a id="add-risk-button" href="{{ route('risk-register-ap.create', $routeParams) }}" type="button"
+                    class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
+                    data-bs-title="Tambah Risiko">
+                    <span class="bx bx-plus"></span>
+                    <span class="ms-1">Tambah Risiko</span>
+                  </a>
                 @endif
               @endcan
               </div>
@@ -123,7 +126,7 @@
             <thead>
               <tr>
                 <th class="no-sort white-space-nowrap">
-                   @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
+                  @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
                   <div class="form-check mb-0">
                     <input class="form-check-input" type="checkbox" id="select-all" />
                   </div>

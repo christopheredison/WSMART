@@ -137,7 +137,7 @@ class ProjectRiskController extends BasicCRUDController
                     PeristiwaRisiko::select('id', 'title')->orderBy('title')->get()->pluck('title', 'id')->toArray(),
                     '',
                     [
-                        'class' => 'form-select',
+                        'class' => 'form-select select2',
                         'placeholder' => 'Peristiwa Risiko',
                     ]
                 ],
@@ -156,7 +156,7 @@ class ProjectRiskController extends BasicCRUDController
                     ],
                     '',
                     [
-                        'class' => 'form-select',
+                        'class' => 'form-select select2 js-select-hide-search',
                         'placeholder' => 'Level Risiko',
                     ]
                 ],
@@ -184,7 +184,7 @@ class ProjectRiskController extends BasicCRUDController
             ];
 
             $this->tableActions[] = [
-                'label' => '<span class="bx bx-show-alt"></span>',
+                'label' => '<span class="bx bx-show-alt" title="View"></span>',
                 'btn_icon' => true,
                 'action' => 'link',
                 'url' => route('projects.risks.view', ['project' => request()->route('project'), 'risk' => ':id']),
@@ -229,6 +229,11 @@ class ProjectRiskController extends BasicCRUDController
                 'permissions' => ['project_risk_delete'],
             ];
         }
+
+        $this->tableLegend[] = [
+            'icon' => '<span class="badge bg-primary">!</span>',
+            'label' => 'Rekomendasi Risiko'
+        ];
 
         $average = (float) ProjectRisk::where('project_periode_list_id', request()->route('project'))->avg('skala_risiko');
 
@@ -362,7 +367,6 @@ class ProjectRiskController extends BasicCRUDController
                 'user_id' => $user->id,
                 'project_id' => $project->id,
                 'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
-                //'target_capaian_kinerja' => $request->target_capaian_kinerja,
                 'target_capaian_kinerja' => $targetCapaianKinerja,
                 'sasaran_proyek_id' => $sasaranProyekId,
                 'project_periode_list_id' => $projectPeriodeList->id,
@@ -491,7 +495,7 @@ class ProjectRiskController extends BasicCRUDController
         $project = $projectPeriodeList->project;
         $periode = $projectPeriodeList->periode;
 
-        if ($request->action === 'save') {
+        if ($request->action === 'save' || $request->action === 'savenext') {
             $request->validate([
                 'peristiwa_risiko_id' => 'required',
                 'kategori_risiko_id' => 'required',
@@ -513,6 +517,19 @@ class ProjectRiskController extends BasicCRUDController
             $perkiraanWaktuTerpaparRisikoMulai = DateTime::createFromFormat('d/m/Y', $request->perkiraan_waktu_terpapar_risiko_mulai)->format('Y-m-d');
             $perkiraanWaktuTerpaparRisikoAkhir = DateTime::createFromFormat('d/m/Y', $request->perkiraan_waktu_terpapar_risiko_akhir)->format('Y-m-d');
 
+            $sasaranProyekId = null;
+            $targetCapaianKinerja = '';
+
+            if ($request->sasaran_proyek_id === 'other') {
+                $sasaranProyekId = null;
+                $targetCapaianKinerja = $request->target_capaian_kinerja;
+            } else if ($request->sasaran_proyek_id) {
+                $sasaranProyekId = $request->sasaran_proyek_id;
+                $targetCapaianKinerja = $request->kpi_desc_selected;
+            } else {
+                $targetCapaianKinerja = $request->target_capaian_kinerja;
+            }
+            
             $toUpdate = [
                 'unit_type_id' => $user->unit_type_id,
                 'unit_id' => $user->unit_id,
@@ -529,8 +546,8 @@ class ProjectRiskController extends BasicCRUDController
                 'perkiraan_waktu_terpapar_risiko_mulai' => $perkiraanWaktuTerpaparRisikoMulai,
                 'perkiraan_waktu_terpapar_risiko_akhir' => $perkiraanWaktuTerpaparRisikoAkhir,
                 'wbs' => $request->wbs,
-                //'target_capaian_kinerja' => $targetCapaianKinerja,
-                //'sasaran_proyek_id' => $sasaranProyekId,
+                'target_capaian_kinerja' => $targetCapaianKinerja,
+                'sasaran_proyek_id' => $sasaranProyekId,
             ];
 
             $projectRisk->update($toUpdate);
@@ -565,9 +582,15 @@ class ProjectRiskController extends BasicCRUDController
                 ]);
             }
 
-            return [
-                'redirect' => route('projects.risks.index', ['project' => $projectPeriodeList->id]),
-            ];
+            if ($request->action === 'savenext') {
+              return [
+                  'redirect' => route('projects.risks.analisa', ['project' => $projectPeriodeList->id, 'risk' => $projectRisk->id]),
+              ];
+            } else {
+              return [
+                  'redirect' => route('projects.risks.index', ['project' => $projectPeriodeList->id]),
+              ];
+            }
 
         } elseif ($request->action === 'draft') {
 
@@ -1033,6 +1056,8 @@ class ProjectRiskController extends BasicCRUDController
             'output_perlakuan_risiko' => 'required|string',
             'biaya_perlakuan_risiko' => 'required|numeric|min:0',
             'pic' => 'required',
+            'divisi_terkait' => 'nullable|array',
+            'divisi_terkait.*' => 'exists:units,id',
             //'timeline_perlakuan_risiko' => 'required|string',
             'timeline_mulai_perlakuan_risiko' => 'required',
             'timeline_selesai_perlakuan_risiko' => 'required',
@@ -1097,6 +1122,7 @@ class ProjectRiskController extends BasicCRUDController
             'biaya_perlakuan_risiko' => $validated['biaya_perlakuan_risiko'],
             'pic' => $jabatan_name,
             'pic_jabatan_id' => $validated['pic'],
+            'divisi_terkait' => $validated['divisi_terkait'] ?? [], 
             'timeline_perlakuan_risiko_start' => $startDate,
             'timeline_perlakuan_risiko_end' => $endDate,
             'opsi_perlakuan_risiko' => $validated['opsi_perlakuan_risiko'],
@@ -1140,6 +1166,7 @@ class ProjectRiskController extends BasicCRUDController
             'rencana_perlakuan_risiko' => $perlakuan->rencana_perlakuan_risiko,
             'output_perlakuan_risiko' => $perlakuan->output_perlakuan_risiko,
             'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
+            'divisi_terkait' => $perlakuan->divisi_terkait,
             // 'jenis_rencana_perlakuan_risiko' => $perlakuan->jenis_rencana_perlakuan_risiko,
             'biaya_perlakuan_risiko' => $perlakuan->biaya_perlakuan_risiko,
             'pic' => $perlakuan->pic,
@@ -1158,6 +1185,8 @@ class ProjectRiskController extends BasicCRUDController
             // 'xjenis_rencana_perlakuan_risiko' => 'required',
             'xbiaya_perlakuan_risiko' => 'required|numeric',
             'xpic' => 'required',
+            'xdivisi_terkait' => 'nullable|array',
+            'xdivisi_terkait.*' => 'exists:units,id',
             //'xtimeline_perlakuan_risiko' => 'required',
             'xtimeline_mulai_perlakuan_risiko' => 'required',
             'xtimeline_selesai_perlakuan_risiko' => 'required',
@@ -1186,6 +1215,7 @@ class ProjectRiskController extends BasicCRUDController
                 // 'jenis_rencana_perlakuan_risiko' => $validated['xjenis_rencana_perlakuan_risiko'],
                 'biaya_perlakuan_risiko' => $validated['xbiaya_perlakuan_risiko'],
                 'pic' => $jabatan_name,
+                'divisi_terkait' => $request->input('xdivisi_terkait', []),
                 'pic_jabatan_id' => $validated['xpic'],
                 'timeline_perlakuan_risiko_start' => $startDate->format('Y-m-d'),
                 'timeline_perlakuan_risiko_end' => $endDate->format('Y-m-d'),

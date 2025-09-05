@@ -80,12 +80,16 @@
                                         <tr data-id="{{ $perlakuan->id }}">
                                         @endif
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
-                                            <td><span class="inputmask-fixed">{{ $perlakuan->biaya_perlakuan_risiko ?: '-' }}</span></td>
+                                            <td>
+                                              <span class="inputmask-fixed">
+                                                {{ isset($perlakuan->biaya_perlakuan_risiko) ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                              </span>
+                                            </td>
                                             <td class="display-progress inputmask-fixed">
                                                 {{ $perlakuan->{'progress_rencana_perlakuan_risiko_q' . $quarter} ?? '-' }}
                                             </td>
                                             <td class="display-biaya inputmask-fixed">
-                                                {{ $perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter} ?? '-' }}
+                                                {{ isset($perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter}) ? 'Rp ' . number_format($perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter}, 0, ',', '.') : '-' }}
                                             </td>
                                             <td class="display-timeline">{{ $lastMonitoring?->timeline_perlakuan_risiko_start->format('d/m/Y') ?: '-' }}</td>
                                             <td>
@@ -232,7 +236,7 @@
                         </div>
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
-                                <input disabled="disabled" class="form-control" type="text" name="nilai_dampak_inherent"
+                                <input disabled="disabled" class="form-control" type="text" name="nilai_dampak_residual"
                                 value="Rp {{ number_format($riskAnalysis->{'nilai_dampak_residual_q' . $quarter}, strpos($riskAnalysis->{'nilai_dampak_residual_q' . $quarter}, '.') !== false ? 2 : 0, ',', '.') }}">
                                 <label for="">Target Nilai Dampak</label>
                             </div>
@@ -290,7 +294,7 @@
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
                                 <input class="form-control update-trigger inputmask-rupiah" type="text" id="realisasi_nilai_dampak" name="realisasi_nilai_dampak"
-                                value="{{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}" 
+                                value="Rp {{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}" 
                                 data-max="{{ $riskAnalysis->nilai_dampak }}" 
                                 {{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? 'disabled' : '' }}
                                 {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'max=' . $riskAnalysis->nilai_dampak : '' }}

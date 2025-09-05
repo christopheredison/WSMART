@@ -114,7 +114,7 @@
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="nilai_dampak_inherent"
-                                value="Rp {{ number_format($projectRiskAnalisa->nilai_dampak_residual, strpos($projectRiskAnalisa->nilai_dampak, '.') !== false ? 2 : 0, ',', '.') }}">
+                                value="Rp {{ number_format($projectRiskAnalisa->nilai_dampak_residual, strpos($projectRiskAnalisa->nilai_dampak_residual, '.') !== false ? 2 : 0, ',', '.') }}">
                                 <label for="">Target Nilai Dampak</label>
                             </div>
                             <div class="form-floating">
@@ -204,12 +204,21 @@
                                 <label for="">Realisasi Skala Dampak</label>
                             </div>
                             <div class="form-floating">
-                                <input class="form-control update-trigger" type="number" id="realisasi_nilai_probabilitas"
-                                name="realisasi_nilai_probabilitas" value="{{ $riskMonitoring?->nilai_probabilitas }}"
-                                data-max="{{ $projectRiskAnalisa->nilai_probabilitas }}" 
-                                max="{{ $projectRiskAnalisa->nilai_probabilitas }}"
-                                min="0"
-                                oninput="if(this.value > {{ $projectRiskAnalisa->nilai_probabilitas }}) this.value = {{ $projectRiskAnalisa->nilai_probabilitas }};">
+                                <input 
+                                  class="form-control update-trigger" 
+                                  type="number" 
+                                  id="realisasi_nilai_probabilitas"
+                                  name="realisasi_nilai_probabilitas" 
+                                  value="{{ $riskMonitoring?->nilai_probabilitas }}"
+                                  {{-- data-max="{{ $projectRiskAnalisa->nilai_probabilitas }}"  --}}
+                                  {{-- max="{{ $projectRiskAnalisa->nilai_probabilitas }}" --}}
+                                  {{-- min="0" --}}
+                                  {{-- oninput="if(this.value > {{ $projectRiskAnalisa->nilai_probabilitas }}) this.value = {{ $projectRiskAnalisa->nilai_probabilitas }};" --}}
+                                  data-max="100" 
+                                  max="100"
+                                  min="0"
+                                  oninput="if(this.value > 100) this.value = 100;"
+                                >
                                 <label for="">Realisasi Nilai Probabilitas (%)</label>
                             </div>
                             <div class="form-floating">
@@ -288,9 +297,15 @@
                                         <tr data-id="{{ $perlakuan->id }}">
                                         @endif
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
-                                            <td><span class="inputmask-fixed">{{ $perlakuan->biaya_perlakuan_risiko ?: '-' }}</span></td>
-                                            <td class="display-progress inputmask-fixed">{{ $perlakuan->progress_rencana_perlakuan_risiko }}</td>
-                                            <td class="display-biaya inputmask-fixed">{{ $perlakuan->realisasi_biaya_perlakuan_risiko }}</td>
+                                            <td>
+                                              <span class="inputmask-fixed">
+                                                {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                              </span>
+                                            </td>
+                                            <td class="display-progress inputmask-fixed">{{ $perlakuan->progress_rencana_perlakuan_risiko ?? '-' }}</td>
+                                            <td class="display-biaya inputmask-fixed">
+                                              {{  $perlakuan->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                            </td>
                                             <td class="display-timeline">{{ $perlakuan?->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
                                             <td style="white-space:nowrap" class="column-action">
                                                 <div class="d-none dom-saved">
@@ -298,7 +313,6 @@
                                                     </div>
                                                     <input type="textarea" class="input-file-description" name="document_description_{{ $perlakuan->id }}" id="deskripsi_perlakuan_risiko_{{ $perlakuan->id }}">
                                                 </div>
-                                                {{-- <a href="javascript:void(0)" class="hover-underline px-1 btn-action" data-action="update-realisasi" data-id="{{ $perlakuan->id }}">Update Realisasi</a> --}}
                                                 <div class="text-center">
                                                     <a href="javascript:void(0)" 
                                                     class="btn-input-icon btn-action" 
@@ -455,12 +469,14 @@
 
         <div class="col-12 mt-5">
             <div class="row g-2">
-                <div class="col-auto order-1">
+                <div class="col-auto">
                     <a href="{{ route('projects.monitorings.index', ['project' => $projectPeriode->id]) }}" class="btn btn-outline-secondary">Batal</a>
                 </div>
-                <div class="col-auto order-3 px-0 px-md-1 d-flex gap-2">
+                <div class="col-auto">
                     <button type="button" data-action="save" class="btn btn-primary ms-auto btn-action">Simpan</button>
-                    <button type="button" data-action="save-and-close" class="btn btn-secondary btn-action">Simpan dan Close Risiko</button>
+                </div>
+                <div class="col-auto ms-auto">
+                    <button type="button" data-action="save-and-close" class="btn btn-danger btn-action">Simpan dan Close Risiko</button>
                 </div>
             </div>
         </div>
@@ -634,19 +650,19 @@ $(document).ready(function() {
         }
     });
 
-    // Validasi nilai probabilitas
-    $('#realisasi_nilai_probabilitas').on('change', function() {
-        const value = parseFloat($(this).val());
-        if (value > nilaiProbabilitasInherent) {
-            Swal.fire({
-                title: 'Peringatan',
-                text: 'Nilai probabilitas realisasi tidak boleh lebih besar dari nilai probabilitas inherent',
-                icon: 'warning',
-                confirmButtonText: 'OK'
-            });
-            $(this).val(nilaiProbabilitasInherent).trigger('change');
-        }
-    });
+    // // Validasi nilai probabilitas
+    // $('#realisasi_nilai_probabilitas').on('change', function() {
+    //     const value = parseFloat($(this).val());
+    //     if (value > nilaiProbabilitasInherent) {
+    //         Swal.fire({
+    //             title: 'Peringatan',
+    //             text: 'Nilai probabilitas realisasi tidak boleh lebih besar dari nilai probabilitas inherent',
+    //             icon: 'warning',
+    //             confirmButtonText: 'OK'
+    //         });
+    //         $(this).val(nilaiProbabilitasInherent).trigger('change');
+    //     }
+    // });
 
     $('#section-realisasi').on('change', '.update-trigger', function() {
         refreshSkalaAndLevelRisiko();
@@ -703,7 +719,8 @@ $(document).ready(function() {
             $('#modalUpdateRealisasi :input[name="rencana_perlakuan_risiko"]').val(perlakuanPenyebab.rencana_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="biaya_perlakuan_risiko"]').val(perlakuanPenyebab.biaya_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="pic"]').val(perlakuanPenyebab.pic);
-            $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab.realisasi_biaya_perlakuan_risiko);
+            // $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab.realisasi_biaya_perlakuan_risiko === null || perlakuanPenyebab.realisasi_biaya_perlakuan_risiko === '' ? perlakuanPenyebab.biaya_perlakuan_risiko : perlakuanPenyebab.realisasi_biaya_perlakuan_risiko);
+            $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab.realisasi_biaya_perlakuan_risiko ?? 0);
             $('#modalUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val(perlakuanPenyebab.progress_rencana_perlakuan_risiko);
             // $('#modalUpdateRealisasi :input[name="jenis_program_rkap"]').val(perlakuanPenyebab.jenis_program_rkap);
             // $('#modalUpdateRealisasi :input[name="jenis_program_rkap_id"]').val(perlakuanPenyebab.jenis_program_rkap_id);

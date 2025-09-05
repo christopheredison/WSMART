@@ -1,4 +1,4 @@
-<div class="modal fade" id="modalTambahRencana" tabindex="-1" role="dialog" aria-labelledby="modalTambahRencana"
+<div class="modal fade" id="modalTambahRencana" role="dialog" aria-labelledby="modalTambahRencana"
     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content">

@@ -302,12 +302,12 @@ function getAmbangBatas(periodeId) {
         }); 
 } 
 
-// Tambahkan event listener untuk modal 
-document.querySelectorAll('[data-bs-target^="#modalAmbangBatas"]').forEach(button => { 
-    button.addEventListener('click', function() { 
-        const periodeId = this.getAttribute('data-periode-id'); 
-        getAmbangBatas(periodeId); 
-    }); 
+// Tambahkan event listener untuk modal
+document.querySelectorAll('[data-bs-target^="#modalAmbangBatas"]').forEach(button => {
+    button.addEventListener('click', function() {
+        const periodeId = this.getAttribute('data-periode-id');
+        getAmbangBatas(periodeId);
+    });
 });
 
 // Tambahkan event listener untuk form submit dengan SweetAlert
@@ -383,19 +383,30 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Set judul modal
       modal.find('#periode-tahun-title').text(selectedPeriode.tahun);
-      
-      // Reset semua input (terlihat dan tersembunyi) ke nilai default
-      form.find('.input-risk-limit').val('');
+
+      $(tableRiskLimitType1.rows().nodes()).find('.input-risk-limit').val('');
+      $(tableRiskLimitType2.rows().nodes()).find('.input-risk-limit').val('');
+
+      // Reset input yang tersembunyi
       form.find('.holder-risk-limit').val('');
 
       // Isi input dengan data yang sudah ada
       if (selectedPeriode.risk_limit_periodes && selectedPeriode.risk_limit_periodes.length > 0) {
           selectedPeriode.risk_limit_periodes.forEach(function(riskLimit) {
-          // Isi input yang terlihat
-          $(`#risk_limit_input_${riskLimit.unit_id}`).val(riskLimit.risk_limit);
-          // Isi juga input yang tersembunyi
-          $(`#holder_risk_limit_${riskLimit.unit_id}`).val(riskLimit.risk_limit);
-        });
+              // Cari input di SEMUA HALAMAN DataTables, bukan hanya yang terlihat
+              const inputInTable1 = $(tableRiskLimitType1.rows().nodes()).find(`#risk_limit_input_${riskLimit.unit_id}`);
+              const inputInTable2 = $(tableRiskLimitType2.rows().nodes()).find(`#risk_limit_input_${riskLimit.unit_id}`);
+
+              if (inputInTable1.length) {
+                  inputInTable1.val(riskLimit.risk_limit);
+              }
+              if (inputInTable2.length) {
+                  inputInTable2.val(riskLimit.risk_limit);
+              }
+
+              // Isi juga input yang tersembunyi (ini sudah benar)
+              $(`#holder_risk_limit_${riskLimit.unit_id}`).val(riskLimit.risk_limit);
+          });
       }
       // Memicu re-apply mask setelah nilai di set
       $('.inputmask-rupiah').trigger('input');
@@ -419,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
       $('.holder-risk-limit[name="' + name + '"]').val($(this).val());
     });
 
-    $('#tableRiskLimitType1').DataTable({
+    let tableRiskLimitType1 = $('#tableRiskLimitType1').DataTable({
         paging: true,
         searching: true,
         info: true,
@@ -429,8 +440,7 @@ document.addEventListener('DOMContentLoaded', function() {
         lengthMenu: [10, 25, 50, 100],
         columnDefs: [{ orderable: false, targets: [0, 1] }],
     });
-    
-    $('#tableRiskLimitType2').DataTable({
+    let tableRiskLimitType2 = $('#tableRiskLimitType2').DataTable({
         paging: true,
         searching: true,
         info: true,

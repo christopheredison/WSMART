@@ -96,7 +96,7 @@
             </div>
             <div class="col-auto ms-auto d-flex gap-2 align-items-center">
               <div class="col-auto ms-auto">
-                <a href="{{ route('kamus-risiko-unit.index') }}" class="btn btn-outline-danger btn-sm">
+                <a href="{{ route('kamus-risiko-unit.index') }}" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Kamus Risiko">
                   <span class="bx bx-book-bookmark"></span>
                   <span class="ms-1">Kamus Risiko</span>
                 </a>

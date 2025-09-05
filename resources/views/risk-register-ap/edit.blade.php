@@ -46,7 +46,7 @@
                             <div class="form-group d-lg-flex">
                                 <div class="form-floating flex-grow-1">
                                     <select class="form-select select2" id="jenis_risiko_id" name="jenis_risiko_id" required>
-                                        <option value="">Pilih Jenis Risiko</option>
+                                        <option value="" selected disabled>Pilih Jenis Risiko</option>
                                         @foreach($jenisRisiko as $id => $title)
                                             @php
                                                 $kategori = \App\Models\JenisRisiko::find($id)->kategoriRisiko;
@@ -330,8 +330,8 @@
                         <div class="col-md-6 col-lg-5 col-xxl-6">
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Jenis Kontrol Eksisting</label>
-                                <select name="jenis_kontrol_eksisting_id" class="form-select">
-                                    <option value="">Jenis Kontrol Eksisting</option>
+                                <select name="jenis_kontrol_eksisting_id" class="form-select select2">
+                                    <option value="" selected disabled>Jenis Kontrol Eksisting</option>
                                     @foreach ($jenisKontrolEksistings as $jenisKontrolEksisting)
                                         <option value="{{ $jenisKontrolEksisting->id }}" {{ $identifikasiRisiko->jenis_kontrol_eksisting_id == $jenisKontrolEksisting->id ? 'selected' : '' }}>
                                             {{ $jenisKontrolEksisting->jenis_kontrol }}</option>

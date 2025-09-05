@@ -31,20 +31,39 @@
           </div>
       </div>
       <div class="card-body dt-header-true">
-        <div class="table-responsive-sm scrollbar">
-          <table class="table table-hover dataTable" id="example" data-paging="true" data-info="true" data-filter="true">
+        @if($apAdmin)
+          <div class="row g-2">
+            <div class="col-md-4">
+              <label class="form-label d-none" for="unit_id_filter">Filter Anak Perusahaan</label>
+              <select id="unit_id_filter" class="form-select select2">
+                <option value="">Semua Anak Perusahaan</option>
+                @foreach ($units as $id => $name)
+                  <option value="{{ $name }}">{{ $name }}</option>
+                @endforeach
+              </select>
+            </div>
+          </div>
+        @endif
+        <div class="table-responsive-sm">
+          <table class="table table-hover" id="periodeDataTable">
             <thead>
               <tr>
                 <th class="white-space-nowrap">#</th>
+                <th class="sort" data-sort="unit">Anak Perusahaan</th>
                 <th class="sort" data-sort="tahun">Tahun</th>
                 <th class="sort text-center" data-sort="status">Status</th>
                 <th class="no-sort white-space-nowrap" data-sort="action">Action</th>
               </tr>
             </thead>
             <tbody class="list" id="bulk-select-body">
-              @foreach ($periodes as $index => $periode)
+              @forelse ($dataToDisplay as $index => $item)
+                @php
+                    $unit = $item['unit'];
+                    $periode = $item['periode'];
+                @endphp
               <tr>
                 <td class="index-number">{{ $index + 1 }}</td>
+                <td class="unit">{{ $unit->name }}</td>
                 <td class="tahun">{{ $periode->tahun }}</td>
                 <td class="status text-center">
                   <figure class="badge {{ $periode->status == 'active' ? 'bg-success' : 'bg-secondary' }}">
@@ -52,27 +71,24 @@
                   </figure>
                 </td>
                 <td class="white-space-nowrap">
-                  {{--
-                  <a href="javascript:void(0)" class="btn-input-icon" data-bs-toggle="tooltip" title="Pengaturan Periode Divisi" onclick="openPeriodeUnitSettings({{ $periode->id }})">
-                    <span class="bx bx-cog"></span>
-                  </a>
-                  --}}
-                  <a href="{{ route('risk-register-ap.periods.show', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
-                    <span class="bx bx-show"></span>
-                  </a>
-                  <a href="{{ route('risk-register-ap.index', ['pid' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
-                    <span class="bx bx-list-check"></span>
-                  </a>
-                  <a href="{{ route('risk-register-ap.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
-                    <span class="bx bx-radar"></span>
-                  </a>
-                  <a href="{{ route('ap-led.index-by-periode', ['periode' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
-                    title="Loss Event">
-                    <span class="bx bx-dock-bottom"></span>
-                  </a>
+                    @if ($apAdmin)
+                        <a href="{{ route('risk-register-ap.periods.show', ['period' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View"><span class="bx bx-show"></span></a>
+                        <a href="{{ route('risk-register-ap.index', ['pid' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register"><span class="bx bx-list-check"></span></a>
+                        <a href="{{ route('risk-register-ap.monitorings.index', ['period' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring"><span class="bx bx-radar"></span></a>
+                        <a href="{{ route('ap-led.index-by-periode', ['periode' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Loss Event"><span class="bx bx-dock-bottom"></span></a>
+                    @else
+                        <a href="{{ route('risk-register-ap.periods.show', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View"><span class="bx bx-show"></span></a>
+                        <a href="{{ route('risk-register-ap.index', ['pid' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register"><span class="bx bx-list-check"></span></a>
+                        <a href="{{ route('risk-register-ap.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring"><span class="bx bx-radar"></span></a>
+                        <a href="{{ route('ap-led.index-by-periode', ['periode' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Loss Event"><span class="bx bx-dock-bottom"></span></a>
+                    @endif
                 </td>
               </tr>
-              @endforeach
+              @empty
+              <tr>
+                  <td colspan="5" class="text-center">Tidak ada data untuk ditampilkan.</td>
+              </tr>
+              @endforelse
             </tbody>
           </table>
         </div>
@@ -81,3 +97,22 @@
   </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+  $(document).ready(function() {
+    let table = $('#periodeDataTable').DataTable({
+      "paging": true,
+      "info": true,
+      "searching": true
+    });
+
+    @if($apAdmin)
+      $('#unit_id_filter').on('change', function() {
+        let searchTerm = $(this).val();
+        table.column(1).search(searchTerm ? '^' + searchTerm + '$' : '', true, false).draw();
+      });
+    @endif
+  });
+</script>
+@endpush

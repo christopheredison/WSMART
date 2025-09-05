@@ -69,9 +69,9 @@ class UnitLEDController extends Controller
                     }
                     return 'Rp 0';
                 })
-                ->editColumn('unit_penanggung_jawab', function($row) {
-                    return $row->unit_penanggung_jawab ?? '-';
-                })
+                // ->editColumn('unit_penanggung_jawab', function($row) {
+                //     return $row->unit_penanggung_jawab ?? '-';
+                // })
                 ->rawColumns(['action'])
                 ->make(true);
         }
@@ -658,7 +658,14 @@ class UnitLEDController extends Controller
 
     public function show($periode, $id)
     {
-        $lossEvent = LossEvent::with(['kategoriKejadian', 'kategoriRisiko', 'jenisRisiko'])->findOrFail($id);
+        $lossEvent = LossEvent::with([
+          'periode',
+          'unit',
+          'kategoriKejadian', 
+          'kategoriRisiko', 
+          'jenisRisiko',
+          'penyebabRisikoLeds.perlakuanPenyebabRisiko',
+        ])->findOrFail($id);
         
         return view('unit-led.show', compact('lossEvent'));
     }
@@ -795,7 +802,26 @@ class UnitLEDController extends Controller
     
             // Cek apakah risiko perlu di-close
             if ($request->input('is_closed') == '1') {
-                $riskRegister->update(['is_closed' => true]);
+                $efektivitas = 0;
+
+                $analisa = $riskRegister->riskAnalysis;
+                $monitoring = $riskRegister?->lastMonitoringRisiko;
+                $quarter = $monitoring?->quarter ?: 1;
+                $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
+                $skala_risiko_rencana = (float) optional($analisa)['skala_risiko_residual_q' . $quarter];
+                $skala_risiko_realisasi = (float) optional($monitoring)->skala_risiko;
+
+                $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
+
+                // Hindari pembagian dengan nol
+                if ($selisih_inherent_rencana != 0) {
+                    $efektivitas = ($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana;
+                }
+
+                $riskRegister->update([
+                  'is_closed' => true,
+                  'efektivitas_perlakuan_risiko' => $efektivitas
+                ]);
 
                 KamusRisikoUnit::updateOrCreate(
                     ['risiko_id' => $riskRegister->id],

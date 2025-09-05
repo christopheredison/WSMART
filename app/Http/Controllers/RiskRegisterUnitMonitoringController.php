@@ -94,7 +94,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'data' => 'nilai_dampak_residual',
                 'sortable' => false,
                 'searchable' => false,
-                'render' => '(data, type, row) => Intl.NumberFormat().format(data) || "-"',
+                'render' => '(data, type, row) => "Rp" + Intl.NumberFormat("id-ID").format(data) || "-"',
             ],
             'skala_dampak' => [
                 'label' => 'Skala Dampak Residual',
@@ -190,18 +190,18 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         })->flatten()->unique('id');
 
         $this->availableFilters = [
-            'peristiwa_risiko_id' => [
-                'label' => 'Peristiwa Risiko',
-                'type' => 'select',
-                'parameters' => [
-                    'peristiwa_risiko_id',
-                    ['' => 'Semua Peristiwa Risiko'] + $peristiwaRisikos->pluck('title', 'id')->toArray(),
-                    '',
-                    [
-                        'class' => 'form-select',
-                    ]
-                ],
-            ],
+            // 'peristiwa_risiko_id' => [
+            //     'label' => 'Peristiwa Risiko',
+            //     'type' => 'select',
+            //     'parameters' => [
+            //         'peristiwa_risiko_id',
+            //         ['' => 'Semua Peristiwa Risiko'] + $peristiwaRisikos->pluck('title', 'id')->toArray(),
+            //         '',
+            //         [
+            //             'class' => 'form-select select2',
+            //         ]
+            //     ],
+            // ],
             'quarter' => [
                 'label' => 'Quarter',
                 'type' => 'select',
@@ -215,7 +215,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     ],
                     '',
                     [
-                        'class' => 'form-select',
+                        'class' => 'form-select select2 js-select-hide-search',
                     ]
                 ],
                 'handler' => function ($query, $key, $value) {
@@ -230,7 +230,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     [],
                     '',
                     [
-                        'class' => 'form-select',
+                        'class' => 'form-select select2 js-select-hide-search',
                     ]
                 ],
                 'handler' => function ($query, $key, $value) {

@@ -79,6 +79,18 @@
             <dt class="col-sm-4">Score RMI</dt><dd class="col-sm-8">{{ $period->final_score_rmi }}</dd>
 
             <dt class="col-sm-4">Tanggal Update</dt><dd class="col-sm-8">{{ $period->updated_at->format('d M Y H:i') }}</dd>
+            <dt class="col-sm-4">Penilai</dt><dd class="col-sm-8">
+              {{ $period->penilaian ?? '-' }} 
+              @if($period->tipe_penilaian)
+                <span class="">
+                  @if($period->tipe_penilaian == 1)
+                    (Eksternal)
+                  @elseif($period->tipe_penilaian == 2)
+                    (Internal)
+                  @endif
+                </span>
+              @endif
+            </dd>
           </dl>
         </div>
       </div>
@@ -95,6 +107,57 @@
             <dt class="col-sm-6">Nilai Konversi</dt><dd class="col-sm-6">{{ $period->nilai_konversi }}</dd>
           </dl>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+      Dokumen Pendukung
+      <span id="doc-count-badge" class="badge bg-info text-secondary-emphasis">{{ $period->documents->count() }} File</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0" id="document-table">
+          <thead>
+            <tr>
+              <th class="ps-3" style="width: 5%;">#</th>
+              <th>Nama File</th>
+              <th>Deskripsi</th>
+              <th style="width: 15%;">Tgl Upload</th>
+              <th class="text-center pe-3" style="width: 12%;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="document-table-body">
+            @forelse ($period->documents as $document)
+              <tr id="doc-row-{{ $document->id }}">
+                <td class="ps-3">{{ $loop->iteration }}</td>
+                <td><i class="bx bxs-file me-2 text-muted"></i>{{ $document->file_name }}</td>
+                <td>{{ $document->description ?? '-' }}</td>
+                <td>{{ $document->created_at->format('d M Y') }}</td>
+                <td class="text-center pe-3">
+                  <div class="d-flex justify-content-center gap-1">
+                    <a href="{{ Storage::url($document->file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="Download">
+                      <i class="bx bx-download"></i>
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-delete-document"
+                      data-doc-id="{{ $document->id }}"
+                      data-period-id="{{ $period->id }}"
+                      title="Hapus">
+                      <i class="bx bx-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            @empty
+              <tr id="empty-doc-row">
+                <td colspan="5" class="text-center py-4 text-muted">
+                  Tidak ada dokumen pendukung.
+                </td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -472,3 +535,90 @@
 </div><!-- /.container -->
 
 @endsection
+
+@push('scripts')
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const tableBody = document.getElementById('document-table-body');
+    const docCountBadge = document.getElementById('doc-count-badge');
+
+    tableBody.addEventListener('click', function (event) {
+        const deleteButton = event.target.closest('.btn-delete-document');
+
+        if (!deleteButton) {
+            return;
+        }
+
+        const docId = deleteButton.dataset.docId;
+        const periodId = deleteButton.dataset.periodId;
+        const url = `/penilaian-rmi/${periodId}/aspek-kinerja/delete-document/${docId}`;
+
+        Swal.fire({
+            title: 'Apakah Anda yakin?',
+            text: "Dokumen yang dihapus tidak dapat dikembalikan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const csrfToken = document?.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+                fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => { throw new Error(err.message || 'Gagal menghapus dokumen.') });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const rowToRemove = document.getElementById(`doc-row-${docId}`);
+                    if (rowToRemove) {
+                        rowToRemove.remove();
+                    }
+
+                    const currentCount = parseInt(docCountBadge.innerText) || 0;
+                    const newCount = Math.max(0, currentCount - 1);
+                    docCountBadge.innerText = `${newCount} File`;
+
+                    const remainingRows = tableBody.querySelectorAll('tr[id^="doc-row-"]').length;
+                    if (remainingRows === 0) {
+                        const emptyRowHtml = `
+                            <tr id="empty-doc-row">
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    Tidak ada dokumen pendukung.
+                                </td>
+                            </tr>`;
+                        tableBody.innerHTML = emptyRowHtml;
+                    }
+
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: data.message || 'Dokumen telah dihapus.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire(
+                        'Gagal!',
+                        error.message || 'Terjadi kesalahan saat menghapus dokumen.',
+                        'error'
+                    );
+                });
+            }
+        });
+    });
+  });
+</script>
+@endpush

@@ -60,7 +60,11 @@
                                     <td rowspan="{{ $rowSpan }}">{{ $loop->iteration }}</td>
                                     <td rowspan="{{ $rowSpan }}">{{ $penyebabRisiko->penyebab_risiko ?: '-' }}</td>
                                     <td>{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->rencana_perlakuan_risiko ?: '-' }}</td>
-                                    <td><span class="inputmask-fixed">{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->biaya_perlakuan_risiko ?: '-' }}</span></td>
+                                    <td>
+                                      <span class="inputmask-fixed">
+                                        {{ isset(($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->biaya_perlakuan_risiko) ? 'Rp ' . number_format($penyebabRisiko->perlakuanPenyebabRisiko[0]->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                      </span>
+                                    </td>
                                     {{-- <td class="display-progress inputmask-fixed">{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->{'progress_rencana_perlakuan_risiko_q' . $quarter } ?: '-' }}</td>
                                     <td class="display-biaya inputmask-fixed">{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->{'realisasi_biaya_perlakuan_risiko_q' . $quarter } ?: '-' }}</td> --}}
                                     <td class="display-progress inputmask-fixed">
@@ -90,7 +94,9 @@
                                                 {{ $perlakuan->last_monitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
                                             </td>
                                             <td class="display-biaya inputmask-fixed">
-                                                {{ $perlakuan?->last_monitoring?->realisasi_biaya_perlakuan_risiko ?? '-' }}
+                                                {{ 
+                                                  $perlakuan?->last_monitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->last_monitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-'
+                                                }}
                                             </td>
                                             <td class="display-timeline">{{ $perlakuan?->last_monitoring?->waktu_perlakuan_risiko?: '-' }}</td>
                                             <td>
@@ -238,7 +244,7 @@
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="nilai_dampak_inherent"
-                                value="{{ number_format($projectRiskAnalisa->nilai_dampak_residual, strpos($projectRiskAnalisa->nilai_dampak, '.') !== false ? 2 : 0, ',', '.') }}">
+                                value="Rp {{ number_format($projectRiskAnalisa->nilai_dampak_residual, strpos($projectRiskAnalisa->nilai_dampak_residual, '.') !== false ? 2 : 0, ',', '.') }}">
                                 <label for="">Target Nilai Dampak</label>
                             </div>
                             <div class="form-floating">
@@ -250,6 +256,7 @@
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" id="target_nilai_probabilitas"
                                 name="target_nilai_probabilitas" value="{{ $projectRiskAnalisa->nilai_probabilitas_residual }}">
+                                <label for="">Target Nilai Probabilitas (%)</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="skala_probabilitas_inherent"
@@ -293,12 +300,12 @@
                         </div>
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
-                                <input class="form-control update-trigger inputmask-fixed" type="number" id="realisasi_nilai_dampak" name="realisasi_nilai_dampak"
-                                value="{{ $riskMonitoring?->nilai_dampak }}" disabled>
+                                <input class="form-control update-trigger" type="text" id="realisasi_nilai_dampak" name="realisasi_nilai_dampak"
+                                value="{{ isset($riskMonitoring?->nilai_dampak) ? 'Rp ' . number_format($riskMonitoring->nilai_dampak, 0, ',', '.') : '-' }}" disabled>
                                 <label for="">Realisasi Nilai Dampak</label>
                             </div>
                             <div class="form-floating">
-                                <input class="form-control update-trigger" type="text" id="realisasi_nilai_dampak" name="realisasi_nilai_dampak"
+                                <input class="form-control update-trigger" type="text" id="realisasi_skala_dampak" name="realisasi_skala_dampak"
                                 value="{{ $riskMonitoring?->skalaDampakObj?->tingkat . ' - ' . $riskMonitoring?->skalaDampakObj?->deskripsi }}" disabled>
                                 <label for="">Realisasi Skala Dampak</label>
                             </div>
@@ -465,12 +472,14 @@ function getSkalaProbabilitasByValue(value) {
         }
     }
 }
+const riskMonitoring = @json($riskMonitoring);
+console.log(riskMonitoring);
 
 function refreshSkalaAndLevelRisiko() {
     const riskMaps = @json($riskMaps);
-    const nilaiDampak = parseFloat($('#realisasi_nilai_dampak').val());
-    const nilaiProbabilitas = parseFloat($('#realisasi_nilai_probabilitas').val());
-    const skalaDampak = parseFloat($('#realisasi_skala_dampak').val());
+    const nilaiDampak = parseFloat(riskMonitoring?.nilai_dampak || 0);
+    const nilaiProbabilitas = parseFloat(riskMonitoring?.nilai_probabilitas || 0);
+    const skalaDampak = riskMonitoring?.skalaDampakObj?.tingkat || 0;
     const skalaProbabilitas = getSkalaProbabilitasByValue(nilaiProbabilitas);
 
     const domSkalaProbabilitas = $('#realisasi_skala_probabilitas');
