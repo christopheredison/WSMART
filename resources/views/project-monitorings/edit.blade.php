@@ -43,7 +43,7 @@
         <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
-                    <h4 class="mb-0 ff-heading-sm">Realisasi Nilai Risiko</h4>
+                    <h4 class="mb-0 ff-heading-sm">Realisasi Nilai Risiko Residual</h4>
                 </div>
             </div>
             <div class="row g-2">
@@ -378,11 +378,11 @@
                                             {{-- <a href="javascript:void(0)" class="hover-underline px-1 btn-action" data-action="update-kri" data-id="{{ $kriProject->id }}">Update KRI</a> --}}
                                             <div class="text-center">
                                             <a href="javascript:void(0)" 
-                                               class="btn-input-icon btn-action" 
-                                               data-action="update-kri" 
-                                               data-bs-toggle="tooltip"
-                                               title="Update KRI"
-                                               data-id="{{ $kriProject->id }}">
+                                              class="btn-input-icon btn-action" 
+                                              data-action="update-kri" 
+                                              data-bs-toggle="tooltip"
+                                              title="Update KRI"
+                                              data-id="{{ $kriProject->id }}">
                                                 <span class="bx bx-chart text-primary"></span>
                                             </a>
                                             </div>
@@ -453,7 +453,7 @@
                                                     title="Detail Mitigasi"
                                                     data-perlakuan-id="{{ $perlakuanPenyebab->id }}"
                                                     data-id="{{ $perlakuanMonitoring->id }}">
-                                                     <span class="bx bx-show text-primary"></span>
+                                                    <span class="bx bx-show text-primary"></span>
                                             </button>
                                             </td>
                                         </tr>
@@ -503,6 +503,54 @@ const perlakuanPenyebabRisikos = @json($penyebabRisikoProjects->pluck('perlakuan
 const kriProjects = @json($kriProjects->keyBy('id'));
 const quarter = {{ $quarter }};
 const namaRisiko = @json($peristiwaRisiko->title);
+const month = @json($month);
+const year = @json($tahun);
+const paddedMonth = String(month).padStart(2, '0');
+const minDateString = dayjs(`${year}-${paddedMonth}-01`, 'YYYY-MM-DD').toDate();
+
+var flatpickrIns = flatpickr("#timelineInput", {
+    mode: "single",
+    altInput: false,
+    altFormat: "j F Y",
+    dateFormat: "d/m/Y",
+    minDate: minDateString,
+    disableMobile: true
+});
+
+$("#timelineInput").data('_flatpickr', flatpickrIns);
+
+var timeline1 = flatpickr("#perkiraan_waktu_terpapar_risiko_mulai", {
+    mode: "single",
+    altInput: true,
+    altFormat: "j F Y",
+    dateFormat: "d/m/Y",
+    //maxDate: endOfYear,
+    disableMobile: true
+});
+var timeline2 = flatpickr("#perkiraan_waktu_terpapar_risiko_akhir", {
+    mode: "single",
+    altInput: true,
+    altFormat: "j F Y",
+    dateFormat: "d/m/Y",
+    //maxDate: endOfYear,
+    disableMobile: true
+});
+var perlakuanWaktu1 = flatpickr("#timeline_perlakuan_risiko_start", {
+    mode: "single",
+    altInput: true,
+    altFormat: "j F Y",
+    dateFormat: "d/m/Y",
+    //maxDate: endOfYear,
+    disableMobile: true
+});
+var perlakuanWaktu2 = flatpickr("#timeline_perlakuan_risiko_end", {
+    mode: "single",
+    altInput: true,
+    altFormat: "j F Y",
+    dateFormat: "d/m/Y",
+    //maxDate: endOfYear,
+    disableMobile: true
+});
 
 function getSkalaProbabilitasByValue(value) {
     const skalaProbabilitases = @json($skalaProbabilitas);
@@ -708,6 +756,7 @@ $(document).ready(function() {
             $('#modalUpdateKri :input[name="status_kri"]').val(kriProject.status_kri_terkini);
             $('#modalUpdateKri').modal('show');
         } else if (action === 'update-realisasi') {
+            const projectRisk = @json($projectRisk);
             const perlakuanPenyebab = perlakuanPenyebabRisikos[$(this).data('id')];
             if (!perlakuanPenyebab) {
                 Swal.fire('Error', 'Data perlakuan penyebab risiko tidak ditemukan', 'error');
@@ -716,6 +765,23 @@ $(document).ready(function() {
             const penyebabRisiko = penyebabRisikoProjects[perlakuanPenyebab.penyebab_risiko_id];
             $('#modalUpdateRealisasi :input[name="penyebab_risiko_id"]').val($(this).data('id'));
             $('#modalUpdateRealisasi :input[name="penyebab_risiko"]').val(penyebabRisiko.penyebab_risiko);
+
+            if (projectRisk.perkiraan_waktu_terpapar_risiko_mulai) {
+              timeline1.setDate(dayjs(projectRisk.perkiraan_waktu_terpapar_risiko_mulai).format('DD/MM/YYYY'));
+            }
+
+            if (projectRisk.perkiraan_waktu_terpapar_risiko_akhir) {
+              timeline2.setDate(dayjs(projectRisk.perkiraan_waktu_terpapar_risiko_akhir).format('DD/MM/YYYY'));
+            }
+
+            if (perlakuanPenyebab.timeline_perlakuan_risiko_start) {
+              perlakuanWaktu1.setDate(dayjs(perlakuanPenyebab.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
+            }
+
+            if (perlakuanPenyebab.timeline_perlakuan_risiko_end) {
+              perlakuanWaktu2.setDate(dayjs(perlakuanPenyebab.timeline_perlakuan_risiko_end).format('DD/MM/YYYY'));
+            }
+
             $('#modalUpdateRealisasi :input[name="rencana_perlakuan_risiko"]').val(perlakuanPenyebab.rencana_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="biaya_perlakuan_risiko"]').val(perlakuanPenyebab.biaya_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="pic"]').val(perlakuanPenyebab.pic);
@@ -732,6 +798,7 @@ $(document).ready(function() {
             } else {
                 $("#timelineInput").data('_flatpickr').clear();
             }
+
             $('#modalUpdateRealisasi').modal('show');
 
             const tableDocument = $('#modalUpdateRealisasi .table-dokumen');
@@ -993,17 +1060,6 @@ $(document).ready(function() {
             }
         }
     });
-
-    var flatpickrIns = flatpickr("#timelineInput", {
-        mode: "single",
-        altInput: false,
-        altFormat: "j F Y",
-        dateFormat: "d/m/Y",
-        //maxDate: endOfYear,
-        disableMobile: true
-    });
-
-    $("#timelineInput").data('_flatpickr', flatpickrIns);
 
     // Fungsi untuk menghitung skala dampak berdasarkan persentase
     function hitungSkalaDampak(percentage) {
