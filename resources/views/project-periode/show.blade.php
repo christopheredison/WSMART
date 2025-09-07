@@ -221,9 +221,20 @@
                     </div>
                 </div>
             </div>
+            <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
+                <h3 class="h4 mb-0">Daftar Risiko Proyek</h3>
+                <div class="d-flex align-items-center">
+                    <label for="statusFilter" class="me-2 fw-bold mb-0">Status Risiko:</label>
+                    <select id="statusFilter" class="form-select form-select-sm w-auto">
+                        <option value="">Semua</option>
+                        <option value="open" {{ request('status') == 'open' ? 'selected' : '' }}>Open</option>
+                        <option value="closed" {{ request('status') == 'closed' ? 'selected' : '' }}>Closed</option>
+                    </select>
+                </div>
+            </div>
             <div class="d-block mt-3">
-                <div class="table-responsive scrollbar">
-                    <table class="table table-strategi">
+                <div class="">
+                    <table class="table table-responsive table-strategi">
                         <thead>
                             <tr>
                                 <th>No</th>
@@ -241,10 +252,11 @@
                                 <th>Skala Probabilitas Residual</th>
                                 <th>Nilai Risiko Residual</th>
                                 <th>Level Risiko Residual</th>
+                                <th>Status Risiko</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($projectPeriode->projectRisks as $projectRisk)
+                            @forelse($projectPeriode->projectRisks as $projectRisk)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $projectRisk->peristiwaRisiko?->title ?? '-' }}</td>
@@ -277,13 +289,22 @@
                                 </td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->skala_risiko_residual ?? '-' }}</td>
                                 <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko_residual)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko_residual ?? '-' }}</td>
+                                <td>
+                                    @if ($projectRisk->is_closed)
+                                        <span class="badge bg-danger rounded-pill px-2 mt-auto">Closed</span>
+                                    @else
+                                        <span class="badge bg-success rounded-pill px-2 mt-auto">Open</span>
+                                    @endif
+                                </td>
                             </tr>
-                            @endforeach
-                            @if ($projectPeriode->projectRisks->isEmpty())
+                            @empty
                             <tr>
-                                <td colspan="15" class="text-center p-3">Tidak ada data</td>
+                                <td colspan="16" class="text-center p-3">Tidak ada data</td>
                             </tr>
-                            @endif
+                            @endforelse
+                            <tr id="no-data-filter" style="display: none;">
+                                <td colspan="16" class="text-center p-3">Tidak ada data yang cocok dengan filter.</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -354,7 +375,7 @@
 <script>
 $(document).ready(function () {
     const inputmaskGeneral = $('.inputmask-general');
-    const risks = @json($projectPeriode->projectRisks);
+    const risks = @json($projectPeriode->projectRisks->values());
 
     $('#modalEdit input[name="nk_ppn"],#modalEdit input[name="rapk"]').on('change', function() {
         const nkPpn = $('#modalEdit input[name="nk_ppn"]').inputmask('unmaskedvalue');
@@ -393,6 +414,23 @@ $(document).ready(function () {
         }
 
         inputmask.inputmask(options);
+    });
+
+    $('#statusFilter').on('change', function() {
+        const selectedStatus = $(this).val();
+        // Buat objek URL dari URL saat ini
+        const currentUrl = new URL(window.location.href);
+
+        if (selectedStatus) {
+            // Jika ada status yang dipilih, set query parameter 'status'
+            currentUrl.searchParams.set('status', selectedStatus);
+        } else {
+            // Jika memilih "Semua", hapus query parameter 'status'
+            currentUrl.searchParams.delete('status');
+        }
+        
+        // Arahkan browser ke URL yang baru
+        window.location.href = currentUrl.toString();
     });
 
 

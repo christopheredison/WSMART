@@ -23,11 +23,41 @@
         </div>
     </div>
 
+
     <div class="card mb-5">
         <div class="card-header stepper border-0 pb-0">
             <div class="nav-link active d-flex align-items-center p-0">
                 <span class="nav-item-circle-parent">
                     <span class="nav-item-circle">2</span>
+                </span>
+                <span class="h3 mb-0">Pengukuran Risiko Inheren</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-2">Nilai Dampak</div>
+                <div class="col-md-2 fw-bold">{{ $analisa?->nilai_dampak ? 'Rp' . number_format($analisa->nilai_dampak, 0, ',', '.') : 'Rp 0' }}</div>
+                <div class="col-md-2">Nilai Probabilitas (%)</div>
+                <div class="col-md-2 fw-bold">{{ $analisa?->nilai_probabilitas ?: '-' }}</div>
+                <div class="col-md-2">Skala Risiko</div>
+                <div class="col-md-2 fw-bold">{{ $analisa?->skala_risiko ?: '-' }}</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-2">Skala Dampak</div>
+                <div class="col-md-2 fw-bold">{{ $analisa?->skala_dampak ?: '-' }}</div>
+                <div class="col-md-2">Skala Probabilitas</div>
+                <div class="col-md-2 fw-bold">{{ ($analisa?->skalaProbabilitas? '(' . $analisa->skalaProbabilitas->tingkat . ') ' . $analisa->skalaProbabilitas->skala : null) ?: '-' }}</div>
+                <div class="col-md-2">Level Risiko</div>
+                <div class="col-md-2 fw-bold">{{ $analisa?->level_risiko ?: '-' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-5">
+        <div class="card-header stepper border-0 pb-0">
+            <div class="nav-link active d-flex align-items-center p-0">
+                <span class="nav-item-circle-parent">
+                    <span class="nav-item-circle">3</span>
                 </span>
                 <span class="h3 mb-0">Perlakuan Risiko</span>
             </div>
@@ -103,7 +133,7 @@
                                 @endif
                             @endforeach
                         @else
-                            <td colspan="4" class="text-center">Belum ada rencana perlakuan risiko</td>
+                            <td colspan="5" class="text-center">Belum ada rencana perlakuan risiko</td>
                             {{-- <td class="text-center">
                                 <button class="btn btn-primary" type="button" data-action="add" data-id="{{ $penyebab->id }}" data-penyebab="{{ $penyebab->penyebab_risiko }}">Input Rencana Perlakuan</button>
                             </td> --}}
@@ -131,35 +161,6 @@
         <div class="card-header stepper border-0 pb-0">
             <div class="nav-link active d-flex align-items-center p-0">
                 <span class="nav-item-circle-parent">
-                    <span class="nav-item-circle">3</span>
-                </span>
-                <span class="h3 mb-0">Pengukuran Risiko Inheren</span>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-2">Nilai Dampak</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->nilai_dampak ? 'Rp' . number_format($analisa->nilai_dampak, 0, ',', '.') : '-' }}</div>
-                <div class="col-md-2">Nilai Probabilitas (%)</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->nilai_probabilitas ?: '-' }}</div>
-                <div class="col-md-2">Skala Risiko</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->skala_risiko ?: '-' }}</div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-2">Skala Dampak</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->skala_dampak ?: '-' }}</div>
-                <div class="col-md-2">Skala Probabilitas</div>
-                <div class="col-md-2 fw-bold">{{ ($analisa?->skalaProbabilitas? '(' . $analisa->skalaProbabilitas->tingkat . ') ' . $analisa->skalaProbabilitas->skala : null) ?: '-' }}</div>
-                <div class="col-md-2">Level Risiko</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->level_risiko ?: '-' }}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card mb-5">
-        <div class="card-header stepper border-0 pb-0">
-            <div class="nav-link active d-flex align-items-center p-0">
-                <span class="nav-item-circle-parent">
                     <span class="nav-item-circle">4</span>
                 </span>
                 <span class="h3 mb-0">Pengukuran Risiko Residual</span>
@@ -168,7 +169,7 @@
         <div class="card-body">
             <div class="row mb-3">
                 <div class="col-md-2">Nilai Dampak</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->nilai_dampak_residual ? 'Rp' . number_format($analisa->nilai_dampak_residual, 0, ',', '.') : '-' }}</div>
+                <div class="col-md-2 fw-bold">{{ $analisa?->nilai_dampak_residual ? 'Rp' . number_format($analisa->nilai_dampak_residual, 0, ',', '.') : 'Rp 0' }}</div>
                 <div class="col-md-2">Nilai Probabilitas (%)</div>
                 <div class="col-md-2 fw-bold">{{ $analisa?->nilai_probabilitas_residual ?: '-' }}</div>
                 <div class="col-md-2">Skala Risiko</div>
@@ -559,18 +560,14 @@ $(document).ready(function() {
 <script>
     $(document).on('click', 'button[data-action="edit"]', function() {
         const rencanaId = $(this).data('id'); // Ambil ID rencana
-        var flatpickrInstance = flatpickr("#xtimelineRange", {
-            mode: "range",
-            altInput: true,
-            altFormat: "j F Y",
-            dateFormat: "d/m/Y",
-            disableMobile: true
-        });
+        const projectRisk = @json($projectRisk);
 
         var flatpickrInstance1 = flatpickr("#xtimelineRange1", {
             altInput: false,
             altFormat: "j F Y",
             dateFormat: "d/m/Y",
+            minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+            maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
             disableMobile: true
         });
 
@@ -578,6 +575,8 @@ $(document).ready(function() {
             altInput: false,
             altFormat: "j F Y",
             dateFormat: "d/m/Y",
+            minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+            maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
             disableMobile: true
         });
         // Ambil data rencana dari server
@@ -600,18 +599,16 @@ $(document).ready(function() {
                 $('#picEdit').trigger('change');
                 $('#divisiTerkaitEdit').val(response.divisi_terkait);
                 $('#divisiTerkaitEdit').trigger('change');
-                
-                if (response.timeline_perlakuan_risiko_start && response.timeline_perlakuan_risiko_end) {
-                    // flatpickrInstance.setDate([
-                    //     response.timeline_perlakuan_risiko_start,
-                    //     response.timeline_perlakuan_risiko_end
-                    // ]);
-                    flatpickrInstance1.setDate(response.timeline_perlakuan_risiko_start);
-                    flatpickrInstance2.setDate(response.timeline_perlakuan_risiko_end);
 
+                if (response.timeline_perlakuan_risiko_start) {
+                    flatpickrInstance1.setDate(response.timeline_perlakuan_risiko_start);
                 } else {
-                    //flatpickrInstance.clear(); // Kosongkan jika tidak ada timeline
                     flatpickrInstance1.clear();
+                }
+
+                if (response.timeline_perlakuan_risiko_end) {
+                    flatpickrInstance2.setDate(response.timeline_perlakuan_risiko_end);
+                } else {
                     flatpickrInstance2.clear();
                 }
 
