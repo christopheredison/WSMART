@@ -27,6 +27,7 @@ use App\Models\AreaDampak;
 use App\Models\AreaDampakDetail;
 use App\Models\LossEventProject;
 use App\Models\Jabatan;
+use App\Models\SkalaParameter;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -241,7 +242,7 @@ class ProjectRiskController extends BasicCRUDController
             (data, type, row) => {
                 let add = '';
                 if (row.skala_risiko >= $average) {
-                    add = '<span class="badge bg-primary">!</span> ';
+                    add = '<span class="badge bg-primary"  data-bs-toggle="tooltip" title="Rekomendasi Risiko">!</span> ';
                 }
                 return add + (row.peristiwa_risiko?.title || '-');
             }
@@ -755,6 +756,15 @@ class ProjectRiskController extends BasicCRUDController
         if (!$analisa) {
             $analisa = $projectRisk->projectRiskAnalisa()->create([]);
         }
+
+        $selectedParameterType = null;
+        if ($analisa && $analisa->skalaParameterObj) {
+            $selectedParameterType = $analisa->skalaParameterObj->type_parameter;
+        }
+
+        $skalaParameters = SkalaParameter::all();
+        $parameterTypes = $skalaParameters->pluck('type_parameter')->unique();
+        $groupedSkalaParameters = $skalaParameters->groupBy('type_parameter');
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
         $riskMaps = RiskMap::get()->keyBy(function($item) {
             return $item->skala_dampak . '-' . $item->skala_probabilitas;
@@ -806,7 +816,7 @@ class ProjectRiskController extends BasicCRUDController
 
         //$risk_limit = $projectPeriodeList->risk_limit;
         $risk_limit = ($projectPeriodeList->project->meta['omset'] ?? 0) * 0.03;
-        return view('project-risk.analisa', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'skalaProbabilitas', 'riskMaps', 'analisa', 'areas', 'groupedAreas', 'risk_tolerance', 'risk_limit'));
+        return view('project-risk.analisa', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'skalaProbabilitas', 'riskMaps', 'analisa', 'areas', 'groupedAreas', 'risk_tolerance', 'risk_limit', 'parameterTypes', 'groupedSkalaParameters', 'selectedParameterType'));
     }
 
     public function doAnalisa(Request $request) {
@@ -831,6 +841,8 @@ class ProjectRiskController extends BasicCRUDController
             // 'skala_dampak_hidden' => 'required|numeric',
             'nilai_probabilitas' => 'required|numeric',
             // 'skala_dampak_residual_hidden' => 'required|numeric|lte:skala_dampak_hidden',
+            'skala_parameter_id' => 'required|exists:skala_parameters,id',
+            'skala_parameter_residual_id' => 'required|exists:skala_parameters,id',
             'nilai_probabilitas_residual' => 'required|numeric|lte:nilai_probabilitas',
         ]);
 
@@ -869,6 +881,8 @@ class ProjectRiskController extends BasicCRUDController
             //'skala_risiko_residual' => null, // calculated [Done]
             //'level_risiko_residual' => null, // calculated [Done]
             //'eksposur_risiko_residual' => null, // calculated
+            'skala_parameter_id' => $request->skala_parameter_id,
+            'skala_parameter_residual_id' => $request->skala_parameter_residual_id,
         ];
 
         $analisa->update($toUpdate);
@@ -943,7 +957,16 @@ class ProjectRiskController extends BasicCRUDController
 
         
         //dd($toUpdate);
-        
+        $skalaInherent = SkalaParameter::find($request->skala_parameter_id);
+        $skalaResidual = SkalaParameter::find($request->skala_parameter_residual_id);
+
+        // Validasi tingkat residual tidak boleh > inheren
+        if ($skalaResidual->tingkat > $skalaInherent->tingkat) {
+            return response()->json([
+                'message' => 'Tingkat skala probabilitas residual tidak boleh lebih tinggi dari inheren.',
+            ], 422);
+        }
+
         $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($request->nilai_probabilitas);
         $tingkatSkalaProbabilitasResidual = SkalaProbabilitas::getSkalaByValue($request->nilai_probabilitas_residual);
 
@@ -1563,5 +1586,11 @@ class ProjectRiskController extends BasicCRUDController
             \Log::error('Error in calculatePoissonProbability: ' . $e->getMessage());
             throw new \Exception('Gagal menghitung probabilitas: ' . $e->getMessage());
         }
+    }
+
+    public function getSkalaParameters($type)
+    {
+        $scales = SkalaParameter::where('type_parameter', $type)->orderBy('tingkat')->get();
+        return response()->json($scales);
     }
 }

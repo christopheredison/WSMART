@@ -104,6 +104,8 @@
   <script src="/vendors/select2/select2.js"></script>
   <script src="/vendors/sweetalert2/sweetalert2.min.js"></script>
   <script src="/assets/js/theme.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
   @yield('scripts')
   @stack('scripts')
 </body>

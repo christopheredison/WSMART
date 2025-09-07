@@ -32,6 +32,8 @@ class ProjectRiskAnalisa extends Model
         'skala_risiko_residual',
         'level_risiko_residual',
         'eksposur_risiko_residual',
+        'skala_parameter_id',
+        'skala_parameter_residual_id',
     ];
 
     public const KATEGORI_DAMPAK_KUANTITATIF = 'Kuantitatif';
@@ -76,5 +78,15 @@ class ProjectRiskAnalisa extends Model
     public function skalaDampakResidualObj()
     {
         return $this->belongsTo(SkalaDampak::class, 'skala_dampak_residual');
+    }
+
+    public function skalaParameterObj()
+    {
+        return $this->belongsTo(SkalaParameter::class, 'skala_parameter_id');
+    }
+
+    public function skalaParameterResidualObj()
+    {
+        return $this->belongsTo(SkalaParameter::class, 'skala_parameter_residual_id');
     }
 }
