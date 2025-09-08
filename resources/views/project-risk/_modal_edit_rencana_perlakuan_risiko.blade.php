@@ -84,14 +84,6 @@ $(document).ready(function() {
             }
         }
     });
-
-    var flatpickrIns = flatpickr("#xtimelineRange", {
-        mode: "range",
-        altInput: true,
-        altFormat: "j F Y",
-        dateFormat: "d/m/Y",
-        disableMobile: true
-    });
 })
 </script>
 @endpush

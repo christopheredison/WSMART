@@ -286,12 +286,6 @@ class RiskRegisterUnitController extends Controller
 
     public function RiskPeriodeList()
     {
-        // Ambil semua data periode
-        $periodes = Periode::orderBy('tahun', 'desc')->get();
-
-        // Ambil periode aktif jika ada
-        $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
-
         $tableLegend = [
             [
               'icon' => '<span class="bx bx-show"></span>',
@@ -310,8 +304,24 @@ class RiskRegisterUnitController extends Controller
               'label' => 'Loss Event'
             ],
         ];
+        // Ambil semua data periode
+        $periodes = Periode::orderBy('tahun', 'desc')->get();
 
-        return view('risk-register-unit.risk-period-list', compact('periodes', 'activePeriode', 'tableLegend'));
+        // Ambil periode aktif jika ada
+        $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
+
+        $dataToDisplay = collect();
+        $userUnit = auth()->user()->unit;
+        if ($userUnit) {
+            foreach ($periodes as $periode) {
+                $dataToDisplay->push([
+                    'unit' => $userUnit,
+                    'periode' => $periode,
+                ]);
+            }
+        }
+
+        return view('risk-register-unit.risk-period-list', compact('periodes', 'activePeriode', 'tableLegend', 'dataToDisplay'));
     }
 
     public function riskPeriodeDashboard($period)

@@ -102,7 +102,7 @@
                             <div class="card-header p-3 d-flex justify-content-between align-items-center">
                               <h5 class="mb-0">Penyebab dan Penanganan Saat Kejadian</h5>
                               <button type="button" class="btn btn-outline-primary" id="btn-tambah-penyebab">
-                                  {{-- <i class="bx bx-plus"></i> --}}
+                                  <span class="bx bx-plus"></span> 
                                   Tambah Penyebab
                               </button>
                           </div>
@@ -114,39 +114,10 @@
                                             <th>Penyebab</th>
                                             <th>Penanganan Saat Kejadian</th>
                                             <th style="width: 200px;">PIC</th>
+                                            <th style="width: 50px;">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody id="penyebab-risiko-tbody">
-                                        {{-- @forelse ($projectRisk->penyebabRisikoProjects as $penyebab)
-                                            <tr>
-                                                <td>{{ $loop->iteration }}</td>
-                                                <td>{{ $penyebab->penyebab_risiko }}</td>
-                                                <td>
-                                                    @if($penyebab->perlakuanPenyebabRisiko->isNotEmpty())
-                                                        <ul class="list-unstyled mb-0">
-                                                        @foreach($penyebab->perlakuanPenyebabRisiko as $perlakuan)
-                                                            <li>{{ $perlakuan->rencana_perlakuan_risiko }}</li>
-                                                        @endforeach
-                                                        </ul>
-                                                    @else
-                                                        -
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if($penyebab->perlakuanPenyebabRisiko->isNotEmpty())
-                                                        <ul class="list-unstyled mb-0">
-                                                        @foreach($penyebab->perlakuanPenyebabRisiko as $perlakuan)
-                                                            <li>{{ $perlakuan->pic }}</li>
-                                                        @endforeach
-                                                        </ul>
-                                                    @else
-                                                        -
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr><td colspan="4" class="text-center">Tidak ada data penyebab.</td></tr>
-                                        @endforelse --}}
                                     </tbody>
                                 </table>
                             </div>
@@ -248,6 +219,13 @@
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
 $(document).ready(function() {
+    flatpickr("#tanggal_kejadian", {
+        altInput: false,
+        altFormat: "j F Y",
+        dateFormat: "Y-m-d",
+        disableMobile: true
+    });
+
     var flatpickrMulai = flatpickr("#timelineRange1", {
         altInput: false,
         altFormat: "j F Y",
@@ -272,58 +250,88 @@ $(document).ready(function() {
         let counter = 1;
 
         if (penyebabData.length === 0) {
-            tbody.html('<tr><td colspan="4" class="text-center">Belum ada data penyebab. Klik "Tambah Penyebab" untuk memulai.</td></tr>');
+            tbody.html('<tr><td colspan="5" class="text-center">Belum ada data penyebab. Klik "Tambah Penyebab" untuk memulai.</td></tr>');
             $('#penyebab_data_input').val('[]');
             return;
         }
-    
-        penyebabData.forEach(penyebab => {
-            let perlakuanHtml = '-';
-            let picHtml = '-';
-            if (penyebab.perlakuan && penyebab.perlakuan.length > 0) {
-                perlakuanHtml = '<ul class="list-unstyled mb-0">';
-                picHtml = '<ul class="list-unstyled mb-0">';
-                penyebab.perlakuan.forEach(p => {
-                    let perlakuanActionButtons = '';
-                    if (!p.is_original) {
-                        perlakuanActionButtons = `
-                            <span class="d-flex gap-2">
-                                <button type="button" class="btn btn-link p-0 btn-edit-perlakuan" data-penyebab-id="${penyebab.id}" data-perlakuan-id="${p.id}" title="Edit Rencana"><i class="bx bx-edit-alt"></i></button>
-                                <button type="button" class="btn btn-link text-danger p-0 btn-hapus-perlakuan" data-penyebab-id="${penyebab.id}" data-perlakuan-id="${p.id}" title="Hapus Rencana"><i class="bx bx-trash"></i></button>
-                            </span>`;
-                    }
-                    perlakuanHtml += `<li class="d-flex justify-content-between align-items-center my-1">
-                        <span>${p.rencana_perlakuan_risiko || ''}</span>
-                        ${perlakuanActionButtons}
-                    </li>`;
-                    picHtml += `<li>${p.pic_name || ''}</li>`;
-                });
-                perlakuanHtml += '</ul>';
-                picHtml += '</ul>';
-            }
-        
-            const actionButtons = `
-                <button type="button" class="btn btn-link p-0 btn-tambah-rencana" data-penyebab-id="${penyebab.id}" title="Tambah Rencana"><i class="bx bx-plus-circle"></i></button>
-                ${!penyebab.is_original ? `<button type="button" class="btn btn-link text-danger p-0 btn-hapus-penyebab" data-id="${penyebab.id}" title="Hapus Penyebab"><i class="bx bx-trash"></i></button>` : ''}
-            `;
 
-            const row = `
-                <tr class="table">
-                    <td class="align-middle">${counter++}</td>
-                    <td class="align-middle">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span>${penyebab.penyebab_risiko}</span>
-                            <span class="d-flex gap-2">${actionButtons}</span>
-                        </div>
-                    </td>
-                    <td class="align-middle">${perlakuanHtml}</td>
-                    <td class="align-middle">${picHtml}</td>
-                </tr>
-            `;
-            tbody.append(row);
+        penyebabData.forEach(penyebab => {
+            const perlakuanList = penyebab.perlakuan || [];
+            const rowspanCount = perlakuanList.length > 0 ? perlakuanList.length : 1;
+
+            const noCell = `<td class="align-middle text-center" rowspan="${rowspanCount}">${counter}</td>`;
+            const penyebabCell = `<td class="align-middle" rowspan="${rowspanCount}">${penyebab.penyebab_risiko}</td>`;
+            
+            const actionMenu = `
+                <div class="dropdown">
+                    <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-toggle="tooltip" title="Pilihan Aksi">
+                        <i class="bx bx-dots-vertical-rounded fs-4"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <a class="dropdown-item btn-edit-penyebab" href="#" data-id="${penyebab.id}"><i class="bx bx-edit-alt me-2"></i>Edit Penyebab</a>
+                        <a class="dropdown-item text-danger btn-hapus-penyebab" href="#" data-id="${penyebab.id}"><i class="bx bx-trash me-2"></i>Hapus Penyebab</a>
+                        
+                        <div class="dropdown-divider d-block"></div>
+                        
+                        <a class="dropdown-item btn-tambah-rencana" href="#" data-penyebab-id="${penyebab.id}"><i class="bx bx-plus me-2"></i>Tambah Penanganan</a>
+                    </div>
+                </div>`;
+            const actionCell = `<td class="align-middle text-center" rowspan="${rowspanCount}">${actionMenu}</td>`;
+            
+            let rowsHtml = '';
+
+            if (perlakuanList.length > 0) {
+                perlakuanList.forEach((perlakuan, index) => {
+                    const perlakuanActionButtons = `
+                        <span class="d-flex gap-2">
+                            <button type="button" class="btn btn-link p-0 btn-edit-perlakuan" data-penyebab-id="${penyebab.id}" data-perlakuan-id="${perlakuan.id}" data-bs-toggle="tooltip" title="Edit Penanganan"><i class="bx bx-edit-alt"></i></button>
+                            <button type="button" class="btn btn-link text-danger p-0 btn-hapus-perlakuan" data-penyebab-id="${penyebab.id}" data-perlakuan-id="${perlakuan.id}" data-bs-toggle="tooltip" title="Hapus Penanganan"><i class="bx bx-trash"></i></button>
+                        </span>`;
+
+                    const perlakuanCellContent = `<div class="d-flex justify-content-between align-items-center">${perlakuan.rencana_perlakuan_risiko || ''}${perlakuanActionButtons}</div>`;
+                    const picCellContent = perlakuan.pic_name || '-';
+
+                    if (index === 0) {
+                        rowsHtml += `<tr>
+                            ${noCell}
+                            ${penyebabCell}
+                            <td class="align-middle">${perlakuanCellContent}</td>
+                            <td class="align-middle">${picCellContent}</td>
+                            ${actionCell}
+                        </tr>`;
+                    } else {
+                        rowsHtml += `<tr>
+                            <td class="align-middle">${perlakuanCellContent}</td>
+                            <td class="align-middle">${picCellContent}</td>
+                        </tr>`;
+                    }
+                });
+            } else {
+                const tambahPerlakuanBtnHtml = `
+                    <button type="button" class="btn btn-outline-info btn-sm btn-tambah-rencana" 
+                            data-penyebab-id="${penyebab.id}" data-bs-toggle="tooltip" title="Tambah Penanganan Baru untuk penyebab ini">
+                        <span class="bx bx-plus"></span> Tambah Penanganan
+                    </button>`;
+
+                rowsHtml = `<tr>
+                    ${noCell}
+                    ${penyebabCell}
+                    <td class="align-middle text-center">${tambahPerlakuanBtnHtml}</td>
+                    <td class="align-middle text-center">-</td>
+                    ${actionCell}
+                </tr>`;
+            }
+            
+            tbody.append(rowsHtml);
+            counter++;
         });
-        
+
         $('#penyebab_data_input').val(JSON.stringify(penyebabData));
+
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
     }
 
     renderPenyebabTable();
@@ -337,8 +345,19 @@ $(document).ready(function() {
     $('#btn-tambah-penyebab').on('click', function() {
         $('#modalPenyebabLabel').text('Tambah Penyebab Baru');
         $('#input-penyebab-risiko').val('');
-        $('#btn-simpan-penyebab').data('id', null);
+        $('#btn-simpan-penyebab').data('mode', 'add');
         $('#modalPenyebab').modal('show');
+    });
+
+    $('body').on('click', '.btn-edit-penyebab', function() {
+        const idToEdit = $(this).data('id');
+        const penyebab = penyebabData.find(p => p.id == idToEdit);
+        if (penyebab) {
+            $('#modalPenyebabLabel').text('Edit Penyebab');
+            $('#input-penyebab-risiko').val(penyebab.penyebab_risiko);
+            $('#btn-simpan-penyebab').data('mode', 'edit').data('id', idToEdit);
+            $('#modalPenyebab').modal('show');
+        }
     });
 
     $('#btn-simpan-penyebab').on('click', function() {
@@ -348,12 +367,21 @@ $(document).ready(function() {
             return; 
         }
 
-        penyebabData.push({ 
-            id: `temp_${new Date().getTime()}`, 
-            penyebab_risiko: penyebabText, 
-            perlakuan: [],
-            is_original: false
-        });
+        const mode = $(this).data('mode');
+        if (mode === 'edit') {
+            const idToUpdate = $(this).data('id');
+            const penyebabIndex = penyebabData.findIndex(p => p.id == idToUpdate);
+            if (penyebabIndex > -1) {
+                penyebabData[penyebabIndex].penyebab_risiko = penyebabText;
+            }
+        } else {
+            penyebabData.push({ 
+                id: `temp_${new Date().getTime()}`, 
+                penyebab_risiko: penyebabText, 
+                perlakuan: []
+            });
+        }
+        
         renderPenyebabTable();
         $('#modalPenyebab').modal('hide');
     });

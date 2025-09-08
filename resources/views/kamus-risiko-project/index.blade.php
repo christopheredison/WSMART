@@ -83,33 +83,36 @@
 
 <div class="card">
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped" id="kamus-risiko-table" style="width:100%">
-                <thead>
-                    <tr>
-                        <th>No</th>
-                        <th>Action</th>
-                        <th>Proyek</th>
-                        <th>Taksonomi Risiko</th>
-                        <th>Peristiwa Risiko</th>
-                        <th>Deskripsi Peristiwa Risiko</th>
-                        <th>Nilai Dampak Inheren</th>
-                        <th>Skala Dampak Inheren</th>
-                        <th>Nilai Probabilitas Inheren</th>
-                        <th>Eksposur Risiko Inheren</th>
-                        <th>Level Risiko Inheren</th>
-                        <th>Realisasi Nilai Dampak</th>
-                        <th>Realisasi Skala Dampak</th>
-                        <th>Realisasi Skala Probabilitas</th>
-                        <th>Realisasi Level Risiko</th>
-                        <th>Realisasi Eksposur Risiko</th>
-                        <th>Efektivitas Risiko</th>
-                    </tr>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
-        </div>
+        <table class="table table-bordered table-striped table-responsive" id="kamus-risiko-table" style="width:100%">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Action</th>
+                    <th>Proyek</th>
+                    <th>Taksonomi Risiko</th>
+                    <th>Peristiwa Risiko</th>
+                    <th>Deskripsi Peristiwa Risiko</th>
+                    <th>Nilai Dampak Inheren</th>
+                    <th>Skala Dampak Inheren</th>
+                    <th>Nilai Probabilitas Inheren</th>
+                    <th>Eksposur Risiko Inheren</th>
+                    <th>Level Risiko Inheren</th>
+                    <th>Nilai Dampak Residual</th>
+                    <th>Skala Dampak Residual</th>
+                    <th>Nilai Probabilitas Residual</th>
+                    <th>Eksposur Risiko Residual</th>
+                    <th>Level Risiko Residual</th>
+                    <th>Realisasi Nilai Dampak</th>
+                    <th>Realisasi Skala Dampak</th>
+                    <th>Realisasi Skala Probabilitas</th>
+                    <th>Realisasi Level Risiko</th>
+                    {{-- <th>Realisasi Eksposur Risiko</th> --}}
+                    <th>Efektivitas Risiko</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -178,16 +181,28 @@ $(document).ready(function() {
             { data: 'taksonomi_risiko', name: 'projectRisk.jenisRisiko.title', orderable: false, searchable: false },
             { data: 'peristiwa_risiko', name: 'projectRisk.peristiwaRisiko.title' },
             { data: 'deskripsi_peristiwa_risiko', name: 'projectRisk.deskripsi_peristiwa_risiko' },
+
+            // Inherent
             { data: 'nilai_dampak_inheren', name: 'projectRisk.projectRiskAnalisa.nilai_dampak' },
             { data: 'skala_dampak_inheren', name: 'projectRisk.projectRiskAnalisa.skala_dampak' },
             { data: 'nilai_probabilitas_inheren', name: 'projectRisk.projectRiskAnalisa.nilai_probabilitas' },
             { data: 'eksposur_risiko_inheren', name: 'projectRisk.projectRiskAnalisa.eksposur_risiko' },
             { data: 'level_risiko_inheren', name: 'projectRisk.projectRiskAnalisa.level_risiko' },
-            { data: 'realisasi_nilai_dampak', name: 'projectRisk.projectRiskAnalisa.nilai_dampak_residual' },
-            { data: 'realisasi_skala_dampak', name: 'projectRisk.projectRiskAnalisa.skala_dampak_residual' },
-            { data: 'realisasi_skala_probabilitas', name: 'projectRisk.projectRiskAnalisa.skala_probabilitas_residual' },
-            { data: 'realisasi_level_risiko', name: 'projectRisk.projectRiskAnalisa.level_risiko_residual' },
-            { data: 'realisasi_eksposur_risiko', name: 'projectRisk.projectRiskAnalisa.eksposur_risiko_residual' },
+            
+            // Residual
+            { data: 'nilai_dampak_residual', name: 'projectRisk.projectRiskAnalisa.nilai_dampak_residual' },
+            { data: 'skala_dampak_residual', name: 'projectRisk.projectRiskAnalisa.skala_dampak_residual' },
+            { data: 'nilai_probabilitas_residual', name: 'projectRisk.projectRiskAnalisa.nilai_probabilitas_residual' },
+            { data: 'eksposur_risiko_residual', name: 'projectRisk.projectRiskAnalisa.eksposur_risiko_residual' },
+            { data: 'level_risiko_residual', name: 'projectRisk.projectRiskAnalisa.level_risiko_residual' },
+
+            // Monitoring
+            { data: 'realisasi_nilai_dampak', name: 'projectRisk.projectRiskMonitoring.nilai_dampak' },
+            { data: 'realisasi_skala_dampak', name: 'projectRisk.projectRiskMonitoring.skala_dampak' },
+            { data: 'realisasi_skala_probabilitas', name: 'projectRisk.projectRiskMonitoring.skala_probabilitas' },
+            { data: 'realisasi_level_risiko', name: 'projectRisk.projectRiskMonitoring.level_risiko' },
+            // { data: 'realisasi_eksposur_risiko', name: 'projectRisk.projectRiskMonitoring.eksposur_risiko' },
+            
             { data: 'efektivitas', name: 'projectRisk.efektivitas_perlakuan_risiko' },
         ],
         order: [[2, 'asc']] // Default order by Proyek name

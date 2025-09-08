@@ -21,52 +21,40 @@ class KamusRisikoUnitController extends Controller
             $query = KamusRisikoUnit::with([
                 'identifikasiRisiko.unit',
                 'identifikasiRisiko.jenisRisiko.kategoriRisiko',
-                'identifikasiRisiko.riskAnalysis'
+                'identifikasiRisiko.riskAnalysis',
+                'identifikasiRisiko.lastMonitoringRisiko',
+                'identifikasiRisiko.lastMonitoringRisiko.skalaProbabilitas',
             ]);
 
-            $query->whereHas('identifikasiRisiko');
-
-            if ($request->filled('unit_id')) {
-                $query->whereHas('identifikasiRisiko', function ($q) use ($request) {
-                    $q->where('unit_id', $request->unit_id);
+            $query->whereHas('identifikasiRisiko', function ($q) use ($request) {
+                $q->when($request->filled('unit_id'), function ($subQ) use ($request) {
+                    $subQ->where('unit_id', $request->unit_id);
                 });
-            }
-            
-            if ($request->filled('peristiwa_risiko')) {
-                $query->whereHas('identifikasiRisiko', function ($q) use ($request) {
-                    $q->where('peristiwa_risiko', 'like', '%' . $request->peristiwa_risiko . '%');
-                });
-            }
 
-            if ($request->filled('jenis_risiko_id')) {
-                $query->whereHas('identifikasiRisiko', function ($q) use ($request) {
-                    $q->where('jenis_risiko_id', $request->jenis_risiko_id);
+                $q->when($request->filled('peristiwa_risiko'), function ($subQ) use ($request) {
+                    $subQ->where('peristiwa_risiko', 'like', '%' . $request->peristiwa_risiko . '%');
                 });
-            }
 
-            if ($request->filled('level_risiko')) {
-                $query->whereHas('identifikasiRisiko', function ($q) use ($request) {
-                    $q->where('level_risiko', $request->level_risiko);
+                $q->when($request->filled('jenis_risiko_id'), function ($subQ) use ($request) {
+                    $subQ->where('jenis_risiko_id', $request->jenis_risiko_id);
                 });
-            }
-
-            if ($request->filled('deskripsi_risiko')) {
-                $query->whereHas('identifikasiRisiko', function ($q) use ($request) {
-                    $q->where('deskripsi_peristiwa_risiko', 'like', '%' . $request->deskripsi_risiko . '%');
+                
+                $q->when($request->filled('level_risiko'), function ($subQ) use ($request) {
+                    $subQ->where('level_risiko', $request->level_risiko);
                 });
-            }
 
-            if ($request->filled('efektivitas')) {
-                $query->whereHas('identifikasiRisiko', function ($q) use ($request) {
+                $q->when($request->filled('deskripsi_risiko'), function ($subQ) use ($request) {
+                    $subQ->where('deskripsi_peristiwa_risiko', 'like', '%' . $request->deskripsi_risiko . '%');
+                });
+                
+                $q->when($request->filled('efektivitas'), function ($subQ) use ($request) {
                     if ($request->efektivitas == 'efektif') {
-                        // 'Efektif' jika nilainya lebih dari 0
-                        $q->where('efektivitas_perlakuan_risiko', '>', 0);
+                        $subQ->where('efektivitas_perlakuan_risiko', '>', 0);
                     } elseif ($request->efektivitas == 'tidak_efektif') {
-                        // 'Tidak Efektif' jika nilainya 0 atau kurang dari 0 (negatif)
-                        $q->where('efektivitas_perlakuan_risiko', '<=', 0);
+                        $subQ->where('efektivitas_perlakuan_risiko', '<=', 0);
                     }
                 });
-            }
+            });
 
             return datatables()->of($query)
                 ->addIndexColumn()
@@ -99,7 +87,8 @@ class KamusRisikoUnitController extends Controller
                 ->addColumn('deskripsi_peristiwa_risiko', function ($row) {
                     return $row->identifikasiRisiko->deskripsi_peristiwa_risiko ?? '-';
                 })
-                // Mengambil data dari relasi riskAnalysis
+
+                // Inherent
                 ->addColumn('nilai_dampak_inheren', fn($row) => 'Rp ' . number_format($row->identifikasiRisiko->riskAnalysis->nilai_dampak ?? 0, 0, ',', '.'))
                 ->addColumn('skala_dampak_inheren', fn($row) => $row->identifikasiRisiko->riskAnalysis->skala_dampak ?? '-')
                 ->addColumn('nilai_probabilitas_inheren', fn($row) => ($row->identifikasiRisiko->riskAnalysis->nilai_probabilitas ?? 0) . ' %')
@@ -110,16 +99,65 @@ class KamusRisikoUnitController extends Controller
                     $css_class = str_replace(' ', '.', $analisa->level_risiko);
                     return '<span class="badge-level ' . e($css_class) . '">' . e($analisa->level_risiko) . ' (' . e($analisa->skala_risiko) . ')</span>';
                 })
-                ->addColumn('realisasi_nilai_dampak', fn($row) => 'Rp ' . number_format($row->identifikasiRisiko->riskAnalysis->nilai_dampak_residual ?? 0, 0, ',', '.'))
-                ->addColumn('realisasi_skala_dampak', fn($row) => $row->identifikasiRisiko->riskAnalysis->skala_dampak_residual ?? '-')
-                ->addColumn('realisasi_skala_probabilitas', fn($row) => $row->identifikasiRisiko->riskAnalysis?->skalaProbabilitasResidual?->tingkat ?? '-')
-                ->addColumn('realisasi_level_risiko', function ($row) {
+
+                // Residual
+                ->addColumn('nilai_dampak_residual', function ($row) {
                     $analisa = $row->identifikasiRisiko->riskAnalysis;
-                    if (!$analisa || !$analisa->level_risiko_residual) return '-';
-                    $css_class = str_replace(' ', '.', $analisa->level_risiko_residual);
-                    return '<span class="badge-level ' . e($css_class) . '">' . e($analisa->level_risiko_residual) . ' (' . e($analisa->skala_risiko_residual) . ')</span>';
+                    $quarter = $row->identifikasiRisiko->lastMonitoringRisiko?->quarter ?? 4;
+                    $columnName = 'nilai_dampak_residual_q' . $quarter;
+                    $value = $analisa->{$columnName} ?? 0;
+                    return 'Rp ' . number_format($value, 0, ',', '.');
                 })
-                ->addColumn('realisasi_eksposur_risiko', fn($row) => 'Rp ' . number_format($row->identifikasiRisiko->riskAnalysis->eksposur_risiko_residual ?? 0, 0, ',', '.'))
+                ->addColumn('skala_dampak_residual', function ($row) {
+                    $analisa = $row->identifikasiRisiko->riskAnalysis;
+                    $quarter = $row->identifikasiRisiko->lastMonitoringRisiko?->quarter ?? 4;
+                    $columnName = 'skala_dampak_residual_q' . $quarter;
+                    return $analisa->{$columnName} ?? '-';
+                })
+                ->addColumn('nilai_probabilitas_residual', function ($row) {
+                    $analisa = $row->identifikasiRisiko->riskAnalysis;
+                    $quarter = $row->identifikasiRisiko->lastMonitoringRisiko?->quarter ?? 4;
+                    $columnName = 'nilai_probabilitas_residual_q' . $quarter;
+                    $value = $analisa->{$columnName} ?? 0;
+                    return $value . ' %';
+                })
+                ->addColumn('eksposur_risiko_residual', function ($row) {
+                    $analisa = $row->identifikasiRisiko->riskAnalysis;
+                    $quarter = $row->identifikasiRisiko->lastMonitoringRisiko?->quarter ?? 4;
+                    $columnName = 'eksposur_risiko_residual_q' . $quarter;
+                    $value = $analisa->{$columnName} ?? 0;
+                    return 'Rp ' . number_format($value, 0, ',', '.');
+                })
+                ->addColumn('level_risiko_residual', function ($row) {
+                    $analisa = $row->identifikasiRisiko->riskAnalysis;
+                    $quarter = $row->identifikasiRisiko->lastMonitoringRisiko?->quarter ?? 4;
+
+                    if (!$analisa) return '-';
+
+                    $levelColumn = 'level_risiko_residual_q' . $quarter;
+                    $skalaColumn = 'skala_risiko_residual_q' . $quarter;
+
+                    $level_risiko = $analisa->{$levelColumn};
+                    $skala_risiko = $analisa->{$skalaColumn};
+
+                    if (!$level_risiko) return '-';
+
+                    $css_class = str_replace(' ', '.', $level_risiko);
+                    return '<span class="badge-level ' . e($css_class) . '">' . e($level_risiko) . ' (' . e($skala_risiko) . ')</span>';
+                })
+
+                // Monitoring
+                ->addColumn('realisasi_nilai_dampak', fn($row) => 'Rp ' . number_format($row->identifikasiRisiko->lastMonitoringRisiko->nilai_dampak ?? 0, 0, ',', '.'))
+                ->addColumn('realisasi_skala_dampak', fn($row) => $row->identifikasiRisiko->lastMonitoringRisiko->skala_dampak ?? '-')
+                ->addColumn('realisasi_skala_probabilitas', fn($row) => $row->identifikasiRisiko->lastMonitoringRisiko?->skalaProbabilitas?->tingkat ?? '-')
+                ->addColumn('realisasi_level_risiko', function ($row) {
+                    $analisa = $row->identifikasiRisiko->lastMonitoringRisiko;
+                    if (!$analisa || !$analisa->level_risiko) return '-';
+                    $css_class = str_replace(' ', '.', $analisa->level_risiko);
+                    return '<span class="badge-level ' . e($css_class) . '">' . e($analisa->level_risiko) . ' (' . e($analisa->skala_risiko) . ')</span>';
+                })
+                // ->addColumn('realisasi_eksposur_risiko', fn($row) => 'Rp ' . number_format($row->identifikasiRisiko->lastMonitoringRisiko->eksposur_risiko ?? 0, 0, ',', '.'))
+
                 ->addColumn('efektivitas', function ($row) {
                     $efektivitas = $row->identifikasiRisiko->efektivitas_perlakuan_risiko;
 
@@ -131,7 +169,7 @@ class KamusRisikoUnitController extends Controller
                     
                     return '<span class="fw-bold ' . $class . '">' . $efektivitas . '</span>';
                 })
-                ->rawColumns(['action', 'level_risiko_inheren', 'realisasi_level_risiko', 'efektivitas'])
+                ->rawColumns(['action', 'level_risiko_inheren', 'level_risiko_residual', 'realisasi_level_risiko', 'efektivitas'])
                 ->make(true);
         }
 
@@ -172,6 +210,7 @@ class KamusRisikoUnitController extends Controller
             $existingRisk = IdentifikasiRisiko::where('unit_id', $request->target_unit_id)
                 ->where('periode_id', $activePeriode->id)
                 ->where('peristiwa_risiko', $originalRisk->peristiwa_risiko)
+                ->where('is_closed', 0)
                 ->first();
 
             // Jika risiko sudah ada dan pengguna belum menyetujui overwrite

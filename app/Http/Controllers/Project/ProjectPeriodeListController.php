@@ -234,13 +234,33 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'project.projectDivisi',
                 'project.projectSektor',
                 'periode',
-                'projectRisks.projectRiskAnalisa',
+                'projectRisks.peristiwaRisiko',
+                'projectRisks.projectRiskAnalisa.skalaDampakObj',
+                'projectRisks.projectRiskAnalisa.skalaDampakResidualObj',
+                'projectRisks.projectRiskAnalisa.skalaProbabilitas',
+                'projectRisks.projectRiskAnalisa.skalaProbabilitasResidual',
                 'projectRisks.projectRiskMonitorings' => function($query) {
                     $query->orderBy('id', 'desc');
                     $query->with('skalaProbabilitas');
                 },
             ])
             ->findOrFail($resource);
+
+        $status = request()->query('status');
+        $risks = $projectPeriode->projectRisks;
+
+        if ($status === 'open') {
+            $risks = $risks->where('is_closed', 0);
+        } elseif ($status === 'closed') {
+            $risks = $risks->where('is_closed', 1);
+        }
+
+        $sortedRisks = $risks->sortByDesc(function ($risk) {
+            // Beri nilai default -1 jika tidak ada analisa/skala agar tidak error dan ditaruh di bawah
+            return $risk->projectRiskAnalisa?->skala_risiko ?? -1;
+        });
+
+        $projectPeriode->setRelation('projectRisks', $sortedRisks);
 
         $projectPeriode->projectRisks->each(function($projectRisk) {
             $projectRisk->append('currentRiskMapsMonth');

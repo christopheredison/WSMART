@@ -39,6 +39,7 @@ class DatabaseSeeder extends Seeder
             PenilaianEfektivitasKontrolSeeder::class,
             SkalaKinerjaSeeder::class,
             SkalaKPMRSeeder::class,
+            SkalaParameterSeeder::class,
         ]);
     }
 }
