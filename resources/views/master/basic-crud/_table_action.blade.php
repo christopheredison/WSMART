@@ -34,6 +34,11 @@ if (!(!$permissions || \Gate::any($permissions))) {
         {!! $action['label'] !!}
     </a>
     @break
+@case('verifikasi')
+    <button type="button" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'btn btn-link' }}" onclick="showVerifikasiModal({{ $id }}, '{{ addslashes($item->peristiwa_risiko ?? '') }}', '{{ addslashes($item->deskripsi_peristiwa_risiko ?? '') }}')" data-bs-toggle="tooltip" title="{{ $action['title'] ?? 'Verifikasi Risiko' }}">
+        {!! $action['label'] !!}
+    </button>
+    @break    
 @case('change_to_led')
     <button type="button" class="btn btn-link btn-muted-primary  btn-action px-1 py-0" data-action="change_to_led" data-id="{{ $id }}">
         <span>{!! $action['label'] !!}</span>

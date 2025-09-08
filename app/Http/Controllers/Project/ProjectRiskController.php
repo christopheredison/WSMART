@@ -38,6 +38,13 @@ use App\Imports\TenderTemplateImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use App\Models\SasaranProyek;
+use App\Models\DataBatch;
+use App\Models\RiskNote;
+use App\Models\ApprovalLog;
+use App\Models\ApprovalFlow;
+use App\Models\ApprovalStep;
+use App\Models\DataBatchNotes;
+
 
 class ProjectRiskController extends BasicCRUDController
 {
@@ -91,8 +98,16 @@ class ProjectRiskController extends BasicCRUDController
             'searchable' => false,
             'render' => '(data, type, row) => row.project_risk_analisa?.skala_probabilitas?.skala || "-"',
         ],
+        //tambahkan untuk eksposure risiko
+        'eksposur_risiko' => [
+            'label' => 'Eksposur Risiko',
+            'data' => 'projectRiskAnalisa.eksposur_risiko',
+            'sortable' => true,
+            'searchable' => false,
+            'render' => '(data, type, row) => row.project_risk_analisa?.eksposur_risiko ? new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(row.project_risk_analisa.eksposur_risiko) : "-"',
+        ],
         'nilai_risiko' => [
-            'label' => 'Nilai Risiko',
+            'label' => 'Skala Risiko',
             'data' => 'projectRiskAnalisa.skala_risiko',
             'sortable' => true,
             'searchable' => false,
@@ -105,13 +120,60 @@ class ProjectRiskController extends BasicCRUDController
             'searchable' => false,
             'render' => '(data, type, row) => data || "-"',
         ],
+        'status_risiko' => [
+            'label' => 'Status',
+            'data' => 'status',
+            'sortable' => false,
+            'searchable' => false,
+            'render' => '(data, type, row) => {
+                if (data === 0 || data === 1) return "Draft";
+                if (data === 2) return "On Review";
+                if (data === 3 || data === 4) return "Accepted";
+                if (data === 5) return "Need Revision or Rejected";
+                return "-";
+            }',
+        ],
+
     ];
 
     public function index() {
+
+        $projectId = request()->route('project');
+        $periodeId = 0;
+        $batchNotes = null;
+        $user = request()->user();
+        $levelId = $user->level_id;
+
+        // Cari ApprovalFlow untuk unit ini
+        $approvalFlow = ApprovalFlow::where('project_id', $projectId)
+            ->whereNull('unit_id')
+            ->first();
+        $min_verification = 2;
+        if ($approvalFlow) {
+            $min_verification = $approvalFlow->min_verification;
+        }
+
+        $dataBatch = DataBatch::where('project_id', $projectId)
+                      ->where('periode_id', $periodeId)
+                      ->where('type', 2)
+                      ->where('finish', false)
+                      ->first();
+
+        if(!$dataBatch){
+            $dataBatch = DataBatch::create([
+                'project_id' => $projectId,
+                'periode_id' => $periodeId,
+                'type' => 2,
+                'status' => DataBatch::STATUS_PROSES,
+                'step_verification' => 0,
+                'finish' => false
+            ]);
+        }
+        $status = $dataBatch->status;
+
         $this->baseRouteParams = ['project' => request()->route('project')];
 
         $projectPeriodeList = ProjectPeriodeList::with('project')->findOrFail(request()->route('project'));
-        $user = request()->user();
         $this->indexSubtitle = $projectPeriodeList->project->project_name;
 
         if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriodeList))) {
@@ -126,8 +188,10 @@ class ProjectRiskController extends BasicCRUDController
         $this->callbackQuery = function($query) {
             $query->leftJoin('project_risk_analisas', 'project_risk_analisas.risiko_id', '=', 'project_risks.id')
                 ->where('project_risks.project_periode_list_id', request()->route('project'))
-                ->with('peristiwaRisiko', 'projectRiskAnalisa.skalaProbabilitas');
-        };        
+                ->with('peristiwaRisiko', 'projectRiskAnalisa.skalaProbabilitas')
+                ->orderBy('project_risk_analisas.skala_risiko', 'desc')
+                ->orderBy('project_risk_analisas.eksposur_risiko', 'desc');
+        };
 
         $this->availableFilters = [
             'peristiwa_risiko_id' => [
@@ -192,36 +256,61 @@ class ProjectRiskController extends BasicCRUDController
                 'title' => 'View Risiko'
             ];
 
-            $this->tableActions[] = [
-                'label' => '<span class="bx bx-analyse text-warning"></span>',
-                'btn_icon' => true,
-                'action' => 'link',
-                'url' => route('projects.risks.analisa', ['project' => request()->route('project'), 'risk' => ':id']),
-                'title' => 'Analisa Risiko'
-            ];
-            
-            $this->tableActions[] = [
-                'label' => '<span class="bx bx-task text-primary"></span>',
-                'btn_icon' => true,
-                'action' => 'link',
-                'url' => route('projects.risks.rencana', ['project' => request()->route('project'), 'risk' => ':id']),
-                'title' => 'Rencana Perlakuan Risiko'
-            ];
+            //$levelId = 7;
 
-            $this->tableActions[] = [
-                'label' => '<span class="bx bx-edit"></span>',
-                'btn_icon' => true,
-                'action' => 'edit',
-                'permissions' => ['project_risk_edit'],
-            ];
+            if(($status==1 || $status==5) && $levelId==6){//on proses/revisi dan level = RO
+                $active_state = null;
+                if($status == 5) {
+                    // Jika status batch 5, maka status risk juga harus 5
+                    $active_state = 'function(id, type, row) { return row.status == 5; }';
+                }
+
+                $this->tableActions[] = [
+                    'label' => '<span class="bx bx-analyse text-warning"></span>',
+                    'btn_icon' => true,
+                    'action' => 'link',
+                    'url' => route('projects.risks.analisa', ['project' => request()->route('project'), 'risk' => ':id']),
+                    'title' => 'Analisa Risiko',
+                    'active_state' => $active_state
+                ];
+
+                $this->tableActions[] = [
+                    'label' => '<span class="bx bx-task text-primary"></span>',
+                    'btn_icon' => true,
+                    'action' => 'link',
+                    'url' => route('projects.risks.rencana', ['project' => request()->route('project'), 'risk' => ':id']),
+                    'title' => 'Rencana Perlakuan Risiko',
+                    'active_state' => $active_state
+                ];
+
+                $this->tableActions[] = [
+                    'label' => '<span class="bx bx-edit"></span>',
+                    'btn_icon' => true,
+                    'action' => 'edit',
+                    'permissions' => ['project_risk_edit'],
+                    'active_state' => $active_state
+                ];
+            }
+            else if($status==2 && $levelId==7){//on verif && level = ROW/P
+                $active_state = null;
+                $active_state = 'function(id, type, row) { return row.status == 2; }';
+                $this->tableActions[] = [
+                    'label' => '<span class="bx bx-check-shield text-success"></span>',
+                    'btn_icon' => true,
+                    'action' => 'verifikasi',
+                    'title' => 'Verifikasi Risiko',
+                    'active_state' => $active_state,
+                    //'permissions' => ['project_risk_edit'],
+                ];
+            }
         }
 
-        if (Gate::check('project_risk_delete')) {
+        if (Gate::check('project_risk_delete') && $status==1) {
             $this->tableLegend[] = [
                 'icon' => '<span class="bx bx-trash text-danger"></span>',
                 'label' => 'Hapus'
             ];
-            
+
             $this->tableActions[] = [
                 'label' => '<span class="bx bx-trash text-danger"></span>',
                 'btn_icon' => true,
@@ -237,12 +326,28 @@ class ProjectRiskController extends BasicCRUDController
         ];
 
         $average = (float) ProjectRisk::where('project_periode_list_id', request()->route('project'))->avg('skala_risiko');
+        // Menghitung rata-rata eksposur risiko dari data dengan kategori dampak Kuantitatif
+        $projectRiskIds = ProjectRisk::where('project_periode_list_id', request()->route('project'))
+            ->pluck('id');
+
+        $averageExposure = (float) ProjectRiskAnalisa::whereIn('risiko_id', $projectRiskIds)
+            ->where('kategori_dampak', ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF)
+            ->avg('eksposur_risiko');
+
+        //dd($averageExposure);
 
         $this->tableColumns['peristiwa_risiko']['render'] = <<< JS
             (data, type, row) => {
                 let add = '';
-                if (row.skala_risiko >= $average) {
-                    add = '<span class="badge bg-primary"  data-bs-toggle="tooltip" title="Rekomendasi Risiko">!</span> ';
+                // if (row.skala_risiko >= $average) {
+                //     add = '<span class="badge bg-primary">!</span> ';
+                // }
+                if (row.project_risk_analisa?.kategori_dampak === 'Kuantitatif' &&
+                    row.project_risk_analisa?.eksposur_risiko >= $averageExposure) {
+                    add = '<span class="badge bg-primary">!</span> ';
+                } else if (row.project_risk_analisa?.kategori_dampak === 'Kualitatif' &&
+                    row.skala_risiko >= 20) {
+                    add = '<span class="badge bg-primary">!</span> ';
                 }
                 return add + (row.peristiwa_risiko?.title || '-');
             }
@@ -256,12 +361,54 @@ class ProjectRiskController extends BasicCRUDController
                 };
                 return formatCurrency(row.project_risk_analisa?.nilai_dampak);
             }
-            JS;    
+            JS;
+
+        //$routeUrl = route('projects.risks.send');
+        $routeUrl = ($levelId == 7 && $status == 2) ? route('projects.risks.eskalasi') : route('projects.risks.send');
+
+        $csrfToken = csrf_token();
+        $disabledAttr = '';
+        if (!((($status == 1 || $status == 5) && $levelId == 6) || ($status == 2 && $levelId == 7))) {
+            $disabledAttr = ' disabled';
+        }
+        $buttonText = ($status == 5) ? 'Kirim Perbaikan' : 'Kirim Risiko';
+        $sendType = ($status == 5) ? 'perbaikan' : 'risiko';
+        // Format nilai eksposur risiko dengan format Rupiah dan pemisah ribuan
+        $formattedAverageExposure = 'Rp ' . number_format($averageExposure, 0, ',', '.');
 
         $this->cardFooter = <<<HTML
-            <div>
-                <strong>Rata-rata:</strong> <span id="average-risk-value">$average</span>
+            <div class="d-flex flex-column">
+                <div>
+                    <strong>Rata-rata Eksposure Risiko (Kuantitatif):</strong>
+                    <span id="average-risk-value">{$formattedAverageExposure}</span>
+                </div>
+                <div class="mt-3">
+                    <form id="send-form" action="{$routeUrl}" method="POST" class="d-inline-block">
+                        <input type="hidden" name="_token" value="{$csrfToken}">
+                        <input type="hidden" name="project_id" value="{$projectId}">
+                        <input type="hidden" name="send_type" value="{$sendType}">
+                        <button id="send-button" type="button" class="btn btn-submit btn-arrow-right"{$disabledAttr}>{$buttonText}</button>
+                    </form>
+                </div>
             </div>
+            <script>
+                document.getElementById('send-button').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: 'Konfirmasi',
+                        text: 'Apakah Anda yakin ingin mengirim {$sendType} ini?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Kirim',
+                        cancelButtonText: 'Batal',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            document.getElementById('send-form').submit();
+                        }
+                    });
+                });
+            </script>
             HTML;
 
         $this->defaultOrder = [[7, 'desc']];
@@ -272,6 +419,12 @@ class ProjectRiskController extends BasicCRUDController
           'title' => 'Upload Risiko Tender dari Excel',
           'instructions' => 'Pastikan file Excel Anda memiliki template yang sesuai.',
           'templateUrl' => route('download-tender-template'),
+        ];
+
+        $this->extraViewData = [
+            'status' => $status,
+            'levelId' => $levelId,
+            // tambahkan data lain jika diperlukan
         ];
 
         return parent::index();
@@ -296,9 +449,9 @@ class ProjectRiskController extends BasicCRUDController
         $kontrolEksistings = KontrolEksisting::get();
         $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();
         $sasaranProyeks = SasaranProyek::get();
-        
+
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
-        
+
         return view('project-risk.create', compact('periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos', 'sasaranProyeks'));
     }
 
@@ -379,7 +532,11 @@ class ProjectRiskController extends BasicCRUDController
                 'kategori_risiko_id' => $request->kategori_risiko_id,
                 'jenis_risiko_id' => $request->jenis_risiko_id,
                 'kontrol_eksisting' => '',
-                'wbs' => $request->wbs
+                'wbs' => $request->wbs,
+                //penambahan untuk status awal input
+                'status_risiko' => '0',
+                'status_progress'  => '0',
+                'status' => 1
             ];
 
             $projectRisk = ProjectRisk::create($toStore);
@@ -474,9 +631,9 @@ class ProjectRiskController extends BasicCRUDController
         $kontrolEksistingIds = !empty($projectRisk->kontrol_eksisting) ? explode(',', $projectRisk->kontrol_eksisting) : [];
 
         $kontrolEksistings = KontrolEksisting::whereIn('id', $kontrolEksistingIds)->get();
-        
+
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
-        
+
         $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();
 
         return view('project-risk.edit', compact('projectRisk', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos', 'sasaranProyeks'));
@@ -530,7 +687,7 @@ class ProjectRiskController extends BasicCRUDController
             } else {
                 $targetCapaianKinerja = $request->target_capaian_kinerja;
             }
-            
+
             $toUpdate = [
                 'unit_type_id' => $user->unit_type_id,
                 'unit_id' => $user->unit_id,
@@ -643,7 +800,7 @@ class ProjectRiskController extends BasicCRUDController
         $minTahun = !empty($tahunMonitorings) ? min($tahunMonitorings) : date('Y');
         $maxTahun = !empty($tahunMonitorings) ? max($tahunMonitorings) : date('Y');
         $tahunMonitorings = range($minTahun, $maxTahun);
-        
+
         $currentRiskMaps = $projectRisk->currentRiskMapsMonth;
         $formattedCurrentRiskMaps = [];
         $currentValue = $projectRisk->currentRiskMaps['inherent'] ?? null;
@@ -654,11 +811,11 @@ class ProjectRiskController extends BasicCRUDController
                     if ($nextValue = ($projectRisk->currentRiskMapsMonth[$tahun . '-' . $month] ?? null)) {
                         $currentValue = $nextValue;
                     }
-    
+
                     $currentValue['tahun'] = $tahun;
                     $currentValue['quarter'] = ceil($month / 3);
                     $currentValue['month'] = $month;
-    
+
                     $formattedCurrentRiskMaps[$projectRisk->id][$tahun][] = $currentValue;
                 }
             }
@@ -676,17 +833,17 @@ class ProjectRiskController extends BasicCRUDController
 
         if($project->type==2){
             $risk_tolerance = array_filter([
-                $project->rapk_100_rp, 
-                $project->rapk_70_90_rp, 
-                $project->rapk_30_50_rp, 
-                $project->rapk_0_10_rp, 
+                $project->rapk_100_rp,
+                $project->rapk_70_90_rp,
+                $project->rapk_30_50_rp,
+                $project->rapk_0_10_rp,
                 $project->rapk
             ], function ($value) {
                 return $value !== null && $value != 0;
             });
-            
+
             $risk_tolerance = reset($risk_tolerance) ?: 0;
-            
+
             $risk_tolerance = 2/100 *($risk_tolerance);
         } else if($project->type==1){
             $risk_tolerance = $project->rapt ?? 0;
@@ -699,13 +856,13 @@ class ProjectRiskController extends BasicCRUDController
             $risk_limit = ($project->meta['omset'] ?? 0) * 0.03;
         } else{
             $risk_limit = 1/100*$risk_tolerance;
-        }  
+        }
 
         // dd($risk_limit, $risk_tolerance);
         return view('project-risk.view', compact(
-            'projectRisk', 
-            'tahunMonitorings', 
-            'formattedCurrentRiskMaps', 
+            'projectRisk',
+            'tahunMonitorings',
+            'formattedCurrentRiskMaps',
             'riskMaps',
             'risk_limit',
             'risk_tolerance',
@@ -785,25 +942,25 @@ class ProjectRiskController extends BasicCRUDController
         $sum_risk = $sum_risk + 1;
         //dd($project);
         if($project->type==2){
-            // $risk_tolerance = $project->rapk_100_rp 
-            //     ?? $project->rapk_70_90_rp 
-            //     ?? $project->rapk_30_50_rp 
-            //     ?? $project->rapk_0_10_rp 
-            //     ?? $project->rapk 
+            // $risk_tolerance = $project->rapk_100_rp
+            //     ?? $project->rapk_70_90_rp
+            //     ?? $project->rapk_30_50_rp
+            //     ?? $project->rapk_0_10_rp
+            //     ?? $project->rapk
             //     ?? 0;
 
             $risk_tolerance = array_filter([
-                $project->rapk_100_rp, 
-                $project->rapk_70_90_rp, 
-                $project->rapk_30_50_rp, 
-                $project->rapk_0_10_rp, 
+                $project->rapk_100_rp,
+                $project->rapk_70_90_rp,
+                $project->rapk_30_50_rp,
+                $project->rapk_0_10_rp,
                 $project->rapk
             ], function ($value) {
                 return $value !== null && $value != 0;
             });
-            
+
             $risk_tolerance = reset($risk_tolerance) ?: 0;
-            
+
             $risk_tolerance = 2/100 *($risk_tolerance);
         }
         else if($project->type==1){
@@ -895,25 +1052,25 @@ class ProjectRiskController extends BasicCRUDController
         $risk_limit = 0;
 
         if($project->type==2){
-            // $risk_tolerance = $project->rapk_100_rp 
-            //     ?? $project->rapk_70_90_rp 
-            //     ?? $project->rapk_30_50_rp 
-            //     ?? $project->rapk_0_10_rp 
-            //     ?? $project->rapk 
+            // $risk_tolerance = $project->rapk_100_rp
+            //     ?? $project->rapk_70_90_rp
+            //     ?? $project->rapk_30_50_rp
+            //     ?? $project->rapk_0_10_rp
+            //     ?? $project->rapk
             //     ?? 0;
 
             $risk_tolerance = array_filter([
-                $project->rapk_100_rp, 
-                $project->rapk_70_90_rp, 
-                $project->rapk_30_50_rp, 
-                $project->rapk_0_10_rp, 
+                $project->rapk_100_rp,
+                $project->rapk_70_90_rp,
+                $project->rapk_30_50_rp,
+                $project->rapk_0_10_rp,
                 $project->rapk
             ], function ($value) {
                 return $value !== null && $value != 0;
             });
-            
+
             $risk_tolerance = reset($risk_tolerance) ?: 0;
-            
+
             $risk_tolerance = 2/100 *($risk_tolerance);
         }
         else if($project->type==1){
@@ -925,7 +1082,7 @@ class ProjectRiskController extends BasicCRUDController
         }
 
         if($request->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF){
-            
+
             $sum_risk = ProjectRisk::where('periode_id', $projectPeriodeList->periode_id)
                 ->where('project_id', $projectPeriodeList->project_id)
                 ->where('id', '!=', $projectRisk->id)
@@ -934,13 +1091,13 @@ class ProjectRiskController extends BasicCRUDController
                 })
                 ->count();
             $sum_risk = $sum_risk + 1;
-            
+
             //$risk_limit = $projectPeriodeList->risk_limit;
             $risk_limit = ($projectPeriodeList->project->meta['omset'] ?? 0) * 0.03;
 
             $skala_dampak = $this->hitungSkalaDampak($nilai_dampak, $risk_limit);
             $skala_dampak_residual = $this->hitungSkalaDampak($nilai_dampak_residual, $risk_limit);
-            
+
             $toUpdate['skala_dampak'] = $skala_dampak;
             $toUpdate['skala_dampak_residual'] = $skala_dampak_residual;
             $toUpdate['nilai_dampak'] = $nilai_dampak;
@@ -955,7 +1112,7 @@ class ProjectRiskController extends BasicCRUDController
             $toUpdate['risk_limit'] = 1/100*$risk_tolerance;
         }
 
-        
+
         //dd($toUpdate);
         $skalaInherent = SkalaParameter::find($request->skala_parameter_id);
         $skalaResidual = SkalaParameter::find($request->skala_parameter_residual_id);
@@ -1012,14 +1169,14 @@ class ProjectRiskController extends BasicCRUDController
             $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'] / 100;
             $toUpdate['eksposur_risiko_residual'] = $toUpdate['nilai_dampak_residual'] * $toUpdate['nilai_probabilitas_residual'] / 100;
         }
-  
+
         $analisa->update($toUpdate);
 
         $projectRisk->update([
             'skala_risiko' => $toUpdate['skala_risiko'],
             'level_risiko' => $toUpdate['level_risiko'],
         ]);
-        
+
         $projectPeriodeList->recalculateAnalisa($risk_limit);
         $projectPeriodeList->refreshNilai();
         //dd($toUpdate);
@@ -1035,7 +1192,7 @@ class ProjectRiskController extends BasicCRUDController
         ])->findOrFail(request()->route('risk'));
 
         //dd($projectRisk->penyebabRisikoProjects);
-    
+
         $projectPeriodeList = ProjectPeriodeList::findOrFail(request()->route('project'));
 
         $user = request()->user();
@@ -1145,7 +1302,7 @@ class ProjectRiskController extends BasicCRUDController
             'biaya_perlakuan_risiko' => $validated['biaya_perlakuan_risiko'],
             'pic' => $jabatan_name,
             'pic_jabatan_id' => $validated['pic'],
-            'divisi_terkait' => $validated['divisi_terkait'] ?? [], 
+            'divisi_terkait' => $validated['divisi_terkait'] ?? [],
             'timeline_perlakuan_risiko_start' => $startDate,
             'timeline_perlakuan_risiko_end' => $endDate,
             'opsi_perlakuan_risiko' => $validated['opsi_perlakuan_risiko'],
@@ -1165,7 +1322,7 @@ class ProjectRiskController extends BasicCRUDController
             // Cari data berdasarkan ID dan hapus
             $perlakuan = PerlakuanPenyebabRisiko::findOrFail($id);
             $perlakuan->delete();
-    
+
             // Kembalikan respons JSON
             return response()->json([
                 'message' => 'Rencana perlakuan berhasil dihapus.'
@@ -1230,7 +1387,7 @@ class ProjectRiskController extends BasicCRUDController
             if($jabatan){
                 $jabatan_name = $jabatan->name;
             }
-            
+
             $data = [
                 'rencana_perlakuan_risiko' => $validated['xrencana_perlakuan_risiko'],
                 'output_perlakuan_risiko' => $validated['xoutput_perlakuan_risiko'],
@@ -1332,7 +1489,7 @@ class ProjectRiskController extends BasicCRUDController
             $modifier = new TenderTemplateImport($templatePath, $peristiwaRisikoData, $jenisRisikoData);
             $spreadsheet = $modifier->getModifiedSpreadsheet();
             $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-        
+
             ob_start();
             $writer->save('php://output');
             $fileContents = ob_get_clean();
@@ -1345,11 +1502,11 @@ class ProjectRiskController extends BasicCRUDController
             return response()->json(['error' => 'Error processing template: ' . $e->getMessage()], 500);
         }
     }
-    
+
     public function getKontrolEksisting(Request $request)
     {
         $kontrolEksistings = KontrolEksisting::where('peristiwa_risiko_id', $request->peristiwa_risiko_id)->get();
-        
+
         return response()->json($kontrolEksistings);
     }
 
@@ -1362,9 +1519,9 @@ class ProjectRiskController extends BasicCRUDController
         if ($risk_limit <= 0) {
             return 5; // Jika risk limit 0 atau negatif, default ke High (5)
         }
-    
+
         $persentase = ($nilai_dampak / $risk_limit) * 100;
-    
+
         if ($persentase <= 20) {
             return 1; // Low
         } elseif ($persentase > 20 && $persentase <= 40) {
@@ -1400,11 +1557,11 @@ class ProjectRiskController extends BasicCRUDController
     {
         try {
             $projectRisk = ProjectRisk::findOrFail($request->project_risk_id);
-            
+
             // Lakukan perhitungan Poisson di sini
             // Contoh sederhana (sesuaikan dengan kebutuhan):
             $probability = $this->calculatePoissonProbability($projectRisk);
-            
+
             return response()->json([
                 'success' => true,
                 'probability' => $probability
@@ -1421,11 +1578,11 @@ class ProjectRiskController extends BasicCRUDController
     {
         try {
             $projectRisk = ProjectRisk::findOrFail($request->project_risk_id);
-            
+
             // Lakukan perhitungan Poisson di sini
             // Contoh sederhana (sesuaikan dengan kebutuhan):
             $probability = $this->calculatePoissonProbabilityRes($projectRisk);
-            
+
             return response()->json([
                 'success' => true,
                 'probability' => $probability
@@ -1447,20 +1604,20 @@ class ProjectRiskController extends BasicCRUDController
                 throw new \Exception('Project tidak ditemukan');
             }
             $projectSektorId = $project->project_sektor_id;
-    
+
             // 2. Ambil tahun dari meta project atau gunakan tahun berjalan
             $tahun = date('Y'); // default tahun berjalan
             // if ($project->meta && isset($project->meta['start_date'])) {
             //     $tahun = Carbon::parse($project->meta['start_date'])->year;
             // }
-    
+
             // 3. Ambil peristiwa_risiko_id
             $peristiwaRisikoId = $projectRisk->peristiwa_risiko_id;
-    
+
             // 4 & 5. Ambil data kejadian 5 tahun kebelakang
             $tahunMulai = $tahun - 5;
             $tahunAkhir = $tahun - 1;
-    
+
             // Ambil data kejadian dan group by tahun
             $kejadianPerTahun = LossEventProject::where('peristiwa_risiko_id', $peristiwaRisikoId)
                 ->where('project_sektor_id', $projectSektorId)
@@ -1470,20 +1627,20 @@ class ProjectRiskController extends BasicCRUDController
                 ->groupBy('tahun')
                 ->pluck('jumlah', 'tahun')
                 ->toArray();
-    
+
             // 6. Isi tahun yang kosong dengan nilai 0
             $dataKejadian = [];
             for ($t = $tahunMulai; $t <= $tahunAkhir; $t++) {
                 $dataKejadian[$t] = $kejadianPerTahun[$t] ?? 0;
             }
-    
+
             // 7. Hitung probabilitas Poisson
             $lambda = array_sum($dataKejadian) / count($dataKejadian); // rata-rata kejadian per tahun
-            
+
             // Hitung probabilitas minimal 1 kejadian (P(X ≥ 1) = 1 - P(X = 0))
             $probabilitas = (1 - exp(-$lambda)) * 100;
             $probabilitasFinal = min(round($probabilitas, 2), 100);
-    
+
             // Log calculation details
             $logData = [
                 'timestamp' => Carbon::now()->format('Y-m-d H:i:s'),
@@ -1501,12 +1658,12 @@ class ProjectRiskController extends BasicCRUDController
                     ->where('tahun', '<=', $tahunAkhir)
                     ->toSql()
             ];
-    
+
             // Write to poisson.log
             Log::channel('poisson')->info('Poisson Calculation', $logData);
-            
+
             return $probabilitasFinal;
-    
+
         } catch (\Exception $e) {
             \Log::error('Error in calculatePoissonProbability: ' . $e->getMessage());
             throw new \Exception('Gagal menghitung probabilitas: ' . $e->getMessage());
@@ -1522,20 +1679,20 @@ class ProjectRiskController extends BasicCRUDController
                 throw new \Exception('Project tidak ditemukan');
             }
             $projectSektorId = $project->project_sektor_id;
-    
+
             // 2. Ambil tahun dari meta project atau gunakan tahun berjalan
             $tahun = date('Y'); // default tahun berjalan
             // if ($project->meta && isset($project->meta['start_date'])) {
             //     $tahun = Carbon::parse($project->meta['start_date'])->year;
             // }
-    
+
             // 3. Ambil peristiwa_risiko_id
             $peristiwaRisikoId = $projectRisk->peristiwa_risiko_id;
-    
+
             // 4 & 5. Ambil data kejadian 5 tahun kebelakang
             $tahunMulai = $tahun - 4;
             $tahunAkhir = $tahun - 1;
-    
+
             // Ambil data kejadian dan group by tahun
             $kejadianPerTahun = LossEventProject::where('peristiwa_risiko_id', $peristiwaRisikoId)
             ->where('project_sektor_id', $projectSektorId)
@@ -1551,14 +1708,14 @@ class ProjectRiskController extends BasicCRUDController
             for ($t = $tahunMulai; $t <= $tahun; $t++) {
                 $dataKejadian[$t] = $kejadianPerTahun[$t] ?? 0;
             }
-    
+
             //Hitung probabilitas Poisson
             $lambda = array_sum($dataKejadian) / count($dataKejadian); // rata-rata kejadian per tahun
-            
+
             // Hitung probabilitas minimal 1 kejadian (P(X ≥ 1) = 1 - P(X = 0))
             $probabilitas = (1 - exp(-$lambda)) * 100;
             $probabilitasFinal = min(round($probabilitas, 2), 100);
-    
+
             // Log calculation details
             $logData = [
                 'timestamp' => Carbon::now()->format('Y-m-d H:i:s'),
@@ -1576,21 +1733,447 @@ class ProjectRiskController extends BasicCRUDController
                     ->where('tahun', '<=', $tahunAkhir)
                     ->toSql()
             ];
-    
+
             // Write to poisson.log
             Log::channel('poisson')->info('Poisson Calculation', $logData);
-            
+
             return $probabilitasFinal;
-    
+
         } catch (\Exception $e) {
             \Log::error('Error in calculatePoissonProbability: ' . $e->getMessage());
             throw new \Exception('Gagal menghitung probabilitas: ' . $e->getMessage());
         }
     }
 
-    public function getSkalaParameters($type)
+    public function send(Request $request)
     {
-        $scales = SkalaParameter::where('type_parameter', $type)->orderBy('tingkat')->get();
-        return response()->json($scales);
+        $user = auth()->user();
+        $project_id = $request->input('project_id');
+        $send_type = $request->input('send_type', 'risiko'); // Default ke 'risiko' jika tidak ada
+        $project = Project::find($project_id);
+        $level_id = $user->level_id;
+        $periode_id = 0;
+
+        $appFlow = $this->getFlowData($project_id, $level_id);
+        $step_order = $appFlow['step_order'];
+        $min_verification = $appFlow['min_verification'];
+        $approval_step_id = $appFlow['approval_step_id'];
+
+        $risikos = ProjectRisk::where('project_id', $project_id)
+                ->where('periode_id', $periode_id)
+                ->get();
+
+        $belumLengkap = false;
+        $idRisikoBelumLengkap = [];
+
+        foreach ($risikos as $risiko) {
+            //cek kelengkapan risiko
+            // Cek apakah risiko memiliki analisis risiko
+            if (!$risiko->projectRiskAnalisa) {
+                $belumLengkap = true;
+                $idRisikoBelumLengkap[] = $risiko->id;
+                continue;
+            }
+
+            // Cek apakah semua penyebab risiko memiliki perlakuan
+            $penyebabRisikos = $risiko->penyebabRisikoProjects;
+            if ($penyebabRisikos->isEmpty()) {
+                $belumLengkap = true;
+                $idRisikoBelumLengkap[] = $risiko->id;
+                continue;
+            }
+
+            // Cek apakah setiap penyebab risiko memiliki perlakuan
+            foreach ($penyebabRisikos as $penyebabRisiko) {
+                if ($penyebabRisiko->perlakuanPenyebabRisiko->isEmpty()) {
+                    $belumLengkap = true;
+                    $idRisikoBelumLengkap[] = $risiko->id;
+                    break;
+                }
+            }
+        }
+        //dd($risikos);
+        if ($belumLengkap) {
+            // Kumpulkan deskripsi peristiwa risiko yang belum lengkap
+            $risikoTidakLengkap = [];
+            foreach ($idRisikoBelumLengkap as $id) {
+                $risiko = $risikos->where('id', $id)->first();
+                if ($risiko) {
+                    // Ambil deskripsi peristiwa risiko
+                    $deskripsi = $risiko->deskripsi_peristiwa_risiko ?:
+                                 ($risiko->peristiwaRisiko ? $risiko->peristiwaRisiko->title : 'Risiko #' . $risiko->id);
+                    $risikoTidakLengkap[] = $deskripsi;
+                }
+            }
+
+            // Buat pesan error dengan daftar risiko yang belum lengkap
+            $pesanError = 'Terdapat risiko yang belum dianalisa atau belum memiliki rencana perlakuan: <ul>';
+            foreach ($risikoTidakLengkap as $deskripsi) {
+                $pesanError .= '<li>' . $deskripsi . '</li>';
+            }
+            $pesanError .= '</ul>Silahkan lengkapi terlebih dahulu.';
+
+            return redirect()->route('projects.risks.index', [
+                'project' => $project_id  // Changed from 'project_id' to 'project'
+            ])
+                ->with('error', $pesanError);
+        }
+
+        $dataBatch = DataBatch::where('project_id', $project_id)
+                ->where('periode_id', $periode_id)
+                ->where('type', 2)
+                ->orderBy('batch', 'desc')
+                ->first();
+
+        if ($send_type == 'perbaikan' && $dataBatch) {
+            $dataBatch->update([
+                'status' => DataBatch::STATUS_KIRIM,
+            ]);
+
+            //update semua project risk yang status=5 menjadi 2
+            ProjectRisk::where('project_id', $project_id)
+                ->where('periode_id', $periode_id)
+                ->where('status', ProjectRisk::STATUS_REJECTED) // STATUS_REJECTED = 5
+                ->update([
+                    'status' => ProjectRisk::STATUS_DIKIRIM, // STATUS_DIKIRIM = 2
+                ]);
+
+        } else if (!$dataBatch) {
+            // Jika belum ada, buat batch baru dengan nilai batch = 1
+            $batch = 1;
+
+            // Buat data batch baru
+            $newDataBatch = DataBatch::create([
+                'periode_id' => $periode_id,
+                'type' => 2, // type = 1 untuk unit/divisi
+                'project_id' => $uniproject_idt_id,
+                'batch' => $batch,
+                'status' => DataBatch::STATUS_KIRIM, // Status kirim
+                'step_verification' => 1,
+                'finish' => false
+            ]);
+        }
+        else if (!$dataBatch->finish) {
+            if($dataBatch->step_verification==null || $dataBatch->step_verification < 1){
+                // Jika sudah ada dan status belum finish
+                if($dataBatch->status != DataBatch::STATUS_PROSES){
+                    return redirect()->route('projects.risks.index', [
+                        'project' => $project_id
+                    ])->with('error', 'Masih ada data batch risiko yang sedang berproses. Silahkan tunggu hingga proses selesai.');
+                }
+                else{
+                    //update dataBatch
+                    $dataBatch->update([
+                        'status' => DataBatch::STATUS_KIRIM,
+                        'step_verification' => 1,
+                        'finish' => false
+                    ]);
+                }
+            }
+        }
+
+        if($dataBatch->status <= DataBatch::STATUS_KIRIM){
+            // Ubah semua risiko di identifikasi_risikos dengan status = 2 (Dikirim), status_risiko = 1, dan status_progress = 1
+            foreach ($risikos as $risiko) {
+                $risiko->update([
+                    'status' => ProjectRisk::STATUS_DIKIRIM, // Status dikirim
+                    'status_risiko' => 1,
+                    'status_progress' => 1,
+                    'step_verification' => 1
+                ]);
+            }
+        }
+
+        return redirect()->route('projects.risks.index', [
+                    'project' => $project_id
+                ])
+                    ->with('success', 'Pengiriman risiko berhasil dilakukan. Risiko telah dikirim untuk diverifikasi.');
+    }
+
+    private function getFlowData($project_id, $level_id)
+    {
+        $step_order = 0;
+        $min_verification = 2;
+        $approval_step_id = null;
+
+        // Jika bukan risk owner atau level_id null, kembalikan 0
+        if ($level_id == 1 || $level_id == null) {
+            return [
+                'step_order' => $step_order,
+                'min_verification' => $min_verification,
+                'approval_step_id' => $approval_step_id
+            ];
+        }
+
+        $approvalFlow = ApprovalFlow::where('project_id', $project_id)
+            ->whereNull('unit_id')
+            ->first();
+
+        if ($approvalFlow) {
+            $min_verification = $approvalFlow->min_verification;
+            $approvalStep = ApprovalStep::where('approval_flow_id', $approvalFlow->id)
+                ->where('level_id', $level_id)
+                ->first();
+            if ($approvalStep) {
+                $step_order = $approvalStep->step_order;
+                $approval_step_id = $approvalStep->id;
+            } else {
+                //default step order
+                if ($level_id == 2) {
+                    $step_order = 1;
+                } else if ($level_id == 3) {
+                    $step_order = 2;
+                }
+            }
+        } else {
+            //default step order jika tidak ada approval flow
+            if ($level_id == 2) {
+                $step_order = 1;
+            } else if ($level_id == 3) {
+                $step_order = 2;
+            }
+        }
+
+        return [
+            'step_order' => $step_order,
+            'min_verification' => $min_verification,
+            'approval_step_id' => $approval_step_id
+        ];
+    }
+
+    //verifikasi
+    public function verifikasi(Request $request, $id)
+    {
+        // $project_id = $request->input('project_id');
+        // $risiko = ProjectRisk::find($id);
+        // if (!$risiko) {
+        //     return redirect()->route('projects.risks.index', [
+        //         'project' => $project_id
+        //     ])->with('error', 'Risiko tidak ditemukan.');
+        // }
+        $projectRisk = ProjectRisk::findOrFail($id);
+        $project_id = $projectRisk->project_id;
+        $periode_id = $projectRisk->periode_id;
+
+        $user = auth()->user();
+        $level_id = $user->level_id;
+
+        $appFlow = $this->getFlowData($project_id, $level_id);
+        $step_order = $appFlow['step_order'];
+        $min_verification = $appFlow['min_verification'];
+        $approval_step_id = $appFlow['approval_step_id'];
+
+        // Validasi input
+        $request->validate([
+            'status_verifikasi' => 'required|in:terima,tolak',
+            'catatan_verifikasi' => 'required|string',
+        ]);
+
+        // if ($step_order == 0) {
+        //     return redirect()->route('projects.risks.index', ['project' => $project_id])
+        //         ->with('error', 'Anda tidak memiliki hak untuk melakukan verifikasi risiko');
+        // }
+
+        $step_order = 1;
+
+        //dd("step_order", $step_order);
+
+        // Ambil data batch
+        $dataBatch = DataBatch::where('project_id', $project_id)
+            ->where('periode_id', $periode_id ?? 0)
+            ->where('type', 2)
+            ->where('finish', false)
+            ->first();
+
+        if (!$dataBatch) {
+            return redirect()->back()->with('error', 'Data batch tidak ditemukan.');
+        }
+
+        // catat log disini
+        Log::channel('verification')->info('Verifikasi risiko dengan ID: ' . $projectRisk->id . ' oleh user dengan ID: ' . auth()->id());
+        Log::channel('verification')->info('Step Order: ' . $step_order);
+        Log::channel('verification')->info('Min Verification: ' . $min_verification);
+
+        // Proses verifikasi berdasarkan status
+        if ($request->status_verifikasi === 'terima') {
+            //catat log disini
+            Log::channel('verification')->info('Verifikasi risiko dengan ID: ' . $projectRisk->id . ' diterima oleh user dengan ID: ' . auth()->id());
+
+            //pengecekan jika step_order yang dimiliki level_id adalah sama dengan min_verification
+            if($step_order >= $min_verification){
+                // Jika diterima, update status menjadi terverifikasi
+                $identifikasiRisiko->update([
+                    'status' => ProjectRisk::STATUS_TERVERIFIKASI,
+                    'status_progress' => 3,
+                    'status_risiko' => 1, //valid
+                    'step_verification' => $step_order
+                ]);
+            }
+            else{
+                // Update status risiko menjadi terverifikasi
+                $projectRisk->update([
+                    'status' => ProjectRisk::STATUS_TUNGGU_VERIFIKASI,
+                    'status_progress' => 1,
+                    'step_verification' => $step_order + 1
+                ]);
+            }
+
+            //disini maka akan simpan approval logs
+            ApprovalLog::create([
+                'risk_id' => $projectRisk->id,
+                'approval_step_id' => $approval_step_id,
+                'type' => 2, // 1 untuk unit, 2 untuk project
+                'step_order' => $step_order,
+                'approved_by' => auth()->id(),
+                'approved_at' => now(),
+            ]);
+
+            //semua batch notes perlu diupdate sudah read jadi unread menjadi false
+            $batchNotes = DataBatchNotes::where('data_batch_id', $dataBatch->id)
+                ->where('step_order', $step_order)
+                ->update([
+                    'unread' => false
+                ]);
+
+            // Tambahkan catatan verifikasi
+            RiskNote::create([
+                'risiko_id' => $projectRisk->id,
+                'type' => 2,
+                'status' => 1,
+                'notes' => $request->catatan_verifikasi,
+                'user_id' => $user->id,
+            ]);
+
+            $message = 'Risiko berhasil diverifikasi dan diterima.';
+        } else {
+            Log::channel('verification')->info('Verifikasi risiko project dengan ID: ' . $projectRisk->id . ' ditolak oleh user dengan ID: ' . auth()->id());
+            // Update status risiko menjadi revisi (kembali ke draft)
+            $projectRisk->update([
+                'status' => ProjectRisk::STATUS_REJECTED,
+                'status_progress' => 2
+            ]);
+
+            $dataBatch->update([
+                    'status' => DataBatch::STATUS_REVISI,
+                ]);
+
+            //semua batch notes perlu diupdate sudah read jadi unread menjadi false
+            $batchNotes = DataBatchNotes::where('data_batch_id', $dataBatch->id)
+                ->where('step_order', $step_order)
+                ->update([
+                    'unread' => false
+                ]);
+
+            // Tambahkan catatan penolakan
+            RiskNote::create([
+                'risiko_id' => $projectRisk->id,
+                'type' => 2,
+                'status' => 2,
+                'notes' => $request->catatan_verifikasi,
+                'user_id' => $user->id,
+            ]);
+
+            // // Update status batch jika diperlukan
+            // if ($dataBatch->status == DataBatch::STATUS_VERIFIKASI) {
+            //     $dataBatch->update([
+            //         'status' => DataBatch::STATUS_REVISI
+            //     ]);
+            // }
+
+            $message = 'Risiko ditolak dan dikembalikan untuk revisi.';
+        }
+
+        // Cek apakah semua risiko sudah diverifikasi
+        // $pendingRisks = ProjectRisk::where('project_periode_list_id', $projectRisk->project_periode_list_id)
+        //     ->where('status', ProjectRisk::STATUS_DIKIRIM)
+        //     ->count();
+
+        // if ($pendingRisks == 0 && $dataBatch->status == DataBatch::STATUS_VERIFIKASI) {
+        //     // Semua risiko sudah diverifikasi, update status batch
+        //     $dataBatch->update([
+        //         'status' => DataBatch::STATUS_FINISH,
+        //         'finish' => true
+        //     ]);
+        // }
+
+        return redirect()->route('projects.risks.index', ['project' => $project_id])
+            ->with('success', $message);
+    }
+
+    public function eskalasi(Request $request)
+    {
+        $user = auth()->user();
+        $project_id = $request->input('project_id');
+        $project = Project::find($project_id);
+        $level_id = $user->level_id;
+        $periode_id = 0;
+
+        // Hanya user dengan level 7 yang bisa melakukan eskalasi
+        if ($level_id != 7) {
+            return redirect()->route('projects.risks.index', [
+                'project' => $project_id
+            ])->with('error', 'Anda tidak memiliki akses untuk melakukan eskalasi risiko.');
+        }
+
+        // Cek apakah semua risiko sudah memiliki status 3
+        $risikos = ProjectRisk::where('project_id', $project_id)
+                ->where('periode_id', $periode_id)
+                ->get();
+
+        $belumStatus3 = false;
+        $idRisikoBelumStatus3 = [];
+
+        foreach ($risikos as $risiko) {
+            if ($risiko->status != ProjectRisk::STATUS_TUNGGU_VERIFIKASI) { // STATUS_TUNGGU_VERIFIKASI = 3
+                $belumStatus3 = true;
+                $idRisikoBelumStatus3[] = $risiko->id;
+            }
+        }
+        if ($belumStatus3) {
+            // Kumpulkan deskripsi peristiwa risiko yang belum status 3
+            $risikoTidakStatus3 = [];
+            foreach ($idRisikoBelumStatus3 as $id) {
+                $risiko = $risikos->where('id', $id)->first();
+                if ($risiko) {
+                    // Ambil deskripsi peristiwa risiko
+                    $deskripsi = $risiko->deskripsi_peristiwa_risiko ?:
+                                ($risiko->peristiwaRisiko ? $risiko->peristiwaRisiko->title : 'Risiko #' . $risiko->id);
+                    $risikoTidakStatus3[] = $deskripsi;
+                }
+            }
+
+            // Buat pesan error dengan daftar risiko yang belum status 3
+            $pesanError = 'Terdapat risiko yang perlu direvisi atau diverifikasi:<br /><ul>';
+            foreach ($risikoTidakStatus3 as $deskripsi) {
+                $pesanError .= '<li>' . $deskripsi . '</li>';
+            }
+            $pesanError .= '</ul><br />Silahkan pastikan semua risiko sudah diverifikasi terlebih dahulu.';
+
+            return redirect()->route('projects.risks.index', [
+                'project' => $project_id
+            ])->with('error', $pesanError);
+
+            $appFlow = $this->getFlowData($project_id, $level_id);
+            $step_order = $appFlow['step_order'];
+
+            $dataBatch = DataBatch::where('project_id', $project_id)
+                ->where('periode_id', $periode_id)
+                ->where('type', 2)
+                ->orderBy('batch', 'desc')
+                ->first();
+
+            if ($dataBatch) {
+                $dataBatch->update([
+                    'status' => DataBatch::STATUS_VERIFIKASI,
+                    'step_verification' => $step_order + 1
+                ]);
+            }
+
+
+
+            return redirect()->route('projects.risks.index', [
+                'project' => $project_id
+            ])->with('success', 'Semua risiko berhasil dieskalasi dan diverifikasi.');
+        }
     }
 }
