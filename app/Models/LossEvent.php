@@ -12,6 +12,16 @@ class LossEvent extends Model
     protected $guarded = [];
     protected $table = 'loss_events';
 
+    public function periode()
+    {
+        return $this->belongsTo(Periode::class, 'periode_id');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_id');
+    }
+
     public function child()
     {
         return $this->hasMany(LossEventChild::class);

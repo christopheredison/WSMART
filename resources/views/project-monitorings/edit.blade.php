@@ -302,7 +302,7 @@
                                                 {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
                                               </span>
                                             </td>
-                                            <td class="display-progress inputmask-fixed">{{ $perlakuan->progress_rencana_perlakuan_risiko }}</td>
+                                            <td class="display-progress inputmask-fixed">{{ $perlakuan->progress_rencana_perlakuan_risiko ?? '-' }}</td>
                                             <td class="display-biaya inputmask-fixed">
                                               {{  $perlakuan->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
                                             </td>
@@ -719,7 +719,8 @@ $(document).ready(function() {
             $('#modalUpdateRealisasi :input[name="rencana_perlakuan_risiko"]').val(perlakuanPenyebab.rencana_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="biaya_perlakuan_risiko"]').val(perlakuanPenyebab.biaya_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="pic"]').val(perlakuanPenyebab.pic);
-            $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab.realisasi_biaya_perlakuan_risiko === null || perlakuanPenyebab.realisasi_biaya_perlakuan_risiko === '' ? perlakuanPenyebab.biaya_perlakuan_risiko : perlakuanPenyebab.realisasi_biaya_perlakuan_risiko);
+            // $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab.realisasi_biaya_perlakuan_risiko === null || perlakuanPenyebab.realisasi_biaya_perlakuan_risiko === '' ? perlakuanPenyebab.biaya_perlakuan_risiko : perlakuanPenyebab.realisasi_biaya_perlakuan_risiko);
+            $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab.realisasi_biaya_perlakuan_risiko ?? 0);
             $('#modalUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val(perlakuanPenyebab.progress_rencana_perlakuan_risiko);
             // $('#modalUpdateRealisasi :input[name="jenis_program_rkap"]').val(perlakuanPenyebab.jenis_program_rkap);
             // $('#modalUpdateRealisasi :input[name="jenis_program_rkap_id"]').val(perlakuanPenyebab.jenis_program_rkap_id);

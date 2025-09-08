@@ -139,9 +139,9 @@
                                         <select class="form-select" name="frekuensi_kejadian">
                                             <option value="">Pilih</option>
                                             @for($i=1; $i<=5; $i++)
-                                                <option value="{{ $i }}" {{ old('frekuensi_kejadian') == $i ? 'selected' : '' }}>{{ $i }} kali</option>
+                                                <option value="{{ $i }}" {{ old('frekuensi_kejadian') == $i ? 'selected' : '' }}>{{ $i }} kali per tahun</option>
                                             @endfor
-                                            <option value="6" {{ old('frekuensi_kejadian') == '6' ? 'selected' : '' }}>6 kali atau lebih</option>
+                                            <option value="6" {{ old('frekuensi_kejadian') == '6' ? 'selected' : '' }}>6 kali atau lebih per tahun</option>
                                         </select>
                                     </div>
                                 </div>

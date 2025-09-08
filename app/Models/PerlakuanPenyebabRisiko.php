@@ -16,6 +16,7 @@ class PerlakuanPenyebabRisiko extends Model
         'biaya_perlakuan_risiko',
         'pic',
         'pic_jabatan_id',
+        'divisi_terkait',
         'timeline_perlakuan_risiko_start',
         'timeline_perlakuan_risiko_end',
         'opsi_perlakuan_risiko',
@@ -34,6 +35,7 @@ class PerlakuanPenyebabRisiko extends Model
     protected $casts = [
         'timeline_perlakuan_risiko_start' => 'date',
         'timeline_perlakuan_risiko_end' => 'date',
+        'divisi_terkait' => 'array',
     ];
 
     public function penyebabRisikoProject()
@@ -140,5 +142,14 @@ class PerlakuanPenyebabRisiko extends Model
     public function picJabatan()
     {
         return $this->belongsTo(Jabatan::class, 'pic_jabatan_id');
+    }
+    
+    public function getDivisiTerkaitUnitsAttribute()
+    {
+        if (empty($this->divisi_terkait)) {
+            return collect();
+        }
+
+        return Unit::whereIn('id', $this->divisi_terkait)->get();
     }
 }

@@ -82,29 +82,33 @@
                                     </a>
                                 </div>
                             @else
+                                @if(empty($extraViewData['status']) || $extraViewData['status'] == \App\Models\DataBatch::STATUS_PROSES)
                                 <div id="bulk-select-replace-element" class="col-auto ms-auto">
                                     <a class="btn btn-outline-info btn-sm" href="{{ route($baseRoute . 'create', $baseRouteParams ?? []) }}">
                                         <span class="bx bx-plus"></span>
                                         <span class="ms-1">Tambah {{ $resourceName }}</span>
                                     </a>
                                 </div>
+                                @endif
                             @endif
                         @endif
-                        @if (!empty($importConfig))
-                          <div id="bulk-select-replace-element" class="col-auto ms-auto">
-                            <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#importDataModal">
-                              <span class="bx bx-upload"></span>
-                              <span class="ms-1">{{ $importConfig['buttonText'] ?? 'Import Data' }}</span>
-                            </button>
-                          </div>
-                        @endif
-                        @if (!empty($extraViewData['showKamusRisikoButton']))
-                          <div class="col-auto ms-auto">
-                            <a href="{{ route('kamus-risiko-project.index') }}" class="btn btn-outline-danger btn-sm">
-                              <span class="bx bx-book-bookmark"></span>
-                              <span class="ms-1">Kamus Risiko</span>
-                            </a>
-                          </div>
+                        @if(empty($extraViewData['status']) || $extraViewData['status'] == \App\Models\DataBatch::STATUS_PROSES)
+                            @if (!empty($importConfig))
+                            <div id="bulk-select-replace-element" class="col-auto ms-auto">
+                                <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#importDataModal">
+                                <span class="bx bx-upload"></span>
+                                <span class="ms-1">{{ $importConfig['buttonText'] ?? 'Import Data' }}</span>
+                                </button>
+                            </div>
+                            @endif
+                            @if (!empty($extraViewData['showKamusRisikoButton']))
+                            <div class="col-auto ms-auto">
+                                <a href="{{ route('kamus-risiko-project.index') }}" class="btn btn-outline-danger btn-sm">
+                                <span class="bx bx-book-bookmark"></span>
+                                <span class="ms-1">Kamus Risiko</span>
+                                </a>
+                            </div>
+                            @endif
                         @endif
                         </div>
                     </div>
@@ -156,12 +160,14 @@
                         data-filter="true" data-info="true">
                         <thead>
                             <tr>
+                                {{--
                                 <th class="white-space-nowrap">
                                     <div class="form-check mb-0">
                                         <input class="form-check-input" type="checkbox"
                                             data-bulk-select='{"body":"bulk-select-body","actions":"bulk-select-actions","replacedElement":"bulk-select-replace-element"}' />
                                     </div>
                                 </th>
+                                --}}
                                 <th class="white-space-nowrap">#</th>
                                 @foreach ($tableColumns as $key => $column)
                                     <th class="sort" data-sort="{{ $key }}">
@@ -192,6 +198,15 @@
     @if (!empty($importConfig))
     @include('project-risk._modal_import_tender', ['importConfig' => $importConfig])
     @endif
+
+    @php
+        $hasVerifikasiAction = collect($tableActions ?? [])->contains('action', 'verifikasi');
+    @endphp
+
+    @if($hasVerifikasiAction)
+        @include('project-risk._modal_verifikasi')
+    @endif
+    
 @endsection
 
 @push('styles')
@@ -199,6 +214,15 @@
     .hover-underline:hover {
         text-decoration: underline;
     }
+    
+    .alert-danger ul { 
+        margin-top: 10px; 
+        margin-bottom: 10px; 
+    } 
+    
+    .alert-danger p { 
+        margin-bottom: 10px; 
+    } 
 </style>    
 @endpush
 
@@ -228,19 +252,22 @@
 @if($hasChangeToLedApAction)
     const ledCreateRoute = "{{ route('risk-register-ap.loss-events.create', ['riskRegister' => ':riskRegister']) }}";
 @endif
+
+
+
 const fetchedData = [];
 $(document).ready(function() {
     $("body").tooltip({ selector: '[data-bs-toggle=tooltip]' });
 
     const datatableColumns = [
-        {
-            data: 'id',
-            orderable: false,
-            searchable: false,
-            render: function(data, type, row, meta) {
-                return '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" value="' + data + '"></div>';
-            }
-        },
+        // {
+        //     data: 'id',
+        //     orderable: false,
+        //     searchable: false,
+        //     render: function(data, type, row, meta) {
+        //         return '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" value="' + data + '"></div>';
+        //     }
+        // },
         {
             data: 'id',
             orderable: false,

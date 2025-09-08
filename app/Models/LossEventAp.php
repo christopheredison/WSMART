@@ -12,6 +12,16 @@ class LossEventAp extends Model
     protected $guarded = [];
     protected $table = 'loss_event_aps';
 
+    public function periode()
+    {
+        return $this->belongsTo(Periode::class, 'periode_id');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_id');
+    }
+
     public function kategoriRisiko()
     {
         return $this->belongsTo(KategoriRisiko::class, 'kategori_risiko_id');

@@ -41,12 +41,14 @@ class ProjectRisk extends Model
         'is_closed',
         'efektivitas_perlakuan_risiko',
         'sasaran_proyek_id',
+        'step_verification',
     ];
 
     public const STATUS_INPUT_DATA = 1;
     public const STATUS_DIKIRIM = 2;
     public const STATUS_TUNGGU_VERIFIKASI = 3;
     public const STATUS_TERVERIFIKASI = 4;
+    public const STATUS_REJECTED = 5;
 
     public const LEVEL_RISIKO_LOW = 'Low';
     public const LEVEL_RISIKO_LOW_TO_MODERATE = 'Low To Moderate';

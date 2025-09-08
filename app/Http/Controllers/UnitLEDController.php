@@ -69,9 +69,9 @@ class UnitLEDController extends Controller
                     }
                     return 'Rp 0';
                 })
-                ->editColumn('unit_penanggung_jawab', function($row) {
-                    return $row->unit_penanggung_jawab ?? '-';
-                })
+                // ->editColumn('unit_penanggung_jawab', function($row) {
+                //     return $row->unit_penanggung_jawab ?? '-';
+                // })
                 ->rawColumns(['action'])
                 ->make(true);
         }
@@ -658,7 +658,14 @@ class UnitLEDController extends Controller
 
     public function show($periode, $id)
     {
-        $lossEvent = LossEvent::with(['kategoriKejadian', 'kategoriRisiko', 'jenisRisiko'])->findOrFail($id);
+        $lossEvent = LossEvent::with([
+          'periode',
+          'unit',
+          'kategoriKejadian', 
+          'kategoriRisiko', 
+          'jenisRisiko',
+          'penyebabRisikoLeds.perlakuanPenyebabRisiko',
+        ])->findOrFail($id);
         
         return view('unit-led.show', compact('lossEvent'));
     }

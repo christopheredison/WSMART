@@ -31,7 +31,7 @@
           </div>
       </div>
       <div class="card-body dt-header-true">
-        <div class="table-responsive-sm scrollbar">
+        <div class="table-responsive-sm">
           <table class="table table-hover dataTable" id="example" data-paging="true" data-info="true" data-filter="true">
             <thead>
               <tr>

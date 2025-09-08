@@ -190,18 +190,18 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         })->flatten()->unique('id');
 
         $this->availableFilters = [
-            'peristiwa_risiko_id' => [
-                'label' => 'Peristiwa Risiko',
-                'type' => 'select',
-                'parameters' => [
-                    'peristiwa_risiko_id',
-                    ['' => 'Semua Peristiwa Risiko'] + $peristiwaRisikos->pluck('title', 'id')->toArray(),
-                    '',
-                    [
-                        'class' => 'form-select select2',
-                    ]
-                ],
-            ],
+            // 'peristiwa_risiko_id' => [
+            //     'label' => 'Peristiwa Risiko',
+            //     'type' => 'select',
+            //     'parameters' => [
+            //         'peristiwa_risiko_id',
+            //         ['' => 'Semua Peristiwa Risiko'] + $peristiwaRisikos->pluck('title', 'id')->toArray(),
+            //         '',
+            //         [
+            //             'class' => 'form-select select2',
+            //         ]
+            //     ],
+            // ],
             'quarter' => [
                 'label' => 'Quarter',
                 'type' => 'select',

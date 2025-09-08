@@ -280,6 +280,7 @@ return [
         'ap_menu',
         'rmd_menu',
         'setting_menu',
+        'ap_admin',
 
         'ict_input',
         'ict_approval',

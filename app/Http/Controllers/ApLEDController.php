@@ -22,18 +22,38 @@ use App\Models\RiskAnalysis;
 use App\Models\PenyebabRisiko;
 use App\Models\JenisKontrolEksisting;
 use App\Models\KamusRisikoAp;
+use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class ApLEDController extends Controller
 {
-    public function index(Request $request, $unitId = null)
+    public function index(Request $request, $periodeId = null)
     {
+        $isApAdmin = Gate::check('ap_admin');
+        $targetUnitId = null;
+        $units = [];
+
+        if ($isApAdmin) {
+            $units = Unit::where('unit_type_id', 2)->pluck('name', 'id');
+            $targetUnitId = $request->input('unit_id', $units->keys()->first());
+        } else {
+            $targetUnitId = $request->user()->unit_id;
+        }
+
         if ($request->ajax()) {
             $data = LossEventAp::with(['kategoriKejadian']);
 
-            $user = $request->user();
+            $unitToFilter = null;
+            if ($isApAdmin) {
+                $unitToFilter = $request->input('unit_id');
+            } else {
+                $unitToFilter = $request->user()->unit_id;
+            }
 
-            $data->where('unit_id', $user->unit_id);
+            if ($unitToFilter) {
+                $data->where('unit_id', $unitToFilter);
+            }
             
             if ($request->filled('periode_id') && $request->periode_id !== '') {
                 $data->where('periode_id', $request->periode_id);
@@ -62,9 +82,9 @@ class ApLEDController extends Controller
                     }
                     return 'Rp 0';
                 })
-                ->editColumn('unit_penanggung_jawab', function($row) {
-                    return $row->unit_penanggung_jawab ?? '-';
-                })
+                // ->editColumn('unit_penanggung_jawab', function($row) {
+                //     return $row->unit_penanggung_jawab ?? '-';
+                // })
                 ->rawColumns(['action'])
                 ->make(true);
         }
@@ -72,11 +92,18 @@ class ApLEDController extends Controller
         $periodes = Periode::orderBy('tahun', 'desc')->get();
         $kategoriKejadians = KategoriKejadian::all();
         $periode = null;
-        if ($unitId) {
-            $periode = Periode::findOrFail($unitId);
+        if ($periodeId) {
+            $periode = Periode::findOrFail($periodeId);
         }
     
-        return view('ap-led.index', compact('periodes', 'kategoriKejadians', 'periode'));
+        return view('ap-led.index', compact(
+          'periodes', 
+          'kategoriKejadians', 
+          'periode',
+          'units',
+          'isApAdmin',
+          'targetUnitId' 
+        ));
     }
 
     public function create($periode)
