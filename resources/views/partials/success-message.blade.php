@@ -13,7 +13,7 @@
   <div class="svg-icon svg-icon-danger">
     @include('partials.icon-alert')
   </div>
-  <p class="mb-0 flex-1">{{ $message }}</p>
+  <div class="mb-0 flex-1">{!! $message !!}</div>
   <button class="btn-close" type="button" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 @endif

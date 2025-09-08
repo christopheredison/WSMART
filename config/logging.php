@@ -135,6 +135,13 @@ return [
             'level' => 'debug',
             'days' => 14,
         ],
+
+        'verification_project' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/verification_project.log'),
+            'level' => 'debug',
+            'days' => 14,
+        ],
     ],
 
 ];
