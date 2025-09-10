@@ -325,3 +325,49 @@ Breadcrumbs::for('question.show', function (BreadcrumbTrail $trail, $id) {
     $trail->parent('question.index');
     $trail->push('Detail Pertanyaan Survey', route('question.show', $id));
 });
+
+
+// Rekomendasi Risiko
+Breadcrumbs::for('rekomendasi-risiko.index', function (BreadcrumbTrail $trail) {
+    $trail->push('Rekomendasi Risiko', route('rekomendasi-risiko.index'));
+});
+
+// Rekomendasi Risiko > {Nama Divisi} Periode {Tahun}
+Breadcrumbs::for('rekomendasi-risiko.show', function (BreadcrumbTrail $trail, $unit, $periode) {
+    $trail->parent('rekomendasi-risiko.index');
+    $trail->push(
+        "Divisi {$unit->name} Periode {$periode->tahun}", 
+        route('rekomendasi-risiko.show', [$unit, $periode])
+    );
+});
+
+// Rekomendasi Risiko > {Nama Divisi} Periode {Tahun} > Tambah
+Breadcrumbs::for('rekomendasi-risiko.create', function (BreadcrumbTrail $trail, $unit, $periode) {
+    $trail->parent('rekomendasi-risiko.show', $unit, $periode);
+    $trail->push(
+        'Tambah Rekomendasi', 
+        route('rekomendasi-risiko.create', [$unit, $periode])
+    );
+});
+
+// Rekomendasi Risiko > {Nama Divisi} Periode {Tahun} > Edit
+Breadcrumbs::for('rekomendasi-risiko.edit', function (BreadcrumbTrail $trail, $rekomendasi) {
+    // Memuat relasi agar bisa mendapatkan unit dan periode
+    $rekomendasi->load('unit', 'periode');
+    $trail->parent('rekomendasi-risiko.show', $rekomendasi->unit, $rekomendasi->periode);
+    $trail->push(
+        'Edit Rekomendasi', 
+        route('rekomendasi-risiko.edit', $rekomendasi)
+    );
+});
+
+// Rekomendasi Risiko > {Nama Divisi} Periode {Tahun} > View
+Breadcrumbs::for('rekomendasi-risiko.view', function (BreadcrumbTrail $trail, $rekomendasi) {
+    // Memuat relasi agar bisa mendapatkan unit dan periode
+    $rekomendasi->load('unit', 'periode');
+    $trail->parent('rekomendasi-risiko.show', $rekomendasi->unit, $rekomendasi->periode);
+    $trail->push(
+        'View Rekomendasi', 
+        route('rekomendasi-risiko.view', $rekomendasi)
+    );
+});

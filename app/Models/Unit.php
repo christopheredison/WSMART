@@ -132,4 +132,10 @@ class Unit extends Model
     {
         return $this->HasMany(Unit::class, 'parent_id');
     }
+
+    public function rekomendasiRisikos()
+    {
+        return $this->hasMany(RekomendasiRisiko::class, 'unit_id');
+    }
+
 }

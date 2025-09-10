@@ -67,6 +67,7 @@ use App\Http\Controllers\ApLEDController;
 use App\Http\Controllers\KamusRisikoProjectController;
 use App\Http\Controllers\KamusRisikoUnitController;
 use App\Http\Controllers\KamusRisikoApController;
+use App\Http\Controllers\RekomendasiRisikoController;
 
 
 /*
@@ -116,10 +117,10 @@ Route::group(['middleware' => ['auth']], function() {
         $sektors = ProjectSektor::where('project_divisi_id', $divisiId)
                     ->orderBy('sektor_name')
                     ->pluck('sektor_name', 'id');
-    
+
         return response()->json($sektors);
     });
-    
+
     Route::get('/risk-map', function () {
         return view('risk-map');
     });
@@ -394,7 +395,7 @@ Route::group(['middleware' => ['auth']], function() {
     Route::post('projects/{project}/risks/import-tender', [ProjectRiskController::class, 'importTender'])->name('projects.risks.import-tender');
     Route::post('project-risk/{id}/verifikasi', [ProjectRiskController::class, 'verifikasi'])->name('project-risk.verifikasi');
     Route::post('projects/risks/eskalasi', [ProjectRiskController::class, 'eskalasi'])->name('projects.risks.eskalasi');
-    
+
     Route::resource('projects/{project}/monitorings', ProjectRiskMonitoringController::class)->names('projects.monitorings')->only(['index', 'show', 'edit', 'update']);
     Route::resource('projects-monitorings/{monitoring}/q-{quarter}/documents', ProjectRiskMonitoringDocumentController::class)->names('projects.monitorings.documents')->only(['index', 'show', 'store', 'destroy']);
     Route::get('projects/{project}/risks/{risk}/loss-events/create', [ProjectLEDController::class, 'riskChangeToLed'])->name('projects.loss-events.create')->middleware('can:project_risk_edit');
@@ -465,25 +466,25 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('penilaian-rmi/{id}/aspek-kinerja', 'App\Http\Controllers\PenilaianRMIController@aspekKinerja')
         ->name('penilaian-rmi.aspek-kinerja');
     // Proses simpan Aspek Kinerja
-    Route::post('penilaian-rmi/{id}/aspek-kinerja', [PenilaianRMIController::class,'storeAspekKinerja'])->name('penilaian-rmi.aspek-kinerja.store');    
+    Route::post('penilaian-rmi/{id}/aspek-kinerja', [PenilaianRMIController::class,'storeAspekKinerja'])->name('penilaian-rmi.aspek-kinerja.store');
     Route::delete('penilaian-rmi/{id}/aspek-kinerja/delete-document/{docId}', [PenilaianRMIController::class,'deleteAspekKinerjaDocument'])->name('penilaian-rmi.aspek-kinerja.delete-document');
     Route::put('penilaian-rmi/{period}/update-penilaian', [PenilaianRMIController::class, 'updatePenilaian'])
-    ->name('penilaian-rmi.update-penilaian');  
+    ->name('penilaian-rmi.update-penilaian');
 
     // Metrik Strategi Risiko
     Route::get('metrik-strategi-risiko/{id}/parameter', 'App\Http\Controllers\MetrikStrategiRisikoController@parameter')
         ->name('metrik-strategi-risiko.parameter');
     Route::resource('metrik-strategi-risiko', MetrikStrategiRisikoController::class);
     Route::put('metrik-strategi-risiko/{metrikStrategiRisiko}/update-parameter', [MetrikStrategiRisikoController::class, 'updateParameter'])
-        ->name('metrik-strategi-risiko.update-parameter');  
-        
+        ->name('metrik-strategi-risiko.update-parameter');
+
     Route::get('/metrik-strategi-risiko/{metrikStrategiRisiko}/parameter', [MetrikStrategiRisikoController::class, 'parameter'])
         ->name('metrik-strategi-risiko.parameter');
     Route::post('/metrik-strategi-risiko/{metrikStrategiRisiko}/parameter', [MetrikStrategiRisikoController::class, 'storeParameter'])
         ->name('metrik-strategi-risiko.store-parameter');
     Route::delete('/metrik-strategi-risiko/{metrikStrategiRisiko}/parameter/{parameter}', [MetrikStrategiRisikoController::class, 'destroyParameter'])
-        ->name('metrik-strategi-risiko.destroy-parameter'); 
-        
+        ->name('metrik-strategi-risiko.destroy-parameter');
+
     // Resource index, create, store
     Route::resource('sasaran-strategi', SasaranStrategiBisnisController::class)
          ->only(['index','create','store'])
@@ -526,7 +527,7 @@ Route::group(['middleware' => ['auth']], function() {
 Route::group(['prefix' => 'master', 'middleware' => ['auth']], function () {
     // Resource route untuk measurement-parameter
     Route::resource('measurement-parameter', 'App\Http\Controllers\Master\MeasurementParameterController');
-    
+
     // Route tambahan untuk measurement-parameter
     Route::post('measurement-parameter/{id}/restore', 'App\Http\Controllers\Master\MeasurementParameterController@restore')
         ->name('measurement-parameter.restore');
@@ -608,6 +609,20 @@ Route::get('ap-led/{periode}/{id}/show', [ApLEDController::class, 'show'])->name
 Route::get('ap-led/{periode}/{id}/edit', [ApLEDController::class, 'edit'])->name('ap-led.edit');
 Route::put('ap-led/{id}', [ApLEDController::class, 'update'])->name('ap-led.update');
 Route::delete('ap-led/{id}', [ApLEDController::class, 'destroy'])->name('ap-led.destroy');
+
+Route::prefix('rekomendasi-risiko')->name('rekomendasi-risiko.')->group(function () {
+    Route::get('/', [RekomendasiRisikoController::class, 'index'])->name('index');
+    Route::post('/', [RekomendasiRisikoController::class, 'store'])->name('store');
+    Route::get('/{unit}/{periode}/create', [RekomendasiRisikoController::class, 'create'])->name('create');
+    Route::get('/{rekomendasi}/edit', [RekomendasiRisikoController::class, 'edit'])->name('edit');
+    
+    Route::put('/{rekomendasi}', [RekomendasiRisikoController::class, 'update'])->name('update');
+    Route::delete('/{rekomendasi}', [RekomendasiRisikoController::class, 'destroy'])->name('destroy');
+    Route::post('/{rekomendasi}/publish', [RekomendasiRisikoController::class, 'publish'])->name('publish');
+    
+    Route::get('/{rekomendasi}', [RekomendasiRisikoController::class, 'view'])->name('view');
+    Route::get('/{unit}/{periode}', [RekomendasiRisikoController::class, 'show'])->name('show');
+});
 
 Route::group(['prefix' => 'ict', 'as' => 'ict.'], function () {
     Route::get('/', [\App\Http\Controllers\ICT\ICTController::class, 'index'])->name('index');
