@@ -398,6 +398,11 @@ Route::group(['middleware' => ['auth']], function() {
 
     Route::resource('projects/{project}/monitorings', ProjectRiskMonitoringController::class)->names('projects.monitorings')->only(['index', 'show', 'edit', 'update']);
     Route::resource('projects-monitorings/{monitoring}/q-{quarter}/documents', ProjectRiskMonitoringDocumentController::class)->names('projects.monitorings.documents')->only(['index', 'show', 'store', 'destroy']);
+    Route::prefix('projects/{project}/monitorings')->name('projects.monitorings.')->group(function () {
+        Route::post('send-all', [ProjectRiskMonitoringController::class, 'sendAllMonitoring'])->name('send.all');
+        Route::post('{monitoring}/verify', [ProjectRiskMonitoringController::class, 'verifyMonitoring'])->name('verify');
+        Route::get('{riskId}/notes', [ProjectRiskMonitoringController::class, 'getNotes'])->name('notes');
+    });
     Route::get('projects/{project}/risks/{risk}/loss-events/create', [ProjectLEDController::class, 'riskChangeToLed'])->name('projects.loss-events.create')->middleware('can:project_risk_edit');
     Route::post('projects/{project}/risks/{risk}/loss-events', [ProjectLEDController::class, 'riskChangeToLedStore'])->name('projects.loss-events.store')->middleware('can:project_risk_edit');
     Route::post('projects/risks/send', [ProjectRiskController::class, 'send'])->name('projects.risks.send');
@@ -545,6 +550,11 @@ Route::prefix('risk-register-unit')->group(function () {
     Route::resource('/periods/{period}/monitorings', RiskRegisterUnitMonitoringController::class)
             ->names('risk-register-unit.monitorings')
             ->only(['index', 'show', 'edit', 'update']);
+    Route::prefix('risk-register-unit/{period}/monitorings')->name('risk-register-unit.monitorings.')->group(function () {
+        Route::post('send-all', [RiskRegisterUnitMonitoringController::class, 'sendAllMonitoring'])->name('send.all');
+        Route::post('{monitoring}/verify', [RiskRegisterUnitMonitoringController::class, 'verifyMonitoring'])->name('verify');
+        Route::get('{risk}/notes', [RiskRegisterUnitMonitoringController::class, 'getNotes'])->name('notes');
+    });
     Route::get('/', [RiskRegisterUnitController::class, 'index'])->name('risk-register-unit.index');
     Route::get('/create', [RiskRegisterUnitController::class, 'create'])->name('risk-register-unit.create');
     Route::post('/', [RiskRegisterUnitController::class, 'store'])->name('risk-register-unit.store');
