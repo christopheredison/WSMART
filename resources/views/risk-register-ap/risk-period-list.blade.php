@@ -104,7 +104,14 @@
     let table = $('#periodeDataTable').DataTable({
       "paging": true,
       "info": true,
-      "searching": true
+      "searching": true,
+      "layout": {
+        "topEnd": {
+            "search": {
+                "placeholder": 'Search...'
+            }
+        },
+      }
     });
 
     @if($apAdmin)

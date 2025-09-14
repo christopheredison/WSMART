@@ -5,7 +5,7 @@
             <div class="svg-icon svg-icon-secondary">
                 @include('partials.icon-tool')
             </div>
-            <h3 class="mb-0">Data {{ $user->unit->name }} Periode {{ $periode->tahun }}</h3>
+            <h3 class="mb-0">Data {{ $targetUnit->name }} Periode {{ $periode->tahun }}</h3>
             <div class="ms-auto">
                 <button id="exportPdfBtn" class="btn btn-sm btn-danger ms-auto d-flex align-items-center gap-1">
                     <i class='bx bxs-file-pdf'></i> Export PDF
@@ -473,7 +473,7 @@ $(document).ready(function () {
         const exportArea = document.getElementById('exportArea');
         const button = $(this);
 
-        const namaUnit = "{{ str_replace(' ', '-', strtolower($user->unit->name)) }}";
+        const namaUnit = "{{ str_replace(' ', '-', strtolower($targetUnit->name)) }}";
         const tahun = "{{ $periode->tahun }}";
         const month = $('#monthSelect').val();
         const fileName = `peta-risiko-${namaUnit}-tahun-${tahun}-q${month}.pdf`;

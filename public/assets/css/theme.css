@@ -24321,3 +24321,7 @@ div[data-collapse] + .kanban-item {
 .treeview.treeview-stripe {
   padding-left: 0.5rem !important;
 }
+
+div.dt-container div.dt-search label {
+  display: none !important;
+}

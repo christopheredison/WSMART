@@ -309,25 +309,68 @@ class RiskRegisterUnitController extends Controller
 
         // Ambil periode aktif jika ada
         $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
-
-        $dataToDisplay = collect();
         $userUnit = auth()->user()->unit;
-        if ($userUnit) {
-            foreach ($periodes as $periode) {
-                $dataToDisplay->push([
-                    'unit' => $userUnit,
-                    'periode' => $periode,
-                ]);
+        $units = [];
+
+        $viewAllDivision = Gate::check('view_all_division');
+        $dataToDisplay = collect();
+
+        if ($viewAllDivision) {
+            $units = Unit::where('unit_type_id', 1)->pluck('name', 'id');
+            $displayUnits = Unit::where('unit_type_id', 1)->get();
+            $periodes = Periode::orderBy('tahun', 'desc')->get();
+
+            foreach ($displayUnits as $unit) {
+                foreach ($periodes as $periode) {
+                    $dataToDisplay->push([
+                        'unit' => $unit,
+                        'periode' => $periode,
+                    ]);
+                }
+            }
+        } else {
+            $units = Unit::where('unit_type_id', 1)->where('id', $userUnit->id)->pluck('name', 'id');
+            $periodes = Periode::orderBy('tahun', 'desc')->get();
+
+            if ($userUnit) {
+                foreach ($periodes as $periode) {
+                    $dataToDisplay->push([
+                        'unit' => $userUnit,
+                        'periode' => $periode,
+                    ]);
+                }
             }
         }
 
-        return view('risk-register-unit.risk-period-list', compact('periodes', 'activePeriode', 'tableLegend', 'dataToDisplay'));
+        return view('risk-register-unit.risk-period-list', compact(
+          'periodes', 
+          'activePeriode', 
+          'tableLegend', 
+          'dataToDisplay',
+          'viewAllDivision',
+          'units',
+        ));
     }
 
-    public function riskPeriodeDashboard($period)
+    public function riskPeriodeDashboard(Request $request, $period)
     {
         $user    = request()->user()->load('unit');
         $periode = Periode::find($period);
+
+        $targetUnitId = null;
+
+        if (Gate::check('view_all_division') && $request->has('unit_id')) {
+            $targetUnitId = $request->input('unit_id');
+        } else {
+            $targetUnitId = $user->unit_id;
+        }
+
+        $targetUnit = Unit::find($targetUnitId);
+
+        if (!$targetUnit) {
+            abort(404, 'Unit tidak ditemukan.');
+        }
+
         $risikos = IdentifikasiRisiko::where('periode_id', $period)
             ->where('unit_id', auth()->user()->unit_id)
             ->with('riskAnalysis')
@@ -355,7 +398,7 @@ class RiskRegisterUnitController extends Controller
                 return $item->skala_dampak . '-' . $item->skala_probabilitas;
             });
 
-        return view('risk-register-unit.risk-period-dashboard', compact('user', 'periode', 'risikos', 'riskMaps', 'formattedCurrentRiskMaps'));
+        return view('risk-register-unit.risk-period-dashboard', compact('user', 'periode', 'risikos', 'riskMaps', 'formattedCurrentRiskMaps', 'targetUnit'));
     }
 
     public function store(Request $request)
@@ -393,10 +436,14 @@ class RiskRegisterUnitController extends Controller
             'penilaian_efektifitas_kontrol' => 'nullable|exists:penilaian_efektivitas_kontrols,id',
             'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
             'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
+            'unit_id' => 'nullable|exists:units,id',
         ]);
 
         $peristiwa_risiko = $request->peristiwa_risiko;
         $unitId = auth()->user()->unit_id;
+        if ($request->has('unit_id') && Gate::check('view_all_division')) {
+            $unitId = $request->unit_id;
+        }
 
         // Pengecekan tidak boleh ada peristiwa risiko yang sama di periode dan unit yang sama
         $existingRisk = IdentifikasiRisiko::where('unit_id', $unitId)
@@ -456,7 +503,6 @@ class RiskRegisterUnitController extends Controller
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
             $identifikasiRisiko->user_id = auth()->id();
-            $unitId = auth()->user()->unit_id;
             $identifikasiRisiko->unit_id = $unitId;
             $unit = Unit::find($unitId);
             if ($unit) {
@@ -551,7 +597,7 @@ class RiskRegisterUnitController extends Controller
                 // Redirect ke halaman index
                 return response()->json([
                     'message' => 'Data risiko berhasil disimpan',
-                    'redirect' => route('risk-register-unit.index', ['pid' => $request->periode_id])
+                    'redirect' => route('risk-register-unit.index', ['pid' => $request->periode_id, 'unit_id' => $unitId])
                 ]);
             }
         } catch (\Exception $e) {

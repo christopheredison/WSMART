@@ -23,24 +23,34 @@ use App\Models\PenyebabRisiko;
 use App\Models\JenisKontrolEksisting;
 use App\Models\KamusRisikoUnit;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class UnitLEDController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @param Request $request
-     * @param string|null $unitId, $unitId is periode_id
-     * @return \Illuminate\Http\Response
-     */
-    public function index(Request $request, $unitId = null)
+    public function index(Request $request, $periodeId = null)
     {
+        $viewAllDivision = Gate::check('view_all_division');
+        $targetUnitId = null;
+        $units = [];
+
+        if ($viewAllDivision) {
+            $units = Unit::where('unit_type_id', 1)->pluck('name', 'id');
+            $targetUnitId = $request->input('unit_id', $units->keys()->first());
+        } else {
+            $targetUnitId = $request->user()->unit_id;
+        }
+
         if ($request->ajax()) {
             $data = LossEvent::with(['kategoriKejadian']);
 
-            $user = $request->user();
+            $unitToFilter = null;
+            if ($viewAllDivision) {
+                $unitToFilter = $request->input('unit_id');
+            } else {
+                $unitToFilter = $request->user()->unit_id;
+            }
 
-            $data->where('unit_id', $user->unit_id);
+            $data->where('unit_id', $unitToFilter);
             
             if ($request->filled('periode_id') && $request->periode_id !== '') {
                 $data->where('periode_id', $request->periode_id);
@@ -79,11 +89,18 @@ class UnitLEDController extends Controller
         $periodes = Periode::orderBy('tahun', 'desc')->get();
         $kategoriKejadians = KategoriKejadian::all();
         $periode = null;
-        if ($unitId) {
-            $periode = Periode::findOrFail($unitId);
+        if ($periodeId) {
+            $periode = Periode::findOrFail($periodeId);
         }
     
-        return view('unit-led.index', compact('periodes', 'kategoriKejadians', 'periode'));
+        return view('unit-led.index', compact(
+          'periodes', 
+          'kategoriKejadians', 
+          'periode',
+          'units',
+          'viewAllDivision',
+          'targetUnitId',
+        ));
     }
 
     public function create($periode)

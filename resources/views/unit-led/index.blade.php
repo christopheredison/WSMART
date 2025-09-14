@@ -19,8 +19,15 @@
                           <div class="ff-preheading">Periode: {{ $periode->tahun }}</div>
                           @endif
                         </div>
+                        
                         <div class="col-auto ms-auto">
-                            <a class="btn btn-outline-info btn-sm" href="{{ route('unit-led.create', ['periode' => $periode->id]) }}">
+                            @php
+                                $createRouteParams = ['periode' => $periode->id ?? null];
+                                if ($viewAllDivision && isset($targetUnitId)) {
+                                    $createRouteParams['unit_id'] = $targetUnitId;
+                                }
+                            @endphp
+                            <a class="btn btn-outline-info btn-sm" href="{{ route('unit-led.create', $createRouteParams) }}">
                                 <span class="bx bx-plus"></span>
                                 <span class="ms-1">Tambah Data Loss Event</span>
                             </a>
@@ -42,6 +49,20 @@
                             </select>
                         </div>
                         @endif
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Divisi</label>
+                            @if($viewAllDivision)
+                                <select class="form-select select2" id="filter-unit">
+                                    @foreach($units as $id => $name)
+                                        <option value="{{ $id }}" {{ $targetUnitId == $id ? 'selected' : '' }}>{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <select class="form-select" id="filter-unit" disabled>
+                                    <option value="{{ auth()->user()->unit_id }}">{{ auth()->user()->unit->name }}</option>
+                                </select>
+                            @endif
+                        </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Kategori Kejadian</label>
                             <select class="form-select" id="filter-kategori">

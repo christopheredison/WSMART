@@ -13,6 +13,8 @@ use App\Models\SkalaProbabilitas;
 use App\Models\StrategiRisiko;
 use App\Models\Level;
 use App\Models\UnitRiskMonitoring;
+use App\Models\Unit;
+use App\Models\RiskMonitoringNote;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -44,13 +46,29 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         if ($quarter == 4) $defaultMonth = '10';
         $month = request()->input('filters.month', $defaultMonth);
 
+        $targetUnitId = null;
+        $viewAllDivision = Gate::check('view_all_division');
+
+        if ($viewAllDivision) {
+          if (request()->filled('filters.unit_id')) {
+            $targetUnitId = request()->input('filters.unit_id');
+          } elseif (request()->filled('unit_id')) {
+            $targetUnitId = request()->input('unit_id');
+          } else {
+            $firstUnit = Unit::where('unit_type_id', 1)->orderBy('id', 'asc')->first();
+            $targetUnitId = $firstUnit ? $firstUnit->id : null;
+          }
+        } else {
+          $targetUnitId = $user->unit_id;
+        }
+
         // if (!(Gate::check('risk_monitoring_list') || $user->hasProject($period))) {
         //     abort(403);
         // }
 
-        $this->callbackQuery = function ($query) use ($period, $quarter, $user, $month) {
+        $this->callbackQuery = function ($query) use ($period, $quarter, $user, $month, $targetUnitId) {
             $query->where('periode_id', $period->id)
-                ->where('unit_id', $user->unit_id)
+                ->where('unit_id', $targetUnitId)
                 ->where('unit_type_id', 1)
                 ->with([
                   // 'peristiwaRisiko', 
@@ -223,22 +241,32 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ];
         }
 
+        $hasVerificationMr = Gate::allows('verification_mr');
+        $isUnitMr = (bool) $user->unit?->unit_mr;
         $verificatorLevels = [2, 1];
         if (in_array($user->level_id, $verificatorLevels)) {
             $this->tableActions[] = [
-                'label' => 'Verifikasi', 'btn_class' => 'btn-warning btn-sm', 'action' => 'script',
+                'label' => 'Verifikasi',
+                'btn_class' => 'btn-warning btn-sm',
+                'action' => 'script',
                 'script' => "showVerifikasiModal(__MONITORING_ID__, '__RISK_TITLE__', '__RISK_DESC__')",
                 'active_state' => '(data, type, row) => {
                     const monitoring = row.last_monitoring_risiko;
                     if (!monitoring || monitoring.is_approved) return false;
                     
-                    const user = '.json_encode($user).';
+                    const userLevel = ' . $user->level_id . ';
+                    const isUnitMr = ' . ($isUnitMr ? 'true' : 'false') . ';
+                    const hasVerificationMr = ' . ($hasVerificationMr ? 'true' : 'false') . ';
                     const status = monitoring.status;
 
-                    // Tambahkan pengecekan `user.unit` sebelum mengakses propertinya
-                    if (user.level_id == 2 && user.unit && !user.unit.unit_mr && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI.') return true;
-                    if (user.level_id == 1 && user.unit && user.unit.unit_mr == 1 && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR.') return true;
-                    if (user.level_id == 2 && user.unit && user.unit.unit_mr == 1 && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR.') return true;
+                    // Verifier for Step 2 (Risk Owner Divisi -> Risk Officer Divisi MR)
+                    if (userLevel == 2 && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI.') return true;
+
+                    // Verifier for Step 3 (Risk Officer Divisi MR -> Risk Owner Divisi MR)
+                    if (userLevel == 1 && isUnitMr && hasVerificationMr && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR.') return true;
+
+                    // Verifier for Step 4 (Risk Owner Divisi MR -> Publish)
+                    if (userLevel == 2 && isUnitMr && hasVerificationMr && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR.') return true;
                     
                     return false;
                 }',
@@ -265,55 +293,68 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             return $identifikasiRisiko->peristiwaRisiko;
         })->flatten()->unique('id');
 
-        $this->availableFilters = [
-            // 'peristiwa_risiko_id' => [
-            //     'label' => 'Peristiwa Risiko',
-            //     'type' => 'select',
-            //     'parameters' => [
-            //         'peristiwa_risiko_id',
-            //         ['' => 'Semua Peristiwa Risiko'] + $peristiwaRisikos->pluck('title', 'id')->toArray(),
-            //         '',
-            //         [
-            //             'class' => 'form-select select2',
-            //         ]
-            //     ],
-            // ],
-            'quarter' => [
-                'label' => 'Quarter',
-                'type' => 'select',
-                'parameters' => [
-                    'quarter',
-                    [
-                        1 => 'Monitoring Quarter 1',
-                        2 => 'Monitoring Quarter 2',
-                        3 => 'Monitoring Quarter 3',
-                        4 => 'Monitoring Quarter 4',
-                    ],
-                    '',
-                    [
-                        'class' => 'form-select select2 js-select-hide-search',
-                    ]
-                ],
-                'handler' => function ($query, $key, $value) {
-                    // handled outside
-                },
+        $unitFilterOptions = [];
+        $unitFilterAttributes = ['class' => 'form-select select2'];
+
+        if ($viewAllDivision) {
+            $unitFilterOptions = Unit::where('unit_type_id', 1)->pluck('name', 'id')->toArray();
+        } else {
+            if ($user->unit) {
+                $unitFilterOptions = [$user->unit_id => $user->unit->name];
+            }
+            $unitFilterAttributes['disabled'] = true;
+        }
+
+        $filters = [];
+        $filters['unit_id'] = [
+            'label' => 'Divisi',
+            'type' => 'select',
+            'parameters' => [
+                'unit_id',
+                $unitFilterOptions,
+                $targetUnitId,
+                $unitFilterAttributes,
             ],
-            'month' => [
-                'label' => 'Bulan',
-                'type' => 'select',
-                'parameters' => [
-                    'month',
-                    [],
-                    '',
-                    [
-                        'class' => 'form-select select2 js-select-hide-search',
-                    ]
-                ],
-                'handler' => function ($query, $key, $value) {
-                    // handled outside
-                },
-            ],
+            'handler' => function ($query, $key, $value) { /* handled outside */ },
         ];
+
+        $filters['quarter'] = [
+            'label' => 'Quarter',
+            'type' => 'select',
+            'parameters' => [
+                'quarter',
+                [
+                    1 => 'Monitoring Quarter 1',
+                    2 => 'Monitoring Quarter 2',
+                    3 => 'Monitoring Quarter 3',
+                    4 => 'Monitoring Quarter 4',
+                ],
+                '',
+                [
+                    'class' => 'form-select select2 js-select-hide-search',
+                ]
+            ],
+            'handler' => function ($query, $key, $value) {
+                // handled outside
+            },
+        ];
+        $filters['month'] = [
+            'label' => 'Bulan',
+            'type' => 'select',
+            'parameters' => [
+                'month',
+                [],
+                '',
+                [
+                    'class' => 'form-select select2 js-select-hide-search',
+                ]
+            ],
+            'handler' => function ($query, $key, $value) {
+                // handled outside
+            },
+        ];
+
+        $this->availableFilters = $filters;
 
         $this->extraScripts[] = $this->getFilterScripts();
 
@@ -625,6 +666,8 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
     {
         extract($filters);
         $userLevel = $user->level_id;
+        $hasVerificationMr = Gate::allows('verification_mr');
+        $isUnitMr = (bool) $user->unit?->unit_mr;
 
         $riskIds = IdentifikasiRisiko::where('periode_id', $period->id)
             ->where('unit_id', $user->unit_id)
@@ -652,7 +695,14 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         switch ($userLevel) {
             case 1:
-                if (!$user->unit?->unit_mr) {
+                if ($isUnitMr && $hasVerificationMr) {
+                    // Step 3: Kirim ke Risk Owner Divisi MR
+                    $allApproved = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR)->isNotEmpty() && $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR)->every('is_approved', true);
+                    $buttonText = 'Kirim ke Risk Owner Divisi MR';
+                    $params = ['status_dari' => UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR, 'status_ke' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR];
+                    $disabled = $allApproved ? '' : 'disabled';
+                } else {
+                    // Step 1: Kirim ke Risk Owner Divisi
                     $allRisksMonitored = $riskIds->isNotEmpty() && $riskIds->diff($latestMonitorings->pluck('identifikasi_risiko_id'))->isEmpty();
                     $hasItemsToSend = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_DRAFT_REVISI)->isNotEmpty();
                     if ($allRisksMonitored && $hasItemsToSend) {
@@ -660,24 +710,21 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                         $params = ['status_dari' => UnitRiskMonitoring::STATUS_DRAFT_REVISI, 'status_ke' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI];
                         $disabled = '';
                     }
-                } elseif ($user->unit?->unit_mr == 1) {
-                    $allApproved = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR)->isNotEmpty() && $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR)->every('is_approved', true);
-                    $buttonText = 'Kirim ke Risk Owner Divisi MR';
-                    $params = ['status_dari' => UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR, 'status_ke' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR];
-                    $disabled = $allApproved ? '' : 'disabled';
                 }
                 break;
-            
+
             case 2:
-                if (!$user->unit?->unit_mr) {
-                    $allApproved = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI)->isNotEmpty() && $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI)->every('is_approved', true);
-                    $buttonText = 'Kirim ke Risk Officer Divisi MR';
-                    $params = ['status_dari' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI, 'status_ke' => UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR];
-                    $disabled = $allApproved ? '' : 'disabled';
-                } elseif ($user->unit?->unit_mr == 1) {
+                if ($isUnitMr && $hasVerificationMr) {
+                    // Step 4: Publish Monitoring
                     $allApproved = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR)->isNotEmpty() && $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR)->every('is_approved', true);
                     $buttonText = 'Publish Monitoring';
                     $params = ['status_dari' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR, 'status_ke' => UnitRiskMonitoring::STATUS_PUBLISHED, 'final' => true];
+                    $disabled = $allApproved ? '' : 'disabled';
+                } else {
+                    // Step 2: Kirim ke Risk Officer Divisi MR
+                    $allApproved = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI)->isNotEmpty() && $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI)->every('is_approved', true);
+                    $buttonText = 'Kirim ke Risk Officer Divisi MR';
+                    $params = ['status_dari' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI, 'status_ke' => UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR];
                     $disabled = $allApproved ? '' : 'disabled';
                 }
                 break;
