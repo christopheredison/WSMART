@@ -282,6 +282,8 @@ return [
         'rmd_menu',
         'setting_menu',
         'ap_admin',
+        'view_all_division',
+        'verification_mr',
 
         'ict_input',
         'ict_approval',

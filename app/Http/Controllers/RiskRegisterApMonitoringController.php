@@ -32,8 +32,13 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         $cb = fn ($fn) => $fn;
 
         $user = request()->user();
-        $quarter = request()->input('filters.quarter') ?: 4;
-        $month = request()->input('filters.month') ?: null;
+        $quarter = request()->input('filters.quarter') ?: 1;
+        
+        $defaultMonth = '1';
+        if ($quarter == 2) $defaultMonth = '4';
+        if ($quarter == 3) $defaultMonth = '7';
+        if ($quarter == 4) $defaultMonth = '10';
+        $month = request()->input('filters.month', $defaultMonth);
 
         $targetUnitId = null;
         $isApAdmin = Gate::check('ap_admin');

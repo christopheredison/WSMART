@@ -327,9 +327,10 @@ $(document).ready(function() {
                     const quarter = $('#table-filter select[name="quarter"]').val();
                     const tahun = $('#table-filter select[name="tahun"]').val();
                     const month = $('#table-filter select[name="month"]').val();
+                    const monitoringId = row.last_monitoring_risiko?.id || row.project_risk_monitoring?.id || 0;
 
                     buttonHtml = buttonHtml.replaceAll('__RISK_ID__', row.id)
-                                        .replaceAll('__MONITORING_ID__', row.project_risk_monitoring?.id || 0)
+                                        .replaceAll('__MONITORING_ID__', monitoringId)
                                         .replaceAll('__RISK_TITLE__', title)
                                         .replaceAll('__RISK_DESC__', desc)
                                         .replaceAll(':quarter', quarter)

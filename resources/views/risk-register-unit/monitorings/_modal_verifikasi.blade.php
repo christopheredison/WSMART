@@ -17,8 +17,18 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-success" id="btn-terima-verifikasi"><span class="indicator-label">Terima</span><span class="indicator-progress d-none">Memproses... <span class="spinner-border spinner-border-sm"></span></span></button>
-                <button type="button" class="btn btn-danger" id="btn-tolak-verifikasi"><span class="indicator-label">Tolak</span><span class="indicator-progress d-none">Memproses... <span class="spinner-border spinner-border-sm"></span></span></button>
+                <button type="button" class="btn btn-success" id="btn-terima-verifikasi">
+                  <span class="indicator-label">Terima Monitoring</span>
+                  <span class="indicator-progress d-none">
+                    Memproses... <span class="spinner-border spinner-border-sm" style="width: 0.75rem; height: 0.75rem;"></span>
+                  </span>
+                </button>
+                <button type="button" class="btn btn-danger" id="btn-tolak-verifikasi">
+                  <span class="indicator-label">Tolak Monitoring</span>
+                  <span class="indicator-progress d-none">
+                    Memproses... <span class="spinner-border spinner-border-sm" style="width: 0.75rem; height: 0.75rem;"></span>
+                  </span>
+                </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="btn-batal-verifikasi">Batal</button>
             </div>
         </div>
