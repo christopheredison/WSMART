@@ -235,18 +235,6 @@ class ProjectRiskController extends BasicCRUDController
                 [
                     'icon' => '<span class="bx bx-show-alt"></span>',
                     'label' => 'View'
-                ],
-                [
-                    'icon' => '<span class="bx bx-analyse text-warning"></span>',
-                    'label' => 'Analisa'
-                ],
-                [
-                    'icon' => '<span class="bx bx-task text-primary"></span>',
-                    'label' => 'Perencanaan'
-                ],
-                [
-                    'icon' => '<span class="bx bx-edit"></span>',
-                    'label' => 'Edit'
                 ]
             ];
 
@@ -266,6 +254,21 @@ class ProjectRiskController extends BasicCRUDController
                     // Jika status batch 5, maka status risk juga harus 5
                     $active_state = 'function(id, type, row) { return row.status == 5; }';
                 }
+
+                $this->tableLegend = [
+                    [
+                        'icon' => '<span class="bx bx-analyse text-warning"></span>',
+                        'label' => 'Analisa'
+                    ],
+                    [
+                        'icon' => '<span class="bx bx-task text-primary"></span>',
+                        'label' => 'Perencanaan'
+                    ],
+                    [
+                        'icon' => '<span class="bx bx-edit"></span>',
+                        'label' => 'Edit'
+                    ]
+                ];
 
                 $this->tableActions[] = [
                     'label' => '<span class="bx bx-analyse text-warning"></span>',
@@ -292,6 +295,22 @@ class ProjectRiskController extends BasicCRUDController
                     'permissions' => ['project_risk_edit'],
                     'active_state' => $active_state
                 ];
+                
+
+                if (Gate::check('project_risk_delete') && $status==1) {
+                    $this->tableLegend[] = [
+                        'icon' => '<span class="bx bx-trash text-danger"></span>',
+                        'label' => 'Hapus'
+                    ];
+
+                    $this->tableActions[] = [
+                        'label' => '<span class="bx bx-trash text-danger"></span>',
+                        'btn_icon' => true,
+                        'action' => 'delete',
+                        'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']),
+                        'permissions' => ['project_risk_delete'],
+                    ];
+                }
             }
             else if($status==2 && $levelId==7){//on verif && level = ROW/P
                 $active_state = null;
@@ -305,21 +324,6 @@ class ProjectRiskController extends BasicCRUDController
                     //'permissions' => ['project_risk_edit'],
                 ];
             }
-        }
-
-        if (Gate::check('project_risk_delete') && $status==1) {
-            $this->tableLegend[] = [
-                'icon' => '<span class="bx bx-trash text-danger"></span>',
-                'label' => 'Hapus'
-            ];
-
-            $this->tableActions[] = [
-                'label' => '<span class="bx bx-trash text-danger"></span>',
-                'btn_icon' => true,
-                'action' => 'delete',
-                'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']),
-                'permissions' => ['project_risk_delete'],
-            ];
         }
 
         $this->tableLegend[] = [
@@ -370,9 +374,13 @@ class ProjectRiskController extends BasicCRUDController
 
         $csrfToken = csrf_token();
         $disabledAttr = '';
+        $viewAttr = "none";
+
         if (!((($status == 1 || $status == 5) && $levelId == 6) || ($status == 2 && $levelId == 7))) {
             $disabledAttr = ' disabled';
+            $viewAttr = " style='display:none'";
         }
+
         $buttonText = ($status == 5) ? 'Kirim Perbaikan' : 'Kirim Risiko';
         $sendType = ($status == 5) ? 'perbaikan' : 'risiko';
         // Format nilai eksposur risiko dengan format Rupiah dan pemisah ribuan
@@ -384,7 +392,7 @@ class ProjectRiskController extends BasicCRUDController
                     <strong>Rata-rata Eksposure Risiko (Kuantitatif):</strong>
                     <span id="average-risk-value">{$formattedAverageExposure}</span>
                 </div>
-                <div class="mt-3">
+                <div class="mt-3"{$viewAttr}>
                     <form id="send-form" action="{$routeUrl}" method="POST" class="d-inline-block">
                         <input type="hidden" name="_token" value="{$csrfToken}">
                         <input type="hidden" name="project_id" value="{$projectId}">
