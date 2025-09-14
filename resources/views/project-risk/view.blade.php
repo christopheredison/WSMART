@@ -562,7 +562,15 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Parameter Probabilitas</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->skalaParameterObj->type_parameter ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Nilai Probabilitas (%)</label>
                             <div class="p-3 bg-light rounded">
@@ -574,7 +582,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Eksposur Risiko</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->eksposur_risiko ? 'Rp ' . number_format($analisa->eksposur_risiko, 0, ',', '.') : '-' }}
+                                {{ $analisa->eksposur_risiko ? 'Rp ' . number_format($analisa->eksposur_risiko, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>
@@ -657,7 +665,15 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Skala Parameter</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $analisa->skalaParameterResidualObj ? '(' . $analisa->skalaParameterResidualObj->tingkat . ') ' . $analisa->skalaParameterResidualObj->skala : '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Nilai Probabilitas (%)</label>
                             <div class="p-3 bg-light rounded">
@@ -669,7 +685,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Eksposur Risiko</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->eksposur_risiko_residual ? 'Rp ' . number_format($analisa->eksposur_risiko_residual, 0, ',', '.') : '-' }}
+                                {{ $analisa->eksposur_risiko_residual ? 'Rp ' . number_format($analisa->eksposur_risiko_residual, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>

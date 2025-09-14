@@ -31,7 +31,8 @@ class Unit extends Model
         'cost_center_abbrevation',
         'cost_center_type',
         'cost_center_parent',
-        'cost_center_parent_deskripsi'
+        'cost_center_parent_deskripsi',
+        'unit_mr',
     ];
 
     public const UNIT_TYPE_DIVISION = 1;
@@ -132,4 +133,10 @@ class Unit extends Model
     {
         return $this->HasMany(Unit::class, 'parent_id');
     }
+
+    public function rekomendasiRisikos()
+    {
+        return $this->hasMany(RekomendasiRisiko::class, 'unit_id');
+    }
+
 }

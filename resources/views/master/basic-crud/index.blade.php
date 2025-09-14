@@ -206,7 +206,22 @@
     @if($hasVerifikasiAction)
         @include('project-risk._modal_verifikasi')
     @endif
-    
+
+    @if (!empty($extraViewData['showVerifikasiModal']))
+        @if (request()->route()->getName() === 'projects.monitorings.index')
+            @include('project-monitorings._modal_verifikasi')
+        @elseif (request()->route()->getName() === 'risk-register-unit.monitorings.index')
+            @include('risk-register-unit.monitorings._modal_verifikasi')
+        @endif
+    @endif
+
+    @if (!empty($extraViewData['showCatatanModal']))
+        @if (request()->route()->getName() === 'projects.monitorings.index')
+            @include('project-monitorings._modal_catatan')
+        @elseif (request()->route()->getName() === 'risk-register-unit.monitorings.index')
+            @include('risk-register-unit.monitorings._modal_catatan')
+        @endif
+    @endif
 @endsection
 
 @push('styles')
@@ -305,7 +320,23 @@ $(document).ready(function() {
                 activeState = true;
                 @endif
                 if (activeState) {
-                    buttons.push(`@include('master.basic-crud._table_action', ['action' => $action, 'id' => ':id', 'code' => ':code'])`);
+                    let buttonHtml = `@include('master.basic-crud._table_action', ['action' => $action, 'id' => ':id', 'code' => ':code'])`;
+
+                    const title = (row.peristiwa_risiko?.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    const desc = (row.deskripsi_peristiwa_risiko || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    const quarter = $('#table-filter select[name="quarter"]').val();
+                    const tahun = $('#table-filter select[name="tahun"]').val();
+                    const month = $('#table-filter select[name="month"]').val();
+
+                    buttonHtml = buttonHtml.replaceAll('__RISK_ID__', row.id)
+                                        .replaceAll('__MONITORING_ID__', row.project_risk_monitoring?.id || 0)
+                                        .replaceAll('__RISK_TITLE__', title)
+                                        .replaceAll('__RISK_DESC__', desc)
+                                        .replaceAll(':quarter', quarter)
+                                        .replaceAll(':tahun', tahun)
+                                        .replaceAll(':month', month);
+
+                    buttons.push(buttonHtml);
                 }
             @endforeach
 

@@ -9,6 +9,13 @@ class ProjectRiskMonitoring extends Model
 {
     use HasFactory;
 
+    public const STATUS_DRAFT_REVISI = 1;
+    public const STATUS_VERIFIKASI_RO_PROJECT = 2;   // Menunggu Level 7
+    public const STATUS_VERIFIKASI_RO_DIVISI = 3;    // Menunggu Level 1 (Divisi)
+    public const STATUS_VERIFIKASI_RO_DIVISI_MR = 4; // Menunggu Level 1 (MR)
+    public const STATUS_VERIFIKASI_ROW_DIVISI_MR = 5;// Menunggu Level 2 (ROW MR)
+    public const STATUS_PUBLISHED = 6;
+
     protected $fillable = [
         'risiko_id',
         'quarter',
@@ -21,11 +28,16 @@ class ProjectRiskMonitoring extends Model
         'level_risiko',
         'eksposure_risiko',
         'month',
+        'status',
+        'is_approved',
+        'is_revision',
     ];
 
     protected $casts = [
         'nilai_dampak' => 'decimal:2',
         'eksposure_risiko' => 'decimal:2',
+        'is_approved' => 'boolean',
+        'is_revision' => 'boolean',
     ];
 
     public function projectRisk()
@@ -60,5 +72,14 @@ class ProjectRiskMonitoring extends Model
     public function skalaDampakObj()
     {
         return $this->belongsTo(SkalaDampak::class, 'skala_dampak');
+    }
+
+    public function notes()
+    {
+        return $this->hasMany(RiskMonitoringNote::class, 'risiko_id', 'risiko_id')
+                    ->where('type', 2)
+                    ->whereColumn('quarter', 'project_risk_monitorings.quarter')
+                    ->whereColumn('month', 'project_risk_monitorings.month')
+                    ->whereColumn('year', 'project_risk_monitorings.tahun');
     }
 }

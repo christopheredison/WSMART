@@ -128,12 +128,21 @@
                     </div>
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
-                            <label>Nilai Probabilitas (%)</label>
-                            <button type="button" class="btn btn-link p-0" id="btnCalculatePoisson" title="Hitung">
-                                <i class='bx bx-calculator bx-sm'></i> <!-- Boxicons Eye Icon -->
-                            </button>
+                          <label for="skala_parameter_type" class="">
+                              <span>Parameter Probabilitas</span>
+                          </label>
+                          <button type="button" class="btn btn-link p-0 ms-2" id="btnShowSkalaInfo" data-bs-toggle="modal" data-bs-target="#modalSkalaInfo" title="Lihat Panduan Parameter">
+                              <i class='bx bx-show bx-sm'></i>
+                          </button>
                         </div>
-                        {{ Form::number('nilai_probabilitas', $analisa->nilai_probabilitas, ['class' => 'form-control', 'required' => true, 'step' => 0.01, 'min' => 0, 'max' => 100]) }}
+                        <select name="skala_parameter_type" id="skala_parameter_type" class="form-select" required>
+                            <option value="">Pilih Parameter...</option>
+                            @foreach($parameterTypes as $type)
+                                <option value="{{ $type }}" {{ ($selectedParameterType ?? null) == $type ? 'selected' : '' }}>
+                                    {{ $type }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-md-4">
                         <label>Eksposur Risiko</label>
@@ -143,17 +152,21 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label>Skala Dampak</label>
-                        {{ Form::select('skala_dampak', 
-                            \App\Models\SkalaDampak::get()->mapWithKeys(function($item) {
-                                return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi];
-                            }), 
-                            $analisa->skala_dampak, 
-                            ['class' => 'form-select', 'placeholder' => 'Pilih Skala Dampak', 'required' => true, 'id' => 'skala_dampak']
-                        ) }}
+                        {{ Form::select('skala_dampak', \App\Models\SkalaDampak::get()->mapWithKeys(function($item) { return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi]; }), $analisa->skala_dampak, ['class' => 'form-select', 'placeholder' => 'Pilih Skala Dampak', 'required' => true, 'id' => 'skala_dampak']) }}
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-4 d-none">
                         <label>Skala Probabilitas</label>
                         {{ Form::text('skala_probabilitas', '', ['class' => 'form-control', 'disabled' => true, 'required' => true]) }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="skala_parameter_id">Skala Probabilitas</label>
+                        <select name="skala_parameter_id" id="skala_parameter_id" class="form-select" required disabled>
+                            <option value="">Pilih Skala...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label>Nilai Probabilitas (%)</label>
+                        {{ Form::number('nilai_probabilitas', $analisa->nilai_probabilitas, ['class' => 'form-control', 'required' => true, 'step' => '0.01', 'min' => 0, 'max' => 100, 'disabled' => true]) }}
                     </div>
                     <div class="col-md-2">
                         <label>Skala Risiko</label>
@@ -190,45 +203,43 @@
                 </div>
             </div>
             <div class="card-body">
-                <div class="row mb-3">
+                <div class="row mb-3 gx-3">
                     <div class="col-md-4">
                         <label>Nilai Dampak</label>
                         {{ Form::text('nilai_dampak_residual', $analisa->nilai_dampak_residual, ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak_residual']) }}
                     </div>
                     <div class="col-md-4">
-                        <div class="d-flex align-items-center">
-                            <label>Nilai Probabilitas (%)</label>
-                            <button type="button" class="btn btn-link p-0" id="btnCalculatePoissonRes" title="Hitung">
-                                <i class='bx bx-calculator bx-sm'></i> <!-- Boxicons Eye Icon -->
-                            </button>
-                        </div>
-                        {{ Form::number('nilai_probabilitas_residual', $analisa->nilai_probabilitas_residual, ['class' => 'form-control', 'required' => true, 'step' => 0.01, 'min' => 0, 'max' => 100]) }}
+                        <label for="skala_parameter_type_residual">Parameter Probabilitas</label>
+                        <select name="skala_parameter_type_residual" id="skala_parameter_type_residual" class="form-select" required disabled>
+                            <option value="">Pilih Parameter...</option>
+                            @foreach($parameterTypes as $type)
+                                <option value="{{ $type }}">{{ $type }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-md-4">
                         <label>Eksposur Risiko</label>
-                        {{ Form::text('eksposur_risiko_residual', $analisa->eksposur_risiko_residual, ['class' => 'form-control inputmask-rupiah', 'disabled' => true, 'required' => true]) }}
+                        {{ Form::text('eksposur_risiko_residual', '', ['class' => 'form-control inputmask-rupiah', 'disabled' => true, 'required' => true]) }}
                     </div>
                 </div>
-                <div class="row mb-3">
+                <div class="row mb-3 gx-3">
                     <div class="col-md-4">
-                        <div class="d-flex align-items-center">
-                            <label>Skala Dampak Residual</label>
-                            <button type="button" class="btn btn-link p-0" id="btnShowKualitatifRes" title="Skala Dampak">
-                                <i class='bx bx-show bx-sm'></i> <!-- Boxicons Eye Icon -->
-                            </button>
-                        </div>
-                        {{ Form::select('skala_dampak_residual', 
-                                            \App\Models\SkalaDampak::get()->mapWithKeys(function($item) {
-                                                return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi];
-                                            }), 
-                                            $analisa->skala_dampak_residual, 
-                                            ['class' => 'form-select', 'placeholder' => 'Pilih Skala Dampak Residual', 'required' => true, 'id' => 'skala_dampak_residual']
-                                        ) }}
-                        <input type="hidden" name="skala_dampak_residual_hidden" id="skala_dampak_residual_hidden" value="{{ $analisa->skala_dampak_residual }}">
+                        <label>Skala Dampak Residual</label>
+                        {{ Form::select('skala_dampak_residual', \App\Models\SkalaDampak::get()->mapWithKeys(function($item) { return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi]; }), $analisa->skala_dampak_residual, ['class' => 'form-select', 'placeholder' => 'Pilih Skala Dampak Residual', 'required' => true, 'id' => 'skala_dampak_residual']) }}
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-4 d-none">
                         <label>Skala Probabilitas</label>
                         {{ Form::text('skala_probabilitas_residual', '', ['class' => 'form-control', 'disabled' => true, 'required' => true]) }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="skala_parameter_residual_id">Skala Probabilitas</label>
+                        <select name="skala_parameter_residual_id" id="skala_parameter_residual_id" class="form-select" required disabled>
+                            <option value="">Pilih Skala...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label>Nilai Probabilitas (%)</label>
+                        {{ Form::number('nilai_probabilitas_residual', $analisa->nilai_probabilitas_residual, ['class' => 'form-control', 'required' => true, 'step' => '0.01', 'min' => 0, 'max' => 100, 'disabled' => true]) }}
                     </div>
                     <div class="col-md-2">
                         <label>Skala Risiko</label>
@@ -272,16 +283,17 @@
     </div>
     @include('project-risk._modal_kualitatif')
     @include('project-risk._modal_kualitatif_res')
+    @include('project-risk._modal_skala_parameter')
 @endsection
 @push('styles')
 <style>
-    #btnShowKualitatif i {
+    #btnShowKualitatif i, #btnShowSkalaInfo i {
         font-size: 1.2rem; /* Ukuran ikon */
         color: #007bff; /* Warna biru */
         cursor: pointer;
     }
 
-    #btnShowKualitatif:hover i {
+    #btnShowKualitatif:hover i, , #btnShowSkalaInfo:hover i {
         color: #0056b3; /* Warna lebih gelap saat hover */
     }
 
@@ -329,8 +341,8 @@
 <script>
 function getSkalaProbabilitasByValue(value) {
     const skalaProbabilitases = @json($skalaProbabilitas);
-    for (index in skalaProbabilitases) {
-        skalaProbabilitas = skalaProbabilitases[index];
+    for (const index in skalaProbabilitases) {
+        const skalaProbabilitas = skalaProbabilitases[index];
         if (value >= skalaProbabilitas.min) {
             return skalaProbabilitas;
         }
@@ -345,13 +357,10 @@ function refreshEksposureRisiko(residual = false) {
 
     if (kategoriDampak === "{{ \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF }}") {
         const nilaiDampak = parseFloat($('[name="nilai_dampak' + (residual ? '_residual' : '') + '"]').val());
-
-        //console.log(nilaiDampak);
-        
         if (isNaN(nilaiDampak) || isNaN(nilaiProbabilitas)) {
             domEksposurRisiko.val('');
         } else {
-            domEksposurRisiko.val(nilaiDampak * nilaiProbabilitas /100);
+            domEksposurRisiko.val(nilaiDampak * nilaiProbabilitas / 100);
         }
     } else if (kategoriDampak === "{{ \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF }}") {
         const skalaDampak = parseFloat($('[name="skala_dampak' + (residual ? '_residual' : '') + '"]').val());
@@ -360,7 +369,7 @@ function refreshEksposureRisiko(residual = false) {
         if (isNaN(skalaDampak) || isNaN(nilaiProbabilitas) || isNaN(riskLimit)) {
             domEksposurRisiko.val('');
         } else {
-            domEksposurRisiko.val(skalaDampak * (1/100) * nilaiProbabilitas/100 * riskTolerance);
+            domEksposurRisiko.val(skalaDampak * (1 / 100) * nilaiProbabilitas / 100 * riskTolerance);
         }
     }
 }
@@ -373,11 +382,13 @@ function refreshSkalaAndLevelRisiko(residual = false) {
     const skalaProbabilitas = $('[name="skala_probabilitas' + (residual ? '_residual' : '') + '"]').data('tingkat');
 
     if (!skalaDampak || !skalaProbabilitas) {
-        return; 
+        domSkalaRisiko.val('');
+        domLevelRisiko.val('');
+        return;
     }
 
     const riskMap = riskMaps[skalaDampak + '-' + skalaProbabilitas];
-    if  (riskMap) {
+    if (riskMap) {
         domSkalaRisiko.val(riskMap.nilai_risiko);
         domLevelRisiko.val(riskMap.level_risiko);
     } else {
@@ -387,6 +398,242 @@ function refreshSkalaAndLevelRisiko(residual = false) {
 }
 
 $(document).ready(function() {
+    const groupedSkalaParameters = @json($groupedSkalaParameters);
+    const riskMaps = @json($riskMaps);
+
+    const $paramTypeInherent = $('#skala_parameter_type');
+    const $scaleInherent = $('#skala_parameter_id');
+    const $nilaiProbInherent = $('[name="nilai_probabilitas"]');
+    
+    const $paramTypeResidual = $('#skala_parameter_type_residual');
+    const $scaleResidual = $('#skala_parameter_residual_id');
+    const $nilaiProbResidual = $('[name="nilai_probabilitas_residual"]');
+
+    function populateSkalaDropdown(selectedType, $scaleSelect) {
+        $scaleSelect.prop('disabled', true).html('<option value="">Pilih Skala...</option>');
+        if (!selectedType) {
+            $scaleSelect.html('<option value="">Pilih Parameter Dahulu</option>');
+            return;
+        }
+        const scales = groupedSkalaParameters[selectedType] || [];
+        let options = '<option value="">Pilih Skala...</option>';
+        scales.forEach(function(scale) {
+            options += `<option value="${scale.id}" data-min="${scale.min}" data-max="${scale.max}" data-tingkat="${scale.tingkat}">${scale.tingkat} - ${scale.skala}</option>`;
+        });
+        $scaleSelect.html(options).prop('disabled', false);
+    }
+
+    function validateNilaiProbabilitas($input, $scaleSelect) {
+        const $selectedOption = $scaleSelect.find('option:selected');
+        if (!$selectedOption.val()) return;
+
+        const min = parseFloat($selectedOption.data('min'));
+        const max = parseFloat($selectedOption.data('max'));
+        let currentValue = parseFloat($input.val());
+
+        if (isNaN(currentValue)) return;
+
+        let correctedValue = null;
+        if (currentValue < min) correctedValue = min;
+        if (currentValue > max) correctedValue = max;
+
+        if (correctedValue !== null) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: `Nilai probabilitas harus berada di antara ${min}% dan ${max}%. Nilai otomatis disesuaikan.`,
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            $input.val(correctedValue).trigger('change');
+        }
+    }
+
+    $('#btnShowSkalaInfo').on('click', function() {
+        $('#modalSkalaInfo').modal('show');
+    });
+
+    $('#modalSkalaInfo').on('click', '.selectable-cell', function() {
+        const selectedType = $(this).data('parameter-type');
+        const selectedSkalaId = $(this).data('skala-id');
+
+        $paramTypeInherent.val(selectedType).trigger('change');
+        $scaleInherent.val(selectedSkalaId).trigger('change');
+
+        $('#modalSkalaInfo').modal('hide');
+    });
+
+    $paramTypeInherent.on('change', function() {
+        const selectedType = $(this).val();
+        $paramTypeResidual.val(selectedType);
+
+        populateSkalaDropdown(selectedType, $scaleInherent);
+        populateSkalaDropdown(selectedType, $scaleResidual);
+
+        $scaleInherent.val('').trigger('change');
+    });
+
+    $scaleInherent.on('change', function() {
+        const $selectedOption = $(this).find('option:selected');
+        const min = $selectedOption.data('min');
+        const max = $selectedOption.data('max');
+        const tingkatInherent = parseInt($selectedOption.data('tingkat')) || 0;
+
+        if ($(this).val()) {
+            $nilaiProbInherent.prop('disabled', false).attr({ min, max }).val('');
+        } else {
+            $nilaiProbInherent.prop('disabled', true).val('').attr({ min: 0, max: 100 });
+        }
+        $nilaiProbInherent.trigger('change');
+
+        $scaleResidual.val('').trigger('change');
+        $scaleResidual.find('option').each(function() {
+            const tingkatOption = parseInt($(this).data('tingkat')) || 0;
+            $(this).prop('disabled', tingkatOption > tingkatInherent);
+        });
+    });
+
+    $scaleResidual.on('change', function() {
+        const $selectedOption = $(this).find('option:selected');
+        const min = $selectedOption.data('min');
+        const max = $selectedOption.data('max');
+
+        if ($(this).val()) {
+            $nilaiProbResidual.prop('disabled', false).attr({ min, max }).val('');
+        } else {
+            $nilaiProbResidual.prop('disabled', true).val('').attr({ min: 0, max: 100 });
+        }
+        $nilaiProbResidual.trigger('change');
+    });
+
+    $nilaiProbInherent.on('blur', function() {
+        const $input = $(this);
+        let currentValue = parseFloat($input.val());
+        if (isNaN(currentValue)) return;
+
+        const $scaleSelect = $scaleInherent;
+        const min = parseFloat($scaleSelect.find('option:selected').data('min'));
+        const max = parseFloat($scaleSelect.find('option:selected').data('max'));
+        
+        let correctedValue = null;
+
+        if (!isNaN(min) && currentValue < min) correctedValue = min;
+        if (!isNaN(max) && currentValue > max) correctedValue = max;
+
+        if (correctedValue !== null) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: `Nilai probabilitas harus berada di antara ${min}% dan ${max}%. Nilai otomatis disesuaikan.`,
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            $input.val(correctedValue).trigger('change');
+        }
+    });
+
+    $nilaiProbResidual.on('blur', function() {
+        const $input = $(this);
+        let currentValue = parseFloat($input.val());
+        if (isNaN(currentValue)) return;
+
+        const $scaleSelect = $scaleResidual;
+        const min = parseFloat($scaleSelect.find('option:selected').data('min'));
+        const max = parseFloat($scaleSelect.find('option:selected').data('max'));
+        const inherentValue = parseFloat($nilaiProbInherent.val());
+        
+        let correctedValue = null;
+        let reason = '';
+
+        if (!isNaN(min) && currentValue < min) {
+            correctedValue = min;
+            reason = `Nilai harus lebih besar atau sama dengan ${min}%.`;
+        }
+        if (!isNaN(max) && currentValue > max) {
+            correctedValue = max;
+            reason = `Nilai harus lebih kecil atau sama dengan ${max}%.`;
+        }
+
+        const valueToCompare = (correctedValue !== null) ? correctedValue : currentValue;
+
+        if (!isNaN(inherentValue) && valueToCompare > inherentValue) {
+            correctedValue = inherentValue;
+            reason = 'Nilai Probabilitas Residual tidak boleh lebih besar dari Inherent.';
+        }
+        if (correctedValue !== null) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: `${reason} Nilai otomatis disesuaikan.`,
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            $input.val(correctedValue).trigger('change');
+        }
+    });
+
+    const savedParameterType = '{{ $selectedParameterType ?? '' }}';
+    const savedInherentScaleId = '{{ $analisa->skala_parameter_id ?? '' }}';
+    const savedResidualScaleId = '{{ $analisa->skala_parameter_residual_id ?? '' }}';
+
+    if (savedParameterType) {
+        $paramTypeInherent.val(savedParameterType);
+        $paramTypeResidual.val(savedParameterType);
+
+        populateSkalaDropdown(savedParameterType, $scaleInherent);
+        populateSkalaDropdown(savedParameterType, $scaleResidual);
+
+        $scaleInherent.val(savedInherentScaleId);
+        $scaleResidual.val(savedResidualScaleId);
+
+        if (savedInherentScaleId) {
+            const $selectedInherent = $scaleInherent.find('option:selected');
+            $nilaiProbInherent.prop('disabled', false).attr({ 
+                min: $selectedInherent.data('min'), 
+                max: $selectedInherent.data('max') 
+            });
+        }
+        if (savedResidualScaleId) {
+            const $selectedResidual = $scaleResidual.find('option:selected');
+            $nilaiProbResidual.prop('disabled', false).attr({ 
+                min: $selectedResidual.data('min'), 
+                max: $selectedResidual.data('max') 
+            });
+        }
+
+        const tingkatInherent = parseInt($scaleInherent.find('option:selected').data('tingkat')) || 0;
+        if (tingkatInherent > 0) {
+            $scaleResidual.find('option').each(function() {
+                const tingkatOption = parseInt($(this).data('tingkat')) || 0;
+                $(this).prop('disabled', tingkatOption > tingkatInherent);
+            });
+        }
+    }
+
+    $('[name="nilai_probabilitas"], [name="nilai_probabilitas_residual"]').on('input change blur', function() {
+        const input = $(this);
+        const isResidual = input.attr('name') === 'nilai_probabilitas_residual';
+
+        const nilaiProbabilitasInput = $('[name="nilai_probabilitas"]');
+        const nilaiProbabilitasResidualInput = $('[name="nilai_probabilitas_residual"]');
+        
+        const nilaiProbabilitas = parseFloat(nilaiProbabilitasInput.val()); 
+        const nilaiResidual = parseFloat(nilaiProbabilitasResidualInput.val());
+
+        if (isResidual && !isNaN(nilaiProbabilitas) && nilaiResidual > nilaiProbabilitas) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Nilai Probabilitas Residual tidak boleh lebih besar dari Nilai Probabilitas Inherent.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            }).then(() => {
+                nilaiProbabilitasResidualInput.val(nilaiProbabilitas).trigger('change');
+                nilaiProbabilitasResidualInput.focus();
+            });
+        }
+
+        if (!isResidual && !isNaN(nilaiResidual) && nilaiResidual > nilaiProbabilitas) {
+            nilaiProbabilitasResidualInput.val(nilaiProbabilitas).trigger('change');
+        }
+    });
+
     $('[name="kategori_dampak"]').on('change', function() {
         const value = $(this).val();
 

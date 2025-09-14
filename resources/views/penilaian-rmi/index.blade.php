@@ -70,8 +70,8 @@
                 title="Penilaian Aspek Kinerja">
                 <span class="bx bx-line-chart"></span>
               </a>
-              <button 
-                  type="button" 
+              <button
+                  type="button"
                   class="btn-input-icon"
                   data-bs-toggle="modal"
                   data-bs-target="#penilaianModal"
@@ -79,9 +79,9 @@
                   data-penilaian="{{ $period->penilaian }}"
                   data-tipe-penilaian="{{ $period->tipe_penilaian }}"
                   data-period-year="{{ $period->year }}"
-                  title="Atur Data Penilaian"
+                  title="Atur Penilaian Data"
               >
-                <span class="bx bxs-edit-alt"></span>
+                <span class="bx bxs-edit-alt" data-bs-toggle="tooltip" title="Atur Penilaian Data"></span>
               </button>
             </td>
           </tr>
@@ -97,7 +97,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="penilaianModalLabel">Atur Data Penilaian Periode <span id="modalPeriodYear"></span></h5>
+        <h5 class="modal-title" id="penilaianModalLabel">Atur Penilaian Data Periode <span id="modalPeriodYear"></span></h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <!-- Form akan di-submit ke route yang kita buat -->

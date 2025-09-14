@@ -278,6 +278,7 @@ return [
         'unit_menu',
         'proyek_menu',
         'ap_menu',
+        'rekomendasi_menu',
         'rmd_menu',
         'setting_menu',
         'ap_admin',

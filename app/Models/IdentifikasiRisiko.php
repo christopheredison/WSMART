@@ -260,10 +260,10 @@ class IdentifikasiRisiko extends Model
     public function refreshRealisasi()
     {
         $this->load('penyebabRisiko.perlakuanPenyebabRisikoUnit.perlakuanPenyebabUnitMonitorings.unitRiskMonitoring', 'kris.kriUnitMonitorings.unitRiskMonitoring');
-    
+
         $perlakuanPenyebabRisikos = $this->penyebabRisiko->flatten()->pluck('perlakuanPenyebabRisikoUnit')->flatten();
         $kris = $this->kris->flatten();
-    
+
         $perlakuanPenyebabRisikos->each(function($perlakuanPenyebabRisiko) {
             for ($quarter = 1; $quarter <= 4; $quarter++) {
                 $realisasiBiaya = $perlakuanPenyebabRisiko
@@ -272,21 +272,21 @@ class IdentifikasiRisiko extends Model
                     ->sortByDesc('id')
                     ->first()
                     ?->realisasi_biaya_perlakuan_risiko;
-    
+
                 $progress = $perlakuanPenyebabRisiko
                     ->perlakuanPenyebabUnitMonitorings
                     ->filter(fn($monitoring) => $monitoring->unitRiskMonitoring->quarter === $quarter)
                     ->sortByDesc('id')
                     ->first()
                     ?->progress_rencana_perlakuan_risiko;
-    
+
                 $perlakuanPenyebabRisiko->update([
                     "realisasi_biaya_perlakuan_risiko_q{$quarter}" => $realisasiBiaya,
                     "progress_rencana_perlakuan_risiko_q{$quarter}" => $progress,
                 ]);
             }
         });
-    
+
         $kris->each(function($kri) {
             for ($quarter = 1; $quarter <= 4; $quarter++) {
                 $nilaiKri = $kri
@@ -295,14 +295,14 @@ class IdentifikasiRisiko extends Model
                     ->sortByDesc('id')
                     ->first()
                     ?->nilai_kri_terkini;
-    
+
                 $statusKri = $kri
                     ->kriUnitMonitorings
                     ->filter(fn($monitoring) => $monitoring->unitRiskMonitoring->quarter === $quarter)
                     ->sortByDesc('id')
                     ->first()
                     ?->status_kri_terkini;
-    
+
                 $kri->update([
                     "nilai_kri_terkini_q{$quarter}" => $nilaiKri,
                     "status_kri_terkini_q{$quarter}" => $statusKri,

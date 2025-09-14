@@ -19,6 +19,18 @@
                                 <label>Penyebab Risiko</label>
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="perkiraan_waktu_terpapar_risiko_mulai" name="perkiraan_waktu_terpapar_risiko_mulai" required disabled>
+                                <label for="perkiraan_waktu_terpapar_risiko_mulai">Perkiraan Waktu Mulai Perlakuan Risiko</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="perkiraan_waktu_terpapar_risiko_akhir" name="perkiraan_waktu_terpapar_risiko_akhir" required disabled>
+                                <label for="perkiraan_waktu_terpapar_risiko_akhir">Perkiraan Waktu Selesai Perlakuan Risiko</label>
+                            </div>
+                        </div>
                         <div class="col-12">
                             <div class="form-floating">
                                 {{ Form::textarea('rencana_perlakuan_risiko', null, ['class' => 'form-control', 'rows' => 3, 'disabled' => 'disabled']) }}
@@ -35,6 +47,19 @@
                             <div class="form-floating">
                                 {{ Form::text('pic', null, ['class' => 'form-control', 'disabled' => 'disabled']) }}
                                 <label>PIC</label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="timeline_perlakuan_risiko_start" name="timeline_perlakuan_risiko_start" required disabled>
+                                <label for="timeline_perlakuan_risiko_start">Waktu Mulai Perlakuan Risiko</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="timeline_perlakuan_risiko_end" name="timeline_perlakuan_risiko_end" required disabled>
+                                <label for="timeline_perlakuan_risiko_end">Waktu Selesai Perlakuan Risiko</label>
                             </div>
                         </div>
                         <div class="col-12">
