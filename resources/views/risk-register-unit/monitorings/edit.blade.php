@@ -41,7 +41,7 @@
         <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
-                    <h4 class="mb-0 ff-heading-sm">Realisasi Nilai Risiko</h4>
+                    <h4 class="mb-0 ff-heading-sm">Realisasi Nilai Risiko Residual</h4>
                 </div>
             </div>
             <div class="row g-2">

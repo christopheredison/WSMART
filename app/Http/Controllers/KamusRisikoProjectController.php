@@ -23,7 +23,8 @@ class KamusRisikoProjectController extends Controller
                 'project',
                 'projectRisk.peristiwaRisiko',
                 'projectRisk.jenisRisiko.kategoriRisiko',
-                'projectRisk.projectRiskAnalisa'
+                'projectRisk.projectRiskAnalisa',
+                'projectRisk.projectRiskMonitoring',
             ]);
 
             if ($request->filled('project_id')) {
@@ -97,6 +98,8 @@ class KamusRisikoProjectController extends Controller
                 ->addColumn('deskripsi_peristiwa_risiko', function ($row) {
                     return $row->projectRisk->deskripsi_peristiwa_risiko ?? '-';
                 })
+
+                // Inherent
                 ->addColumn('nilai_dampak_inheren', function ($row) {
                     return 'Rp ' . number_format($row->projectRisk->projectRiskAnalisa->nilai_dampak ?? 0, 0, ',', '.');
                 })
@@ -115,24 +118,46 @@ class KamusRisikoProjectController extends Controller
                     $css_class = str_replace(' ', '.', $analisa->level_risiko);
                     return '<span class="badge-level ' . e($css_class) . '">' . e($analisa->level_risiko) . ' (' . e($analisa->skala_risiko) . ')</span>';
                 })
-                ->addColumn('realisasi_nilai_dampak', function ($row) {
+
+                // Residual
+                ->addColumn('nilai_dampak_residual', function ($row) {
                     return 'Rp ' . number_format($row->projectRisk->projectRiskAnalisa->nilai_dampak_residual ?? 0, 0, ',', '.');
                 })
-                ->addColumn('realisasi_skala_dampak', function ($row) {
+                ->addColumn('skala_dampak_residual', function ($row) {
                     return $row->projectRisk->projectRiskAnalisa->skala_dampak_residual ?? '-';
                 })
-                ->addColumn('realisasi_skala_probabilitas', function ($row) {
-                    return $row->projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat ?? '-';
+                ->addColumn('nilai_probabilitas_residual', function ($row) {
+                    return ($row->projectRisk->projectRiskAnalisa->nilai_probabilitas_residual ?? 0) . ' %';
                 })
-                ->addColumn('realisasi_level_risiko', function ($row) {
+                ->addColumn('eksposur_risiko_residual', function ($row) {
+                    return 'Rp ' . number_format($row->projectRisk->projectRiskAnalisa->eksposur_risiko_residual ?? 0, 0, ',', '.');
+                })
+                ->addColumn('level_risiko_residual', function ($row) {
                     $analisa = $row->projectRisk->projectRiskAnalisa;
                     if (!$analisa || !$analisa->level_risiko_residual) return '-';
                     $css_class = str_replace(' ', '.', $analisa->level_risiko_residual);
                     return '<span class="badge-level ' . e($css_class) . '">' . e($analisa->level_risiko_residual) . ' (' . e($analisa->skala_risiko_residual) . ')</span>';
                 })
-                ->addColumn('realisasi_eksposur_risiko', function ($row) {
-                    return 'Rp ' . number_format($row->projectRisk->projectRiskAnalisa->eksposur_risiko_residual ?? 0, 0, ',', '.');
+
+                // Monitoring
+                ->addColumn('realisasi_nilai_dampak', function ($row) {
+                    return 'Rp ' . number_format($row->projectRisk->projetRiskMonitoring->nilai_dampak ?? 0, 0, ',', '.');
                 })
+                ->addColumn('realisasi_skala_dampak', function ($row) {
+                    return $row->projectRisk->projectRiskMonitoring->skala_dampak ?? '-';
+                })
+                ->addColumn('realisasi_skala_probabilitas', function ($row) {
+                    return $row->projectRisk->projectRiskMonitoring?->skalaProbabilitas?->tingkat ?? '-';
+                })
+                ->addColumn('realisasi_level_risiko', function ($row) {
+                    $monitoring = $row->projectRisk->projectRiskMonitoring;
+                    if (!$monitoring || !$monitoring->level_risiko) return '-';
+                    $css_class = str_replace(' ', '.', $monitoring->level_risiko);
+                    return '<span class="badge-level ' . e($css_class) . '">' . e($monitoring->level_risiko) . ' (' . e($monitoring->skala_risiko) . ')</span>';
+                })
+                // ->addColumn('realisasi_eksposur_risiko', function ($row) {
+                //     return 'Rp ' . number_format($row->projectRisk->projectRiskMonitoring->eksposur_risiko ?? 0, 0, ',', '.');
+                // })
                 ->addColumn('efektivitas', function ($row) {
                     $efektivitas = $row->projectRisk->efektivitas_perlakuan_risiko;
 
@@ -144,7 +169,7 @@ class KamusRisikoProjectController extends Controller
                     
                     return '<span class="fw-bold ' . $class . '">' . $efektivitas . '</span>';
                 })
-                ->rawColumns(['action', 'level_risiko_inheren', 'realisasi_level_risiko', 'efektivitas'])
+                ->rawColumns(['action', 'level_risiko_inheren', 'level_risiko_residual', 'realisasi_level_risiko', 'efektivitas'])
                 ->make(true);
         }
 
@@ -186,13 +211,14 @@ class KamusRisikoProjectController extends Controller
             }
 
             // Cek duplikasi berdasarkan deskripsi di proyek tujuan
-            $isExist = ProjectRisk::where('project_id', $targetPeriodeList->project_id)
-                ->where('deskripsi_peristiwa_risiko', $originalRisk->deskripsi_peristiwa_risiko)
-                ->exists();
+            // $isExist = ProjectRisk::where('project_id', $targetPeriodeList->project_id)
+            //     ->where('deskripsi_peristiwa_risiko', $originalRisk->deskripsi_peristiwa_risiko)
+            //     ->where('is_closed', 0)
+            //     ->exists();
                 
-            if ($isExist) {
-                return response()->json(['message' => 'Risiko dengan deskripsi yang sama sudah ada di proyek tujuan.'], 422);
-            }
+            // if ($isExist) {
+            //     return response()->json(['message' => 'Risiko dengan deskripsi yang sama sudah ada di proyek tujuan.'], 422);
+            // }
 
             // 1. Duplikasi ProjectRisk
             $newRisk = $originalRisk->replicate()->fill([

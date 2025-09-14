@@ -541,11 +541,9 @@ class ApLEDController extends Controller
         return [
                 'id' => $penyebab->id,
                 'penyebab_risiko' => $penyebab->penyebab_risiko,
-                'is_original' => true,
                 'perlakuan' => $penyebab->perlakuanPenyebabRisikoUnit->map(function ($perlakuan) {
                     return [
                         'id' => $perlakuan->id,
-                        'is_original' => true,
                         'rencana_perlakuan_risiko' => $perlakuan->rencana_perlakuan_risiko,
                         'output_perlakuan_risiko' => $perlakuan->output_perlakuan_risiko,
                         'biaya_perlakuan_risiko' => $perlakuan->biaya_perlakuan_risiko,

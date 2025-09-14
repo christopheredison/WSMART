@@ -27,6 +27,7 @@ use App\Models\AreaDampak;
 use App\Models\AreaDampakDetail;
 use App\Models\LossEventProject;
 use App\Models\Jabatan;
+use App\Models\SkalaParameter;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -144,7 +145,7 @@ class ProjectRiskController extends BasicCRUDController
         $batchNotes = null;
         $user = request()->user();
         $levelId = $user->level_id;
-        
+
         // Cari ApprovalFlow untuk unit ini
         $approvalFlow = ApprovalFlow::where('project_id', $projectId)
             ->whereNull('unit_id')
@@ -192,7 +193,7 @@ class ProjectRiskController extends BasicCRUDController
                 ->with('peristiwaRisiko', 'projectRiskAnalisa.skalaProbabilitas')
                 ->orderBy('project_risk_analisas.skala_risiko', 'desc')
                 ->orderBy('project_risk_analisas.eksposur_risiko', 'desc');
-        };        
+        };
 
         $this->availableFilters = [
             'peristiwa_risiko_id' => [
@@ -274,7 +275,7 @@ class ProjectRiskController extends BasicCRUDController
                     'title' => 'Analisa Risiko',
                     'active_state' => $active_state
                 ];
-                
+
                 $this->tableActions[] = [
                     'label' => '<span class="bx bx-task text-primary"></span>',
                     'btn_icon' => true,
@@ -311,7 +312,7 @@ class ProjectRiskController extends BasicCRUDController
                 'icon' => '<span class="bx bx-trash text-danger"></span>',
                 'label' => 'Hapus'
             ];
-            
+
             $this->tableActions[] = [
                 'label' => '<span class="bx bx-trash text-danger"></span>',
                 'btn_icon' => true,
@@ -330,7 +331,7 @@ class ProjectRiskController extends BasicCRUDController
         // Menghitung rata-rata eksposur risiko dari data dengan kategori dampak Kuantitatif
         $projectRiskIds = ProjectRisk::where('project_periode_list_id', request()->route('project'))
             ->pluck('id');
-            
+
         $averageExposure = (float) ProjectRiskAnalisa::whereIn('risiko_id', $projectRiskIds)
             ->where('kategori_dampak', ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF)
             ->avg('eksposur_risiko');
@@ -343,10 +344,10 @@ class ProjectRiskController extends BasicCRUDController
                 // if (row.skala_risiko >= $average) {
                 //     add = '<span class="badge bg-primary">!</span> ';
                 // }
-                if (row.project_risk_analisa?.kategori_dampak === 'Kuantitatif' && 
+                if (row.project_risk_analisa?.kategori_dampak === 'Kuantitatif' &&
                     row.project_risk_analisa?.eksposur_risiko >= $averageExposure) {
                     add = '<span class="badge bg-primary">!</span> ';
-                } else if (row.project_risk_analisa?.kategori_dampak === 'Kualitatif' && 
+                } else if (row.project_risk_analisa?.kategori_dampak === 'Kualitatif' &&
                     row.skala_risiko >= 20) {
                     add = '<span class="badge bg-primary">!</span> ';
                 }
@@ -362,7 +363,7 @@ class ProjectRiskController extends BasicCRUDController
                 };
                 return formatCurrency(row.project_risk_analisa?.nilai_dampak);
             }
-            JS;      
+            JS;
 
         //$routeUrl = route('projects.risks.send');
         $routeUrl = ($levelId == 7 && $status == 2) ? route('projects.risks.eskalasi') : route('projects.risks.send');
@@ -372,23 +373,23 @@ class ProjectRiskController extends BasicCRUDController
         if (!((($status == 1 || $status == 5) && $levelId == 6) || ($status == 2 && $levelId == 7))) {
             $disabledAttr = ' disabled';
         }
-        $buttonText = ($status == 5) ? 'Kirim Perbaikan' : 'Kirim Risiko';  
-        $sendType = ($status == 5) ? 'perbaikan' : 'risiko';     
+        $buttonText = ($status == 5) ? 'Kirim Perbaikan' : 'Kirim Risiko';
+        $sendType = ($status == 5) ? 'perbaikan' : 'risiko';
         // Format nilai eksposur risiko dengan format Rupiah dan pemisah ribuan
         $formattedAverageExposure = 'Rp ' . number_format($averageExposure, 0, ',', '.');
 
         $this->cardFooter = <<<HTML
             <div class="d-flex flex-column">
                 <div>
-                    <strong>Rata-rata Eksposure Risiko (Kuantitatif):</strong> 
+                    <strong>Rata-rata Eksposure Risiko (Kuantitatif):</strong>
                     <span id="average-risk-value">{$formattedAverageExposure}</span>
                 </div>
                 <div class="mt-3">
-                    <form id="send-form" action="{$routeUrl}" method="POST" class="d-inline-block"> 
+                    <form id="send-form" action="{$routeUrl}" method="POST" class="d-inline-block">
                         <input type="hidden" name="_token" value="{$csrfToken}">
-                        <input type="hidden" name="project_id" value="{$projectId}"> 
+                        <input type="hidden" name="project_id" value="{$projectId}">
                         <input type="hidden" name="send_type" value="{$sendType}">
-                        <button id="send-button" type="button" class="btn btn-submit btn-arrow-right"{$disabledAttr}>{$buttonText}</button>  
+                        <button id="send-button" type="button" class="btn btn-submit btn-arrow-right"{$disabledAttr}>{$buttonText}</button>
                     </form>
                 </div>
             </div>
@@ -547,11 +548,9 @@ class ProjectRiskController extends BasicCRUDController
         $masterKris = MasterKRI::get();
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
         $kontrolEksistings = KontrolEksisting::get();
-        $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();
-        
-        
+        $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();        
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
-        
+
         return view('project-risk.create', compact('periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos', 'sasaranProyeks'));
     }
 
@@ -731,9 +730,9 @@ class ProjectRiskController extends BasicCRUDController
         $kontrolEksistingIds = !empty($projectRisk->kontrol_eksisting) ? explode(',', $projectRisk->kontrol_eksisting) : [];
 
         $kontrolEksistings = KontrolEksisting::whereIn('id', $kontrolEksistingIds)->get();
-        
+
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
-        
+
         $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();
 
         return view('project-risk.edit', compact('projectRisk', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos', 'sasaranProyeks'));
@@ -787,7 +786,7 @@ class ProjectRiskController extends BasicCRUDController
             } else {
                 $targetCapaianKinerja = $request->target_capaian_kinerja;
             }
-            
+
             $toUpdate = [
                 'unit_type_id' => $user->unit_type_id,
                 'unit_id' => $user->unit_id,
@@ -900,7 +899,7 @@ class ProjectRiskController extends BasicCRUDController
         $minTahun = !empty($tahunMonitorings) ? min($tahunMonitorings) : date('Y');
         $maxTahun = !empty($tahunMonitorings) ? max($tahunMonitorings) : date('Y');
         $tahunMonitorings = range($minTahun, $maxTahun);
-        
+
         $currentRiskMaps = $projectRisk->currentRiskMapsMonth;
         $formattedCurrentRiskMaps = [];
         $currentValue = $projectRisk->currentRiskMaps['inherent'] ?? null;
@@ -911,11 +910,11 @@ class ProjectRiskController extends BasicCRUDController
                     if ($nextValue = ($projectRisk->currentRiskMapsMonth[$tahun . '-' . $month] ?? null)) {
                         $currentValue = $nextValue;
                     }
-    
+
                     $currentValue['tahun'] = $tahun;
                     $currentValue['quarter'] = ceil($month / 3);
                     $currentValue['month'] = $month;
-    
+
                     $formattedCurrentRiskMaps[$projectRisk->id][$tahun][] = $currentValue;
                 }
             }
@@ -933,17 +932,17 @@ class ProjectRiskController extends BasicCRUDController
 
         if($project->type==2){
             $risk_tolerance = array_filter([
-                $project->rapk_100_rp, 
-                $project->rapk_70_90_rp, 
-                $project->rapk_30_50_rp, 
-                $project->rapk_0_10_rp, 
+                $project->rapk_100_rp,
+                $project->rapk_70_90_rp,
+                $project->rapk_30_50_rp,
+                $project->rapk_0_10_rp,
                 $project->rapk
             ], function ($value) {
                 return $value !== null && $value != 0;
             });
-            
+
             $risk_tolerance = reset($risk_tolerance) ?: 0;
-            
+
             $risk_tolerance = 2/100 *($risk_tolerance);
         } else if($project->type==1){
             $risk_tolerance = $project->rapt ?? 0;
@@ -956,13 +955,13 @@ class ProjectRiskController extends BasicCRUDController
             $risk_limit = ($project->meta['omset'] ?? 0) * 0.03;
         } else{
             $risk_limit = 1/100*$risk_tolerance;
-        }  
+        }
 
         // dd($risk_limit, $risk_tolerance);
         return view('project-risk.view', compact(
-            'projectRisk', 
-            'tahunMonitorings', 
-            'formattedCurrentRiskMaps', 
+            'projectRisk',
+            'tahunMonitorings',
+            'formattedCurrentRiskMaps',
             'riskMaps',
             'risk_limit',
             'risk_tolerance',
@@ -1013,6 +1012,15 @@ class ProjectRiskController extends BasicCRUDController
         if (!$analisa) {
             $analisa = $projectRisk->projectRiskAnalisa()->create([]);
         }
+
+        $selectedParameterType = null;
+        if ($analisa && $analisa->skalaParameterObj) {
+            $selectedParameterType = $analisa->skalaParameterObj->type_parameter;
+        }
+
+        $skalaParameters = SkalaParameter::all();
+        $parameterTypes = $skalaParameters->pluck('type_parameter')->unique();
+        $groupedSkalaParameters = $skalaParameters->groupBy('type_parameter');
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
         $riskMaps = RiskMap::get()->keyBy(function($item) {
             return $item->skala_dampak . '-' . $item->skala_probabilitas;
@@ -1033,25 +1041,25 @@ class ProjectRiskController extends BasicCRUDController
         $sum_risk = $sum_risk + 1;
         //dd($project);
         if($project->type==2){
-            // $risk_tolerance = $project->rapk_100_rp 
-            //     ?? $project->rapk_70_90_rp 
-            //     ?? $project->rapk_30_50_rp 
-            //     ?? $project->rapk_0_10_rp 
-            //     ?? $project->rapk 
+            // $risk_tolerance = $project->rapk_100_rp
+            //     ?? $project->rapk_70_90_rp
+            //     ?? $project->rapk_30_50_rp
+            //     ?? $project->rapk_0_10_rp
+            //     ?? $project->rapk
             //     ?? 0;
 
             $risk_tolerance = array_filter([
-                $project->rapk_100_rp, 
-                $project->rapk_70_90_rp, 
-                $project->rapk_30_50_rp, 
-                $project->rapk_0_10_rp, 
+                $project->rapk_100_rp,
+                $project->rapk_70_90_rp,
+                $project->rapk_30_50_rp,
+                $project->rapk_0_10_rp,
                 $project->rapk
             ], function ($value) {
                 return $value !== null && $value != 0;
             });
-            
+
             $risk_tolerance = reset($risk_tolerance) ?: 0;
-            
+
             $risk_tolerance = 2/100 *($risk_tolerance);
         }
         else if($project->type==1){
@@ -1064,7 +1072,7 @@ class ProjectRiskController extends BasicCRUDController
 
         //$risk_limit = $projectPeriodeList->risk_limit;
         $risk_limit = ($projectPeriodeList->project->meta['omset'] ?? 0) * 0.03;
-        return view('project-risk.analisa', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'skalaProbabilitas', 'riskMaps', 'analisa', 'areas', 'groupedAreas', 'risk_tolerance', 'risk_limit'));
+        return view('project-risk.analisa', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'skalaProbabilitas', 'riskMaps', 'analisa', 'areas', 'groupedAreas', 'risk_tolerance', 'risk_limit', 'parameterTypes', 'groupedSkalaParameters', 'selectedParameterType'));
     }
 
     public function doAnalisa(Request $request) {
@@ -1089,6 +1097,8 @@ class ProjectRiskController extends BasicCRUDController
             // 'skala_dampak_hidden' => 'required|numeric',
             'nilai_probabilitas' => 'required|numeric',
             // 'skala_dampak_residual_hidden' => 'required|numeric|lte:skala_dampak_hidden',
+            'skala_parameter_id' => 'required|exists:skala_parameters,id',
+            'skala_parameter_residual_id' => 'required|exists:skala_parameters,id',
             'nilai_probabilitas_residual' => 'required|numeric|lte:nilai_probabilitas',
         ]);
 
@@ -1127,6 +1137,8 @@ class ProjectRiskController extends BasicCRUDController
             //'skala_risiko_residual' => null, // calculated [Done]
             //'level_risiko_residual' => null, // calculated [Done]
             //'eksposur_risiko_residual' => null, // calculated
+            'skala_parameter_id' => $request->skala_parameter_id,
+            'skala_parameter_residual_id' => $request->skala_parameter_residual_id,
         ];
 
         $analisa->update($toUpdate);
@@ -1139,25 +1151,25 @@ class ProjectRiskController extends BasicCRUDController
         $risk_limit = 0;
 
         if($project->type==2){
-            // $risk_tolerance = $project->rapk_100_rp 
-            //     ?? $project->rapk_70_90_rp 
-            //     ?? $project->rapk_30_50_rp 
-            //     ?? $project->rapk_0_10_rp 
-            //     ?? $project->rapk 
+            // $risk_tolerance = $project->rapk_100_rp
+            //     ?? $project->rapk_70_90_rp
+            //     ?? $project->rapk_30_50_rp
+            //     ?? $project->rapk_0_10_rp
+            //     ?? $project->rapk
             //     ?? 0;
 
             $risk_tolerance = array_filter([
-                $project->rapk_100_rp, 
-                $project->rapk_70_90_rp, 
-                $project->rapk_30_50_rp, 
-                $project->rapk_0_10_rp, 
+                $project->rapk_100_rp,
+                $project->rapk_70_90_rp,
+                $project->rapk_30_50_rp,
+                $project->rapk_0_10_rp,
                 $project->rapk
             ], function ($value) {
                 return $value !== null && $value != 0;
             });
-            
+
             $risk_tolerance = reset($risk_tolerance) ?: 0;
-            
+
             $risk_tolerance = 2/100 *($risk_tolerance);
         }
         else if($project->type==1){
@@ -1169,7 +1181,7 @@ class ProjectRiskController extends BasicCRUDController
         }
 
         if($request->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF){
-            
+
             $sum_risk = ProjectRisk::where('periode_id', $projectPeriodeList->periode_id)
                 ->where('project_id', $projectPeriodeList->project_id)
                 ->where('id', '!=', $projectRisk->id)
@@ -1178,13 +1190,13 @@ class ProjectRiskController extends BasicCRUDController
                 })
                 ->count();
             $sum_risk = $sum_risk + 1;
-            
+
             //$risk_limit = $projectPeriodeList->risk_limit;
             $risk_limit = ($projectPeriodeList->project->meta['omset'] ?? 0) * 0.03;
 
             $skala_dampak = $this->hitungSkalaDampak($nilai_dampak, $risk_limit);
             $skala_dampak_residual = $this->hitungSkalaDampak($nilai_dampak_residual, $risk_limit);
-            
+
             $toUpdate['skala_dampak'] = $skala_dampak;
             $toUpdate['skala_dampak_residual'] = $skala_dampak_residual;
             $toUpdate['nilai_dampak'] = $nilai_dampak;
@@ -1199,9 +1211,18 @@ class ProjectRiskController extends BasicCRUDController
             $toUpdate['risk_limit'] = 1/100*$risk_tolerance;
         }
 
-        
+
         //dd($toUpdate);
-        
+        $skalaInherent = SkalaParameter::find($request->skala_parameter_id);
+        $skalaResidual = SkalaParameter::find($request->skala_parameter_residual_id);
+
+        // Validasi tingkat residual tidak boleh > inheren
+        if ($skalaResidual->tingkat > $skalaInherent->tingkat) {
+            return response()->json([
+                'message' => 'Tingkat skala probabilitas residual tidak boleh lebih tinggi dari inheren.',
+            ], 422);
+        }
+
         $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($request->nilai_probabilitas);
         $tingkatSkalaProbabilitasResidual = SkalaProbabilitas::getSkalaByValue($request->nilai_probabilitas_residual);
 
@@ -1247,14 +1268,14 @@ class ProjectRiskController extends BasicCRUDController
             $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'] / 100;
             $toUpdate['eksposur_risiko_residual'] = $toUpdate['nilai_dampak_residual'] * $toUpdate['nilai_probabilitas_residual'] / 100;
         }
-  
+
         $analisa->update($toUpdate);
 
         $projectRisk->update([
             'skala_risiko' => $toUpdate['skala_risiko'],
             'level_risiko' => $toUpdate['level_risiko'],
         ]);
-        
+
         $projectPeriodeList->recalculateAnalisa($risk_limit);
         $projectPeriodeList->refreshNilai();
         //dd($toUpdate);
@@ -1270,7 +1291,7 @@ class ProjectRiskController extends BasicCRUDController
         ])->findOrFail(request()->route('risk'));
 
         //dd($projectRisk->penyebabRisikoProjects);
-    
+
         $projectPeriodeList = ProjectPeriodeList::findOrFail(request()->route('project'));
 
         $user = request()->user();
@@ -1380,7 +1401,7 @@ class ProjectRiskController extends BasicCRUDController
             'biaya_perlakuan_risiko' => $validated['biaya_perlakuan_risiko'],
             'pic' => $jabatan_name,
             'pic_jabatan_id' => $validated['pic'],
-            'divisi_terkait' => $validated['divisi_terkait'] ?? [], 
+            'divisi_terkait' => $validated['divisi_terkait'] ?? [],
             'timeline_perlakuan_risiko_start' => $startDate,
             'timeline_perlakuan_risiko_end' => $endDate,
             'opsi_perlakuan_risiko' => $validated['opsi_perlakuan_risiko'],
@@ -1400,7 +1421,7 @@ class ProjectRiskController extends BasicCRUDController
             // Cari data berdasarkan ID dan hapus
             $perlakuan = PerlakuanPenyebabRisiko::findOrFail($id);
             $perlakuan->delete();
-    
+
             // Kembalikan respons JSON
             return response()->json([
                 'message' => 'Rencana perlakuan berhasil dihapus.'
@@ -1465,7 +1486,7 @@ class ProjectRiskController extends BasicCRUDController
             if($jabatan){
                 $jabatan_name = $jabatan->name;
             }
-            
+
             $data = [
                 'rencana_perlakuan_risiko' => $validated['xrencana_perlakuan_risiko'],
                 'output_perlakuan_risiko' => $validated['xoutput_perlakuan_risiko'],
@@ -1567,7 +1588,7 @@ class ProjectRiskController extends BasicCRUDController
             $modifier = new TenderTemplateImport($templatePath, $peristiwaRisikoData, $jenisRisikoData);
             $spreadsheet = $modifier->getModifiedSpreadsheet();
             $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-        
+
             ob_start();
             $writer->save('php://output');
             $fileContents = ob_get_clean();
@@ -1580,11 +1601,11 @@ class ProjectRiskController extends BasicCRUDController
             return response()->json(['error' => 'Error processing template: ' . $e->getMessage()], 500);
         }
     }
-    
+
     public function getKontrolEksisting(Request $request)
     {
         $kontrolEksistings = KontrolEksisting::where('peristiwa_risiko_id', $request->peristiwa_risiko_id)->get();
-        
+
         return response()->json($kontrolEksistings);
     }
 
@@ -1597,9 +1618,9 @@ class ProjectRiskController extends BasicCRUDController
         if ($risk_limit <= 0) {
             return 5; // Jika risk limit 0 atau negatif, default ke High (5)
         }
-    
+
         $persentase = ($nilai_dampak / $risk_limit) * 100;
-    
+
         if ($persentase <= 20) {
             return 1; // Low
         } elseif ($persentase > 20 && $persentase <= 40) {
@@ -1635,11 +1656,11 @@ class ProjectRiskController extends BasicCRUDController
     {
         try {
             $projectRisk = ProjectRisk::findOrFail($request->project_risk_id);
-            
+
             // Lakukan perhitungan Poisson di sini
             // Contoh sederhana (sesuaikan dengan kebutuhan):
             $probability = $this->calculatePoissonProbability($projectRisk);
-            
+
             return response()->json([
                 'success' => true,
                 'probability' => $probability
@@ -1656,11 +1677,11 @@ class ProjectRiskController extends BasicCRUDController
     {
         try {
             $projectRisk = ProjectRisk::findOrFail($request->project_risk_id);
-            
+
             // Lakukan perhitungan Poisson di sini
             // Contoh sederhana (sesuaikan dengan kebutuhan):
             $probability = $this->calculatePoissonProbabilityRes($projectRisk);
-            
+
             return response()->json([
                 'success' => true,
                 'probability' => $probability
@@ -1682,20 +1703,20 @@ class ProjectRiskController extends BasicCRUDController
                 throw new \Exception('Project tidak ditemukan');
             }
             $projectSektorId = $project->project_sektor_id;
-    
+
             // 2. Ambil tahun dari meta project atau gunakan tahun berjalan
             $tahun = date('Y'); // default tahun berjalan
             // if ($project->meta && isset($project->meta['start_date'])) {
             //     $tahun = Carbon::parse($project->meta['start_date'])->year;
             // }
-    
+
             // 3. Ambil peristiwa_risiko_id
             $peristiwaRisikoId = $projectRisk->peristiwa_risiko_id;
-    
+
             // 4 & 5. Ambil data kejadian 5 tahun kebelakang
             $tahunMulai = $tahun - 5;
             $tahunAkhir = $tahun - 1;
-    
+
             // Ambil data kejadian dan group by tahun
             $kejadianPerTahun = LossEventProject::where('peristiwa_risiko_id', $peristiwaRisikoId)
                 ->where('project_sektor_id', $projectSektorId)
@@ -1705,20 +1726,20 @@ class ProjectRiskController extends BasicCRUDController
                 ->groupBy('tahun')
                 ->pluck('jumlah', 'tahun')
                 ->toArray();
-    
+
             // 6. Isi tahun yang kosong dengan nilai 0
             $dataKejadian = [];
             for ($t = $tahunMulai; $t <= $tahunAkhir; $t++) {
                 $dataKejadian[$t] = $kejadianPerTahun[$t] ?? 0;
             }
-    
+
             // 7. Hitung probabilitas Poisson
             $lambda = array_sum($dataKejadian) / count($dataKejadian); // rata-rata kejadian per tahun
-            
+
             // Hitung probabilitas minimal 1 kejadian (P(X ≥ 1) = 1 - P(X = 0))
             $probabilitas = (1 - exp(-$lambda)) * 100;
             $probabilitasFinal = min(round($probabilitas, 2), 100);
-    
+
             // Log calculation details
             $logData = [
                 'timestamp' => Carbon::now()->format('Y-m-d H:i:s'),
@@ -1736,12 +1757,12 @@ class ProjectRiskController extends BasicCRUDController
                     ->where('tahun', '<=', $tahunAkhir)
                     ->toSql()
             ];
-    
+
             // Write to poisson.log
             Log::channel('poisson')->info('Poisson Calculation', $logData);
-            
+
             return $probabilitasFinal;
-    
+
         } catch (\Exception $e) {
             \Log::error('Error in calculatePoissonProbability: ' . $e->getMessage());
             throw new \Exception('Gagal menghitung probabilitas: ' . $e->getMessage());
@@ -1757,20 +1778,20 @@ class ProjectRiskController extends BasicCRUDController
                 throw new \Exception('Project tidak ditemukan');
             }
             $projectSektorId = $project->project_sektor_id;
-    
+
             // 2. Ambil tahun dari meta project atau gunakan tahun berjalan
             $tahun = date('Y'); // default tahun berjalan
             // if ($project->meta && isset($project->meta['start_date'])) {
             //     $tahun = Carbon::parse($project->meta['start_date'])->year;
             // }
-    
+
             // 3. Ambil peristiwa_risiko_id
             $peristiwaRisikoId = $projectRisk->peristiwa_risiko_id;
-    
+
             // 4 & 5. Ambil data kejadian 5 tahun kebelakang
             $tahunMulai = $tahun - 4;
             $tahunAkhir = $tahun - 1;
-    
+
             // Ambil data kejadian dan group by tahun
             $kejadianPerTahun = LossEventProject::where('peristiwa_risiko_id', $peristiwaRisikoId)
             ->where('project_sektor_id', $projectSektorId)
@@ -1786,14 +1807,14 @@ class ProjectRiskController extends BasicCRUDController
             for ($t = $tahunMulai; $t <= $tahun; $t++) {
                 $dataKejadian[$t] = $kejadianPerTahun[$t] ?? 0;
             }
-    
+
             //Hitung probabilitas Poisson
             $lambda = array_sum($dataKejadian) / count($dataKejadian); // rata-rata kejadian per tahun
-            
+
             // Hitung probabilitas minimal 1 kejadian (P(X ≥ 1) = 1 - P(X = 0))
             $probabilitas = (1 - exp(-$lambda)) * 100;
             $probabilitasFinal = min(round($probabilitas, 2), 100);
-    
+
             // Log calculation details
             $logData = [
                 'timestamp' => Carbon::now()->format('Y-m-d H:i:s'),
@@ -1811,12 +1832,12 @@ class ProjectRiskController extends BasicCRUDController
                     ->where('tahun', '<=', $tahunAkhir)
                     ->toSql()
             ];
-    
+
             // Write to poisson.log
             Log::channel('poisson')->info('Poisson Calculation', $logData);
-            
+
             return $probabilitasFinal;
-    
+
         } catch (\Exception $e) {
             \Log::error('Error in calculatePoissonProbability: ' . $e->getMessage());
             throw new \Exception('Gagal menghitung probabilitas: ' . $e->getMessage());
@@ -1878,19 +1899,19 @@ class ProjectRiskController extends BasicCRUDController
                 $risiko = $risikos->where('id', $id)->first();
                 if ($risiko) {
                     // Ambil deskripsi peristiwa risiko
-                    $deskripsi = $risiko->deskripsi_peristiwa_risiko ?: 
+                    $deskripsi = $risiko->deskripsi_peristiwa_risiko ?:
                                  ($risiko->peristiwaRisiko ? $risiko->peristiwaRisiko->title : 'Risiko #' . $risiko->id);
                     $risikoTidakLengkap[] = $deskripsi;
                 }
             }
-            
+
             // Buat pesan error dengan daftar risiko yang belum lengkap
             $pesanError = 'Terdapat risiko yang belum dianalisa atau belum memiliki rencana perlakuan: <ul>';
             foreach ($risikoTidakLengkap as $deskripsi) {
                 $pesanError .= '<li>' . $deskripsi . '</li>';
             }
             $pesanError .= '</ul>Silahkan lengkapi terlebih dahulu.';
-            
+
             return redirect()->route('projects.risks.index', [
                 'project' => $project_id  // Changed from 'project_id' to 'project'
             ])
@@ -1915,7 +1936,7 @@ class ProjectRiskController extends BasicCRUDController
                 ->update([
                     'status' => ProjectRisk::STATUS_DIKIRIM, // STATUS_DIKIRIM = 2
                 ]);
-            
+
         } else if (!$dataBatch) {
             // Jika belum ada, buat batch baru dengan nilai batch = 1
             $batch = 1;
@@ -1930,7 +1951,7 @@ class ProjectRiskController extends BasicCRUDController
                 'step_verification' => 1,
                 'finish' => false
             ]);
-        }  
+        }
         else if (!$dataBatch->finish) {
             if($dataBatch->step_verification==null || $dataBatch->step_verification < 1){
                 // Jika sudah ada dan status belum finish
@@ -1948,8 +1969,8 @@ class ProjectRiskController extends BasicCRUDController
                     ]);
                 }
             }
-        }   
-        
+        }
+
         if($dataBatch->status <= DataBatch::STATUS_KIRIM){
             // Ubah semua risiko di identifikasi_risikos dengan status = 2 (Dikirim), status_risiko = 1, dan status_progress = 1
             foreach ($risikos as $risiko) {
@@ -2040,7 +2061,7 @@ class ProjectRiskController extends BasicCRUDController
         $step_order = $appFlow['step_order'];
         $min_verification = $appFlow['min_verification'];
         $approval_step_id = $appFlow['approval_step_id'];
-        
+
         // Validasi input
         $request->validate([
             'status_verifikasi' => 'required|in:terima,tolak',
@@ -2055,14 +2076,14 @@ class ProjectRiskController extends BasicCRUDController
         $step_order = 1;
 
         //dd("step_order", $step_order);
-        
+
         // Ambil data batch
         $dataBatch = DataBatch::where('project_id', $project_id)
             ->where('periode_id', $periode_id ?? 0)
             ->where('type', 2)
             ->where('finish', false)
             ->first();
-            
+
         if (!$dataBatch) {
             return redirect()->back()->with('error', 'Data batch tidak ditemukan.');
         }
@@ -2071,7 +2092,7 @@ class ProjectRiskController extends BasicCRUDController
         Log::channel('verification')->info('Verifikasi risiko dengan ID: ' . $projectRisk->id . ' oleh user dengan ID: ' . auth()->id());
         Log::channel('verification')->info('Step Order: ' . $step_order);
         Log::channel('verification')->info('Min Verification: ' . $min_verification);
-        
+
         // Proses verifikasi berdasarkan status
         if ($request->status_verifikasi === 'terima') {
             //catat log disini
@@ -2091,11 +2112,11 @@ class ProjectRiskController extends BasicCRUDController
                 // Update status risiko menjadi terverifikasi
                 $projectRisk->update([
                     'status' => ProjectRisk::STATUS_TUNGGU_VERIFIKASI,
-                    'status_progress' => 1,	
+                    'status_progress' => 1,
                     'step_verification' => $step_order + 1
                 ]);
             }
-            
+
             //disini maka akan simpan approval logs
             ApprovalLog::create([
                 'risk_id' => $projectRisk->id,
@@ -2112,7 +2133,7 @@ class ProjectRiskController extends BasicCRUDController
                 ->update([
                     'unread' => false
                 ]);
-            
+
             // Tambahkan catatan verifikasi
             RiskNote::create([
                 'risiko_id' => $projectRisk->id,
@@ -2121,7 +2142,7 @@ class ProjectRiskController extends BasicCRUDController
                 'notes' => $request->catatan_verifikasi,
                 'user_id' => $user->id,
             ]);
-            
+
             $message = 'Risiko berhasil diverifikasi dan diterima.';
         } else {
             Log::channel('verification')->info('Verifikasi risiko project dengan ID: ' . $projectRisk->id . ' ditolak oleh user dengan ID: ' . auth()->id());
@@ -2140,8 +2161,8 @@ class ProjectRiskController extends BasicCRUDController
                 ->where('step_order', $step_order)
                 ->update([
                     'unread' => false
-                ]);    
-            
+                ]);
+
             // Tambahkan catatan penolakan
             RiskNote::create([
                 'risiko_id' => $projectRisk->id,
@@ -2150,22 +2171,22 @@ class ProjectRiskController extends BasicCRUDController
                 'notes' => $request->catatan_verifikasi,
                 'user_id' => $user->id,
             ]);
-            
+
             // // Update status batch jika diperlukan
             // if ($dataBatch->status == DataBatch::STATUS_VERIFIKASI) {
             //     $dataBatch->update([
             //         'status' => DataBatch::STATUS_REVISI
             //     ]);
             // }
-            
+
             $message = 'Risiko ditolak dan dikembalikan untuk revisi.';
         }
-        
+
         // Cek apakah semua risiko sudah diverifikasi
         // $pendingRisks = ProjectRisk::where('project_periode_list_id', $projectRisk->project_periode_list_id)
         //     ->where('status', ProjectRisk::STATUS_DIKIRIM)
         //     ->count();
-            
+
         // if ($pendingRisks == 0 && $dataBatch->status == DataBatch::STATUS_VERIFIKASI) {
         //     // Semua risiko sudah diverifikasi, update status batch
         //     $dataBatch->update([
@@ -2173,7 +2194,7 @@ class ProjectRiskController extends BasicCRUDController
         //         'finish' => true
         //     ]);
         // }
-        
+
         return redirect()->route('projects.risks.index', ['project' => $project_id])
             ->with('success', $message);
     }
@@ -2197,10 +2218,10 @@ class ProjectRiskController extends BasicCRUDController
         $risikos = ProjectRisk::where('project_id', $project_id)
                 ->where('periode_id', $periode_id)
                 ->get();
-        
+
         $belumStatus3 = false;
         $idRisikoBelumStatus3 = [];
-        
+
         foreach ($risikos as $risiko) {
             if ($risiko->status != ProjectRisk::STATUS_TUNGGU_VERIFIKASI) { // STATUS_TUNGGU_VERIFIKASI = 3
                 $belumStatus3 = true;
@@ -2214,19 +2235,19 @@ class ProjectRiskController extends BasicCRUDController
                 $risiko = $risikos->where('id', $id)->first();
                 if ($risiko) {
                     // Ambil deskripsi peristiwa risiko
-                    $deskripsi = $risiko->deskripsi_peristiwa_risiko ?: 
+                    $deskripsi = $risiko->deskripsi_peristiwa_risiko ?:
                                 ($risiko->peristiwaRisiko ? $risiko->peristiwaRisiko->title : 'Risiko #' . $risiko->id);
                     $risikoTidakStatus3[] = $deskripsi;
                 }
             }
-            
+
             // Buat pesan error dengan daftar risiko yang belum status 3
             $pesanError = 'Terdapat risiko yang perlu direvisi atau diverifikasi:<br /><ul>';
             foreach ($risikoTidakStatus3 as $deskripsi) {
                 $pesanError .= '<li>' . $deskripsi . '</li>';
             }
             $pesanError .= '</ul><br />Silahkan pastikan semua risiko sudah diverifikasi terlebih dahulu.';
-            
+
             return redirect()->route('projects.risks.index', [
                 'project' => $project_id
             ])->with('error', $pesanError);
@@ -2245,7 +2266,7 @@ class ProjectRiskController extends BasicCRUDController
                     'status' => DataBatch::STATUS_VERIFIKASI,
                     'step_verification' => $step_order + 1
                 ]);
-            }    
+            }
 
 
 

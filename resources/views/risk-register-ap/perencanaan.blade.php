@@ -29,6 +29,35 @@
                 <span class="nav-item-circle-parent">
                     <span class="nav-item-circle">2</span>
                 </span>
+                <span class="h3 mb-0">Pengukuran Risiko Inheren</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-2">Nilai Dampak</div>
+                <div class="col-md-2 fw-bold">{{ $analisa?->nilai_dampak ? 'Rp' . number_format($analisa->nilai_dampak, 0, ',', '.') : 'Rp 0' }}</div>
+                <div class="col-md-2">Nilai Probabilitas (%)</div>
+                <div class="col-md-2 fw-bold">{{ $analisa?->nilai_probabilitas ?: '-' }}</div>
+                <div class="col-md-2">Skala Risiko</div>
+                <div class="col-md-2 fw-bold">{{ $analisa?->skala_risiko ?: '-' }}</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-2">Skala Dampak</div>
+                <div class="col-md-2 fw-bold">{{ $analisa?->skala_dampak ?: '-' }}</div>
+                <div class="col-md-2">Skala Probabilitas</div>
+                <div class="col-md-2 fw-bold">{{ ($analisa?->skalaProbabilitas? '(' . $analisa->skalaProbabilitas->tingkat . ') ' . $analisa->skalaProbabilitas->skala : null) ?: '-' }}</div>
+                <div class="col-md-2">Level Risiko</div>
+                <div class="col-md-2 fw-bold">{{ $analisa?->level_risiko ?: '-' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-5">
+        <div class="card-header stepper border-0 pb-0">
+            <div class="nav-link active d-flex align-items-center p-0">
+                <span class="nav-item-circle-parent">
+                    <span class="nav-item-circle">3</span>
+                </span>
                 <span class="h3 mb-0">Perlakuan Risiko</span>
             </div>
         </div>
@@ -123,35 +152,6 @@
         </div>
     </div>
 
-    <div class="card mb-5">
-        <div class="card-header stepper border-0 pb-0">
-            <div class="nav-link active d-flex align-items-center p-0">
-                <span class="nav-item-circle-parent">
-                    <span class="nav-item-circle">3</span>
-                </span>
-                <span class="h3 mb-0">Pengukuran Risiko Inheren</span>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-2">Nilai Dampak</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->nilai_dampak ? 'Rp' . number_format($analisa->nilai_dampak, 0, ',', '.') : '-' }}</div>
-                <div class="col-md-2">Nilai Probabilitas (%)</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->nilai_probabilitas ?: '-' }}</div>
-                <div class="col-md-2">Skala Risiko</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->skala_risiko ?: '-' }}</div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-2">Skala Dampak</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->skala_dampak ?: '-' }}</div>
-                <div class="col-md-2">Skala Probabilitas</div>
-                <div class="col-md-2 fw-bold">{{ ($analisa?->skalaProbabilitas? '(' . $analisa->skalaProbabilitas->tingkat . ') ' . $analisa->skalaProbabilitas->skala : null) ?: '-' }}</div>
-                <div class="col-md-2">Level Risiko</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->level_risiko ?: '-' }}</div>
-            </div>
-        </div>
-    </div>
-
     @for ($i = 1; $i <= 4; $i++)
     <div class="card mb-5">
         <div class="card-header stepper border-0 pb-0">
@@ -165,7 +165,7 @@
         <div class="card-body">
             <div class="row mb-3">
                 <div class="col-md-2">Nilai Dampak</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->{'nilai_dampak_residual_q' . $i} ? 'Rp' . number_format($analisa->{'nilai_dampak_residual_q' . $i }, 0, ',', '.') : '-' }}</div>
+                <div class="col-md-2 fw-bold">{{ $analisa?->{'nilai_dampak_residual_q' . $i} ? 'Rp' . number_format($analisa->{'nilai_dampak_residual_q' . $i }, 0, ',', '.') : 'Rp 0' }}</div>
                 <div class="col-md-2">Nilai Probabilitas (%)</div>
                 <div class="col-md-2 fw-bold">{{ $analisa?->{'nilai_probabilitas_residual_q' . $i} ?: '-' }}</div>
                 <div class="col-md-2">Skala Risiko</div>
@@ -369,27 +369,26 @@ $(document).ready(function() {
 <script>
     $(document).on('click', 'button[data-action="edit"]', function() {
         const rencanaId = $(this).data('id'); // Ambil ID rencana
-        var flatpickrInstance = flatpickr("#xtimelineRange", {
-            mode: "range",
-            altInput: true,
-            altFormat: "j F Y",
-            dateFormat: "d/m/Y",
-            disableMobile: true
-        });
+        const risk = @json($identifikasiRisiko);
 
         var flatpickrInstance1 = flatpickr("#xtimelineRange1", {
-            altInput: true,
+            altInput: false,
             altFormat: "j F Y",
             dateFormat: "d/m/Y",
+            minDate: risk ? dayjs(risk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+            maxDate: risk ? dayjs(risk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
             disableMobile: true
         });
 
         var flatpickrInstance2 = flatpickr("#xtimelineRange2", {
-            altInput: true,
+            altInput: false,
             altFormat: "j F Y",
             dateFormat: "d/m/Y",
+            minDate: risk ? dayjs(risk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+            maxDate: risk ? dayjs(risk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
             disableMobile: true
         });
+
         // Ambil data rencana dari server
         $.ajax({
             url: `{{ route('risk-register-ap.edit-rencana-perlakuan', ['riskRegister' => $identifikasiRisiko->id, 'id' => ':id']) }}`.replace(':id', rencanaId),
@@ -406,17 +405,15 @@ $(document).ready(function() {
                 $('#formEditRencana [name="xbiaya_perlakuan_risiko"]').val(response.biaya_perlakuan_risiko);
                 $('#formEditRencana [name="xpic"]').val(response.pic_jabatan_id);
                 
-                if (response.timeline_perlakuan_risiko_start && response.timeline_perlakuan_risiko_end) {
-                    // flatpickrInstance.setDate([
-                    //     response.timeline_perlakuan_risiko_start,
-                    //     response.timeline_perlakuan_risiko_end
-                    // ]);
+                if (response.timeline_perlakuan_risiko_start) {
                     flatpickrInstance1.setDate(response.timeline_perlakuan_risiko_start);
-                    flatpickrInstance2.setDate(response.timeline_perlakuan_risiko_end);
-
                 } else {
-                    //flatpickrInstance.clear(); // Kosongkan jika tidak ada timeline
                     flatpickrInstance1.clear();
+                }
+
+                if (response.timeline_perlakuan_risiko_end) {
+                    flatpickrInstance2.setDate(response.timeline_perlakuan_risiko_end);
+                } else {
                     flatpickrInstance2.clear();
                 }
 

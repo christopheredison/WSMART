@@ -6,6 +6,12 @@ if (!is_array($permissions)) {
 if (!(!$permissions || \Gate::any($permissions))) {
     return '';
 }
+$extraAttributes = '';
+if (!empty($action['extra_attrs'])) {
+    foreach($action['extra_attrs'] as $attr => $value) {
+        $extraAttributes .= ' ' . e($attr) . '="' . e($value) . '"';
+    }
+}
 @endphp
 @switch($action['action'])
 @case('edit')
@@ -30,17 +36,17 @@ if (!(!$permissions || \Gate::any($permissions))) {
     </a>
     @break 
 @case('script')
-    <a href="javascript:void(0)" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'hover-underline px-1' }}" data-id="{{ $id }}" onclick="{{ $action['script'] }}" data-bs-toggle="tooltip" title="{{ $action['title'] ?? '' }}">
+    <a href="javascript:void(0)" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'hover-underline px-1' }}" data-id="{{ $id }}" onclick="{{ $action['script'] }}" data-bs-toggle="tooltip" title="{{ $action['title'] ?? '' }}" {!! $extraAttributes !!}>
         {!! $action['label'] !!}
     </a>
     @break
 @case('verifikasi')
-    <button type="button" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'btn btn-link' }}" onclick="showVerifikasiModal({{ $id }}, '{{ addslashes($item->peristiwa_risiko ?? '') }}', '{{ addslashes($item->deskripsi_peristiwa_risiko ?? '') }}')" data-bs-toggle="tooltip" title="{{ $action['title'] ?? 'Verifikasi Risiko' }}">
+    <button type="button" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'btn btn-link' }}" onclick="showVerifikasiModal({{ $id }}, '{{ addslashes($item->peristiwa_risiko ?? '') }}', '{{ addslashes($item->deskripsi_peristiwa_risiko ?? '') }}')" data-bs-toggle="tooltip" title="{{ $action['title'] ?? 'Verifikasi Risiko' }}" {!! $extraAttributes !!}>
         {!! $action['label'] !!}
     </button>
     @break    
 @case('change_to_led')
-    <button type="button" class="btn btn-link btn-muted-primary  btn-action px-1 py-0" data-action="change_to_led" data-id="{{ $id }}">
+    <button type="button" class="btn btn-link btn-muted-primary  btn-action px-1 py-0" data-action="change_to_led" data-id="{{ $id }}" {!! $extraAttributes !!}>
         <span>{!! $action['label'] !!}</span>
     </button>
     @break

@@ -107,6 +107,19 @@
           </a>
         </li>
         @endcan
+
+        @can('rekomendasi_menu')
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->is('rekomendasi-risiko') ? 'active' : '' }}" href="/rekomendasi-risiko"
+            role="button" data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon">
+              <i class="menu-icon tf-icons bx bxs-bulb"></i>
+              <span class="nav-link-text">Rekomendasi Risiko</span>
+            </span>
+          </a>
+        </li>
+        @endcan
+
         @can('ap_menu')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->is('risk-register-ap') ? 'active' : '' }}" href="/risk-register-ap/periods"

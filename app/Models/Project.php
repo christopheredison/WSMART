@@ -47,6 +47,7 @@ class Project extends Model
         'rapk_100_rp',
         'rapk_100_persen',
         'batas_nilai',
+        'cost_center_parent',
     ];
 
     protected $casts = [

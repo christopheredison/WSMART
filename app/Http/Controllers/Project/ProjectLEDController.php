@@ -733,27 +733,24 @@ class ProjectLEDController extends Controller
         ]);
 
         $penyebabData = $projectRisk->penyebabRisikoProjects->map(function ($penyebab) {
-        return [
-              'id' => $penyebab->id,
-              'penyebab_risiko' => $penyebab->penyebab_risiko,
-              'is_original' => true,
-              'perlakuan' => $penyebab->perlakuanPenyebabRisiko->map(function ($perlakuan) {
-                  return [
-                      'id' => $perlakuan->id,
-                      'is_original' => true,
-                      'rencana_perlakuan_risiko' => $perlakuan->rencana_perlakuan_risiko,
-                      'output_perlakuan_risiko' => $perlakuan->output_perlakuan_risiko,
-                      'biaya_perlakuan_risiko' => $perlakuan->biaya_perlakuan_risiko,
-                      'pic' => $perlakuan->pic_jabatan_id,
-                      'pic_name' => $perlakuan->pic ?? '',
-                      'timeline_mulai_perlakuan_risiko' => \Carbon\Carbon::parse($perlakuan->timeline_perlakuan_risiko_start)->format('d/m/Y'),
-                      'timeline_selesai_perlakuan_risiko' => \Carbon\Carbon::parse($perlakuan->timeline_perlakuan_risiko_end)->format('d/m/Y'),
-                      'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
-                      // 'jenis_rencana_perlakuan_risiko' => $perlakuan->jenis_rencana_perlakuan_risiko,
-                  ];
-              })
-          ];
-      });
+            return [
+                'id' => $penyebab->id,
+                'penyebab_risiko' => $penyebab->penyebab_risiko,
+                'perlakuan' => $penyebab->perlakuanPenyebabRisiko->map(function ($perlakuan) {
+                    return [
+                        'id' => $perlakuan->id,
+                        'rencana_perlakuan_risiko' => $perlakuan->rencana_perlakuan_risiko,
+                        'output_perlakuan_risiko' => $perlakuan->output_perlakuan_risiko,
+                        'biaya_perlakuan_risiko' => $perlakuan->biaya_perlakuan_risiko,
+                        'pic' => $perlakuan->pic_jabatan_id,
+                        'pic_name' => $perlakuan->pic ?? '',
+                        'timeline_mulai_perlakuan_risiko' => Carbon::parse($perlakuan->timeline_perlakuan_risiko_start)->format('d/m/Y'),
+                        'timeline_selesai_perlakuan_risiko' => Carbon::parse($perlakuan->timeline_perlakuan_risiko_end)->format('d/m/Y'),
+                        'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
+                    ];
+                })
+            ];
+        });
       
         $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
         $kategoriKejadians = KategoriKejadian::all();
@@ -850,7 +847,6 @@ class ProjectLEDController extends Controller
                                 'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $perlakuanItem['timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
                                 'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $perlakuanItem['timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
                                 'opsi_perlakuan_risiko' => $perlakuanItem['opsi_perlakuan_risiko'],
-                                // 'jenis_rencana_perlakuan_risiko' => $perlakuanItem['jenis_rencana_perlakuan_risiko'],
                             ]);
                         }
                     }
