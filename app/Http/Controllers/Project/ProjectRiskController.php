@@ -43,6 +43,8 @@ use App\Models\ApprovalLog;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalStep;
 use App\Models\DataBatchNotes;
+use App\Supports\ApiHC;
+use App\Supports\ApiWika;
 
 
 class ProjectRiskController extends BasicCRUDController
@@ -439,6 +441,105 @@ class ProjectRiskController extends BasicCRUDController
         }
 
         $project = $projectPeriodeList->project;
+
+        //get project profit_center
+        $profitCenter = $project->meta['profit_center'] ?? null;
+        //get project bulan mulai dan tahun mulai
+        $tanggalMulai = $project->meta['tanggal_mulai'] ?? null;
+        $bulanMulai = null;
+        $tahunMulai = null;
+        
+        if ($tanggalMulai) {
+            $date = \Carbon\Carbon::parse($tanggalMulai);
+            $bulanMulai = $date->month;
+            $tahunMulai = $date->year;
+        }
+
+        //$sasaranProyeks = SasaranProyek::get();
+        $sasaranProyeks = collect();
+        if ($profitCenter) {
+            // Ambil tahun berjalan
+            $tahunBerjalan = date('Y');
+            
+            // Cari data sasaran proyek berdasarkan profit_center dan tahun berjalan
+            $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)
+                                          ->where('tahun', $tahunBerjalan)
+                                          ->get();
+            
+            // Jika tidak ada data, lakukan sinkronisasi dengan API
+            if ($sasaranProyeks->isEmpty()) {
+                try {
+                    Log::channel('wikaapi')->info("Memulai request API KPI Rev dengan tahun: {$tahunBerjalan} dan profit_center: {$profitCenter}");
+                    $kpiResult = (new \App\Supports\ApiWika())->getKPIRev($tahunBerjalan, $profitCenter);
+                    
+                    Log::channel('wikaapi')->info("Request API KPI Rev berhasil", [
+                        'tahun' => $tahunBerjalan,
+                        'profit_center' => $profitCenter,
+                        'status' => $kpiResult['status'] ?? false,
+                        'message' => $kpiResult['message'] ?? ''
+                    ]);
+                    
+                    // Periksa apakah ada data KPI
+                    if (isset($kpiResult['data']) && isset($kpiResult['data']['kpi']) && is_array($kpiResult['data']['kpi'])) {
+                        $kpiData = $kpiResult['data']['kpi'];
+                        
+                        Log::channel('wikaapi')->info("Data KPI ditemukan", [
+                            'jumlah_data' => count($kpiData)
+                        ]);
+                        
+                        foreach ($kpiData as $kpi) {
+                            // Cek apakah data dengan kpi_name, tahun, dan profit_center yang sama sudah ada
+                            $existingKpi = SasaranProyek::where('costcenter_code', $profitCenter)
+                                                      ->where('tahun', $tahunBerjalan)
+                                                      ->where('kpi_desc', $kpi['kpi_name'] ?? '')
+                                                      ->first();
+                            
+                            $kpiData = [
+                                'costcenter_code' => $profitCenter,
+                                'kpi_desc' => $kpi['kpi_name'] ?? '',
+                                'status' => 1, // 1 = API
+                                'tahun' => $tahunBerjalan,
+                                'kpi_id' => $kpi['kpi_id'] ?? null,
+                                'target_akhir_tahun' => $kpi['target_akhir_tahun'] ?? null,
+                                'satuan' => $kpi['satuan'] ?? null
+                            ];
+                            
+                            if ($existingKpi) {
+                                // Update data yang sudah ada
+                                $existingKpi->update($kpiData);
+                                Log::channel('wikaapi')->info("Data KPI diupdate", [
+                                    'kpi_id' => $kpi['kpi_id'] ?? null,
+                                    'kpi_name' => $kpi['kpi_name'] ?? ''
+                                ]);
+                            } else {
+                                // Buat data baru
+                                SasaranProyek::create($kpiData);
+                                Log::channel('wikaapi')->info("Data KPI baru disimpan", [
+                                    'kpi_id' => $kpi['kpi_id'] ?? null,
+                                    'kpi_name' => $kpi['kpi_name'] ?? ''
+                                ]);
+                            }
+                        }
+                    } else {
+                        Log::channel('wikaapi')->warning("Tidak ada data KPI dalam response", [
+                            'response' => $kpiResult
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::channel('wikaapi')->error("Request API KPI Rev gagal", [
+                        'tahun' => $tahunBerjalan,
+                        'profit_center' => $profitCenter,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+                
+                // Ambil data yang baru disimpan
+                $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)
+                                              ->where('tahun', $tahunBerjalan)
+                                              ->get();
+            }
+        }
+
         $periode = Periode::where('status','active')->first();
 
         $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
@@ -447,7 +548,7 @@ class ProjectRiskController extends BasicCRUDController
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
         $kontrolEksistings = KontrolEksisting::get();
         $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();
-        $sasaranProyeks = SasaranProyek::get();
+        
         
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
         

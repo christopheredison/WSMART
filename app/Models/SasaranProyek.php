@@ -13,5 +13,10 @@ class SasaranProyek extends Model
     protected $fillable = [
         'costcenter_code',
         'kpi_desc',
+        'status',
+        'tahun',
+        'kpi_id',
+        'target_akhir_tahun',
+        'satuan'
     ];
 }
