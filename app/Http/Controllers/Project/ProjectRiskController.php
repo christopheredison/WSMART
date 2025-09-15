@@ -178,7 +178,8 @@ class ProjectRiskController extends BasicCRUDController
         $projectPeriodeList = ProjectPeriodeList::with('project')->findOrFail(request()->route('project'));
         $this->indexSubtitle = $projectPeriodeList->project->project_name;
 
-        if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriodeList))) {
+        if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriodeList) || 
+            ($user->unit && $projectPeriodeList->project && $projectPeriodeList->project->cost_center_parent == $user->unit->cost_center))) {
             abort(403);
         }
 
