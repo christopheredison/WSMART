@@ -156,7 +156,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'status_monitoring' => [
                 'label' => 'Status Monitoring',
                 'render' => '(data, type, row) => {
-                    if (row.is_closed) return `<div class="badge bg-secondary">Closed</div>`;
+                    if (row.is_closed) return `<div class="badge text-danger bg-danger-subtle">Dihentikan</div>`;
                     if (!row.project_risk_monitoring) return `<div class="badge bg-light text-dark">Belum Dimonitor</div>`;
                     
                     const status = row.project_risk_monitoring.status;
@@ -170,13 +170,13 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     if (verificatorMap[status]) {
                         const verificatorName = verificatorMap[status];
                         if(isApproved){
-                            return `<div class="badge bg-success">Terverifikasi ${verificatorName}</div>`;
+                            return `<div class="badge bg-info">Terverifikasi ${verificatorName}</div>`;
                         } else {
                             return `<div class="badge border border-info text-info">Menunggu Verifikasi ${verificatorName}</div>`;
                         }
                     }
                     if (status == '.ProjectRiskMonitoring::STATUS_PUBLISHED.') {
-                        return `<div class="badge bg-primary">Published</div>`;
+                        return `<div class="badge bg-primary">Terverifikasi</div>`;
                     }
                     return "-";
                 }',
@@ -207,7 +207,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'script' => <<<JS
                     window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Atahun', $('#table-filter select[name="tahun"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
-                'active_state' => '(data, type, row) => row.is_closed != 1 && row.project_risk_monitoring?.status == 1',
+                'active_state' => '(data, type, row) => row.is_closed != 1 && (!row.project_risk_monitoring || row.project_risk_monitoring?.status == 1)',
             ];
 
             $this->tableActions[] = [
@@ -218,22 +218,31 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ];
         } 
 
+        $hasVerificationMr = Gate::allows('verification_mr');
+        $isUnitMr = (bool) $user->unit?->unit_mr;
         $verificatorLevels = [7, 1, 2];
         if (in_array($userLevel, $verificatorLevels)) {
             $this->tableActions[] = [
-                'label' => 'Verifikasi', 'btn_class' => 'btn-warning btn-sm', 'action' => 'script',
+                'label' => 'Verifikasi',
+                'btn_class' => 'btn-warning btn-sm',
+                'action' => 'script',
                 'script' => "showVerifikasiModal(__MONITORING_ID__, '__RISK_TITLE__', '__RISK_DESC__')",
                 'active_state' => '(data, type, row) => {
+                    if (row.is_closed) return false;
+
                     const monitoring = row.project_risk_monitoring;
                     if (!monitoring || monitoring.is_approved) return false;
+                    
+                    const userLevel = ' . $user->level_id . ';
+                    const hasVerificationMr = ' . ($hasVerificationMr ? 'true' : 'false') . ';
                     const user = '.json_encode($user->load('unit')).';
                     const project = '.json_encode($projectPeriode->project).';
                     const status = monitoring.status;
                     
-                    if (user.level_id == 7 && status == '.ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_PROJECT.') return true;
-                    if (user.level_id == 1 && status == '.ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI.' && user.unit && user.unit.cost_center == project.cost_center_parent) return true;
-                    if (user.level_id == 1 && status == '.ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR.' && user.unit && user.unit.unit_mr == 1) return true;
-                    if (user.level_id == 2 && status == '.ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR.') return true;
+                    if (userLevel == 7 && status == '.ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_PROJECT.') return true;
+                    if (userLevel == 1 && status == '.ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI.' && user.unit && user.unit.cost_center == project.cost_center_parent) return true;
+                    if (userLevel == 1 && status == '.ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR.' && user.unit && user.unit.unit_mr == 1 && hasVerificationMr) return true;
+                    if (userLevel == 2 && status == '.ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR.' && hasVerificationMr) return true;
                     
                     return false;
                 }',
@@ -744,6 +753,8 @@ class ProjectRiskMonitoringController extends BasicCRUDController
     {
         extract($filters);
         $userLevel = $user->level_id;
+        $hasVerificationMr = Gate::allows('verification_mr');
+        $isUnitMr = (bool) $user->unit?->unit_mr;
     
         $latestMonitorings = collect([]);
         $riskIds = $projectPeriode->projectRisks()->pluck('id');
@@ -756,14 +767,16 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 ->groupBy('risiko_id')
                 ->pluck('last_id');
             if($latestMonitoringIds->isNotEmpty()){
-                $latestMonitorings = ProjectRiskMonitoring::whereIn('id', $latestMonitoringIds)->get();
+                $latestMonitorings = ProjectRiskMonitoring::whereIn('id', $latestMonitoringIds)->with('projectRisk')->get();
             }
         }
         
         $buttonText = '';
         $params = [];
         $disabled = 'disabled';
-        $allApproved = $latestMonitorings->isNotEmpty() && $latestMonitorings->every('is_approved', true);
+        $allApproved = $latestMonitorings->isNotEmpty() && $latestMonitorings->every(function ($monitoring) {
+            return $monitoring->is_approved || $monitoring->projectRisk?->is_closed;
+        });
     
         switch ($userLevel) {
             case 6:
@@ -794,7 +807,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     $params = ['status_dari' => ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI, 'status_ke' => ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR];
                     $disabled = $allApproved ? '' : 'disabled';
                 }
-                elseif ($user->unit && $user->unit->unit_mr == 1) {
+                elseif ($user->unit && $isUnitMr && $hasVerificationMr) {
                     $buttonText = 'Kirim ke Risk Owner Divisi MR';
                     $params = ['status_dari' => ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR, 'status_ke' => ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR];
                     $disabled = $allApproved ? '' : 'disabled';
@@ -803,12 +816,17 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             
             case 2:
                 // Tombol aktif JIKA semua item yang menunggu verifikasi level ini (status 5) sudah di-approve
-                $allApproved = $latestMonitorings->where('status', ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR)->isNotEmpty() && 
-                              $latestMonitorings->where('status', ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR)->every('is_approved', true);
-
-                $buttonText = 'Publish Monitoring';
-                $params = ['status_dari' => ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR, 'status_ke' => ProjectRiskMonitoring::STATUS_PUBLISHED, 'final' => true];
-                $disabled = $allApproved ? '' : 'disabled';
+                if ($isUnitMr && $hasVerificationMr) {
+                    $monitoringsForThisStep = $latestMonitorings->where('status', ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR);
+                
+                    $allApproved = $monitoringsForThisStep->isNotEmpty() &&  $monitoringsForThisStep->every(function ($monitoring) {
+                        return $monitoring->is_approved || $monitoring->risiko?->is_closed;
+                    });
+    
+                    $buttonText = 'Verifikasi Monitoring';
+                    $params = ['status_dari' => ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR, 'status_ke' => ProjectRiskMonitoring::STATUS_PUBLISHED, 'final' => true];
+                    $disabled = $allApproved ? '' : 'disabled';
+                }
                 break;
         }
     
@@ -841,7 +859,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 <input type="hidden" name="status_ke" value="{$statusKe}">
                 <input type="hidden" name="is_final" value="{$isFinal}">
 
-                <button type="button" class="btn btn-primary" onclick="submitEskalasiForm('{$uniqueId}', '{$buttonText}')" {$disabled}>{$buttonText}</button>
+                <button type="button" class="btn btn-info btn-arrow-right" onclick="submitEskalasiForm('{$uniqueId}', '{$buttonText}')" {$disabled}>{$buttonText}</button>
             </form>
         HTML;
     }

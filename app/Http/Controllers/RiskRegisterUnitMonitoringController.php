@@ -187,7 +187,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'status_monitoring' => [
                 'label' => 'Status Monitoring',
                 'render' => '(data, type, row) => {
-                    if (row.is_closed) return `<div class="badge bg-secondary">Closed</div>`;
+                    if (row.is_closed) return `<div class="badge text-danger bg-danger-subtle">Dihentikan</div>`;
                     if (!row.last_monitoring_risiko) return `<div class="badge bg-light text-dark">Belum Dimonitor</div>`;
                     
                     const monitoring = row.last_monitoring_risiko;
@@ -198,11 +198,11 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     }
                     if (verificatorMap[monitoring.status]) {
                         return monitoring.is_approved
-                            ? `<div class="badge bg-success">Terverifikasi ${verificatorMap[monitoring.status]}</div>`
+                            ? `<div class="badge bg-info">Terverifikasi ${verificatorMap[monitoring.status]}</div>`
                             : `<div class="badge border border-info text-info">Menunggu Verifikasi ${verificatorMap[monitoring.status]}</div>`;
                     }
                     if (monitoring.status == '.UnitRiskMonitoring::STATUS_PUBLISHED.') {
-                        return `<div class="badge bg-primary">Published</div>`;
+                        return `<div class="badge bg-primary">Terverifikasi</div>`;
                     }
                     return "-";
                 }',
@@ -251,6 +251,8 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'action' => 'script',
                 'script' => "showVerifikasiModal(__MONITORING_ID__, '__RISK_TITLE__', '__RISK_DESC__')",
                 'active_state' => '(data, type, row) => {
+                    if (row.is_closed) return false;
+
                     const monitoring = row.last_monitoring_risiko;
                     if (!monitoring || monitoring.is_approved) return false;
                     
@@ -717,7 +719,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 if ($isUnitMr && $hasVerificationMr) {
                     // Step 4: Publish Monitoring
                     $allApproved = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR)->isNotEmpty() && $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR)->every('is_approved', true);
-                    $buttonText = 'Publish Monitoring';
+                    $buttonText = 'Verifikasi Monitoring';
                     $params = ['status_dari' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR, 'status_ke' => UnitRiskMonitoring::STATUS_PUBLISHED, 'final' => true];
                     $disabled = $allApproved ? '' : 'disabled';
                 } else {
@@ -755,7 +757,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 <input type="hidden" name="status_dari" value="{$statusDari}">
                 <input type="hidden" name="status_ke" value="{$statusKe}">
                 <input type="hidden" name="is_final" value="{$isFinal}">
-                <button type="button" class="btn btn-primary" onclick="submitEskalasiForm('{$uniqueId}', '{$buttonText}')" {$disabled}>{$buttonText}</button>
+                <button type="button" class="btn btn-info btn-arrow-right" onclick="submitEskalasiForm('{$uniqueId}', '{$buttonText}')" {$disabled}>{$buttonText}</button>
             </form>
         HTML;
     }
