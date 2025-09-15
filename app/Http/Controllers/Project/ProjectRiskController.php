@@ -44,6 +44,8 @@ use App\Models\ApprovalLog;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalStep;
 use App\Models\DataBatchNotes;
+use App\Supports\ApiHC;
+use App\Supports\ApiWika;
 
 
 class ProjectRiskController extends BasicCRUDController
@@ -176,7 +178,8 @@ class ProjectRiskController extends BasicCRUDController
         $projectPeriodeList = ProjectPeriodeList::with('project')->findOrFail(request()->route('project'));
         $this->indexSubtitle = $projectPeriodeList->project->project_name;
 
-        if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriodeList))) {
+        if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriodeList) || 
+            ($user->unit && $projectPeriodeList->project && $projectPeriodeList->project->cost_center_parent == $user->unit->cost_center))) {
             abort(403);
         }
 
@@ -233,18 +236,6 @@ class ProjectRiskController extends BasicCRUDController
                 [
                     'icon' => '<span class="bx bx-show-alt"></span>',
                     'label' => 'View'
-                ],
-                [
-                    'icon' => '<span class="bx bx-analyse text-warning"></span>',
-                    'label' => 'Analisa'
-                ],
-                [
-                    'icon' => '<span class="bx bx-task text-primary"></span>',
-                    'label' => 'Perencanaan'
-                ],
-                [
-                    'icon' => '<span class="bx bx-edit"></span>',
-                    'label' => 'Edit'
                 ]
             ];
 
@@ -264,6 +255,21 @@ class ProjectRiskController extends BasicCRUDController
                     // Jika status batch 5, maka status risk juga harus 5
                     $active_state = 'function(id, type, row) { return row.status == 5; }';
                 }
+
+                $this->tableLegend = [
+                    [
+                        'icon' => '<span class="bx bx-analyse text-warning"></span>',
+                        'label' => 'Analisa'
+                    ],
+                    [
+                        'icon' => '<span class="bx bx-task text-primary"></span>',
+                        'label' => 'Perencanaan'
+                    ],
+                    [
+                        'icon' => '<span class="bx bx-edit"></span>',
+                        'label' => 'Edit'
+                    ]
+                ];
 
                 $this->tableActions[] = [
                     'label' => '<span class="bx bx-analyse text-warning"></span>',
@@ -290,6 +296,22 @@ class ProjectRiskController extends BasicCRUDController
                     'permissions' => ['project_risk_edit'],
                     'active_state' => $active_state
                 ];
+                
+
+                if (Gate::check('project_risk_delete') && $status==1) {
+                    $this->tableLegend[] = [
+                        'icon' => '<span class="bx bx-trash text-danger"></span>',
+                        'label' => 'Hapus'
+                    ];
+
+                    $this->tableActions[] = [
+                        'label' => '<span class="bx bx-trash text-danger"></span>',
+                        'btn_icon' => true,
+                        'action' => 'delete',
+                        'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']),
+                        'permissions' => ['project_risk_delete'],
+                    ];
+                }
             }
             else if($status==2 && $levelId==7){//on verif && level = ROW/P
                 $active_state = null;
@@ -303,21 +325,6 @@ class ProjectRiskController extends BasicCRUDController
                     //'permissions' => ['project_risk_edit'],
                 ];
             }
-        }
-
-        if (Gate::check('project_risk_delete') && $status==1) {
-            $this->tableLegend[] = [
-                'icon' => '<span class="bx bx-trash text-danger"></span>',
-                'label' => 'Hapus'
-            ];
-
-            $this->tableActions[] = [
-                'label' => '<span class="bx bx-trash text-danger"></span>',
-                'btn_icon' => true,
-                'action' => 'delete',
-                'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']),
-                'permissions' => ['project_risk_delete'],
-            ];
         }
 
         $this->tableLegend[] = [
@@ -368,9 +375,13 @@ class ProjectRiskController extends BasicCRUDController
 
         $csrfToken = csrf_token();
         $disabledAttr = '';
+        $viewAttr = "none";
+
         if (!((($status == 1 || $status == 5) && $levelId == 6) || ($status == 2 && $levelId == 7))) {
             $disabledAttr = ' disabled';
+            $viewAttr = " style='display:none'";
         }
+
         $buttonText = ($status == 5) ? 'Kirim Perbaikan' : 'Kirim Risiko';
         $sendType = ($status == 5) ? 'perbaikan' : 'risiko';
         // Format nilai eksposur risiko dengan format Rupiah dan pemisah ribuan
@@ -382,7 +393,7 @@ class ProjectRiskController extends BasicCRUDController
                     <strong>Rata-rata Eksposure Risiko (Kuantitatif):</strong>
                     <span id="average-risk-value">{$formattedAverageExposure}</span>
                 </div>
-                <div class="mt-3">
+                <div class="mt-3"{$viewAttr}>
                     <form id="send-form" action="{$routeUrl}" method="POST" class="d-inline-block">
                         <input type="hidden" name="_token" value="{$csrfToken}">
                         <input type="hidden" name="project_id" value="{$projectId}">
@@ -440,6 +451,105 @@ class ProjectRiskController extends BasicCRUDController
         }
 
         $project = $projectPeriodeList->project;
+
+        //get project profit_center
+        $profitCenter = $project->meta['profit_center'] ?? null;
+        //get project bulan mulai dan tahun mulai
+        $tanggalMulai = $project->meta['tanggal_mulai'] ?? null;
+        $bulanMulai = null;
+        $tahunMulai = null;
+        
+        if ($tanggalMulai) {
+            $date = \Carbon\Carbon::parse($tanggalMulai);
+            $bulanMulai = $date->month;
+            $tahunMulai = $date->year;
+        }
+
+        //$sasaranProyeks = SasaranProyek::get();
+        $sasaranProyeks = collect();
+        if ($profitCenter) {
+            // Ambil tahun berjalan
+            $tahunBerjalan = date('Y');
+            
+            // Cari data sasaran proyek berdasarkan profit_center dan tahun berjalan
+            $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)
+                                          ->where('tahun', $tahunBerjalan)
+                                          ->get();
+            
+            // Jika tidak ada data, lakukan sinkronisasi dengan API
+            if ($sasaranProyeks->isEmpty()) {
+                try {
+                    Log::channel('wikaapi')->info("Memulai request API KPI Rev dengan tahun: {$tahunBerjalan} dan profit_center: {$profitCenter}");
+                    $kpiResult = (new \App\Supports\ApiWika())->getKPIRev($tahunBerjalan, $profitCenter);
+                    
+                    Log::channel('wikaapi')->info("Request API KPI Rev berhasil", [
+                        'tahun' => $tahunBerjalan,
+                        'profit_center' => $profitCenter,
+                        'status' => $kpiResult['status'] ?? false,
+                        'message' => $kpiResult['message'] ?? ''
+                    ]);
+                    
+                    // Periksa apakah ada data KPI
+                    if (isset($kpiResult['data']) && isset($kpiResult['data']['kpi']) && is_array($kpiResult['data']['kpi'])) {
+                        $kpiData = $kpiResult['data']['kpi'];
+                        
+                        Log::channel('wikaapi')->info("Data KPI ditemukan", [
+                            'jumlah_data' => count($kpiData)
+                        ]);
+                        
+                        foreach ($kpiData as $kpi) {
+                            // Cek apakah data dengan kpi_name, tahun, dan profit_center yang sama sudah ada
+                            $existingKpi = SasaranProyek::where('costcenter_code', $profitCenter)
+                                                      ->where('tahun', $tahunBerjalan)
+                                                      ->where('kpi_desc', $kpi['kpi_name'] ?? '')
+                                                      ->first();
+                            
+                            $kpiData = [
+                                'costcenter_code' => $profitCenter,
+                                'kpi_desc' => $kpi['kpi_name'] ?? '',
+                                'status' => 1, // 1 = API
+                                'tahun' => $tahunBerjalan,
+                                'kpi_id' => $kpi['kpi_id'] ?? null,
+                                'target_akhir_tahun' => $kpi['target_akhir_tahun'] ?? null,
+                                'satuan' => $kpi['satuan'] ?? null
+                            ];
+                            
+                            if ($existingKpi) {
+                                // Update data yang sudah ada
+                                $existingKpi->update($kpiData);
+                                Log::channel('wikaapi')->info("Data KPI diupdate", [
+                                    'kpi_id' => $kpi['kpi_id'] ?? null,
+                                    'kpi_name' => $kpi['kpi_name'] ?? ''
+                                ]);
+                            } else {
+                                // Buat data baru
+                                SasaranProyek::create($kpiData);
+                                Log::channel('wikaapi')->info("Data KPI baru disimpan", [
+                                    'kpi_id' => $kpi['kpi_id'] ?? null,
+                                    'kpi_name' => $kpi['kpi_name'] ?? ''
+                                ]);
+                            }
+                        }
+                    } else {
+                        Log::channel('wikaapi')->warning("Tidak ada data KPI dalam response", [
+                            'response' => $kpiResult
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::channel('wikaapi')->error("Request API KPI Rev gagal", [
+                        'tahun' => $tahunBerjalan,
+                        'profit_center' => $profitCenter,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+                
+                // Ambil data yang baru disimpan
+                $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)
+                                              ->where('tahun', $tahunBerjalan)
+                                              ->get();
+            }
+        }
+
         $periode = Periode::where('status','active')->first();
 
         $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
@@ -447,9 +557,7 @@ class ProjectRiskController extends BasicCRUDController
         $masterKris = MasterKRI::get();
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
         $kontrolEksistings = KontrolEksisting::get();
-        $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();
-        $sasaranProyeks = SasaranProyek::get();
-
+        $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();        
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
 
         return view('project-risk.create', compact('periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos', 'sasaranProyeks'));
