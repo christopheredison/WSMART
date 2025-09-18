@@ -76,6 +76,11 @@
 
             @can('kri_dashboard_menu')
             <li class="nav-item">
+              <a class="nav-link {{ request()->is('dashboard-kri-project') ? 'active' : '' }} " href="/dashboard-kri-project">
+                <span class="nav-link-text">KRI Proyek</span>
+              </a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link {{ request()->is('dashboard-kri-unit') ? 'active' : '' }} " href="/dashboard-kri-unit">
                 <span class="nav-link-text">KRI Unit</span>
               </a>

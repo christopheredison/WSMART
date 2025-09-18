@@ -7,6 +7,7 @@ use App\Models\CapaianTkmru;
 use App\Models\IdentifikasiRisiko;
 use App\Models\JenisRisiko;
 use App\Models\KRI;
+use App\Models\KRIProject;
 use App\Models\LossEvent;
 use App\Models\LossEventProject;
 use App\Models\Periode;
@@ -443,10 +444,10 @@ class HomeController extends Controller
         $selectedUnit = Unit::find($selectedUnitId);
 
         $units = Unit::query()
-          ->when(!$isAllUnit, function ($query) use ($user) {
-              $query->where('id', $user->unit_id);
-          })
-          ->get();
+            ->when(!$isAllUnit, function ($query) use ($user) {
+                $query->where('id', $user->unit_id);
+            })
+            ->get();
 
         $risikos = IdentifikasiRisiko::with([
             'periode',
@@ -481,9 +482,7 @@ class HomeController extends Controller
 
                 // Jika tidak ada, cari dari quarter sebelumnya secara mundur
                 for ($q = $targetQuarter - 1; $q >= 1; $q--) {
-                    if (isset($risk->current_risk_maps[$q]) &&
-                        !is_null($risk->current_risk_maps[$q]['skala_dampak']) &&
-                        !is_null($risk->current_risk_maps[$q]['skala_probabilitas'])) {
+                    if (isset($risk->current_risk_maps[$q]) && !is_null($risk->current_risk_maps[$q]['skala_dampak']) && !is_null($risk->current_risk_maps[$q]['skala_probabilitas'])) {
                         return $risk->current_risk_maps[$q];
                     }
                 }
@@ -529,27 +528,86 @@ class HomeController extends Controller
             });
 
         $lossEvents = LossEvent::where('unit_id', $selectedUnitId)
-          ->whereYear('tanggal_kejadian', $tahun)
-          ->with(['kategoriRisiko', 'jenisRisiko'])
-          ->get()
-          ->map(function ($event) {
-              $event->numeric_value = (int) preg_replace('/[^0-9]/', '', $event->nilai_kerugian_finansial);
-              return $event;
-          })
-          ->sortByDesc('numeric_value')
-          ->take(10)
-          ->map(function ($led) {
-              return [
-                  'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
-                  'nama_kejadian' => $led->nama_kejadian ?? '-',
-                  'identifikasi_kejadian' => $led->identifikasi_kejadian ?? '-',
-                  'kategori_kejadian' => $led->kategoriKejadian->kategori_kejadian ?? '-',
-                  'nilai_kerugian' => is_numeric($led->nilai_kerugian_finansial) ? 'Rp ' . number_format($led->nilai_kerugian_finansial, 0, ',', '.') : $led->nilai_kerugian_finansial,
-                  'unit_penanggung_jawab' => $led?->unitPenanggungJawabJabatan?->name ?? '-',
-              ];
-          })
-          ->values()
-          ->toArray();
+            ->whereYear('tanggal_kejadian', $tahun)
+            ->with(['kategoriRisiko', 'jenisRisiko'])
+            ->get()
+            ->map(function ($event) {
+                $event->numeric_value = (int) preg_replace('/[^0-9]/', '', $event->nilai_kerugian_finansial);
+                return $event;
+            })
+            ->sortByDesc('numeric_value')
+            ->take(10)
+            ->map(function ($led) {
+                return [
+                    'nama_divisi' => $led->unit?->name,
+                    'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
+                    'nama_kejadian' => $led->nama_kejadian ?? '-',
+                    'identifikasi_kejadian' => $led->identifikasi_kejadian ?? '-',
+                    'kategori_kejadian' => $led->kategoriKejadian->kategori_kejadian ?? '-',
+                    'nilai_kerugian' => is_numeric($led->nilai_kerugian_finansial) ? 'Rp ' . number_format($led->nilai_kerugian_finansial, 0, ',', '.') : $led->nilai_kerugian_finansial,
+                    'unit_penanggung_jawab' => $led?->unitPenanggungJawabJabatan?->name ?? '-',
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        $topRisks = IdentifikasiRisiko::where('unit_id', $selectedUnit->id)
+            ->where('periode_id', $selectedPeriode->id)
+            // ->where('status_risiko', '>=', 3)
+            ->with(['riskAnalysis.skalaProbabilitas', 'kris', 'unit', 'peristiwaRisiko', 'jenisRisiko', 'tck'])
+            ->get()
+            ->sortByDesc(fn($risk) => $risk->riskAnalysis?->skala_risiko)
+            ->take(10)
+            ->values()
+            ->map(function($item) use ($riskMaps) {
+                $skalaRisiko = $item->riskAnalysis?->skala_risiko;
+                $levelRisiko = optional($riskMaps->where('nilai_risiko', $skalaRisiko)->first())->level_risiko;
+                $warnaLevelRisiko = strtolower(str_replace(' ', '-', str_replace('to ', '', $levelRisiko ?? '')));
+
+                $krisData = $item->kris->map(function($kri) {
+                    $statusKri = $kri->statusKri;
+                    $statusKriColor = match (strtolower($statusKri)) {
+                        '3' => 'red',
+                        '2' => 'yellow',
+                        '1' => 'green',
+                        default => 'neutral'
+                    };
+
+                    return [
+                        'kri' => $kri->kri,
+                        'status_kri' => $statusKri,
+                        'status_kri_color' => $statusKriColor,
+                    ];
+                })->values();
+
+                return [
+                    'peristiwa_risiko' => $item->peristiwa_risiko,
+                    'deskripsi_peristiwa_risiko' => $item->deskripsi_peristiwa_risiko,
+                    'jenis_risiko' => $item->jenisRisiko?->title,
+                    'skala_dampak' => $item?->riskAnalysis?->skala_dampak,
+                    'nilai_dampak' => $item?->riskAnalysis?->nilai_dampak,
+                    'nilai_risiko' => $item?->riskAnalysis?->skala_risiko,
+                    'level_risiko' => $levelRisiko,
+                    'warna_tingkat_risiko' => $warnaLevelRisiko,
+                    'kris' => $krisData,
+                    'divisi' => $item->unit->name,
+                ];
+            });
+
+        $risikosEfektif = [];
+        $risikosTidakEfektif = [];
+
+        $risikos->where('is_closed', 1)->each(function ($risiko) use (&$risikosEfektif, &$risikosTidakEfektif) {
+            $data = [
+                'peristiwa_risiko' => $risiko->peristiwa_risiko ?: $risiko->peristiwaRisiko->title,
+                'unit_name' => $risiko->unit->name,
+            ];
+            if ($risiko->efektivitas_perlakuan_risiko > 0) {
+                $risikosEfektif[] = $data;
+            } else {
+                $risikosTidakEfektif[] = $data;
+            }
+        });
 
         $dashboardData = [
           'rpr_c' => null,
@@ -560,40 +618,66 @@ class HomeController extends Controller
           'tkmru_date' => null,
           'tkmru' => null,
           'tkmru_notes' => null,
-          // 'top_risk' => $risikos->sortByDesc('riskAnalysis.skala_risiko')->take(5)->map(function ($item) use ($riskMaps, $selectedUnit) {
-          //   return [
-          //     'peristiwa' => $item->peristiwa_risiko ?? '-',
-          //     'deskripsi' => $item->deskripsi_peristiwa_risiko ?? '-',
-          //     'jenis_risiko' => $item->jenisRisiko->title ?? '-',
-          //     'tingkat_risiko' => $item->skala_risiko,
-          //     'warna_tingkat_risiko' => strtolower(str_replace(' ', '-', $riskMaps->where('nilai_risiko', $item->skala_risiko)->pluck('level_risiko')->first())),
-          //     'sasaran' => $item->target_capaian_kinerja ?? '-',
-          //     'kri' => $item->kris->first()?->kri,
-          //     'status_kri' => $item->kris->first()?->status_kri_terkini_q4,
-          //     'risk_owner' => $selectedUnit->name,
-          //   ];
-          // })->values(),
+          'top_risks' => $topRisks,
           'led' => $lossEvents,
+          'efektivitas_perlakuan' => [
+              ['label' => 'Efektif', 'value' => count($risikosEfektif), 'color' => '#5470C6'],
+              ['label' => 'Tidak Efektif', 'value' => count($risikosTidakEfektif), 'color' => '#EE6666'],
+          ],
+          'risikos_efektif' => $risikosEfektif,
+          'risikos_tidak_efektif' => $risikosTidakEfektif,
         ];
 
         return view('dashboard-unit', compact(
-          'user',
-          'periodes',
-          'selectedPeriode',
-          'units',
-          'selectedUnit',
-          'risikos',
-          'formattedCurrentRiskMaps',
-          'riskMaps',
-          'dashboardData',
+            'user',
+            'periodes',
+            'selectedPeriode',
+            'units',
+            'selectedUnit',
+            'risikos',
+            'formattedCurrentRiskMaps',
+            'riskMaps',
+            'dashboardData',
         ));
     }
 
     public function dashboardProyek(Request $request)
     {
-        $projectPeriodes = ProjectPeriodeList::whereHas('project', function($query) {
-                $query->where('type', Project::TYPE_OPERASIONAL);
-            })
+        $selectedUnitId = $request->input('unit_id');
+        $selectedProjectId = $request->input('project_id');
+
+        $units = Unit::where('unit_type_id', 1)->get();
+
+        $projects = collect([]);
+        if ($selectedUnitId) {
+            $unit = Unit::find($selectedUnitId);
+            if ($unit) {
+                $projects = Project::where('cost_center_parent', $unit->cost_center)->get();
+            }
+        } else {
+            $projects = Project::all();
+        }
+
+        $projectPeriodeQuery = ProjectPeriodeList::whereHas('project', function($query) {
+            $query->where('type', Project::TYPE_OPERASIONAL);
+        });
+
+        // Apply unit filter if selected
+        $projectPeriodeQuery->when($selectedUnitId, function ($query, $selectedUnitId) {
+            $unit = Unit::find($selectedUnitId);
+            if ($unit) {
+                $query->whereHas('project', function ($q) use ($unit) {
+                    $q->where('cost_center_parent', $unit->cost_center);
+                });
+            }
+        });
+
+        // Apply project filter if selected
+        $projectPeriodeQuery->when($selectedProjectId, function ($query, $selectedProjectId) {
+            $query->where('project_id', $selectedProjectId);
+        });
+
+        $projectPeriodes = $projectPeriodeQuery
             ->orderBy('skala_risiko', 'desc')
             ->with('projectRisks', 'projectRisks.projectRiskAnalisa', 'projectRisks.projectRiskMonitorings', 'project')
             ->take(10)
@@ -626,6 +710,35 @@ class HomeController extends Controller
             '#FB7293', '#E062AE', '#E690D1', '#E7BCF3', '#9D96F5'
         ];
         $colorIndex = 0;
+
+        // Loss Event Data Query
+        $topLossEvents = LossEventProject::orderBy('nilai_kerugian_finansial', 'desc')
+            ->when($selectedUnitId, function ($query, $selectedUnitId) {
+                $unit = Unit::find($selectedUnitId);
+                if ($unit) {
+                    $query->whereHas('project', function ($q) use ($unit) {
+                        $q->where('cost_center_parent', $unit->cost_center);
+                    });
+                }
+            })
+            ->when($selectedProjectId, function ($query, $selectedProjectId) {
+                $query->where('project_id', $selectedProjectId);
+            })
+            ->with('project', 'kategoriKejadian')
+            ->take(10)
+            ->get();
+
+        $efektifCount = 0;
+        $tidakEfektifCount = 0;
+        foreach ($projectRisks as $projectRisk) {
+            if ($projectRisk->is_closed) {
+                if ($projectRisk->efektivitas_perlakuan_risiko > 0) {
+                    $efektifCount++;
+                } else {
+                    $tidakEfektifCount++;
+                }
+            }
+        }
 
         $dashboardData = [
             'prp' => $projectRisksGroupByPeristiwaRisiko->map(function($projectRiskGroups, $peristiwaRisikoId) use ($peristiwaRisikos, $colors, $projectRisks, &$colorIndex) {
@@ -676,7 +789,7 @@ class HomeController extends Controller
                     'monitorings' => $monitorings,
                 ];
             })->values()->toArray(),
-            'top_risk' => $projectRisks->sortByDesc('projectRiskAnalisa.nilai_risiko')->take(10)->map(function($projectRisk) {
+            'top_risk' => $projectRisks->sortByDesc('projectRiskAnalisa.skala_risiko')->take(10)->map(function($projectRisk) {
                 return [
                     'kode' => 'R' . $projectRisk->id,
                     'nama_proyek' => $projectRisk->project?->project_name,
@@ -684,18 +797,33 @@ class HomeController extends Controller
                     'deskripsi_peristiwa_risiko' => $projectRisk->deskripsi_peristiwa_risiko,
                     'nilai_dampak' => $projectRisk->projectRiskAnalisa?->nilai_dampak,
                     'skala_dampak' => $projectRisk->projectRiskAnalisa?->skala_dampak,
-                    'jenis_risiko' => $projectRisk->jenis_risiko,
-                    'nilai_risiko' => $projectRisk->projectRiskAnalisa?->nilai_risiko,
+                    'jenis_risiko' => $projectRisk->jenisRisiko?->title,
+                    'nilai_risiko' => $projectRisk->projectRiskAnalisa?->skala_risiko,
                     'level_risiko' => $projectRisk->projectRiskAnalisa?->level_risiko,
                 ];
             })->values()->toArray(),
+            'top_led' => $topLossEvents->map(function($led, $idx) {
+                return [
+                    'id' => $led->id,
+                    'nama_proyek' => $led->project?->project_name,
+                    'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
+                    'nama_kejadian' => $led->nama_kejadian,
+                    'deskripsi_kejadian' => $led->peristiwaRisiko?->title,
+                    'kategori_kejadian' => $led->kategoriKejadian?->kategori_kejadian,
+                    'nilai_kerugian_finansial' => $led->nilai_kerugian_finansial,
+                ];
+            })->values()->toArray(),
+            'efektivitas_perlakuan' => [
+                ['label' => 'Efektif', 'value' => $efektifCount, 'color' => '#5470C6'],
+                ['label' => 'Tidak Efektif', 'value' => $tidakEfektifCount, 'color' => '#EE6666'],
+            ],
         ];
 
         $riskMaps = RiskMap::get()->keyBy(function($item) {
             return $item->skala_dampak . '-' . $item->skala_probabilitas;
         });
 
-        return view('dashboard-proyek', compact('dashboardData', 'tahunMonitorings', 'riskMaps'));
+        return view('dashboard-proyek', compact('dashboardData', 'tahunMonitorings', 'riskMaps', 'units', 'projects', 'selectedUnitId', 'selectedProjectId'));
     }
 
     public function dashboardCorporate(Request $request)

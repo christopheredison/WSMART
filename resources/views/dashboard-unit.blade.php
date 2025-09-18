@@ -27,7 +27,7 @@
             @endforeach
           </select>
         </div>
-        <div class="col-md-3 col-xxl-2">
+        <div class="col-md-5 col-xxl-4">
           <select name="unit_id" id="unit_selector" class="form-select select2 js-select-hide-search">
             <option value="" selected disabled>Unit</option>
             @foreach ($units as $unit)
@@ -395,7 +395,7 @@
                 @endforeach
                 @if ($risikos->isEmpty())
                 <tr>
-                  <td colspan="15" class="text-center p-3">Tidak ada data</td>
+                  <td colspan="17" class="text-center p-3">Tidak ada data</td>
                 </tr>
                 @endif
               </tbody>
@@ -406,8 +406,8 @@
     </div>
   </div>
 
-  <!--============================ Top 5 Risk ============================-->
-  {{-- <div class="col-12">
+  <!--============================ Top 10 High Risk ============================-->
+  <div class="col-12 mb-3">
     <div class="card" id="top-risk-card">
       <div class="card-header border-0 pb-0">
         <div class="d-flex align-items-center gap-3">
@@ -418,7 +418,7 @@
               </span>
             </div>
           </div>
-          <h3>Top 5 Risk</h3>
+          <h3>Top 10 High Risk Divisi</h3>
         </div>
         <hr class="mb-0 mt-xxl-5">
       </div>
@@ -427,14 +427,17 @@
           <table class="table">
             <thead>
               <tr>
+                <th>#</th>
+                <th class="white-space-nowrap">Divisi</th>
                 <th>Peristiwa Risiko</th>
-                <th>Deskripsi peristiwa risiko</th>
+                <th>Deskripsi Peristiwa Risiko</th>
                 <th>Jenis Risiko</th>
-                <th class="text-center white-space-nowrap">Tingkat Risiko</th>
-                <th class="white-space-nowrap">Sasaran</th>
+                <th>Nilai Dampak</th>
+                <th>Skala Dampak</th>
+                <th>Nilai Risiko</th>
+                <th>Level Risiko</th>
                 <th>KRI</th>
                 <th class="text-center white-space-nowrap">Status KRI</th>
-                <th class="white-space-nowrap">Risk Owner</th>
               </tr>
             </thead>
             <tbody>
@@ -443,10 +446,10 @@
         </div>
       </div>
     </div>
-  </div> --}}
+  </div>
 
   <!--============================ Loss Event Data ============================-->
-  <div class="col-12">
+  <div class="col-12 mb-3">
     <div class="card" id="led-card">
       <div class="card-header border-0 pb-0">
         <div class="d-flex align-items-center gap-3">
@@ -466,12 +469,13 @@
           <table class="table">
             <thead>
               <tr>
-                <th rowspan="2">Tanggal Kejadian</th>
-                <th rowspan="2">Nama Kejadian</th>
-                <th rowspan="2">Identifikasi Kejadian</th>
-                <th rowspan="2">Kategori Kejadian</th>
-                <th rowspan="2">Nilai Kerugian</th>
-                <th rowspan="2">Pihak Terkait</th>
+                <th>#</th>
+                <th>Nama Divisi</th>
+                <th>Tanggal Kejadian</th>
+                <th>Nama Kejadian</th>
+                <th>Identifikasi Kejadian</th>
+                <th>Kategori Kejadian</th>
+                <th>Nilai Kerugian</th>
               </tr>
               {{-- <tr>
                 <th class="no-sort text-center py-2">Finansial (IDR)</th>
@@ -493,6 +497,33 @@
           </table>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card" id="efektivitas-perlakuan-card">
+        <div class="card-header border-0 pb-0 d-flex flex-between-center">
+            <h3 class="h4">Efektivitas Perlakuan Risiko</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-12">
+                    <div class="border rounded-3 p-3 mb-3 w-100">
+                      @if(isset($dashboardData['efektivitas_perlakuan']))
+                        @foreach ($dashboardData['efektivitas_perlakuan'] as $item)
+                        <div class="mb-1 d-flex align-items-center gap-2">
+                            <span class="d-inline-block" style="width:25px; height:25px; border-radius: 3px; background-color: {{$item['color']}}"></span>
+                            <span>{{ $item['label'] }}</span>
+                        </div>
+                        @endforeach
+                      @endif
+                    </div>
+                    <div class="ratio ratio-1x1 ratio-lg-4x3 ratio-xxl-16x9 ratio-xxxl-21x9">
+                        <div id="efektivitas-perlakuan-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
   </div>
 </div>
@@ -574,6 +605,152 @@ $(document).ready(function() {
   const risks = @json($risikos);
   const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
   const riskMatrix = @json($riskMaps);
+
+  const fillTopRisks = (data) => {
+    const tableBody = $('#top-risk-card table tbody');
+    tableBody.empty();
+    
+    if (!data || data.length === 0) {
+        tableBody.append(`
+            <tr>
+                <td colspan="11" class="text-center">No data available</td>
+            </tr>
+        `);
+        return;
+    }
+
+    data.forEach((risk, index) => {
+        const rowSpan = risk.kris.length || 1;
+        let krisHtml = '';
+
+        if (risk.kris.length > 0) {
+            krisHtml += `
+                <td>${risk.kris[0].kri || '-'}</td>
+                <td class="text-center">
+                    <div class="status-container ${risk.kris[0].status_kri_color}">
+                        <div class="status-red"></div>
+                        <div class="status-yellow"></div>
+                        <div class="status-green"></div>
+                    </div>
+                </td>
+            `;
+        } else {
+            krisHtml += `
+                <td>-</td>
+                <td class="text-center">-</td>
+            `;
+        }
+
+        let mainRow = `
+            <tr>
+                <td rowspan="${rowSpan}">${index + 1}</td>
+                <td rowspan="${rowSpan}">${risk.divisi || '-'}</td>
+                <td rowspan="${rowSpan}">${risk.peristiwa_risiko || '-'}</td>
+                <td rowspan="${rowSpan}">${risk.deskripsi_peristiwa_risiko || '-'}</td>
+                <td rowspan="${rowSpan}">${risk.jenis_risiko || '-'}</td>
+                <td rowspan="${rowSpan}">${risk.nilai_dampak ? 'Rp ' + Intl.NumberFormat('id-ID').format(risk.nilai_dampak) : 'Rp 0'}</td>
+                <td rowspan="${rowSpan}">${risk.skala_dampak || '-'}</td>
+                <td rowspan="${rowSpan}">${risk.nilai_risiko || '-'}</td>
+                <td rowspan="${rowSpan}" class="bg-${risk.level_risiko?.toLowerCase().replaceAll('to', '').replaceAll(' ', '-')}">${risk.level_risiko || '-'}</td>
+                
+                ${krisHtml}
+            </tr>
+        `;
+
+        tableBody.append(mainRow);
+
+        if (risk.kris.length > 1) {
+            for (let i = 1; i < risk.kris.length; i++) {
+                let kriRow = `
+                    <tr>
+                        <td>${risk.kris[i].kri || '-'}</td>
+                        <td class="text-center">
+                            <div class="status-container ${risk.kris[i].status_kri_color}">
+                                <div class="status-red"></div>
+                                <div class="status-yellow"></div>
+                                <div class="status-green"></div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tableBody.append(kriRow);
+            }
+        }
+    });
+  }
+
+  const fillEfektivitasChart = (data) => {
+    var chartDom = document.getElementById('efektivitas-perlakuan-chart');
+    if (!chartDom) return;
+    var myChart = echarts.init(chartDom);
+    var option;
+
+    option = {
+        tooltip: {
+            trigger: 'item',
+            formatter: '{b}: {c} ({d}%)'
+        },
+        series: [
+            {
+            name: 'Efektivitas Perlakuan',
+            type: 'pie',
+            radius: '90%',
+            center: ['50%', '50%'],
+            data: data.map(function(item) {
+                return {
+                    value: item.value,
+                    name: item.label,
+                    itemStyle: {
+                        color: item.color
+                    }
+                }
+            }),
+            emphasis: {
+                itemStyle: {
+                shadowBlur: 10,
+                shadowOffsetX: 0,
+                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+            },
+            label: {
+                show: true,
+                position: 'inside',
+                formatter: '{d}%',
+                fontSize: '14',
+                color: '#fff'
+            },
+            }
+        ]
+    };
+
+    if (myChart) {
+        myChart.setOption(option, true);
+    }
+  }
+
+  const fillEfektivitasDetails = (efektifData, tidakEfektifData) => {
+      const efektifBody = $('#efektif-details-body');
+      const tidakEfektifBody = $('#tidak-efektif-details-body');
+
+      efektifBody.empty();
+      tidakEfektifBody.empty();
+
+      if (efektifData.length > 0) {
+          efektifData.forEach(item => {
+              efektifBody.append(`<tr><td>${item.peristiwa_risiko}</td></tr>`);
+          });
+      } else {
+          efektifBody.append('<tr><td>Tidak ada data</td></tr>');
+      }
+
+      if (tidakEfektifData.length > 0) {
+          tidakEfektifData.forEach(item => {
+              tidakEfektifBody.append(`<tr><td>${item.peristiwa_risiko}</td></tr>`);
+          });
+      } else {
+          tidakEfektifBody.append('<tr><td>Tidak ada data</td></tr>');
+      }
+  }
 
   const refreshSummary = () => {
     // Capaian KPI
@@ -689,19 +866,24 @@ $(document).ready(function() {
               </tr>
           `);
     } else {
-      dashboardData.led.forEach((led) => {
+      dashboardData.led.forEach((led, index) => {
         $('#led-card .table tbody').append(`
                 <tr>
+                    <td>${index + 1}</td>
+                    <td>${led.nama_divisi}</td>
                     <td>${led.tanggal_kejadian}</td>
                     <td>${led.nama_kejadian}</td>
                     <td>${led.identifikasi_kejadian}</td>
                     <td>${led.kategori_kejadian}</td>
                     <td>${led.nilai_kerugian}</td>
-                    <td>${led.unit_penanggung_jawab}</td>
                 </tr>
             `);
       });
     }
+
+    fillTopRisks(dashboardData.top_risks);
+    fillEfektivitasChart(dashboardData.efektivitas_perlakuan);
+    // fillEfektivitasDetails(dashboardData.risikos_efektif, dashboardData.risikos_tidak_efektif);
   }
 
   const initKpiChart = () => {
