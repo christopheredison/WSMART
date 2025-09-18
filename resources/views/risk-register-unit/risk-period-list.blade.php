@@ -31,8 +31,21 @@
           </div>
       </div>
       <div class="card-body dt-header-true">
+        @if($viewAllDivision)
+          <div class="row g-2">
+            <div class="col-md-4">
+              <label class="form-label d-none" for="unit_id_filter">Filter Divisi</label>
+              <select id="unit_id_filter" class="form-select select2">
+                <option value="">Semua Divisi</option>
+                @foreach ($units as $id => $name)
+                  <option value="{{ $name }}">{{ $name }}</option>
+                @endforeach
+              </select>
+            </div>
+          </div>
+        @endif
         <div class="table-responsive-sm">
-          <table class="table table-hover dataTable" id="example" data-paging="true" data-info="true" data-filter="true">
+          <table class="table table-hover" id="example" data-paging="true" data-info="true" data-filter="true">
             <thead>
               <tr>
                 <th class="white-space-nowrap">#</th>
@@ -43,38 +56,58 @@
               </tr>
             </thead>
             <tbody class="list" id="bulk-select-body">
-              @foreach ($dataToDisplay as $index => $item)
+              @forelse ($dataToDisplay as $index => $item)
+              @php
+
+                    $unit = $item['unit'];
+                    $periode = $item['periode'];
+                @endphp
               <tr>
                 <td class="index-number">{{ $index + 1 }}</td>
-                <td class="unit">{{ $item['unit']->name }}</td>
-                <td class="tahun">{{ $item['periode']->tahun }}</td>
+                <td class="unit">{{ $unit->name }}</td>
+                <td class="tahun">{{ $periode->tahun }}</td>
                 <td class="status text-center">
-                  <figure class="badge {{ $item['periode']->status == 'active' ? 'bg-success' : 'bg-secondary' }}">
-                    {{ $item['periode']->status == 'active' ? 'Aktif' : 'Tidak Aktif' }}
+                  <figure class="badge {{ $periode->status == 'active' ? 'bg-success' : 'bg-secondary' }}">
+                    {{ $periode->status == 'active' ? 'Aktif' : 'Tidak Aktif' }}
                   </figure>
                 </td>
                 <td class="white-space-nowrap">
-                  {{--
-                  <a href="javascript:void(0)" class="btn-input-icon" data-bs-toggle="tooltip" title="Pengaturan Periode Divisi" onclick="openPeriodeUnitSettings({{ $item['periode']->id }})">
-                    <span class="bx bx-cog"></span>
-                  </a>
-                  --}}
-                  <a href="{{ route('risk-register-unit.periods.show', ['period' => $item['periode']->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
-                    <span class="bx bx-show"></span>
-                  </a>
-                  <a href="{{ route('risk-register-unit.index', ['pid' => $item['periode']->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
-                    <span class="bx bx-list-check"></span>
-                  </a>
-                  <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $item['periode']->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
-                    <span class="bx bx-radar"></span>
-                  </a>
-                  <a href="{{ route('unit-led.index-by-periode', ['periode' => $item['periode']->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
-                    title="Loss Event">
-                    <span class="bx bx-dock-bottom"></span>
-                  </a>
+                  @if ($viewAllDivision)
+                    <a href="{{ route('risk-register-unit.periods.show', ['period' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
+                      <span class="bx bx-show"></span>
+                    </a>
+                    <a href="{{ route('risk-register-unit.index', ['pid' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
+                      <span class="bx bx-list-check"></span>
+                    </a>
+                    <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
+                      <span class="bx bx-radar"></span>
+                    </a>
+                    <a href="{{ route('unit-led.index-by-periode', ['periode' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+                      title="Loss Event">
+                      <span class="bx bx-dock-bottom"></span>
+                    </a>
+                  @else
+                    <a href="{{ route('risk-register-unit.periods.show', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
+                      <span class="bx bx-show"></span>
+                    </a>
+                    <a href="{{ route('risk-register-unit.index', ['pid' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
+                      <span class="bx bx-list-check"></span>
+                    </a>
+                    <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
+                      <span class="bx bx-radar"></span>
+                    </a>
+                    <a href="{{ route('unit-led.index-by-periode', ['periode' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+                      title="Loss Event">
+                      <span class="bx bx-dock-bottom"></span>
+                    </a>
+                  @endif
                 </td>
               </tr>
-              @endforeach
+              @empty
+              <tr>
+                  <td colspan="5" class="text-center">Tidak ada data untuk ditampilkan.</td>
+              </tr>
+              @endforelse
             </tbody>
           </table>
         </div>
@@ -83,3 +116,29 @@
   </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+  $(document).ready(function() {
+    let table = $('#example').DataTable({
+      "paging": true,
+      "info": true,
+      "searching": true,
+      "layout": {
+        "topEnd": {
+            "search": {
+                "placeholder": 'Search...'
+            }
+        },
+      }
+    });
+
+    @if($viewAllDivision)
+      $('#unit_id_filter').on('change', function() {
+        let searchTerm = $(this).val();
+        table.column(1).search(searchTerm ? '^' + searchTerm + '$' : '', true, false).draw();
+      });
+    @endif
+  });
+</script>
+@endpush

@@ -85,10 +85,19 @@ class ProjectPeriodeListController extends BasicCRUDController
         $periodeOptions = Periode::select('id', 'tahun')->orderBy('tahun')->get()->pluck('tahun', 'id')->toArray();
 
         $user = request()->user();
-        $user->load('projects');
+        $user->load('projects', 'unit');
         
         $userProjectIds = $user->projects->pluck('id');
         $this->userProjectIdsx = $user->projects->pluck('id')->toArray();
+
+        // Mendapatkan project berdasarkan unit jika user memiliki unit
+        $unitProjectIds = collect([]);
+        if ($user->unit && !in_array($user->level_id ?? 0, [6, 7])) {
+            $unitProjectIds = $user->unit->projects()->pluck('id');
+        }
+        
+        // Menggabungkan project IDs dari user dan unit
+        $allProjectIds = $userProjectIds->merge($unitProjectIds)->unique();
 
         // $this->callbackQuery = function ($query) use ($userProjectIds) {
         //     if ($userProjectIds->count() > 0) {
@@ -102,36 +111,96 @@ class ProjectPeriodeListController extends BasicCRUDController
         //     }
         // };
 
-        $this->callbackQuery = function ($query) use ($userProjectIds) {
+        $this->callbackQuery = function ($query) use ($userProjectIds, $unitProjectIds, $allProjectIds, $user) {
             $query->reorder();
 
-            if ($userProjectIds->isNotEmpty()) {
-                $idList = $userProjectIds->join(',');
-                $query->orderByRaw("
-                    CASE 
-                        WHEN project_periode_lists.project_id IN ({$idList}) THEN 1 
-                        ELSE 2 
-                    END ASC, 
-                    updated_at DESC
-                ");
+            // if ($userProjectIds->isNotEmpty()) {
+            //     $idList = $userProjectIds->join(',');
+            //     $query->orderByRaw("
+            //         CASE 
+            //             WHEN project_periode_lists.project_id IN ({$idList}) THEN 1 
+            //             ELSE 2 
+            //         END ASC, 
+            //         updated_at DESC
+            //     ");
+            // } else {
+            //     $query->orderBy('updated_at', 'desc');
+            // }
+
+            // if (!Gate::check('project_periode_view')) {
+            //     $query->whereIn('project_id', $userProjectIds);
+            // }
+
+            if ($allProjectIds->isNotEmpty()) {
+                $userIdList = $userProjectIds->join(',');
+                $allIdList = $allProjectIds->join(',');
+                
+                if ($userProjectIds->isNotEmpty() && $unitProjectIds->isNotEmpty()) {
+                    $query->orderByRaw("
+                        CASE 
+                            WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 1
+                            WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 2
+                            ELSE 3 
+                        END ASC, 
+                        updated_at DESC
+                    ");
+                } else {
+                    $query->orderByRaw("
+                        CASE 
+                            WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 1 
+                            ELSE 2 
+                        END ASC, 
+                        updated_at DESC
+                    ");
+                }
             } else {
                 $query->orderBy('updated_at', 'desc');
             }
 
+            // Filter berdasarkan permission dan level
             if (!Gate::check('project_periode_view')) {
-                $query->whereIn('project_id', $userProjectIds);
+                // Jika user adalah user project (level 6 atau 7), hanya tampilkan project miliknya
+                if (in_array($user->level_id ?? 0, [6, 7])) {
+                    $query->whereIn('project_id', $userProjectIds);
+                } 
+                // Jika user adalah user divisi, tampilkan project miliknya dan project di bawah unitnya
+                else if ($user->unit) {
+                    $query->whereIn('project_id', $allProjectIds);
+                }
+                // Jika tidak memiliki unit, hanya tampilkan project miliknya
+                else {
+                    $query->whereIn('project_id', $userProjectIds);
+                }
             }
         };
 
         $this->datatableCallback = function ($dataTable) use ($user) {
+            // $dataTable->addColumn('has_view', function ($data) use ($user) {
+            //     return Gate::check('project_periode_view') || $user->hasProject($data);
+            // });
+            // $dataTable->addColumn('has_risk_register', function ($data) use ($user) {
+            //     return Gate::check('project_admin_access') || $user->hasProject($data);
+            // });
+            // $dataTable->addColumn('has_monitoring', function ($data) use ($user) {
+            //     return Gate::check('project_admin_access') || $user->hasProject($data);
+            // });
             $dataTable->addColumn('has_view', function ($data) use ($user) {
-                return Gate::check('project_periode_view') || $user->hasProject($data);
+                return Gate::check('project_periode_view') || 
+                    $user->hasProject($data) || 
+                    ($user->unit && $data->project && $data->project->cost_center_parent == $user->unit->cost_center);
             });
             $dataTable->addColumn('has_risk_register', function ($data) use ($user) {
-                return Gate::check('project_admin_access') || $user->hasProject($data);
+                // Periksa apakah user memiliki permission project_risk_list (bukan project_admin_access)
+                // atau user memiliki proyek tersebut
+                // atau proyek tersebut berada di bawah unit user
+                return Gate::check('project_admin_access') || 
+                    $user->hasProject($data) || 
+                    ($user->unit && $data->project && $data->project->cost_center_parent == $user->unit->cost_center);
             });
             $dataTable->addColumn('has_monitoring', function ($data) use ($user) {
-                return Gate::check('project_admin_access') || $user->hasProject($data);
+                return Gate::check('project_admin_access') || 
+                    $user->hasProject($data) || 
+                    ($user->unit && $data->project && $data->project->cost_center_parent == $user->unit->cost_center);
             });
         };
 
@@ -145,7 +214,7 @@ class ProjectPeriodeListController extends BasicCRUDController
 
         $this->tableLegend= [];
 
-        if (Gate::check('project_periode_view')) {
+        if (Gate::check('project_periode_view')) {//semua user diwajibkan ada project_periode_view bila ingin bisa lihat
             $this->tableActions[] = [
                 'btn_icon' => true,
                 'label' => '<span class="bx bx-show" title="View"></span>',

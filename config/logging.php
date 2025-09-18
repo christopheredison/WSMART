@@ -142,6 +142,13 @@ return [
             'level' => 'debug',
             'days' => 14,
         ],
+
+        'wikaapi' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/wikaapi.log'),
+            'level' => 'debug',
+            'days' => 14,
+        ],
     ],
 
 ];

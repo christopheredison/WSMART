@@ -6,6 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class UnitRiskMonitoring extends Model
 {
+    public const STATUS_DRAFT_REVISI = 1;
+    public const STATUS_VERIFIKASI_ROW_DIVISI = 2;       // Menunggu Level 2 (Owner Divisi)
+    public const STATUS_VERIFIKASI_RO_DIVISI_MR = 3;     // Menunggu Level 1 (Officer MR)
+    public const STATUS_VERIFIKASI_ROW_DIVISI_MR = 4;    // Menunggu Level 2 (Owner MR)
+    public const STATUS_PUBLISHED = 5;                   // Selesai
+
     protected $fillable = [
         'identifikasi_risiko_id',
         'quarter',
@@ -17,6 +23,14 @@ class UnitRiskMonitoring extends Model
         'skala_risiko',
         'level_risiko',
         'eksposure_risiko',
+        'status',
+        'is_approved',
+        'is_revision',
+    ];
+
+    protected $casts = [
+        'is_approved' => 'boolean',
+        'is_revision' => 'boolean',
     ];
 
     public function perlakuanPenyebabRisikos()
