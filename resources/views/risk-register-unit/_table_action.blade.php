@@ -1,5 +1,5 @@
 
-@if($item->status == 1 || $item->status == null || $item->status == 5)
+@if(($item->status == 1 || $item->status == null || $item->status == 5) && (auth()->user()->level_id == 1 && auth()->user()->unit_id == $item->unit_id))
   @can('risk_register_edit')
     <a href="{{ route('risk-register-unit.edit', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
       title="Edit"><span class="bx bx-message-square-edit"></span></a>
@@ -19,21 +19,9 @@
 
 @can('risk_register_verification')
 @php
-    // Cek apakah level user terdaftar di ApprovalStep unit terkait
-    $userLevelId = auth()->user()->level_id;
-    $unitId = $item->unit_id;
-    $approvalFlow = \App\Models\ApprovalFlow::where('unit_id', $unitId)->first();
     $canVerify = false;
-    
-    if ($approvalFlow) {
-        $approvalStep = \App\Models\ApprovalStep::where('approval_flow_id', $approvalFlow->id)
-            ->where('level_id', $userLevelId)
-            ->first();
-        
-        // Cek apakah step_verification risiko = step_order level terkait
-        if ($approvalStep && $item->step_verification == $approvalStep->step_order && $item->status_progress == 1) {
-            $canVerify = true;
-        }
+    if ($item->step_verification == $step_order && $dataBatch->step_verification == $step_order && ($item->status == 2 || $item->status == 3 )) {
+        $canVerify = true;
     }
 @endphp
 @if($canVerify)
@@ -43,7 +31,7 @@
 @endif
 @endcan
 
-@if($item->status == 1 || $item->status == null || $item->status == 5)
+@if(($item->status == 1 || $item->status == null || $item->status == 5) && (auth()->user()->level_id == 1 && auth()->user()->unit_id == $item->unit_id))
 @can('risk_register_delete')
   <button type="button" class="btn-input-icon" data-bs-toggle="modal"
     data-bs-target="#modalDelete{{ $item->id }}">

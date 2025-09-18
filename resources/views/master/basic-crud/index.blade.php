@@ -213,9 +213,9 @@
         @elseif (request()->route()->getName() === 'risk-register-unit.monitorings.index')
             @include('risk-register-unit.monitorings._modal_verifikasi')
         @endif
-    @endif
+     @endif
 
-    @if (!empty($extraViewData['showCatatanModal']))
+    @if (!empty($extraViewData['showCatatanModal']))
         @if (request()->route()->getName() === 'projects.monitorings.index')
             @include('project-monitorings._modal_catatan')
         @elseif (request()->route()->getName() === 'risk-register-unit.monitorings.index')

@@ -130,8 +130,19 @@ class ProjectRiskController extends BasicCRUDController
             'render' => '(data, type, row) => {
                 if (data === 0 || data === 1) return "Draft";
                 if (data === 2) return "On Review";
-                if (data === 3 || data === 4) return "Accepted";
+                if (data === 3) {
+                    if (row.step_verification === 2) return "Accepted by Risk Owner Project";
+                    if (row.step_verification === 3) return "Accepted by Risk Officer Divisi";
+                    if (row.step_verification === 4) return "Accepted by Risk Officer MR";
+                    return "Accepted";
+                }
+                if (data === 4) {
+                    return "Accepted by Risk Owner MR";
+                }
                 if (data === 5) return "Need Revision or Rejected";
+                if (data === 6) {
+                    return "Published";
+                }
                 return "-";
             }',
         ],
@@ -147,13 +158,13 @@ class ProjectRiskController extends BasicCRUDController
         $levelId = $user->level_id;
 
         // Cari ApprovalFlow untuk unit ini
-        $approvalFlow = ApprovalFlow::where('project_id', $projectId)
-            ->whereNull('unit_id')
-            ->first();
-        $min_verification = 2;
-        if ($approvalFlow) {
-            $min_verification = $approvalFlow->min_verification;
-        }
+        // $approvalFlow = ApprovalFlow::where('project_id', $projectId)
+        //     ->whereNull('unit_id')
+        //     ->first();
+        // $min_verification = 2;
+        // if ($approvalFlow) {
+        //     $min_verification = $approvalFlow->min_verification;
+        // }
 
         $dataBatch = DataBatch::where('project_id', $projectId)
                       ->where('periode_id', $periodeId)
@@ -172,6 +183,44 @@ class ProjectRiskController extends BasicCRUDController
             ]);
         }
         $status = $dataBatch->status;
+
+        //u step & b step
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        $verificationData = $this->getUserVerificationStep($levelId, $is_mr);
+        $u_step = $verificationData['u_step'];
+        $user_verification = $verificationData['user_verification'];
+
+        //hitung pending risk
+        $step_order = $u_step;
+        $pending_risk = 0;
+        $min_verification = 4;
+
+        //dd($step_order, $levelId);
+        if ($step_order >= 1) {
+            // Hitung pending risk untuk step_order > 1
+            $pending_risk = ProjectRisk::where('project_periode_list_id', request()->route('project'))
+                ->where(function($query) use ($step_order) {
+                    $query->where('step_verification', '<=', $step_order)
+                        ->orWhereNull('step_verification');
+                })
+                ->where(function($query) {
+                    $query->where('status_progress', '!=', 3) // Menggunakan nilai 3 untuk PROGRESS_ON_ACCEPTED
+                        ->where('status_progress', '!=', 4); // Menggunakan nilai 4 untuk PROGRESS_ON_FINAL
+                })
+                ->count();
+        } else if ($levelId == 6 || $levelId == null) {
+            // Untuk risk owner (levelId = 1 atau null)
+            if ($status == DataBatch::STATUS_REVISI) {
+                // Jika status revisi, hitung risiko dengan status_progress = 2 (PROGRESS_ON_REVISION_DELETED)
+                $pending_risk = ProjectRisk::where('project_periode_list_id', request()->route('project'))
+                    ->where('status_progress', 2)
+                    ->count();
+            } else {
+                $pending_risk = 0;
+            }
+        }
+        //dd($pending_risk);
+        $b_step = $dataBatch->step_verification;
 
         $this->baseRouteParams = ['project' => request()->route('project')];
 
@@ -248,6 +297,7 @@ class ProjectRiskController extends BasicCRUDController
             ];
 
             //$levelId = 7;
+            //dd($status, $levelId, $u_step, $b_step);
 
             if(($status==1 || $status==5) && $levelId==6){//on proses/revisi dan level = RO
                 $active_state = null;
@@ -313,9 +363,11 @@ class ProjectRiskController extends BasicCRUDController
                     ];
                 }
             }
-            else if($status==2 && $levelId==7){//on verif && level = ROW/P
+            //else if($status==2 && $levelId==7){//on verif && level = ROW/P
+            else if($u_step == $b_step){//status batch dan step
                 $active_state = null;
-                $active_state = 'function(id, type, row) { return row.status == 2; }';
+                //$active_state = 'function(id, type, row) { return row.status == 2 || row.status == 3; }'; 
+                $active_state = 'function(id, type, row) { return (row.status == 2 || row.status == 3) && row.step_verification == ' . $u_step . '; }';
                 $this->tableActions[] = [
                     'label' => '<span class="bx bx-check-shield text-success"></span>',
                     'btn_icon' => true,
@@ -370,25 +422,41 @@ class ProjectRiskController extends BasicCRUDController
             }
             JS;
 
-        //$routeUrl = route('projects.risks.send');
-        $routeUrl = ($levelId == 7 && $status == 2) ? route('projects.risks.eskalasi') : route('projects.risks.send');
+        $routeUrl = route('projects.risks.send');
+        //$routeUrl = ($levelId == 7 && $status == 2) ? route('projects.risks.eskalasi') : route('projects.risks.send');
 
         $csrfToken = csrf_token();
         $disabledAttr = '';
         $viewAttr = "none";
 
-        if (!((($status == 1 || $status == 5) && $levelId == 6) || ($status == 2 && $levelId == 7))) {
+        //if (!((($status == 1 || $status == 5) && $levelId == 6) || ($status == 2 && $levelId == 7))) {
+        //jika risk officer project
+        if (!(($status == 1 || $status == 5) && $levelId == 6)){
             $disabledAttr = ' disabled';
             $viewAttr = " style='display:none'";
         }
 
+        //jika risk owner project, risk off div, risk ow div
+        //dd($status, $u_step, $b_step);
+        if(($status == 2 || $status == 3 || $status == 4) && $u_step == $b_step){
+            $disabledAttr = '';
+            $viewAttr = "";
+            $routeUrl = route('projects.risks.eskalasi');
+        }
+
         $buttonText = ($status == 5) ? 'Kirim Perbaikan' : 'Kirim Risiko';
+        //jika sudah di level row mr
+        if($status == 4 && $u_step >= $min_verification){
+            $buttonText = "Publish Risiko";
+        }
+
         $sendType = ($status == 5) ? 'perbaikan' : 'risiko';
         // Format nilai eksposur risiko dengan format Rupiah dan pemisah ribuan
         $formattedAverageExposure = 'Rp ' . number_format($averageExposure, 0, ',', '.');
 
         $this->cardFooter = <<<HTML
             <div class="d-flex flex-column">
+                {$this->getPendingRiskAlert($pending_risk, $step_order, $dataBatch)}
                 <div>
                     <strong>Rata-rata Eksposure Risiko (Kuantitatif):</strong>
                     <span id="average-risk-value">{$formattedAverageExposure}</span>
@@ -435,6 +503,7 @@ class ProjectRiskController extends BasicCRUDController
         $this->extraViewData = [
             'status' => $status,
             'levelId' => $levelId,
+            'pending_risk' => $pending_risk,
             // tambahkan data lain jika diperlukan
         ];
 
@@ -1932,18 +2001,27 @@ class ProjectRiskController extends BasicCRUDController
                 ->where('type', 2)
                 ->orderBy('batch', 'desc')
                 ->first();
-
+        //dd($send_type);
         if ($send_type == 'perbaikan' && $dataBatch) {
-            $dataBatch->update([
-                'status' => DataBatch::STATUS_KIRIM,
-            ]);
+            if ($dataBatch->step_verification == 1) {
+                $dataBatch->update([
+                    'status' => DataBatch::STATUS_KIRIM,
+                ]);
+            } else if ($dataBatch->step_verification > 1) {
+                $dataBatch->update([
+                    'status' => DataBatch::STATUS_VERIFIKASI,
+                ]);
+            }
 
             //update semua project risk yang status=5 menjadi 2
             ProjectRisk::where('project_id', $project_id)
                 ->where('periode_id', $periode_id)
                 ->where('status', ProjectRisk::STATUS_REJECTED) // STATUS_REJECTED = 5
                 ->update([
-                    'status' => ProjectRisk::STATUS_DIKIRIM, // STATUS_DIKIRIM = 2
+                    'status' => $dataBatch->step_verification == 1 ? 
+                        ProjectRisk::STATUS_DIKIRIM : // STATUS_DIKIRIM = 2
+                        ProjectRisk::STATUS_TUNGGU_VERIFIKASI, // STATUS_TUNGGU_VERIFIKASI = 3
+                        'status_progress' => 1,
                 ]);
 
         } else if (!$dataBatch) {
@@ -1980,17 +2058,17 @@ class ProjectRiskController extends BasicCRUDController
             }
         }
 
-        if($dataBatch->status <= DataBatch::STATUS_KIRIM){
-            // Ubah semua risiko di identifikasi_risikos dengan status = 2 (Dikirim), status_risiko = 1, dan status_progress = 1
-            foreach ($risikos as $risiko) {
-                $risiko->update([
-                    'status' => ProjectRisk::STATUS_DIKIRIM, // Status dikirim
-                    'status_risiko' => 1,
-                    'status_progress' => 1,
-                    'step_verification' => 1
-                ]);
-            }
-        }
+        // if($dataBatch->status <= DataBatch::STATUS_KIRIM){
+        //     // Ubah semua risiko di identifikasi_risikos dengan status = 2 (Dikirim), status_risiko = 1, dan status_progress = 1
+        //     foreach ($risikos as $risiko) {
+        //         $risiko->update([
+        //             'status' => ProjectRisk::STATUS_DIKIRIM, // Status dikirim
+        //             'status_risiko' => 1,
+        //             'status_progress' => 1,
+        //             'step_verification' => 1
+        //         ]);
+        //     }
+        // }
 
         return redirect()->route('projects.risks.index', [
                     'project' => $project_id
@@ -2001,7 +2079,7 @@ class ProjectRiskController extends BasicCRUDController
     private function getFlowData($project_id, $level_id)
     {
         $step_order = 0;
-        $min_verification = 2;
+        $min_verification = 4;
         $approval_step_id = null;
 
         // Jika bukan risk owner atau level_id null, kembalikan 0
@@ -2066,11 +2144,18 @@ class ProjectRiskController extends BasicCRUDController
         $user = auth()->user();
         $level_id = $user->level_id;
 
-        $appFlow = $this->getFlowData($project_id, $level_id);
-        $step_order = $appFlow['step_order'];
-        $min_verification = $appFlow['min_verification'];
-        $approval_step_id = $appFlow['approval_step_id'];
+        // $appFlow = $this->getFlowData($project_id, $level_id);
+        // $step_order = $appFlow['step_order'];
+        // $min_verification = $appFlow['min_verification'];
+        // $approval_step_id = $appFlow['approval_step_id'];
 
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        //cek databatch terkait dimana untuk step verification dan user flow step verification harus sama
+        $verificationData = $this->getUserVerificationStep($level_id, $is_mr);
+        $u_step = $verificationData['u_step'];
+        $user_verification = $verificationData['user_verification'];
+        $min_verification = 4;
+        $step_order = $u_step;
         // Validasi input
         $request->validate([
             'status_verifikasi' => 'required|in:terima,tolak',
@@ -2082,7 +2167,7 @@ class ProjectRiskController extends BasicCRUDController
         //         ->with('error', 'Anda tidak memiliki hak untuk melakukan verifikasi risiko');
         // }
 
-        $step_order = 1;
+        //$step_order = 1;
 
         //dd("step_order", $step_order);
 
@@ -2095,6 +2180,14 @@ class ProjectRiskController extends BasicCRUDController
 
         if (!$dataBatch) {
             return redirect()->back()->with('error', 'Data batch tidak ditemukan.');
+        }
+        $b_step = $dataBatch->step_verification;
+
+        //cek untuk step user dengan step branch harus sama
+        if ($u_step != $b_step) {
+            return redirect()->route('projects.risks.index', [
+                'project' => $project_id
+            ])->with('error', 'Anda tidak berhak melakukan verifikasi pada tahap ini. Saat ini tahap verifikasi hanya dilakukan oleh '.$user_verification);
         }
 
         // catat log disini
@@ -2110,7 +2203,7 @@ class ProjectRiskController extends BasicCRUDController
             //pengecekan jika step_order yang dimiliki level_id adalah sama dengan min_verification
             if($step_order >= $min_verification){
                 // Jika diterima, update status menjadi terverifikasi
-                $identifikasiRisiko->update([
+                $projectRisk->update([
                     'status' => ProjectRisk::STATUS_TERVERIFIKASI,
                     'status_progress' => 3,
                     'status_risiko' => 1, //valid
@@ -2118,23 +2211,24 @@ class ProjectRiskController extends BasicCRUDController
                 ]);
             }
             else{
+                $next_step_order = $step_order + 1;
                 // Update status risiko menjadi terverifikasi
                 $projectRisk->update([
                     'status' => ProjectRisk::STATUS_TUNGGU_VERIFIKASI,
                     'status_progress' => 1,
-                    'step_verification' => $step_order + 1
+                    'step_verification' => $next_step_order
                 ]);
             }
 
-            //disini maka akan simpan approval logs
-            ApprovalLog::create([
-                'risk_id' => $projectRisk->id,
-                'approval_step_id' => $approval_step_id,
-                'type' => 2, // 1 untuk unit, 2 untuk project
-                'step_order' => $step_order,
-                'approved_by' => auth()->id(),
-                'approved_at' => now(),
-            ]);
+            //disini maka akan simpan approval logs (sementara dimatikan)
+            // ApprovalLog::create([
+            //     'risk_id' => $projectRisk->id,
+            //     'approval_step_id' => $approval_step_id,
+            //     'type' => 2, // 1 untuk unit, 2 untuk project
+            //     'step_order' => $step_order,
+            //     'approved_by' => auth()->id(),
+            //     'approved_at' => now(),
+            // ]);
 
             //semua batch notes perlu diupdate sudah read jadi unread menjadi false
             $batchNotes = DataBatchNotes::where('data_batch_id', $dataBatch->id)
@@ -2215,13 +2309,28 @@ class ProjectRiskController extends BasicCRUDController
         $project = Project::find($project_id);
         $level_id = $user->level_id;
         $periode_id = 0;
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        //cek databatch terkait dimana untuk step verification dan user flow step verification harus sama
+        $verificationData = $this->getUserVerificationStep($level_id, $is_mr);
+        $u_step = $verificationData['u_step'];
+        $user_verification = $verificationData['user_verification'];
 
-        // Hanya user dengan level 7 yang bisa melakukan eskalasi
-        if ($level_id != 7) {
+        //get data batch step
+        $dataBatch = DataBatch::where('project_id', $project_id)
+                ->where('periode_id', $periode_id)
+                ->where('type', 2)
+                ->orderBy('batch', 'desc')
+                ->first();
+        
+        $b_step = $dataBatch->step_verification;
+
+        //cek untuk step user dengan step branch harus sama
+        if ($u_step != $b_step) {
             return redirect()->route('projects.risks.index', [
                 'project' => $project_id
-            ])->with('error', 'Anda tidak memiliki akses untuk melakukan eskalasi risiko.');
+            ])->with('error', 'Anda tidak berhak melakukan eskalasi pada tahap ini. Saat ini tahap eskalasi hanya dilakukan oleh '.$user_verification);
         }
+        
 
         // Cek apakah semua risiko sudah memiliki status 3
         $risikos = ProjectRisk::where('project_id', $project_id)
@@ -2230,13 +2339,22 @@ class ProjectRiskController extends BasicCRUDController
 
         $belumStatus3 = false;
         $idRisikoBelumStatus3 = [];
-
         foreach ($risikos as $risiko) {
-            if ($risiko->status != ProjectRisk::STATUS_TUNGGU_VERIFIKASI) { // STATUS_TUNGGU_VERIFIKASI = 3
-                $belumStatus3 = true;
-                $idRisikoBelumStatus3[] = $risiko->id;
+            //jika bukan final
+            if($u_step != 4){
+                if ($risiko->status != ProjectRisk::STATUS_TUNGGU_VERIFIKASI || $risiko->step_verification <= $u_step) { // STATUS_TUNGGU_VERIFIKASI = 3
+                    $belumStatus3 = true;
+                    $idRisikoBelumStatus3[] = $risiko->id;
+                }
+            }
+            else{
+                if ($risiko->status != ProjectRisk::STATUS_TERVERIFIKASI && $risiko->status != ProjectRisk::STATUS_PUBLISHED) { // Cek jika bukan status 4 atau 6
+                    $belumStatus3 = true;
+                    $idRisikoBelumStatus3[] = $risiko->id;
+                }
             }
         }
+
         if ($belumStatus3) {
             // Kumpulkan deskripsi peristiwa risiko yang belum status 3
             $risikoTidakStatus3 = [];
@@ -2260,28 +2378,128 @@ class ProjectRiskController extends BasicCRUDController
             return redirect()->route('projects.risks.index', [
                 'project' => $project_id
             ])->with('error', $pesanError);
+        }
+        else{
+            //$appFlow = $this->getFlowData($project_id, $level_id);
+            //$step_order = $appFlow['step_order'];//sementara diganti u_step
+            $step_order = $u_step;
+            //dd($step_order);    
+            // if ($dataBatch) {
+            //     $dataBatch->update([
+            //         'status' => DataBatch::STATUS_VERIFIKASI,
+            //         'step_verification' => $step_order + 1
+            //     ]);
+            // }
 
-            $appFlow = $this->getFlowData($project_id, $level_id);
-            $step_order = $appFlow['step_order'];
+            try {
+                // Mulai transaksi database
+                DB::beginTransaction();
+                
+                if($u_step==4){
+                    if ($dataBatch) {
+                        $dataBatch->update([
+                            'status' => DataBatch::STATUS_FINISH,
+                            'step_verification' => $step_order
+                        ]);
+                    }
 
-            $dataBatch = DataBatch::where('project_id', $project_id)
-                ->where('periode_id', $periode_id)
-                ->where('type', 2)
-                ->orderBy('batch', 'desc')
-                ->first();
+                    //update project risk terkait menjadi publish
+                    ProjectRisk::where('project_id', $project_id)
+                        ->where('periode_id', $periode_id)
+                        ->update([
+                            'status' => ProjectRisk::STATUS_PUBLISHED,
+                            'step_verification' => $step_order
+                        ]);
 
-            if ($dataBatch) {
-                $dataBatch->update([
-                    'status' => DataBatch::STATUS_VERIFIKASI,
-                    'step_verification' => $step_order + 1
-                ]);
+                    //tetapkan project risk utama
+                    ProjectRisk::determineMainRisks($project_id, $periode_id);
+                }
+                else{
+                    if ($dataBatch) {
+                        $dataBatch->update([
+                            'status' => DataBatch::STATUS_VERIFIKASI,
+                            'step_verification' => $step_order + 1
+                        ]);
+                    }
+                }
+                
+                // Update ProjectRisk dengan status=3 dan step_verification=u_step
+                // ProjectRisk::where('project_id', $project_id)
+                //     ->where('periode_id', $periode_id)
+                //     ->where('status', 3)
+                //     ->where('step_verification', $u_step)
+                //     ->update([
+                //         'step_verification' => $u_step + 1,
+                //         'status' => 2
+                //     ]);
+                
+                // Commit transaksi jika semua berhasil
+                DB::commit();
+                    
+                return redirect()->route('projects.risks.index', [
+                    'project' => $project_id
+                ])->with('success', 'Semua risiko berhasil dieskalasi dan diverifikasi.');
+            } catch (\Exception $e) {
+                // Rollback transaksi jika terjadi error
+                DB::rollBack();
+                
+                return redirect()->route('projects.risks.index', [
+                    'project' => $project_id
+                ])->with('error', 'Terjadi kesalahan saat memproses data: ' . $e->getMessage());
             }
-
-
 
             return redirect()->route('projects.risks.index', [
                 'project' => $project_id
             ])->with('success', 'Semua risiko berhasil dieskalasi dan diverifikasi.');
         }
+    }
+
+    /**
+     * Mendapatkan step verifikasi dan label user berdasarkan level_id
+     *
+     * @param int $level_id Level ID user
+     * @param bool $is_mr Flag apakah user adalah Management Risk
+     * @return array Array berisi u_step dan user_verification
+     */
+    private function getUserVerificationStep($level_id, $is_mr = false)
+    {
+        $u_step = 0;
+        $user_verification = "";
+        
+        if($level_id == 7) { // ROWP
+            $u_step = 1; // step verifikasi user
+            $user_verification = "Risk Owner Project";
+        }
+        else if($level_id == 1) { // RO Divisi
+            if($is_mr) { // RO Divisi MR
+                $u_step = 3; // step verifikasi user
+                $user_verification = "Risk Officer Manajemen Risiko";
+            } else {
+                $u_step = 2; // step verifikasi user
+                $user_verification = "Risk Officer Divisi";
+            }
+        }
+        else if($level_id == 2 && $is_mr) { // ROW MR
+            $u_step = 4; // step verifikasi user
+            $user_verification = "Risk Owner MR";
+        }
+        
+        return [
+            'u_step' => $u_step,
+            'user_verification' => $user_verification
+        ];
+    }
+
+    private function getPendingRiskAlert($pending_risk, $step_order, $dataBatch)
+    {
+        if (isset($pending_risk) && $pending_risk > 0 && $step_order == $dataBatch->step_verification) {
+            return <<<HTML
+            <div class="alert alert-info mb-3">
+              <strong>Informasi:</strong> Terdapat {$pending_risk} risiko yang menunggu verifikasi/revisi.
+            </div>
+            HTML;
+        }
+        
+        return '';
     }
 }

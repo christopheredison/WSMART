@@ -244,6 +244,7 @@ class IdentifikasiRisiko extends Model
     public const STATUS_TUNGGU_VERIFIKASI = 3;
     public const STATUS_TERVERIFIKASI = 4;
     public const STATUS_REJECTED = 5;
+    public const STATUS_PUBLISHED = 6;
 
     public const LEVEL_RISIKO_LOW = 'Low';
     public const LEVEL_RISIKO_LOW_TO_MODERATE = 'Low To Moderate';
@@ -256,6 +257,11 @@ class IdentifikasiRisiko extends Model
     public const STATUS_RISIKO_MAIN = 3;
     public const STATUS_RISIKO_CORPORATE_RECOMMENDATION = 4;
     public const STATUS_RISIKO_CORPORATE = 5;
+
+    public const PROGRESS_ON_REVIEW = 1;
+    public const PROGRESS_ON_REVISION_DELETED = 2;
+    public const PROGRESS_ON_ACCEPTED = 3;
+    public const PROGRESS_ON_FINAL = 4;
 
     public function refreshRealisasi()
     {
@@ -311,8 +317,73 @@ class IdentifikasiRisiko extends Model
         });
     }
 
-    public const PROGRESS_ON_REVIEW = 1;
-    public const PROGRESS_ON_REVISION_DELETED = 2;
-    public const PROGRESS_ON_ACCEPTED = 3;
-    public const PROGRESS_ON_FINAL = 4;
+    /**
+     * Relasi ke model RiskDivisiProject
+     */
+    public function riskDivisiProjects()
+    {
+        return $this->hasMany(RiskDivisiProject::class, 'identifikasi_risiko_id');
+    }
+
+    /**
+     * Relasi ke model ProjectRisk melalui RiskDivisiProject
+     */
+    public function projectRisks()
+    {
+        return $this->belongsToMany(ProjectRisk::class, 'risk_divisi_projects', 'identifikasi_risiko_id', 'project_risk_id');
+    }
+
+    /**
+     * Menentukan risiko utama berdasarkan kriteria:
+     * - Untuk risiko kuantitatif: eksposur risiko di atas rata-rata
+     * - Untuk risiko kualitatif: skala risiko > 20
+     * 
+     * @param int $unit_id ID unit
+     * @param int $periode_id ID periode
+     * @return void
+     */
+    public static function determineMainRisks($unit_id, $periode_id)
+    {
+        // Ambil semua risiko dengan status = 6 untuk unit dan periode ini
+        $unitRisks = self::where('unit_id', $unit_id)
+            ->where('periode_id', $periode_id)
+            ->where('status', 6)
+            ->get();
+        
+        // Pisahkan risiko berdasarkan kategori dampak (kuantitatif dan kualitatif)
+        $quantitativeRisks = $unitRisks->filter(function($risk) {
+            return $risk->riskAnalysis && 
+                   $risk->riskAnalysis->kategori_dampak === 'Kuantitatif';
+        });
+        
+        $qualitativeRisks = $unitRisks->filter(function($risk) {
+            return $risk->riskAnalysis && 
+                   $risk->riskAnalysis->kategori_dampak === 'Kualitatif';
+        });
+        
+        // Untuk risiko kuantitatif, hitung rata-rata eksposur risiko
+        if ($quantitativeRisks->count() > 0) {
+            $avgExposure = $quantitativeRisks->avg(function($risk) {
+                return $risk->riskAnalysis->eksposur_risiko ?? 0;
+            });
+            
+            // Update risiko kuantitatif yang eksposurnya di atas rata-rata
+            foreach ($quantitativeRisks as $risk) {
+                if (($risk->riskAnalysis->eksposur_risiko ?? 0) > $avgExposure) {
+                    $risk->update([
+                        'status_risiko' => 3
+                    ]);
+                }
+            }
+        }
+        
+        // Untuk risiko kualitatif, tandai yang skala risikonya > 20
+        foreach ($qualitativeRisks as $risk) {
+            if (($risk->riskAnalysis->skala_risiko ?? 0) > 20) {
+                $risk->update([
+                    'status_risiko' => 3
+                ]);
+            }
+        }
+    }
 }
