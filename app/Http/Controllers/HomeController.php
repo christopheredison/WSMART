@@ -1219,17 +1219,22 @@ class HomeController extends Controller
         }
 
         $selectedYear = $request->tahun ?? $currentYear;
+        $selectedUnitId = $request->input('unit_id');
+        $selectedProjectId = $request->input('project_id');
 
-        $projects = Project::query()->get();
+        $units = Unit::where('unit_type_id', 1)->get();
 
-        $selectedProjectId = null;
-        if ($request->project_id) {
-            $selectedProjectId = $request->project_id; // null untuk "semua project"
+        $projects = collect([]);
+        if ($selectedUnitId) {
+            $unit = Unit::find($selectedUnitId);
+            if ($unit) {
+                $projects = Project::where('cost_center_parent', $unit->cost_center)->get();
+            }
+        } else {
+            $projects = Project::all();
         }
-
+        
         $selectedProject = $selectedProjectId ? Project::find($selectedProjectId) : null;
-
-        $selectedQuarter = $request->quarter ?? 1;
 
         $kriQuery = KRIProject::with([
             'risiko' => function($query) {
@@ -1240,33 +1245,36 @@ class HomeController extends Controller
                     $subQuery->where('tahun', $selectedYear);
                 })->orderBy('id', 'desc');
             }
-        ]);
+        ])
+        ->whereHas('risiko.project');
 
-        if ($selectedProjectId) {
-            $kriQuery->whereHas('risiko', function($query) use ($selectedProjectId) {
-                $query->where('project_id', $selectedProjectId);
+        $kriQuery->when($selectedUnitId, function ($query, $selectedUnitId) {
+            $unit = Unit::find($selectedUnitId);
+            if ($unit) {
+                $query->whereHas('risiko.project', function ($q) use ($unit) {
+                    $q->where('cost_center_parent', $unit->cost_center);
+                });
+            }
+        });
+
+        $kriQuery->when($selectedProjectId, function ($query, $selectedProjectId) {
+            $query->whereHas('risiko', function($q) use ($selectedProjectId) {
+                $q->where('project_id', $selectedProjectId);
             });
-        }
+        });
 
         $kriData = $kriQuery->get();
 
-        // Process and sort KRI data by status priority (bahaya > waspada > aman)
-        $processedKriData = $kriData->map(function($kri) use ($selectedQuarter, $selectedYear) {
-            $currentStatusField = "status_kri_terkini_q{$selectedQuarter}";
-            $currentStatusNumeric = $kri->$currentStatusField ?? 1;
+        $getLatestKriStatus = function($kri) {
+            $latestMonitoring = $kri->kriProjectMonitorings->first();
+            if ($latestMonitoring) {
+                return $latestMonitoring->status_kri_terkini;
+            }
+            return $kri->status_kri_terkini_q4 ?? $kri->status_kri_terkini_q3 ?? $kri->status_kri_terkini_q2 ?? $kri->status_kri_terkini_q1 ?? 1;
+        };
 
-            $latestMonitoring = $kri->kriProjectMonitorings
-                ->filter(function($monitoring) use ($selectedQuarter, $selectedYear) {
-                    return $monitoring->projectMonitoring &&
-                          $monitoring->projectMonitoring->quarter == $selectedQuarter &&
-                          $monitoring->projectMonitoring->tahun == $selectedYear;
-                })
-                ->first();
-
-            $monitoringStatusNumeric = $latestMonitoring ? $latestMonitoring->status_kri_terkini : $currentStatusNumeric;
-
-            $finalStatusNumeric = $monitoringStatusNumeric ?? $currentStatusNumeric ?? 1;
-
+        $processedKriData = $kriData->map(function($kri) use ($getLatestKriStatus) {
+            $finalStatusNumeric = $getLatestKriStatus($kri);
             return [
                 'kri' => $kri->kri,
                 'risiko' => $kri->risiko->peristiwaRisiko->title ?? '-',
@@ -1283,97 +1291,48 @@ class HomeController extends Controller
 
         $sortedKriData = $processedKriData->sortBy('status_priority')->values();
 
-        $peristiwaRisikoData = $kriData->groupBy('risiko.peristiwaRisiko.title')->map(function($group, $peristiwaRisiko) use ($selectedQuarter, $selectedYear) {
-            $amanCount = 0;
-            $waspadaCount = 0;
-            $bahayaCount = 0;
-
+        $peristiwaRisikoData = $kriData->groupBy('risiko.peristiwaRisiko.title')->map(function($group) use ($getLatestKriStatus) {
+            $counts = ['aman' => 0, 'waspada' => 0, 'bahaya' => 0];
             foreach($group as $kri) {
-                $currentStatusField = "status_kri_terkini_q{$selectedQuarter}";
-                $currentStatusNumeric = $kri->$currentStatusField ?? 1;
-
-                $latestMonitoring = $kri->kriProjectMonitorings
-                    ->filter(function($monitoring) use ($selectedQuarter, $selectedYear) {
-                        return $monitoring->projectMonitoring &&
-                              $monitoring->projectMonitoring->quarter == $selectedQuarter &&
-                              $monitoring->projectMonitoring->tahun == $selectedYear;
-                    })
-                    ->first();
-
-                $finalStatusNumeric = $latestMonitoring ? $latestMonitoring->status_kri_terkini : $currentStatusNumeric;
-                $finalStatusNumeric = $finalStatusNumeric ?? 1;
-
-                switch ((int)$finalStatusNumeric) {
-                    case 1:
-                        $amanCount++;
-                        break;
-                    case 2:
-                        $waspadaCount++;
-                        break;
-                    case 3:
-                        $bahayaCount++;
-                        break;
-                }
+                $status = (int)$getLatestKriStatus($kri);
+                if ($status === 1) $counts['aman']++;
+                elseif ($status === 2) $counts['waspada']++;
+                elseif ($status === 3) $counts['bahaya']++;
             }
-
             return [
-                'peristiwa_risiko' => $peristiwaRisiko ?: 'Tidak Diketahui',
-                'aman' => $amanCount,
-                'waspada' => $waspadaCount,
-                'bahaya' => $bahayaCount,
-                'total' => $amanCount + $waspadaCount + $bahayaCount
+                'peristiwa_risiko' => $group->first()->risiko->peristiwaRisiko->title ?? 'Tidak Diketahui',
+                'aman' => $counts['aman'],
+                'waspada' => $counts['waspada'],
+                'bahaya' => $counts['bahaya'],
+                'total' => array_sum($counts)
             ];
         })->values();
 
-        $projectData = $kriData->groupBy('risiko.project.project_name')->map(function($group, $projectName) use ($selectedQuarter, $selectedYear) {
-            $amanCount = 0;
-            $waspadaCount = 0;
-            $bahayaCount = 0;
-
+        $projectData = $kriData->groupBy('risiko.project.project_name')->map(function($group) use ($getLatestKriStatus) {
+            $counts = ['aman' => 0, 'waspada' => 0, 'bahaya' => 0];
             foreach($group as $kri) {
-                $currentStatusField = "status_kri_terkini_q{$selectedQuarter}";
-                $currentStatusNumeric = $kri->$currentStatusField ?? 1;
-
-                $latestMonitoring = $kri->kriProjectMonitorings
-                    ->filter(function($monitoring) use ($selectedQuarter, $selectedYear) {
-                        return $monitoring->projectMonitoring &&
-                              $monitoring->projectMonitoring->quarter == $selectedQuarter &&
-                              $monitoring->projectMonitoring->tahun == $selectedYear;
-                    })
-                    ->first();
-
-                $finalStatusNumeric = $latestMonitoring ? $latestMonitoring->status_kri_terkini : $currentStatusNumeric;
-                $finalStatusNumeric = $finalStatusNumeric ?? 1;
-
-                switch ((int)$finalStatusNumeric) {
-                    case 1:
-                        $amanCount++;
-                        break;
-                    case 2:
-                        $waspadaCount++;
-                        break;
-                    case 3:
-                        $bahayaCount++;
-                        break;
-                }
+                $status = (int)$getLatestKriStatus($kri);
+                if ($status === 1) $counts['aman']++;
+                elseif ($status === 2) $counts['waspada']++;
+                elseif ($status === 3) $counts['bahaya']++;
             }
-
             return [
-                'project_name' => $projectName ?: 'Tidak Diketahui',
-                'aman' => $amanCount,
-                'waspada' => $waspadaCount,
-                'bahaya' => $bahayaCount,
-                'total' => $amanCount + $waspadaCount + $bahayaCount
+                'project_name' => $group->first()->risiko->project->project_name ?? 'Tidak Diketahui',
+                'aman' => $counts['aman'],
+                'waspada' => $counts['waspada'],
+                'bahaya' => $counts['bahaya'],
+                'total' => array_sum($counts)
             ];
         })->values();
 
         $peristiwaRisikoList = PeristiwaRisiko::orderBy('title')->get();
 
         return view('dashboard-kri-project', compact(
+            'units',
+            'selectedUnitId',
             'projects',
             'selectedProject',
             'selectedProjectId',
-            'selectedQuarter',
             'selectedYear',
             'yearList',
             'sortedKriData',
