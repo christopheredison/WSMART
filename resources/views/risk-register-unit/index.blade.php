@@ -169,7 +169,19 @@
                 </td>
                 <td class="unit_type">{{ $item->target_capaian_kinerja ?? '-' }}</td>
                 <td class="kategori_jenis_risiko">{{ $item->kategoriRisiko->title ?? '-' }} - {{ $item->jenisRisiko->title ?? '-' }}</td>
-                <td class="peristiwa_risiko">{{ $item->peristiwa_risiko ?? '-' }}</td>
+                <td class="peristiwa_risiko">
+                  @php
+                    $add = '';
+                    if ($item->riskAnalysis && $item->riskAnalysis->kategori_dampak === 'Kuantitatif' && 
+                        isset($avgQuantitativeExposure) && $item->riskAnalysis->eksposur_risiko >= $avgQuantitativeExposure) {
+                        $add = '<span class="badge bg-primary">!</span> ';
+                    } else if ($item->riskAnalysis && $item->riskAnalysis->kategori_dampak === 'Kualitatif' && 
+                               $item->riskAnalysis->skala_risiko >= 20) {
+                        $add = '<span class="badge bg-primary">!</span> ';
+                    }
+                  @endphp
+                  {!! $add !!}{{ $item->peristiwa_risiko ?? '-' }}
+                </td>
                 <td class="deskripsi_peristiwa_risiko">{{ $item->deskripsi_peristiwa_risiko }}</td>
                 <td class="kontrol_eksisting">{{ $item->jenisKontrolEksisting->jenis_kontrol ?? '-' }}</td>
                 <td class="kategori_dampak">{{ $item->riskAnalysis->kategori_dampak ?? '-' }}</td>
@@ -224,18 +236,17 @@
                   On Review
                   @break
                   @case(3)
-                  @php
-                    $lastApproval = \App\Models\ApprovalLog::where('risk_id', $item->id)
-                      ->where('type', 1) // 1 untuk unit
-                      ->orderBy('approved_at', 'desc')
-                      ->with('approver')
-                      ->first();
-                    $levelName = '-';
-                    if ($lastApproval && $lastApproval->approvalStep && $lastApproval->approvalStep->level) {
-                      $levelName = $lastApproval->approvalStep->level->name;
-                    }
-                  @endphp
-                  Accepted By {{ $levelName }}
+                    @php
+                      $acceptedText = 'Accepted';
+                      if ($item->step_verification == 2) {
+                        $acceptedText = 'Accepted by Risk Owner Divisi';
+                      } elseif ($item->step_verification == 3) {
+                        $acceptedText = 'Accepted by Risk Officer MR';
+                      } elseif ($item->step_verification == 3) {
+                        $acceptedText = 'Accepted by Risk Owner MR';
+                      }
+                    @endphp
+                    {{ $acceptedText }}
                   @break
                   @case(4)
                   Accepted
@@ -274,13 +285,13 @@
         </div>
         @endif
 
-        @if(isset($pending_risk) && $pending_risk > 0)
+        @if(isset($pending_risk) && $pending_risk > 0 && $step_order == $dataBatch->step_verification)
         <div class="alert alert-info mb-3">
           <strong>Informasi:</strong> Terdapat {{ $pending_risk }} risiko yang menunggu verifikasi/revisi.
         </div>
         @endif
         {{-- Informasi Average Eksposure Risiko Unit --}}
-        @if($status == 3 && isset($avgQuantitativeExposure))
+        @if(isset($avgQuantitativeExposure))
         <div class="alert alert-primary mb-3">
           <strong>Informasi:</strong> Rata-rata eksposur risiko kuantitatif: Rp {{ number_format($avgQuantitativeExposure, 0, ',', '.') }}
         </div>
@@ -300,16 +311,15 @@
               kondisi 2: {{ ($levelId > 1 && intval($status) === 1) ? 'true' : 'false' }}<br>
               kondisi lengkap: {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && intval($status) === 1) ? 'true' : 'false' }}
             </div>
-            @if($status==3 && ($step_order>=$min_verification))
+            @if($status==4 && ($step_order>=$min_verification))
             <input type="hidden" name="send_type" value="mainrisk">
             <input type="hidden" name="unit_id" value="{{ $unitId }}">
-            <button id="accept-button" class="btn btn-submit btn-arrow-right">Konfirmasi Risiko Utama</button>
-            @elseif($status==6 && ($step_order>=$min_verification))
-            <input type="hidden" name="send_type" value="corporate-risk">
-            <button id="accept-button" class="btn btn-submit btn-arrow-right">Atur Risiko Korporat</button>
+            <button id="accept-button" class="btn btn-submit btn-arrow-right" {{ (isset($pending_risk) && $pending_risk > 0) ? 'disabled' : '' }}>Publish Risiko</button>
             @else
             <input type="hidden" name="unit_id" value="{{ $unitId }}">
-            <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button>
+              @if($status != 8)
+              <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button>
+              @endif
             @endif
           @endif
         </form>
