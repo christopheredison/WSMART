@@ -651,9 +651,32 @@ Route::group(['prefix' => 'ict', 'as' => 'ict.'], function () {
     Route::post('/reject-all', [\App\Http\Controllers\ICT\ICTController::class, 'rejectAll'])->name('rejectAll');
 });
 // Tambahkan di dalam grup middleware auth
-Route::get('corporate-risk', [App\Http\Controllers\CorporateRiskController::class, 'index'])->name('corporate-risk.index');
+// Route::get('corporate-risk', [App\Http\Controllers\./,::class, 'index'])->name('corporate-risk.index');
 Route::post('corporate-risk/update-to-corporate', [App\Http\Controllers\CorporateRiskController::class, 'updateToCorporate'])->name('corporate-risk.update-to-corporate');
 Route::post('corporate-risk/ranking-risiko', [App\Http\Controllers\CorporateRiskController::class, 'rankingRisiko'])->name('corporate-risk.ranking-risiko');
 Route::post('corporate-risk/confirm-corporate', [App\Http\Controllers\CorporateRiskController::class, 'confirmCorporateRisks'])->name('corporate-risk.confirm-corporate');
 Route::post('corporate-risk/revert-from-corporate', [App\Http\Controllers\CorporateRiskController::class, 'revertFromCorporate'])->name('corporate-risk.revert-from-corporate');
 Route::get('/download-tender-template', [ProjectRiskController::class, 'downloadTenderTemplate'])->name('download-tender-template');
+
+Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->group(function () {
+    Route::get('periods', [App\Http\Controllers\CorporateRiskController::class, 'riskPeriodeList'])->name('periods');
+    Route::get('/periods/{period}', [App\Http\Controllers\CorporateRiskController::class, 'riskPeriodeDashboard'])->name('periods.show');
+    Route::get('/', [App\Http\Controllers\CorporateRiskController::class, 'index'])->name('index');
+    Route::get('/create', [App\Http\Controllers\CorporateRiskController::class, 'create'])->name('create');
+    Route::post('/', [App\Http\Controllers\CorporateRiskController::class, 'store'])->name('store');
+    Route::get('/{riskRegister}/edit', [App\Http\Controllers\CorporateRiskController::class, 'edit'])->name('edit');
+    Route::put('/{riskRegister}', [App\Http\Controllers\CorporateRiskController::class, 'update'])->name('update');
+    Route::delete('/{riskRegister}', [App\Http\Controllers\CorporateRiskController::class, 'destroy'])->name('destroy');
+    Route::get('/{riskRegister}/view', [App\Http\Controllers\CorporateRiskController::class, 'view'])->name('view');
+    
+    Route::get('/{riskRegister}/analisa', [App\Http\Controllers\CorporateRiskController::class, 'analisa'])->name('analisa');
+    Route::post('/{riskRegister}/analisa', [App\Http\Controllers\CorporateRiskController::class, 'doAnalisa'])->name('do-analisa');
+
+    Route::get('/{riskRegister}/perencanaan', [App\Http\Controllers\CorporateRiskController::class, 'perencanaan'])->name('perencanaan');
+    Route::post('/{riskRegister}/perencanaan', [App\Http\Controllers\CorporateRiskController::class, 'doPerencanaan'])->name('do-perencanaan');
+    Route::delete('/{riskRegister}/perencanaan/{id}', [App\Http\Controllers\CorporateRiskController::class, 'hapusRencanaPerlakuan'])->name('hapus-rencana-perlakuan');
+    Route::get('/{riskRegister}/perencanaan/{id}/edit', [App\Http\Controllers\CorporateRiskController::class, 'editRencanaPerlakuan'])->name('edit-rencana-perlakuan');
+    Route::put('/{riskRegister}/perencanaan/{id}', [App\Http\Controllers\CorporateRiskController::class, 'updateRencanaPerlakuan'])->name('update-rencana-perlakuan');
+
+    Route::get('/get-division-risks/{unit}', [App\Http\Controllers\CorporateRiskController::class, 'getDivisionRisks'])->name('get-division-risks');
+});

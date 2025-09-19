@@ -283,6 +283,7 @@ return [
         'setting_menu',
         'ap_admin',
         'view_all_division',
+        'view_all_project',
         'verification_mr',
 
         'ict_input',

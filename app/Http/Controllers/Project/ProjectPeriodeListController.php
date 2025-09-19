@@ -336,7 +336,7 @@ class ProjectPeriodeListController extends BasicCRUDController
         });
 
         $tahunMonitorings = $projectPeriode->projectRisks->pluck('projectRiskMonitorings')->flatten()->pluck('tahun')->unique()->toArray();
-        $tahunMonitorings[] = $projectPeriode->created_at->format('Y');
+        $tahunMonitorings[] = $projectPeriode->created_at?->format('Y') ?? date('Y');
         sort($tahunMonitorings);
         $minTahun = min($tahunMonitorings);
         $maxTahun = max($tahunMonitorings);
