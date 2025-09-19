@@ -386,4 +386,14 @@ class IdentifikasiRisiko extends Model
             }
         }
     }
+
+    public function divisiRisks()
+    {
+        return $this->belongsToMany(
+            IdentifikasiRisiko::class, 
+            'risk_corporate_divisi', 
+            'identifikasi_risiko_corporate_id', 
+            'identifikasi_risiko_divisi_id'
+        );
+    }
 }

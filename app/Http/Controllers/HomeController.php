@@ -459,7 +459,7 @@ class HomeController extends Controller
         ])
             ->where('periode_id', $selectedPeriode->id)
             ->where('unit_id', $selectedUnitId)
-            ->where('status_risiko', '>=', 3)
+            ->where('status_risiko', '=', 3)
             ->get()
             ->sortBy([
               ['riskAnalysis.skala_risiko', 'desc'],      // Prioritas 1

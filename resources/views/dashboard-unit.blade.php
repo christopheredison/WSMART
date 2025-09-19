@@ -7,7 +7,7 @@
     <div class="card border-0 dashboard-header">
       <img src="../assets/img/dashboard-header2.webp" alt="dashboard">
       <div class="card-header border-0">
-        <h1 class="mb-auto mt-3 mt-md-6">Risk Dashboard Unit</h1>
+        <h1 class="mb-auto mt-3 mt-md-6">Risk Dashboard Divisi</h1>
         <h6>Statistik per tanggal {{ now()->format('d M Y') }}</h6>
       </div>
     </div>
@@ -29,7 +29,7 @@
         </div>
         <div class="col-md-5 col-xxl-4">
           <select name="unit_id" id="unit_selector" class="form-select select2 js-select-hide-search">
-            <option value="" selected disabled>Unit</option>
+            <option value="" selected disabled>Divisi</option>
             @foreach ($units as $unit)
               <option value="{{ $unit->id }}" {{$unit->id == $selectedUnit->id ? 'selected' : ''}}>{{ $unit->name }}</option>
             @endforeach
@@ -418,7 +418,7 @@
               </span>
             </div>
           </div>
-          <h3>Top 10 High Risk Divisi</h3>
+          <h3>Top High Risk Divisi</h3>
         </div>
         <hr class="mb-0 mt-xxl-5">
       </div>

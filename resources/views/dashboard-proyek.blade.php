@@ -284,7 +284,7 @@
               </span>
             </div>
           </div>
-          <h3>Top 10 High Risk Project</h3>
+          <h3>Top High Risk Project</h3>
         </div>
         <hr class="mb-0 mt-xxl-5">
       </div>
