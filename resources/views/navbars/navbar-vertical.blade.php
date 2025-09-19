@@ -76,8 +76,13 @@
 
             @can('kri_dashboard_menu')
             <li class="nav-item">
+              <a class="nav-link {{ request()->is('dashboard-kri-project') ? 'active' : '' }} " href="/dashboard-kri-project">
+                <span class="nav-link-text">KRI Proyek</span>
+              </a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link {{ request()->is('dashboard-kri-unit') ? 'active' : '' }} " href="/dashboard-kri-unit">
-                <span class="nav-link-text">KRI Unit</span>
+                <span class="nav-link-text">KRI Divisi</span>
               </a>
             </li>
             @endcan
@@ -86,7 +91,7 @@
         <!-- Dashboard Menu End -->
         @can('corporate_risk_view')
         <li class="nav-item single-indicator">
-          <a class="nav-link {{ request()->is('corporate-risk') ? 'active' : '' }}" href="/corporate-risk"
+          <a class="nav-link {{ request()->is('corporate-risk') ? 'active' : '' }}" href="/corporate-risk/periods"
             role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon">
               <i class="menu-icon tf-icons bx bx-buildings"></i>

@@ -139,15 +139,8 @@ class Unit extends Model
         return $this->hasMany(RekomendasiRisiko::class, 'unit_id');
     }
 
-    /**
-     * Mendapatkan semua project yang terkait dengan unit ini
-     * berdasarkan cost_center unit dan cost_center_parent project
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
     public function projects()
     {
         return $this->hasMany(Project::class, 'cost_center_parent', 'cost_center');
     }
-
 }

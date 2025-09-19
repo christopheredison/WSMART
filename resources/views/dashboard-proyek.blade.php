@@ -15,22 +15,34 @@
 </div>
 
 <!--========================= Input Filter =========================-->
-{{-- <div class="row input-selector-rounded g-3 mb-3">
+<div class="row input-selector-rounded g-3 mb-3">
   <div class="col-12">
-    <form action="{{ url()->current() }}">
-      <div class="row g-3 justify-content-between">
-        <div class="col-auto">
-          <select name="periode_id" id="periode_selector" class="form-select select2 js-select-hide-search" onchange="window.location.href = window.location.pathname + '?periode_id=' + this.value">
-            <option value="" selected disabled>Periode</option>
-            @foreach ($periodes as $periode)
-              <option value="{{ $periode->id }}" {{$periode->id == $selectedPeriode ? 'selected' : ''}}>{{ $periode->tahun }}</option>
+    <form id="filter-form" action="{{ url()->current() }}" method="GET">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <select name="unit_id" id="unit_selector" class="form-select select2" onchange="this.form.submit()">
+            <option value="" selected>Semua Divisi</option>
+            @foreach ($units as $unit)
+              <option value="{{ $unit->id }}" {{ $unit->id == $selectedUnitId ? 'selected' : '' }}>
+                {{ $unit->name }}
+              </option>
+            @endforeach
+          </select>
+        </div>
+        <div class="col-md-4">
+          <select name="project_id" id="project_selector" class="form-select select2" onchange="this.form.submit()">
+            <option value="" selected>Semua Proyek</option>
+            @foreach ($projects as $project)
+              <option value="{{ $project->id }}" {{ $project->id == $selectedProjectId ? 'selected' : '' }}>
+                {{ $project->project_name }}
+              </option>
             @endforeach
           </select>
         </div>
       </div>
     </form>
   </div>
-</div> --}}
+</div>
   
 <div class="card mb-3">
   <div class="card-header border-0 pb-0 d-flex flex-between-center">
@@ -285,9 +297,9 @@
                 <th>Nama Proyek</th>
                 <th>Peristiwa Risiko</th>
                 <th>Deskripsi Peristiwa Risiko</th>
+                <th>Jenis Risiko</th>
                 <th>Nilai Dampak</th>
                 <th>Skala Dampak</th>
-                <th>Jenis Risiko</th>
                 <th>Nilai Risiko</th>
                 <th>Level Risiko</th>
               </tr>
@@ -299,6 +311,73 @@
       </div>
     </div>
   </div>
+
+  <!--============================ Top 10 Loss Event Data ============================-->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header border-0 pb-0">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-info-subtle rounded-3 p-2">
+            <div class="lead__icon lead__icon_sm">
+              <span class="svg-icon svg-icon-2x svg-icon-info">
+                @include('partials.icon-abs05')
+              </span>
+            </div>
+          </div>
+          <h3>Top 10 Loss Event Data</h3>
+        </div>
+        <hr class="mb-0 mt-xxl-5">
+      </div>
+      <div class="card-body pt-0">
+        <div class="table-responsive scrollbar">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nama Proyek</th>
+                <th>Tanggal Kejadian</th>
+                <th>Nama Kejadian</th>
+                <th>Deskripsi Kejadian</th>
+                <th>Kategori Kejadian</th>
+                <th>Nilai Kerugian Finansial</th>
+              </tr>
+            </thead>
+            <tbody id="top-led-body">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!--============================ Efektivitas Perlakuan Risiko ============================-->
+  <div class="col-md-6">
+    <div class="card" id="efektivitas-perlakuan-card">
+      <div class="card-header border-0 pb-0 d-flex flex-between-center">
+        <h3 class="h4">Efektivitas Perlakuan Risiko</h3>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-12 d-flex align-items-center">
+            <div class="border rounded-3 p-3 mb-3 w-100">
+              @foreach ($dashboardData['efektivitas_perlakuan'] as $item)
+                <div class="mb-1 d-flex align-items-center gap-2">
+                  <span class="d-inline-block" style="width:25px; height:25px; border-radius: 3px; background-color: {{$item['color']}}"></span>
+                  <span>{{ $item['label'] }}</span>
+                </div>
+              @endforeach
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="ratio ratio-1x1 ratio-lg-4x3 ratio-xxl-16x9 ratio-xxxl-21x9">
+              <div id="efektivitas-perlakuan-chart"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 @endsection
 
@@ -377,6 +456,8 @@ const refreshSummary = (data) => {
   fillPrir(data['prir']);
   fillPrsi(data['prsi']);
   fillTopRisk(data['top_risk']);
+  fillTopLed(data['top_led']);
+  fillEfektivitasChart(data['efektivitas_perlakuan']);
 }
 
 function fillPersentaseKejadian(data) {
@@ -600,13 +681,96 @@ function fillTopRisk(data) {
     row.append('<td>' + item.nama_proyek + '</td>');
     row.append('<td>' + item.peristiwa_risiko + '</td>');
     row.append('<td>' + item.deskripsi_peristiwa_risiko + '</td>');
-    row.append('<td>' + (item.nilai_dampak ? Intl.NumberFormat().format(item.nilai_dampak) : '-') + '</td>');
-    row.append('<td>' + (item.skala_dampak || '-') + '</td>');
     row.append('<td>' + (item.jenis_risiko || '-') + '</td>');
+    row.append('<td>' + (item.nilai_dampak ? 'Rp ' + Intl.NumberFormat('id-ID').format(item.nilai_dampak) : 'Rp 0') + '</td>');
+    row.append('<td>' + (item.skala_dampak || '-') + '</td>');
     row.append('<td>' + (item.nilai_risiko || '-') + '</td>');
     row.append(`<td class="bg-${item.level_risiko?.toLowerCase().replaceAll('to ', '').replaceAll(' ', '-')}">` + (item.level_risiko || '-') + '</td>');
     table.append(row);
   });
+}
+
+function fillTopLed(data) {
+    const tableBody = $('#top-led-body');
+    tableBody.empty(); // Kosongkan tabel sebelumnya
+
+    if (data.length === 0) {
+        tableBody.append(`
+            <tr>
+                <td colspan="7" class="dt-empty text-center">No data available</td>
+            </tr>
+        `);
+        return;
+    }
+
+    data.forEach((item, index) => {
+        const formattedKerugian = new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+        }).format(item.nilai_kerugian_finansial);
+
+        tableBody.append(`
+            <tr>
+                <td>${index + 1}</td>
+                <td>${item.nama_proyek || '-'}</td>
+                <td>${item.tanggal_kejadian || '-'}</td>
+                <td>${item.nama_kejadian || '-'}</td>
+                <td>${item.deskripsi_kejadian || '-'}</td>
+                <td>${item.kategori_kejadian || '-'}</td>
+                <td>${formattedKerugian || 'Rp 0'}</td>
+            </tr>
+        `);
+    });
+}
+
+function fillEfektivitasChart(data) {
+  var chartDom = document.getElementById('efektivitas-perlakuan-chart');
+  var myChart = echarts.init(chartDom);
+  var option;
+
+  option = {
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c} ({d}%)'
+    },
+    series: [
+      {
+        name: 'Efektivitas Perlakuan',
+        type: 'pie',
+        radius: '90%',
+        center: ['50%', '50%'],
+        data: data.map(function(item) {
+          return {
+            value: item.value,
+            name: item.label,
+            itemStyle: {
+              color: item.color
+            }
+          }
+        }),
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        },
+        label: {
+            show: true,
+            position: 'inside',
+            formatter: '{d}%',
+            fontSize: '16',
+            fontWeight: 'normal',
+            color: '#FFF'
+        },
+      }
+    ]
+  };
+
+  if (myChart) {
+      myChart.setOption(option, true);
+  }
 }
 
 $(document).ready(function() {
