@@ -16,37 +16,35 @@
 <div class="row input-selector-rounded g-3 mb-5">
     <div class="col-12">
         <div class="card p-3 shadow-sm">
-            <form id="filter-form" action="{{ url()->current() }}" method="GET">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-4">
-                        <label for="period_selector" class="form-label fw-bold">Pilih Periode</label>
-                        <input type="text" name="period" id="period_selector" class="form-control" placeholder="Pilih Bulan & Tahun" value="{{ $selectedPeriod }}" disabled>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label for="unit_selector" class="form-label fw-bold">Pilih Divisi</label>
-                        <select name="unit_id" id="unit_selector" class="form-select select2">
-                            <option value="" selected>Pilih Divisi</option>
-                            @foreach ($units as $unit)
-                                <option value="{{ $unit->id }}" {{ $unit->id == $selectedUnitId ? 'selected' : '' }}>
-                                    {{ $unit->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="project_selector" class="form-label fw-bold">Pilih Proyek</label>
-                        <select name="project_id" id="project_selector" class="form-select select2" onchange="this.form.submit()">
-                            <option value="" selected>Pilih Proyek</option>
-                            @foreach ($projects as $project)
-                                <option value="{{ $project->id }}" {{ $project->id == $selectedProjectId ? 'selected' : '' }}>
-                                    {{ $project->project_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="period_selector" class="form-label fw-bold">Pilih Periode</label>
+                    <input type="text" name="period" id="period_selector" class="form-control" placeholder="Pilih Bulan & Tahun" value="{{ $selectedPeriod }}">
                 </div>
-            </form>
+
+                <div class="col-md-4">
+                    <label for="unit_selector" class="form-label fw-bold">Pilih Divisi</label>
+                    <select name="unit_id" id="unit_selector" class="form-select select2">
+                        <option value="" selected>Pilih Divisi</option>
+                        @foreach ($units as $unit)
+                            <option value="{{ $unit->id }}" {{ $unit->id == $selectedUnitId ? 'selected' : '' }}>
+                                {{ $unit->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="project_selector" class="form-label fw-bold">Pilih Proyek</label>
+                    <select name="project_id" id="project_selector" class="form-select select2">
+                        <option value="" selected>Pilih Proyek</option>
+                        @foreach ($projects as $project)
+                            <option value="{{ $project->id }}" {{ $project->id == $selectedProjectId ? 'selected' : '' }}>
+                                {{ $project->project_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -202,7 +200,6 @@
     </div>
 
 @else
-    {{-- Alert jika proyek belum dipilih --}}
     <div class="alert alert-info text-center mt-5" role="alert">
         <strong>Pilih Proyek</strong> untuk menampilkan Executive Summary dan detail risiko.
     </div>
@@ -211,16 +208,33 @@
 @endsection
 
 @push('styles')
-{{-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"> --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
 @endpush
 
-@section('scripts')
-{{-- <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script> --}}
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
 
 <script type="text/javascript">
 $(document).ready(function() {
+    function applyFilterAndRefresh() {
+        var unitId = $('#unit_selector').val();
+        var projectId = $('#project_selector').val();
+        var period = $('#period_selector').val();
+
+        if (projectId) {
+            let baseUrl = '{{ url()->current() }}';
+            let params = new URLSearchParams();
+
+            if (unitId) params.append('unit_id', unitId);
+            if (projectId) params.append('project_id', projectId);
+            if (period) params.append('period', period);
+            
+            window.location.href = `${baseUrl}?${params.toString()}`;
+        }
+    }
+
     flatpickr("#period_selector", {
         plugins: [
             new monthSelectPlugin({
@@ -230,73 +244,52 @@ $(document).ready(function() {
                 altInput: true,
             })
         ],
-        maxDate: "today", // Batasi pemilihan maksimal bulan ini
+        maxDate: "today",
+        defaultDate: "{{ $selectedPeriod }}",
         onChange: function(selectedDates, dateStr, instance) {
-            // Auto-submit form ketika periode diganti
-            $('#filter-form').submit();
+            applyFilterAndRefresh();
         }
     });
 
-    // Handler untuk auto-submit filter unit
+    // Handler untuk perubahan Divisi
     $('#unit_selector').on('change', function() {
-        // Setelah unit dipilih, kita ingin memuat ulang halaman agar daftar proyek diperbarui.
-        // Tidak perlu langsung submit, karena kita akan melakukan auto-select proyek jika hanya ada 1.
-        // Biarkan controller yang menangani, kita hanya perlu tambahkan logic auto-select di JS.
         var selectedUnitId = $(this).val();
+        var $projectSelector = $('#project_selector');
+        $projectSelector.empty().append('<option value="" selected>Memuat Proyek...</option>').trigger('change.select2');
+
         if (selectedUnitId) {
-            // Lakukan AJAX call untuk mendapatkan proyek berdasarkan unit
             $.ajax({
                 url: '{{ url()->current() }}',
                 type: 'GET',
-                data: {
-                    unit_id: selectedUnitId,
-                    ajax: 1 // Flag untuk request AJAX
-                },
+                data: { unit_id: selectedUnitId, ajax: 1 },
                 success: function(response) {
                     var projects = response.projects;
-                    var $projectSelector = $('#project_selector');
                     $projectSelector.empty().append('<option value="" selected>Pilih Proyek</option>');
 
-                    if (projects.length === 1) {
-                        // Auto-select proyek jika hanya ada satu
-                        var projectId = projects[0].id;
-                        $projectSelector.append(new Option(projects[0].project_name, projectId, true, true));
-                        // Auto-submit form
-                        $('#filter-form').submit();
-                    } else if (projects.length > 0) {
-                        // Isi opsi proyek
+                    if (projects.length > 0) {
                         $.each(projects, function(key, project) {
                             $projectSelector.append(new Option(project.project_name, project.id));
                         });
-                        $projectSelector.val(''); // Reset project selection
-                        // Submit form HANYA jika ada project_id yang sudah terpilih sebelumnya
-                        // atau jika unit berubah dan tidak ada auto-select (agar daftar project terisi)
-                        // Untuk simplicity, kita submit form setelah Unit diubah,
-                        // entah itu ter-auto-select atau tidak, agar URL terupdate.
-                        if ('{{ $selectedProjectId }}') {
-                            // Jika ada proyek terpilih sebelumnya, biarkan proses filter di backend yang mengembalikan nilai.
-                            // Kita hanya submit form ketika project selector berubah.
-                        } else {
-                            // Biarkan user memilih proyek jika lebih dari satu
-                            // Atau biarkan perubahan unit mengarahkan ke dashboard tanpa proyek terpilih.
-                            $('#filter-form').submit();
+
+                        // Auto-select jika hanya ada 1 proyek
+                        if (projects.length === 1) {
+                            $projectSelector.val(projects[0].id);
+                            applyFilterAndRefresh();
                         }
                     } else {
-                        // Jika tidak ada proyek, submit form untuk mereset tampilan
-                        $('#filter-form').submit();
+                        $projectSelector.append('<option value="" disabled>Tidak ada proyek</option>');
                     }
                     $projectSelector.trigger('change.select2');
-                },
-                error: function() {
-                    console.error("Gagal mengambil daftar proyek.");
-                    $('#filter-form').submit(); // Tetap submit jika gagal
                 }
             });
         } else {
-            // Jika unit dikosongkan, submit form
-            $('#filter-form').submit();
+            $projectSelector.empty().append('<option value="" selected>Pilih Divisi Dulu</option>').trigger('change.select2');
         }
+    });
+
+    $('#project_selector').on('change', function() {
+        applyFilterAndRefresh();
     });
 });
 </script>
-@endsection
+@endpush
