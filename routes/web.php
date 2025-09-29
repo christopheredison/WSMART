@@ -160,6 +160,8 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('/dashboard-kri-unit', [HomeController::class, 'dashboardKriUnit'])->name('dashboard-kri-unit');
     Route::get('/dashboard-kri-project', [HomeController::class, 'dashboardKriProject'])->name('dashboard-kri-project');
 
+    Route::get('/executive-summary-project', [HomeController::class, 'executiveSummaryProject'])->name('executive-summary-project');
+
     Route::group(['middleware' => ['can:manajemen_user']],function ()
     {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');

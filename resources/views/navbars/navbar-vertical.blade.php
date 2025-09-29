@@ -86,6 +86,14 @@
               </a>
             </li>
             @endcan
+
+            @can('proyek_dashboard_menu')
+            <li class="nav-item"><a class="nav-link {{ request()->is('executive-summary-project') ? 'active' : '' }}"
+                href="/executive-summary-project">
+                <span class="nav-link-text">Executive Summary Proyek</span>
+              </a>
+            </li>
+            @endcan
           </ul>
         </li>
         <!-- Dashboard Menu End -->

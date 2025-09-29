@@ -18,12 +18,16 @@ use App\Models\ProjectPeriodeList;
 use App\Models\RiskMap;
 use App\Models\Unit;
 use App\Models\RMIPeriod;
+use App\Models\ProjectRiskMonitoring;
 use Illuminate\Http\Request;
+use App\Supports\ApiWika;
 use Auth;
 use Hash;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class HomeController extends Controller
 {
@@ -646,7 +650,11 @@ class HomeController extends Controller
         $selectedUnitId = $request->input('unit_id');
         $selectedProjectId = $request->input('project_id');
 
-        $units = Unit::where('unit_type_id', 1)->get();
+        $costCenterParents = Project::distinct()->pluck('cost_center_parent');
+        $units = Unit::where('unit_type_id', 1)
+                ->whereIn('cost_center', $costCenterParents)
+                ->orderBy('name')
+                ->get();
 
         $projects = collect([]);
         if ($selectedUnitId) {
@@ -1339,6 +1347,111 @@ class HomeController extends Controller
             'peristiwaRisikoData',
             'projectData',
             'peristiwaRisikoList'
+        ));
+    }
+
+    public function executiveSummaryProject(Request $request)
+    {
+        // 1. [MODIFIKASI] Ambil semua input filter
+        $selectedUnitId = $request->input('unit_id');
+        $selectedProjectId = $request->input('project_id');
+        // Ambil periode dari request (format YYYY-MM), default ke bulan saat ini
+        $selectedPeriod = $request->input('period', now()->format('Y-m'));
+
+        // Logika untuk mengambil unit dan project (sudah bagus, tidak perlu diubah)
+        $costCenterParents = Project::distinct()->pluck('cost_center_parent');
+        $units = Unit::where('unit_type_id', 1)
+                    ->whereIn('cost_center', $costCenterParents)
+                    ->orderBy('name')
+                    ->get();
+
+        $projectsQuery = Project::query();
+        $projectsQuery->when($selectedUnitId, function ($query, $unitId) {
+            $unitCostCenter = Unit::find($unitId)?->cost_center;
+            return $query->where('cost_center_parent', $unitCostCenter);
+        });
+        
+        $projects = $projectsQuery->get();
+        
+        if ($request->ajax() && $selectedUnitId) {
+            return response()->json(['projects' => $projects->map(function($p) {
+                return ['id' => $p->id, 'project_name' => $p->project_name];
+            })]);
+        }
+
+        $selectedProject = $selectedProjectId ? Project::find($selectedProjectId) : null;
+
+        // Inisialisasi data summary
+        $summaryData = [
+            'omset_kontrak' => 0,
+            'omset_penjualan_sd_bulan' => 0,
+            'progress_sd_bulan' => 0,
+            'lsp_rencana_sd_bulan' => 0,
+            'lsp_realisasi_sd_bulan' => 0,
+            'led_proyek_total' => 0,
+            'lsp_realisasi_incl_led' => 0,
+            'omset_penjualan_sd_selesai' => 0,
+            'lsp_rencana_sd_selesai' => 0,
+            'lsp_realisasi_sd_selesai' => 0,
+            'eksposur_risiko_total' => 0,
+            'proyeksi_lsp_incl_eksposur' => 0,
+        ];
+
+        if ($selectedProject) {
+            try {
+                $periodForApi = Carbon::createFromFormat('Y-m', $selectedPeriod)->format('Ym');
+                $profitCenter = $selectedProject->meta['profit_center'] ?? null;
+
+                if ($profitCenter) {
+                    $hasilUsaha = (new ApiWika())->getHasilUsahaProject($periodForApi, $profitCenter);
+
+                    // dd($hasilUsaha);
+                    if ($hasilUsaha && $hasilUsaha['status'] && isset($hasilUsaha['data']['hasil_usaha'])) {
+                        $apiData = $hasilUsaha['data']['hasil_usaha'];
+
+                        $summaryData['omset_kontrak'] = $apiData['kontrak_review'] ?? 0;
+                        $summaryData['omset_penjualan_sd_bulan'] = $apiData['penjualan_ri'] ?? 0;                        
+                        $summaryData['progress_sd_bulan'] = ($summaryData['omset_kontrak'] > 0) 
+                            ? ($summaryData['omset_penjualan_sd_bulan'] / $summaryData['omset_kontrak']) * 100 
+                            : 0;
+
+                        $summaryData['lsp_rencana_sd_bulan'] = $apiData['lsp_ra'] ?? 0;
+                        $summaryData['lsp_realisasi_sd_bulan'] = $apiData['lsp_ri'] ?? 0;
+
+                        $summaryData['lsp_rencana_sd_selesai'] = $apiData['lsp_review'] ?? 0;
+                        $summaryData['lsp_realisasi_sd_selesai'] = $apiData['lsp_proyeksi'] ?? 0;
+                        $summaryData['omset_penjualan_sd_selesai'] = $apiData['penjualan_ra'];
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::channel('wikaapi')->error("Request API Hasil Usaha Project gagal", [
+                    'project_id' => $selectedProject->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            // --- Perhitungan dari Database Lokal (LED & Eksposur Risiko) ---
+            $ledProyekTotal = LossEventProject::where('project_id', $selectedProjectId)->sum('nilai_kerugian_finansial');
+            $eksposurRisikoTotal = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($selectedProjectId) {
+                $q->where('project_id', $selectedProjectId);
+            })->sum('eksposure_risiko');
+            
+            // --- Isi data yang tersisa & kalkulasi ---
+            $summaryData['led_proyek_total'] = $ledProyekTotal;
+            $summaryData['eksposur_risiko_total'] = $eksposurRisikoTotal;
+
+            $summaryData['lsp_realisasi_incl_led'] = $summaryData['lsp_realisasi_sd_bulan'] - $summaryData['led_proyek_total'];
+            $summaryData['proyeksi_lsp_incl_eksposur'] = $summaryData['lsp_realisasi_sd_selesai'] - $summaryData['eksposur_risiko_total'];
+        }
+
+        return view('executive-summary-project', compact(
+            'units', 
+            'projects', 
+            'selectedUnitId', 
+            'selectedProjectId', 
+            'selectedProject',
+            'selectedPeriod',
+            'summaryData'
         ));
     }
 
