@@ -4,7 +4,7 @@
 <div class="row mb-7">
   <div class="col-12">
     <div class="card border-0 dashboard-header">
-      <img src="../assets/img/dashboard-header4.webp" alt="dashboard">
+      <img src="../assets/img/dashboard-header.webp" alt="dashboard">
       <div class="card-header border-0 justify-content-end">
         <h1 class="mb-0">Executive Summary Proyek</h1>
         <h4 id="selected-project-name" class="mb-4">{{ $selectedProject ? $selectedProject->project_name : '' }}</h4>

@@ -234,10 +234,11 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ];
 
             $this->tableActions[] = [
-                'label' => 'Change',
+                'label' => 'Change to LED',
                 'btn_icon' => false,
                 'action' => 'change_to_led_unit',
                 'active_state' => '(data, type, row) => row.is_closed != 1',
+                'extra_attrs' => [ 'style' => 'font-size: 14px; font-weight: 400;' ]
             ];
         }
 

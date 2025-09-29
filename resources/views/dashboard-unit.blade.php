@@ -260,13 +260,21 @@
                   <h3 class="h4">Peta Risiko Terkini (Current)</h3>
                 </div>
                 <div class="col">
+                  <select class="form-select" id="monthSelect">
+                      @for ($month = 1; $month <= 12; $month++)
+                        @php $quarter = ceil($month / 3); @endphp
+                        <option value="{{ $month }}">Q{{ $quarter }} - {{ __('basic.month.' . $month) }}</option>
+                      @endfor
+                  </select>
+                </div>
+                {{-- <div class="col">
                   <select class="form-select" id="quarterSelect">
                     <option value="1">Quarter 1</option>
                     <option value="2">Quarter 2</option>
                     <option value="3">Quarter 3</option>
                     <option value="4">Quarter 4</option>
                   </select>
-                </div>
+                </div> --}}
               </div>
               <div class="table-risk-map" id="currentMap">
                 <table class="map-table">
@@ -438,6 +446,7 @@
                 <th>Level Risiko</th>
                 <th>KRI</th>
                 <th class="text-center white-space-nowrap">Status KRI</th>
+                <th class="text-center">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -476,6 +485,7 @@
                 <th>Identifikasi Kejadian</th>
                 <th>Kategori Kejadian</th>
                 <th>Nilai Kerugian</th>
+                <th class="text-center">Aksi</th>
               </tr>
               {{-- <tr>
                 <th class="no-sort text-center py-2">Finansial (IDR)</th>
@@ -594,6 +604,16 @@
 #currentMap.show-q4 .current-q4 {
     display: block;
 }
+
+#currentMap .current-m1, #currentMap .current-m2, #currentMap .current-m3, #currentMap .current-m4, #currentMap .current-m5, #currentMap .current-m6, #currentMap .current-m7, #currentMap .current-m8, #currentMap .current-m9, #currentMap .current-m10, #currentMap .current-m11, #currentMap .current-m12 {
+    display: none;
+}
+
+@for ($month = 1; $month <= 12; $month++)
+#currentMap.show-m{{ $month }} .current-m{{ $month }} {
+    display: block;
+}
+@endfor
 </style>
 @endpush
 
@@ -613,7 +633,7 @@ $(document).ready(function() {
     if (!data || data.length === 0) {
         tableBody.append(`
             <tr>
-                <td colspan="11" class="text-center">No data available</td>
+                <td colspan="12" class="text-center">No data available</td>
             </tr>
         `);
         return;
@@ -622,6 +642,7 @@ $(document).ready(function() {
     data.forEach((risk, index) => {
         const rowSpan = risk.kris.length || 1;
         let krisHtml = '';
+        const riskDetailUrl = `{{ url('risk-register-unit') }}/${risk.id}/view`;
 
         if (risk.kris.length > 0) {
             krisHtml += `
@@ -654,6 +675,11 @@ $(document).ready(function() {
                 <td rowspan="${rowSpan}" class="bg-${risk.level_risiko?.toLowerCase().replaceAll('to', '').replaceAll(' ', '-')}">${risk.level_risiko || '-'}</td>
                 
                 ${krisHtml}
+                <td rowspan="${rowSpan}" class="text-center">
+                    <a href="${riskDetailUrl}" class="btn btn-sm btn-light-primary btn-icon" data-bs-toggle="tooltip" title="Lihat Detail">
+                        <i class='bx bx-show'></i>
+                    </a>
+                </td>
             </tr>
         `;
 
@@ -862,11 +888,15 @@ $(document).ready(function() {
     if (dashboardData.led.length == 0) {
       $('#led-card .table tbody').append(`
               <tr>
-                  <td colspan="7" class="dt-empty text-center">No data available</td>
+                  <td colspan="8" class="dt-empty text-center">No data available</td>
               </tr>
           `);
     } else {
+      const selectedPeriodeId = $('#periode_selector').val();
+
       dashboardData.led.forEach((led, index) => {
+        const ledDetailUrl = `{{ url('unit-led') }}/${selectedPeriodeId}/${led.id}/show`;
+
         $('#led-card .table tbody').append(`
                 <tr>
                     <td>${index + 1}</td>
@@ -876,6 +906,11 @@ $(document).ready(function() {
                     <td>${led.identifikasi_kejadian}</td>
                     <td>${led.kategori_kejadian}</td>
                     <td>${led.nilai_kerugian}</td>
+                    <td class="text-center">
+                        <a href="${ledDetailUrl}" class="btn btn-sm btn-light-primary btn-icon" data-bs-toggle="tooltip" title="Lihat Detail">
+                            <i class='bx bx-show'></i>
+                        </a>
+                    </td>
                 </tr>
             `);
       });
@@ -1080,11 +1115,11 @@ $(document).ready(function() {
             const cellC = $(`#currentMap.table-risk-map .data-cell[data-matrix="${matrixC}"]`);
 
             if (cellC.length) {
-                if (!cellC.data('kode-peristiwa-current-q' + currentRiskMap.quarter)) {
-                    cellC.data('kode-peristiwa-current-q' + currentRiskMap.quarter, []);
+                if (!cellC.data('kode-peristiwa-current-m' + currentRiskMap.month)) {
+                    cellC.data('kode-peristiwa-current-m' + currentRiskMap.month, []);
                 }
                 
-                cellC.data('kode-peristiwa-current-q' + currentRiskMap.quarter).push(code);
+                cellC.data('kode-peristiwa-current-m' + currentRiskMap.month).push(code);
                 cellC.data('has-current', true);
             }
         });
@@ -1113,7 +1148,15 @@ $(document).ready(function() {
         cellsC.each((index, cell) => {
             let html = '';
             let kodePeristiwaCurrent = null;
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-q1');
+            for (let month = 1; month <= 12; month++) {
+                kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-m' + month);
+                if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
+                    for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
+                        html += `<span class="box-current current-m${month}">R${kodePeristiwaCurrent[i]}</span>`;
+                    }
+                }
+            }
+            /* kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-q1');
             if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
                 for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
                     html += `<span class="box-current current-q1">R${kodePeristiwaCurrent[i]}</span>`;
@@ -1139,7 +1182,7 @@ $(document).ready(function() {
                 for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
                     html += `<span class="box-current current-q4">R${kodePeristiwaCurrent[i]}</span>`;
                 }
-            }
+            } */
 
             $(cell).find('.kode-peristiwa').html(html);
         });
@@ -1240,10 +1283,17 @@ $(document).ready(function() {
     $('#detailRisikoModal').modal('show');
   }
 
-  $('#quarterSelect,#tahunSelect').on('change', function() {
-      const quarter = $('#quarterSelect').val();
+  // $('#quarterSelect,#tahunSelect').on('change', function() {
+  //     const quarter = $('#quarterSelect').val();
+  //     $('#currentMap').prop('class', 'table-risk-map');
+  //     $('#currentMap').addClass('show-q' + quarter);
+  // }).change();
+
+  $('#monthSelect,#tahunSelect').on('change', function() {
+      const month = $('#monthSelect').val();
+      const tahun = $('#tahunSelect').val();
       $('#currentMap').prop('class', 'table-risk-map');
-      $('#currentMap').addClass('show-q' + quarter);
+      $('#currentMap').addClass('show-m' + month);
   }).change();
 
   // initKpiChart();

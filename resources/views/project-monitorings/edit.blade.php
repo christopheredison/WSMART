@@ -26,7 +26,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-12 col-md-4">
             <div class="card bg-primary shadow text-white text-center border-0">
                 <div class="card-body">
@@ -170,10 +170,10 @@
                         </div>
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
-                                <input 
-                                  class="form-control update-trigger inputmask-rupiah" 
-                                  type="text" 
-                                  id="realisasi_nilai_dampak" 
+                                <input
+                                  class="form-control update-trigger inputmask-rupiah"
+                                  type="text"
+                                  id="realisasi_nilai_dampak"
                                   name="realisasi_nilai_dampak"
                                   value="{{ $projectRiskAnalisa->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}"
                                   {{ $projectRiskAnalisa->kategori_dampak == 'Kualitatif' ? 'disabled' : '' }}
@@ -186,14 +186,14 @@
                             </div>
                             <div class="form-floating">
                                 <input type="hidden" name="realisasi_skala_dampak" id="realisasi_skala_dampak_hidden">
-                                <select 
-                                  class="form-select js-select-hide-search update-trigger" 
+                                <select
+                                  class="form-select js-select-hide-search update-trigger"
                                   name="realisasi_skala_dampak"
                                   id="realisasi_skala_dampak"
                                 >
                                   <option selected disabled>Skala Dampak</option>
                                   @foreach($skalaDampaks as $tingkat => $deskripsi)
-                                  <option value="{{ $tingkat }}" 
+                                  <option value="{{ $tingkat }}"
                                       {{ $riskMonitoring?->skala_dampak == $tingkat ? 'selected' : '' }}
                                       {{ $tingkat > $projectRiskAnalisa->skalaDampakObj?->tingkat ? 'disabled' : '' }}>
                                       {{ $tingkat }} - {{ $deskripsi }}
@@ -204,17 +204,17 @@
                                 <label for="">Realisasi Skala Dampak</label>
                             </div>
                             <div class="form-floating">
-                                <input 
-                                  class="form-control update-trigger" 
-                                  type="number" 
+                                <input
+                                  class="form-control update-trigger"
+                                  type="number"
                                   id="realisasi_nilai_probabilitas"
-                                  name="realisasi_nilai_probabilitas" 
+                                  name="realisasi_nilai_probabilitas"
                                   value="{{ $riskMonitoring?->nilai_probabilitas }}"
                                   {{-- data-max="{{ $projectRiskAnalisa->nilai_probabilitas }}"  --}}
                                   {{-- max="{{ $projectRiskAnalisa->nilai_probabilitas }}" --}}
                                   {{-- min="0" --}}
                                   {{-- oninput="if(this.value > {{ $projectRiskAnalisa->nilai_probabilitas }}) this.value = {{ $projectRiskAnalisa->nilai_probabilitas }};" --}}
-                                  data-max="100" 
+                                  data-max="100"
                                   max="100"
                                   min="0"
                                   oninput="if(this.value > 100) this.value = 100;"
@@ -251,7 +251,7 @@
                     <h4 class="mb-0 ff-heading-sm">Realisasi Penanganan Risiko</h4>
                 </div>
             </div>
-            
+
             {{-- Tambahkan card untuk legend/keterangan --}}
             <div class="row mb-3">
                 <div class="col-12">
@@ -292,7 +292,7 @@
                                         @if ($loop->index == 0)
                                         <tr data-id="{{ $perlakuan?->id }}">
                                             <td rowspan="{{ $penyebabRisiko->perlakuanPenyebabRisiko->count() }}">{{ $loop->iteration }}</td>
-                                            <td rowspan="{{ $penyebabRisiko->perlakuanPenyebabRisiko->count() }}">{{ $penyebabRisiko->penyebab_risiko ?: '-' }}</td>        
+                                            <td rowspan="{{ $penyebabRisiko->perlakuanPenyebabRisiko->count() }}">{{ $penyebabRisiko->penyebab_risiko ?: '-' }}</td>
                                         @else
                                         <tr data-id="{{ $perlakuan->id }}">
                                         @endif
@@ -314,9 +314,9 @@
                                                     <input type="textarea" class="input-file-description" name="document_description_{{ $perlakuan->id }}" id="deskripsi_perlakuan_risiko_{{ $perlakuan->id }}">
                                                 </div>
                                                 <div class="text-center">
-                                                    <a href="javascript:void(0)" 
-                                                    class="btn-input-icon btn-action" 
-                                                    data-action="update-realisasi" 
+                                                    <a href="javascript:void(0)"
+                                                    class="btn-input-icon btn-action"
+                                                    data-action="update-realisasi"
                                                     data-bs-toggle="tooltip"
                                                     title="Update Realisasi"
                                                     data-id="{{ $perlakuan->id }}">
@@ -357,7 +357,7 @@
                                         <td>{{ $kriProject->kri ?: '-' }}</td>
                                         <td>{{ $kriProject->satuan_kri ?: '-' }}</td>
                                         <td>{{ $kriProject->batas_aman ?: '-' }}</td>
-                                        <td>{{ $kriProject->batas_waspada ?: '-' }}</td>                    
+                                        <td>{{ $kriProject->batas_waspada ?: '-' }}</td>
                                         <td>{{ $kriProject->batas_bahaya ?: '-' }}</td>
                                         <td class="display-nilai-kri">
                                             {{ $kriProject->nilai_kri_terkini ?? '-' }}
@@ -377,9 +377,9 @@
                                         <td style="white-space:nowrap">
                                             {{-- <a href="javascript:void(0)" class="hover-underline px-1 btn-action" data-action="update-kri" data-id="{{ $kriProject->id }}">Update KRI</a> --}}
                                             <div class="text-center">
-                                            <a href="javascript:void(0)" 
-                                              class="btn-input-icon btn-action" 
-                                              data-action="update-kri" 
+                                            <a href="javascript:void(0)"
+                                              class="btn-input-icon btn-action"
+                                              data-action="update-kri"
                                               data-bs-toggle="tooltip"
                                               title="Update KRI"
                                               data-id="{{ $kriProject->id }}">
@@ -446,9 +446,9 @@
                                             <td>{{ $perlakuanMonitoring->realisasi_biaya_perlakuan_risiko }}</td>
                                             <td>{{ $perlakuanMonitoring->progress_rencana_perlakuan_risiko }}</td>
                                             <td>
-                                                <button type="button" 
-                                                    class="btn-input-icon btn-action" 
-                                                    data-action="view-details" 
+                                                <button type="button"
+                                                    class="btn-input-icon btn-action"
+                                                    data-action="view-details"
                                                     data-bs-toggle="tooltip"
                                                     title="Detail Mitigasi"
                                                     data-perlakuan-id="{{ $perlakuanPenyebab->id }}"
@@ -607,6 +607,14 @@ function validateRealisasiForm() {
 
     fieldsToValidate.forEach(function(fieldSelector) {
         const field = $(fieldSelector);
+
+        if (field.is(':disabled')) {
+            // Hapus error sebelumnya jika ada
+            field.removeClass('is-invalid');
+            field.closest('.form-floating').find('.invalid-feedback').remove();
+            return; // Lanjut ke field berikutnya
+        }
+
         field.removeClass('is-invalid');
         field.closest('.form-floating').find('.invalid-feedback').remove();
 
@@ -624,9 +632,9 @@ function validateRealisasiForm() {
 
     if (!isValid && firstErrorField) {
     $('html, body').animate({
-            scrollTop: firstErrorField.offset().top - 150 
+            scrollTop: firstErrorField.offset().top - 150
         }, 500);
-        
+
         firstErrorField.focus();
     }
 
@@ -635,7 +643,7 @@ function validateRealisasiForm() {
 
 function submitForm(isClosed) {
     $('.dom-edited').remove();
-    
+
     const formData = new FormData($('#main-form')[0]);
     formData.append('perlakuan_penyebab_risikos', JSON.stringify(perlakuanPenyebabRisikos));
     formData.append('kri_projects', JSON.stringify(kriProjects));
@@ -658,6 +666,14 @@ function submitForm(isClosed) {
                 icon: 'success',
                 confirmButtonText: 'OK',
             }).then(() => {
+                // let baseUrl = '{{ route('projects.monitorings.index', ['project' => request()->route('project')]) }}';
+                
+                // const currentQuarter = '{{ $quarter }}';
+                // const currentTahun = '{{ $tahun }}';
+                // const currentMonth = '{{ $month }}';
+                // const redirectUrl = `${baseUrl}?quarter=${currentQuarter}&tahun=${currentTahun}&month=${currentMonth}`;
+
+                // window.location.href = redirectUrl;
                 window.location.href = '{{ route('projects.monitorings.index', ['project' => request()->route('project')]) }}';
             });
         },
@@ -680,7 +696,7 @@ $(document).ready(function() {
     // Simpan nilai skala dampak inherent dan probabilitas inherent
     const skalaDampakInherent = {{ $projectRiskAnalisa->skalaDampakObj?->tingkat ?? 0 }};
     const nilaiProbabilitasInherent = {{ $projectRiskAnalisa->nilai_probabilitas ?? 0 }};
-    
+
     // Validasi saat memilih skala dampak
     $('#realisasi_skala_dampak').on('change', function(e) {
         // Skip validasi jika perubahan dari hitungRealisasiSkalaDampak()
@@ -727,8 +743,8 @@ $(document).ready(function() {
             const isClosing = (action === 'save-and-close');
             const swalConfig = {
                 title: 'Konfirmasi',
-                text: isClosing 
-                    ? `Apakah Anda yakin ingin menyimpan dan menutup risiko "${namaRisiko}" ini?` 
+                text: isClosing
+                    ? `Apakah Anda yakin ingin menyimpan dan menutup risiko "${namaRisiko}" ini?`
                     : 'Apakah Anda yakin ingin menyimpan data ini?',
                 icon: 'question',
                 showCancelButton: true,
@@ -836,7 +852,7 @@ $(document).ready(function() {
             } else {
                 tableDocument.closest('table').find('tfoot').show();
             }
-            
+
             tableDocument.on('input', '[name="deskripsi_dokumen[]"]', function() {
                 const value = $(this).val();
                 const id = $(this).closest('tr').data('id');
@@ -844,8 +860,8 @@ $(document).ready(function() {
                 const domCell = $('#table-penyebab-risiko tr[data-id="'+penyebabRisikoId+'"] td.column-action');
                 const domEdited = domCell.find('.dom-edited');
 
-                console.log(id, domCell);
-                
+                // console.log(id, domCell);
+
                 const domDeskripsi = domEdited.find('.input-file-description');
                 console.log(domDeskripsi.length);
                 const deskripsi = domDeskripsi.val() ? JSON.parse(domDeskripsi.val()) : {};
@@ -872,7 +888,7 @@ $(document).ready(function() {
             const perlakuanPenyebab = perlakuanPenyebabRisikos[perlakuanId];
             const penyebabRisiko = penyebabRisikoProjects[perlakuanPenyebab.penyebab_risiko_id];
             const perlakuanMonitoring = perlakuanPenyebab?.perlakuan_penyebab_monitorings?.find(m => m.id == id);
-            
+
             if (!perlakuanMonitoring) {
                 Swal.fire('Error', 'Data perlakuan penyebab risiko tidak ditemukan', 'error');
                 return;
@@ -1092,7 +1108,7 @@ $(document).ready(function() {
                 console.log("percentage : " + percentage);
                 console.log("skala : " + skala);
             }
-            
+
             // Set nilai skala dampak dan trigger change event
             skalaDampakSelect.val(skala).trigger('change');
             // Disable select dan pindahkan nilai ke hidden input

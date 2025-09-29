@@ -472,57 +472,69 @@ class HomeController extends Controller
             ])
             ->values();
 
-        $currentRiskMaps          = $risikos->pluck('currentRiskMaps');
+        $currentRiskMaps          = $risikos->pluck('currentRiskMapsMonth');
         $formattedCurrentRiskMaps = [];
 
         foreach ($risikos as $idx => $risk) {
-            $getFallbackValue = function($targetQuarter) use ($risk) {
-                // Cek apakah quarter target memiliki data yang valid
-                if (isset($risk->current_risk_maps[$targetQuarter]) &&
-                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) &&
-                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_probabilitas'])) {
-                    return $risk->current_risk_maps[$targetQuarter];
+            $currentValue = $risk->currentRiskMapsMonth['inherent'];
+            for ($month = 1; $month <= 12; $month++) {
+                if ($nextValue = ($risk->currentRiskMapsMonth[$month] ?? null)) {
+                    $currentValue = $nextValue;
                 }
 
-                // Jika tidak ada, cari dari quarter sebelumnya secara mundur
-                for ($q = $targetQuarter - 1; $q >= 1; $q--) {
-                    if (isset($risk->current_risk_maps[$q]) && !is_null($risk->current_risk_maps[$q]['skala_dampak']) && !is_null($risk->current_risk_maps[$q]['skala_probabilitas'])) {
-                        return $risk->current_risk_maps[$q];
-                    }
-                }
+                $currentValue['quarter'] = ceil($month / 3);
+                $currentValue['month'] = $month;
 
-                // Jika semua quarter tidak ada, ambil dari inherent
-                if (isset($risk->current_risk_maps['inherent']) &&
-                    !is_null($risk->current_risk_maps['inherent']['skala_dampak']) &&
-                    !is_null($risk->current_risk_maps['inherent']['skala_probabilitas'])) {
-                    return $risk->current_risk_maps['inherent'];
-                }
-
-                // Jika inherent juga tidak ada, fallback ke riskAnalysis
-                if ($risk->riskAnalysis) {
-                    return [
-                        'skala_dampak' => $risk->riskAnalysis->skala_dampak,
-                        'skala_probabilitas' => $risk->riskAnalysis->skala_probabilitas->tingkat ?? null,
-                        'skala_risiko' => $risk->riskAnalysis->skala_risiko,
-                        'level_risiko' => $risk->riskAnalysis->level_risiko,
-                    ];
-                }
-
-                return null;
-            };
-
-            // Generate data untuk setiap quarter
-            for ($quarter = 1; $quarter <= 4; $quarter++) {
-                $currentValue = $getFallbackValue($quarter);
-
-                // Hanya tambahkan jika currentValue tidak null dan valid
-                if ($currentValue &&
-                    !is_null($currentValue['skala_dampak']) &&
-                    !is_null($currentValue['skala_probabilitas'])) {
-                    $currentValue['quarter'] = $quarter;
-                    $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
-                }
+                $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
             }
+
+            // $getFallbackValue = function($targetQuarter) use ($risk) {
+            //     // Cek apakah quarter target memiliki data yang valid
+            //     if (isset($risk->current_risk_maps[$targetQuarter]) &&
+            //         !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) &&
+            //         !is_null($risk->current_risk_maps[$targetQuarter]['skala_probabilitas'])) {
+            //         return $risk->current_risk_maps[$targetQuarter];
+            //     }
+
+            //     // Jika tidak ada, cari dari quarter sebelumnya secara mundur
+            //     for ($q = $targetQuarter - 1; $q >= 1; $q--) {
+            //         if (isset($risk->current_risk_maps[$q]) && !is_null($risk->current_risk_maps[$q]['skala_dampak']) && !is_null($risk->current_risk_maps[$q]['skala_probabilitas'])) {
+            //             return $risk->current_risk_maps[$q];
+            //         }
+            //     }
+
+            //     // Jika semua quarter tidak ada, ambil dari inherent
+            //     if (isset($risk->current_risk_maps['inherent']) &&
+            //         !is_null($risk->current_risk_maps['inherent']['skala_dampak']) &&
+            //         !is_null($risk->current_risk_maps['inherent']['skala_probabilitas'])) {
+            //         return $risk->current_risk_maps['inherent'];
+            //     }
+
+            //     // Jika inherent juga tidak ada, fallback ke riskAnalysis
+            //     if ($risk->riskAnalysis) {
+            //         return [
+            //             'skala_dampak' => $risk->riskAnalysis->skala_dampak,
+            //             'skala_probabilitas' => $risk->riskAnalysis->skala_probabilitas->tingkat ?? null,
+            //             'skala_risiko' => $risk->riskAnalysis->skala_risiko,
+            //             'level_risiko' => $risk->riskAnalysis->level_risiko,
+            //         ];
+            //     }
+
+            //     return null;
+            // };
+
+            // // Generate data untuk setiap quarter
+            // for ($quarter = 1; $quarter <= 4; $quarter++) {
+            //     $currentValue = $getFallbackValue($quarter);
+
+            //     // Hanya tambahkan jika currentValue tidak null dan valid
+            //     if ($currentValue &&
+            //         !is_null($currentValue['skala_dampak']) &&
+            //         !is_null($currentValue['skala_probabilitas'])) {
+            //         $currentValue['quarter'] = $quarter;
+            //         $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
+            //     }
+            // }
         }
 
         $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
@@ -543,6 +555,7 @@ class HomeController extends Controller
             ->take(10)
             ->map(function ($led) {
                 return [
+                    'id' => $led->id,
                     'nama_divisi' => $led->unit?->name,
                     'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
                     'nama_kejadian' => $led->nama_kejadian ?? '-',
@@ -585,6 +598,7 @@ class HomeController extends Controller
                 })->values();
 
                 return [
+                    'id' => $item->id,
                     'peristiwa_risiko' => $item->peristiwa_risiko,
                     'deskripsi_peristiwa_risiko' => $item->deskripsi_peristiwa_risiko,
                     'jenis_risiko' => $item->jenisRisiko?->title,
@@ -649,41 +663,67 @@ class HomeController extends Controller
     {
         $selectedUnitId = $request->input('unit_id');
         $selectedProjectId = $request->input('project_id');
+        $user = Auth::user();
 
-        $costCenterParents = Project::distinct()->pluck('cost_center_parent');
-        $units = Unit::where('unit_type_id', 1)
-                ->whereIn('cost_center', $costCenterParents)
-                ->orderBy('name')
-                ->get();
+        $allowedProjectIds = null;
 
-        $projects = collect([]);
-        if ($selectedUnitId) {
-            $unit = Unit::find($selectedUnitId);
-            if ($unit) {
-                $projects = Project::where('cost_center_parent', $unit->cost_center)->get();
-            }
+        if ($user->can('view_all_project')) {
+            $costCenterParents = Project::distinct()->pluck('cost_center_parent')->filter();
+            $units = Unit::where('unit_type_id', 1)
+                        ->whereIn('cost_center', $costCenterParents)
+                        ->orderBy('name')
+                        ->get();
         } else {
-            $projects = Project::all();
+            // 1. Gabungkan proyek dari unit dan yang di-assign langsung
+            $projectsFromUnit = $user->unit ? $user->unit->projects : collect();
+            $projectsDirectlyAssigned = $user->projects;
+            $allAllowedProjects = $projectsFromUnit->merge($projectsDirectlyAssigned)->unique('id');
+
+            // 2. Simpan ID proyek yang diizinkan
+            $allowedProjectIds = $allAllowedProjects->pluck('id');
+
+            // 3. Ambil unit yang relevan dari gabungan proyek tersebut
+            $costCenterParents = $allAllowedProjects->pluck('cost_center_parent')->unique()->filter();
+            $units = Unit::where('unit_type_id', 1)
+                        ->whereIn('cost_center', $costCenterParents)
+                        ->orderBy('name')
+                        ->get();
         }
 
-        $projectPeriodeQuery = ProjectPeriodeList::whereHas('project', function($query) {
-            $query->where('type', Project::TYPE_OPERASIONAL);
-        });
+        if ($selectedProjectId && $allowedProjectIds && !$allowedProjectIds->contains($selectedProjectId)) {
+            return redirect()
+                ->route('dashboard-proyek', $request->except('project_id'))
+                ->with('error', 'Anda tidak memiliki hak akses untuk melihat proyek tersebut.');
+        }
 
-        // Apply unit filter if selected
-        $projectPeriodeQuery->when($selectedUnitId, function ($query, $selectedUnitId) {
-            $unit = Unit::find($selectedUnitId);
-            if ($unit) {
-                $query->whereHas('project', function ($q) use ($unit) {
-                    $q->where('cost_center_parent', $unit->cost_center);
+        $projectsQuery = Project::query()
+            ->when($allowedProjectIds, function ($query, $ids) {
+                $query->whereIn('id', $ids);
+            })
+            ->when($selectedUnitId, function ($query, $unitId) {
+                $unit = Unit::find($unitId);
+                if ($unit) {
+                    $query->where('cost_center_parent', $unit->cost_center);
+                }
+            });
+        $projects = $projectsQuery->get();
+
+        $projectPeriodeQuery = ProjectPeriodeList::query()
+            ->whereHas('project', function($query) {
+                $query->where('type', Project::TYPE_OPERASIONAL);
+            })
+            ->when($allowedProjectIds, function ($query, $ids) {
+                $query->whereIn('project_id', $ids);
+            })
+            ->when($selectedUnitId, function ($query, $unitId) {
+                $query->whereHas('project', function ($q) use ($unitId) {
+                    $unit = Unit::find($unitId);
+                    if ($unit) $q->where('cost_center_parent', $unit->cost_center);
                 });
-            }
-        });
-
-        // Apply project filter if selected
-        $projectPeriodeQuery->when($selectedProjectId, function ($query, $selectedProjectId) {
-            $query->where('project_id', $selectedProjectId);
-        });
+            })
+            ->when($selectedProjectId, function ($query, $projectId) {
+                $query->where('project_id', $projectId);
+            });
 
         $projectPeriodes = $projectPeriodeQuery
             ->orderBy('skala_risiko', 'desc')
@@ -799,6 +839,8 @@ class HomeController extends Controller
             })->values()->toArray(),
             'top_risk' => $projectRisks->sortByDesc('projectRiskAnalisa.skala_risiko')->take(10)->map(function($projectRisk) {
                 return [
+                    'id' => $projectRisk->id,
+                    'project_id' => $projectRisk->project_id,
                     'kode' => 'R' . $projectRisk->id,
                     'nama_proyek' => $projectRisk->project?->project_name,
                     'peristiwa_risiko' => $projectRisk->peristiwaRisiko?->title,
@@ -1352,20 +1394,47 @@ class HomeController extends Controller
 
     public function executiveSummaryProject(Request $request)
     {
-        // 1. [MODIFIKASI] Ambil semua input filter
         $selectedUnitId = $request->input('unit_id');
         $selectedProjectId = $request->input('project_id');
-        // Ambil periode dari request (format YYYY-MM), default ke bulan saat ini
         $selectedPeriod = $request->input('period', now()->format('Y-m'));
+        $user = Auth::user();
 
-        // Logika untuk mengambil unit dan project (sudah bagus, tidak perlu diubah)
-        $costCenterParents = Project::distinct()->pluck('cost_center_parent');
-        $units = Unit::where('unit_type_id', 1)
-                    ->whereIn('cost_center', $costCenterParents)
-                    ->orderBy('name')
-                    ->get();
+        // $costCenterParents = Project::distinct()->pluck('cost_center_parent');
+        // $units = Unit::where('unit_type_id', 1)
+        //             ->whereIn('cost_center', $costCenterParents)
+        //             ->orderBy('name')
+        //             ->get();
 
         $projectsQuery = Project::query();
+
+        if ($user->can('view_all_project')) {
+            $costCenterParents = Project::distinct()->pluck('cost_center_parent');
+            $units = Unit::where('unit_type_id', 1)
+                        ->whereIn('cost_center', $costCenterParents)
+                        ->orderBy('name')
+                        ->get();
+        } else {
+            // 1. Ambil proyek dari unit
+            $projectsFromUnit = $user->unit ? $user->unit->projects : collect();
+
+            // 2. Ambil proyek yang di-assign langsung ke user
+            $projectsDirectlyAssigned = $user->projects;
+
+            // 3. Gabungkan kedua koleksi dan hapus duplikat berdasarkan ID
+            $allAllowedProjects = $projectsFromUnit->merge($projectsDirectlyAssigned)->unique('id');
+
+            // 4. Ambil ID proyek yang diizinkan untuk membatasi query utama
+            $assignedProjectIds = $allAllowedProjects->pluck('id');
+            $projectsQuery->whereIn('id', $assignedProjectIds);
+
+            // 5. Ambil unit yang relevan dari gabungan proyek tersebut untuk dropdown Divisi
+            $costCenterParents = $allAllowedProjects->pluck('cost_center_parent')->unique()->filter();
+            $units = Unit::where('unit_type_id', 1)
+                        ->whereIn('cost_center', $costCenterParents)
+                        ->orderBy('name')
+                        ->get();
+        }
+
         $projectsQuery->when($selectedUnitId, function ($query, $unitId) {
             $unitCostCenter = Unit::find($unitId)?->cost_center;
             return $query->where('cost_center_parent', $unitCostCenter);
@@ -1398,6 +1467,16 @@ class HomeController extends Controller
         ];
 
         if ($selectedProject) {
+            $allowedProjectIds = $user->can('view_all_project') ? 
+                Project::pluck('id') : 
+                ($user->unit ? $user->unit->projects->pluck('id') : collect())->merge($user->projects->pluck('id'))->unique();
+
+            if (!$allowedProjectIds->contains($selectedProject->id)) {
+                return redirect()
+                    ->route('executive-summary-project', $request->except('project_id'))
+                    ->with('error', 'Anda tidak memiliki hak akses untuk melihat proyek tersebut.');
+            }
+
             try {
                 $periodForApi = Carbon::createFromFormat('Y-m', $selectedPeriod)->format('Ym');
                 $profitCenter = $selectedProject->meta['profit_center'] ?? null;
@@ -1436,7 +1515,7 @@ class HomeController extends Controller
                 $q->where('project_id', $selectedProjectId);
             })->sum('eksposure_risiko');
             
-            // --- Isi data yang tersisa & kalkulasi ---
+            // --- Perhitungan LED dan Eksposur ---
             $summaryData['led_proyek_total'] = $ledProyekTotal;
             $summaryData['eksposur_risiko_total'] = $eksposurRisikoTotal;
 

@@ -51,7 +51,7 @@ if (!empty($action['extra_attrs'])) {
     </button>
     @break
 @case('change_to_led_unit')
-    <button type="button" class="btn btn-link btn-muted-primary  btn-action px-1 py-0" data-action="change_to_led_unit" data-id="{{ $id }}">
+    <button type="button" class="btn btn-link btn-muted-primary  btn-action px-1 py-0" data-action="change_to_led_unit" data-id="{{ $id }}" {!! $extraAttributes !!}>
         <span>{!! $action['label'] !!}</span>
     </button>
     @break
