@@ -72,6 +72,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 ->where('unit_type_id', 1)
                 ->with([
                   // 'peristiwaRisiko', 
+                  'unit',
                   'riskAnalysis.skalaProbabilitasResidualQ' . $quarter]
                 )
                 ->with(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
@@ -95,12 +96,14 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 });
         };
 
-        $levelNames = Level::whereIn('id', [1, 2])->pluck('name', 'id');
-        $verificatorMap = [
-            UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI => $levelNames[2] ?? 'Risk Owner Divisi',
-            UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR => 'Risk Officer Divisi MR',
-            UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR => 'Risk Owner Divisi MR',
-        ];
+        $unitMr = Unit::where('unit_mr', 1)->first();
+        $unitMrName = $unitMr?->name ?? 'Divisi MR';
+        // $levelNames = Level::whereIn('id', [1, 2])->pluck('name', 'id');
+        // $verificatorMap = [
+        //     UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI => $levelNames[2] ?? 'Risk Owner Divisi',
+        //     UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR => 'Risk Officer Divisi MR',
+        //     UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR => 'Risk Owner Divisi MR',
+        // ];
 
         $this->tableColumns = [
             'quarter' => [
@@ -189,21 +192,41 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'render' => '(data, type, row) => {
                     if (row.is_closed) return `<div class="badge text-danger bg-danger-subtle">Dihentikan</div>`;
                     if (!row.last_monitoring_risiko) return `<div class="badge bg-light text-dark">Belum Dimonitor</div>`;
-                    
-                    const monitoring = row.last_monitoring_risiko;
-                    const verificatorMap = '.json_encode($verificatorMap).';
 
-                    if (monitoring.status === '.UnitRiskMonitoring::STATUS_DRAFT_REVISI.') {
-                        return monitoring.is_revision ? `<div class="badge bg-danger">Revisi</div>` : `<div class="badge bg-warning">Draft</div>`;
+                    const monitoring = row.last_monitoring_risiko;
+                    let statusText = "";
+                    const unitMrName = "' . $unitMrName . '";
+
+                    const STATUS_DRAFT = ' . UnitRiskMonitoring::STATUS_DRAFT_REVISI . ';
+                    const STATUS_ROW_DIVISI = ' . UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI . ';
+                    const STATUS_RO_MR = ' . UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR . ';
+                    const STATUS_ROW_MR = ' . UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR . ';
+                    const STATUS_PUBLISHED = ' . UnitRiskMonitoring::STATUS_PUBLISHED . ';
+
+                    switch(monitoring.status) {
+                        case STATUS_DRAFT:
+                            return monitoring.is_revision ? `<div class="badge bg-danger">Revisi</div>` : `<div class="badge bg-warning">Draft</div>`;
+                        case STATUS_ROW_DIVISI:
+                            statusText = `Risk Owner Divisi ${row.unit?.name || ""}`;
+                            break;
+                        case STATUS_RO_MR:
+                            statusText = `Risk Officer ${unitMrName}`;
+                            break;
+                        case STATUS_ROW_MR:
+                            statusText = `Risk Owner ${unitMrName}`;
+                            break;
+                        case STATUS_PUBLISHED:
+                            return `<div class="badge bg-primary">Terverifikasi</div>`;
+                        default:
+                            return "-";
                     }
-                    if (verificatorMap[monitoring.status]) {
+                    
+                    if (statusText) {
                         return monitoring.is_approved
-                            ? `<div class="badge bg-info">Terverifikasi ${verificatorMap[monitoring.status]}</div>`
-                            : `<div class="badge border border-info text-info">Menunggu Verifikasi ${verificatorMap[monitoring.status]}</div>`;
+                            ? `<div class="badge bg-info">Terverifikasi ${statusText}</div>`
+                            : `<div class="badge border border-info text-info">Menunggu Verifikasi ${statusText}</div>`;
                     }
-                    if (monitoring.status == '.UnitRiskMonitoring::STATUS_PUBLISHED.') {
-                        return `<div class="badge bg-primary">Terverifikasi</div>`;
-                    }
+                    
                     return "-";
                 }',
             ],
@@ -285,7 +308,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'active_state' => '(data, type, row) => row.last_monitoring_risiko !== null',
         ];
 
-        $this->cardFooter = $this->generateFooter($period, $user, compact('quarter', 'month'));
+        $this->cardFooter = $this->generateFooter($period, $user, compact('quarter', 'month', 'targetUnitId'));
 
         $this->extraViewData['isProjectMonitoringPage'] = true;
         $this->extraViewData['currentUserLevel'] = $userLevel;
@@ -672,8 +695,13 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $hasVerificationMr = Gate::allows('verification_mr');
         $isUnitMr = (bool) $user->unit?->unit_mr;
 
+        $currentUserUnitName = $user->unit?->name ?? 'Anda';
+
+        $unitMr = Unit::where('unit_mr', 1)->first();
+        $unitMrName = $unitMr?->name ?? 'Divisi MR';
+
         $riskIds = IdentifikasiRisiko::where('periode_id', $period->id)
-            ->where('unit_id', $user->unit_id)
+            ->where('unit_id', $targetUnitId)
             ->where('is_closed', false)
             ->pluck('id');
 
@@ -701,15 +729,19 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 if ($isUnitMr && $hasVerificationMr) {
                     // Step 3: Kirim ke Risk Owner Divisi MR
                     $allApproved = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR)->isNotEmpty() && $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR)->every('is_approved', true);
-                    $buttonText = 'Kirim ke Risk Owner Divisi MR';
+                    
+                    $buttonText = "Kirim ke Risk Owner {$unitMrName}";
+
                     $params = ['status_dari' => UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR, 'status_ke' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR];
                     $disabled = $allApproved ? '' : 'disabled';
                 } else {
                     // Step 1: Kirim ke Risk Owner Divisi
                     $allRisksMonitored = $riskIds->isNotEmpty() && $riskIds->diff($latestMonitorings->pluck('identifikasi_risiko_id'))->isEmpty();
                     $hasItemsToSend = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_DRAFT_REVISI)->isNotEmpty();
+
                     if ($allRisksMonitored && $hasItemsToSend) {
-                        $buttonText = 'Kirim ke Risk Owner Divisi';
+                        $buttonText = "Kirim ke Risk Owner Divisi {$currentUserUnitName}";
+
                         $params = ['status_dari' => UnitRiskMonitoring::STATUS_DRAFT_REVISI, 'status_ke' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI];
                         $disabled = '';
                     }
@@ -720,13 +752,17 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 if ($isUnitMr && $hasVerificationMr) {
                     // Step 4: Publish Monitoring
                     $allApproved = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR)->isNotEmpty() && $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR)->every('is_approved', true);
+
                     $buttonText = 'Verifikasi Monitoring';
+                    
                     $params = ['status_dari' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR, 'status_ke' => UnitRiskMonitoring::STATUS_PUBLISHED, 'final' => true];
                     $disabled = $allApproved ? '' : 'disabled';
                 } else {
                     // Step 2: Kirim ke Risk Officer Divisi MR
                     $allApproved = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI)->isNotEmpty() && $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI)->every('is_approved', true);
-                    $buttonText = 'Kirim ke Risk Officer Divisi MR';
+                    
+                    $buttonText = "Kirim ke Risk Officer {$unitMrName}";
+                    
                     $params = ['status_dari' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI, 'status_ke' => UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR];
                     $disabled = $allApproved ? '' : 'disabled';
                 }
@@ -734,12 +770,12 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         }
 
         if ($buttonText) {
-            return "<div>" . $this->buildEskalasiForm($buttonText, 'risk-register-unit.monitorings.send.all', $period->id, $period->tahun, $params, $disabled) . "</div>";
+            return "<div>" . $this->buildEskalasiForm($buttonText, 'risk-register-unit.monitorings.send.all', $period->id, $period->tahun, $params, $disabled, $targetUnitId) . "</div>";
         }
         return null;
     }
 
-    private function buildEskalasiForm($buttonText, $routeName, $periodId, $tahunPeriode, $params, $disabled)
+    private function buildEskalasiForm($buttonText, $routeName, $periodId, $tahunPeriode, $params, $disabled, $targetUnitId)
     {
         $route = route($routeName, ['period' => $periodId]);
         $csrf = csrf_token();
@@ -758,6 +794,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 <input type="hidden" name="status_dari" value="{$statusDari}">
                 <input type="hidden" name="status_ke" value="{$statusKe}">
                 <input type="hidden" name="is_final" value="{$isFinal}">
+                <input type="hidden" name="unit_id" value="{$targetUnitId}">
                 <button type="button" class="btn btn-info btn-arrow-right" onclick="submitEskalasiForm('{$uniqueId}', '{$buttonText}')" {$disabled}>{$buttonText}</button>
             </form>
         HTML;
@@ -826,6 +863,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
     public function sendAllMonitoring(Request $request, Periode $period)
     {
         $validated = $request->validate([
+            'unit_id' => 'required|integer|exists:units,id',
             'quarter' => 'required|integer', 
             'month' => 'required|integer',
             'status_dari' => 'required|integer', 
@@ -834,7 +872,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         ]);
         
         $riskIds = IdentifikasiRisiko::where('periode_id', $period->id)
-            ->where('unit_id', Auth::user()->unit_id)
+            ->where('unit_id', $validated['unit_id'])
             ->pluck('id');
 
         $latestMonitoringIds = UnitRiskMonitoring::select(DB::raw('MAX(id) as last_id'))
