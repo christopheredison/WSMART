@@ -20,7 +20,7 @@
     <form id="filter-form" action="{{ url()->current() }}" method="GET">
       <div class="row g-3">
         <div class="col-md-4">
-          <select name="unit_id" id="unit_selector" class="form-select select2" onchange="this.form.submit()">
+          <select name="unit_id" id="unit_selector" class="form-select select2  js-select-hide-search" onchange="this.form.submit()">
             <option value="" selected>Semua Divisi</option>
             @foreach ($units as $unit)
               <option value="{{ $unit->id }}" {{ $unit->id == $selectedUnitId ? 'selected' : '' }}>

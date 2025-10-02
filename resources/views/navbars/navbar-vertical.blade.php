@@ -87,6 +87,22 @@
             </li>
             @endcan
 
+            @can('corporate_dashboard_menu')
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('executive-summary-corporate') ? 'active' : '' }}" href="/executive-summary-corporate">
+                <span class="nav-link-text">Executive Summary Corporate</span>
+              </a>
+            </li>
+            @endcan
+
+            @can('unit_dashboard_menu')
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('executive-summary-unit') ? 'active' : '' }}" href="/executive-summary-unit">
+                <span class="nav-link-text">Executive Summary Divisi</span>
+              </a>
+            </li>
+            @endcan
+
             @can('proyek_dashboard_menu')
             <li class="nav-item"><a class="nav-link {{ request()->is('executive-summary-project') ? 'active' : '' }}"
                 href="/executive-summary-project">

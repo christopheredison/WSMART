@@ -19,10 +19,12 @@ use App\Models\RiskMap;
 use App\Models\Unit;
 use App\Models\RMIPeriod;
 use App\Models\ProjectRiskMonitoring;
+use App\Models\UnitRiskMonitoring;
 use Illuminate\Http\Request;
 use App\Supports\ApiWika;
 use Auth;
 use Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Arr;
@@ -1531,6 +1533,235 @@ class HomeController extends Controller
             'selectedProject',
             'selectedPeriod',
             'summaryData'
+        ));
+    }
+
+    public function executiveSummaryUnit(Request $request)
+    {
+        // 1. Ambil input filter
+        $selectedUnitId = $request->input('unit_id');
+        $selectedPeriod = $request->input('period', now()->format('Y-m'));
+
+        // 2. Ambil daftar unit untuk dropdown filter
+        $units = Unit::whereIn('unit_type_id', [1, 2, 3])->orderBy('name')->get();
+
+        // 3. Inisialisasi data summary
+        $summaryData = [
+            'omset_penjualan_sd_bulan'      => 0,
+            'lsp_rencana_sd_bulan'          => 0,
+            'lsp_realisasi_sd_bulan'        => 0,
+            'omset_penjualan_sd_des'        => 0,
+            'lsp_rencana_sd_des'            => 0,
+            'proyeksi_lsp_sd_des'           => 0,
+            'led_proyek_total'              => 0,
+            'eksposur_risiko_annual'        => 0,
+            'eksposur_risiko_total'         => 0,
+            'led_divisi_total'              => 0,
+            'hasil_usaha_sd_bulan'          => 0,
+            'proyeksi_hasil_usaha_sd_des'   => 0,
+        ];
+
+        $isProjectUnit = false;
+        $selectedUnit = null;
+
+        if ($selectedUnitId) {
+            $selectedUnit = Unit::find($selectedUnitId);
+            $year = Carbon::createFromFormat('Y-m', $selectedPeriod)->year;
+            $month = Carbon::createFromFormat('Y-m', $selectedPeriod)->month;
+
+            // 4. Cek apakah unit ini menangani proyek
+            $projectHandlingCostCenters = Project::distinct()->pluck('cost_center_parent');
+            if ($selectedUnit && $projectHandlingCostCenters->contains($selectedUnit->cost_center)) {
+                $isProjectUnit = true;
+            }
+
+            // 5. Isi dengan data dummy (bisa diganti dengan API nanti)
+            if ($isProjectUnit) {
+                $summaryData['omset_penjualan_sd_bulan'] = 15000000000; // dummy
+                $summaryData['lsp_rencana_sd_bulan']     = 2500000000;  // dummy
+                $summaryData['lsp_realisasi_sd_bulan']   = 2300000000;  // dummy
+                $summaryData['omset_penjualan_sd_des']   = 25000000000; // dummy
+                $summaryData['lsp_rencana_sd_des']       = 4500000000;  // dummy
+                $summaryData['proyeksi_lsp_sd_des']      = 4100000000;  // dummy
+                $summaryData['led_proyek_total']         = 75000000;    // dummy (bisa diganti dengan data asli jika ada relasi)
+            } else {
+                // Untuk divisi non-proyek, omset dianggap biaya usaha
+                $summaryData['omset_penjualan_sd_bulan'] = 1200000000; // dummy
+                $summaryData['omset_penjualan_sd_des']   = 2200000000; // dummy
+            }
+
+            // 6. Ambil data asli dari database
+            // Ambil ID periode berdasarkan tahun
+            $periode = Periode::where('tahun', $year)->first();
+            
+            if ($periode) {
+                // Loss Event Divisi
+                $summaryData['led_divisi_total'] = LossEvent::where('unit_id', $selectedUnitId)
+                  ->where('periode_id', $periode->id)
+                  ->get() // 1. Ambil semua data sebagai collection
+                  ->sum('nilai_kerugian_finansial');
+
+                // Eksposur Risiko Residual (Annual & Total hingga bulan berjalan)
+                $baseQuery = UnitRiskMonitoring::whereHas('identifikasiRisiko', function ($query) use ($selectedUnitId, $periode) {
+                    $query->where('unit_id', $selectedUnitId)->where('periode_id', $periode->id);
+                });
+                
+                $summaryData['eksposur_risiko_annual'] = (clone $baseQuery)->sum('eksposure_risiko');
+                $summaryData['eksposur_risiko_total'] = (clone $baseQuery)->where('month', '<=', $month)->sum('eksposure_risiko');
+            }
+
+
+            // 7. Lakukan kalkulasi akhir
+            $summaryData['hasil_usaha_sd_bulan'] = $summaryData['lsp_realisasi_sd_bulan'] - $summaryData['led_proyek_total'] - $summaryData['led_divisi_total'];
+            $summaryData['proyeksi_hasil_usaha_sd_des'] = $summaryData['proyeksi_lsp_sd_des'] - $summaryData['eksposur_risiko_annual'];
+        }
+
+        return view('executive-summary-unit', compact(
+            'units',
+            'selectedUnitId',
+            'selectedUnit',
+            'selectedPeriod',
+            'summaryData',
+            'isProjectUnit'
+        ));
+    }
+
+    public function executiveSummaryCorporate(Request $request)
+    {
+        $selectedUnitId = $request->input('unit_id');
+        $selectedPeriod = $request->input('period', now()->format('Y-m'));
+
+        $units = Unit::whereIn('unit_type_id', [1, 2, 3, 4])->orderBy('name')->get();
+
+        $summaryData = [
+            'omset_penjualan_sd_bulan'    => 0,
+            'lsp_rencana_sd_bulan'        => 0,
+            'lsp_realisasi_sd_bulan'      => 0,
+            'omset_penjualan_sd_des'      => 0,
+            'lsp_rencana_sd_des'          => 0,
+            'proyeksi_lsp_sd_des'         => 0,
+            'led_proyek_total'            => 0,
+            'eksposur_risiko_annual'      => 0,
+            'eksposur_risiko_total'       => 0,
+            'led_divisi_operasi_total'    => 0,
+            'led_divisi_fungsi_total'     => 0,
+            'hasil_usaha_sd_bulan'        => 0,
+            'proyeksi_hasil_usaha_sd_des' => 0,
+        ];
+
+        $isProjectUnit = false;
+        $selectedUnit = null;
+
+        $top10LedProyek = [];
+        $top10EksposurResidualProyek = [];
+
+        if ($selectedUnitId) {
+            $selectedUnit = Unit::find($selectedUnitId);
+            $year = Carbon::createFromFormat('Y-m', $selectedPeriod)->year;
+            $month = Carbon::createFromFormat('Y-m', $selectedPeriod)->month;
+
+            $projectHandlingCostCenters = Project::distinct()->pluck('cost_center_parent');
+            if ($selectedUnit && $projectHandlingCostCenters->contains($selectedUnit->cost_center)) {
+                $isProjectUnit = true;
+            }
+
+            if ($isProjectUnit) {
+                $summaryData['omset_penjualan_sd_bulan'] = 15000000000;
+                $summaryData['lsp_rencana_sd_bulan']     = 2500000000;
+                $summaryData['lsp_realisasi_sd_bulan']   = 2300000000;
+                $summaryData['omset_penjualan_sd_des']   = 25000000000;
+                $summaryData['lsp_rencana_sd_des']       = 4500000000;
+                $summaryData['proyeksi_lsp_sd_des']      = 4100000000;
+                $summaryData['led_proyek_total']         = 75000000;
+            } else {
+                $summaryData['omset_penjualan_sd_bulan'] = 1200000000;
+                $summaryData['omset_penjualan_sd_des']   = 2200000000;
+            }
+
+            $periode = Periode::where('tahun', $year)->first();
+            
+            if ($periode) {
+                // LED Divisi Operasi
+                $summaryData['led_divisi_operasi_total'] = LossEvent::where('unit_id', $selectedUnitId)
+                    ->where('periode_id', $periode->id)
+                    ->whereHas('unit', function ($q) {
+                        $q->where('unit_type_id', 1);
+                    })
+                    ->sum(DB::raw('CAST(nilai_kerugian_finansial AS NUMERIC)'));
+
+                // LED Divisi Fungsi
+                $summaryData['led_divisi_fungsi_total'] = LossEvent::where('unit_id', $selectedUnitId)
+                    ->where('periode_id', $periode->id)
+                    ->whereHas('unit', function ($q) {
+                        $q->where('unit_type_id', 2);
+                    })
+                    ->sum(DB::raw('CAST(nilai_kerugian_finansial AS NUMERIC)'));
+
+                $baseMonitoringQuery = UnitRiskMonitoring::whereHas('identifikasiRisiko', function ($query) use ($selectedUnitId, $periode) {
+                    $query->where('unit_id', $selectedUnitId)->where('periode_id', $periode->id);
+                });
+                
+                $summaryData['eksposur_risiko_annual'] = (clone $baseMonitoringQuery)->sum('eksposure_risiko');
+                $summaryData['eksposur_risiko_total'] = (clone $baseMonitoringQuery)->where('month', '<=', $month)->sum('eksposure_risiko');
+
+                $top10LedProyek = LossEventProject::query()
+                  ->join('kategori_kejadians', 'loss_event_projects.kategori_kejadian_id', '=', 'kategori_kejadians.id')
+                  ->select(
+                      'kategori_kejadians.kategori_kejadian as chart_label', 
+                      'loss_event_projects.nilai_kerugian_finansial'
+                  )
+                  ->whereHas('project', function ($q) use ($selectedUnit) {
+                      if ($selectedUnit) {
+                          $q->where('cost_center_parent', $selectedUnit->cost_center);
+                      }
+                  })
+                  ->where('loss_event_projects.tahun', $year)
+                  ->orderByDesc(DB::raw('CAST(loss_event_projects.nilai_kerugian_finansial AS NUMERIC)'))
+                  ->limit(10)
+                  ->get();
+
+                $top10EksposurResidualProyekData = ProjectRiskMonitoring::with([
+                        // Eager load relasi yang kita butuhkan untuk mengambil nama
+                        'projectRisk.peristiwaRisiko'
+                    ])
+                    ->select(
+                        'risiko_id', // Kita butuh foreign key untuk grouping
+                        DB::raw('SUM(eksposure_risiko) as total_eksposure')
+                    )
+                    // Gunakan whereHas untuk memfilter berdasarkan unit melalui relasi
+                    ->whereHas('projectRisk.project', function ($q) use ($selectedUnit) {
+                        if ($selectedUnit) {
+                            $q->where('cost_center_parent', $selectedUnit->cost_center);
+                        }
+                    })
+                    ->where('tahun', $year)
+                    ->groupBy('risiko_id') // Group berdasarkan ID risikonya
+                    ->orderByDesc('total_eksposure')
+                    ->limit(10)
+                    ->get();
+                    
+                    // Karena hasil query di atas tidak memiliki nama, kita format di sini
+                $top10EksposurResidualProyek = $top10EksposurResidualProyekData->map(function ($item) {
+                    return [
+                        'risk_event' => $item->projectRisk->peristiwaRisiko->title ?? 'Nama Risiko Tidak Ditemukan',
+                        'total_eksposure' => $item->total_eksposure,
+                    ];
+                });
+            }
+
+            $summaryData['hasil_usaha_sd_bulan'] = $summaryData['lsp_realisasi_sd_bulan'] - $summaryData['led_proyek_total'] - $summaryData['led_divisi_operasi_total'] - $summaryData['led_divisi_fungsi_total'];
+            $summaryData['proyeksi_hasil_usaha_sd_des'] = $summaryData['proyeksi_lsp_sd_des'] - $summaryData['eksposur_risiko_annual'];
+        }
+
+        return view('executive-summary-corporate', compact(
+            'units',
+            'selectedUnitId',
+            'selectedUnit',
+            'selectedPeriod',
+            'summaryData',
+            'isProjectUnit',
+            'top10LedProyek',
+            'top10EksposurResidualProyek'
         ));
     }
 

@@ -22,6 +22,7 @@ use App\Models\RiskAnalysis;
 use App\Models\PenyebabRisiko;
 use App\Models\JenisKontrolEksisting;
 use App\Models\KamusRisikoUnit;
+use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 

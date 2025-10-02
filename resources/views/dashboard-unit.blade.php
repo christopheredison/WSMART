@@ -28,7 +28,7 @@
           </select>
         </div>
         <div class="col-md-5 col-xxl-4">
-          <select name="unit_id" id="unit_selector" class="form-select select2 js-select-hide-search">
+          <select name="unit_id" id="unit_selector" class="form-select select2">
             <option value="" selected disabled>Divisi</option>
             @foreach ($units as $unit)
               <option value="{{ $unit->id }}" {{$unit->id == $selectedUnit->id ? 'selected' : ''}}>{{ $unit->name }}</option>
