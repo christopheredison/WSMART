@@ -111,6 +111,12 @@
                 <span class="nav-link-text">Corporate</span>
               </a>
             </li>
+
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('executive-summary-corporate-population') ? 'active' : '' }}" href="/executive-summary-corporate-population">
+                <span class="nav-link-text">Corporate Population</span>
+              </a>
+            </li>
             @endcan
 
             @can('unit_dashboard_menu')

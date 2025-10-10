@@ -296,30 +296,54 @@
                 <table class="table table-bordered table-hover table-sm table-strategi">
                     <thead class="text-center align-middle">
                         <tr>
-                            <th rowspan="2">ID</th>
+                            <th rowspan="2">Kode</th>
                             <th rowspan="2" style="min-width: 200px;">Peristiwa Risiko</th>
                             <th colspan="6">Inherent</th>
                             <th colspan="6">Residual</th>
                             <th colspan="6">Realisasi (Current)</th>
                         </tr>
                         <tr>
-                            <th style="min-width: 120px;">Nilai Dampak</th><th>Skala</th><th style="min-width: 100px;">Nilai Prob.</th><th>Skala</th><th>Nilai</th><th>Level</th>
-                            <th style="min-width: 120px;">Nilai Dampak</th><th>Skala</th><th style="min-width: 100px;">Nilai Prob.</th><th>Skala</th><th>Nilai</th><th>Level</th>
-                            <th style="min-width: 120px;">Nilai Dampak</th><th>Skala</th><th style="min-width: 100px;">Nilai Prob.</th><th>Skala</th><th>Nilai</th><th>Level</th>
+                            {{-- Inherent --}}
+                            <th style="min-width: 120px;">Nilai Dampak</th>
+                            <th>Skala Dampak</th>
+                            <th style="min-width: 100px;">Nilai Probabilitas</th>
+                            <th>Skala Probabilitas</th>
+                            <th>Nilai Risiko</th>
+                            <th>Level Risiko</th>
+                            
+                            {{-- Residual --}}
+                            <th style="min-width: 120px;">Nilai Dampak</th>
+                            <th>Skala Dampak</th>
+                            <th style="min-width: 100px;">Nilai Probabilitas</th>
+                            <th>Skala Probabilitas</th>
+                            <th>Nilai Risiko</th>
+                            <th>Level Risiko</th>
+
+                            {{-- Realisasi --}}
+                            <th style="min-width: 120px;">Nilai Dampak</th>
+                            <th>Skala Dampak</th>
+                            <th style="min-width: 100px;">Nilai Probabilitas</th>
+                            <th>Skala Probabilitas</th>
+                            <th>Nilai Risiko</th>
+                            <th>Level Risiko</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($highImpactRisks as $risk)
                         <tr data-risk-id="{{ $risk->id }}">
-                            <td class="text-center fw-bold">R{{ $loop->iteration }}</td>
+                            <td class="text-center fw-bold">
+                              <a href="{{  route('risk-register-unit.view', ['riskRegister' => $risk->id]) }}">
+                                R{{ $loop->iteration }}
+                              </a>
+                            </td>
                             <td>{{ optional($risk->peristiwaRisiko)->title ?? $risk->peristiwa_risiko }}</td>
                             {{-- Inherent --}}
-                            <td>{{ optional($risk->riskAnalysis)->nilai_dampak ? 'Rp ' . number_format(optional($risk->riskAnalysis)->nilai_dampak, 0, ',', '.') : '-' }}</td>
+                            <td>{{ optional($risk->riskAnalysis)->nilai_dampak ? 'Rp ' . number_format(optional($risk->riskAnalysis)->nilai_dampak, 0, ',', '.') : 'Rp 0' }}</td>
                             <td class="text-center">{{ optional(optional($risk->riskAnalysis)->skalaDampakObj)->tingkat ?? '-' }}</td>
                             <td class="text-center">{{ optional($risk->riskAnalysis)->nilai_probabilitas ? optional($risk->riskAnalysis)->nilai_probabilitas . '%' : '-' }}</td>
                             <td class="text-center">{{ optional(optional($risk->riskAnalysis)->skalaProbabilitas)->tingkat ?? '-' }}</td>
                             <td class="text-center">{{ optional($risk->riskAnalysis)->skala_risiko ?? '-' }}</td>
-                            <td class="text-center bg-{{ strtolower(str_replace([' ', 'to '], ['-', ''], optional($risk->riskAnalysis)->level_risiko)) }}">{{ optional($risk->riskAnalysis)->level_risiko ?? '-' }}</td>
+                            <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($risk->riskAnalysis?->level_risiko)))}}">{{ $risk->riskAnalysis?->level_risiko ?? '-' }}</td>
 
                             {{-- Residual --}}
                             @php
@@ -330,12 +354,12 @@
                                 $skala_risiko_residual = optional($risk->riskAnalysis)->{'skala_risiko_residual_q'.$currentQuarter};
                                 $level_risiko_residual = optional($risk->riskAnalysis)->{'level_risiko_residual_q'.$currentQuarter};
                             @endphp
-                            <td>{{ $nilai_dampak_residual ? 'Rp ' . number_format($nilai_dampak_residual, 0, ',', '.') : '-' }}</td>
+                            <td>{{ $nilai_dampak_residual ? 'Rp ' . number_format($nilai_dampak_residual, 0, ',', '.') : 'Rp 0' }}</td>
                             <td class="text-center">{{ optional($skala_dampak_residual_obj)->tingkat ?? '-' }}</td>
                             <td class="text-center">{{ $nilai_prob_residual ? $nilai_prob_residual . '%' : '-' }}</td>
                             <td class="text-center">{{ optional($skala_prob_residual)->tingkat ?? '-' }}</td>
                             <td class="text-center">{{ $skala_risiko_residual ?? '-' }}</td>
-                            <td class="text-center bg-{{ strtolower(str_replace([' ', 'to '], ['-', ''], $level_risiko_residual)) }}">{{ $level_risiko_residual ?? '-' }}</td>
+                            <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($level_risiko_residual)))}}">{{ $level_risiko_residual ?? '-' }}</td>
 
                             {{-- Realisasi --}}
                             <td class="realisasi-nilai-dampak">-</td>
@@ -464,7 +488,7 @@
                         <div class="accordion-item">
                             <h2 class="accordion-header" id="headingEfektif">
                                 <button class="accordion-button fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEfektif" aria-expanded="true">
-                                    Perlakuan Efektif <span class="badge rounded-pill bg-primary ms-2">{{ $efektifRisks->count() }}</span>
+                                    Perlakuan Efektif <span class="badge rounded-pill bg-info ms-2">{{ $efektifRisks->count() }}</span>
                                 </button>
                             </h2>
                             <div id="collapseEfektif" class="accordion-collapse collapse show" aria-labelledby="headingEfektif">
@@ -529,7 +553,11 @@
                   <ul class="list-group list-group-flush">
                       @forelse($topLedProjects as $item)
                           <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
-                              <span>{{ optional($item->project)->project_name }}</span>
+                              <span>
+                                <a href="">
+                                  {{ optional($item->project)->project_name }}
+                                </a>
+                              </span>
                               <span class="badge bg-danger rounded-pill">Rp {{ number_format($item->total_kerugian, 0, ',', '.') }}</span>
                           </li>
                       @empty
@@ -607,44 +635,101 @@
         </div>
         </div>
         @endif
-        <div class="col-lg-6">
-          <div class="card h-100">
-              <div class="card-header">
-                  <h5 class="mb-0 fw-bold">Top 5 Eksposur Risiko (Annual {{ $currentYear }})</h5>
+        @if ($isProjectUnit)
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0 fw-bold">Top 5 Eksposur Risiko Proyek (Annual {{ $currentYear }})</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            @forelse($topEksposurAnnual as $item)
+                                <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
+                                    <span>
+                                      <a href="">
+                                        {{ $item->project_name }}
+                                      </a>
+                                    </span>
+                                    <span class="badge bg-warning text-dark rounded-pill">Rp {{ number_format($item->max_eksposur, 0, ',', '.') }}</span>
+                                </li>
+                            @empty
+                                <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
+                            @endforelse
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0 fw-bold">Top 5 Eksposur Risiko Proyek (Total s/d {{ $formattedPeriod }})</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            @forelse($topEksposurTotal as $item)
+                                <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
+                                    <span>
+                                      <a href="">
+                                        {{ $item->project_name }}
+                                      </a>
+                                    </span>
+                                    <span class="badge bg-warning text-dark rounded-pill">Rp {{ number_format($item->total_eksposur, 0, ',', '.') }}</span>
+                                </li>
+                            @empty
+                                <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
+                            @endforelse
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="col-lg-6">
+              <div class="card h-100">
+                  <div class="card-header">
+                      <h5 class="mb-0 fw-bold">Top 5 Eksposur Risiko (Annual {{ $currentYear }})</h5>
+                  </div>
+                  <div class="card-body">
+                      <ul class="list-group list-group-flush">
+                            @forelse($topEksposurAnnual as $item)
+                                <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
+                                    <span>
+                                      <a href="">
+                                        {{ optional($item->identifikasiRisiko)->peristiwa_risiko ?? 'Risiko ID: '.$item->identifikasi_risiko_id }}
+                                      </a>
+                                    </span>
+                                    <span class="badge bg-warning text-dark rounded-pill">Rp {{ number_format($item->max_eksposur, 0, ',', '.') }}</span>
+                                </li>
+                            @empty
+                                <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
+                            @endforelse
+                      </ul>
+                  </div>
               </div>
-              <div class="card-body">
-                  <ul class="list-group list-group-flush">
-                      @forelse($topEksposurAnnual as $item)
-                          <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
-                              <span>{{ optional(optional($item->identifikasiRisiko)->peristiwaRisiko)->title ?? 'Risiko ID: '.$item->identifikasi_risiko_id }}</span>
-                              <span class="badge bg-warning text-dark rounded-pill">Rp {{ number_format($item->max_eksposur, 0, ',', '.') }}</span>
-                          </li>
-                      @empty
-                          <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
-                      @endforelse
-                  </ul>
+            </div>
+            <div class="col-lg-6">
+              <div class="card h-100">
+                  <div class="card-header">
+                      <h5 class="mb-0 fw-bold">Top 5 Eksposur Risiko (Total s/d {{ $formattedPeriod }})</h5>
+                  </div>
+                  <div class="card-body">
+                      <ul class="list-group list-group-flush">
+                            @forelse($topEksposurTotal as $item)
+                                <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
+                                    <span>
+                                      <a href="">
+                                        {{ optional($item->identifikasiRisiko)->peristiwa_risiko ?? 'Risiko ID: '.$item->identifikasi_risiko_id }}
+                                      </a>
+                                    </span>
+                                    <span class="badge bg-warning text-dark rounded-pill">Rp {{ number_format($item->total_eksposur, 0, ',', '.') }}</span>
+                                </li>
+                            @empty
+                                <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
+                            @endforelse
+                      </ul>
+                  </div>
               </div>
-          </div>
-        </div>
-        <div class="col-lg-6">
-          <div class="card h-100">
-              <div class="card-header">
-                  <h5 class="mb-0 fw-bold">Top 5 Eksposur Risiko (Total s/d {{ $formattedPeriod }})</h5>
-              </div>
-              <div class="card-body">
-                  <ul class="list-group list-group-flush">
-                      @forelse($topEksposurTotal as $item)
-                          <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
-                              <span>{{ optional(optional($item->identifikasiRisiko)->peristiwaRisiko)->title ?? 'Risiko ID: '.$item->identifikasi_risiko_id }}</span>
-                              <span class="badge bg-warning text-dark rounded-pill">Rp {{ number_format($item->total_eksposur, 0, ',', '.') }}</span>
-                          </li>
-                      @empty
-                          <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
-                      @endforelse
-                  </ul>
-              </div>
-          </div>
-        </div>
+            </div>
+        @endif
     </div>
 @else
     <div class="alert alert-info text-center mt-5" role="alert">

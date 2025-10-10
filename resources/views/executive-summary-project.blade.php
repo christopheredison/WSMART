@@ -267,7 +267,7 @@
                                 @endfor
                             </select>
                         </div>
-                        <div class="col d-none">
+                        <div class="col">
                             <select class="form-select" id="tahunSelect">
                                 @foreach ($tahunMonitorings as $tahun)
                                 <option value="{{ $tahun }}" {{ $tahun == \Carbon\Carbon::createFromFormat('Y-m', $selectedPeriod)->format('Y') ? 'selected' : '' }}>{{ $tahun }}</option>
@@ -307,9 +307,8 @@
                 </div>
             </div>
             
-            {{-- DAFTAR RISIKO PROYEK --}}
             <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
-                <h3 class="h4 mb-0">Daftar Risiko Proyek</h3>
+                <h3 class="h4 mb-0">Daftar Risiko (Level Inheren: Moderate to High & High)</h3>
             </div>
             <div class="table-responsive">
                 <table class="table table-bordered table-hover table-sm table-strategi">
@@ -355,10 +354,10 @@
                                 R{{ $loop->iteration }}
                               </a>
                             </td>
-                            <td>{{ $projectRisk->peristiwaRisiko?->title ?? '-' }}</td>
+                            <td class="text-start">{{ $projectRisk->peristiwaRisiko?->title ?? '-' }}</td>
 
                             {{-- =================== Inherent Risk Data =================== --}}
-                            <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak, 0, ',', '.') : '-' }}</td>
+                            <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak, 0, ',', '.') : 'Rp 0' }}</td>
                             <td class="text-center">{{ optional(optional($projectRisk->projectRiskAnalisa)->skalaDampakObj)->tingkat ?? '-' }}</td>
                             <td class="text-center">{{ optional($projectRisk->projectRiskAnalisa)->nilai_probabilitas ? optional($projectRisk->projectRiskAnalisa)->nilai_probabilitas . '%' : '-' }}</td>
                             <td class="text-center">{{ optional(optional($projectRisk->projectRiskAnalisa)->skalaProbabilitas)->tingkat ?? '-' }}</td>
@@ -366,7 +365,7 @@
                             <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko ?? '-' }}</td>
 
                             {{-- =================== Residual Risk Data =================== --}}
-                            <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak_residual ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak_residual, 0, ',', '.') : '-' }}</td>
+                            <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak_residual ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak_residual, 0, ',', '.') : 'Rp 0' }}</td>
                             <td class="text-center">{{ optional(optional($projectRisk->projectRiskAnalisa)->skalaDampakResidualObj)->tingkat ?? '-' }}</td>
                             <td class="text-center">{{ optional($projectRisk->projectRiskAnalisa)->nilai_probabilitas_residual ? optional($projectRisk->projectRiskAnalisa)->nilai_probabilitas_residual . '%' : '-' }}</td>
                             <td class="text-center">{{ optional(optional($projectRisk->projectRiskAnalisa)->skalaProbabilitasResidual)->tingkat ?? '-' }}</td>

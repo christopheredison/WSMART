@@ -207,7 +207,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'script' => <<<JS
                     window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Atahun', $('#table-filter select[name="tahun"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
-                'active_state' => '(data, type, row) => row.is_closed != 1 && (!row.project_risk_monitoring || row.project_risk_monitoring?.status == 1)',
+                'active_state' => '(data, type, row) => true',
             ];
 
             $this->tableActions[] = [
@@ -353,9 +353,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $user = request()->user();
         $month = request()->month ?: '';
 
-        if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriode))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriode))) {
+        //     abort(403);
+        // }
 
         $quarter = request()->quarter ?: 1;
         $projectRisk = $projectPeriode->projectRisks()
@@ -661,9 +661,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         //perhitungan eksposur risiko
         if ($projectRisk->projectRiskAnalisa?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF) {
-            $toCreate['eksposur_risiko'] = floatval($toCreate['skala_dampak']) * (1/100) * floatval($toCreate['nilai_probabilitas']) * ($projectRisk->projectRiskAnalisa?->risk_limit ?: 0);
+            $toCreate['eksposure_risiko'] = floatval($toCreate['skala_dampak']) * (1/100) * floatval($toCreate['nilai_probabilitas']) * ($projectRisk->projectRiskAnalisa?->risk_limit ?: 0);
         } elseif ($projectRisk->projectRiskAnalisa?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
-            $toCreate['eksposur_risiko'] = floatval($toCreate['nilai_dampak']) * floatval($toCreate['nilai_probabilitas']) / 100;
+            $toCreate['eksposure_risiko'] = floatval($toCreate['nilai_dampak']) * floatval($toCreate['nilai_probabilitas']) / 100;
         }
 
         $projectMonitoring = $projectRisk->projectRiskMonitoring()->create($toCreate);
