@@ -89,6 +89,55 @@
           </ul>
         </li>
         <!-- Dashboard Menu End -->
+        
+        <!-- Executive Summary Menu Start -->
+        <li class="nav-item">
+          @php $shouldOpen = in_array(url()->current(), []) @endphp
+          <a class="nav-link dropdown-indicator {{ $shouldOpen ? '' : 'collapsed' }} {{ request()->is('executive-summary-unit') || request()->is('executive-summary-proyek') || request()->is('executive-summary-corporate') ? 'active' : '' }}"
+            href="#executive-summary" role="button" data-bs-toggle="collapse"
+            aria-expanded="{{ $shouldOpen ? 'true' : 'false' }}" aria-controls="executive-summary">
+            <div class="d-flex align-items-center">
+              <i class="menu-icon tf-icons bx bx-tachometer"></i>
+              <span class="nav-link-text">Executive Summary</span>
+            </div>
+          </a>
+          <ul
+            class="nav collapse {{ $shouldOpen ? 'show' : '' }} {{ request()->is('executive-summary-unit') || request()->is('executive-summary-proyek') || request()->is('executive-summary-corporate') ? 'show' : '' }}"
+            id="executive-summary">
+
+            @can('corporate_dashboard_menu')
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('executive-summary-corporate') ? 'active' : '' }}" href="/executive-summary-corporate">
+                <span class="nav-link-text">Corporate</span>
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('executive-summary-corporate-population') ? 'active' : '' }}" href="/executive-summary-corporate-population">
+                <span class="nav-link-text">Corporate Population</span>
+              </a>
+            </li>
+            @endcan
+
+            @can('unit_dashboard_menu')
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('executive-summary-unit') ? 'active' : '' }}" href="/executive-summary-unit">
+                <span class="nav-link-text">Divisi</span>
+              </a>
+            </li>
+            @endcan
+
+            @can('proyek_dashboard_menu')
+            <li class="nav-item"><a class="nav-link {{ request()->is('executive-summary-project') ? 'active' : '' }}"
+                href="/executive-summary-project">
+                <span class="nav-link-text">Proyek</span>
+              </a>
+            </li>
+            @endcan
+          </ul>
+        </li>
+        <!-- Executive Summary Menu End -->
+
         @can('corporate_risk_view')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->is('corporate-risk') ? 'active' : '' }}" href="/corporate-risk/periods"

@@ -42,14 +42,14 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         }
 
         $userLevel = Auth::user()->level_id;
-        $quarter = request()->input('filters.quarter') ?: 1;
-        $tahun = request()->input('filters.tahun') ?: date('Y');
+        $quarter = request()->input('quarter', request()->input('filters.quarter', 1));
+        $tahun = request()->input('tahun', request()->input('filters.tahun', date('Y')));
 
         $defaultMonth = '1';
         if ($quarter == 2) $defaultMonth = '4';
         if ($quarter == 3) $defaultMonth = '7';
         if ($quarter == 4) $defaultMonth = '10';
-        $month = request()->input('filters.month', $defaultMonth);
+        $month = request()->input('month', request()->input('filters.month', $defaultMonth));
 
         $this->callbackQuery = function ($query) use ($projectPeriode, $quarter, $tahun, $month) {
           $query->where('project_periode_list_id', $projectPeriode->id)
@@ -64,10 +64,10 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         // Mapping Level Verifikator
         $levelNames = Level::whereIn('id', [7, 1, 2])->pluck('name', 'id');
         $verificatorMap = [
-            ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_PROJECT => $levelNames[7] ?? 'Risk Owner Project', // 2
-            ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI => $levelNames[1] ?? 'Risk Officer Divisi', // 3
+            ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_PROJECT => $levelNames[7] ? 'Risk Owner Project' :  'Risk Owner Project', // 2
+            ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI => $levelNames[1] ? 'Risk Officer Divisi' : 'Risk Officer Divisi', // 3
             ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR => 'Risk Officer Divisi MR', // 4
-            ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR => $levelNames[2] ?? 'Risk Owner Divisi MR', // 5
+            ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR => $levelNames[2] ?'Risk Owner Divisi MR' :  'Risk Owner Divisi MR', // 5
         ];
 
 
@@ -176,7 +176,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                         }
                     }
                     if (status == '.ProjectRiskMonitoring::STATUS_PUBLISHED.') {
-                        return `<div class="badge bg-primary">Terverifikasi</div>`;
+                        return `<div class="badge bg-primary">Selesai</div>`;
                     }
                     return "-";
                 }',
@@ -207,14 +207,15 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'script' => <<<JS
                     window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Atahun', $('#table-filter select[name="tahun"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
-                'active_state' => '(data, type, row) => row.is_closed != 1 && (!row.project_risk_monitoring || row.project_risk_monitoring?.status == 1)',
+                'active_state' => '(data, type, row) => true',
             ];
 
             $this->tableActions[] = [
-                'label' => 'Change',
+                'label' => 'Change to LED',
                 'btn_icon' => false,
                 'action' => 'change_to_led',
                 'active_state' => '(data, type, row) => row.is_closed != 1',
+                'extra_attrs' => [ 'style' => 'font-size: 14px; font-weight: 400;' ]
             ];
         } 
 
@@ -269,7 +270,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             return $projectRisk->peristiwaRisiko;
         })->flatten()->unique('id');
 
-        $tahunOptions = (int) $projectPeriode->created_at->format('Y');
+        $tahunOptions = (int) $projectPeriode->created_at?->format('Y') ?? date('Y');
         $optionTahuns = [];
         for ($i = $tahunOptions; $i <= $tahunOptions + 9; $i++) {
             $optionTahuns[$i] = $i;
@@ -352,9 +353,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $user = request()->user();
         $month = request()->month ?: '';
 
-        if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriode))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriode))) {
+        //     abort(403);
+        // }
 
         $quarter = request()->quarter ?: 1;
         $projectRisk = $projectPeriode->projectRisks()
@@ -660,9 +661,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         //perhitungan eksposur risiko
         if ($projectRisk->projectRiskAnalisa?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF) {
-            $toCreate['eksposur_risiko'] = floatval($toCreate['skala_dampak']) * (1/100) * floatval($toCreate['nilai_probabilitas']) * ($projectRisk->projectRiskAnalisa?->risk_limit ?: 0);
+            $toCreate['eksposure_risiko'] = floatval($toCreate['skala_dampak']) * (1/100) * floatval($toCreate['nilai_probabilitas']) * ($projectRisk->projectRiskAnalisa?->risk_limit ?: 0);
         } elseif ($projectRisk->projectRiskAnalisa?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
-            $toCreate['eksposur_risiko'] = floatval($toCreate['nilai_dampak']) * floatval($toCreate['nilai_probabilitas']) / 100;
+            $toCreate['eksposure_risiko'] = floatval($toCreate['nilai_dampak']) * floatval($toCreate['nilai_probabilitas']) / 100;
         }
 
         $projectMonitoring = $projectRisk->projectRiskMonitoring()->create($toCreate);
@@ -823,7 +824,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                         return $monitoring->is_approved || $monitoring->risiko?->is_closed;
                     });
     
-                    $buttonText = 'Verifikasi Monitoring';
+                    $buttonText = 'Terima Semua Monitoring';
                     $params = ['status_dari' => ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR, 'status_ke' => ProjectRiskMonitoring::STATUS_PUBLISHED, 'final' => true];
                     $disabled = $allApproved ? '' : 'disabled';
                 }

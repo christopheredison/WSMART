@@ -33,6 +33,11 @@ class UnitRiskMonitoring extends Model
         'is_revision' => 'boolean',
     ];
 
+    public function identifikasiRisiko()
+    {
+        return $this->belongsTo(IdentifikasiRisiko::class, 'identifikasi_risiko_id');
+    }
+
     public function perlakuanPenyebabRisikos()
     {
         return $this->hasMany(PerlakuanPenyebabRisikoUnit::class, 'penyebab_risiko_id', 'identifikasi_risiko_id');
