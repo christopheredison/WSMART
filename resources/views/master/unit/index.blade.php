@@ -25,6 +25,15 @@
         </div>
       </div>
       <div class="card-body">
+        <div class="mb-3" style="max-width: 360px;">
+          <form method="GET" action="{{ route('unit.index') }}">
+            <select name="status" class="form-select" onchange="this.form.submit()">
+              <option value="valid" {{ ($status ?? 'valid') === 'valid' ? 'selected' : '' }}>Valid</option>
+              <option value="invalid" {{ ($status ?? 'valid') === 'invalid' ? 'selected' : '' }}>Invalid</option>
+              <option value="all" {{ ($status ?? 'valid') === 'all' ? 'selected' : '' }}>All</option>
+            </select>
+          </form>
+        </div>
         <div class="position-relative">
           <div class="row row-bulk-select g-2">
             <div class="col-6 col-md-4 col-lg-3 col-xxl-2 mb-3 d-none" id="bulk-select-actions">
@@ -53,6 +62,8 @@
               <th class="sort" data-sort="unit_type_id">Unit Type</th>
               <th class="sort" data-sort="name">Name</th>
               <th class="sort" data-sort="parent_id">Parent</th>
+              <th class="sort" data-sort="valid_from">Valid From</th>
+              <th class="sort" data-sort="valid_to">Valid To</th>
               <th class="no-sort white-space-nowrap" data-sort="action">Action</th>
             </tr>
           </thead>
@@ -75,6 +86,8 @@
                 N/A
                 @endif
               </td>
+              <td class="valid_from">{{ $item->valid_from ? $item->valid_from->format('Y-m-d') : 'N/A' }}</td>
+              <td class="valid_to">{{ $item->valid_to ? $item->valid_to->format('Y-m-d') : 'N/A' }}</td>
               <td class="white-space-nowrap">
                 @if ($item->trashed())
                 <button type="submit" class="btn-input-icon ps-0" data-bs-toggle="modal"

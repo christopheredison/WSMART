@@ -11,11 +11,27 @@ use Illuminate\Support\Facades\Validator;
 
 class UnitController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $unit = Unit::with('unitType')->withTrashed()->get();
+        $status = $request->query('status', 'valid');
+        $today = now()->toDateString();
 
-        return view('master.unit.index', compact('unit'));
+        $query = Unit::with(['unitType', 'parent'])->withTrashed();
+
+        if ($status === 'valid') {
+            // Tampilkan yang masih valid: valid_to null atau >= hari ini, dan valid_from null atau <= hari ini
+            $query->where(function ($q) use ($today) {
+                $q->whereNull('valid_to')->orWhereDate('valid_to', '>=', $today);
+            })->where(function ($q) use ($today) {
+                $q->whereNull('valid_from')->orWhereDate('valid_from', '<=', $today);
+            });
+        } elseif ($status === 'invalid') {
+            // Tampilkan yang sudah tidak valid: valid_to terisi dan < hari ini
+            $query->whereNotNull('valid_to')->whereDate('valid_to', '<', $today);
+        } // status 'all' menampilkan semua
+
+        $unit = $query->get();
+        return view('master.unit.index', compact('unit', 'status'));
     }
 
     public function create()

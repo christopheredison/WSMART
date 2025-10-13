@@ -33,6 +33,13 @@ class Unit extends Model
         'cost_center_parent',
         'cost_center_parent_deskripsi',
         'unit_mr',
+        'valid_from',
+        'valid_to',
+    ];
+
+    protected $casts = [
+        'valid_from' => 'date:Y-m-d',
+        'valid_to' => 'date:Y-m-d',
     ];
 
     public const UNIT_TYPE_DIVISION = 1;
