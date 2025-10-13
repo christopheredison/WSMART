@@ -5,9 +5,9 @@
 <div class="row mb-7">
   <div class="col-12">
     <div class="card border-0 dashboard-header">
-      <img src="../assets/img/dashboard-header6.webp" alt="dashboard">
-      <div class="card-header text-white border-0 mt-auto mb-5">
-        <h1 class="mb-2">Risk Dashboard Proyek</h1>
+      <img src="../assets/img/dashboard-header3.webp" alt="dashboard">
+      <div class="card-header border-0">
+        <h1 class="mb-auto mt-3 mt-md-6">Risk Dashboard Proyek</h1>
         <h6>Statistik per tanggal {{ now()->format('d M Y') }}</h6>
       </div>
     </div>
@@ -20,7 +20,7 @@
     <form id="filter-form" action="{{ url()->current() }}" method="GET">
       <div class="row g-3">
         <div class="col-md-4">
-          <select name="unit_id" id="unit_selector" class="form-select select2" onchange="this.form.submit()">
+          <select name="unit_id" id="unit_selector" class="form-select select2  js-select-hide-search" onchange="this.form.submit()">
             <option value="" selected>Semua Divisi</option>
             @foreach ($units as $unit)
               <option value="{{ $unit->id }}" {{ $unit->id == $selectedUnitId ? 'selected' : '' }}>
@@ -302,6 +302,7 @@
                 <th>Skala Dampak</th>
                 <th>Nilai Risiko</th>
                 <th>Level Risiko</th>
+                <th class="text-center">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -340,6 +341,7 @@
                 <th>Deskripsi Kejadian</th>
                 <th>Kategori Kejadian</th>
                 <th>Nilai Kerugian Finansial</th>
+                <th class="text-center">Aksi</th>
               </tr>
             </thead>
             <tbody id="top-led-body">
@@ -669,13 +671,15 @@ function fillPrsi(data) {
 
 function fillTopRisk(data) {
   if (data.length === 0) {
-    $('#top-risk-card table tbody').html('<tr><td colspan="9" class="text-center">Tidak ada data</td></tr>');
+    $('#top-risk-card table tbody').html('<tr><td colspan="10" class="text-center">Tidak ada data</td></tr>');
     return;
   }
 
   var table = $('#top-risk-card table tbody');
   table.empty();
   data.forEach(function(item, index) {
+    const riskDetailUrl = `{{ url('projects') }}/${item.project_id}/risks/${item.id}/view`;
+
     var row = $('<tr></tr>');
     row.append('<td>' + (index + 1) + '</td>');
     row.append('<td>' + item.nama_proyek + '</td>');
@@ -686,6 +690,14 @@ function fillTopRisk(data) {
     row.append('<td>' + (item.skala_dampak || '-') + '</td>');
     row.append('<td>' + (item.nilai_risiko || '-') + '</td>');
     row.append(`<td class="bg-${item.level_risiko?.toLowerCase().replaceAll('to ', '').replaceAll(' ', '-')}">` + (item.level_risiko || '-') + '</td>');
+    row.append(`
+      <td class="text-center">
+        <a href="${riskDetailUrl}" class="btn btn-sm btn-light-primary btn-icon" data-bs-toggle="tooltip" title="Lihat Detail">
+          <i class='bx bx-show'></i>
+        </a>
+      </td>
+    `);
+
     table.append(row);
   });
 }
@@ -697,13 +709,15 @@ function fillTopLed(data) {
     if (data.length === 0) {
         tableBody.append(`
             <tr>
-                <td colspan="7" class="dt-empty text-center">No data available</td>
+                <td colspan="8" class="dt-empty text-center">No data available</td>
             </tr>
         `);
         return;
     }
 
     data.forEach((item, index) => {
+        const ledDetailUrl = `{{ url('project-led') }}/${item.id}`;
+
         const formattedKerugian = new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
@@ -719,6 +733,11 @@ function fillTopLed(data) {
                 <td>${item.deskripsi_kejadian || '-'}</td>
                 <td>${item.kategori_kejadian || '-'}</td>
                 <td>${formattedKerugian || 'Rp 0'}</td>
+                <td class="text-center">
+                  <a href="${ledDetailUrl}" class="btn btn-sm btn-light-primary btn-icon" data-bs-toggle="tooltip" title="Lihat Detail">
+                    <i class='bx bx-show'></i>
+                  </a>
+                </td>
             </tr>
         `);
     });

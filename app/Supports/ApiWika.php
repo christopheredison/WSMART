@@ -105,4 +105,14 @@ class ApiWika
         
         return $result;
     }
+
+    public function getHasilUsahaProject($period, $profit_center)
+    {
+        $result = $this->apiRequest('GET', 'data/proyek/hasil_usaha', [
+            'period' => $period,
+            'profit_center' => $profit_center,
+        ]);
+
+        return $result;
+    }
 }

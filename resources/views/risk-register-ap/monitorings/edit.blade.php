@@ -624,6 +624,14 @@ function validateRealisasiForm() {
 
     fieldsToValidate.forEach(function(fieldSelector) {
         const field = $(fieldSelector);
+
+        if (field.is(':disabled')) {
+            // Hapus error sebelumnya jika ada
+            field.removeClass('is-invalid');
+            field.closest('.form-floating').find('.invalid-feedback').remove();
+            return; // Lanjut ke field berikutnya
+        }
+        
         field.removeClass('is-invalid');
         field.closest('.form-floating').find('.invalid-feedback').remove();
 
