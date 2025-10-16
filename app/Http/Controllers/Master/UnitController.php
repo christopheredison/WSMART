@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Unit;
 use App\Models\UnitType;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class UnitController extends Controller
 {
@@ -72,9 +73,19 @@ class UnitController extends Controller
 
     public function update(Request $request, Unit $unit)
     {
+        // Normalisasi tanggal ke format Y-m-d agar validasi konsisten
+        $normalizedFrom = $this->normalizeDate($request->valid_from);
+        $normalizedTo = $this->normalizeDate($request->valid_to);
+        $request->merge([
+            'valid_from' => $normalizedFrom,
+            'valid_to' => $normalizedTo,
+        ]);
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'unit_type_id' => 'required',
+            'valid_from' => 'nullable|date',
+            'valid_to' => 'nullable|date|after_or_equal:valid_from',
             // 'parent_id' => 'required',
         ]);
 
@@ -82,14 +93,37 @@ class UnitController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
+        // Gunakan nilai yang telah dinormalisasi
+        $validFrom = $request->valid_from ?: null;
+        $validTo = $request->valid_to ?: null;
+
         $unit->update([
             'name' => $request->name,
             'unit_type_id' => $request->unit_type_id,
             'parent_id' => $request->parent_id ?? 0,
             'unit_api_id' => $request->unit_api_id,
+            'valid_from' => $validFrom,
+            'valid_to' => $validTo,
         ]);
 
         return redirect()->route('unit.index')->with('success', 'Unit updated successfully!');
+    }
+
+    /**
+     * Normalisasi tanggal dari berbagai format ke Y-m-d.
+     */
+    private function normalizeDate($value)
+    {
+        if (!$value) return null;
+        try {
+            if (str_contains($value, '/')) {
+                return Carbon::createFromFormat('d/m/Y', $value)->format('Y-m-d');
+            }
+            // Contoh: "30 November 2025" atau langsung "Y-m-d"
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     public function destroy(Unit $unit)

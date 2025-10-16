@@ -215,6 +215,12 @@ class RiskRegisterUnitController extends Controller
             ],
         ];
 
+        // Hitung status expired divisi berdasarkan valid_to unit
+        $currentUnit = Unit::find($unitId);
+        $today = Carbon::today();
+        $isStillValid = !$currentUnit?->valid_to || ($currentUnit?->valid_to && ($currentUnit->valid_to->isSameDay($today) || $currentUnit->valid_to->isAfter($today)));
+        $unitExpired = !$isStillValid;
+
         return view('risk-register-unit.index', compact(
             'risiko',
             'unit',
@@ -232,6 +238,7 @@ class RiskRegisterUnitController extends Controller
             'avgQuantitativeExposure',
             'unitId',
             'tableLegend',
+            'unitExpired',
         ));
     }
 
@@ -292,7 +299,7 @@ class RiskRegisterUnitController extends Controller
         return view('risk-register-unit.create',compact('kategoriRisiko','peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings','areaDampak','jenisRisiko','tck','selectedPeriode', 'projects', 'projectRisks'));
     }
 
-    public function RiskPeriodeList()
+    public function RiskPeriodeList(Request $request)
     {
         $tableLegend = [
             [
@@ -312,11 +319,13 @@ class RiskRegisterUnitController extends Controller
               'label' => 'Loss Event'
             ],
         ];
-        // Ambil semua data periode
+        // Ambil semua data periode (untuk dropdown filter)
         $periodes = Periode::orderBy('tahun', 'desc')->get();
 
-        // Ambil periode aktif jika ada
+        // Ambil periode aktif jika ada dan set sebagai default pilihan
         $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
+        $selectedPeriodeId = $request->query('pid') ?? ($activePeriode?->id);
+        $selectedPeriode = $selectedPeriodeId ? Periode::find($selectedPeriodeId) : null;
         $userUnit = auth()->user()->unit;
         $units = [];
 
@@ -326,33 +335,49 @@ class RiskRegisterUnitController extends Controller
         if ($viewAllDivision) {
             $units = Unit::where('unit_type_id', 1)->pluck('name', 'id');
             $displayUnits = Unit::where('unit_type_id', 1)->get();
-            $periodes = Periode::orderBy('tahun', 'desc')->get();
 
             foreach ($displayUnits as $unit) {
-                foreach ($periodes as $periode) {
+                if ($selectedPeriode) {
+                    $hasRiskInSelectedPeriode = IdentifikasiRisiko::where('unit_id', $unit->id)
+                        ->where('periode_id', $selectedPeriode->id)
+                        ->exists();
+                    $isStillValid = !$unit->valid_to || $unit->valid_to->isSameDay(\Carbon\Carbon::today()) || $unit->valid_to->isAfter(\Carbon\Carbon::today());
+                    $unitStatus = ($hasRiskInSelectedPeriode && !$isStillValid) ? 'expired' : 'active';
+                    $riskCount = IdentifikasiRisiko::where('unit_id', $unit->id)
+                        ->where('periode_id', $selectedPeriode->id)
+                        ->count();
                     $dataToDisplay->push([
                         'unit' => $unit,
-                        'periode' => $periode,
+                        'periode' => $selectedPeriode,
+                        'unit_status' => $unitStatus,
+                        'risk_count' => $riskCount,
                     ]);
                 }
             }
         } else {
             $units = Unit::where('unit_type_id', 1)->where('id', $userUnit->id)->pluck('name', 'id');
-            $periodes = Periode::orderBy('tahun', 'desc')->get();
-
-            if ($userUnit) {
-                foreach ($periodes as $periode) {
-                    $dataToDisplay->push([
-                        'unit' => $userUnit,
-                        'periode' => $periode,
-                    ]);
-                }
+            if ($userUnit && $selectedPeriode) {
+                $hasRiskInSelectedPeriode = IdentifikasiRisiko::where('unit_id', $userUnit->id)
+                    ->where('periode_id', $selectedPeriode->id)
+                    ->exists();
+                $isStillValid = !$userUnit->valid_to || $userUnit->valid_to->isSameDay(\Carbon\Carbon::today()) || $userUnit->valid_to->isAfter(\Carbon\Carbon::today());
+                $unitStatus = ($hasRiskInSelectedPeriode && !$isStillValid) ? 'expired' : 'active';
+                $riskCount = IdentifikasiRisiko::where('unit_id', $userUnit->id)
+                    ->where('periode_id', $selectedPeriode->id)
+                    ->count();
+                $dataToDisplay->push([
+                    'unit' => $userUnit,
+                    'periode' => $selectedPeriode,
+                    'unit_status' => $unitStatus,
+                    'risk_count' => $riskCount,
+                ]);
             }
         }
 
         return view('risk-register-unit.risk-period-list', compact(
           'periodes', 
           'activePeriode', 
+          'selectedPeriode',
           'tableLegend', 
           'dataToDisplay',
           'viewAllDivision',
