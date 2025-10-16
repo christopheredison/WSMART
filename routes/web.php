@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BackupController;
+//use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CapaianTckController;
 use App\Http\Controllers\CapaianTkmruController;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +49,7 @@ use App\Http\Controllers\Master\ProjectTypeController;
 use App\Http\Controllers\Master\QuestionController;
 use App\Http\Controllers\Master\RMIPeriodController;
 use App\Http\Controllers\Project\ProjectPeriodeListController;
+use App\Http\Controllers\OpportunityController;
 use App\Http\Controllers\Project\ProjectRiskController;
 use App\Http\Controllers\Project\ProjectRiskMonitoringController;
 use App\Http\Controllers\Project\ProjectRiskMonitoringDocumentController;
@@ -112,7 +114,16 @@ Route::get('/callback-sso', [LoginController::class, 'callbackSSO']);
 
 Auth::routes();
 
-Route::group(['middleware' => ['auth']], function() {
+Route::group(['middleware' => ['auth']], function () {
+    
+    Route::post('/opportunities', [OpportunityController::class, 'store'])->name('opportunities.store');
+    Route::put('/opportunities/{id}', [OpportunityController::class, 'update'])->name('opportunities.update');
+    Route::delete('/opportunities/{id}', [OpportunityController::class, 'destroy'])->name('opportunities.destroy');
+    Route::get('/opportunities/monitoring/{risikoId}', [OpportunityController::class, 'getOpportunities'])->name('opportunities.get');
+
+    // Get Risiko ID from Monitoring
+    Route::get('/monitoring/{id}/get-risiko-id', [RiskRegisterUnitMonitoringController::class, 'getRisikoId'])->name('monitoring.get-risiko-id');
+    
     Route::get('/get-sektors/{divisiId}', function ($divisiId) {
         $sektors = ProjectSektor::where('project_divisi_id', $divisiId)
                     ->orderBy('sektor_name')
@@ -685,3 +696,13 @@ Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->
 
     Route::get('/get-division-risks/{unit}', [App\Http\Controllers\CorporateRiskController::class, 'getDivisionRisks'])->name('get-division-risks');
 });
+
+// Notification Routes
+// Route::prefix('notifications')->middleware(['auth'])->group(function () {
+//     Route::get('/', [NotificationController::class, 'index'])->name('notifications.index');
+//     Route::get('/unread', [NotificationController::class, 'getUnreadNotifications'])->name('notifications.unread');
+//     Route::get('/{id}', [NotificationController::class, 'show'])->name('notifications.show');
+//     Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+//     Route::post('/{id}/unread', [NotificationController::class, 'markAsUnread'])->name('notifications.unread');
+//     Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
+// });
