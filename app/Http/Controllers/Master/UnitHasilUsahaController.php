@@ -23,7 +23,9 @@ class UnitHasilUsahaController extends Controller
             ->addIndexColumn()
             ->addColumn('unit_name', fn($row) => $row->unit->name ?? '-')
             ->addColumn('cost_center', fn($row) => $row->cost_center)
-            ->editColumn('lsp_ri', fn($row) => 'Rp ' . number_format($row->lsp_ri, 0, ',', '.'))
+            ->addColumn('period', fn($row) => $row->period ? preg_replace('/(\d{4})(\d{2})/', '$1-$2', $row->period) : '-')
+            // ->editColumn('lsp_ri', fn($row) => 'Rp ' . number_format($row->lsp_ri, 0, ',', '.'))
+            ->editColumn('kontrak_review', fn($row) => 'Rp ' . number_format($row->kontrak_review, 0, ',', '.'))
             ->addColumn('action', function($row){
                 $editBtn = '<button class="btn-input-icon btn-edit" data-id="'.$row->id.'" data-bs-toggle="tooltip" title="Edit"><i class="bx bx-edit"></i></button>';
                 $deleteBtn = '<button class="btn-input-icon text-danger btn-delete ms-1" data-id="'.$row->id.'" data-bs-toggle="tooltip" title="Hapus"><i class="bx bx-trash"></i></button>';

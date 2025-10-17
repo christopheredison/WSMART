@@ -2,33 +2,28 @@
 
 namespace App\Http\Controllers\Master;
 
-use App\Http\Controllers\Controller; // <-- Meng-extend Controller dasar
+use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\ProjectHasilUsaha;
 use Illuminate\Http\Request;
 use App\Supports\ApiWika;
-use DataTables; // <-- Pastikan Anda sudah install yajra/laravel-datatables
+use DataTables;
 
 class ProjectHasilUsahaController extends Controller
 {
-    /**
-     * Menampilkan halaman utama CRUD.
-     */
     public function index()
     {
         return view('master.project-hasil-usaha.index');
     }
 
-    /**
-     * Menyediakan data untuk DataTable.
-     */
     public function data()
     {
         $query = ProjectHasilUsaha::with('project');
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('project_name', fn($row) => $row->project->project_name ?? '-')
-            ->editColumn('lsp_ri', fn($row) => 'Rp ' . number_format($row->lsp_ri, 0, ',', '.'))
+            ->addColumn('period', fn($row) => $row->period ? preg_replace('/(\d{4})(\d{2})/', '$1-$2', $row->period) : '-')
+            // ->editColumn('lsp_ri', fn($row) => 'Rp ' . number_format($row->lsp_ri, 0, ',', '.'))
             ->editColumn('kontrak_review', fn($row) => 'Rp ' . number_format($row->kontrak_review, 0, ',', '.'))
             ->addColumn('action', function($row){
                 $editBtn = '<button class="btn-input-icon btn-edit" data-id="'.$row->id.'" data-bs-toggle="tooltip" title="Edit"><i class="bx bx-edit"></i></button>';
@@ -40,9 +35,6 @@ class ProjectHasilUsahaController extends Controller
             ->make(true);
     }
 
-    /**
-     * Menyimpan data baru.
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -55,18 +47,12 @@ class ProjectHasilUsahaController extends Controller
         return response()->json(['success' => 'Data berhasil disimpan.']);
     }
 
-    /**
-     * Mengambil data untuk form edit.
-     */
     public function edit($id)
     {
         $data = ProjectHasilUsaha::findOrFail($id);
         return response()->json($data);
     }
 
-    /**
-     * Memperbarui data yang ada.
-     */
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -80,18 +66,12 @@ class ProjectHasilUsahaController extends Controller
         return response()->json(['success' => 'Data berhasil diperbarui.']);
     }
 
-    /**
-     * Menghapus data.
-     */
     public function destroy($id)
     {
         ProjectHasilUsaha::destroy($id);
         return response()->json(['success' => 'Data berhasil dihapus.']);
     }
 
-    /**
-     * Menjalankan sinkronisasi massal.
-     */
     public function syncAll(Request $request)
     {
         // Logika syncAll Anda tetap sama seperti sebelumnya

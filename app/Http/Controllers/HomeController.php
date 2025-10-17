@@ -24,6 +24,7 @@ use App\Models\ProjectHasilUsaha;
 use App\Models\KRIUnitMonitoring;
 use App\Models\KRIProjectMonitoring;
 use App\Models\UnitRiskMonitoring;
+use App\Models\UnitHasilUsaha;
 use Illuminate\Http\Request;
 use App\Supports\ApiWika;
 use Auth;
@@ -1492,32 +1493,27 @@ class HomeController extends Controller
             }
 
             try {
-                $periodForApi = Carbon::createFromFormat('Y-m', $selectedPeriod)->format('Ym');
+                $periodForApi = \Carbon\Carbon::createFromFormat('Y-m', $selectedPeriod)->format('Ym');
                 $profitCenter = $selectedProject->meta['profit_center'] ?? null;
-                $hasilUsaha = null;
+                $hasilUsahaRecord = null;
 
                 if ($profitCenter) {
-                    $existingData = ProjectHasilUsaha::where('profit_center', $profitCenter)
-                        ->where('period', $periodForApi)
-                        ->first();
+                    // 1. Cek data di database terlebih dahulu
+                    $hasilUsahaRecord = ProjectHasilUsaha::where('project_id', $selectedProject->id)->where('period', $periodForApi)->first();
 
-                    if ($existingData) {
-                        $hasilUsaha = $existingData->response_data;
-                    } else {
-                        // Jika tidak ada, panggil API
-                        $apiResponse = (new ApiWika())->getHasilUsahaProject($periodForApi, $profitCenter);
+                    // 2. Jika tidak ada, panggil API dan simpan hasilnya
+                    if (!$hasilUsahaRecord) {
+                        $apiResponse = (new \App\Services\ApiWika())->getHasilUsahaProject($periodForApi, $profitCenter);
 
-                        // Jika API sukses, simpan hasilnya ke database
-                        if ($apiResponse && $apiResponse['status'] && isset($apiResponse['data'])) {
+                        if ($apiResponse && $apiResponse['status'] && isset($apiResponse['data']['hasil_usaha'])) {
                             $apiData = $apiResponse['data']['hasil_usaha'];
                             
-                            ProjectHasilUsaha::updateOrCreate(
+                            // Buat record baru di DB, dan simpan hasilnya ke $hasilUsahaRecord
+                            $hasilUsahaRecord = ProjectHasilUsaha::updateOrCreate(
+                                ['project_id' => $selectedProject->id, 'period' => $periodForApi],
                                 [
-                                    'profit_center' => $profitCenter,
-                                    'period' => $periodForApi
-                                ],
-                                [
-                                    'project_id' => $selectedProject->id,
+                                    'profit_center'   => $profitCenter,
+                                    'response_data'   => $apiResponse['data'],
                                     'kontrak_review'    => $apiData['kontrak_review'] ?? 0,
                                     'progress_fisik_ra' => $apiData['progress_fisik_ra'] ?? 0,
                                     'progress_fisik_ri' => $apiData['progress_fisik_ri'] ?? 0,
@@ -1527,34 +1523,28 @@ class HomeController extends Controller
                                     'lsp_ra'            => $apiData['lsp_ra'] ?? 0,
                                     'lsp_ri'            => $apiData['lsp_ri'] ?? 0,
                                     'lsp_proyeksi'      => $apiData['lsp_proyeksi'] ?? 0,
-                                    'response_data' => $apiResponse['data']
                                 ]
                             );
-                            $hasilUsaha = $apiResponse;
                         }
                     }
-                    $hasilUsaha = (new ApiWika())->getHasilUsahaProject($periodForApi, $profitCenter);
 
-                    // dd($hasilUsaha);
-                    if ($hasilUsaha && $hasilUsaha['status'] && isset($hasilUsaha['data']['hasil_usaha'])) {
-                        $apiData = $hasilUsaha['data']['hasil_usaha'];
-
-                        $summaryData['omset_kontrak'] = $apiData['kontrak_review'] ?? 0;
-                        $summaryData['omset_penjualan_sd_bulan'] = $apiData['penjualan_ri'] ?? 0;                        
-                        $summaryData['progress_sd_bulan'] = ($summaryData['omset_kontrak'] > 0) 
-                            ? ($summaryData['omset_penjualan_sd_bulan'] / $summaryData['omset_kontrak']) * 100 
+                    // 3. Sekarang, isi $summaryData dari $hasilUsahaRecord (baik dari DB maupun API)
+                    if ($hasilUsahaRecord) {
+                        $summaryData['omset_kontrak'] = $hasilUsahaRecord->kontrak_review;
+                        $summaryData['omset_penjualan_sd_bulan'] = $hasilUsahaRecord->penjualan_ri;
+                        $summaryData['lsp_rencana_sd_bulan'] = $hasilUsahaRecord->lsp_ra;
+                        $summaryData['lsp_realisasi_sd_bulan'] = $hasilUsahaRecord->lsp_ri;
+                        $summaryData['omset_penjualan_sd_selesai'] = $hasilUsahaRecord->penjualan_ra;
+                        $summaryData['lsp_rencana_sd_selesai'] = $hasilUsahaRecord->lsp_review;
+                        $summaryData['lsp_realisasi_sd_selesai'] = $hasilUsahaRecord->lsp_proyeksi;
+                        
+                        $summaryData['progress_sd_bulan'] = ($summaryData['omset_kontrak'] > 0)
+                            ? ($summaryData['omset_penjualan_sd_bulan'] / $summaryData['omset_kontrak']) * 100
                             : 0;
-
-                        $summaryData['lsp_rencana_sd_bulan'] = $apiData['lsp_ra'] ?? 0;
-                        $summaryData['lsp_realisasi_sd_bulan'] = $apiData['lsp_ri'] ?? 0;
-
-                        $summaryData['lsp_rencana_sd_selesai'] = $apiData['lsp_review'] ?? 0;
-                        $summaryData['lsp_realisasi_sd_selesai'] = $apiData['lsp_proyeksi'] ?? 0;
-                        $summaryData['omset_penjualan_sd_selesai'] = $apiData['penjualan_ra'];
                     }
                 }
             } catch (\Exception $e) {
-                Log::channel('wikaapi')->error("Request API Hasil Usaha Project gagal", [
+                Log::channel('wikaapi')->error("Gagal mengambil atau memproses data Hasil Usaha Project", [
                     'project_id' => $selectedProject->id,
                     'error' => $e->getMessage()
                 ]);
@@ -1730,18 +1720,18 @@ class HomeController extends Controller
         $selectedUnit = $selectedUnitId ? Unit::find($selectedUnitId) : null;
 
         $summaryData = [
-            'omset_penjualan_sd_bulan'      => 0,
-            'lsp_rencana_sd_bulan'          => 0,
-            'lsp_realisasi_sd_bulan'        => 0,
-            'omset_penjualan_sd_des'        => 0,
-            'lsp_rencana_sd_des'            => 0,
-            'proyeksi_lsp_sd_des'           => 0,
-            'led_proyek_total'              => 0,
-            'eksposur_risiko_annual'        => 0,
-            'eksposur_risiko_total'         => 0,
-            'led_divisi_total'              => 0,
-            'hasil_usaha_sd_bulan'          => 0,
-            'proyeksi_hasil_usaha_sd_des'   => 0,
+            'omset_penjualan_sd_bulan'    => 0, // Akan diisi dari penjualan_ri
+            'lsp_rencana_sd_bulan'        => 0, // Akan diisi dari lsp_ra
+            'lsp_realisasi_sd_bulan'      => 0, // Akan diisi dari lsp_ri
+            'omset_penjualan_sd_des'      => 0, // Akan diisi dari penjualan_ra (konsisten dgn project)
+            'lsp_rencana_sd_des'          => 0, // Akan diisi dari lsp_review (konsisten dgn project)
+            'proyeksi_lsp_sd_des'         => 0, // Akan diisi dari lsp_proyeksi
+            'led_proyek_total'            => 0, // Dihitung nanti
+            'eksposur_risiko_annual'      => 0, // Dihitung nanti
+            'eksposur_risiko_total'       => 0, // Dihitung nanti
+            'led_divisi_total'            => 0, // Dihitung nanti
+            'hasil_usaha_sd_bulan'        => 0, // Dihitung nanti
+            'proyeksi_hasil_usaha_sd_des' => 0, // Dihitung nanti
         ];
 
         $isProjectUnit = false;
@@ -1793,15 +1783,34 @@ class HomeController extends Controller
             }
 
             // =========================================================
-            // B. KALKULASI DATA SUMMARY (API & LOKAL)
+            // B. PENGAMBILAN DATA SUMMARY DARI DATABASE
             // =========================================================
-            // NOTE: Di sini Anda bisa mengganti data dummy dengan call API sesungguhnya
-            $summaryData['omset_penjualan_sd_bulan']    = $isProjectUnit ? 15000000000 : 1200000000;
-            $summaryData['lsp_rencana_sd_bulan']        = $isProjectUnit ? 2500000000 : 0;
-            $summaryData['lsp_realisasi_sd_bulan']      = $isProjectUnit ? 2300000000 : 0;
-            $summaryData['omset_penjualan_sd_des']      = $isProjectUnit ? 25000000000 : 2200000000;
-            $summaryData['lsp_rencana_sd_des']          = $isProjectUnit ? 4500000000 : 0;
-            $summaryData['proyeksi_lsp_sd_des']         = $isProjectUnit ? 4100000000 : 0;
+            try {
+                $periodForQuery = Carbon::createFromFormat('Y-m', $selectedPeriod)->format('Ym');
+                
+                // 1. Cari data di tabel UnitHasilUsaha
+                $summaryRecord = UnitHasilUsaha::where('unit_id', $selectedUnit->id)->where('period', $periodForQuery)->first();
+
+                // 2. Jika data ditemukan, isi array $summaryData
+                if ($summaryRecord) {
+                    $summaryData['omset_penjualan_sd_bulan'] = $summaryRecord->penjualan_ri ?? 0;
+                    $summaryData['lsp_rencana_sd_bulan']     = $summaryRecord->lsp_ra ?? 0;
+                    $summaryData['lsp_realisasi_sd_bulan']   = $summaryRecord->lsp_ri ?? 0;
+                    $summaryData['omset_penjualan_sd_des']   = $summaryRecord->penjualan_ra ?? 0; // Menggunakan _ra untuk sd_des
+                    $summaryData['lsp_rencana_sd_des']       = $summaryRecord->lsp_review ?? 0; // Menggunakan _review untuk sd_des
+                    $summaryData['proyeksi_lsp_sd_des']      = $summaryRecord->lsp_proyeksi ?? 0;
+                } 
+                // 3. Jika tidak ditemukan, $summaryData akan tetap berisi nilai default (0)
+                //    (Tidak ada logika API fetch di sini, tapi bisa ditambahkan jika perlu)
+
+            } catch (\Exception $e) {
+                // Log error jika gagal mengambil data summary
+                Log::error("Gagal mengambil data Hasil Usaha Unit", [
+                    'unit_id' => $selectedUnit->id,
+                    'period' => $periodForQuery ?? $selectedPeriod,
+                    'error' => $e->getMessage()
+                ]);
+            }
             
             $summaryData['led_proyek_total'] = $isProjectUnit ? LossEventProject::whereHas('project', fn($q) => $q->where('cost_center_parent', $selectedUnit->cost_center))->whereYear('tanggal_kejadian', $currentYear)->sum(DB::raw('CAST(nilai_kerugian_finansial AS NUMERIC)')) : 0;
             $summaryData['led_divisi_total'] = LossEvent::where('unit_id', $selectedUnit->id)->whereYear('tanggal_kejadian', $currentYear)->sum(DB::raw('CAST(nilai_kerugian_finansial AS NUMERIC)'));
@@ -1971,21 +1980,54 @@ class HomeController extends Controller
         $currentQuarter = (int)ceil($currentMonth / 3);
         $periode = Periode::where('tahun', $currentYear)->first();
 
-        // --- AMBIL SEMUA DATA UNIT RELEVAN ---
+        $summaryData = [
+            // Kolom dari UnitHasilUsaha
+            'omset_penjualan_sd_bulan'    => 0, // dari penjualan_ri
+            'lsp_rencana_sd_bulan'        => 0, // dari lsp_ra
+            'lsp_realisasi_sd_bulan'      => 0, // dari lsp_ri (utama untuk hasil aktual)
+            'omset_penjualan_sd_des'      => 0, // dari penjualan_ra
+            'lsp_rencana_sd_des'          => 0, // dari lsp_review
+            'proyeksi_lsp_sd_des'         => 0, // dari lsp_proyeksi (utama untuk hasil proyeksi)
+            'kontrak_review'              => 0, // dari kontrak_review
+            
+            // Kolom kalkulasi
+            'led_proyek_total'            => 0,
+            'led_divisi_operasi_total'    => 0,
+            'led_divisi_fungsi_total'     => 0,
+            'eksposur_risiko_total'       => 0,
+            'eksposur_risiko_annual'      => 0,
+            'hasil_usaha_aktual'          => 0,
+            'proyeksi_hasil_usaha_des'    => 0,
+        ];
+
+        try {
+            $periodForQuery = Carbon::createFromFormat('Y-m', $selectedPeriod)->format('Ym');
+            
+            // Asumsi unit_id 1 adalah Korporat
+            $corporateHasilUsaha = UnitHasilUsaha::where('unit_id', 1)->where('period', $periodForQuery)->first();
+
+            if ($corporateHasilUsaha) {
+                $summaryData['omset_penjualan_sd_bulan'] = $corporateHasilUsaha->penjualan_ri ?? 0;
+                $summaryData['lsp_rencana_sd_bulan']     = $corporateHasilUsaha->lsp_ra ?? 0;
+                $summaryData['lsp_realisasi_sd_bulan']   = $corporateHasilUsaha->lsp_ri ?? 0;
+                $summaryData['omset_penjualan_sd_des']   = $corporateHasilUsaha->penjualan_ra ?? 0;
+                $summaryData['lsp_rencana_sd_des']       = $corporateHasilUsaha->lsp_review ?? 0;
+                $summaryData['proyeksi_lsp_sd_des']      = $corporateHasilUsaha->lsp_proyeksi ?? 0;
+                $summaryData['kontrak_review']           = $corporateHasilUsaha->kontrak_review ?? 0;
+            } 
+            // Jika tidak ada record, nilai default 0 akan digunakan.
+
+        } catch (\Exception $e) {
+            Log::error("Gagal mengambil data Hasil Usaha Korporat (unit_id=1)", [
+                'period' => $periodForQuery ?? $selectedPeriod,
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // --- AMBIL ID UNIT LAIN (OPERASI & FUNGSI) ---
         $corporateUnitIds = Unit::where('unit_type_id', 4)->pluck('id');
-        $operasiUnitIds = Unit::where('unit_type_id', 2)->pluck('id'); // Asumsi type 2 = Operasi
-        $fungsiUnitIds = Unit::where('unit_type_id', 3)->pluck('id'); // Asumsi type 3 = Fungsi
-
-        $summaryData = [];
-        $summaryData['biaya_usaha_aktual'] = 52150000000; // Contoh: Biaya usaha agregat s/d bulan ini
-        $summaryData['proyeksi_biaya_usaha_des'] = 115000000000; // Contoh: Proyeksi biaya usaha agregat s/d Desember
-
-        $summaryData['omset_penjualan_sd_bulan'] = 0;
-        $summaryData['lsp_rencana_sd_bulan'] = 0;
-        $summaryData['lsp_realisasi_sd_bulan'] = 0;
-        $summaryData['omset_penjualan_sd_des'] = 0;
-        $summaryData['lsp_rencana_sd_des'] = 0;
-        $summaryData['proyeksi_lsp_sd_des'] = 0;
+        $operasiUnitIds = Unit::where('unit_type_id', 2)->pluck('id'); // Tipe 2 = Operasi
+        $fungsiUnitIds = Unit::where('unit_type_id', 3)->pluck('id');  // Tipe 3 = Fungsi
 
         // Agregat semua LED dari Proyek, Operasi, dan Fungsi
         $summaryData['led_proyek_total'] = LossEventProject::whereYear('tanggal_kejadian', $currentYear)->sum(DB::raw('CAST(nilai_kerugian_finansial AS NUMERIC)'));

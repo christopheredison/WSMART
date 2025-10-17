@@ -5,7 +5,7 @@
         <select name="unit_id" id="unit_id" class="form-select" required>
             <option value="" disabled selected>Pilih Divisi</option>
             @foreach(\App\Models\Unit::orderBy('name')->get() as $unit)
-                <option value="{{ $unit->id }}" data-cost-center="{{ $unit->cost_center }}">{{ $unit->name }}</option>
+                <option value="{{ $unit->id }}" data-cost-center="{{ $unit->cost_center }}" data-cost-center="{{ $unit->cost_center }}">{{ $unit->name }}</option>
             @endforeach
         </select>
     </div>

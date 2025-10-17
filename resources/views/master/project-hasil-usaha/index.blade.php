@@ -1,7 +1,6 @@
 @extends('layouts.default')
 
 @section('dashboard')
-    {{-- Notifikasi Sukses/Error --}}
     @include('partials.success-message')
     @if(session('import_summary'))
         @php $summary = session('import_summary'); @endphp
@@ -40,7 +39,6 @@
 
                     @include('master.project-hasil-usaha._sync_button') 
 
-                    {{-- Tombol Tambah Data --}}
                     <button id="btn-tambah" class="btn btn-outline-info btn-sm">
                         <span class="bx bx-plus"></span>
                         <span class="ms-1">Tambah Data</span>
@@ -55,7 +53,6 @@
                         <th>#</th>
                         <th>Nama Proyek</th>
                         <th>Periode</th>
-                        <th>LSP Realisasi (RI)</th>
                         <th>Nilai Kontrak</th>
                         <th>Action</th>
                     </tr>
@@ -97,12 +94,11 @@ $(document).ready(function() {
     const table = $('#hasilUsahaTable').DataTable({
         processing: true,
         serverSide: true,
-        ajax: "{{ route('project-hasil-usaha.data') }}", // Route baru untuk mengambil data
+        ajax: "{{ route('project-hasil-usaha.data') }}",
         columns: [
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
             { data: 'project_name', name: 'project.project_name' },
             { data: 'period', name: 'period' },
-            { data: 'lsp_ri', name: 'lsp_ri' },
             { data: 'kontrak_review', name: 'kontrak_review' },
             { data: 'action', name: 'action', orderable: false, searchable: false },
         ]

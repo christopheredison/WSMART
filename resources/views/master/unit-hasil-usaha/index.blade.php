@@ -1,7 +1,6 @@
 @extends('layouts.default')
 
 @section('dashboard')
-    {{-- Notifikasi untuk pesan sukses --}}
     @include('partials.success-message')
 
     <div class="card">
@@ -13,11 +12,9 @@
                     </div>
                 </div>
                 <div>
-                    {{-- Judul Halaman --}}
                     <h2 class="h3">Data Hasil Usaha Divisi</h2>
                 </div>
                 <div class="ms-auto d-flex align-items-center gap-2">
-                    {{-- Tombol untuk membuka modal tambah data --}}
                     <button id="btn-tambah" class="btn btn-outline-info btn-sm">
                         <span class="bx bx-plus"></span>
                         <span class="ms-1">Tambah Data</span>
@@ -26,7 +23,6 @@
             </div>
         </div>
         <div class="card-body">
-            {{-- Tabel untuk menampilkan data --}}
             <table class="table table-hover w-100" id="unitHasilUsahaTable">
                 <thead>
                     <tr>
@@ -34,12 +30,11 @@
                         <th>Nama Divisi</th>
                         <th>Cost Center</th>
                         <th>Periode</th>
-                        <th>LSP Realisasi (RI)</th>
-                        <th>Aksi</th>
+                        <th>Nilai Kontrak</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {{-- Data akan diisi oleh DataTable --}}
                 </tbody>
             </table>
         </div>
@@ -70,7 +65,6 @@
 @endsection
 
 @push('scripts')
-{{-- Library JavaScript untuk format Rupiah --}}
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
 $(document).ready(function() {
@@ -84,7 +78,7 @@ $(document).ready(function() {
             { data: 'unit_name', name: 'unit.name' },
             { data: 'cost_center', name: 'cost_center' },
             { data: 'period', name: 'period' },
-            { data: 'lsp_ri', name: 'lsp_ri' },
+            { data: 'kontrak_review', name: 'kontrak_review' },
             { data: 'action', name: 'action', orderable: false, searchable: false },
         ]
     });
@@ -115,8 +109,8 @@ $(document).ready(function() {
             for (const key in data) {
                 $(`[name="${key}"]`).val(data[key]);
             }
-            $('.inputmask-general').trigger('input'); // Format ulang nilai Rupiah
-            calculateProgress(); // Hitung nilai progress awal
+            $('.inputmask-general').trigger('input');
+            calculateProgress();
         });
     });
 
