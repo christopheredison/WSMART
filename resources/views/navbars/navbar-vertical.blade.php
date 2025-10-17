@@ -352,6 +352,21 @@
             </li>
             @endcan
 
+            @can('project_sektor_list')
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('project-hasil-usaha.index') ? 'active' : '' }}"
+                href="{{ route('project-hasil-usaha.index') }}">
+                <span class="nav-link-text">Hasil Usaha Project</span>
+              </a>
+            </li>
+            @endcan
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('hasil-usaha-divisi.index') ? 'active' : '' }}"
+                href="{{ route('hasil-usaha-divisi.index') }}">
+                <span class="nav-link-text">Hasil Usaha Divisi</span>
+              </a>
+            </li>
+
             @can('project_list')
             <li class="nav-item">
               <a class="nav-link {{ request()->routeIs('projects.index') ? 'active' : '' }}"

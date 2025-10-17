@@ -383,7 +383,7 @@ $(document).ready(function() {
         responsive: true,
         columnDefs: [
             {"width": "1%", "targets": 0},
-            {"width": "1%", "targets": 1},
+            {"width": "20%", "targets": 1},
             {"width": "1%", "targets": -1},
             {"orderable": false, "targets": [0,1]} // Can't order
         ],

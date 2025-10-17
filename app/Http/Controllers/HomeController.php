@@ -20,6 +20,7 @@ use App\Models\Unit;
 use App\Models\RMIPeriod;
 use App\Models\ProjectRisk;
 use App\Models\ProjectRiskMonitoring;
+use App\Models\ProjectHasilUsaha;
 use App\Models\KRIUnitMonitoring;
 use App\Models\KRIProjectMonitoring;
 use App\Models\UnitRiskMonitoring;
@@ -1493,8 +1494,45 @@ class HomeController extends Controller
             try {
                 $periodForApi = Carbon::createFromFormat('Y-m', $selectedPeriod)->format('Ym');
                 $profitCenter = $selectedProject->meta['profit_center'] ?? null;
+                $hasilUsaha = null;
 
                 if ($profitCenter) {
+                    $existingData = ProjectHasilUsaha::where('profit_center', $profitCenter)
+                        ->where('period', $periodForApi)
+                        ->first();
+
+                    if ($existingData) {
+                        $hasilUsaha = $existingData->response_data;
+                    } else {
+                        // Jika tidak ada, panggil API
+                        $apiResponse = (new ApiWika())->getHasilUsahaProject($periodForApi, $profitCenter);
+
+                        // Jika API sukses, simpan hasilnya ke database
+                        if ($apiResponse && $apiResponse['status'] && isset($apiResponse['data'])) {
+                            $apiData = $apiResponse['data']['hasil_usaha'];
+                            
+                            ProjectHasilUsaha::updateOrCreate(
+                                [
+                                    'profit_center' => $profitCenter,
+                                    'period' => $periodForApi
+                                ],
+                                [
+                                    'project_id' => $selectedProject->id,
+                                    'kontrak_review'    => $apiData['kontrak_review'] ?? 0,
+                                    'progress_fisik_ra' => $apiData['progress_fisik_ra'] ?? 0,
+                                    'progress_fisik_ri' => $apiData['progress_fisik_ri'] ?? 0,
+                                    'penjualan_ra'      => $apiData['penjualan_ra'] ?? 0,
+                                    'penjualan_ri'      => $apiData['penjualan_ri'] ?? 0,
+                                    'lsp_review'        => $apiData['lsp_review'] ?? 0,
+                                    'lsp_ra'            => $apiData['lsp_ra'] ?? 0,
+                                    'lsp_ri'            => $apiData['lsp_ri'] ?? 0,
+                                    'lsp_proyeksi'      => $apiData['lsp_proyeksi'] ?? 0,
+                                    'response_data' => $apiResponse['data']
+                                ]
+                            );
+                            $hasilUsaha = $apiResponse;
+                        }
+                    }
                     $hasilUsaha = (new ApiWika())->getHasilUsahaProject($periodForApi, $profitCenter);
 
                     // dd($hasilUsaha);
