@@ -170,6 +170,7 @@ class ProjectRiskController extends BasicCRUDController
                       ->where('periode_id', $periodeId)
                       ->where('type', 2)
                       ->where('finish', false)
+                      ->orderBy('batch', 'desc')
                       ->first();
 
         if(!$dataBatch){
@@ -2399,7 +2400,18 @@ class ProjectRiskController extends BasicCRUDController
                     if ($dataBatch) {
                         $dataBatch->update([
                             'status' => DataBatch::STATUS_FINISH,
-                            'step_verification' => $step_order
+                            'step_verification' => $step_order,
+                            'finish' => true
+                        ]);
+
+                        DataBatch::create([
+                            'project_id' => $project_id,
+                            'periode_id' => $periode_id,
+                            'type' => 2,
+                            'batch' => $dataBatch->batch + 1,
+                            'status' => DataBatch::STATUS_PROSES,
+                            'step_verification' => 1,
+                            'finish' => false
                         ]);
                     }
 
