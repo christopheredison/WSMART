@@ -133,8 +133,8 @@
                         <h6 class="fw-bold text-success-emphasis mb-0">Hasil Usaha Aktual s/d {{ $formattedPeriod }}</h6>
                         <small class="text-muted">(Biaya Usaha Aktual - Total Kerugian LED)</small>
                     </div>
-                    {{-- <span class="fw-bold fs-4 text-success">Rp {{ number_format($summaryData['hasil_usaha_aktual'], 0, ',', '.') }}</span> --}}
-                    <span class="fw-bold fs-4 text-success">Rp -46.164.154.604</span>
+                    <span class="fw-bold fs-4 text-success">Rp {{ number_format($summaryData['hasil_usaha_aktual'], 0, ',', '.') }}</span>
+                    {{-- <span class="fw-bold fs-4 text-success">Rp -46.164.154.604</span> --}}
                 </div>
             </div>
         </div>
@@ -147,8 +147,8 @@
                         <h6 class="fw-bold text-primary-emphasis mb-0">Proyeksi Hasil Usaha s/d Des {{ $currentYear }}</h6>
                         <small class="text-muted">(Proyeksi Biaya Usaha - Eksposur Risiko Annual)</small>
                     </div>
-                    {{-- <span class="fw-bold fs-4 text-primary">Rp {{ number_format($summaryData['proyeksi_hasil_usaha_des'], 0, ',', '.') }}</span> --}}
-                    <span class="fw-bold fs-4 text-primary">Rp 0</span>
+                    <span class="fw-bold fs-4 text-primary">Rp {{ number_format($summaryData['proyeksi_hasil_usaha_des'], 0, ',', '.') }}</span>
+                    {{-- <span class="fw-bold fs-4 text-primary">Rp 0</span> --}}
                 </div>
             </div>
         </div>
@@ -216,7 +216,7 @@
                     <div class="col"><h3 class="h4">Peta Risiko Terkini (Current)</h3></div>
                 </div>
                 <div class="table-risk-map" id="currentMap">
-                     <table class="map-table">
+                    <table class="map-table">
                         <tbody> 	
                             @for($likelihood = 5; $likelihood >= 1; $likelihood--)
                             <tr>
@@ -308,12 +308,16 @@
 {{-- ========================================================================= --}}
 {{-- ======================== SECTION KEY RISK INDICATOR (KRI) ======================= --}}
 {{-- ========================================================================= --}}
-<h2 class="mt-7 mb-4 text-primary fw-bold"><i class="fas fa-tachometer-alt me-2"></i>Key Risk Indicator (KRI)</h2>
+<h2 class="mt-7 mb-4 text-primary fw-bold">
+  <i class="fas fa-tachometer-alt me-2"></i>
+  Key Risk Indicator (KRI)
+</h2>
 <hr class="mb-4">
-<div class="card shadow-sm">
+{{-- ======================== 1. KRI KORPORAT ======================== --}}
+<div class="card shadow-sm mb-4">
     <div class="card-header stepper border-0 pb-0">
         <div class="nav-link active d-flex align-items-center p-0">
-            <span class="h3 mb-0">Daftar KRI (Status Waspada & Bahaya)</span>
+            <span class="h3 mb-0">Daftar KRI Korporat (Status Waspada & Bahaya)</span>
         </div>
     </div>
     <div class="card-body">
@@ -325,7 +329,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($sortedKriData as $kri)
+                    @forelse($kriKorporat as $kri)
                     <tr>
                         <td>{{ $kri['risiko'] }}</td>
                         <td>
@@ -349,7 +353,151 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI dengan status Waspada atau Bahaya.</td></tr>
+                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI Korporat dengan status Waspada atau Bahaya.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{{-- ======================== 2. KRI PROYEK ======================== --}}
+<div class="card shadow-sm mb-4">
+    <div class="card-header stepper border-0 pb-0">
+        <div class="nav-link active d-flex align-items-center p-0">
+            <span class="h3 mb-0">Daftar KRI Proyek (Status Waspada & Bahaya)</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover table-sm">
+                <thead class="text-center align-middle">
+                    <tr>
+                        <th style="min-width: 150px;">Risiko</th><th style="min-width: 200px;">Penyebab</th><th style="min-width: 150px;">KRI</th><th>Batas Aman</th><th>Batas Waspada</th><th>Batas Bahaya</th><th>Kondisi Saat Ini</th><th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($kriProyek as $kri)
+                    <tr>
+                        <td>{{ $kri['risiko'] }}</td>
+                        <td>
+                            @if(!empty($kri['penyebab']) && is_array($kri['penyebab']))
+                                <ul class="list-unstyled mb-0 ps-3">
+                                @foreach($kri['penyebab'] as $penyebab)<li>- {{ $penyebab }}</li>@endforeach
+                                </ul>
+                            @else - @endif
+                        </td>
+                        <td>{{ $kri['kri'] ?? '-' }}</td>
+                        <td class="text-center">{{ $kri['batas_aman'] ?? '-' }}</td><td class="text-center">{{ $kri['batas_waspada'] ?? '-' }}</td><td class="text-center">{{ $kri['batas_bahaya'] ?? '-' }}</td><td class="text-center fw-bold">{{ $kri['kondisi_saat_ini'] }}</td>
+                        <td class="text-center">
+                            @php
+                                $statusClass = '';
+                                $statusNumeric = $kri['status'] ?? 0;
+                                if ($statusNumeric == 3) { $statusClass = 'red'; } 
+                                elseif ($statusNumeric == 2) { $statusClass = 'yellow'; } 
+                                elseif ($statusNumeric == 1) { $statusClass = 'green'; }
+                            @endphp
+                            <div class="status-container {{ $statusClass }}"><div class="status-green"></div><div class="status-yellow"></div><div class="status-red"></div></div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI Proyek dengan status Waspada atau Bahaya.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{{-- ======================== 3. KRI DIVISI ======================== --}}
+<div class="card shadow-sm mb-4">
+    <div class="card-header stepper border-0 pb-0">
+        <div class="nav-link active d-flex align-items-center p-0">
+            <span class="h3 mb-0">Daftar KRI Divisi (Status Waspada & Bahaya)</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover table-sm">
+                <thead class="text-center align-middle">
+                    <tr>
+                        <th style="min-width: 150px;">Risiko</th><th style="min-width: 200px;">Penyebab</th><th style="min-width: 150px;">KRI</th><th>Batas Aman</th><th>Batas Waspada</th><th>Batas Bahaya</th><th>Kondisi Saat Ini</th><th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($kriDivisi as $kri)
+                    <tr>
+                        <td>{{ $kri['risiko'] }}</td>
+                        <td>
+                            @if(!empty($kri['penyebab']) && is_array($kri['penyebab']))
+                                <ul class="list-unstyled mb-0 ps-3">
+                                @foreach($kri['penyebab'] as $penyebab)<li>- {{ $penyebab }}</li>@endforeach
+                                </ul>
+                            @else - @endif
+                        </td>
+                        <td>{{ $kri['kri'] ?? '-' }}</td>
+                        <td class="text-center">{{ $kri['batas_aman'] ?? '-' }}</td><td class="text-center">{{ $kri['batas_waspada'] ?? '-' }}</td><td class="text-center">{{ $kri['batas_bahaya'] ?? '-' }}</td><td class="text-center fw-bold">{{ $kri['kondisi_saat_ini'] }}</td>
+                        <td class="text-center">
+                            @php
+                                $statusClass = '';
+                                $statusNumeric = $kri['status'] ?? 0;
+                                if ($statusNumeric == 3) { $statusClass = 'red'; } 
+                                elseif ($statusNumeric == 2) { $statusClass = 'yellow'; } 
+                                elseif ($statusNumeric == 1) { $statusClass = 'green'; }
+                            @endphp
+                            <div class="status-container {{ $statusClass }}"><div class="status-green"></div><div class="status-yellow"></div><div class="status-red"></div></div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI Divisi dengan status Waspada atau Bahaya.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{{-- ======================== 4. KRI ANAK PERUSAHAAN ======================== --}}
+<div class="card shadow-sm mb-4">
+    <div class="card-header stepper border-0 pb-0">
+        <div class="nav-link active d-flex align-items-center p-0">
+            <span class="h3 mb-0">Daftar KRI Anak Perusahaan (Status Waspada & Bahaya)</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover table-sm">
+                <thead class="text-center align-middle">
+                    <tr>
+                        <th style="min-width: 150px;">Risiko</th><th style="min-width: 200px;">Penyebab</th><th style="min-width: 150px;">KRI</th><th>Batas Aman</th><th>Batas Waspada</th><th>Batas Bahaya</th><th>Kondisi Saat Ini</th><th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($kriAnakPerusahaan as $kri)
+                    <tr>
+                        <td>{{ $kri['risiko'] }}</td>
+                        <td>
+                            @if(!empty($kri['penyebab']) && is_array($kri['penyebab']))
+                                <ul class="list-unstyled mb-0 ps-3">
+                                @foreach($kri['penyebab'] as $penyebab)<li>- {{ $penyebab }}</li>@endforeach
+                                </ul>
+                            @else - @endif
+                        </td>
+                        <td>{{ $kri['kri'] ?? '-' }}</td>
+                        <td class="text-center">{{ $kri['batas_aman'] ?? '-' }}</td><td class="text-center">{{ $kri['batas_waspada'] ?? '-' }}</td><td class="text-center">{{ $kri['batas_bahaya'] ?? '-' }}</td><td class="text-center fw-bold">{{ $kri['kondisi_saat_ini'] }}</td>
+                        <td class="text-center">
+                            @php
+                                $statusClass = '';
+                                $statusNumeric = $kri['status'] ?? 0;
+                                if ($statusNumeric == 3) { $statusClass = 'red'; } 
+                                elseif ($statusNumeric == 2) { $statusClass = 'yellow'; } 
+                                elseif ($statusNumeric == 1) { $statusClass = 'green'; }
+                            @endphp
+                            <div class="status-container {{ $statusClass }}"><div class="status-green"></div><div class="status-yellow"></div><div class="status-red"></div></div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI Anak Perusahaan dengan status Waspada atau Bahaya.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -419,44 +567,135 @@
 {{-- ========================================================================= --}}
 {{-- ======================== SECTION TOP LOSS EVENT ========================= --}}
 {{-- ========================================================================= --}}
-<h2 class="mt-7 mb-4 text-primary fw-bold"><i class="fas fa-list-ol me-2"></i>Top Loss Event Korporat</h2>
+<h2 class="mt-7 mb-4 text-primary fw-bold">
+  <i class="fas fa-list-ol me-2"></i>
+  Top Loss Events
+</h2>
 <hr class="mb-4">
-<div class="row g-4">
-    <div class="col-12">
-      <div class="card h-100 shadow-sm">
-        <div class="card-header">
-            <h5 class="mb-0 fw-bold">Top Loss Event Korporat</h5>
+<!--============================ Loss Event Data Korporat ============================-->
+<div class="col-12 mb-3">
+  <div class="card" id="led-card">
+    <div class="card-header border-0 pb-0">
+      <div class="d-flex align-items-center gap-3">
+        <div class="bg-info-subtle rounded-3 p-2">
+          <div class="lead__icon lead__icon_sm">
+            <span class="svg-icon svg-icon-2x svg-icon-info">
+              @include('partials.icon-abs05')
+            </span>
+          </div>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover table-sm">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Nama Kejadian</th>
-                            <th class="text-end">Nilai Kerugian</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($topLossEventsCorporate as $event)
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $event->peristiwa ?? ($event->nama_kejadian ?? '-') }}</td>
-                                <td class="text-end text-danger fw-bold">Rp {{ number_format($event->nilai_kerugian_finansial, 0, ',', '.') }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="3" class="text-center text-muted p-4">Tidak ada data Loss Event untuk Kantor Pusat.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <h3>Top 10 Loss Event Data Korporat</h3>
+      </div>
+      <hr class="mb-2 mt-xxl-5">
+    </div>
+    <div class="card-body pt-0">
+      <div class="table-responsive scrollbar">
+        <table class="table table-hover table-sm">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tanggal Kejadian</th>
+              <th>Nama Kejadian</th>
+              <th>Identifikasi Kejadian</th>
+              <th>Kategori Kejadian</th>
+              <th class="text-end">Nilai Kerugian</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse ($topLossEventsCorporate as $event)
+              <tr>
+                <td>{{ $loop->iteration }}</td>
+                <td>{{ $event->peristiwa ?? ($event->nama_kejadian ?? '-') }}</td>
+                <td>{{ $event->peristiwa ?? ($event->nama_kejadian ?? '-') }}</td>
+                <td>{{ $event->peristiwa ?? ($event->nama_kejadian ?? '-') }}</td>
+                <td>{{ $event->peristiwa ?? ($event->nama_kejadian ?? '-') }}</td>
+                <td class="text-end text-danger fw-bold">Rp {{ number_format($event->nilai_kerugian_finansial, 0, ',', '.') }}</td>
+              </tr>
+            @empty
+              <tr>
+                <td colspan="6" class="text-center text-muted p-4">Tidak ada data Loss Event untuk Kantor Pusat.</td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
       </div>
     </div>
+  </div>
 </div>
 
+<!--============================ Loss Event Data Unit ============================-->
+<div class="col-12 mb-3">
+  <div class="card" id="led-card">
+    <div class="card-header border-0 pb-0">
+      <div class="d-flex align-items-center gap-3">
+        <div class="bg-info-subtle rounded-3 p-2">
+          <div class="lead__icon lead__icon_sm">
+            <span class="svg-icon svg-icon-2x svg-icon-info">
+              @include('partials.icon-abs05')
+            </span>
+          </div>
+        </div>
+        <h3>Top 10 Loss Event Data Divisi</h3>
+      </div>
+      <hr class="mb-2 mt-xxl-5">
+    </div>
+    <div class="card-body pt-0">
+      <div class="table-responsive scrollbar">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Tanggal Kejadian</th>
+              <th>Nama Kejadian</th>
+              <th>Identifikasi Kejadian</th>
+              <th>Kategori Kejadian</th>
+              <th>Nilai Kerugian</th>
+              <th>Pihak Terkait</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--============================ Loss Event Data Project ============================-->
+<div class="col-12">
+  <div class="card" id="led-project-card">
+    <div class="card-header border-0 pb-0">
+      <div class="d-flex align-items-center gap-3">
+        <div class="bg-info-subtle rounded-3 p-2">
+          <div class="lead__icon lead__icon_sm">
+            <span class="svg-icon svg-icon-2x svg-icon-info">
+              @include('partials.icon-abs05')
+            </span>
+          </div>
+        </div>
+        <h3>Top 10 Loss Event Data Project</h3>
+      </div>
+      <hr class="mb-2 mt-xxl-5">
+    </div>
+    <div class="card-body pt-0">
+      <div class="table-responsive scrollbar">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Tanggal Kejadian</th>
+              <th>Nama Kejadian</th>
+              <th>Identifikasi Kejadian</th>
+              <th>Kategori Kejadian</th>
+              <th>Nilai Kerugian</th>
+              <th>Pihak Terkait</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 @endsection
 
 
@@ -633,6 +872,52 @@ document.addEventListener('DOMContentLoaded', function() {
         fillEfektivitasChart(efektivitasData);
     } else {
         $('#efektivitas-perlakuan-chart').html('<div class="d-flex justify-content-center align-items-center h-100 text-muted">Tidak ada risiko yang telah ditutup.</div>');
+    }
+
+    // Lost Event Data Divisi
+    $('#led-card .table tbody').html('');
+    if (dashboardData.led.length == 0) {
+      $('#led-card .table tbody').append(`
+              <tr>
+                  <td colspan="7" class="dt-empty text-center">No data available</td>
+              </tr>
+          `);
+    } else {
+      dashboardData.led.forEach((led) => {
+        $('#led-card .table tbody').append(`
+                <tr>
+                    <td>${led.tanggal_kejadian}</td>
+                    <td>${led.nama_kejadian}</td>
+                    <td>${led.identifikasi_kejadian}</td>
+                    <td>${led.kategori_kejadian}</td>
+                    <td>${led.nilai_kerugian}</td>
+                    <td>${led.unit_penanggung_jawab}</td>
+                </tr>
+            `);
+      });
+    }
+
+    // Lost Event Data Project
+    $('#led-project-card .table tbody').html('');
+    if (dashboardData.ledProject.length == 0) {
+      $('#led-project-card .table tbody').append(`
+              <tr>
+                  <td colspan="7" class="dt-empty text-center">No data available</td>
+              </tr>
+          `);
+    } else {
+      dashboardData.ledProject.forEach((led) => {
+        $('#led-project-card .table tbody').append(`
+                <tr>
+                    <td>${led.tanggal_kejadian}</td>
+                    <td>${led.nama_kejadian}</td>
+                    <td>${led.identifikasi_kejadian}</td>
+                    <td>${led.kategori_kejadian}</td>
+                    <td>${led.nilai_kerugian}</td>
+                    <td>${led.unit_penanggung_jawab}</td>
+                </tr>
+            `);
+      });
     }
 });
 </script>
