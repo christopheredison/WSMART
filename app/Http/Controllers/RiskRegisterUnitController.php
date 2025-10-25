@@ -78,6 +78,7 @@ class RiskRegisterUnitController extends Controller
                       ->where('periode_id', $periodeId)
                       ->where('type', 1)
                       ->where('finish', false)
+                      ->orderBy('batch', 'desc')
                       ->first();
 
         if(!$dataBatch){
@@ -1474,7 +1475,18 @@ class RiskRegisterUnitController extends Controller
             if ($dataBatch) {
                 $dataBatch->update([
                     'status' => DataBatch::STATUS_FINISH,
-                    'step_verification' => $step_order
+                    'step_verification' => $step_order,
+                    'finish' => true
+                ]);
+
+                DataBatch::create([
+                    'unit_id' => $unit_id,
+                    'periode_id' => $periode_id,
+                    'type' => 1,
+                    'batch' => $dataBatch->batch + 1,
+                    'status' => DataBatch::STATUS_PROSES,
+                    'step_verification' => 1,
+                    'finish' => true,
                 ]);
             }
 
@@ -2027,16 +2039,29 @@ class RiskRegisterUnitController extends Controller
         ]);
 
         $periodeId = $request->periode_id;
+        $unitId = Unit::where('unit_type_id', 4)->first()?->id;
 
         // Update status DataBatch menjadi STATUS_FINISH (8)
         $dataBatch = DataBatch::where('periode_id', $periodeId)
-            ->where('type', 1) // type = 1 untuk unit/divisi
+            ->where('unit_id', $unitId)
+            ->where('type', 1)
             ->orderBy('batch', 'desc')
             ->first();
 
         if ($dataBatch) {
             $dataBatch->update([
-                'status' => DataBatch::STATUS_FINISH
+                'status' => DataBatch::STATUS_FINISH,
+                'finish' => true,
+            ]);
+
+            DataBatch::create([
+                'unit_id' => $unitId,
+                'periode_id' => $periodeId,
+                'type' => 1,
+                'batch' => $dataBatch->batch + 1,
+                'status' => DataBatch::STATUS_FINISH,
+                'step_verification' => 1,
+                'finish' => true,
             ]);
         }
 

@@ -46,6 +46,8 @@ use App\Http\Controllers\Master\ProjectDivisiController;
 use App\Http\Controllers\Master\ProjectLocationController;
 use App\Http\Controllers\Master\ProjectSektorController;
 use App\Http\Controllers\Master\ProjectTypeController;
+use App\Http\Controllers\Master\ProjectHasilUsahaController;
+use App\Http\Controllers\Master\UnitHasilUsahaController;
 use App\Http\Controllers\Master\QuestionController;
 use App\Http\Controllers\Master\RMIPeriodController;
 use App\Http\Controllers\Project\ProjectPeriodeListController;
@@ -401,6 +403,11 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::resource('project-divisi', ProjectDivisiController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-sektor', ProjectSektorController::class)->except(['create', 'show', 'edit']);
+    Route::resource('project-hasil-usaha', ProjectHasilUsahaController::class)->except(['create', 'show']);
+    Route::get('project-hasil-usaha/data', [ProjectHasilUsahaController::class, 'data'])->name('project-hasil-usaha.data');
+    Route::post('project-hasil-usaha/sync-all', [ProjectHasilUsahaController::class, 'syncAll'])->name('project-hasil-usaha.sync-all');
+    Route::resource('hasil-usaha-divisi', UnitHasilUsahaController::class)->except(['create', 'show']);
+    Route::get('hasil-usaha-divisi/data', [UnitHasilUsahaController::class, 'data'])->name('hasil-usaha-divisi.data');
     Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit', 'destroy']);
     Route::resource('projects/{project}/risks', ProjectRiskController::class)->names('projects.risks');
     Route::get('projects/{project}/risks/{risk}/view', [ProjectRiskController::class, 'view'])->name('projects.risks.view');
