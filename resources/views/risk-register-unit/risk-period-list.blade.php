@@ -35,8 +35,7 @@
           <div class="col-md-4">
             <label class="form-label d-none" for="unit_status_filter">Filter Status Divisi</label>
             <select id="unit_status_filter" class="form-select select2">
-              <option value="">Semua Status</option>
-              <option value="Aktif">Aktif</option>
+              <option value="Valid">Valid</option>
               <option value="Expired">Expired</option>
             </select>
           </div>
@@ -88,7 +87,7 @@
                 <td class="tahun">{{ $periode->tahun }}</td>
                 <td class="risk_count text-center">{{ $item['risk_count'] ?? 0 }}</td>
                 <td class="unit_status text-center">
-                  @php $unitStatusLabel = $unitStatus === 'expired' ? 'Expired' : 'Aktif'; @endphp
+                  @php $unitStatusLabel = $unitStatus === 'expired' ? 'Expired' : 'Valid'; @endphp
                   <figure class="badge {{ $unitStatus === 'expired' ? 'bg-danger' : 'bg-success' }}">
                     {{ $unitStatusLabel }}
                   </figure>
@@ -112,9 +111,9 @@
                     <a href="{{ route('risk-register-unit.periods.show', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
                       <span class="bx bx-show"></span>
                     </a>
-                    <a href="{{ route('risk-register-unit.index', ['pid' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
-                      <span class="bx bx-list-check"></span>
-                    </a>
+                    <a href="{{ route('risk-register-unit.index', ['pid' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
+                       <span class="bx bx-list-check"></span>
+                     </a>
                     <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
                       <span class="bx bx-radar"></span>
                     </a>
@@ -161,7 +160,7 @@
       foreach($dataToDisplay as $item) {
         $unitsWithStatus[] = [
           'name' => $item['unit']->name,
-          'status' => ($item['unit_status'] === 'expired' ? 'Expired' : 'Aktif')
+          'status' => ($item['unit_status'] === 'expired' ? 'Expired' : 'Valid')
         ];
       }
     @endphp
@@ -192,11 +191,14 @@
     }
 
     // Initialize division options based on current status selection
-    updateDivisionOptions($('#unit_status_filter').val());
+    const initialStatus = $('#unit_status_filter').val();
+    updateDivisionOptions(initialStatus);
+    // Apply initial table filter to show only current status (default: Valid)
+    table.column(4).search(initialStatus || '', false, false).draw();
 
     @if($viewAllDivision)
       $('#unit_id_filter').on('change', function() {
-        let searchTerm = $(this).val();
+        const searchTerm = $(this).val();
         table.column(1).search(searchTerm ? '^' + searchTerm + '$' : '', true, false).draw();
       });
     @endif
@@ -209,8 +211,9 @@
     });
 
     $('#unit_status_filter').on('change', function() {
-      let searchTerm = $(this).val();
-      table.column(4).search(searchTerm ? '^' + searchTerm + '$' : '', true, false).draw();
+      const searchTerm = $(this).val();
+      // Use non-regex search to avoid whitespace/newline mismatch
+      table.column(4).search(searchTerm || '', false, false).draw();
       // Update division options to reflect selected status
       updateDivisionOptions(searchTerm);
     });

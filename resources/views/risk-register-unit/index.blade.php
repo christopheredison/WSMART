@@ -50,10 +50,11 @@
               <label for="filter-unit" class="form-label d-none">Unit</label>
               <select id="filter-unit" class="form-select select2" disabled>
                 @php
-                $userUnitId = auth()->user()->unit_id;
-                $userUnitName = $unit[$userUnitId] ?? 'Unit Tidak Ditemukan';
+                // Tampilkan nama unit sesuai konteks halaman: gunakan unit_id dari URL jika diizinkan
+                $displayUnitId = isset($unitId) ? $unitId : (auth()->user()->unit_id ?? null);
+                $displayUnitName = $displayUnitId && isset($unit[$displayUnitId]) ? $unit[$displayUnitId] : 'Unit Tidak Ditemukan';
                 @endphp
-                <option value="{{ $userUnitName }}" selected>{{ $userUnitName }}</option>
+                <option value="{{ $displayUnitName }}" selected>{{ $displayUnitName }}</option>
               </select>
             </div>
             @endcan

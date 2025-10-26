@@ -104,6 +104,9 @@
                 <a href="{{ route('unit.edit', $item) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Edit">
                   <span class="bx bx-edit"></span>
                 </a>
+                <button type="button" class="btn-input-icon btn-manage-relation" data-unit-id="{{ $item->id }}" data-unit-name="{{ $item->name }}" data-bs-toggle="modal" data-bs-target="#modalManageRelation" title="Manage relation">
+                  <span class="bx bx-link-alt"></span>
+                </button>
                 <button type="button" class="btn-input-icon" data-bs-toggle="modal"
                   data-bs-target="#modalDelete{{ $item->id }}">
                   <span class="bx bx-trash text-danger" data-bs-toggle="tooltip" title="Delete"></span>
@@ -120,6 +123,64 @@
             @endforeach
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Manage Relation Modal -->
+<div class="modal fade" id="modalManageRelation" tabindex="-1" aria-labelledby="modalManageRelationLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header d-flex flex-between-center">
+        <h4 class="modal-title" id="modalManageRelationLabel">Manage Relation</h4>
+        <div class="lead__icon lead__icon_sm">
+          <div class="svg-icon svg-icon-secondary">
+            @include('partials.icon-tool')
+          </div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <h5 class="mb-2">Unit terelasi</h5>
+          <div class="table-responsive">
+            <table class="table table-hover" id="relationTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nama Unit</th>
+                  <th>Valid To</th>
+                  <th>Status</th>
+                  <th class="no-sort">Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="border-top pt-3">
+          <h5 class="mb-2">Tambah relasi</h5>
+          <div class="row g-2 align-items-center">
+            <div class="col-md-8">
+              <select id="invalidUnitSelect" class="form-select">
+                <option value="">Pilih unit tidak valid...</option>
+              </select>
+            </div>
+            <div class="col-md-4 text-end">
+              <!-- Tombol Tambah dipindah ke footer agar sejajar dengan Tutup -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer pt-0 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <span class="bx bx-x"></span>
+          <span class="ms-1">Tutup</span>
+        </button>
+        <button type="button" id="btnAddRelation" class="btn btn-submit">
+          <span class="bx bx-plus"></span>
+          <span class="ms-1">Tambah</span>
+        </button>
       </div>
     </div>
   </div>
@@ -175,5 +236,88 @@
       }
     });
   }
+
+  // Manage Relation logic
+  let currentUnitId = null;
+  let currentUnitName = null;
+
+  $(document).on('click', '.btn-manage-relation', function() {
+    currentUnitId = $(this).data('unit-id');
+    currentUnitName = $(this).data('unit-name');
+    $('#modalManageRelationLabel').text('Manage Relation: ' + currentUnitName);
+    loadRelations(currentUnitId);
+  });
+
+  function loadRelations(unitId) {
+    $('#relationTable tbody').html('<tr><td colspan="5">Loading...</td></tr>');
+    $('#invalidUnitSelect').empty().append('<option value="">Pilih unit tidak valid...</option>');
+    $.ajax({
+      url: '/unit/' + unitId + '/relations',
+      type: 'GET',
+      success: function(resp) {
+        // Fill table
+        const rows = resp.relations.map((rel, idx) => `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${rel.related_unit_name || '-'}</td>
+            <td>${rel.valid_to || '-'}</td>
+            <td>${rel.status ? 'Valid' : 'Invalid'}</td>
+            <td>
+              <button type="button" class="btn btn-sm btn-outline-danger btn-remove-relation" data-relation-id="${rel.id}">
+                <span class="bx bx-unlink"></span>
+                <span class="ms-1">Hapus</span>
+              </button>
+            </td>
+          </tr>
+        `);
+        $('#relationTable tbody').html(rows.join('') || '<tr><td colspan="5">Belum ada relasi</td></tr>');
+
+        // Fill select
+        resp.invalid_units.forEach(u => {
+          $('#invalidUnitSelect').append(`<option value="${u.id}">${u.name}</option>`);
+        });
+      },
+      error: function(xhr) {
+        $('#relationTable tbody').html('<tr><td colspan="5">Gagal memuat data</td></tr>');
+      }
+    });
+  }
+
+  $('#btnAddRelation').on('click', function() {
+    const relatedId = $('#invalidUnitSelect').val();
+    if (!currentUnitId || !relatedId) {
+      Swal.fire({ icon: 'info', title: 'Pilih unit tidak valid terlebih dahulu' });
+      return;
+    }
+    $.ajax({
+      url: '/unit/' + currentUnitId + '/relations',
+      type: 'POST',
+      data: { related_unit_id: relatedId, _token: '{{ csrf_token() }}' },
+      success: function(resp) {
+        Swal.fire({ icon: 'success', title: 'Relasi ditambahkan' });
+        loadRelations(currentUnitId);
+      },
+      error: function(xhr) {
+        Swal.fire({ icon: 'error', title: 'Gagal menambahkan relasi', text: xhr.responseJSON?.message || 'Error' });
+      }
+    });
+  });
+
+  $(document).on('click', '.btn-remove-relation', function() {
+    const relationId = $(this).data('relation-id');
+    if (!currentUnitId || !relationId) return;
+    $.ajax({
+      url: '/unit/' + currentUnitId + '/relations/' + relationId,
+      type: 'DELETE',
+      data: { _token: '{{ csrf_token() }}' },
+      success: function(resp) {
+        Swal.fire({ icon: 'success', title: 'Relasi dihapus' });
+        loadRelations(currentUnitId);
+      },
+      error: function(xhr) {
+        Swal.fire({ icon: 'error', title: 'Gagal menghapus relasi', text: xhr.responseJSON?.message || 'Error' });
+      }
+    });
+  });
 </script>
 @endpush
