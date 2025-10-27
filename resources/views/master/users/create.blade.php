@@ -71,7 +71,7 @@
               <label class="form-label label-md-start col-md-4">Cari</label>
               <div class="input-group">
                 <input class="form-control" name="search" type="text" placeholder="Masukkan NIP / Email"
-                  value="{{ old('search') }}" style="border-top-right-radius: 0; border-bottom-right-radius: 0;" onkeydown="if(event.key === 'Enter') { event.preventDefault(); document.getElementById('search-button').click(); }"/>
+                  value="{{ old('search') }}" autocomplete="off" style="border-top-right-radius: 0; border-bottom-right-radius: 0;" onkeydown="if(event.key === 'Enter') { event.preventDefault(); document.getElementById('search-button').click(); }"/>
                 <button class="btn btn-primary py-2" type="button" id="search-button">
                   <i class="bx bx-search"></i>
                 </button>
@@ -206,6 +206,7 @@
 
 @push('scripts')
 <script>
+// Force cache refresh - version 2.0
   $('#search-button').click(function() {
     Swal.fire({
       title: 'Mencari user...',
@@ -244,15 +245,22 @@
           }
         });
 
-        if (data.nm_unit) {
-          const existingUnit = $('select[name="unit_id"] option').filter(function() {
-            return $(this).text() === data.nm_unit;
-          }).val();
-          if (existingUnit) {
-            $('select[name="unit_id"]').val(existingUnit).change();
-          } else {
-            $('select[name="unit_id"]').append(`<option value="${data.nm_unit}">${data.nm_unit}</option>`);
-            $('select[name="unit_id"]').val(data.nm_unit).change();
+        // Handle unit selection based on resolved_unit from backend
+        console.log('Debug info:', response.debug);
+        if (response.resolved_unit && response.resolved_unit.id) {
+          // Unit found based on cost_center_parent, select it
+          $('select[name="unit_id"]').val(response.resolved_unit.id).change();
+          console.log('Unit selected:', response.resolved_unit);
+        } else {
+          // No matching unit found, clear selection and show message
+          $('select[name="unit_id"]').val('').change();
+          if (data.nm_unit) {
+            Swal.fire({
+              icon: 'info',
+              title: 'Unit tidak ditemukan',
+              text: `Unit "${data.nm_unit}" (Cost Center Parent: ${response.debug?.cost_center_parent || 'N/A'}) tidak ditemukan di database. Silakan pilih unit secara manual.`,
+              confirmButtonText: 'OK'
+            });
           }
         }
         $('select[name="jabatan_id"]').val(response.jabatan?.id || '').change();

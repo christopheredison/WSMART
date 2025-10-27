@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CapaianTckController;
 use App\Http\Controllers\CapaianTkmruController;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,7 @@ use App\Http\Controllers\Master\UserController;
 use App\Http\Controllers\Master\TckController;
 use App\Http\Controllers\Master\RoleController;
 use App\Http\Controllers\Master\UnitController;
+use App\Http\Controllers\Master\UnitRelationController;
 use App\Http\Controllers\Master\UnitTypeController;
 use App\Http\Controllers\RiskOfficer\RiskRegisterController as RiskRegisterOfficer;
 use App\Http\Controllers\RiskOfficer\RiskMonitoringController;
@@ -50,6 +52,7 @@ use App\Http\Controllers\Master\UnitHasilUsahaController;
 use App\Http\Controllers\Master\QuestionController;
 use App\Http\Controllers\Master\RMIPeriodController;
 use App\Http\Controllers\Project\ProjectPeriodeListController;
+use App\Http\Controllers\OpportunityController;
 use App\Http\Controllers\Project\ProjectRiskController;
 use App\Http\Controllers\Project\ProjectRiskMonitoringController;
 use App\Http\Controllers\Project\ProjectRiskMonitoringDocumentController;
@@ -114,7 +117,16 @@ Route::get('/callback-sso', [LoginController::class, 'callbackSSO']);
 
 Auth::routes();
 
-Route::group(['middleware' => ['auth']], function() {
+Route::group(['middleware' => ['auth']], function () {
+    
+    Route::post('/opportunities', [OpportunityController::class, 'store'])->name('opportunities.store');
+    Route::put('/opportunities/{id}', [OpportunityController::class, 'update'])->name('opportunities.update');
+    Route::delete('/opportunities/{id}', [OpportunityController::class, 'destroy'])->name('opportunities.destroy');
+    Route::get('/opportunities/monitoring/{risikoId}', [OpportunityController::class, 'getOpportunities'])->name('opportunities.get');
+
+    // Get Risiko ID from Monitoring
+    Route::get('/monitoring/{id}/get-risiko-id', [RiskRegisterUnitMonitoringController::class, 'getRisikoId'])->name('monitoring.get-risiko-id');
+    
     Route::get('/get-sektors/{divisiId}', function ($divisiId) {
         $sektors = ProjectSektor::where('project_divisi_id', $divisiId)
                     ->orderBy('sektor_name')
@@ -186,6 +198,7 @@ Route::group(['middleware' => ['auth']], function() {
         Route::delete('/roles/destroy/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
         Route::post('/roles/{id}/restore', [RoleController::class, 'restore'])->name('roles.restore');
     });
+
     Route::group(['middleware' => ['can:manajemen_master']],function ()
     {
         Route::get('/universitas', [UniversitasController::class, 'index'])->name('universitas.index');
@@ -291,6 +304,11 @@ Route::group(['middleware' => ['auth']], function() {
             Route::put('/unit/{unit}', [UnitController::class, 'update'])->name('unit.update');
             Route::delete('/unit/{unit}', [UnitController::class, 'destroy'])->name('unit.destroy');
             Route::post('/unit/{id}/restore', [UnitController::class, 'restore'])->name('unit.restore');
+
+            // Unit Relations
+            Route::get('/unit/{unit}/relations', [UnitRelationController::class, 'index'])->name('unit.relations.index');
+            Route::post('/unit/{unit}/relations', [UnitRelationController::class, 'store'])->name('unit.relations.store');
+            Route::delete('/unit/{unit}/relations/{relation}', [UnitRelationController::class, 'destroy'])->name('unit.relations.destroy');
 
             Route::get('/unit-type', [UnitTypeController::class, 'index'])->name('unit-type.index');
             Route::get('/unit-type/create', [UnitTypeController::class, 'create'])->name('unit-type.create');
@@ -556,7 +574,7 @@ Route::group(['prefix' => 'master', 'middleware' => ['auth']], function () {
         ->name('measurement-parameter.delete-criteria');
 });
 
-Route::prefix('risk-register-unit')->group(function () {
+Route::prefix('risk-register-unit')->middleware('auth')->group(function () {
     Route::get('/periods', [RiskRegisterUnitController::class, 'RiskPeriodeList'])->name('risk-register-unit.periods');
     Route::get('/periods/{period}', [RiskRegisterUnitController::class, 'riskPeriodeDashboard'])->name('risk-register-unit.periods.show');
     Route::resource('/periods/{period}/monitorings', RiskRegisterUnitMonitoringController::class)
@@ -620,6 +638,7 @@ Route::prefix('risk-register-ap')->group(function () {
     Route::get('/{riskRegister}/loss-events/create', [ApLEDController::class, 'riskChangeToLed'])->name('risk-register-ap.loss-events.create')->middleware('can:risk_register_list');
     Route::post('/{riskRegister}/loss-events', [ApLEDController::class, 'riskChangeToLedStore'])->name('risk-register-ap.loss-events.store')->middleware('can:risk_register_list');
 });
+
 Route::get('kamus-risiko-ap', [KamusRisikoApController::class, 'index'])->name('kamus-risiko-ap.index');
 Route::post('kamus-risiko-ap/add-risk', [KamusRisikoApController::class, 'addRisk'])->name('kamus-risiko-ap.add-risk');
 Route::post('kamus-risiko-ap/export', [KamusRisikoApController::class, 'exportExcel'])->name('kamus-risiko-ap.export');
@@ -691,4 +710,16 @@ Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->
     Route::put('/{riskRegister}/perencanaan/{id}', [App\Http\Controllers\CorporateRiskController::class, 'updateRencanaPerlakuan'])->name('update-rencana-perlakuan');
 
     Route::get('/get-division-risks/{unit}', [App\Http\Controllers\CorporateRiskController::class, 'getDivisionRisks'])->name('get-division-risks');
+});
+
+// Notification Routes
+Route::prefix('notifications')->middleware(['auth'])->group(function () {
+    Route::get('/', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/unread', [NotificationController::class, 'getUnreadNotifications'])->name('notifications.unread_count');
+    Route::get('/{id}', [NotificationController::class, 'show'])->name('notifications.show');
+    Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/{id}/unread', [NotificationController::class, 'markAsUnread'])->name('notifications.unread');
+    Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
+    Route::post('/mark-multiple-read', [NotificationController::class, 'markMultipleAsRead'])->name('notifications.markMultipleAsRead');
+    Route::post('/mark-multiple-unread', [NotificationController::class, 'markMultipleAsUnread'])->name('notifications.markMultipleAsUnread');
 });

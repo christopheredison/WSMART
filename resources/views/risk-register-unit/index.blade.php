@@ -50,10 +50,11 @@
               <label for="filter-unit" class="form-label d-none">Unit</label>
               <select id="filter-unit" class="form-select select2" disabled>
                 @php
-                $userUnitId = auth()->user()->unit_id;
-                $userUnitName = $unit[$userUnitId] ?? 'Unit Tidak Ditemukan';
+                // Tampilkan nama unit sesuai konteks halaman: gunakan unit_id dari URL jika diizinkan
+                $displayUnitId = isset($unitId) ? $unitId : (auth()->user()->unit_id ?? null);
+                $displayUnitName = $displayUnitId && isset($unit[$displayUnitId]) ? $unit[$displayUnitId] : 'Unit Tidak Ditemukan';
                 @endphp
-                <option value="{{ $userUnitName }}" selected>{{ $userUnitName }}</option>
+                <option value="{{ $displayUnitName }}" selected>{{ $displayUnitName }}</option>
               </select>
             </div>
             @endcan
@@ -94,12 +95,14 @@
                 <option value="Low">Low</option>
               </select>
             </div>
-            <div class="col-auto ms-auto d-flex gap-2 align-items-center">
+              <div class="col-auto ms-auto d-flex gap-2 align-items-center">
               <div class="col-auto ms-auto">
+                @if(!$unitExpired)
                 <a href="{{ route('kamus-risiko-unit.index') }}" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Kamus Risiko">
                   <span class="bx bx-book-bookmark"></span>
                   <span class="ms-1">Kamus Risiko</span>
                 </a>
+                @endif
               </div>
               <div class="col-auto ms-auto">
               @php
@@ -107,7 +110,7 @@
                   $pid = $selectedPeriode->id;
               @endphp
               @can('risk_register_create')
-                @if($status == null || $status == 1 || $status == 5)
+                @if(!$unitExpired && ($status == null || $status == 1 || $status == 5))
                 <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $pid]) }}" type="button"
                   class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
                   data-bs-title="Tambah Risiko">
@@ -297,6 +300,7 @@
         </div>
         @endif
 
+        @if(!$unitExpired)
         @can('risk_register_send')
         <form id="send-form" action="{{ route('risk-register-unit.send') }}" method="POST" class="d-inline-block">
           @csrf
@@ -317,13 +321,14 @@
             <button id="accept-button" class="btn btn-submit btn-arrow-right" {{ (isset($pending_risk) && $pending_risk > 0) ? 'disabled' : '' }}>Publish Risiko</button>
             @else
             <input type="hidden" name="unit_id" value="{{ $unitId }}">
-              @if($status != 8)
+              @if($status != 8 && !$unitExpired)
               <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button>
               @endif
             @endif
           @endif
         </form>
         @endcan
+        @endif
       </div>
     </div>
   </div>
@@ -518,7 +523,9 @@ $(document).ready(function() {
     table.column(8).search(riskLevel).draw();
   });
 
-  document.querySelector('#send-form').addEventListener('submit', function(event) {
+  const sendFormEl = document.querySelector('#send-form');
+  if (sendFormEl) {
+  sendFormEl.addEventListener('submit', function(event) {
     event.preventDefault(); // Mencegah form submission otomatis
 
     const status = {{ $status ?? 'null' }};
@@ -590,6 +597,7 @@ $(document).ready(function() {
       });
     }
   });
+  }
 
   // Select/Deselect all checkboxes
   $('#select-all').on('click', function() {
@@ -621,7 +629,7 @@ document.addEventListener('DOMContentLoaded', function() {
   //}
 
   const addRiskButton = document.getElementById('add-risk-button');
-
+  if (addRiskButton) {
   addRiskButton.addEventListener('click', function(event) {
     // Cek apakah status berbeda dari 1
     if (status !== null && status != 1 && status != 5) {
@@ -630,6 +638,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Jika status == 1 atau status null, link akan berjalan normal dan mengarah ke halaman buat risiko.
   });
+  }
 });
 
 // Tambahkan event listener untuk tombol kirim perbaikan
