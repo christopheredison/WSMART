@@ -384,6 +384,83 @@ class ProjectRiskController extends BasicCRUDController
             }
         }
 
+        $this->tableActions[] = [
+            'label' => '<span class="bx bx-comment-dots"></span>',
+            'btn_icon' => true,
+            'action' => 'script',
+            'script' => 'showCatatanRisiko($(this).data("id"))',
+            'title' => 'Lihat Catatan',
+            'active_state' => 'function(id, type, row) { return true; }',
+        ];
+
+        $this->tableLegend[] = [
+            'icon' => '<span class="bx bx-comment-dots"></span>',
+            'label' => 'Lihat Catatan'
+        ];
+
+        $catatanRoute = route('projects.risks.notes', ['project' => request()->route('project'), 'risk' => ':id']);
+
+        $this->extraScripts[] = <<<SCRIPT
+        <script>
+        function showCatatanRisiko(riskId) {
+            const modalElement = document.getElementById('modalCatatan');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            const contentDiv = $('#catatan-content');
+            
+            // Tampilkan spinner loading
+            contentDiv.html('<div class="d-flex justify-content-center my-4"><div class="spinner-border" role="status"><span class="visually-hidden">Memuat...</span></div></div>');
+            
+            // Gunakan route yang sudah di-generate dari PHP
+            const url = "{$catatanRoute}".replace(':id', riskId);
+            
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(notes) {
+                    if (notes.length === 0) {
+                        contentDiv.html('<div class="text-center my-4"><i class="fas fa-comment-slash fa-2x text-muted mb-2"></i><p>Belum ada catatan untuk risiko ini.</p></div>');
+                    } else {
+                        let html = '';
+                        notes.forEach(note => {
+                            const statusBadge = note.status == 1 
+                                ? '<span class="badge bg-success-subtle text-success">Diterima</span>' 
+                                : '<span class="badge bg-danger-subtle text-danger">Ditolak</span>';
+                            
+                            const formattedDate = new Date(note.created_at).toLocaleString('id-ID', {
+                                day: '2-digit', month: 'short', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                            });
+
+                            html += `
+                            <div class="card mb-3 shadow-sm">
+                                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                                    <div class="fw-bold">
+                                        \${note.user ? note.user.name : 'User Tidak Ditemukan'}
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <small class="text-muted me-3">\${formattedDate}</small>
+                                        \${statusBadge}
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text mb-0">\${note.notes || '<i>Tidak ada catatan.</i>'}</p>
+                                </div>
+                            </div>
+                            `;
+                        });
+                        contentDiv.html(html);
+                    }
+                    modal.show();
+                },
+                error: function() {
+                    contentDiv.html('<div class="text-center my-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p>Gagal memuat catatan.</p></div>');
+                    modal.show();
+                }
+            });
+        }
+        </script>
+        SCRIPT;
+
         $this->tableLegend[] = [
             'icon' => '<span class="badge bg-primary">!</span>',
             'label' => 'Rekomendasi Risiko'
@@ -2542,5 +2619,20 @@ class ProjectRiskController extends BasicCRUDController
         }
         
         return '';
+    }
+    public function getRiskNotes(Request $request, $project, $risk)
+    {
+        try {
+            $notes = RiskNote::with('user')
+                ->where('risiko_id', $risk)
+                ->where('type', 2) // Type 2 untuk Project
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json($notes);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Gagal mengambil data catatan.'], 500);
+        }
     }
 }

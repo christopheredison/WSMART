@@ -207,6 +207,10 @@
         @include('project-risk._modal_verifikasi')
     @endif
 
+    @if(request()->route()->getName() === 'projects.risks.index')
+        @include('project-risk._modal_catatan')
+    @endif
+
     @if (!empty($extraViewData['showVerifikasiModal']))
         @if (request()->route()->getName() === 'projects.monitorings.index')
             @include('project-monitorings._modal_verifikasi')
