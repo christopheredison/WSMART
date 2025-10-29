@@ -15,7 +15,7 @@
                             </tr>
                             <tr>
                                 @php
-                                    $sampleScales = $groupedSkalaParameters->first()->sortBy('tingkat');
+                                    $sampleScales = $groupedSkalaParameters?->first()?->sortBy('tingkat') ?? [];
                                 @endphp
                                 @foreach($sampleScales as $scale)
                                     <th style="width: 17%;">{{ $scale->tingkat }}<br>{{ $scale->skala }}</th>

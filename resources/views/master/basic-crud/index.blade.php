@@ -564,7 +564,10 @@ $(document).ready(function() {
 
             let html = '<div style="white-space:nowrap" class="d-flex align-items-center">' + buttons.join('') + '</div>';
 
-            return html.replaceAll(':id', data).replaceAll(':code', row.code || '');
+            return html
+              .replaceAll(':project_id', (row?.project_id || (row?.project && row?.project?.id) || ''))
+              .replaceAll(':id', data)
+              .replaceAll(':code', row.code || '');
         }
     });
     @endif
