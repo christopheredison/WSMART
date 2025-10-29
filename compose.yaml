@@ -1,14 +1,42 @@
 services:
   php-apache:
     build:
-      context: . # Mengacu ke lokasi Dockerfile
+      context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:80" # Memetakan port 80 di container ke port 8080 di host
+      - "8080:80"
     volumes:
-      - .:/var/www/html # Menyinkronkan kode sumber ke dalam container
-      - ./docker/000-default.conf:/etc/apache2/sites-available/000-default.conf # Menyinkronkan konfigurasi Apache
+      - .:/var/www/html
+      - ./docker/000-default.conf:/etc/apache2/sites-available/000-default.conf
     container_name: php-apache-wika
-    # environment:
-    #   - APACHE_RUN_USER=root
-    #   - APACHE_RUN_GROUP=root
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-wika
+    environment:
+      MYSQL_ROOT_PASSWORD: password123
+      MYSQL_DATABASE: mrdb
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    restart: unless-stopped
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin-wika
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: password123
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
