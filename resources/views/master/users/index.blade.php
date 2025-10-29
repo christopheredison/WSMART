@@ -92,6 +92,7 @@
                 <th class="sort" data-sort="no">#</th>
                 <th>Name</th>
                 <th>Email</th>
+                <th>NIP</th>
                 <th>Roles</th>
                 <th class="no-sort">Action</th>
               </tr>
@@ -108,6 +109,7 @@
                 <td class="index-number">{{ $index + 1 }}</td>
                 <td>{{ $item->name }}</td>
                 <td>{{ $item->email }}</td>
+                <td>{{ $item->nip ?? '-' }}</td>
                 <td>
                   @foreach ($item->roles as $role)
                   {{ ucwords(str_replace('_', ' ', $role->name)) }}

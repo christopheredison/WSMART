@@ -574,7 +574,7 @@
 <hr class="mb-4">
 <!--============================ Loss Event Data Korporat ============================-->
 <div class="col-12 mb-3">
-  <div class="card" id="led-card">
+  <div class="card" id="led-korporat-card">
     <div class="card-header border-0 pb-0">
       <div class="d-flex align-items-center gap-3">
         <div class="bg-info-subtle rounded-3 p-2">
@@ -593,7 +593,7 @@
         <table class="table table-hover table-sm">
           <thead>
             <tr>
-              <th>#</th>
+              {{-- <th>#</th> --}}
               <th>Tanggal Kejadian</th>
               <th>Nama Kejadian</th>
               <th>Identifikasi Kejadian</th>
@@ -604,7 +604,7 @@
           <tbody>
             @forelse ($topLossEventsCorporate as $event)
               <tr>
-                <td>{{ $loop->iteration }}</td>
+                {{-- <td>{{ $loop->iteration }}</td> --}}
                 <td>{{ $event->peristiwa ?? ($event->nama_kejadian ?? '-') }}</td>
                 <td>{{ $event->peristiwa ?? ($event->nama_kejadian ?? '-') }}</td>
                 <td>{{ $event->peristiwa ?? ($event->nama_kejadian ?? '-') }}</td>
@@ -613,7 +613,7 @@
               </tr>
             @empty
               <tr>
-                <td colspan="6" class="text-center text-muted p-4">Tidak ada data Loss Event untuk Kantor Pusat.</td>
+                <td colspan="6" class="text-center text-muted p-4">Tidak ada data Loss Event untuk Korporat.</td>
               </tr>
             @endforelse
           </tbody>
@@ -875,15 +875,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Lost Event Data Divisi
+    const lossEventsUnit = @json($lossEventsUnit ?? []);
     $('#led-card .table tbody').html('');
-    if (dashboardData.led.length == 0) {
+    if (lossEventsUnit.length == 0) {
       $('#led-card .table tbody').append(`
               <tr>
                   <td colspan="7" class="dt-empty text-center">No data available</td>
               </tr>
           `);
     } else {
-      dashboardData.led.forEach((led) => {
+      lossEventsUnit.forEach((led) => {
         $('#led-card .table tbody').append(`
                 <tr>
                     <td>${led.tanggal_kejadian}</td>
@@ -898,15 +899,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Lost Event Data Project
+    const lossEventsProject = @json($lossEventsProject ?? []);
     $('#led-project-card .table tbody').html('');
-    if (dashboardData.ledProject.length == 0) {
+    if (lossEventsProject.length == 0) {
       $('#led-project-card .table tbody').append(`
               <tr>
                   <td colspan="7" class="dt-empty text-center">No data available</td>
               </tr>
           `);
     } else {
-      dashboardData.ledProject.forEach((led) => {
+      lossEventsProject.forEach((led) => {
         $('#led-project-card .table tbody').append(`
                 <tr>
                     <td>${led.tanggal_kejadian}</td>

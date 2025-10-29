@@ -1926,7 +1926,13 @@ class ProjectRiskController extends BasicCRUDController
     public function send(Request $request)
     {
         $user = auth()->user();
-        $project_id = $request->input('project_id');
+        $project_periode_id = $request->input('project_id');
+        $project_id = null;
+        $projectPeriodeList = ProjectPeriodeList::findOrFail($request->input('project_id'));
+        if ($projectPeriodeList) {
+          $project_id = $projectPeriodeList->project_id;
+        }
+        // dd($project_id);
         $send_type = $request->input('send_type', 'risiko'); // Default ke 'risiko' jika tidak ada
         $project = Project::find($project_id);
         $level_id = $user->level_id;
@@ -1992,7 +1998,7 @@ class ProjectRiskController extends BasicCRUDController
             $pesanError .= '</ul>Silahkan lengkapi terlebih dahulu.';
 
             return redirect()->route('projects.risks.index', [
-                'project' => $project_id  // Changed from 'project_id' to 'project'
+                'project' => $project_periode_id
             ])
                 ->with('error', $pesanError);
         }
@@ -2033,7 +2039,7 @@ class ProjectRiskController extends BasicCRUDController
             $newDataBatch = DataBatch::create([
                 'periode_id' => $periode_id,
                 'type' => 2, // type = 1 untuk unit/divisi
-                'project_id' => $uniproject_idt_id,
+                'project_id' => $project_id,
                 'batch' => $batch,
                 'status' => DataBatch::STATUS_KIRIM, // Status kirim
                 'step_verification' => 1,
@@ -2045,7 +2051,7 @@ class ProjectRiskController extends BasicCRUDController
                 // Jika sudah ada dan status belum finish
                 if($dataBatch->status != DataBatch::STATUS_PROSES){
                     return redirect()->route('projects.risks.index', [
-                        'project' => $project_id
+                        'project' => $project_periode_id
                     ])->with('error', 'Masih ada data batch risiko yang sedang berproses. Silahkan tunggu hingga proses selesai.');
                 }
                 else{
@@ -2058,21 +2064,22 @@ class ProjectRiskController extends BasicCRUDController
                 }
             }
         }
+        // dd($dataBatch);
 
-        // if($dataBatch->status <= DataBatch::STATUS_KIRIM){
-        //     // Ubah semua risiko di identifikasi_risikos dengan status = 2 (Dikirim), status_risiko = 1, dan status_progress = 1
-        //     foreach ($risikos as $risiko) {
-        //         $risiko->update([
-        //             'status' => ProjectRisk::STATUS_DIKIRIM, // Status dikirim
-        //             'status_risiko' => 1,
-        //             'status_progress' => 1,
-        //             'step_verification' => 1
-        //         ]);
-        //     }
-        // }
+        if($dataBatch->status <= DataBatch::STATUS_KIRIM){
+            // Ubah semua risiko di identifikasi_risikos dengan status = 2 (Dikirim), status_risiko = 1, dan status_progress = 1
+            foreach ($risikos as $risiko) {
+                $risiko->update([
+                    'status' => ProjectRisk::STATUS_DIKIRIM, // Status dikirim
+                    'status_risiko' => 1,
+                    'status_progress' => 1,
+                    'step_verification' => 1
+                ]);
+            }
+        }
 
         return redirect()->route('projects.risks.index', [
-                    'project' => $project_id
+                    'project' => $project_periode_id
                 ])
                     ->with('success', 'Pengiriman risiko berhasil dilakukan. Risiko telah dikirim untuk diverifikasi.');
     }
