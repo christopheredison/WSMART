@@ -7,6 +7,7 @@ use App\Supports\ApiWika;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Log;
 
 class Unit extends Model
 {
@@ -33,6 +34,14 @@ class Unit extends Model
         'cost_center_parent',
         'cost_center_parent_deskripsi',
         'unit_mr',
+        'valid_from',
+        'valid_to',
+        'status',
+    ];
+
+    protected $casts = [
+        'valid_from' => 'date:Y-m-d',
+        'valid_to' => 'date:Y-m-d',
     ];
 
     public const UNIT_TYPE_DIVISION = 1;
@@ -47,6 +56,15 @@ class Unit extends Model
             'limit' => 999999,
             'key' => 'GZrmL5TH',
             'cost_center_type' => 'Department',
+        ]);
+
+        Log::channel('unit_sync')->info('Unit HC API response fetched', [
+            'total' => is_array($units['data'] ?? null) ? count($units['data']) : 0,
+            'message' => $units['message'] ?? null,
+            'sample_first' => $units['data'][0] ?? null,
+        ]);
+        Log::channel('unit_sync')->debug('Unit HC API raw data', [
+            'data' => $units['data'] ?? [],
         ]);
 
         if (!($units['data'] ?? [])) {
@@ -68,9 +86,9 @@ class Unit extends Model
         })->reverse()->keyBy('cost_center_parent')->values()->toArray();
         
         foreach ($unitData as $unit) {
-            if (!($unitTypes[$unit['cost_center_type']] ?? false)) {
-                continue;
-            }
+            // if (!($unitTypes[$unit['cost_center_type']] ?? false)) {
+            //     continue;
+            // }
 
             $unit = Unit::updateOrCreate(
                 ['cost_center' => $unit['cost_center_parent']],
@@ -97,6 +115,7 @@ class Unit extends Model
             $divisiUnits[$unit['cost_center']] = $unit;
         }
 
+        /*
         $projectDatas = (new ApiWika())->getProjects();
         foreach ($projectDatas as $projectData) {
             $divisiUnit = $divisiUnits[$projectData['divisisap']] ?? null;
@@ -117,6 +136,7 @@ class Unit extends Model
                 'unit_id' => $divisiUnit?->id,
             ]);
         }
+        */
     }
 
     public function unitType()

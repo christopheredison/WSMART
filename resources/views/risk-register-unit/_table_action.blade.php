@@ -1,47 +1,53 @@
 
-@if(($item->status == 1 || $item->status == null || $item->status == 5) && (auth()->user()->level_id == 1 && auth()->user()->unit_id == $item->unit_id))
-  @can('risk_register_edit')
-    <a href="{{ route('risk-register-unit.edit', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
-      title="Edit"><span class="bx bx-message-square-edit"></span></a>
-  @endcan
-  <!-- Tambahkan tombol Analisa Risiko di sini -->
-  @can('risk_register_edit')
-    <a href="{{ route('risk-register-unit.analisa', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
-      title="Analisa Risiko">
-      <span class="bx bx-analyse text-warning"></span>
-    </a>
-    <a href="{{ route('risk-register-unit.perencanaan', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
-      title="Rencana Perlakuan Risiko">
-      <span class="bx bx-task text-primary"></span>
-    </a>
-  @endcan
+@if(!$unitExpired)
+  @if(($item->status == 1 || $item->status == null || $item->status == 5) && (auth()->user()->level_id == 1 && auth()->user()->unit_id == $item->unit_id))
+    @can('risk_register_edit')
+      <a href="{{ route('risk-register-unit.edit', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+        title="Edit"><span class="bx bx-message-square-edit"></span></a>
+    @endcan
+    <!-- Tambahkan tombol Analisa Risiko di sini -->
+    @can('risk_register_edit')
+      <a href="{{ route('risk-register-unit.analisa', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+        title="Analisa Risiko">
+        <span class="bx bx-analyse text-warning"></span>
+      </a>
+      <a href="{{ route('risk-register-unit.perencanaan', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+        title="Rencana Perlakuan Risiko">
+        <span class="bx bx-task text-primary"></span>
+      </a>
+    @endcan
+  @endif
 @endif
 
-@can('risk_register_verification')
-@php
-    $canVerify = false;
-    if ($item->step_verification == $step_order && $dataBatch->step_verification == $step_order && ($item->status == 2 || $item->status == 3 )) {
-        $canVerify = true;
-    }
-@endphp
-@if($canVerify)
-<button type="button" class="btn-input-icon" onclick="showVerifikasiModal({{ $item->id }}, '{{ addslashes($item->peristiwa_risiko) }}', '{{ addslashes($item->deskripsi_peristiwa_risiko) }}')">
-  <span class="bx bx-check-shield text-success" data-bs-toggle="tooltip" title="Verifikasi Risiko"></span>
-</button>
-@endif
-@endcan
-
-@if(($item->status == 1 || $item->status == null || $item->status == 5) && (auth()->user()->level_id == 1 && auth()->user()->unit_id == $item->unit_id))
-@can('risk_register_delete')
-  <button type="button" class="btn-input-icon" data-bs-toggle="modal"
-    data-bs-target="#modalDelete{{ $item->id }}">
-    <span class="bx bx-trash text-danger" data-bs-toggle="tooltip" title="Delete"></span>
-  </button>
+@if(!$unitExpired)
+  @can('risk_register_verification')
   @php
-  $itemId = $item->id;
-  $innerItemText = $item->peristiwa_risiko ?: '-';
-  $formAction = route('risk-register-unit.destroy', $item->id);
+      $canVerify = false;
+      if ($item->step_verification == $step_order && $dataBatch->step_verification == $step_order && ($item->status == 2 || $item->status == 3 )) {
+          $canVerify = true;
+      }
   @endphp
-  @include('partials.modal-delete-alert')
-@endcan
+  @if($canVerify)
+  <button type="button" class="btn-input-icon" onclick="showVerifikasiModal({{ $item->id }}, '{{ addslashes($item->peristiwa_risiko) }}', '{{ addslashes($item->deskripsi_peristiwa_risiko) }}')">
+    <span class="bx bx-check-shield text-success" data-bs-toggle="tooltip" title="Verifikasi Risiko"></span>
+  </button>
+  @endif
+  @endcan
+@endif
+
+@if(!$unitExpired)
+  @if(($item->status == 1 || $item->status == null || $item->status == 5) && (auth()->user()->level_id == 1 && auth()->user()->unit_id == $item->unit_id))
+  @can('risk_register_delete')
+    <button type="button" class="btn-input-icon" data-bs-toggle="modal"
+      data-bs-target="#modalDelete{{ $item->id }}">
+      <span class="bx bx-trash text-danger" data-bs-toggle="tooltip" title="Delete"></span>
+    </button>
+    @php
+    $itemId = $item->id;
+    $innerItemText = $item->peristiwa_risiko ?: '-';
+    $formAction = route('risk-register-unit.destroy', $item->id);
+    @endphp
+    @include('partials.modal-delete-alert')
+  @endcan
+  @endif
 @endif

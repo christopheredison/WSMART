@@ -63,21 +63,8 @@ class UserController extends Controller
         }
 
         $unitId = $request->unit_id;
-        if (is_numeric($unitId)) {
-            $unitId = $unitId;
-        } elseif ($dataUser) {
-            $unitId = null;
-            if ($dataUser['nm_unit']) {
-                $unit = Unit::where('name', $dataUser['nm_unit'])->first();
-                if (!$unit) {
-                    $unit = Unit::create([
-                        'name' => $dataUser['nm_unit'],
-                        'unit_type_id' => 2,
-                        'parent_id' => 0,
-                    ]);
-                }
-                $unitId = $unit->id;
-            }
+        if (!is_numeric($unitId)) {
+            return back()->withErrors(['unit_id' => 'Silakan pilih unit yang valid']).withInput();
         }
 
         $unit = Unit::findOrFail($unitId);
@@ -94,7 +81,7 @@ class UserController extends Controller
             'unit_type_id' => $unit->unitType->id,
             'parent_id' => $unit->parent_id,
             'jabatan_id' => $jabatan->id,
-            'level_id' => $request->level_id, // Gunakan level_id dari request
+            'level_id' => $request->level_id,
         ]);
 
         if ($request->has('user_projects')) {
@@ -225,6 +212,26 @@ class UserController extends Controller
             $jabatan = Jabatan::where('code', $dataUser['kd_jabatan'])->first();
         }
 
-        return response()->json(['data' => $dataUser, 'jabatan' => $jabatan]);
+        // Resolve unit by cost_center_parent from API user data
+        $resolvedUnit = null;
+        $ccParent = $dataUser['cost_center_parent'] ?? null;
+        if ($ccParent) {
+            // Try to find unit by cost_center matching cost_center_parent from API
+            $unit = Unit::where('cost_center', $ccParent)->first();
+            if ($unit) {
+                $resolvedUnit = ['id' => $unit->id, 'name' => $unit->name];
+            }
+        }
+
+        return response()->json([
+            'data' => $dataUser, 
+            'jabatan' => $jabatan, 
+            'resolved_unit' => $resolvedUnit,
+            'debug' => [
+                'cost_center_parent' => $ccParent,
+                'unit_found' => $resolvedUnit ? true : false,
+                'nm_unit' => $dataUser['nm_unit'] ?? null
+            ]
+        ]);
     }
 }

@@ -106,6 +106,7 @@
   <script src="/assets/js/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
+  <script src="/js/notification-handler.js"></script>
   @yield('scripts')
   @stack('scripts')
 </body>
