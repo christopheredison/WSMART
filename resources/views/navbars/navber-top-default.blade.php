@@ -9,7 +9,7 @@
     </button>
     <div class="row justify-content-between g-0 w-100">
       <div class="col-6 col-md-auto d-flex align-items-center">
-        <h5 class="mb-0">WIKA Sistem MAnagement Risiko Terintegrasi (W-SMART)</h5>
+        <h5 class="mb-0">Selamat Datang di Sistem Manajemen Risiko Terintegrasi</h5>
       </div>
       <div class="col-auto">
         <ul class="navbar-nav navbar-nav-icons ms-auto flex-row align-items-center">
