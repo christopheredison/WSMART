@@ -150,8 +150,9 @@ class ProjectRiskController extends BasicCRUDController
     ];
 
     public function index() {
-
-        $projectId = request()->route('project');
+        $projectPeriodeListId = request()->route('project');
+        $projectPeriodeList = ProjectPeriodeList::findOrFail($projectPeriodeListId);
+        $projectId = $projectPeriodeList->project_id;
         $periodeId = 0;
         $batchNotes = null;
         $user = request()->user();
@@ -225,10 +226,10 @@ class ProjectRiskController extends BasicCRUDController
 
         $this->baseRouteParams = ['project' => request()->route('project')];
 
-        $projectPeriodeList = ProjectPeriodeList::with('project')->findOrFail(request()->route('project'));
+        $projectPeriodeList = ProjectPeriodeList::with('project')->where('project_id', $projectId)->first();
         $this->indexSubtitle = $projectPeriodeList->project->project_name;
 
-        if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriodeList) || 
+        if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriodeList) ||
             ($user->unit && $projectPeriodeList->project && $projectPeriodeList->project->cost_center_parent == $user->unit->cost_center))) {
             abort(403);
         }
@@ -304,7 +305,9 @@ class ProjectRiskController extends BasicCRUDController
                 $active_state = null;
                 if($status == 5) {
                     // Jika status batch 5, maka status risk juga harus 5
-                    $active_state = 'function(id, type, row) { return row.status == 5; }';
+                    $active_state = 'function(id, type, row) { return row.status === 5; }';
+                } else {
+                    $active_state = 'function(id, type, row) { return row.status === 1; }';
                 }
 
                 $this->tableLegend = [
@@ -349,7 +352,7 @@ class ProjectRiskController extends BasicCRUDController
                 ];
                 
 
-                if (Gate::check('project_risk_delete') && $status==1) {
+                if (Gate::check('project_risk_delete') && ($status==1 || $status==5)) {
                     $this->tableLegend[] = [
                         'icon' => '<span class="bx bx-trash text-danger"></span>',
                         'label' => 'Hapus'
@@ -361,6 +364,7 @@ class ProjectRiskController extends BasicCRUDController
                         'action' => 'delete',
                         'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']),
                         'permissions' => ['project_risk_delete'],
+                        'active_state' => 'function(id, type, row) { return (row.status == 1 || row.status == 5); }'
                     ];
                 }
             }
@@ -379,6 +383,83 @@ class ProjectRiskController extends BasicCRUDController
                 ];
             }
         }
+
+        $this->tableActions[] = [
+            'label' => '<span class="bx bx-comment-dots"></span>',
+            'btn_icon' => true,
+            'action' => 'script',
+            'script' => 'showCatatanRisiko($(this).data("id"))',
+            'title' => 'Lihat Catatan',
+            'active_state' => 'function(id, type, row) { return true; }',
+        ];
+
+        $this->tableLegend[] = [
+            'icon' => '<span class="bx bx-comment-dots"></span>',
+            'label' => 'Lihat Catatan'
+        ];
+
+        $catatanRoute = route('projects.risks.notes', ['project' => request()->route('project'), 'risk' => ':id']);
+
+        $this->extraScripts[] = <<<SCRIPT
+        <script>
+        function showCatatanRisiko(riskId) {
+            const modalElement = document.getElementById('modalCatatan');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            const contentDiv = $('#catatan-content');
+            
+            // Tampilkan spinner loading
+            contentDiv.html('<div class="d-flex justify-content-center my-4"><div class="spinner-border" role="status"><span class="visually-hidden">Memuat...</span></div></div>');
+            
+            // Gunakan route yang sudah di-generate dari PHP
+            const url = "{$catatanRoute}".replace(':id', riskId);
+            
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(notes) {
+                    if (notes.length === 0) {
+                        contentDiv.html('<div class="text-center my-4"><i class="fas fa-comment-slash fa-2x text-muted mb-2"></i><p>Belum ada catatan untuk risiko ini.</p></div>');
+                    } else {
+                        let html = '';
+                        notes.forEach(note => {
+                            const statusBadge = note.status == 1 
+                                ? '<span class="badge bg-success-subtle text-success">Diterima</span>' 
+                                : '<span class="badge bg-danger-subtle text-danger">Ditolak</span>';
+                            
+                            const formattedDate = new Date(note.created_at).toLocaleString('id-ID', {
+                                day: '2-digit', month: 'short', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                            });
+
+                            html += `
+                            <div class="card mb-3 shadow-sm">
+                                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                                    <div class="fw-bold">
+                                        \${note.user ? note.user.name : 'User Tidak Ditemukan'}
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <small class="text-muted me-3">\${formattedDate}</small>
+                                        \${statusBadge}
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text mb-0">\${note.notes || '<i>Tidak ada catatan.</i>'}</p>
+                                </div>
+                            </div>
+                            `;
+                        });
+                        contentDiv.html(html);
+                    }
+                    modal.show();
+                },
+                error: function() {
+                    contentDiv.html('<div class="text-center my-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p>Gagal memuat catatan.</p></div>');
+                    modal.show();
+                }
+            });
+        }
+        </script>
+        SCRIPT;
 
         $this->tableLegend[] = [
             'icon' => '<span class="badge bg-primary">!</span>',
@@ -465,7 +546,7 @@ class ProjectRiskController extends BasicCRUDController
                 <div class="mt-3"{$viewAttr}>
                     <form id="send-form" action="{$routeUrl}" method="POST" class="d-inline-block">
                         <input type="hidden" name="_token" value="{$csrfToken}">
-                        <input type="hidden" name="project_id" value="{$projectId}">
+                        <input type="hidden" name="project_id" value="{$projectPeriodeListId}">
                         <input type="hidden" name="send_type" value="{$sendType}">
                         <button id="send-button" type="button" class="btn btn-submit btn-arrow-right"{$disabledAttr}>{$buttonText}</button>
                     </form>
@@ -528,7 +609,7 @@ class ProjectRiskController extends BasicCRUDController
         $tanggalMulai = $project->meta['tanggal_mulai'] ?? null;
         $bulanMulai = null;
         $tahunMulai = null;
-        
+
         if ($tanggalMulai) {
             $date = \Carbon\Carbon::parse($tanggalMulai);
             $bulanMulai = $date->month;
@@ -540,40 +621,40 @@ class ProjectRiskController extends BasicCRUDController
         if ($profitCenter) {
             // Ambil tahun berjalan
             $tahunBerjalan = date('Y');
-            
+
             // Cari data sasaran proyek berdasarkan profit_center dan tahun berjalan
             $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)
-                                          ->where('tahun', $tahunBerjalan)
+                                          // ->where('tahun', $tahunBerjalan)
                                           ->get();
-            
+
             // Jika tidak ada data, lakukan sinkronisasi dengan API
             if ($sasaranProyeks->isEmpty()) {
                 try {
                     Log::channel('wikaapi')->info("Memulai request API KPI Rev dengan tahun: {$tahunBerjalan} dan profit_center: {$profitCenter}");
                     $kpiResult = (new \App\Supports\ApiWika())->getKPIRev($tahunBerjalan, $profitCenter);
-                    
+
                     Log::channel('wikaapi')->info("Request API KPI Rev berhasil", [
                         'tahun' => $tahunBerjalan,
                         'profit_center' => $profitCenter,
                         'status' => $kpiResult['status'] ?? false,
                         'message' => $kpiResult['message'] ?? ''
                     ]);
-                    
+
                     // Periksa apakah ada data KPI
                     if (isset($kpiResult['data']) && isset($kpiResult['data']['kpi']) && is_array($kpiResult['data']['kpi'])) {
                         $kpiData = $kpiResult['data']['kpi'];
-                        
+
                         Log::channel('wikaapi')->info("Data KPI ditemukan", [
                             'jumlah_data' => count($kpiData)
                         ]);
-                        
+
                         foreach ($kpiData as $kpi) {
                             // Cek apakah data dengan kpi_name, tahun, dan profit_center yang sama sudah ada
                             $existingKpi = SasaranProyek::where('costcenter_code', $profitCenter)
                                                       ->where('tahun', $tahunBerjalan)
                                                       ->where('kpi_desc', $kpi['kpi_name'] ?? '')
                                                       ->first();
-                            
+
                             $kpiData = [
                                 'costcenter_code' => $profitCenter,
                                 'kpi_desc' => $kpi['kpi_name'] ?? '',
@@ -583,7 +664,7 @@ class ProjectRiskController extends BasicCRUDController
                                 'target_akhir_tahun' => $kpi['target_akhir_tahun'] ?? null,
                                 'satuan' => $kpi['satuan'] ?? null
                             ];
-                            
+
                             if ($existingKpi) {
                                 // Update data yang sudah ada
                                 $existingKpi->update($kpiData);
@@ -612,7 +693,7 @@ class ProjectRiskController extends BasicCRUDController
                         'error' => $e->getMessage()
                     ]);
                 }
-                
+
                 // Ambil data yang baru disimpan
                 $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)
                                               ->where('tahun', $tahunBerjalan)
@@ -627,7 +708,7 @@ class ProjectRiskController extends BasicCRUDController
         $masterKris = MasterKRI::get();
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
         $kontrolEksistings = KontrolEksisting::get();
-        $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();        
+        $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
 
         return view('project-risk.create', compact('periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos', 'sasaranProyeks'));
@@ -1926,7 +2007,13 @@ class ProjectRiskController extends BasicCRUDController
     public function send(Request $request)
     {
         $user = auth()->user();
-        $project_id = $request->input('project_id');
+        $project_periode_id = $request->input('project_id');
+        $project_id = null;
+        $projectPeriodeList = ProjectPeriodeList::findOrFail($request->input('project_id'));
+        if ($projectPeriodeList) {
+          $project_id = $projectPeriodeList->project_id;
+        }
+        // dd($project_id);
         $send_type = $request->input('send_type', 'risiko'); // Default ke 'risiko' jika tidak ada
         $project = Project::find($project_id);
         $level_id = $user->level_id;
@@ -1939,8 +2026,14 @@ class ProjectRiskController extends BasicCRUDController
 
         $risikos = ProjectRisk::where('project_id', $project_id)
                 ->where('periode_id', $periode_id)
+                ->where('status', '!=', 6)
                 ->get();
 
+        if ($risikos->isEmpty()) {
+          return redirect()->route('projects.risks.index', [
+                        'project' => $project_periode_id
+                    ])->with('error', 'Tidak ada risiko yang dapat dikirim.');
+        }
         $belumLengkap = false;
         $idRisikoBelumLengkap = [];
 
@@ -1992,7 +2085,7 @@ class ProjectRiskController extends BasicCRUDController
             $pesanError .= '</ul>Silahkan lengkapi terlebih dahulu.';
 
             return redirect()->route('projects.risks.index', [
-                'project' => $project_id  // Changed from 'project_id' to 'project'
+                'project' => $project_periode_id
             ])
                 ->with('error', $pesanError);
         }
@@ -2013,13 +2106,14 @@ class ProjectRiskController extends BasicCRUDController
                     'status' => DataBatch::STATUS_VERIFIKASI,
                 ]);
             }
+            $dataBatch->refresh();
 
             //update semua project risk yang status=5 menjadi 2
             ProjectRisk::where('project_id', $project_id)
                 ->where('periode_id', $periode_id)
                 ->where('status', ProjectRisk::STATUS_REJECTED) // STATUS_REJECTED = 5
                 ->update([
-                    'status' => $dataBatch->step_verification == 1 ? 
+                    'status' => $dataBatch->step_verification == 1 ?
                         ProjectRisk::STATUS_DIKIRIM : // STATUS_DIKIRIM = 2
                         ProjectRisk::STATUS_TUNGGU_VERIFIKASI, // STATUS_TUNGGU_VERIFIKASI = 3
                         'status_progress' => 1,
@@ -2033,7 +2127,7 @@ class ProjectRiskController extends BasicCRUDController
             $newDataBatch = DataBatch::create([
                 'periode_id' => $periode_id,
                 'type' => 2, // type = 1 untuk unit/divisi
-                'project_id' => $uniproject_idt_id,
+                'project_id' => $project_id,
                 'batch' => $batch,
                 'status' => DataBatch::STATUS_KIRIM, // Status kirim
                 'step_verification' => 1,
@@ -2045,7 +2139,7 @@ class ProjectRiskController extends BasicCRUDController
                 // Jika sudah ada dan status belum finish
                 if($dataBatch->status != DataBatch::STATUS_PROSES){
                     return redirect()->route('projects.risks.index', [
-                        'project' => $project_id
+                        'project' => $project_periode_id
                     ])->with('error', 'Masih ada data batch risiko yang sedang berproses. Silahkan tunggu hingga proses selesai.');
                 }
                 else{
@@ -2055,24 +2149,28 @@ class ProjectRiskController extends BasicCRUDController
                         'step_verification' => 1,
                         'finish' => false
                     ]);
+                    $dataBatch->refresh();
+                }
+            }
+        }
+        // dd($dataBatch);
+
+        if($dataBatch && $dataBatch->status <= DataBatch::STATUS_KIRIM){
+            // Ubah semua risiko di identifikasi_risikos dengan status = 2 (Dikirim), status_risiko = 1, dan status_progress = 1
+            foreach ($risikos as $risiko) {
+                if ($risiko->status == ProjectRisk::STATUS_INPUT_DATA) {
+                    $risiko->update([
+                        'status' => ProjectRisk::STATUS_DIKIRIM, // Status dikirim
+                        'status_risiko' => 1,
+                        'status_progress' => 1,
+                        'step_verification' => 1
+                    ]);
                 }
             }
         }
 
-        // if($dataBatch->status <= DataBatch::STATUS_KIRIM){
-        //     // Ubah semua risiko di identifikasi_risikos dengan status = 2 (Dikirim), status_risiko = 1, dan status_progress = 1
-        //     foreach ($risikos as $risiko) {
-        //         $risiko->update([
-        //             'status' => ProjectRisk::STATUS_DIKIRIM, // Status dikirim
-        //             'status_risiko' => 1,
-        //             'status_progress' => 1,
-        //             'step_verification' => 1
-        //         ]);
-        //     }
-        // }
-
         return redirect()->route('projects.risks.index', [
-                    'project' => $project_id
+                    'project' => $project_periode_id
                 ])
                     ->with('success', 'Pengiriman risiko berhasil dilakukan. Risiko telah dikirim untuk diverifikasi.');
     }
@@ -2141,6 +2239,7 @@ class ProjectRiskController extends BasicCRUDController
         $projectRisk = ProjectRisk::findOrFail($id);
         $project_id = $projectRisk->project_id;
         $periode_id = $projectRisk->periode_id;
+        $projectPeriodeList = ProjectPeriodeList::where('project_id', $project_id)->first();
 
         $user = auth()->user();
         $level_id = $user->level_id;
@@ -2187,7 +2286,7 @@ class ProjectRiskController extends BasicCRUDController
         //cek untuk step user dengan step branch harus sama
         if ($u_step != $b_step) {
             return redirect()->route('projects.risks.index', [
-                'project' => $project_id
+                'project' => $projectPeriodeList->id
             ])->with('error', 'Anda tidak berhak melakukan verifikasi pada tahap ini. Saat ini tahap verifikasi hanya dilakukan oleh '.$user_verification);
         }
 
@@ -2299,15 +2398,21 @@ class ProjectRiskController extends BasicCRUDController
         //     ]);
         // }
 
-        return redirect()->route('projects.risks.index', ['project' => $project_id])
+        return redirect()->route('projects.risks.index', ['project' => $projectPeriodeList->id])
             ->with('success', $message);
     }
 
     public function eskalasi(Request $request)
     {
         $user = auth()->user();
-        $project_id = $request->input('project_id');
+        $project_periode_id = $request->input('project_id');
+        $project_id = null;
+        $projectPeriodeList = ProjectPeriodeList::findOrFail($request->input('project_id'));
+        if ($projectPeriodeList) {
+          $project_id = $projectPeriodeList->project_id;
+        }
         $project = Project::find($project_id);
+
         $level_id = $user->level_id;
         $periode_id = 0;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
@@ -2322,20 +2427,21 @@ class ProjectRiskController extends BasicCRUDController
                 ->where('type', 2)
                 ->orderBy('batch', 'desc')
                 ->first();
-        
+
         $b_step = $dataBatch->step_verification;
 
         //cek untuk step user dengan step branch harus sama
         if ($u_step != $b_step) {
             return redirect()->route('projects.risks.index', [
-                'project' => $project_id
+                'project' => $project_periode_id
             ])->with('error', 'Anda tidak berhak melakukan eskalasi pada tahap ini. Saat ini tahap eskalasi hanya dilakukan oleh '.$user_verification);
         }
-        
+
 
         // Cek apakah semua risiko sudah memiliki status 3
         $risikos = ProjectRisk::where('project_id', $project_id)
                 ->where('periode_id', $periode_id)
+                ->where('status', '!=', 6)
                 ->get();
 
         $belumStatus3 = false;
@@ -2377,14 +2483,14 @@ class ProjectRiskController extends BasicCRUDController
             $pesanError .= '</ul><br />Silahkan pastikan semua risiko sudah diverifikasi terlebih dahulu.';
 
             return redirect()->route('projects.risks.index', [
-                'project' => $project_id
+                'project' => $project_periode_id
             ])->with('error', $pesanError);
         }
         else{
             //$appFlow = $this->getFlowData($project_id, $level_id);
             //$step_order = $appFlow['step_order'];//sementara diganti u_step
             $step_order = $u_step;
-            //dd($step_order);    
+            //dd($step_order);
             // if ($dataBatch) {
             //     $dataBatch->update([
             //         'status' => DataBatch::STATUS_VERIFIKASI,
@@ -2395,7 +2501,7 @@ class ProjectRiskController extends BasicCRUDController
             try {
                 // Mulai transaksi database
                 DB::beginTransaction();
-                
+
                 if($u_step==4){
                     if ($dataBatch) {
                         $dataBatch->update([
@@ -2436,32 +2542,32 @@ class ProjectRiskController extends BasicCRUDController
                 }
                 
                 // Update ProjectRisk dengan status=3 dan step_verification=u_step
-                // ProjectRisk::where('project_id', $project_id)
-                //     ->where('periode_id', $periode_id)
-                //     ->where('status', 3)
-                //     ->where('step_verification', $u_step)
-                //     ->update([
-                //         'step_verification' => $u_step + 1,
-                //         'status' => 2
-                //     ]);
+                ProjectRisk::where('project_id', $project_id)
+                    ->where('periode_id', $periode_id)
+                    ->where('status', 3)
+                    ->where('step_verification', $u_step)
+                    ->update([
+                        'step_verification' => $u_step + 1,
+                        'status' => 2
+                    ]);
                 
                 // Commit transaksi jika semua berhasil
                 DB::commit();
                     
                 return redirect()->route('projects.risks.index', [
-                    'project' => $project_id
+                    'project' => $project_periode_id
                 ])->with('success', 'Semua risiko berhasil dieskalasi dan diverifikasi.');
             } catch (\Exception $e) {
                 // Rollback transaksi jika terjadi error
                 DB::rollBack();
                 
                 return redirect()->route('projects.risks.index', [
-                    'project' => $project_id
+                    'project' => $project_periode_id
                 ])->with('error', 'Terjadi kesalahan saat memproses data: ' . $e->getMessage());
             }
 
             return redirect()->route('projects.risks.index', [
-                'project' => $project_id
+                'project' => $project_periode_id
             ])->with('success', 'Semua risiko berhasil dieskalasi dan diverifikasi.');
         }
     }
@@ -2513,5 +2619,20 @@ class ProjectRiskController extends BasicCRUDController
         }
         
         return '';
+    }
+    public function getRiskNotes(Request $request, $project, $risk)
+    {
+        try {
+            $notes = RiskNote::with('user')
+                ->where('risiko_id', $risk)
+                ->where('type', 2) // Type 2 untuk Project
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json($notes);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Gagal mengambil data catatan.'], 500);
+        }
     }
 }

@@ -436,6 +436,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('projects/{project}/risks/{risk}/loss-events/create', [ProjectLEDController::class, 'riskChangeToLed'])->name('projects.loss-events.create')->middleware('can:project_risk_edit');
     Route::post('projects/{project}/risks/{risk}/loss-events', [ProjectLEDController::class, 'riskChangeToLedStore'])->name('projects.loss-events.store')->middleware('can:project_risk_edit');
     Route::post('projects/risks/send', [ProjectRiskController::class, 'send'])->name('projects.risks.send');
+    Route::get('projects/{project}/risks/{risk}/notes', [ProjectRiskController::class, 'getRiskNotes'])->name('projects.risks.notes');
     Route::resource('master-kri', MasterKriController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-periode-list', ProjectPeriodeListController::class)->except(['create', 'edit']);
     Route::resource('jenis-kontrol-eksisting', JenisKontrolEksistingController::class)->except(['create', 'show', 'edit']);

@@ -19,17 +19,22 @@ class ChangeOpportunitiesRelationToIdentifikasiRisiko extends Migration
             $table->unsignedBigInteger('identifikasi_risiko_id')->nullable()->after('unit_risk_monitoring_id');
         });
 
-        // Pindahkan data dari relasi lama ke relasi baru
+        // Pindahkan data (Sintaks PostgreSQL)
         DB::statement('
-            UPDATE opportunities o
-            JOIN unit_risk_monitorings urm ON o.unit_risk_monitoring_id = urm.id
-            SET o.identifikasi_risiko_id = urm.identifikasi_risiko_id
-            WHERE o.unit_risk_monitoring_id IS NOT NULL
+            UPDATE opportunities
+            SET identifikasi_risiko_id = urm.identifikasi_risiko_id
+            FROM unit_risk_monitorings urm
+            WHERE opportunities.unit_risk_monitoring_id = urm.id
+              AND opportunities.unit_risk_monitoring_id IS NOT NULL
         ');
 
         // Hapus kolom lama
         Schema::table('opportunities', function (Blueprint $table) {
-            $table->dropForeign(['unit_risk_monitoring_id']);
+            // Cek jika foreign key ada sebelum dihapus (best practice)
+            $foreignKeys = $this->listTableForeignKeys('opportunities');
+            if (in_array('opportunities_unit_risk_monitoring_id_foreign', $foreignKeys)) {
+                $table->dropForeign(['unit_risk_monitoring_id']);
+            }
             $table->dropColumn('unit_risk_monitoring_id');
         });
 
@@ -54,18 +59,25 @@ class ChangeOpportunitiesRelationToIdentifikasiRisiko extends Migration
             $table->unsignedBigInteger('unit_risk_monitoring_id')->nullable()->after('identifikasi_risiko_id');
         });
 
-        // Coba kembalikan data (ini tidak akan sempurna karena relasi one-to-many)
+        // Kembalikan data (Sintaks PostgreSQL dengan subquery untuk 'LIMIT 1')
+        // Ini menggunakan subquery berkorelasi, yang valid di PostgreSQL
         DB::statement('
             UPDATE opportunities o
-            JOIN unit_risk_monitorings urm ON o.identifikasi_risiko_id = urm.identifikasi_risiko_id
-            SET o.unit_risk_monitoring_id = urm.id
+            SET unit_risk_monitoring_id = (
+                SELECT urm.id
+                FROM unit_risk_monitorings urm
+                WHERE urm.identifikasi_risiko_id = o.identifikasi_risiko_id
+                LIMIT 1
+            )
             WHERE o.identifikasi_risiko_id IS NOT NULL
-            LIMIT 1
         ');
 
         // Hapus kolom baru
         Schema::table('opportunities', function (Blueprint $table) {
-            $table->dropForeign(['identifikasi_risiko_id']);
+            $foreignKeys = $this->listTableForeignKeys('opportunities');
+            if (in_array('opportunities_identifikasi_risiko_id_foreign', $foreignKeys)) {
+                $table->dropForeign(['identifikasi_risiko_id']);
+            }
             $table->dropColumn('identifikasi_risiko_id');
         });
 
@@ -76,5 +88,17 @@ class ChangeOpportunitiesRelationToIdentifikasiRisiko extends Migration
                   ->on('unit_risk_monitorings')
                   ->onDelete('cascade');
         });
+    }
+
+    /**
+     * Helper untuk memeriksa foreign key (khususnya berguna untuk PgSQL).
+     */
+    private function listTableForeignKeys($table)
+    {
+        $conn = Schema::getConnection()->getDoctrineSchemaManager();
+
+        return array_map(function($key) {
+            return $key->getName();
+        }, $conn->listTableForeignKeys($table));
     }
 }
