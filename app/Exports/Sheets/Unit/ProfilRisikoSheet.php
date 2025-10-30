@@ -94,6 +94,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                     'alignment' => [
                         'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
                         'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                        'wrapText' => true,
                     ],
                     'font' => ['bold' => true],
                     'fill' => [
@@ -170,33 +171,38 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                 ];
                 $sheet->getStyle('R2')->applyFromArray($bahayaStyle);
 
+                $lastRow = $sheet->getHighestRow();
+
                 $dataStyle = [
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
                             'color' => ['rgb' => '000000']
                         ]
-                    ]
+                    ],
+                    'alignment' => [
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP,
+                        'wrapText' => true,
+                    ],
                 ];
 
-                // Hitung jumlah data aktual untuk border yang tepat
-                $risikosCount = \App\Models\IdentifikasiRisiko::where('periode_id', $this->periodeId)
-                    ->where('unit_id', $this->unitId)
-                    ->count();
-                
-                // Estimasi jumlah row berdasarkan data risiko dan relasi
-                $estimatedRows = $risikosCount * 5; // Asumsi rata-rata 5 row per risiko
-                
-                // Border hanya untuk row yang berisi data (header + data aktual)
-                if ($risikosCount > 0) {
-                    $maxDataRow = 2 + $estimatedRows; // Row 2 (header) + estimasi data
-                    $sheet->getStyle('A3:X' . $maxDataRow)->applyFromArray($dataStyle);
+                if ($lastRow > 2) {
+                    // Terapkan style border dan wrap text ke semua data
+                    $dataRange = 'A3:X' . $lastRow;
+                    $sheet->getStyle($dataRange)->applyFromArray($dataStyle);
+
+                    // Set format text untuk kolom Kode Penyebab Risiko (Kolom L)
+                    $sheet->getStyle('L3:L' . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
                     
-                    // Set format text untuk kolom Kode Penyebab Risiko agar tidak berubah jadi angka
-                    $sheet->getStyle('L3:L' . $maxDataRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
-                    
-                    // Tambahkan pewarnaan background untuk kolom Kategori Threshold KRI pada data
-                    $this->applyThresholdColoring($sheet, $maxDataRow);
+                    // Set rata tengah horizontal untuk kolom-kolom tertentu
+                    $centerCols = ['A', 'C', 'H', 'K', 'L', 'O', 'P', 'Q', 'R', 'S', 'U', 'V'];
+                    foreach ($centerCols as $col) {
+                        $sheet->getStyle("{$col}3:{$col}{$lastRow}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                    }
+
+                    // Tambahkan pewarnaan background untuk kolom Kategori Threshold KRI
+                    // Gunakan $lastRow, bukan $maxDataRow
+                    $this->applyThresholdColoring($sheet, $lastRow);
                 }
 
                 foreach (range('A', 'X') as $column) {
@@ -215,7 +221,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
         for ($row = 3; $row <= $maxRow; $row++) {
             // Kolom P (Aman) - Hijau
             $amanValue = $sheet->getCell('P' . $row)->getValue();
-            if ($amanValue && $amanValue !== '-') {
+            if ($amanValue !== null && $amanValue !== '-') {
                 $sheet->getStyle('P' . $row)->applyFromArray([
                     'fill' => [
                         'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -226,7 +232,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
             
             // Kolom Q (Waspada) - Kuning
             $waspadaValue = $sheet->getCell('Q' . $row)->getValue();
-            if ($waspadaValue && $waspadaValue !== '-') {
+            if ($waspadaValue !== null && $waspadaValue !== '-') {
                 $sheet->getStyle('Q' . $row)->applyFromArray([
                     'fill' => [
                         'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -237,7 +243,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
             
             // Kolom R (Bahaya) - Merah
             $bahayaValue = $sheet->getCell('R' . $row)->getValue();
-            if ($bahayaValue && $bahayaValue !== '-') {
+            if ($bahayaValue !== null && $bahayaValue !== '-') {
                 $sheet->getStyle('R' . $row)->applyFromArray([
                     'fill' => [
                         'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -354,18 +360,20 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
      */
     private function createRowData($risiko, $penyebab, $kri, $kontrolList, $isFirstRowOfGroup, $nomorUrutRisiko, $nomorUrutPenyebab, $isFirstKRIOfPenyebab = true)
     {
+        $kategoriT2T3 = (optional($risiko->kategoriRisiko)->title ?? '') . ' - ' . (optional($risiko->jenisRisiko)->title ?? '-');
+
         return [
             'no' => $isFirstRowOfGroup ? $nomorUrutRisiko : '',
             'nama_bumn' => $isFirstRowOfGroup ? 'PT Wijaya Karya (Persero) Tbk' : '',
             'kode_bumn' => '',
             'sasaran_bumn' => $isFirstRowOfGroup ? ($risiko->target_capaian_kinerja ?? '-') : '',
             'sasaran_kbumn' => '',
-            'kategori_risiko_bumn' => $isFirstRowOfGroup ? (optional($risiko->kategoriRisiko)->title ?? '-') : '',
+            'kategori_risiko_bumn' => $isFirstRowOfGroup ? $kategoriT2T3 : '',
             'kategori_risiko_t2_t3' => $isFirstRowOfGroup ? ($risiko->jenisRisiko->title ?? '-') : '',
             'no_risiko' => $isFirstRowOfGroup ? $nomorUrutRisiko : '',
             'peristiwa_risiko' => $isFirstRowOfGroup ? ($risiko->peristiwa_risiko ?? '-') : '',
             'deskripsi_peristiwa_risiko' => $isFirstRowOfGroup ? ($risiko->deskripsi_peristiwa_risiko ?? '-') : '',
-            'no_penyebab_risiko' => ($penyebab && $isFirstKRIOfPenyebab) ? $nomorUrutRisiko : '',
+            'no_penyebab_risiko' => ($penyebab && $isFirstKRIOfPenyebab) ? $nomorUrutPenyebab : '',
             'kode_penyebab_risiko' => ($penyebab && $isFirstKRIOfPenyebab) ? ($nomorUrutRisiko . '.' . $nomorUrutPenyebab) : '',
             'penyebab_risiko' => ($penyebab && $isFirstKRIOfPenyebab) ? ($penyebab->penyebab_risiko ?? '-') : '',
             'key_risk_indicator' => $kri ? ($kri->kri ?? '-') : '-',
