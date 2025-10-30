@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y \
     opcache
 
 # Enable Apache mod_rewrite
-RUN a2enmod mime headers expires
+RUN a2enmod rewrite mime headers expires
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
