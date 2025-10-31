@@ -1136,7 +1136,7 @@ class RiskRegisterUnitController extends Controller
         } else {
             // Untuk kuantitatif, gunakan nilai dampak * probabilitas
             // Rumus: (nilaiDampak * nilaiProbabilitas) / 100
-            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
+            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * ($toUpdate['nilai_probabilitas'] / 100);
         }
 
         for ($i = 1; $i <= 4; $i++) {
