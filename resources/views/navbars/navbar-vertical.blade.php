@@ -136,8 +136,13 @@
             @endcan
 
             @can('ap_dashboard_menu')
-            <li class="nav-item">
+            {{-- <li class="nav-item">
               <a class="nav-link {{ request()->is('dashboard-anper') ? 'active' : '' }} " href="/dashboard-anper">
+                <span class="nav-link-text">Anak Perusahaan</span>
+              </a>
+            </li> --}}
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('executive-summary-anper') ? 'active' : '' }} " href="/executive-summary-anper">
                 <span class="nav-link-text">Anak Perusahaan</span>
               </a>
             </li>

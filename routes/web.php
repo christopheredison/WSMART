@@ -177,6 +177,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/executive-summary-corporate', [HomeController::class, 'executiveSummaryCorporate'])->name('executive-summary-corporate');
     Route::get('/executive-summary-corporate-population', [HomeController::class, 'executiveSummaryCorporatePopulation'])->name('executive-summary-corporate-population');
     Route::get('/executive-summary-unit', [HomeController::class, 'executiveSummaryUnit'])->name('executive-summary-unit');
+    Route::get('/executive-summary-anper', [HomeController::class, 'executiveSummaryAnper'])->name('executive-summary-anper');
     Route::get('/executive-summary-project', [HomeController::class, 'executiveSummaryProject'])->name('executive-summary-project');
 
     Route::group(['middleware' => ['can:manajemen_user']],function ()
