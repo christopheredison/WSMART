@@ -406,7 +406,7 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::resource('capaian-tck', CapaianTckController::class);
     Route::resource('capaian-tkmru', CapaianTkmruController::class);
-    Route::resource('jabatan', JabatanController::class)->except(['create', 'show', 'edit', 'destroy', 'update']);
+    Route::resource('jabatan', JabatanController::class)->except(['create', 'show', 'destroy']);
 
     Route::resource('project-divisi', ProjectDivisiController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-sektor', ProjectSektorController::class)->except(['create', 'show', 'edit']);

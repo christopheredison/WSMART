@@ -16,7 +16,22 @@ class Jabatan extends Model
         'name',
         'code',
         'description',
+        'jabatan_type',
     ];
+
+    public const TIPE_BUKAN_PROJECT = 1;
+    public const TIPE_PROJECT = 2;
+
+    public function getJabatanTypeLabelAttribute(): string
+    {
+        switch ($this->jabatan_type) {
+            case self::TIPE_PROJECT:
+                return 'Project';
+            case self::TIPE_BUKAN_PROJECT:
+            default:
+                return 'Bukan Project';
+        }
+    }
 
     public function levels()
     {
