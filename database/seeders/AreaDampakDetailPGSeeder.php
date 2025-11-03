@@ -45,7 +45,7 @@ class AreaDampakDetailPGSeeder extends Seeder
         $this->enableForeignKeyChecks();
 
         // Baca SQL sumber
-        $path = database_path('seeders/sql/area_dampak_detail_pg.sql');
+        $path = database_path('seeders/sql/area_dampak_detaiL_pg.sql');
         $sql  = File::get($path);
 
         if (DB::connection()->getDriverName() === 'pgsql') {
