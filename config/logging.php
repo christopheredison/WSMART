@@ -149,6 +149,20 @@ return [
             'level' => 'debug',
             'days' => 14,
         ],
+
+        'unit_sync' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/unit_sync.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+        ],
+
+        'closed_risk_log' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/closed_risk_log.log'),
+            'level' => env('LOG_LEVEL', 'info'),
+            'days' => 30,
+        ],
     ],
 
 ];

@@ -44,8 +44,7 @@ class RiskRegisterUnitController extends Controller
 {
     public function index(Request $request)
     {
-        //$unitId = auth()->user()->unit_id;
-        $unitId = $request->query('unit_id') ?? auth()->user()->unit_id;
+        $unitId = null;
         // Ambil periode_id dari parameter URL
         $periodeId = $request->query('pid');
         $batchNotes = null;
@@ -61,6 +60,29 @@ class RiskRegisterUnitController extends Controller
         $unitTypeId = $user->unit_type_id;//not use
         //$unitId = $user->unit_id;
         $levelId = $user->level_id;
+
+        // Securely determine unitId based on permission
+        $viewAllDivision = Gate::check('view_all_division');
+        if ($viewAllDivision) {
+            $allowedUnitIds = Unit::where('unit_type_id', 1)->pluck('id');
+            $requestedUnitId = (int) $request->query('unit_id');
+            if ($requestedUnitId && $allowedUnitIds->contains($requestedUnitId)) {
+                $unitId = $requestedUnitId;
+            } else {
+                $unitId = $allowedUnitIds->contains($user->unit_id) ? $user->unit_id : $allowedUnitIds->first();
+            }
+        } else {
+            // Non-admin: honor unit_id from URL if it is allowed (own unit or related expired unit)
+            $requestedUnitId = (int) $request->query('unit_id');
+            $allowedUnitIds = collect([$user->unit_id]);
+            $relatedIds = \App\Models\UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id');
+            $allowedUnitIds = $allowedUnitIds->merge($relatedIds)->unique();
+            if ($requestedUnitId && $allowedUnitIds->contains($requestedUnitId)) {
+                $unitId = $requestedUnitId;
+            } else {
+                $unitId = $user->unit_id;
+            }
+        }
 
         // Cari ApprovalFlow untuk unit ini
         // $approvalFlow = ApprovalFlow::where('unit_id', $unitId)
@@ -78,6 +100,7 @@ class RiskRegisterUnitController extends Controller
                       ->where('periode_id', $periodeId)
                       ->where('type', 1)
                       ->where('finish', false)
+                      ->orderBy('batch', 'desc')
                       ->first();
 
         if(!$dataBatch){
@@ -215,6 +238,12 @@ class RiskRegisterUnitController extends Controller
             ],
         ];
 
+        // Hitung status expired divisi berdasarkan valid_to unit
+        $currentUnit = Unit::find($unitId);
+        $today = Carbon::today();
+        $isStillValid = !$currentUnit?->valid_to || ($currentUnit?->valid_to && ($currentUnit->valid_to->isSameDay($today) || $currentUnit->valid_to->isAfter($today)));
+        $unitExpired = !$isStillValid;
+
         return view('risk-register-unit.index', compact(
             'risiko',
             'unit',
@@ -232,6 +261,7 @@ class RiskRegisterUnitController extends Controller
             'avgQuantitativeExposure',
             'unitId',
             'tableLegend',
+            'unitExpired',
         ));
     }
 
@@ -292,7 +322,7 @@ class RiskRegisterUnitController extends Controller
         return view('risk-register-unit.create',compact('kategoriRisiko','peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings','areaDampak','jenisRisiko','tck','selectedPeriode', 'projects', 'projectRisks'));
     }
 
-    public function RiskPeriodeList()
+    public function RiskPeriodeList(Request $request)
     {
         $tableLegend = [
             [
@@ -312,11 +342,13 @@ class RiskRegisterUnitController extends Controller
               'label' => 'Loss Event'
             ],
         ];
-        // Ambil semua data periode
+        // Ambil semua data periode (untuk dropdown filter)
         $periodes = Periode::orderBy('tahun', 'desc')->get();
 
-        // Ambil periode aktif jika ada
+        // Ambil periode aktif jika ada dan set sebagai default pilihan
         $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
+        $selectedPeriodeId = $request->query('pid') ?? ($activePeriode?->id);
+        $selectedPeriode = $selectedPeriodeId ? Periode::find($selectedPeriodeId) : null;
         $userUnit = auth()->user()->unit;
         $units = [];
 
@@ -326,25 +358,59 @@ class RiskRegisterUnitController extends Controller
         if ($viewAllDivision) {
             $units = Unit::where('unit_type_id', 1)->pluck('name', 'id');
             $displayUnits = Unit::where('unit_type_id', 1)->get();
-            $periodes = Periode::orderBy('tahun', 'desc')->get();
 
             foreach ($displayUnits as $unit) {
-                foreach ($periodes as $periode) {
+                if ($selectedPeriode) {
+                    $today = \Carbon\Carbon::today();
+                    $isValid = ((is_null($unit->valid_to)) || $unit->valid_to->isSameDay($today) || $unit->valid_to->isAfter($today))
+                        && ((is_null($unit->valid_from)) || $unit->valid_from->isBefore($today) || $unit->valid_from->isSameDay($today));
+                    $unitStatus = $isValid ? 'valid' : 'expired';
+                    $riskCount = IdentifikasiRisiko::where('unit_id', $unit->id)
+                        ->where('periode_id', $selectedPeriode->id)
+                        ->count();
                     $dataToDisplay->push([
                         'unit' => $unit,
-                        'periode' => $periode,
+                        'periode' => $selectedPeriode,
+                        'unit_status' => $unitStatus,
+                        'risk_count' => $riskCount,
                     ]);
                 }
             }
         } else {
             $units = Unit::where('unit_type_id', 1)->where('id', $userUnit->id)->pluck('name', 'id');
-            $periodes = Periode::orderBy('tahun', 'desc')->get();
+            if ($userUnit && $selectedPeriode) {
+                $today = \Carbon\Carbon::today();
+                $isValid = ((is_null($userUnit->valid_to)) || $userUnit->valid_to->isSameDay($today) || $userUnit->valid_to->isAfter($today))
+                    && ((is_null($userUnit->valid_from)) || $userUnit->valid_from->isBefore($today) || $userUnit->valid_from->isSameDay($today));
+                $unitStatus = $isValid ? 'valid' : 'expired';
+                $riskCount = IdentifikasiRisiko::where('unit_id', $userUnit->id)
+                    ->where('periode_id', $selectedPeriode->id)
+                    ->count();
+                $dataToDisplay->push([
+                    'unit' => $userUnit,
+                    'periode' => $selectedPeriode,
+                    'unit_status' => $unitStatus,
+                    'risk_count' => $riskCount,
+                ]);
 
-            if ($userUnit) {
-                foreach ($periodes as $periode) {
+                // Tambahkan unit expired terkait via UnitRelation untuk user tanpa view_all_division
+                $relations = \App\Models\UnitRelation::with('relatedUnit')
+                    ->where('unit_id', $userUnit->id)
+                    ->get();
+                foreach ($relations as $rel) {
+                    $related = $rel->relatedUnit;
+                    if (!$related) { continue; }
+                    $relatedIsValid = ((is_null($related->valid_to)) || $related->valid_to->isSameDay($today) || $related->valid_to->isAfter($today))
+                        && ((is_null($related->valid_from)) || $related->valid_from->isBefore($today) || $related->valid_from->isSameDay($today));
+                    if ($relatedIsValid) { continue; } // hanya expired
+                    $riskCountRelated = IdentifikasiRisiko::where('unit_id', $related->id)
+                        ->where('periode_id', $selectedPeriode->id)
+                        ->count();
                     $dataToDisplay->push([
-                        'unit' => $userUnit,
-                        'periode' => $periode,
+                        'unit' => $related,
+                        'periode' => $selectedPeriode,
+                        'unit_status' => 'expired',
+                        'risk_count' => $riskCountRelated,
                     ]);
                 }
             }
@@ -353,6 +419,7 @@ class RiskRegisterUnitController extends Controller
         return view('risk-register-unit.risk-period-list', compact(
           'periodes', 
           'activePeriode', 
+          'selectedPeriode',
           'tableLegend', 
           'dataToDisplay',
           'viewAllDivision',
@@ -1449,7 +1516,18 @@ class RiskRegisterUnitController extends Controller
             if ($dataBatch) {
                 $dataBatch->update([
                     'status' => DataBatch::STATUS_FINISH,
-                    'step_verification' => $step_order
+                    'step_verification' => $step_order,
+                    'finish' => true
+                ]);
+
+                DataBatch::create([
+                    'unit_id' => $unit_id,
+                    'periode_id' => $periode_id,
+                    'type' => 1,
+                    'batch' => $dataBatch->batch + 1,
+                    'status' => DataBatch::STATUS_PROSES,
+                    'step_verification' => 1,
+                    'finish' => true,
                 ]);
             }
 
@@ -2002,16 +2080,29 @@ class RiskRegisterUnitController extends Controller
         ]);
 
         $periodeId = $request->periode_id;
+        $unitId = Unit::where('unit_type_id', 4)->first()?->id;
 
         // Update status DataBatch menjadi STATUS_FINISH (8)
         $dataBatch = DataBatch::where('periode_id', $periodeId)
-            ->where('type', 1) // type = 1 untuk unit/divisi
+            ->where('unit_id', $unitId)
+            ->where('type', 1)
             ->orderBy('batch', 'desc')
             ->first();
 
         if ($dataBatch) {
             $dataBatch->update([
-                'status' => DataBatch::STATUS_FINISH
+                'status' => DataBatch::STATUS_FINISH,
+                'finish' => true,
+            ]);
+
+            DataBatch::create([
+                'unit_id' => $unitId,
+                'periode_id' => $periodeId,
+                'type' => 1,
+                'batch' => $dataBatch->batch + 1,
+                'status' => DataBatch::STATUS_FINISH,
+                'step_verification' => 1,
+                'finish' => true,
             ]);
         }
 

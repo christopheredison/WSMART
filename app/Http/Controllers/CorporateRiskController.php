@@ -577,6 +577,7 @@ class CorporateRiskController extends Controller
         $divisiRisks = IdentifikasiRisiko::where('unit_id', $unit->id)
             ->where('unit_type_id', 1)
             ->where('status', IdentifikasiRisiko::STATUS_PUBLISHED)
+            ->where('status_risiko', IdentifikasiRisiko::STATUS_RISIKO_MAIN)
             ->with(['unit', 'kategoriRisiko', 'riskAnalysis'])
             ->get();
             

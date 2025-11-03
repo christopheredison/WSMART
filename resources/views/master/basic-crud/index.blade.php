@@ -207,6 +207,10 @@
         @include('project-risk._modal_verifikasi')
     @endif
 
+    @if(request()->route()->getName() === 'projects.risks.index')
+        @include('project-risk._modal_catatan')
+    @endif
+
     @if (!empty($extraViewData['showVerifikasiModal']))
         @if (request()->route()->getName() === 'projects.monitorings.index')
             @include('project-monitorings._modal_verifikasi')
@@ -220,6 +224,7 @@
             @include('project-monitorings._modal_catatan')
         @elseif (request()->route()->getName() === 'risk-register-unit.monitorings.index')
             @include('risk-register-unit.monitorings._modal_catatan')
+            @include('risk-register-unit.monitorings._modal_peluang')
         @endif
     @endif
 @endsection
@@ -244,6 +249,226 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
+
+function showPeluangModal(monitoringId, riskTitle, riskDesc) {
+    console.log('showPeluangModal dipanggil dengan ID:', monitoringId);
+    $('#peluang-risk-title').text(riskTitle);
+    $('#peluang-risk-desc').text(riskDesc);
+    
+    // Pastikan monitoringId tidak 0 atau undefined
+    if (monitoringId && monitoringId !== 0) {
+        $('#identifikasi-risiko-id').val(monitoringId);
+        loadOpportunities(monitoringId);
+        console.log('ID Risiko yang digunakan:', monitoringId);
+    } else {
+        // Coba ambil dari data-id tombol yang memanggil fungsi ini
+        console.error('ID risiko tidak valid:', monitoringId);
+        alert('ID risiko tidak valid. Silakan coba lagi.');
+        return;
+    }
+    
+    $('#modalPeluang').modal('show');
+}
+
+function loadOpportunities(risikoId) {
+    $.ajax({
+        url: `/opportunities/monitoring/${risikoId}`,
+        type: 'GET',
+        success: function(response) {
+            renderOpportunities(response);
+        },
+        error: function(error) {
+            console.error('Error saat memuat peluang:', error);
+        }
+    });
+}
+
+function renderOpportunities(opportunities) {
+    const tbody = $('#peluang-list');
+    tbody.empty();
+    
+    if (opportunities.length === 0) {
+        tbody.append(`
+            <tr id="peluang-empty-row">
+                <td colspan="6" class="text-center">Belum ada data peluang</td>
+            </tr>
+        `);
+        return;
+    }
+    
+    opportunities.forEach((item, index) => {
+        const formattedRencana = formatRupiah(item.nilai_peluang_rencana);
+        const formattedRealisasi = formatRupiah(item.nilai_peluang_realisasi);
+        
+        tbody.append(`
+            <tr>
+                <td>${index + 1}</td>
+                <td>${item.penjelasan_peluang_rencana || '-'}</td>
+                <td>${item.penjelasan_peluang_realisasi || '-'}</td>
+                <td>${formattedRencana}</td>
+                <td>${formattedRealisasi}</td>
+                <td class="text-center">
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-sm btn-info btn-edit-peluang" 
+                            data-id="${item.id}" 
+                            data-rencana="${item.penjelasan_peluang_rencana || ''}" 
+                            data-realisasi="${item.penjelasan_peluang_realisasi || ''}" 
+                            data-nilai-rencana="${item.nilai_peluang_rencana || 0}" 
+                            data-nilai-realisasi="${item.nilai_peluang_realisasi || 0}">
+                            <i class="bx bx-edit-alt"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger btn-delete-peluang" data-id="${item.id}">
+                            <i class="bx bx-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `);
+    });
+}
+
+function formatRupiah(angka) {
+    if (!angka) return 'Rp 0';
+    // Menampilkan nilai asli tanpa dibagi 100
+    return 'Rp ' + Math.round(parseFloat(angka)).toLocaleString('id-ID');
+}
+
+$(document).ready(function() {
+    // Inicializar máscara para campos de moneda
+    $('.rupiah').inputmask({
+        alias: 'numeric',
+        groupSeparator: '.',
+        radixPoint: ',',
+        autoGroup: true,
+        digits: 0,
+        digitsOptional: true,
+        prefix: 'Rp ',
+        placeholder: '0',
+        rightAlign: false,
+        autoUnmask: true,
+        removeMaskOnSubmit: true,
+        unmaskAsNumber: true
+    });
+    
+    // Botón para añadir nueva oportunidad
+    $(document).on('click', '#btn-add-peluang', function() {
+        resetPeluangForm();
+        $('#peluang-form-title').text('Tambah Peluang Baru');
+        $('#peluang-form-container').removeClass('d-none');
+    });
+    
+    // Botón para cancelar formulario
+    $(document).on('click', '#btn-cancel-peluang', function() {
+        $('#peluang-form-container').addClass('d-none');
+    });
+    
+    // Botón para editar oportunidad
+    $(document).on('click', '.btn-edit-peluang', function() {
+        const id = $(this).data('id');
+        const rencana = $(this).data('rencana');
+        const realisasi = $(this).data('realisasi');
+        const nilaiRencana = $(this).data('nilai-rencana');
+        const nilaiRealisasi = $(this).data('nilai-realisasi');
+        
+        $('#peluang-id').val(id);
+        $('#penjelasan_peluang_rencana').val(rencana);
+        $('#penjelasan_peluang_realisasi').val(realisasi);
+        
+        // Hilangkan desimal (,00) dari nilai sebelum mengisi form
+        let nilaiRencanaBulat = Math.round(parseFloat(nilaiRencana));
+        let nilaiRealisasiBulat = Math.round(parseFloat(nilaiRealisasi));
+        
+        $('#nilai_peluang_rencana').val(nilaiRencanaBulat).trigger('input');
+        $('#nilai_peluang_realisasi').val(nilaiRealisasiBulat).trigger('input');
+        
+        $('#peluang-form-title').text('Edit Peluang');
+        $('#peluang-form-container').removeClass('d-none');
+    });
+    
+    // Fungsi untuk menghapus peluang
+    $(document).on('click', '.btn-delete-peluang', function() {
+        if (confirm('Apakah Anda yakin ingin menghapus data peluang ini?')) {
+            const id = $(this).data('id');
+            const riskId = $('#identifikasi-risiko-id').val();
+            
+            $.ajax({
+                url: `/opportunities/${id}`,
+                type: 'POST',
+                data: {
+                    _token: '{{csrf_token()}}',
+                    _method: 'DELETE',
+                    risk_id: riskId
+                },
+                success: function(response) {
+                    loadOpportunities(riskId);
+                },
+                error: function(error) {
+                    console.error('Error saat menghapus peluang:', error);
+                    alert('Terjadi kesalahan saat menghapus data peluang');
+                }
+            });
+        }
+    });
+    
+    
+    $(document).on('submit', '#peluang-form', function(e) {
+        e.preventDefault();
+        
+        const peluangId = $('#peluang-id').val();
+        const isUpdate = peluangId !== '';
+        
+        // Ambil identifikasi_risiko_id dari hidden field yang sudah diisi di showPeluangModal
+        const risikoId = $('#identifikasi-risiko-id').val();
+        
+        // Pastikan risikoId ada dan valid
+        if (!risikoId) {
+            console.error('ID risiko tidak valid:', risikoId);
+            alert('ID risiko tidak valid. Silakan coba lagi.');
+            return;
+        }
+        
+        // Menggunakan FormData untuk mengambil semua data form termasuk CSRF token
+        const formData = new FormData(this);
+        
+        // Gunakan risikoId dari hidden field
+        formData.set('identifikasi_risiko_id', risikoId);
+        
+        // Menyesuaikan nama field dengan yang diharapkan controller
+        formData.set('description', formData.get('penjelasan_peluang_rencana'));
+        formData.set('penjelasan', formData.get('penjelasan_peluang_realisasi'));
+        formData.set('nilai', formData.get('nilai_peluang_rencana'));
+        
+        // Jika update, tambahkan method PUT karena FormData tidak mendukung PUT secara langsung
+        if (isUpdate) {
+            formData.append('_method', 'PUT');
+        }
+        
+        $.ajax({
+            url: isUpdate ? `/opportunities/${peluangId}` : '/opportunities',
+            type: 'POST', // Selalu gunakan POST, untuk PUT kita sudah menambahkan _method di atas
+            data: formData,
+            processData: false,
+            contentType: false,
+            cache: false,
+            success: function(response) {
+                $('#peluang-form-container').addClass('d-none');
+                loadOpportunities($('#identifikasi-risiko-id').val());
+            },
+            error: function(error) {
+                console.error('Error saat menyimpan peluang:', error);
+                alert('Terjadi kesalahan saat menyimpan data peluang');
+            }
+        });
+    });
+    
+    function resetPeluangForm() {
+        $('#peluang-id').val('');
+        $('#penjelasan_peluang_rencana').val('');
+        $('#penjelasan_peluang_realisasi').val('');
+        $('#nilai_peluang_rencana').val('0').trigger('input');
+        $('#nilai_peluang_realisasi').val('0').trigger('input');
+    }
+});
 @php
     $hasChangeToLedAction = collect($tableActions ?? [])->contains('action', 'change_to_led');
 @endphp
@@ -343,7 +568,10 @@ $(document).ready(function() {
 
             let html = '<div style="white-space:nowrap" class="d-flex align-items-center">' + buttons.join('') + '</div>';
 
-            return html.replaceAll(':id', data).replaceAll(':code', row.code || '');
+            return html
+              .replaceAll(':project_id', (row?.project_id || (row?.project && row?.project?.id) || ''))
+              .replaceAll(':id', data)
+              .replaceAll(':code', row.code || '');
         }
     });
     @endif

@@ -167,21 +167,34 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                             'borderStyle' => Border::BORDER_THIN,
                             'color' => ['rgb' => '000000']
                         ]
-                    ]
+                    ],
+                    'alignment' => [
+                        'vertical' => Alignment::VERTICAL_TOP,
+                        'wrapText' => true,
+                    ],
                 ];
-                
-                // Terapkan border ke seluruh data jika ada baris
-                if ($this->totalRows > 0) {
-                    $maxDataRow = 2 + $this->totalRows; // Header row 1-2 + data rows
+
+                // Dapatkan baris terakhir SETELAH data collection ditulis
+                $lastRow = $sheet->getHighestRow();
+
+                // Terapkan border ke seluruh data jika ada baris (baris > 2)
+                if ($lastRow > 2) {
+                    $maxDataRow = $lastRow; // Ini adalah baris data terakhir yang sebenarnya
                     
-                    // Terapkan border ke semua sel dari A3 hingga X terakhir
+                    // Terapkan border dan style alignment ke semua sel data
                     $sheet->getStyle('A3:X' . $maxDataRow)->applyFromArray($dataStyle);
                     
-                    // Format teks untuk kolom Kode Penyebab Risiko
+                    // Format teks untuk kolom Kode Penyebab Risiko (Kolom D)
                     $sheet->getStyle('D3:D' . $maxDataRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
                     
                     // Terapkan pewarnaan timeline
                     $this->applyTimelineColoring($sheet, $maxDataRow);
+
+                    // (Tambahan) Atur perataan tengah untuk kolom tertentu
+                    $centerCols = ['A', 'C', 'D', 'J', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'];
+                    foreach ($centerCols as $col) {
+                        $sheet->getStyle("{$col}3:{$col}{$maxDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    }
                 }
 
                 foreach (range('A', 'X') as $column) {

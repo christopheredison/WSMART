@@ -116,6 +116,7 @@ $(document).ready(function() {
             data: function(d) {
                 d.periode_id = $('#filter-periode').val();
                 d.kategori_id = $('#filter-kategori').val();
+                d.unit_id = $('#filter-unit').val();
             }
         },
         columns: [

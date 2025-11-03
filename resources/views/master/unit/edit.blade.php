@@ -17,32 +17,56 @@
         </div>
       </div>
       <div class="card-body">
+        @if(session('success'))
+        <div class="alert alert-success" role="alert">
+          {{ session('success') }}
+        </div>
+        @endif
+        @if($errors->any())
+        <div class="alert alert-danger" role="alert">
+          <strong>Terjadi kesalahan:</strong>
+          <ul class="mb-0">
+            @foreach ($errors->all() as $error)
+              <li>{{ $error }}</li>
+            @endforeach
+          </ul>
+        </div>
+        @endif
         <div class="row gx-0 gy-3">
           <div class="form-group d-md-flex">
             <label class="form-label label-md-start col-md-3">Tipe Unit</label>
             <select class="form-select js-select-hide-search" name="unit_type_id">
               <option selected disabled>Unit Type</option>
               @foreach($unitType as $id => $name)
-              <option value="{{ $id }}" {{ $id == $unit->unit_type_id ? 'selected' : '' }}>{{ $name }}</option>
+              <option value="{{ $id }}" {{ (int) old('unit_type_id', $unit->unit_type_id) === (int) $id ? 'selected' : '' }}>{{ $name }}</option>
               @endforeach
             </select>
           </div>
-          <div class="form-group d-md-flex">
+          <div class="form-group d-none" id="unit_api_id_group">
             <label class="form-label label-md-start col-md-3">Unit ID</label>
             <input type="text" name="unit_api_id" id="unit_api_id" class="form-control" value="{{ $unit->unit_api_id }}">
           </div>
           <div class="form-group d-md-flex">
             <label class="form-label label-md-start col-md-3">Nama Unit</label>
-            <input type="text" name="name" id="name" class="form-control" value="{{ $unit->name }}">
+            <input type="text" id="name_display" class="form-control form-control-plain" value="{{ old('name', $unit->name) }}" disabled>
+            <input type="hidden" name="name" id="name" value="{{ old('name', $unit->name) }}">
           </div>
-          <div class="form-group d-md-flex">
+          <div class="form-group d-none" id="parent_group">
             <label class="form-label label-md-start col-md-3">Parent</label>
             <select class="form-select js-select-hide-search" name="parent_id">
               <option selected disabled>Parent</option>
               @foreach($parent as $id => $name)
-              <option value="{{ $id }}" {{ $id == $unit->parent_id ? 'selected' : '' }}>{{ $name }}</option>
+              <option value="{{ $id }}" {{ (int) old('parent_id', $unit->parent_id) === (int) $id ? 'selected' : '' }}>{{ $name }}</option>
               @endforeach
             </select>
+          </div>
+          <div class="form-group d-md-flex">
+            <label class="form-label label-md-start col-md-3">Valid From</label>
+            <input class="form-control datetimepicker" name="valid_from" id="valid_from" type="text" placeholder="d/m/y" value="{{ old('valid_from', $unit->valid_from ? $unit->valid_from->format('d/m/Y') : '') }}">
+          </div>
+          <div class="form-group d-md-flex">
+            <label class="form-label label-md-start col-md-3">Valid To</label>
+            <input class="form-control datetimepicker" name="valid_to" id="valid_to" type="text" placeholder="d/m/y" value="{{ old('valid_to', $unit->valid_to ? $unit->valid_to->format('d/m/Y') : '') }}">
           </div>
         </div>
       </div>
@@ -54,3 +78,30 @@
   </div>
 </div>
 @endsection
+
+@push('scripts')
+@push('styles')
+<style>
+  /* Buat input readonly/disabled tampil seperti enabled */
+  .form-control-plain:disabled { background-color: #fff !important; opacity: 1; color: inherit; }
+  .flatpickr-input[readonly] { background-color: #fff !important; opacity: 1; color: inherit; }
+</style>
+@endpush
+<script>
+  // Samakan dengan halaman corporate-risk/create: gunakan flatpickr pada .datetimepicker
+  flatpickr('#valid_from', {
+    altInput: true,
+    altFormat: 'j F Y',
+    dateFormat: 'd/m/Y',
+    disableMobile: true,
+    allowInput: true
+  });
+  flatpickr('#valid_to', {
+    altInput: true,
+    altFormat: 'j F Y',
+    dateFormat: 'd/m/Y',
+    disableMobile: true,
+    allowInput: true
+  });
+</script>
+@endpush

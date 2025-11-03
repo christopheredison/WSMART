@@ -288,5 +288,7 @@ return [
 
         'ict_input',
         'ict_approval',
+
+        'get_all_notification',
     ],
 ];

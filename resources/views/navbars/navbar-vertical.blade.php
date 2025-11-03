@@ -28,7 +28,7 @@
     <div class="navbar-vertical-content scrollbar">
       <ul class="navbar-nav flex-column" id="navbarVerticalNav">
         <!-- Dashboard Menu Start -->
-        <li class="nav-item">
+        {{-- <li class="nav-item">
           @php $shouldDashboardOpen = in_array(url()->current(), [route('home'), route('home', 'universitas'),
           route('home', ['data' => 'fakultas']), route('home', ['data' => 'biro'])]) @endphp
           <a class="nav-link dropdown-indicator {{ $shouldDashboardOpen ? '' : 'collapsed' }} {{ request()->is('dashboard-unit') || request()->is('dashboard-proyek') || request()->is('dashboard-anper') || request()->is('dashboard-kri-unit') || request()->is('dashboard-kri-project') ? 'active' : '' }}"
@@ -87,7 +87,7 @@
             </li>
             @endcan
           </ul>
-        </li>
+        </li> --}}
         <!-- Dashboard Menu End -->
         
         <!-- Executive Summary Menu Start -->
@@ -98,7 +98,7 @@
             aria-expanded="{{ $shouldOpen ? 'true' : 'false' }}" aria-controls="executive-summary">
             <div class="d-flex align-items-center">
               <i class="menu-icon tf-icons bx bx-tachometer"></i>
-              <span class="nav-link-text">Executive Summary</span>
+              <span class="nav-link-text">Dashboard</span>
             </div>
           </a>
           <ul
@@ -112,11 +112,11 @@
               </a>
             </li>
 
-            <li class="nav-item">
+            {{-- <li class="nav-item">
               <a class="nav-link {{ request()->is('executive-summary-corporate-population') ? 'active' : '' }}" href="/executive-summary-corporate-population">
                 <span class="nav-link-text">Corporate Population</span>
               </a>
-            </li>
+            </li> --}}
             @endcan
 
             @can('unit_dashboard_menu')
@@ -131,6 +131,19 @@
             <li class="nav-item"><a class="nav-link {{ request()->is('executive-summary-project') ? 'active' : '' }}"
                 href="/executive-summary-project">
                 <span class="nav-link-text">Proyek</span>
+              </a>
+            </li>
+            @endcan
+
+            @can('ap_dashboard_menu')
+            {{-- <li class="nav-item">
+              <a class="nav-link {{ request()->is('dashboard-anper') ? 'active' : '' }} " href="/dashboard-anper">
+                <span class="nav-link-text">Anak Perusahaan</span>
+              </a>
+            </li> --}}
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('executive-summary-anper') ? 'active' : '' }} " href="/executive-summary-anper">
+                <span class="nav-link-text">Anak Perusahaan</span>
               </a>
             </li>
             @endcan
@@ -472,6 +485,12 @@
               <a class="nav-link {{ request()->routeIs('measurement-parameter.index') ? 'active' : '' }}"
                 href="{{ route('measurement-parameter.index') }}">
                 <span class="nav-link-text">Parameter Pengukuran</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('unit.index') ? 'active' : '' }}"
+                href="{{ route('unit.index') }}">
+                <span class="nav-link-text">Divisi</span>
               </a>
             </li>
             <li class="nav-item">

@@ -15,7 +15,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        // Tutup risiko unit yang sudah tidak valid setiap hari pukul 01:00
+        $schedule->command('risks:close-expired-units')->dailyAt('01:00');
     }
 
     /**

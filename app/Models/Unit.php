@@ -7,6 +7,7 @@ use App\Supports\ApiWika;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Log;
 
 class Unit extends Model
 {
@@ -33,6 +34,14 @@ class Unit extends Model
         'cost_center_parent',
         'cost_center_parent_deskripsi',
         'unit_mr',
+        'valid_from',
+        'valid_to',
+        'status',
+    ];
+
+    protected $casts = [
+        'valid_from' => 'date:Y-m-d',
+        'valid_to' => 'date:Y-m-d',
     ];
 
     public const UNIT_TYPE_DIVISION = 1;
@@ -46,7 +55,19 @@ class Unit extends Model
             'page' => 1,
             'limit' => 999999,
             'key' => 'GZrmL5TH',
-            'cost_center_type' => 'Department',
+            'company_sap' => 'A000',
+            // 'cost_center_type' => 'Department',
+            // 'persubarea_type' => 'Divisi Operasi',
+            // 'persubarea_type' => 'Divisi Fungsi',
+        ]);
+
+        Log::channel('unit_sync')->info('Unit HC API response fetched', [
+            'total' => is_array($units['data'] ?? null) ? count($units['data']) : 0,
+            'message' => $units['message'] ?? null,
+            'sample_first' => $units['data'][0] ?? null,
+        ]);
+        Log::channel('unit_sync')->debug('Unit HC API raw data', [
+            'data' => $units['data'] ?? [],
         ]);
 
         if (!($units['data'] ?? [])) {
@@ -64,31 +85,37 @@ class Unit extends Model
         $unitData = $units['data'];
 
         $unitData = collect($unitData)->filter(function ($unit) {
-            return $unit['company_sap'] == 'A000';
-        })->reverse()->keyBy('cost_center_parent')->values()->toArray();
-        
+            return $unit['company_sap'] == 'A000' && $unit['cost_center_parent'] != "";
+        })->keyBy('cost_center_parent')->values()->toArray();
+        // dd($unitData);
+
         foreach ($unitData as $unit) {
-            if (!($unitTypes[$unit['cost_center_type']] ?? false)) {
-                continue;
+            $cost_center_parent = $unit['cost_center_parent'];
+            $unit_name = $unit['cost_center_parent_deskripsi'];
+
+            // Handle cost_center_parent = 0 for Internal Audit
+            if ($cost_center_parent === '0') {
+                $cost_center_parent = $unit['cost_center'];
+                $unit_name = $unit['cost_center_deskripsi'];
             }
 
             $unit = Unit::updateOrCreate(
-                ['cost_center' => $unit['cost_center_parent']],
+                ['cost_center' => $cost_center_parent],
                 [
                     // 'unit_api_id' => $unit['unit_id'],
-                    'name' => $unit['cost_center_parent_deskripsi'],
+                    'name' => $unit_name,
                     'unit_type_id' => self::UNIT_TYPE_DIVISION,
                     'parent_id' => 0,
                     // 'unit_deskripsi' => $unit['unit_deskripsi'] ?? null,
                     // 'persubarea_sap' => $unit['persubarea_sap'] ?? null,
                     // 'persubarea_deskripsi' => $unit['persubarea_deskripsi'] ?? null,
-                    // 'persubarea_type' => $unit['persubarea_type'] ?? null,
-                    // 'company_sap' => $unit['company_sap'] ?? null,
-                    // 'company_deskripsi' => $unit['company_deskripsi'] ?? null,
+                    'persubarea_type' => $unit['persubarea_type'] ?? null,
+                    'company_sap' => $unit['company_sap'] ?? null,
+                    'company_deskripsi' => $unit['company_deskripsi'] ?? null,
                     // 'cost_center' => $unit['cost_center'] ?? null,
                     // 'cost_center_deskripsi' => $unit['cost_center_deskripsi'] ?? null,
                     // 'cost_center_abbrevation' => $unit['cost_center_abbrevation'] ?? null,
-                    // 'cost_center_type' => $unit['cost_center_type'] ?? null,
+                    'cost_center_type' => $unit['cost_center_type'] ?? null,
                     // 'cost_center_parent' => $unit['cost_center_parent'] ?? null,
                     // 'cost_center_parent_deskripsi' => $unit['cost_center_parent_deskripsi'] ?? null,
                 ]
@@ -97,6 +124,7 @@ class Unit extends Model
             $divisiUnits[$unit['cost_center']] = $unit;
         }
 
+        /*
         $projectDatas = (new ApiWika())->getProjects();
         foreach ($projectDatas as $projectData) {
             $divisiUnit = $divisiUnits[$projectData['divisisap']] ?? null;
@@ -117,6 +145,7 @@ class Unit extends Model
                 'unit_id' => $divisiUnit?->id,
             ]);
         }
+        */
     }
 
     public function unitType()

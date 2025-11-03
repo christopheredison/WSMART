@@ -30,6 +30,14 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
     protected $resourceName = 'Monitoring Risiko';
     protected $baseRoute = 'risk-register-unit.monitorings.';
     protected $editType = 'link';
+    
+    public function getRisikoId($id)
+    {
+        $monitoring = UnitRiskMonitoring::findOrFail($id);
+        return response()->json([
+            'identifikasi_risiko_id' => $monitoring->identifikasi_risiko_id
+        ]);
+    }
 
     public function index() {
         $this->baseRouteParams = ['period' => request()->route('period')];
@@ -262,6 +270,15 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'action' => 'change_to_led_unit',
                 'active_state' => '(data, type, row) => row.is_closed != 1',
                 'extra_attrs' => [ 'style' => 'font-size: 14px; font-weight: 400;' ]
+            ];
+            
+            $this->tableActions[] = [
+                'label' => 'Peluang',
+                'btn_icon' => false,
+                'action' => 'script',
+                'script' => "showPeluangModal($(this).data('id'), '__RISK_TITLE__', '__RISK_DESC__')",
+                'active_state' => '(data, type, row) => true',
+                'extra_attrs' => [ 'style' => 'font-size: 14px; font-weight: 400;', 'data-id' => 'row.id' ]
             ];
         }
 
