@@ -667,9 +667,10 @@
                     </div>
                     <div class="col-md-2">
                         <div class="form-group mb-3">
-                            <label class="form-label fw-bold">Skala Parameter</label>
+                            <label class="form-label fw-bold">Parameter Probabilitas</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->skalaParameterResidualObj ? '(' . $analisa->skalaParameterResidualObj->tingkat . ') ' . $analisa->skalaParameterResidualObj->skala : '-' }}
+                                {{-- {{ $analisa->skalaParameterResidualObj ? '(' . $analisa->skalaParameterResidualObj->tingkat . ') ' . $analisa->skalaParameterResidualObj->skala : '-' }} --}}
+                                {{ $analisa->skalaParameterObj->type_parameter ?? '-' }}
                             </div>
                         </div>
                     </div>

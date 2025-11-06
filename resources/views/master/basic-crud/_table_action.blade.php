@@ -26,7 +26,7 @@ if (!empty($action['extra_attrs'])) {
     @endif
     @break
 @case('delete')
-    <button type="button" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'btn btn-link' }} btn-action" data-action="delete_data" data-id="{{ $id }}" data-bg-toggle="tooltip" title="{{ $action['title'] ?? 'Hapus' }}">
+    <button type="button" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'btn btn-link' }} btn-action" data-action="delete_data" data-id="{{ $id }}" data-bs-toggle="tooltip" title="{{ $action['title'] ?? 'Hapus' }}">
         {!! $action['label'] !!}
     </button>
     @break

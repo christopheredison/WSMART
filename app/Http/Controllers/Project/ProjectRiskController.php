@@ -73,11 +73,13 @@ class ProjectRiskController extends BasicCRUDController
             'label' => 'Peristiwa Risiko',
             'data' => 'peristiwaRisiko.title',
             'render' => '(data, type, row) => row.peristiwa_risiko?.title || "-"',
+            'class' => 'mw-10r',
         ],
         'deskripsi_peristiwa_risiko' => [
             'label' => 'Deskripsi Peristiwa Risiko',
             'data' => 'deskripsi_peristiwa_risiko',
             'render' => '(data, type, row) => data || "-"',
+            'class' => 'mw-20r',
         ],
         'nilai_dampak' => [
             'label' => 'Nilai Dampak',
@@ -85,6 +87,7 @@ class ProjectRiskController extends BasicCRUDController
             'sortable' => false,
             'searchable' => false,
             'render' => '(data, type, row) => row.project_risk_analisa?.nilai_dampak || "-"',
+            'class' => 'white-space-nowrap'
         ],
         'skala_dampak' => [
             'label' => 'Skala Dampak',
@@ -107,6 +110,7 @@ class ProjectRiskController extends BasicCRUDController
             'sortable' => true,
             'searchable' => false,
             'render' => '(data, type, row) => row.project_risk_analisa?.eksposur_risiko ? new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(row.project_risk_analisa.eksposur_risiko) : "-"',
+            'class' => 'white-space-nowrap'
         ],
         'nilai_risiko' => [
             'label' => 'Skala Risiko',
@@ -350,7 +354,7 @@ class ProjectRiskController extends BasicCRUDController
                     'permissions' => ['project_risk_edit'],
                     'active_state' => $active_state
                 ];
-                
+
 
                 if (Gate::check('project_risk_delete') && ($status==1 || $status==5)) {
                     $this->tableLegend[] = [
@@ -363,6 +367,7 @@ class ProjectRiskController extends BasicCRUDController
                         'btn_icon' => true,
                         'action' => 'delete',
                         'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']),
+                        'title' => 'Hapus',
                         'permissions' => ['project_risk_delete'],
                         'active_state' => 'function(id, type, row) { return (row.status == 1 || row.status == 5); }'
                     ];
@@ -371,7 +376,7 @@ class ProjectRiskController extends BasicCRUDController
             //else if($status==2 && $levelId==7){//on verif && level = ROW/P
             else if($u_step == $b_step){//status batch dan step
                 $active_state = null;
-                //$active_state = 'function(id, type, row) { return row.status == 2 || row.status == 3; }'; 
+                //$active_state = 'function(id, type, row) { return row.status == 2 || row.status == 3; }';
                 $active_state = 'function(id, type, row) { return (row.status == 2 || row.status == 3) && row.step_verification == ' . $u_step . '; }';
                 $this->tableActions[] = [
                     'label' => '<span class="bx bx-check-shield text-success"></span>',
@@ -406,13 +411,13 @@ class ProjectRiskController extends BasicCRUDController
             const modalElement = document.getElementById('modalCatatan');
             const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
             const contentDiv = $('#catatan-content');
-            
+
             // Tampilkan spinner loading
             contentDiv.html('<div class="d-flex justify-content-center my-4"><div class="spinner-border" role="status"><span class="visually-hidden">Memuat...</span></div></div>');
-            
+
             // Gunakan route yang sudah di-generate dari PHP
             const url = "{$catatanRoute}".replace(':id', riskId);
-            
+
             $.ajax({
                 url: url,
                 type: 'GET',
@@ -422,10 +427,10 @@ class ProjectRiskController extends BasicCRUDController
                     } else {
                         let html = '';
                         notes.forEach(note => {
-                            const statusBadge = note.status == 1 
-                                ? '<span class="badge bg-success-subtle text-success">Diterima</span>' 
+                            const statusBadge = note.status == 1
+                                ? '<span class="badge bg-success-subtle text-success">Diterima</span>'
                                 : '<span class="badge bg-danger-subtle text-danger">Ditolak</span>';
-                            
+
                             const formattedDate = new Date(note.created_at).toLocaleString('id-ID', {
                                 day: '2-digit', month: 'short', year: 'numeric',
                                 hour: '2-digit', minute: '2-digit'
@@ -651,7 +656,7 @@ class ProjectRiskController extends BasicCRUDController
                         foreach ($kpiData as $kpi) {
                             // Cek apakah data dengan kpi_name, tahun, dan profit_center yang sama sudah ada
                             $existingKpi = SasaranProyek::where('costcenter_code', $profitCenter)
-                                                      ->where('tahun', $tahunBerjalan)
+                                                      // ->where('tahun', $tahunBerjalan)
                                                       ->where('kpi_desc', $kpi['kpi_name'] ?? '')
                                                       ->first();
 
@@ -696,7 +701,7 @@ class ProjectRiskController extends BasicCRUDController
 
                 // Ambil data yang baru disimpan
                 $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)
-                                              ->where('tahun', $tahunBerjalan)
+                                              // ->where('tahun', $tahunBerjalan)
                                               ->get();
             }
         }
@@ -2540,7 +2545,7 @@ class ProjectRiskController extends BasicCRUDController
                         ]);
                     }
                 }
-                
+
                 // Update ProjectRisk dengan status=3 dan step_verification=u_step
                 ProjectRisk::where('project_id', $project_id)
                     ->where('periode_id', $periode_id)
@@ -2550,17 +2555,17 @@ class ProjectRiskController extends BasicCRUDController
                         'step_verification' => $u_step + 1,
                         'status' => 2
                     ]);
-                
+
                 // Commit transaksi jika semua berhasil
                 DB::commit();
-                    
+
                 return redirect()->route('projects.risks.index', [
                     'project' => $project_periode_id
                 ])->with('success', 'Semua risiko berhasil dieskalasi dan diverifikasi.');
             } catch (\Exception $e) {
                 // Rollback transaksi jika terjadi error
                 DB::rollBack();
-                
+
                 return redirect()->route('projects.risks.index', [
                     'project' => $project_periode_id
                 ])->with('error', 'Terjadi kesalahan saat memproses data: ' . $e->getMessage());
@@ -2583,7 +2588,7 @@ class ProjectRiskController extends BasicCRUDController
     {
         $u_step = 0;
         $user_verification = "";
-        
+
         if($level_id == 7) { // ROWP
             $u_step = 1; // step verifikasi user
             $user_verification = "Risk Owner Project";
@@ -2601,7 +2606,7 @@ class ProjectRiskController extends BasicCRUDController
             $u_step = 4; // step verifikasi user
             $user_verification = "Risk Owner MR";
         }
-        
+
         return [
             'u_step' => $u_step,
             'user_verification' => $user_verification
@@ -2617,7 +2622,7 @@ class ProjectRiskController extends BasicCRUDController
             </div>
             HTML;
         }
-        
+
         return '';
     }
     public function getRiskNotes(Request $request, $project, $risk)

@@ -446,10 +446,18 @@ class RiskRegisterUnitController extends Controller
             abort(404, 'Unit tidak ditemukan.');
         }
 
-        $risikos = IdentifikasiRisiko::where('periode_id', $period)
-            ->where('unit_id', auth()->user()->unit_id)
-            ->with('riskAnalysis')
-            ->get();
+        $status = request()->query('status');
+
+        $risikosQuery = IdentifikasiRisiko::where('periode_id', $period)
+        ->where('unit_id', auth()->user()->unit_id)
+        ->with('riskAnalysis');
+
+        if ($status === 'open') {
+            $risikosQuery->where('is_closed', 0);
+        } elseif ($status === 'closed') {
+            $risikosQuery->where('is_closed', 1);
+        }
+        $risikos = $risikosQuery->get();
 
         $currentRiskMaps = $risikos->pluck('currentRiskMapsMonth');
         $formattedCurrentRiskMaps = [];
