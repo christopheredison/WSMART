@@ -823,11 +823,11 @@ $(document).ready(function() {
 
     // Inisialisasi semua chart dan peta jika ada data
     @if ($selectedUnitId)
-        // Logika untuk Peta Risiko
         const highImpactRisksJs = @json($highImpactRisksJs); 
         const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
         const highImpactLevels = ['High', 'Moderate to High'];
         const currentYear = '{{ $currentYear }}';
+        const currentQuarter = {{ $currentQuarter }};
 
         function populateInherentMap() {
             Object.values(highImpactRisksJs).forEach(risk => {
@@ -837,12 +837,21 @@ $(document).ready(function() {
                     const cellI = $(`#inherentMap .data-cell[data-matrix="${matrixI}"]`);
                     if (cellI.length) cellI.find('.kode-peristiwa').append(`<span class="box-inherent">${riskNumber}</span>`);
                     
-                    const matrixR = risk.risk_analysis.skala_dampak_residual + '-' + risk.risk_analysis.skala_probabilitas_residual?.tingkat;
+                    const probResidualRel = risk.risk_analysis['skala_probabilitas_residual_q' + currentQuarter];
+                    const probResidualTingkat = probResidualRel ? probResidualRel.tingkat : null;
+                    const dampakResidual = risk.risk_analysis['nilai_dampak_residual_q' + currentQuarter];
+                    
+                    const dampakResidualObj = risk.risk_analysis['skala_dampak_residual_q' + currentQuarter + '_obj'];
+                    const dampakResidualTingkat = dampakResidualObj ? dampakResidualObj.tingkat : null;
+
+                    const matrixR = dampakResidualTingkat + '-' + probResidualTingkat;
+                    
                     const cellR = $(`#inherentMap .data-cell[data-matrix="${matrixR}"]`);
                     if (cellR.length) cellR.find('.kode-peristiwa').append(`<span class="box-residual">${riskNumber}</span>`);
                 }
             });
         }
+
         function updateCurrentData() {
             const selectedMonth = $('#monthSelect').val();
             const selectedYear = $('#tahunSelect').val();
@@ -858,7 +867,7 @@ $(document).ready(function() {
                     const matrixC = currentData.skala_dampak + '-' + currentData.skala_probabilitas;
                     const cellC = $(`#currentMap .data-cell[data-matrix="${matrixC}"]`);
                     if (cellC.length) cellC.find('.kode-peristiwa').append(`<span class="box-current">${riskNumber}</span>`);
-                    
+
                     const levelClass = (currentData.level_risiko_formatted || '').toLowerCase().replace(/ /g, '-').replace('to-', '');
                     const td = tableRow.find('.realisasi-level-risiko');
 
@@ -868,7 +877,6 @@ $(document).ready(function() {
                     tableRow.find('.realisasi-skala-probabilitas').html(currentData.skala_probabilitas_obj?.tingkat || '-');
                     tableRow.find('.realisasi-nilai-risiko').html(currentData.nilai_risiko_formatted);
                     
-                    // [FIX] Logika pewarnaan background
                     td.html(currentData.level_risiko_formatted || '-');
                     td.removeClass('bg-high bg-moderate-high bg-moderate bg-low-moderate bg-low');
                     if (levelClass) {
@@ -878,8 +886,6 @@ $(document).ready(function() {
             });
         }
 
-        // if (Object.keys(highImpactRisksJs).length > 0) {
-        // }
         populateInherentMap();
         updateCurrentData();
         $('#monthSelect, #tahunSelect').on('change', updateCurrentData);

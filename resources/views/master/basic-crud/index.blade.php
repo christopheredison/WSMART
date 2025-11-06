@@ -170,7 +170,7 @@
                                 --}}
                                 <th class="white-space-nowrap">#</th>
                                 @foreach ($tableColumns as $key => $column)
-                                    <th class="sort" data-sort="{{ $key }}">
+                                    <th class="sort" data-sort="{{ $key }}" class="{{ $column['class'] ?? '' }}">
                                         {{ $column['label'] }}
                                     </th>
                                 @endforeach

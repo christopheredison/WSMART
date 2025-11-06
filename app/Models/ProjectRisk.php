@@ -225,21 +225,44 @@ class ProjectRisk extends Model
 
     public function getCurrentRiskMapsMonthAttribute() {
         $tahuns = $this->projectRiskMonitorings()->pluck('tahun')->unique();
+
+        $this->loadMissing('projectRiskAnalisa.skalaDampakObj', 'projectRiskAnalisa.skalaProbabilitas');
+
         $currentRiskMaps = [
-            'inherent' => [
+          'inherent' => [
+                'nilai_dampak' => $this->projectRiskAnalisa?->nilai_dampak,
                 'skala_dampak' => $this->projectRiskAnalisa?->skala_dampak,
+                'skala_dampak_obj' => $this->projectRiskAnalisa?->skalaDampakObj,
+                'nilai_probabilitas' => $this->projectRiskAnalisa?->nilai_probabilitas,
+                'skala_probabilitas_id' => $this->projectRiskAnalisa?->skala_probabilitas_id,
                 'skala_probabilitas' => $this->projectRiskAnalisa?->skalaProbabilitas?->tingkat,
-                'quarter' => 0,
+                'skala_probabilitas_obj' => $this->projectRiskAnalisa?->skalaProbabilitas,
+                'nilai_risiko' => $this->projectRiskAnalisa?->skala_risiko,
+                'level_risiko' => $this->projectRiskAnalisa?->level_risiko,
+                'month' => 0,
                 'tahun' => 0,
-            ],
+              ],
         ];
         $currentRiskMap = $currentRiskMaps['inherent'];
+
+        $monitorings = $this->projectRiskMonitorings->keyBy(function($item) {
+            return $item->tahun . '-' . $item->month;
+        });
+
         foreach ($tahuns as $tahun) {
             for ($month = 1; $month <= 12; $month++) {
                 $projectMonitoring = $this->projectRiskMonitorings->where('month', $month)->where('tahun', $tahun)->first();
+
                 $currentRiskMaps[$tahun . '-' . $month] = [
+                    'nilai_dampak' => $projectMonitoring?->nilai_dampak ?? $currentRiskMap['nilai_dampak'],
                     'skala_dampak' => $projectMonitoring?->skala_dampak ?? $currentRiskMap['skala_dampak'],
+                    'skala_dampak_obj' => $projectMonitoring?->skalaDampakObj ?? $currentRiskMap['skala_dampak_obj'],
+                    'nilai_probabilitas' => $projectMonitoring?->nilai_probabilitas ?? $currentRiskMap['nilai_probabilitas'],
+                    'skala_probabilitas_id' => $projectMonitoring?->skala_probabilitas_id ?? $currentRiskMap['skala_probabilitas_id'],
                     'skala_probabilitas' => $projectMonitoring?->skalaProbabilitas?->tingkat ?? $currentRiskMap['skala_probabilitas'],
+                    'skala_probabilitas_obj' => $projectMonitoring?->skalaProbabilitas ?? $currentRiskMap['skala_probabilitas_obj'],
+                    'nilai_risiko' => $projectMonitoring?->skala_risiko ?? $currentRiskMap['nilai_risiko'],
+                    'level_risiko' => $projectMonitoring?->level_risiko ?? $currentRiskMap['level_risiko'],
                     'month' => $month,
                     'tahun' => $tahun,
                 ];
@@ -313,7 +336,7 @@ class ProjectRisk extends Model
      * Menentukan risiko utama berdasarkan kriteria:
      * - Untuk risiko kuantitatif: eksposur risiko di atas rata-rata
      * - Untuk risiko kualitatif: skala risiko > 20
-     * 
+     *
      * @param int $project_id ID project
      * @param int $periode_id ID periode
      * @return void
@@ -325,24 +348,24 @@ class ProjectRisk extends Model
             //->where('periode_id', $periode_id)
             ->where('status', 6)
             ->get();
-        
+
         // Pisahkan risiko berdasarkan kategori dampak (kuantitatif dan kualitatif)
         $quantitativeRisks = $projectRisks->filter(function($risk) {
-            return $risk->projectRiskAnalisa && 
+            return $risk->projectRiskAnalisa &&
                    $risk->projectRiskAnalisa->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF;
         });
-        
+
         $qualitativeRisks = $projectRisks->filter(function($risk) {
-            return $risk->projectRiskAnalisa && 
+            return $risk->projectRiskAnalisa &&
                    $risk->projectRiskAnalisa->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF;
         });
-        
+
         // Untuk risiko kuantitatif, hitung rata-rata eksposur risiko
         if ($quantitativeRisks->count() > 0) {
             $avgExposure = $quantitativeRisks->avg(function($risk) {
                 return $risk->projectRiskAnalisa->eksposur_risiko ?? 0;
             });
-            
+
             // Update risiko kuantitatif yang eksposurnya di atas rata-rata
             foreach ($quantitativeRisks as $risk) {
                 if (($risk->projectRiskAnalisa->eksposur_risiko ?? 0) > $avgExposure) {
@@ -352,7 +375,7 @@ class ProjectRisk extends Model
                 }
             }
         }
-        
+
         // Untuk risiko kualitatif, tandai yang skala risikonya > 20
         foreach ($qualitativeRisks as $risk) {
             if (($risk->projectRiskAnalisa->skala_risiko ?? 0) > 20) {

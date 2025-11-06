@@ -65,7 +65,7 @@
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Kategori Kejadian</label>
-                            <select class="form-select" id="filter-kategori">
+                            <select class="form-select select2" id="filter-kategori">
                                 <option value="">Semua</option>
                                 @foreach($kategoriKejadians as $kategori)
                                     <option value="{{ $kategori->id }}">{{ $kategori->kategori_kejadian }}</option>

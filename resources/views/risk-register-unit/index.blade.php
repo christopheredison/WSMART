@@ -45,7 +45,7 @@
                 @endforeach
               </select>
             </div>
-            @else
+            {{-- @else
             <div class="col-4 col-sm-2">
               <label for="filter-unit" class="form-label d-none">Unit</label>
               <select id="filter-unit" class="form-select select2" disabled>
@@ -56,7 +56,7 @@
                 @endphp
                 <option value="{{ $displayUnitName }}" selected>{{ $displayUnitName }}</option>
               </select>
-            </div>
+            </div> --}}
             @endcan
             <div class="col-12 col-sm-4" style="display:none;">
               <label for="filter-risk-event" class="form-label d-none">Peristiwa Risiko</label>
