@@ -215,24 +215,45 @@ class IdentifikasiRisiko extends Model
     }
 
     public function getCurrentRiskMapsMonthAttribute() {
+        $this->loadMissing('riskAnalysis.skalaDampakObj', 'riskAnalysis.skalaProbabilitas');
+
         $currentRiskMaps = [
             'inherent' => [
+                'nilai_dampak' => $this->riskAnalysis?->nilai_dampak,
                 'skala_dampak' => $this->riskAnalysis?->skala_dampak,
+                'skala_dampak_obj' => $this->riskAnalysis?->skalaDampakObj,
+                'nilai_probabilitas' => $this->riskAnalysis?->nilai_probabilitas,
+                'skala_probabilitas_id' => $this->riskAnalysis?->skala_probabilitas_id,
                 'skala_probabilitas' => $this->riskAnalysis?->skalaProbabilitas?->tingkat,
-                'quarter' => 0,
+                'skala_probabilitas_obj' => $this->riskAnalysis?->skalaProbabilitas,
+                'skala_risiko' => $this->riskAnalysis?->skala_risiko,
+                'level_risiko' => $this->riskAnalysis?->level_risiko,
+                'month' => 0,
+                'tahun' => 0,
             ],
         ];
-
-        $currentRiskMap = $currentRiskMaps['inherent'];
+        
+        $currentRiskMap = $currentRiskMaps['inherent']; 
+        
+        $monitorings = $this->monitoringRisikos->keyBy('month');
 
         for ($month = 1; $month <= 12; $month++) {
-            $projectMonitoring = $this->monitoringRisikos->where('month', $month)->first();
-            $currentRiskMaps[$month] = [
-                'skala_dampak' => $projectMonitoring?->skala_dampak ?? $currentRiskMap['skala_dampak'],
-                'skala_probabilitas' => $projectMonitoring?->skalaProbabilitas?->tingkat ?? $currentRiskMap['skala_probabilitas'],
-                'month' => $month,
-            ];
+            $projectMonitoring = $monitorings->get($month);
 
+            $currentRiskMaps[$month] = [
+                'nilai_dampak' => $projectMonitoring?->nilai_dampak ?? $currentRiskMap['nilai_dampak'],
+                'skala_dampak' => $projectMonitoring?->skala_dampak ?? $currentRiskMap['skala_dampak'],
+                'skala_dampak_obj' => $projectMonitoring?->skalaDampakObj ?? $currentRiskMap['skala_dampak_obj'],
+                'nilai_probabilitas' => $projectMonitoring?->nilai_probabilitas ?? $currentRiskMap['nilai_probabilitas'],
+                'skala_probabilitas_id' => $projectMonitoring?->skala_probabilitas_id ?? $currentRiskMap['skala_probabilitas_id'],
+                'skala_probabilitas' => $projectMonitoring?->skalaProbabilitas?->tingkat ?? $currentRiskMap['skala_probabilitas'],
+                'skala_probabilitas_obj' => $projectMonitoring?->skalaProbabilitas ?? $currentRiskMap['skala_probabilitas_obj'],
+                'skala_risiko' => $projectMonitoring?->skala_risiko ?? $currentRiskMap['skala_risiko'],
+                'level_risiko' => $projectMonitoring?->level_risiko ?? $currentRiskMap['level_risiko'],
+                'month' => $month,
+                'tahun' => $projectMonitoring?->tahun ?? $currentRiskMap['tahun'],
+            ];
+            
             $currentRiskMap = $currentRiskMaps[$month];
         }
 

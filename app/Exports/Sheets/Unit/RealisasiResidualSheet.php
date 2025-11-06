@@ -57,7 +57,9 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 $sheet->setCellValue('D1', 'No Risiko');
                 $sheet->setCellValue('E1', 'Peristiwa Risiko');
                 $sheet->setCellValue('F1', 'Realisasi Risiko Residual'); // Header gabungan utama
-                $sheet->setCellValue('AL1', 'Efektifitas Perlakuan Risiko'); // Kolom terakhir
+
+                $sheet->setCellValue('AL1', 'Nilai Efektivitas');
+                $sheet->setCellValue('AM1', 'Efektifitas Perlakuan Risiko');
 
                 // Row 2: Sub-header kategori realisasi
                 $sheet->setCellValue('F2', 'Asumsi Perhitungan Dampak');
@@ -90,8 +92,10 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 // Merge sel header "Realisasi Risiko Residual" secara horizontal (F1 sampai AK1) - 32 kolom
                 $sheet->mergeCells('F1:AK1');
 
-                // Merge sel header "Efektifitas Perlakuan Risiko" secara vertikal (AL1 sampai AL3)
+                // Merge sel header "Nilai Efektivitas"
                 $sheet->mergeCells('AL1:AL3');
+                // Merge sel header "Efektifitas Perlakuan Risiko"
+                $sheet->mergeCells('AM1:AM3');
 
                 // Merge sel header kategori di level 2 (masing-masing 4 kolom untuk Q1-Q4)
                 $sheet->mergeCells('F2:I2'); // Asumsi Perhitungan Dampak
@@ -123,7 +127,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                         ]
                     ]
                 ];
-                $sheet->getStyle('A1:AL3')->applyFromArray($headerStyle);
+                $sheet->getStyle('A1:AM3')->applyFromArray($headerStyle);
 
                 // Style khusus untuk sub-header kategori (row 2) - Background abu-abu
                 $kategoriHeaderStyle = [
@@ -165,31 +169,39 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 ];
                 $sheet->getStyle('F3:AK3')->applyFromArray($quarterHeaderStyle);
 
+                $lastRow = $sheet->getHighestRow();
+
                 // Tambahkan border untuk semua data yang akan terisi
                 $dataStyle = [
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
                             'color' => ['rgb' => '000000']
-                        ]
+                        ],
+                        'alignment' => [
+                            'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP,
+                            'wrapText' => true,
+                        ],
                     ]
                 ];
                 
-                // Hitung jumlah data aktual untuk border yang tepat
-                $risikosCount = \App\Models\IdentifikasiRisiko::where('periode_id', $this->periodeId)
-                    ->where('unit_id', $this->unitId)
-                    ->count();
-                
-                // Border hanya untuk row yang berisi data (header + data aktual)
-                if ($risikosCount > 0) {
-                    $maxDataRow = 3 + $risikosCount; // Row 3 (header) + jumlah data aktual
-                    $sheet->getStyle('A4:AL' . $maxDataRow)->applyFromArray($dataStyle);
+                if ($lastRow > 3) {
+                    $dataRange = 'A4:AM' . $lastRow;
+                    $sheet->getStyle($dataRange)->applyFromArray($dataStyle);
                     
-                    // Tambahkan pewarnaan background untuk Level Risiko BUMN
-                    $this->applyLevelRisikoColoring($sheet, $maxDataRow);
+                    // Set rata tengah horizontal untuk kolom-kolom tertentu
+                    $centerCols = ['A', 'B', 'D', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM'];
+                    foreach ($centerCols as $col) {
+                        // Cek apakah kolom ada sebelum styling
+                        if (\PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($col) <= \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString('AM')) {
+                            $sheet->getStyle("{$col}4:{$col}{$lastRow}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                        }
+                    }
+
+                    $this->applyLevelRisikoColoring($sheet, $lastRow);
                 }
                 
-                foreach (range('A', 'AL') as $column) {
+                foreach (range('A', 'AM') as $column) {
                     $sheet->getColumnDimension($column)->setAutoSize(true);
                 }
             },
@@ -340,8 +352,10 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 'level_risiko_q3' => $analisa->level_risiko_residual_q3 ?? '-',
                 'level_risiko_q4' => $analisa->level_risiko_residual_q4 ?? '-',
                 
+                'nilai_efektivitas' => $risiko->efektivitas_perlakuan_risiko ?? '-',
+
                 // Efektifitas Perlakuan Risiko
-                'efektifitas_perlakuan' => $this->calculateEfektifitas($analisa),
+                'efektifitas_perlakuan' => $this->calculateEfektifitas($analisa, $risiko),
             ];
 
             $exportData->push($rowData);
@@ -378,17 +392,22 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
     /**
      * Calculate efektifitas perlakuan risiko
      */
-    private function calculateEfektifitas($analisa)
+    private function calculateEfektifitas($analisa, $risiko)
     {
-        // Logic: Jika mencapai residual target (misalnya Q4 level low) maka Efektif
-        // Untuk sementara, anggap efektif jika ada data level risiko Q4
-        $levelRisikoQ4 = $analisa->level_risiko_residual_q4;
-        
-        if ($levelRisikoQ4 && in_array(strtolower($levelRisikoQ4), ['low', 'low to moderate'])) {
-            return 'Efektif';
+        // 1. Cek apakah risiko sudah ditutup (closed)
+        if (!$risiko->is_closed) {
+            return 'Belum Ditutup';
         }
+
+        // 2. Jika sudah ditutup, cek nilai efektivitas dari tabel ProjectRisk ($risiko)
+        $nilaiEfektivitas = (float) $risiko->efektivitas_perlakuan_risiko;
         
-        return 'Tidak Efektif';
+        if ($nilaiEfektivitas > 0) {
+            return 'Efektif';
+        } else {
+            // Ini akan mencakup nilai <= 0 (termasuk 0, negatif, atau null)
+            return 'Tidak Efektif';
+        }
     }
 
     /**

@@ -70,6 +70,11 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
           $targetUnitId = $user->unit_id;
         }
 
+        $unit = Unit::find($targetUnitId);
+        if ($unit) {
+          $this->indexSubtitle = $unit->name;
+        }
+
         // if (!(Gate::check('risk_monitoring_list') || $user->hasProject($period))) {
         //     abort(403);
         // }

@@ -6,7 +6,7 @@
         <div class="card border-0 dashboard-header">
             <img src="{{ asset('assets/img/dashboard-header.webp') }}" alt="dashboard">
             <div class="card-header border-0 justify-content-end">
-                <h1 class="mb-0">Executive Summary Divisi</h1>
+                <h1 class="mb-0">Executive Summary Anak Perusahaan</h1>
                 <h4 id="selected-unit-name" class="mb-4">{{ $selectedUnit ? $selectedUnit->name : '' }}</h4>
                 <h6>Statistik per tanggal {{ now()->format('d M Y') }}</h6>
             </div>
@@ -22,9 +22,9 @@
                     <input type="text" name="period" id="period_selector" class="form-control" placeholder="Pilih Bulan & Tahun" value="{{ $selectedPeriod }}">
                 </div>
                 <div class="col-md-6">
-                    <label for="unit_selector" class="form-label fw-bold">Pilih Divisi</label>
+                    <label for="unit_selector" class="form-label fw-bold">Pilih Anak Perusahaan</label>
                     <select name="unit_id" id="unit_selector" class="form-select select2">
-                        <option value="">Pilih Divisi</option>
+                        <option value="">Pilih Anak Perusahaan</option>
                         @foreach ($units as $unit)
                         <option value="{{ $unit->id }}" {{ $unit->id == $selectedUnitId ? 'selected' : '' }}>
                             {{ $unit->name }}
@@ -107,19 +107,8 @@
 
     <div class="row g-4 mb-4">
         <div class="col-lg-6 d-flex flex-column">
-            @if ($isProjectUnit)
-            <div class="card shadow-sm mb-4">
-                <div class="card-header"><h5 class="mb-0 fw-bold"><i class="fas fa-database me-2"></i>Loss Event Database (LED) Proyek</h5></div>
-                <div class="card-body py-2">
-                    <div class="d-flex justify-content-between align-items-center px-0 py-2">
-                        <span class="text-muted">Total Kerugian Finansial</span>
-                        <span class="fw-bold fs-4 text-danger">Rp {{ number_format($summaryData['led_proyek_total'], 0, ',', '.') }}</span>
-                    </div>
-                </div>
-            </div>
-            @endif
             <div class="card shadow-sm flex-grow-1">
-                <div class="card-header"><h5 class="mb-0 fw-bold"><i class="fas fa-building me-2"></i>Loss Event Database (LED) Divisi</h5></div>
+                <div class="card-header"><h5 class="mb-0 fw-bold"><i class="fas fa-building me-2"></i>Loss Event Database (LED) Anak Perusahaan</h5></div>
                 <div class="card-body py-2">
                     <div class="d-flex justify-content-between align-items-center px-0 py-2">
                         <span class="text-muted">Total Kerugian Finansial</span>
@@ -154,8 +143,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="fw-bold text-success-emphasis mb-0">Hasil Usaha Aktual s/d {{ $formattedPeriod }}</h6>
-                            @if($isProjectUnit) <small class="text-muted">(LSP Realisasi - LED Proyek - LED Divisi)</small>
-                            @else <small class="text-muted">(Biaya Usaha - LED Divisi)</small> @endif
+                            <small class="text-muted">(Biaya Usaha - LED Anak Perusahaan)</small>
                         </div>
                         <span class="fw-bold fs-4 text-success">Rp {{ number_format($summaryData['hasil_usaha_sd_bulan'], 0, ',', '.') }}</span>
                     </div>
@@ -186,7 +174,7 @@
     <div class="card">
         <div class="card-header stepper border-0 pb-0">
             <div class="nav-link active d-flex align-items-center p-0">
-                <span class="h3 mb-0">Peta Risiko Divisi</span>
+                <span class="h3 mb-0">Peta Risiko Anak Perusahaan</span>
             </div>
         </div>
         <div class="card-body">
@@ -543,68 +531,10 @@
     <h2 class="mt-7 mb-4 text-primary fw-bold"><i class="fas fa-list-ol me-2"></i>Ringkasan Top Risiko</h2>
     <hr class="mb-4">
     <div class="row g-4">
-        @if($isProjectUnit)
-        <div class="col-lg-6">
-          <div class="card h-100">
-              <div class="card-header">
-                  <h5 class="mb-0 fw-bold">Top 5 Loss Event Project ({{$currentYear}})</h5>
-              </div>
-              <div class="card-body">
-                  <ul class="list-group list-group-flush">
-                      @forelse($topLedProjects as $item)
-                          <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
-                              <span>
-                                <a href="">
-                                  {{ optional($item->project)->project_name }}
-                                </a>
-                              </span>
-                              <span class="badge bg-danger rounded-pill">Rp {{ number_format($item->total_kerugian, 0, ',', '.') }}</span>
-                          </li>
-                      @empty
-                          <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
-                      @endforelse
-                  </ul>
-              </div>
-          </div>
-        </div>
-        <div class="col-lg-6">
-          <div class="card h-100">
-              <div class="card-header">
-                  <h5 class="mb-0 fw-bold">Top 10 Loss Event {{ $isProjectUnit ? 'Divisi Operasi' : 'Divisi Fungsi' }} ({{$currentYear}})</h5>
-              </div>
-              <div class="card-body">
-                  <div class="table-responsive">
-                      <table class="table table-hover table-sm">
-                          <thead>
-                              <tr>
-                                  <th>#</th>
-                                  <th>Nama Kejadian</th>
-                                  <th class="text-end">Nilai Kerugian</th>
-                              </tr>
-                          </thead>
-                          <tbody>
-                              @forelse ($topLedDivisi as $event)
-                                  <tr>
-                                      <td>{{ $loop->iteration }}</td>
-                                      <td>{{ $event->nama_kejadian ?? '-' }}</td>
-                                      <td class="text-end text-danger">Rp {{ number_format($event->nilai_kerugian_finansial, 0, ',', '.') }}</td>
-                                  </tr>
-                              @empty
-                                  <tr>
-                                      <td colspan="3" class="text-center text-muted">Tidak ada data.</td>
-                                  </tr>
-                              @endforelse
-                          </tbody>
-                      </table>
-                  </div>
-              </div>
-          </div>
-        </div>
-        @else
         <div class="col-12">
           <div class="card h-100">
             <div class="card-header">
-                <h5 class="mb-0 fw-bold">Top 10 Loss Event {{ $isProjectUnit ? 'Divisi Operasi' : 'Divisi Fungsi' }} ({{$currentYear}})</h5>
+                <h5 class="mb-0 fw-bold">Top 10 Loss Event Anak Perusahaan ({{$currentYear}})</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -634,106 +564,56 @@
             </div>
         </div>
         </div>
-        @endif
-        @if ($isProjectUnit)
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h5 class="mb-0 fw-bold">Top 5 Eksposur Risiko Proyek (Annual {{ $currentYear }})</h5>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            @forelse($topEksposurAnnual as $item)
-                                <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
-                                    <span>
-                                      <a href="">
-                                        {{ $item->project_name }}
-                                      </a>
-                                    </span>
-                                    <span class="badge bg-warning text-dark rounded-pill">Rp {{ number_format($item->max_eksposur, 0, ',', '.') }}</span>
-                                </li>
-                            @empty
-                                <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
-                            @endforelse
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h5 class="mb-0 fw-bold">Top 5 Eksposur Risiko Proyek (Total s/d {{ $formattedPeriod }})</h5>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            @forelse($topEksposurTotal as $item)
-                                <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
-                                    <span>
-                                      <a href="">
-                                        {{ $item->project_name }}
-                                      </a>
-                                    </span>
-                                    <span class="badge bg-warning text-dark rounded-pill">Rp {{ number_format($item->total_eksposur, 0, ',', '.') }}</span>
-                                </li>
-                            @empty
-                                <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
-                            @endforelse
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        @else
-            <div class="col-lg-6">
-              <div class="card h-100">
-                  <div class="card-header">
-                      <h5 class="mb-0 fw-bold">Top 5 Eksposur Risiko (Annual {{ $currentYear }})</h5>
-                  </div>
-                  <div class="card-body">
-                      <ul class="list-group list-group-flush">
-                            @forelse($topEksposurAnnual as $item)
-                                <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
-                                    <span>
-                                      <a href="">
-                                        {{ optional($item->identifikasiRisiko)->peristiwa_risiko ?? 'Risiko ID: '.$item->identifikasi_risiko_id }}
-                                      </a>
-                                    </span>
-                                    <span class="badge bg-warning text-dark rounded-pill">Rp {{ number_format($item->max_eksposur, 0, ',', '.') }}</span>
-                                </li>
-                            @empty
-                                <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
-                            @endforelse
-                      </ul>
-                  </div>
+        <div class="col-lg-6">
+          <div class="card h-100">
+              <div class="card-header">
+                  <h5 class="mb-0 fw-bold">Top 5 Eksposur Risiko (Annual {{ $currentYear }})</h5>
               </div>
-            </div>
-            <div class="col-lg-6">
-              <div class="card h-100">
-                  <div class="card-header">
-                      <h5 class="mb-0 fw-bold">Top 5 Eksposur Risiko (Total s/d {{ $formattedPeriod }})</h5>
-                  </div>
-                  <div class="card-body">
-                      <ul class="list-group list-group-flush">
-                            @forelse($topEksposurTotal as $item)
-                                <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
-                                    <span>
-                                      <a href="">
-                                        {{ optional($item->identifikasiRisiko)->peristiwa_risiko ?? 'Risiko ID: '.$item->identifikasi_risiko_id }}
-                                      </a>
-                                    </span>
-                                    <span class="badge bg-warning text-dark rounded-pill">Rp {{ number_format($item->total_eksposur, 0, ',', '.') }}</span>
-                                </li>
-                            @empty
-                                <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
-                            @endforelse
-                      </ul>
-                  </div>
+              <div class="card-body">
+                  <ul class="list-group list-group-flush">
+                        @forelse($topEksposurAnnual as $item)
+                            <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
+                                <span>
+                                  <a href="">
+                                    {{ optional($item->identifikasiRisiko)->peristiwa_risiko ?? 'Risiko ID: '.$item->identifikasi_risiko_id }}
+                                  </a>
+                                </span>
+                                <span class="badge bg-warning text-dark rounded-pill">Rp {{ number_format($item->max_eksposur, 0, ',', '.') }}</span>
+                            </li>
+                        @empty
+                            <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
+                        @endforelse
+                  </ul>
               </div>
-            </div>
-        @endif
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card h-100">
+              <div class="card-header">
+                  <h5 class="mb-0 fw-bold">Top 5 Eksposur Risiko (Total s/d {{ $formattedPeriod }})</h5>
+              </div>
+              <div class="card-body">
+                  <ul class="list-group list-group-flush">
+                        @forelse($topEksposurTotal as $item)
+                            <li class="list-group-item d-flex justify-content-between align-items-center ps-0">
+                                <span>
+                                  <a href="">
+                                    {{ optional($item->identifikasiRisiko)->peristiwa_risiko ?? 'Risiko ID: '.$item->identifikasi_risiko_id }}
+                                  </a>
+                                </span>
+                                <span class="badge bg-warning text-dark rounded-pill">Rp {{ number_format($item->total_eksposur, 0, ',', '.') }}</span>
+                            </li>
+                        @empty
+                            <li class="list-group-item text-muted ps-0">Tidak ada data.</li>
+                        @endforelse
+                  </ul>
+              </div>
+          </div>
+        </div>
     </div>
 @else
     <div class="alert alert-info text-center mt-5" role="alert">
-        <strong>Pilih Divisi</strong> untuk menampilkan Executive Summary.
+        <strong>Pilih Anak Perusahaan</strong> untuk menampilkan Executive Summary.
     </div>
 @endif
 
@@ -823,11 +703,11 @@ $(document).ready(function() {
 
     // Inisialisasi semua chart dan peta jika ada data
     @if ($selectedUnitId)
+        // Logika untuk Peta Risiko
         const highImpactRisksJs = @json($highImpactRisksJs); 
         const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
         const highImpactLevels = ['High', 'Moderate to High'];
         const currentYear = '{{ $currentYear }}';
-        const currentQuarter = {{ $currentQuarter }};
 
         function populateInherentMap() {
             Object.values(highImpactRisksJs).forEach(risk => {
@@ -837,21 +717,12 @@ $(document).ready(function() {
                     const cellI = $(`#inherentMap .data-cell[data-matrix="${matrixI}"]`);
                     if (cellI.length) cellI.find('.kode-peristiwa').append(`<span class="box-inherent">${riskNumber}</span>`);
                     
-                    const probResidualRel = risk.risk_analysis['skala_probabilitas_residual_q' + currentQuarter];
-                    const probResidualTingkat = probResidualRel ? probResidualRel.tingkat : null;
-                    const dampakResidual = risk.risk_analysis['nilai_dampak_residual_q' + currentQuarter];
-                    
-                    const dampakResidualObj = risk.risk_analysis['skala_dampak_residual_q' + currentQuarter + '_obj'];
-                    const dampakResidualTingkat = dampakResidualObj ? dampakResidualObj.tingkat : null;
-
-                    const matrixR = dampakResidualTingkat + '-' + probResidualTingkat;
-                    
+                    const matrixR = risk.risk_analysis.skala_dampak_residual + '-' + risk.risk_analysis.skala_probabilitas_residual?.tingkat;
                     const cellR = $(`#inherentMap .data-cell[data-matrix="${matrixR}"]`);
                     if (cellR.length) cellR.find('.kode-peristiwa').append(`<span class="box-residual">${riskNumber}</span>`);
                 }
             });
         }
-
         function updateCurrentData() {
             const selectedMonth = $('#monthSelect').val();
             const selectedYear = $('#tahunSelect').val();
@@ -867,7 +738,7 @@ $(document).ready(function() {
                     const matrixC = currentData.skala_dampak + '-' + currentData.skala_probabilitas;
                     const cellC = $(`#currentMap .data-cell[data-matrix="${matrixC}"]`);
                     if (cellC.length) cellC.find('.kode-peristiwa').append(`<span class="box-current">${riskNumber}</span>`);
-
+                    
                     const levelClass = (currentData.level_risiko_formatted || '').toLowerCase().replace(/ /g, '-').replace('to-', '');
                     const td = tableRow.find('.realisasi-level-risiko');
 
@@ -877,6 +748,7 @@ $(document).ready(function() {
                     tableRow.find('.realisasi-skala-probabilitas').html(currentData.skala_probabilitas_obj?.tingkat || '-');
                     tableRow.find('.realisasi-nilai-risiko').html(currentData.nilai_risiko_formatted);
                     
+                    // [FIX] Logika pewarnaan background
                     td.html(currentData.level_risiko_formatted || '-');
                     td.removeClass('bg-high bg-moderate-high bg-moderate bg-low-moderate bg-low');
                     if (levelClass) {
@@ -886,6 +758,8 @@ $(document).ready(function() {
             });
         }
 
+        // if (Object.keys(highImpactRisksJs).length > 0) {
+        // }
         populateInherentMap();
         updateCurrentData();
         $('#monthSelect, #tahunSelect').on('change', updateCurrentData);

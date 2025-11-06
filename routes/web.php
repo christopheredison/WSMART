@@ -177,6 +177,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/executive-summary-corporate', [HomeController::class, 'executiveSummaryCorporate'])->name('executive-summary-corporate');
     Route::get('/executive-summary-corporate-population', [HomeController::class, 'executiveSummaryCorporatePopulation'])->name('executive-summary-corporate-population');
     Route::get('/executive-summary-unit', [HomeController::class, 'executiveSummaryUnit'])->name('executive-summary-unit');
+    Route::get('/executive-summary-anper', [HomeController::class, 'executiveSummaryAnper'])->name('executive-summary-anper');
     Route::get('/executive-summary-project', [HomeController::class, 'executiveSummaryProject'])->name('executive-summary-project');
 
     Route::group(['middleware' => ['can:manajemen_user']],function ()
@@ -406,7 +407,7 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::resource('capaian-tck', CapaianTckController::class);
     Route::resource('capaian-tkmru', CapaianTkmruController::class);
-    Route::resource('jabatan', JabatanController::class)->except(['create', 'show', 'edit', 'destroy', 'update']);
+    Route::resource('jabatan', JabatanController::class)->except(['create', 'show', 'destroy']);
 
     Route::resource('project-divisi', ProjectDivisiController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-sektor', ProjectSektorController::class)->except(['create', 'show', 'edit']);
@@ -436,6 +437,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('projects/{project}/risks/{risk}/loss-events/create', [ProjectLEDController::class, 'riskChangeToLed'])->name('projects.loss-events.create')->middleware('can:project_risk_edit');
     Route::post('projects/{project}/risks/{risk}/loss-events', [ProjectLEDController::class, 'riskChangeToLedStore'])->name('projects.loss-events.store')->middleware('can:project_risk_edit');
     Route::post('projects/risks/send', [ProjectRiskController::class, 'send'])->name('projects.risks.send');
+    Route::get('projects/{project}/risks/{risk}/notes', [ProjectRiskController::class, 'getRiskNotes'])->name('projects.risks.notes');
     Route::resource('master-kri', MasterKriController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-periode-list', ProjectPeriodeListController::class)->except(['create', 'edit']);
     Route::resource('jenis-kontrol-eksisting', JenisKontrolEksistingController::class)->except(['create', 'show', 'edit']);
