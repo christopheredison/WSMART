@@ -40,6 +40,23 @@ function showVerifikasiModal(monitoringId, peristiwaRisiko, deskripsiRisiko) {
     const modalElement = document.getElementById('modalVerifikasi');
     const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
 
+    document.querySelectorAll('#modalVerifikasi .modal-footer .btn').forEach(btn => {
+        btn.disabled = false;
+        
+        const label = btn.querySelector('.indicator-label');
+        const progress = btn.querySelector('.indicator-progress');
+
+        if (label && progress) {
+            label.classList.remove('d-none');
+            progress.classList.add('d-none');
+        }
+    });
+
+    const btnClose = document.querySelector('#modalVerifikasi .btn-close');
+    if (btnClose) {
+        btnClose.disabled = false;
+    }
+
     document.getElementById('modal-verifikasi-risiko-title').textContent = 'Peristiwa Risiko: ' + peristiwaRisiko;
     document.getElementById('modal-verifikasi-risiko-desc').textContent = deskripsiRisiko;
 
@@ -60,20 +77,62 @@ document.addEventListener('DOMContentLoaded', function () {
     const btnClose = document.querySelector('#modalVerifikasi .btn-close');
 
     const handleSubmit = (button, status) => {
-        btnTerima.disabled = true; btnTolak.disabled = true; btnBatal.disabled = true; btnClose.disabled = true;
+        btnTerima.disabled = true; 
+        btnTolak.disabled = true; 
+        btnBatal.disabled = true; 
+        btnClose.disabled = true;
+        
         button.querySelector('.indicator-label').classList.add('d-none');
         button.querySelector('.indicator-progress').classList.remove('d-none');
+        
         document.getElementById('status-verifikasi').value = status;
         form.submit();
     };
 
-    btnTerima.addEventListener('click', () => handleSubmit(btnTerima, 'terima'));
+    btnTerima.addEventListener('click', () => {
+        const button = btnTerima;
+        
+        Swal.fire({
+            title: 'Terima Monitoring?',
+            text: "Apakah Anda yakin ingin menerima monitoring ini?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Terima',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                handleSubmit(button, 'terima');
+            }
+        });
+    });
+
     btnTolak.addEventListener('click', () => {
-        if (!document.getElementById('catatan-verifikasi').value) {
-            alert('Catatan wajib diisi untuk menolak monitoring.');
+        const button = btnTolak;
+
+        if (!document.getElementById('catatan-verifikasi').value.trim()) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Catatan wajib diisi untuk menolak monitoring.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
             return;
         }
-        handleSubmit(btnTolak, 'tolak');
+        
+        Swal.fire({
+            title: 'Tolak Monitoring?',
+            text: "Apakah Anda yakin ingin menolak monitoring ini?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Tolak',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                handleSubmit(button, 'tolak');
+            }
+        });
     });
 });
 </script>

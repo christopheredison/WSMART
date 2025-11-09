@@ -56,6 +56,11 @@ function showVerifikasiModal(monitoringId, peristiwaRisiko, deskripsiRisiko) {
         }
     });
 
+    const btnClose = document.querySelector('#modalVerifikasiRisiko .btn-close');
+    if (btnClose) {
+        btnClose.disabled = false;
+    }
+
     document.getElementById('modal-peristiwa-risiko').textContent = 'Peristiwa Risiko: ' + peristiwaRisiko;
     document.getElementById('modal-deskripsi-risiko').textContent = deskripsiRisiko;
 
@@ -79,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const btnBatal = document.getElementById('btn-batal-verifikasi');
     const btnClose = document.querySelector('#modalVerifikasiRisiko .btn-close');
 
-    const handleSubmit = (button, status) => {
+    const showSpinnerAndSubmit = (button, status) => {
         btnTerima.disabled = true;
         btnTolak.disabled = true;
         btnBatal.disabled = true;
@@ -93,15 +98,50 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     btnTerima.addEventListener('click', function () {
-        handleSubmit(this, 'terima');
+        const button = this;
+
+        Swal.fire({
+            title: 'Terima Monitoring?',
+            text: "Apakah Anda yakin ingin menerima monitoring ini?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Terima',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showSpinnerAndSubmit(button, 'terima');
+            }
+        });
     });
 
     btnTolak.addEventListener('click', function () {
-        if (!document.getElementById('catatan-verifikasi').value) {
-            alert('Catatan wajib diisi untuk menolak monitoring.');
+        const button = this;
+
+        if (!document.getElementById('catatan-verifikasi').value.trim()) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Catatan wajib diisi untuk menolak monitoring.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
             return;
         }
-        handleSubmit(this, 'tolak');
+
+        // 2. Tampilkan konfirmasi SweetAlert
+        Swal.fire({
+            title: 'Tolak Monitoring?',
+            text: "Apakah Anda yakin ingin menolak monitoring ini?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Tolak',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showSpinnerAndSubmit(button, 'tolak');
+            }
+        });
     });
 });
 </script>

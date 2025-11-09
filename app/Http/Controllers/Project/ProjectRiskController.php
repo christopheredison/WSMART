@@ -543,7 +543,9 @@ class ProjectRiskController extends BasicCRUDController
 
         $this->cardFooter = <<<HTML
             <div class="d-flex flex-column">
-                {$this->getPendingRiskAlert($pending_risk, $step_order, $dataBatch)}
+                <div {$viewAttr}>
+                  {$this->getPendingRiskAlert($pending_risk, $step_order, $dataBatch)}
+                </div>
                 <div>
                     <strong>Rata-rata Eksposure Risiko (Kuantitatif):</strong>
                     <span id="average-risk-value">{$formattedAverageExposure}</span>
