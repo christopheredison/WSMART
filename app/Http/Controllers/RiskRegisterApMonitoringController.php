@@ -572,24 +572,27 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
 
         $risk->refreshRealisasi();
 
+        $efektivitas = 0;
+
+        $analisa = $risk->riskAnalysis;
+        $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
+        $skala_risiko_rencana = (float) optional($analisa)['skala_risiko_residual_q' . $quarter];
+        $skala_risiko_realisasi = (float) ($request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden ?? 0);
+
+        $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
+
+        // Hindari pembagian dengan nol
+        if ($selisih_inherent_rencana != 0) {
+            $efektivitas = ($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana;
+        }
+
+        $risk->update([
+            'efektivitas_perlakuan_risiko' => $efektivitas
+        ]);
+
         if ($request->is_closed == '1') {
-          $efektivitas = 0;
-
-          $analisa = $risk->riskAnalysis;
-          $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
-          $skala_risiko_rencana = (float) optional($analisa)['skala_risiko_residual_q' . $quarter];
-          $skala_risiko_realisasi = (float) ($request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden ?? 0);
-
-          $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
-
-          // Hindari pembagian dengan nol
-          if ($selisih_inherent_rencana != 0) {
-              $efektivitas = ($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana;
-          }
-
           $risk->update([
               'is_closed' => true,
-              'efektivitas_perlakuan_risiko' => $efektivitas
           ]);
 
           KamusRisikoAp::updateOrCreate(

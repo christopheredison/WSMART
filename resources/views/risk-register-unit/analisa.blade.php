@@ -708,7 +708,12 @@ $(document).ready(function() {
             // For Q1, validate against inherent value
             if (i === 1) {
                 if (nilaiResidual > nilaiDampak) {
-                    alert('Nilai Dampak Residual Q1 tidak boleh lebih besar dari Nilai Dampak Inheren!');
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: 'Nilai Dampak Residual Q1 tidak boleh lebih besar dari Nilai Dampak Inheren!',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
                     $(this).val($('#nilai_dampak').val()).change();
                     return;
                 }
@@ -718,7 +723,12 @@ $(document).ready(function() {
             if (i > 1) {
                 var prevQuarterValue = parseRupiahToNumber($(`#nilai_dampak_residual_q${i-1}`).val());
                 if (nilaiResidual > prevQuarterValue) {
-                    alert(`Nilai Dampak Residual Q${i} tidak boleh lebih besar dari Q${i-1}!`);
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: `Nilai Dampak Residual Q${i} tidak boleh lebih besar dari Q${i-1}!`,
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
                     $(this).val($(`#nilai_dampak_residual_q${i-1}`).val()).change();
                 }
             }
@@ -728,11 +738,36 @@ $(document).ready(function() {
         $(`#nilai_probabilitas_residual_q${i}`).on('blur', function() {
             var currentValue = parseFloat($(this).val()) || 0;
             var inherentProb = parseFloat($('#nilai_probabilitas').val()) || 0;
+
+            if (currentValue < 0) {
+                Swal.fire({
+                    title: 'Peringatan!',
+                    text: `Nilai Probabilitas Q${i} tidak boleh kurang dari 0!`,
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                $(this).val(0).change();
+                return;
+            } else if (currentValue > 100) {
+                Swal.fire({
+                    title: 'Peringatan!',
+                    text: `Nilai Probabilitas Q${i} tidak boleh lebih dari 100!`,
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                $(this).val(100).change();
+                currentValue = 100;
+            }
             
             // For Q1, validate against inherent probability
             if (i === 1) {
                 if (currentValue > inherentProb) {
-                    alert('Nilai Probabilitas Q1 tidak boleh lebih besar dari Nilai Probabilitas Inheren!');
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: 'Nilai Probabilitas Q1 tidak boleh lebih besar dari Nilai Probabilitas Inheren!',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
                     $(this).val(inherentProb).change();
                     return;
                 }
@@ -742,7 +777,12 @@ $(document).ready(function() {
             if (i > 1) {
                 var prevQuarterValue = parseFloat($(`#nilai_probabilitas_residual_q${i-1}`).val()) || 0;
                 if (currentValue > prevQuarterValue) {
-                    alert(`Nilai Probabilitas Q${i} tidak boleh lebih besar dari Q${i-1}!`);
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: `Nilai Probabilitas Q${i} tidak boleh lebih besar dari Q${i-1}!`,
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
                     $(this).val(prevQuarterValue).change();
                 }
             }
@@ -756,7 +796,12 @@ $(document).ready(function() {
             // For Q1, validate against inherent scale
             if (i === 1) {
                 if (currentValue > inherentScale) {
-                    alert('Skala Dampak Q1 tidak boleh lebih besar dari Skala Dampak Inheren!');
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: 'Skala Dampak Q1 tidak boleh lebih besar dari Skala Dampak Inheren!',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
                     $(this).val(inherentScale).change();
                     return;
                 }
@@ -766,12 +811,39 @@ $(document).ready(function() {
             if (i > 1) {
                 var prevQuarterValue = parseInt($(`#skala_dampak_residual_q${i-1}`).val());
                 if (currentValue > prevQuarterValue) {
-                    alert(`Skala Dampak Q${i} tidak boleh lebih besar dari Q${i-1}!`);
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: `Skala Dampak Q${i} tidak boleh lebih besar dari Q${i-1}!`,
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
                     $(this).val(prevQuarterValue).change();
                 }
             }
         });
     }
+
+    $('#nilai_probabilitas').on('blur', function() {
+        let value = parseFloat($(this).val()) || 0;
+        
+        if (value < 0) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Nilai Probabilitas Inheren tidak boleh kurang dari 0!',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            $(this).val(0).change(); // Reset ke 0 dan trigger change
+        } else if (value > 100) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Nilai Probabilitas Inheren tidak boleh lebih dari 100!',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            $(this).val(100).change(); // Reset ke 100 dan trigger change
+        }
+    });
 
     $('[name="nilai_probabilitas"]').on('change', function() {
         const value = $(this).val();
