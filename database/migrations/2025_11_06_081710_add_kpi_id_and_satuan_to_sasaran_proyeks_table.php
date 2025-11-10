@@ -12,8 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('sasaran_proyeks', function (Blueprint $table) {
-            $table->bigInteger('kpi_id')->nullable()->after('id');
-            $table->text('satuan')->nullable()->after('kpi_id');
+            // Cek kpi_id
+            if (!Schema::hasColumn('sasaran_proyeks', 'kpi_id')) {
+                $table->bigInteger('kpi_id')->nullable();
+            }
+
+            // Cek satuan
+            if (!Schema::hasColumn('sasaran_proyeks', 'satuan')) {
+                $table->text('satuan')->nullable();
+            }
         });
     }
 
@@ -23,7 +30,13 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('sasaran_proyeks', function (Blueprint $table) {
-            $table->dropColumn(['kpi_id', 'satuan']);
+            if (Schema::hasColumn('sasaran_proyeks', 'kpi_id')) {
+                $table->dropColumn('kpi_id');
+            }
+
+            if (Schema::hasColumn('sasaran_proyeks', 'satuan')) {
+                $table->dropColumn('satuan');
+            }
         });
     }
 };
