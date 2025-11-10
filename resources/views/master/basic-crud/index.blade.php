@@ -14,17 +14,17 @@
             @if(!empty($summary['skipped_rows']))
                 <hr>
                 <h6>Detail Baris yang Dilewati:</h6>
-                <ul class="mb-0 small" style="padding-left: 20px;"> 
+                <ul class="mb-0 small" style="padding-left: 20px;">
                     @foreach($summary['skipped_rows'] as $skipped_info)
                         <li>{{ $skipped_info }}</li>
                     @endforeach
                 </ul>
             @endif
-            
+
             @if(!empty($summary['failed_rows']))
                 <hr>
                 <h6>Detail Kegagalan:</h6>
-                <ul class="mb-0 small" style="padding-left: 20px;"> 
+                <ul class="mb-0 small" style="padding-left: 20px;">
                     @foreach($summary['failed_rows'] as $error)
                         <li>{{ $error }}</li>
                     @endforeach
@@ -82,7 +82,7 @@
                                     </a>
                                 </div>
                             @else
-                                @if(empty($extraViewData['status']) || $extraViewData['status'] == \App\Models\DataBatch::STATUS_PROSES)
+                                @if((empty($extraViewData['status']) || $extraViewData['status'] == \App\Models\DataBatch::STATUS_PROSES) && (empty($extraViewData['levelId']) || $extraViewData['levelId'] == 6))
                                 <div id="bulk-select-replace-element" class="col-auto ms-auto">
                                     <a class="btn btn-outline-info btn-sm" href="{{ route($baseRoute . 'create', $baseRouteParams ?? []) }}">
                                         <span class="bx bx-plus"></span>
@@ -234,16 +234,16 @@
     .hover-underline:hover {
         text-decoration: underline;
     }
-    
-    .alert-danger ul { 
-        margin-top: 10px; 
-        margin-bottom: 10px; 
-    } 
-    
-    .alert-danger p { 
-        margin-bottom: 10px; 
-    } 
-</style>    
+
+    .alert-danger ul {
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+
+    .alert-danger p {
+        margin-bottom: 10px;
+    }
+</style>
 @endpush
 
 @push('scripts')
@@ -254,7 +254,7 @@ function showPeluangModal(monitoringId, riskTitle, riskDesc) {
     console.log('showPeluangModal dipanggil dengan ID:', monitoringId);
     $('#peluang-risk-title').text(riskTitle);
     $('#peluang-risk-desc').text(riskDesc);
-    
+
     // Pastikan monitoringId tidak 0 atau undefined
     if (monitoringId && monitoringId !== 0) {
         $('#identifikasi-risiko-id').val(monitoringId);
@@ -266,7 +266,7 @@ function showPeluangModal(monitoringId, riskTitle, riskDesc) {
         alert('ID risiko tidak valid. Silakan coba lagi.');
         return;
     }
-    
+
     $('#modalPeluang').modal('show');
 }
 
@@ -286,7 +286,7 @@ function loadOpportunities(risikoId) {
 function renderOpportunities(opportunities) {
     const tbody = $('#peluang-list');
     tbody.empty();
-    
+
     if (opportunities.length === 0) {
         tbody.append(`
             <tr id="peluang-empty-row">
@@ -295,11 +295,11 @@ function renderOpportunities(opportunities) {
         `);
         return;
     }
-    
+
     opportunities.forEach((item, index) => {
         const formattedRencana = formatRupiah(item.nilai_peluang_rencana);
         const formattedRealisasi = formatRupiah(item.nilai_peluang_realisasi);
-        
+
         tbody.append(`
             <tr>
                 <td>${index + 1}</td>
@@ -309,11 +309,11 @@ function renderOpportunities(opportunities) {
                 <td>${formattedRealisasi}</td>
                 <td class="text-center">
                     <div class="d-flex justify-content-center gap-2">
-                        <button type="button" class="btn btn-sm btn-info btn-edit-peluang" 
-                            data-id="${item.id}" 
-                            data-rencana="${item.penjelasan_peluang_rencana || ''}" 
-                            data-realisasi="${item.penjelasan_peluang_realisasi || ''}" 
-                            data-nilai-rencana="${item.nilai_peluang_rencana || 0}" 
+                        <button type="button" class="btn btn-sm btn-info btn-edit-peluang"
+                            data-id="${item.id}"
+                            data-rencana="${item.penjelasan_peluang_rencana || ''}"
+                            data-realisasi="${item.penjelasan_peluang_realisasi || ''}"
+                            data-nilai-rencana="${item.nilai_peluang_rencana || 0}"
                             data-nilai-realisasi="${item.nilai_peluang_realisasi || 0}">
                             <i class="bx bx-edit-alt"></i>
                         </button>
@@ -349,19 +349,19 @@ $(document).ready(function() {
         removeMaskOnSubmit: true,
         unmaskAsNumber: true
     });
-    
+
     // Botón para añadir nueva oportunidad
     $(document).on('click', '#btn-add-peluang', function() {
         resetPeluangForm();
         $('#peluang-form-title').text('Tambah Peluang Baru');
         $('#peluang-form-container').removeClass('d-none');
     });
-    
+
     // Botón para cancelar formulario
     $(document).on('click', '#btn-cancel-peluang', function() {
         $('#peluang-form-container').addClass('d-none');
     });
-    
+
     // Botón para editar oportunidad
     $(document).on('click', '.btn-edit-peluang', function() {
         const id = $(this).data('id');
@@ -369,28 +369,28 @@ $(document).ready(function() {
         const realisasi = $(this).data('realisasi');
         const nilaiRencana = $(this).data('nilai-rencana');
         const nilaiRealisasi = $(this).data('nilai-realisasi');
-        
+
         $('#peluang-id').val(id);
         $('#penjelasan_peluang_rencana').val(rencana);
         $('#penjelasan_peluang_realisasi').val(realisasi);
-        
+
         // Hilangkan desimal (,00) dari nilai sebelum mengisi form
         let nilaiRencanaBulat = Math.round(parseFloat(nilaiRencana));
         let nilaiRealisasiBulat = Math.round(parseFloat(nilaiRealisasi));
-        
+
         $('#nilai_peluang_rencana').val(nilaiRencanaBulat).trigger('input');
         $('#nilai_peluang_realisasi').val(nilaiRealisasiBulat).trigger('input');
-        
+
         $('#peluang-form-title').text('Edit Peluang');
         $('#peluang-form-container').removeClass('d-none');
     });
-    
+
     // Fungsi untuk menghapus peluang
     $(document).on('click', '.btn-delete-peluang', function() {
         if (confirm('Apakah Anda yakin ingin menghapus data peluang ini?')) {
             const id = $(this).data('id');
             const riskId = $('#identifikasi-risiko-id').val();
-            
+
             $.ajax({
                 url: `/opportunities/${id}`,
                 type: 'POST',
@@ -409,40 +409,40 @@ $(document).ready(function() {
             });
         }
     });
-    
-    
+
+
     $(document).on('submit', '#peluang-form', function(e) {
         e.preventDefault();
-        
+
         const peluangId = $('#peluang-id').val();
         const isUpdate = peluangId !== '';
-        
+
         // Ambil identifikasi_risiko_id dari hidden field yang sudah diisi di showPeluangModal
         const risikoId = $('#identifikasi-risiko-id').val();
-        
+
         // Pastikan risikoId ada dan valid
         if (!risikoId) {
             console.error('ID risiko tidak valid:', risikoId);
             alert('ID risiko tidak valid. Silakan coba lagi.');
             return;
         }
-        
+
         // Menggunakan FormData untuk mengambil semua data form termasuk CSRF token
         const formData = new FormData(this);
-        
+
         // Gunakan risikoId dari hidden field
         formData.set('identifikasi_risiko_id', risikoId);
-        
+
         // Menyesuaikan nama field dengan yang diharapkan controller
         formData.set('description', formData.get('penjelasan_peluang_rencana'));
         formData.set('penjelasan', formData.get('penjelasan_peluang_realisasi'));
         formData.set('nilai', formData.get('nilai_peluang_rencana'));
-        
+
         // Jika update, tambahkan method PUT karena FormData tidak mendukung PUT secara langsung
         if (isUpdate) {
             formData.append('_method', 'PUT');
         }
-        
+
         $.ajax({
             url: isUpdate ? `/opportunities/${peluangId}` : '/opportunities',
             type: 'POST', // Selalu gunakan POST, untuk PUT kita sudah menambahkan _method di atas
@@ -460,7 +460,7 @@ $(document).ready(function() {
             }
         });
     });
-    
+
     function resetPeluangForm() {
         $('#peluang-id').val('');
         $('#penjelasan_peluang_rencana').val('');
@@ -744,7 +744,7 @@ $(document).ready(function() {
                 let label = 'Apakah Risiko ini terjadi dan menjadi Loss Event?';
                 const rowData = fetchedData[id];
                 if (rowData && rowData?.peristiwa_risiko?.title) {
-                  label = `Apakah Risiko ${rowData?.peristiwa_risiko?.title} - ${rowData?.deskripsi_peristiwa_risiko} ini terjadi dan menjadi Loss Event?`;  
+                  label = `Apakah Risiko ${rowData?.peristiwa_risiko?.title} - ${rowData?.deskripsi_peristiwa_risiko} ini terjadi dan menjadi Loss Event?`;
                 }
                 Swal.fire({
                     title: 'Konfirmasi Perubahan',
@@ -770,7 +770,7 @@ $(document).ready(function() {
                 let label = 'Apakah Risiko ini terjadi dan menjadi Loss Event?';
                 const rowData = fetchedData[id];
                 if (rowData && rowData?.peristiwa_risiko) {
-                  label = `Apakah Risiko ${rowData?.peristiwa_risiko} - ${rowData?.deskripsi_peristiwa_risiko} ini terjadi dan menjadi Loss Event?`;  
+                  label = `Apakah Risiko ${rowData?.peristiwa_risiko} - ${rowData?.deskripsi_peristiwa_risiko} ini terjadi dan menjadi Loss Event?`;
                 }
                 Swal.fire({
                     title: 'Konfirmasi Perubahan',
@@ -796,7 +796,7 @@ $(document).ready(function() {
                 let label = 'Apakah Risiko ini terjadi dan menjadi Loss Event?';
                 const rowData = fetchedData[id];
                 if (rowData && rowData?.peristiwa_risiko) {
-                  label = `Apakah Risiko ${rowData?.peristiwa_risiko} - ${rowData?.deskripsi_peristiwa_risiko} ini terjadi dan menjadi Loss Event?`;  
+                  label = `Apakah Risiko ${rowData?.peristiwa_risiko} - ${rowData?.deskripsi_peristiwa_risiko} ini terjadi dan menjadi Loss Event?`;
                 }
                 Swal.fire({
                     title: 'Konfirmasi Perubahan',
@@ -879,8 +879,8 @@ $(document).ready(function() {
     @if ($availableFilters)
     $('#modalCreate').on('show.bs.modal', function() {
         let filter = null;
-        @foreach ($availableFilters as $filterName => $filter)  
-        filter = $('#table-filter').find(':input[name="{{ $filterName }}"]').val(); 
+        @foreach ($availableFilters as $filterName => $filter)
+        filter = $('#table-filter').find(':input[name="{{ $filterName }}"]').val();
         if (filter) {
             $(this).find(':input[name="{{ $filterName }}"]').val(filter).trigger('change');
         }
