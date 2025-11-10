@@ -246,6 +246,8 @@ class RiskRegisterUnitController extends Controller
         $isStillValid = !$currentUnit?->valid_to || ($currentUnit?->valid_to && ($currentUnit->valid_to->isSameDay($today) || $currentUnit->valid_to->isAfter($today)));
         $unitExpired = !$isStillValid;
 
+        $levelId = auth()->user()->level_id;
+
         return view('risk-register-unit.index', compact(
             'risiko',
             'unit',
@@ -264,6 +266,7 @@ class RiskRegisterUnitController extends Controller
             'unitId',
             'tableLegend',
             'unitExpired',
+            'levelId',
         ));
     }
 

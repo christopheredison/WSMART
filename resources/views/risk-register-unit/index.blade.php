@@ -110,7 +110,7 @@
                   $pid = $selectedPeriode->id;
               @endphp
               @can('risk_register_create')
-                @if(!$unitExpired && ($status == null || $status == 1 || $status == 5))
+                @if(!$unitExpired && ($status == null || $status == 1 || $status == 5) && $levelId == 1)
                 <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $pid]) }}" type="button"
                   class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
                   data-bs-title="Tambah Risiko">
