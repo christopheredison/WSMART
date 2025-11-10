@@ -84,7 +84,7 @@ class LoginController extends Controller
                     'unit_id' => 0,
                     'password' => Hash::make(Str::random(10)),
                     'username' => $responseData['username'] ?? null,
-                    'departemen' => $responseData['departemen'] ?? null,
+                    // 'departemen' => $responseData['departemen'] ?? null,
                     'jabatan' => $responseData['jabatan'] ?? null,
                     'kd_jabatan' => $responseData['kd_jabatan'] ?? null,
                     'meta' => $responseData
@@ -125,7 +125,7 @@ class LoginController extends Controller
         $apiHC = new ApiHC();
         $response = $apiHC->apiRequest('GET', '/', [
             'client' => 'risk',
-            'method' => 'get_pegawai', 
+            'method' => 'get_pegawai',
             'key' => '38VeNwf5',
             'nip' => $userExist->nip,
         ]);
@@ -134,10 +134,10 @@ class LoginController extends Controller
 
         if ($costCenterParent) {
             $unit = Unit::where('cost_center', $costCenterParent)->first();
-            $userExist->update([
-                'unit_type_id' => $unit?->unit_type_id ?: 0,
-                'unit_id' => $unit?->id ?: 0,
-            ]);
+            // $userExist->update([
+            //     'unit_type_id' => $unit?->unit_type_id ?: 0,
+            //     'unit_id' => $unit?->id ?: 0,
+            // ]);
         }
 
         $namaProyek = $responseData['nama_proyek'] ?? null;
