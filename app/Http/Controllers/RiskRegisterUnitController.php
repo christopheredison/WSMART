@@ -2158,4 +2158,20 @@ class RiskRegisterUnitController extends Controller
             'user_verification' => $user_verification
         ];
     }
+
+    public function getRiskNotes(Request $request, $risk)
+    {
+        try {
+            $notes = RiskNote::with('user')
+                ->where('risiko_id', $risk)
+                ->where('type', 1)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json($notes);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Gagal mengambil data catatan.'], 500);
+        }
+    }
 }

@@ -35,6 +35,10 @@
   @endcan
 @endif
 
+<a href="javascript:void(0)" class="btn-input-icon" data-id="{{ $item->id }}" onclick="showCatatanRisiko($(this).data('id'))" data-bs-toggle="tooltip" title="Lihat Catatan">
+  <span class="bx bx-comment-dots"></span>
+</a>
+
 @if(!$unitExpired)
   @if(($item->status == 1 || $item->status == null || $item->status == 5) && (auth()->user()->level_id == 1 && auth()->user()->unit_id == $item->unit_id))
   @can('risk_register_delete')

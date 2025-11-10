@@ -118,7 +118,7 @@ Route::get('/callback-sso', [LoginController::class, 'callbackSSO']);
 Auth::routes();
 
 Route::group(['middleware' => ['auth']], function () {
-    
+
     Route::post('/opportunities', [OpportunityController::class, 'store'])->name('opportunities.store');
     Route::put('/opportunities/{id}', [OpportunityController::class, 'update'])->name('opportunities.update');
     Route::delete('/opportunities/{id}', [OpportunityController::class, 'destroy'])->name('opportunities.destroy');
@@ -126,7 +126,7 @@ Route::group(['middleware' => ['auth']], function () {
 
     // Get Risiko ID from Monitoring
     Route::get('/monitoring/{id}/get-risiko-id', [RiskRegisterUnitMonitoringController::class, 'getRisikoId'])->name('monitoring.get-risiko-id');
-    
+
     Route::get('/get-sektors/{divisiId}', function ($divisiId) {
         $sektors = ProjectSektor::where('project_divisi_id', $divisiId)
                     ->orderBy('sektor_name')
@@ -601,6 +601,7 @@ Route::prefix('risk-register-unit')->middleware('auth')->group(function () {
     Route::get('/{riskRegister}/view', [RiskRegisterUnitController::class, 'view'])->name('risk-register-unit.view');
     Route::post('/send', [RiskRegisterUnitController::class, 'send'])->name('risk-register-unit.send');
     Route::post('/draft', [RiskRegisterUnitController::class, 'storeAsDraft'])->name('risk-register-unit.store-as-draft');
+    Route::get('/{riskRegister}/notes', [RiskRegisterUnitController::class, 'getRiskNotes'])->name('risk-register-unit.notes');
 
     Route::get('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'analisa'])->name('risk-register-unit.analisa');
     Route::post('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'doAnalisa'])->name('risk-register-unit.do-analisa');
@@ -658,11 +659,11 @@ Route::prefix('rekomendasi-risiko')->name('rekomendasi-risiko.')->group(function
     Route::post('/', [RekomendasiRisikoController::class, 'store'])->name('store');
     Route::get('/{unit}/{periode}/create', [RekomendasiRisikoController::class, 'create'])->name('create');
     Route::get('/{rekomendasi}/edit', [RekomendasiRisikoController::class, 'edit'])->name('edit');
-    
+
     Route::put('/{rekomendasi}', [RekomendasiRisikoController::class, 'update'])->name('update');
     Route::delete('/{rekomendasi}', [RekomendasiRisikoController::class, 'destroy'])->name('destroy');
     Route::post('/{rekomendasi}/publish', [RekomendasiRisikoController::class, 'publish'])->name('publish');
-    
+
     Route::get('/{rekomendasi}', [RekomendasiRisikoController::class, 'view'])->name('view');
     Route::get('/{unit}/{periode}', [RekomendasiRisikoController::class, 'show'])->name('show');
 });
@@ -701,7 +702,7 @@ Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->
     Route::put('/{riskRegister}', [App\Http\Controllers\CorporateRiskController::class, 'update'])->name('update');
     Route::delete('/{riskRegister}', [App\Http\Controllers\CorporateRiskController::class, 'destroy'])->name('destroy');
     Route::get('/{riskRegister}/view', [App\Http\Controllers\CorporateRiskController::class, 'view'])->name('view');
-    
+
     Route::get('/{riskRegister}/analisa', [App\Http\Controllers\CorporateRiskController::class, 'analisa'])->name('analisa');
     Route::post('/{riskRegister}/analisa', [App\Http\Controllers\CorporateRiskController::class, 'doAnalisa'])->name('do-analisa');
 

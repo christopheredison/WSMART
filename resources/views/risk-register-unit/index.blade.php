@@ -392,6 +392,7 @@
     </div>
   </div>
 </div>
+@include('risk-register-unit._modal_catatan')
 @endsection
 @section('scripts')
 <script>
@@ -458,6 +459,65 @@ function submitVerifikasi(id, status) {
       form.submit();
     }
   });
+}
+
+// Fungsi lihat catatan
+function showCatatanRisiko(riskId) {
+    const modalElement = document.getElementById('modalCatatan');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+    const contentDiv = $('#catatan-content');
+
+    // Tampilkan spinner loading
+    contentDiv.html('<div class="d-flex justify-content-center my-4"><div class="spinner-border" role="status"><span class="visually-hidden">Memuat...</span></div></div>');
+
+    // Gunakan route yang sudah di-generate dari PHP
+    const url = "{{ route('risk-register-unit.notes', ['riskRegister' => ':id']) }}".replace(':id', riskId);
+
+    $.ajax({
+        url: url,
+        type: 'GET',
+        success: function(notes) {
+            console.log(notes);
+            if (notes.length === 0) {
+                contentDiv.html('<div class="text-center my-4"><i class="fas fa-comment-slash fa-2x text-muted mb-2"></i><p>Belum ada catatan untuk risiko ini.</p></div>');
+            } else {
+                let html = '';
+                notes.forEach(note => {
+                    const statusBadge = note.status == 1
+                        ? '<span class="badge bg-success-subtle text-success">Diterima</span>'
+                        : '<span class="badge bg-danger-subtle text-danger">Ditolak</span>';
+
+                    const formattedDate = new Date(note.created_at).toLocaleString('id-ID', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    });
+
+                    html += `
+                    <div class="card mb-3 shadow-sm">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                            <div class="fw-bold">
+                                ${note.user ? note.user.name : 'User Tidak Ditemukan'}
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <small class="text-muted me-3">${formattedDate}</small>
+                                ${statusBadge}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text mb-0">${note.notes || '<i>Tidak ada catatan.</i>'}</p>
+                        </div>
+                    </div>
+                    `;
+                });
+                contentDiv.html(html);
+            }
+            modal.show();
+        },
+        error: function() {
+            contentDiv.html('<div class="text-center my-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p>Gagal memuat catatan.</p></div>');
+            modal.show();
+        }
+    });
 }
 </script>
 <script>
