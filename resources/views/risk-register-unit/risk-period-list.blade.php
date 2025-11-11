@@ -107,6 +107,10 @@
                       title="Loss Event">
                       <span class="bx bx-dock-bottom"></span>
                     </a>
+                    <a href="{{ route('risk-context.index-by-periode-unit', ['periodeId' => $periode->id, 'unitId' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+                      title="Risk Context">
+                      <span class="bx bx-target-lock"></span>
+                    </a>
                   @else
                     <a href="{{ route('risk-register-unit.periods.show', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
                       <span class="bx bx-show"></span>

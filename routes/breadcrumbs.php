@@ -104,6 +104,13 @@ Breadcrumbs::for('kamus-risiko-unit.index', function (BreadcrumbTrail $trail) {
     $trail->push('Kamus Risiko Unit', route('kamus-risiko-unit.index'));
 });
 
+// Periode Divisi > Risk Context Divisi
+Breadcrumbs::for('risk-context.index-by-periode-unit', function (BreadcrumbTrail $trail, $periodeId, $unitId) {
+    $trail->parent('risk-register-unit.periods');
+    $trail->push('Risk Context Divisi', route('risk-context.index-by-periode-unit', [$periodeId, $unitId]));
+});
+
+
 // Periode Anak Perusahaan
 Breadcrumbs::for('risk-register-ap.periods', function (BreadcrumbTrail $trail) {
     $trail->push('Periode Anak Perusahaan', route('risk-register-ap.periods'));
