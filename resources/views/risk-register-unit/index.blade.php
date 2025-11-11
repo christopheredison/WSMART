@@ -322,7 +322,8 @@
               kondisi 2: {{ ($levelId > 1 && intval($status) === 1) ? 'true' : 'false' }}<br>
               kondisi lengkap: {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && intval($status) === 1) ? 'true' : 'false' }}
             </div>
-            {{-- {{$step_order}}
+            {{-- {{$status}}
+            {{$step_order}}
             {{$dataBatch->step_verification}}
             {{$pending_risk}}
             {{$min_verification}} --}}
