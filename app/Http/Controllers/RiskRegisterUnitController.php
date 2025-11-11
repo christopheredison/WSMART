@@ -359,6 +359,10 @@ class RiskRegisterUnitController extends Controller
               'icon' => '<span class="bx bx-dock-bottom"></span>',
               'label' => 'Loss Event'
             ],
+            [
+              'icon' => '<span class="bx bx-target-lock"></span>',
+              'label' => 'Risk Context'
+            ],
         ];
         // Ambil semua data periode (untuk dropdown filter)
         $periodes = Periode::orderBy('tahun', 'desc')->get();

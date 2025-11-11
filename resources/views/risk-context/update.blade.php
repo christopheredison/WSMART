@@ -20,8 +20,9 @@
                         <!-- Informasi Unit -->
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">Unit</label>
+                                <label class="form-label">Divisi</label>
                                 <input type="text" class="form-control" value="{{ $unit->name }}" readonly>
+                                <input type="hidden" name="unit_id" class="form-control" value="{{ $unit->id }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Periode <span class="text-danger">*</span></label>
@@ -55,7 +56,7 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Pimpinan Tertinggi</label>
-                                        <select name="pimpinan_tertinggi_jabatan_id" class="form-control">
+                                        <select name="pimpinan_tertinggi_jabatan_id" class="form-control select2">
                                             <option value="">Pilih Jabatan</option>
                                             @foreach($jabatans as $jabatan)
                                                 <option value="{{ $jabatan->id }}" 
@@ -179,7 +180,7 @@
                                                     <input type="text" name="member_nama[]" class="form-control" placeholder="Nama Anggota" value="{{ $member->nama }}">
                                                 </div>
                                                 <div class="col-md-5">
-                                                    <select name="member_jabatan_id[]" class="form-control">
+                                                    <select name="member_jabatan_id[]" class="form-control select2">
                                                         <option value="">Pilih Jabatan</option>
                                                         @foreach($jabatans as $jabatan)
                                                             <option value="{{ $jabatan->id }}" {{ $member->jabatan_id == $jabatan->id ? 'selected' : '' }}>
@@ -201,7 +202,7 @@
                                                 <input type="text" name="member_nama[]" class="form-control" placeholder="Nama Anggota">
                                             </div>
                                             <div class="col-md-5">
-                                                <select name="member_jabatan_id[]" class="form-control">
+                                                <select name="member_jabatan_id[]" class="form-control select2">
                                                     <option value="">Pilih Jabatan</option>
                                                     @foreach($jabatans as $jabatan)
                                                         <option value="{{ $jabatan->id }}">{{ $jabatan->name }}</option>
@@ -400,7 +401,7 @@
                         </div>
 
                         <div class="d-flex justify-content-between">
-                            <a href="{{ route('risk-context.index') }}" class="btn btn-secondary">
+                            <a href="{{ route('risk-context.index-by-periode-unit', ['periodeId' => $selectedPeriode->id, 'unitId' => $unit->id]) }}" class="btn btn-secondary">
                                 <i class="bx bx-arrow-back"></i> Kembali
                             </a>
                             <button type="submit" class="btn btn-primary">
@@ -424,7 +425,7 @@ function addMember() {
             <input type="text" name="member_nama[]" class="form-control" placeholder="Nama Anggota">
         </div>
         <div class="col-md-5">
-            <select name="member_jabatan_id[]" class="form-control">
+            <select name="member_jabatan_id[]" class="form-control select2">
                 <option value="">Pilih Jabatan</option>
                 @foreach($jabatans as $jabatan)
                     <option value="{{ $jabatan->id }}">{{ $jabatan->name }}</option>

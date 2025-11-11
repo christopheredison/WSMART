@@ -563,6 +563,7 @@ Route::group(['middleware' => ['auth']], function () {
 
   Route::prefix('risk-context')->group(function () {
         Route::get('/', [RiskContextController::class, 'index'])->name('risk-context.index');
+        Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'indexbyPeriodeUnit'])->name('risk-context.index-by-periode-unit');
         Route::get('/create', [RiskContextController::class, 'create'])->name('risk-context.create');
         Route::post('/store', [RiskContextController::class, 'store'])->name('risk-context.store');
         Route::get('/edit/{id}', [RiskContextController::class, 'edit'])->name('risk-context.edit');
