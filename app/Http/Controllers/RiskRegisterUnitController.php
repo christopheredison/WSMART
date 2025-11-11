@@ -95,6 +95,7 @@ class RiskRegisterUnitController extends Controller
 
         $min_verification = 3;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        $selectedUnit = Unit::find($unitId);
 
         $dataBatch = DataBatch::where('unit_id', $unitId)
                       ->where('periode_id', $periodeId)
@@ -165,6 +166,17 @@ class RiskRegisterUnitController extends Controller
         $step_order = $u_step;
 
         //if($levelId!=1 && $levelId!=null){//risk owner
+        $draft_risk = IdentifikasiRisiko::where('unit_id', $unitId)
+            ->where('periode_id', $periodeId)
+            ->where(function ($query) {
+                $query->whereIn('status', [
+                      IdentifikasiRisiko::STATUS_INPUT_DATA,
+                      IdentifikasiRisiko::STATUS_REJECTED
+                  ])
+                  ->orWhereNull('status');
+            })
+            ->count();
+
         if($step_order>0){
             $pending_risk = IdentifikasiRisiko::where(function($query) use ($step_order) {
                 $query->where('step_verification', '<=', $step_order)
@@ -267,6 +279,7 @@ class RiskRegisterUnitController extends Controller
             'tableLegend',
             'unitExpired',
             'levelId',
+            'draft_risk',
         ));
     }
 
@@ -1534,6 +1547,7 @@ class RiskRegisterUnitController extends Controller
                     'step_verification' => $step_order,
                     'finish' => true
                 ]);
+                $dataBatch->refresh();
 
                 DataBatch::create([
                     'unit_id' => $unit_id,
@@ -1566,8 +1580,15 @@ class RiskRegisterUnitController extends Controller
             // Cek apakah semua risiko sudah dianalisa dan dilakukan rencana perlakuan
             $identifikasiRisikos = IdentifikasiRisiko::where('unit_id', $unit_id)
                 ->where('periode_id', $periode_id)
-                ->whereIn('status', [IdentifikasiRisiko::STATUS_INPUT_DATA, IdentifikasiRisiko::STATUS_REJECTED])
+                ->where(function ($query) {
+                    $query->whereIn('status', [
+                              IdentifikasiRisiko::STATUS_INPUT_DATA,
+                              IdentifikasiRisiko::STATUS_REJECTED
+                          ])
+                          ->orWhereNull('status');
+                })
                 ->get();
+            // dd($identifikasiRisikos, $unit_id, $periode_id);
 
             // Cek apakah ada risiko yang belum dianalisa atau belum memiliki rencana perlakuan
             $belumLengkap = false;
@@ -1641,6 +1662,7 @@ class RiskRegisterUnitController extends Controller
                     );
                     $update_status = IdentifikasiRisiko::STATUS_TUNGGU_VERIFIKASI;
                 }
+                $dataBatch->refresh();
 
                 //update identifikasi risiko yang statusnya bukan antara 2, 3, 4 dan 6 untuk dijadikan 2
                 IdentifikasiRisiko::where('unit_id', $unit_id)
@@ -1689,8 +1711,8 @@ class RiskRegisterUnitController extends Controller
                     if($dataBatch->step_verification==null || $dataBatch->step_verification < 1){
                         // Jika sudah ada dan status belum finish
                         if($dataBatch->status != DataBatch::STATUS_PROSES){
-                            return redirect()->route('risk-register-unit.index', ['pid' => $periode_id])
-                                >with('error', 'Masih ada data batch risiko yang sedang berproses. Silahkan tunggu hingga proses selesai.');
+                            return redirect()->route('risk-register-unit.index', ['pid' => $periode_id, 'unit_id' => $unit_id])
+                                ->with('error', 'Masih ada data batch risiko yang sedang berproses. Silahkan tunggu hingga proses selesai.');
                         }
                         else{
                             //update dataBatch
@@ -1699,16 +1721,17 @@ class RiskRegisterUnitController extends Controller
                                 'step_verification' => 1,
                                 'finish' => false
                             ]);
+                            $dataBatch->refresh();
                         }
                     }
                     else{
                         //cek step order dan min verification
                         if($step_order >= $min_verification){//last send
-
                             $dataBatch->update([
                                     'status' => DataBatch::STATUS_RANKING,
                                     'finish' => false
                             ]);
+                            $dataBatch->refresh();
 
                             $verifiedRisks = IdentifikasiRisiko::where('unit_id', $unit_id)
                             ->where('periode_id', $periode_id)
@@ -1754,6 +1777,7 @@ class RiskRegisterUnitController extends Controller
                                     'step_verification' => $dataBatch->step_verification + 1,
                                     'finish' => false
                             ]);
+                            $dataBatch->refresh();
                         }
                     }
                 }
@@ -1838,6 +1862,7 @@ class RiskRegisterUnitController extends Controller
             'status_verifikasi' => 'required|in:terima,tolak',
         ]);
 
+        // dd($step_order, $verificationData);
         try {
             // Cek apakah user memiliki izin verifikator_risiko
             if (!Gate::check('risk_register_verification')) {

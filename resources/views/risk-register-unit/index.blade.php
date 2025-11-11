@@ -110,7 +110,12 @@
                   $pid = $selectedPeriode->id;
               @endphp
               @can('risk_register_create')
-                @if(!$unitExpired && ($status == null || $status == 1 || $status == 5) && $levelId == 1)
+                @if(
+                  !$unitExpired &&
+                  ($status == null || $status == 1 || $status == 5) &&
+                  $levelId == 1 &&
+                  ($unitId == auth()->user()->unit_id)
+                )
                 <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $pid]) }}" type="button"
                   class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
                   data-bs-title="Tambah Risiko">
@@ -317,14 +322,24 @@
               kondisi 2: {{ ($levelId > 1 && intval($status) === 1) ? 'true' : 'false' }}<br>
               kondisi lengkap: {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && intval($status) === 1) ? 'true' : 'false' }}
             </div>
-            @if($status==4 && ($step_order>=$min_verification))
-            <input type="hidden" name="send_type" value="mainrisk">
-            <input type="hidden" name="unit_id" value="{{ $unitId }}">
-            <button id="accept-button" class="btn btn-submit btn-arrow-right" {{ (isset($pending_risk) && $pending_risk > 0) ? 'disabled' : '' }}>Publish Risiko</button>
+            {{-- {{$step_order}}
+            {{$dataBatch->step_verification}}
+            {{$pending_risk}}
+            {{$min_verification}} --}}
+            @if(
+              $status==4 &&
+              ($step_order >= $min_verification) &&
+              ($dataBatch->step_verification >= $min_verification)
+            )
+              <input type="hidden" name="send_type" value="mainrisk">
+              <input type="hidden" name="unit_id" value="{{ $unitId }}">
+              <button id="accept-button" class="btn btn-submit btn-arrow-right" {{ (isset($pending_risk) && $pending_risk > 0) ? 'disabled' : '' }}>Publish Risiko</button>
             @else
             <input type="hidden" name="unit_id" value="{{ $unitId }}">
-              @if($status != 8 && !$unitExpired)
-              <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button>
+              @if(($status == 1 || $status == 5) && !$unitExpired && $levelId == 1 && $unitId == auth()->user()->unit_id)
+                <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || $draft_risk == 0 || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button>
+              @elseif($step_order == $dataBatch->step_verification)
+                <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button>
               @endif
             @endif
           @endif
