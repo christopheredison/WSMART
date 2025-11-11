@@ -159,7 +159,7 @@ class RiskRegisterUnitController extends Controller
         $step_order = 0;
 
         //get detail
-        $verificationData = $this->getUserVerificationStep($levelId, $is_mr);
+        $verificationData = $this->getUserVerificationStep($levelId, $is_mr, $selectedUnit->unit_mr);
         $u_step = $verificationData['u_step'];
         $user_verification = $verificationData['user_verification'];
 
@@ -1532,8 +1532,9 @@ class RiskRegisterUnitController extends Controller
         }
 
         //dd($send_type);
-
-        $verificationData = $this->getUserVerificationStep($level_id, $is_mr);
+        $unit = Unit::find($unit_id);
+        $verificationData = $this->getUserVerificationStep($level_id, $is_mr, $unit->unit_mr);
+        // dd($verificationData);
         $u_step = $verificationData['u_step'];
         $user_verification = $verificationData['user_verification'];
         $step_order = $u_step;
@@ -1719,12 +1720,29 @@ class RiskRegisterUnitController extends Controller
                                 ->with('error', 'Masih ada data batch risiko yang sedang berproses. Silahkan tunggu hingga proses selesai.');
                         }
                         else{
-                            //update dataBatch
-                            $dataBatch->update([
-                                'status' => DataBatch::STATUS_KIRIM,
-                                'step_verification' => 1,
-                                'finish' => false
-                            ]);
+                            if ($unit->unit_mr) {
+                              // Khusus Divisi MR: Kirim Risiko pertama dari Officer Divisi MR
+                              $dataBatch->update([
+                                  'status' => DataBatch::STATUS_VERIFIKASI,
+                                  'step_verification' => 3,
+                                  'finish' => false
+                              ]);
+
+                              foreach ($identifikasiRisikos as $risiko) {
+                                  $risiko->update([
+                                      'status' => IdentifikasiRisiko::STATUS_DIKIRIM,
+                                      'status_risiko' => 1,
+                                      'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW,
+                                      'step_verification' => 3
+                                  ]);
+                              }
+                            } else {
+                              $dataBatch->update([
+                                  'status' => DataBatch::STATUS_KIRIM,
+                                  'step_verification' => 1,
+                                  'finish' => false
+                              ]);
+                            }
                             $dataBatch->refresh();
                         }
                     }
@@ -2159,7 +2177,7 @@ class RiskRegisterUnitController extends Controller
             ->with('success', 'Konfirmasi risiko corporate berhasil dilakukan.');
     }
 
-    private function getUserVerificationStep($level_id, $is_mr = false)
+    private function getUserVerificationStep($level_id, $is_mr = false, $unit_mr = false)
     {
         $u_step = 0;
         $user_verification = "";
@@ -2174,7 +2192,11 @@ class RiskRegisterUnitController extends Controller
             }
         }
         else if($level_id == 1 && $is_mr) { // RO MR
-            $u_step = 2; // step verifikasi user
+            if ($unit_mr) {
+              $u_step = 0; // step kirim risiko khusus divisi MR
+            } else {
+              $u_step = 2; // step verifikasi user
+            }
             $user_verification = "Risk Officer MR";
         }
         else{
