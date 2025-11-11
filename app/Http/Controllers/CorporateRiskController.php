@@ -349,13 +349,15 @@ class CorporateRiskController extends Controller
 
         $dataToDisplay = collect();
 
-        $units = Unit::where('unit_type_id', 4)->where('id', $userUnit->id)->pluck('name', 'id');
+        $units = Unit::where('unit_type_id', 4)
+          // ->where('id', $userUnit->id)
+          ->pluck('name', 'id');
         $periodes = Periode::orderBy('tahun', 'desc')->get();
 
-        if ($userUnit) {
+        foreach ($units as $unit) {
             foreach ($periodes as $periode) {
                 $dataToDisplay->push([
-                    'unit' => $userUnit,
+                    'unit' => $unit,
                     'periode' => $periode,
                 ]);
             }
@@ -373,10 +375,11 @@ class CorporateRiskController extends Controller
     public function riskPeriodeDashboard(Request $request, $period)
     {
         $user    = request()->user()->load('unit');
+        $unit    = Unit::where('unit_type_id', 4)->first();
         $periode = Periode::find($period);
 
         $targetUnitId = null;
-        $targetUnitId = $user->unit_id;
+        $targetUnitId = $unit->id;
 
         $targetUnit = Unit::find($targetUnitId);
 
@@ -385,7 +388,8 @@ class CorporateRiskController extends Controller
         }
 
         $risikos = IdentifikasiRisiko::where('periode_id', $period)
-            ->where('unit_id', auth()->user()->unit_id)
+            // ->where('unit_id', auth()->user()->unit_id)
+            ->where('unit_type_id', 4)
             ->with('riskAnalysis')
             ->get();
 
