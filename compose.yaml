@@ -1,7 +1,7 @@
 services:
   php-apache:
     build:
-      context: .
+      context: . # Mengacu ke lokasi Dockerfile
       dockerfile: Dockerfile
     image: php-apache-wika:latest
     ports:

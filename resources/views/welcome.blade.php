@@ -1,14 +1,21 @@
 @extends('layouts.auth')
 @section('dashboard')
 <main class="main p-0 min-vh-100" id="top">
+  <div class="position-absolute w-100 h-100 start-0">
+    <img src="assets/img/auth-bg.avif" class="img-cover" alt="">
+  </div>
   <div class="authentication-wrapper d-flex align-items-center px-3 px-lg-10">
     <div class="row h-100 w-100 justify-content-center flex-md-nowrap g-0 gx-md-10">
       <div class="col-12 col-md-9 col-xxl-8 text-center text-md-start ms-md-10 me-md-n10">
         <div class="card ratio ratio-1x1 ratio-lg-4x3 border-0">
-          <img src="assets/img/6895861.jpg" class="img-contain position-absolute z-index--1" alt="background">
+          <img src="assets/img/auth-card-bg.avif" class="img-cover position-absolute z-index--1" alt="">
           <div class="card-body p-5 p-xl-7 p-xxl-9 z-10">
+            <div class="app-brand col-2 col-lg-1 mx-auto mx-md-0 text-primary mb-7">
+              @include('partials.logo',["width"=>150])
+            </div>
             <div class="col-md-8">
-              <h1 class="mb-4">Sistem Manajemen Risiko Terintegrasi</h1>
+              <h1 class="mb-4">WIKA Sistem MAnagement Risiko Terintegrasi<br />(W-SMART)</h1>
+              <h5>PT Wijaya Karya (Persero) Tbk</h5>
             </div>
           </div>
         </div>
