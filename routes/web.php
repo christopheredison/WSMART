@@ -74,6 +74,7 @@ use App\Http\Controllers\KamusRisikoUnitController;
 use App\Http\Controllers\KamusRisikoApController;
 use App\Http\Controllers\RekomendasiRisikoController;
 use App\Http\Controllers\RiskContextController;
+use App\Http\Controllers\ProjectRiskContextController;
 
 
 
@@ -574,6 +575,21 @@ Route::group(['middleware' => ['auth']], function () {
         // New routes for update or create functionality
         Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreate'])->name('risk-context.update-or-create');
         Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdate'])->name('risk-context.store-or-update');
+    });
+
+    Route::prefix('project-risk-context')->group(function () {
+        Route::get('/', [ProjectRiskContextController::class, 'index'])->name('project-risk-context.index');
+        Route::get('/project/{projectId}', [ProjectRiskContextController::class, 'indexByProjectPeriode'])->name('project-risk-context.index-by-project-periode');
+        Route::get('/create', [ProjectRiskContextController::class, 'create'])->name('project-risk-context.create');
+        Route::post('/store', [ProjectRiskContextController::class, 'store'])->name('project-risk-context.store');
+        Route::get('/edit/{id}', [ProjectRiskContextController::class, 'edit'])->name('project-risk-context.edit');
+        Route::put('/update/{id}', [ProjectRiskContextController::class, 'update'])->name('project-risk-context.update');
+        Route::get('/show/{id}', [ProjectRiskContextController::class, 'show'])->name('project-risk-context.show');
+        Route::delete('/destroy/{id}', [ProjectRiskContextController::class, 'destroy'])->name('project-risk-context.destroy');
+
+        // New routes for update or create functionality
+        Route::get('/update-or-create', [ProjectRiskContextController::class, 'updateOrCreate'])->name('project-risk-context.update-or-create');
+        Route::post('/store-or-update', [ProjectRiskContextController::class, 'storeOrUpdate'])->name('project-risk-context.store-or-update');
     });
 });
 

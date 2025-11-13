@@ -299,6 +299,12 @@ Breadcrumbs::for('project-led.show', function (BreadcrumbTrail $trail, $id) {
     $trail->push('Detail Loss Event Project', route('project-led.show', $id));
 });
 
+// Project List > Project Risk Context
+Breadcrumbs::for('project-risk-context.index-by-project-periode', function (BreadcrumbTrail $trail, $project) {
+    $trail->parent('project-periode-list.index');
+    $trail->push('Project Risk Context', route('project-risk-context.index-by-project-periode', $project));
+});
+
 // Kamus Risiko Project
 Breadcrumbs::for('kamus-risiko-project.index', function (BreadcrumbTrail $trail) {
     $trail->parent('project-periode-list.index');
