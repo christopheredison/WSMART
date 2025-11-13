@@ -6,11 +6,7 @@
       <div class="col-11 col-md-8 col-lg-5 col-xxl-4">
         <div class="card">
           <div class="card-body p-5">
-            <div class="app-brand col-4 mx-auto mb-5 text-primary">
-              @include('partials.logo',["width"=>150])
-            </div>
-            <h1 class="h2 text-center mb-3">Sistem Informasi<br>Manajemen Risiko (SIMR)</h1>
-            <h5 class="text-center mb-7">PT Wijaya Karya (Persero) Tbk</h5>
+            <h1 class="h2 text-center mb-5">Sistem Manajemen Risiko Terintegrasi</h1>
             <form class="needs-validation" novalidate="" method="POST" action="{{ route('login') }}">
               @csrf
               <div class="has-validation mb-3">
@@ -49,7 +45,7 @@
         </div>
       </div>
       <div class="col-12 col-lg-6 vh-100 position-absolute position-lg-relative">
-        <img src="assets/img/pp-auth.webp" class="img-cover" alt="">
+        <img src="assets/img/6895861.jpg" class="img-contain" alt="">
       </div>
     </div>
   </div>
