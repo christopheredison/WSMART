@@ -564,7 +564,7 @@ Route::group(['middleware' => ['auth']], function () {
 
   Route::prefix('risk-context')->group(function () {
         Route::get('/', [RiskContextController::class, 'index'])->name('risk-context.index');
-        Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'indexbyPeriodeUnit'])->name('risk-context.index-by-periode-unit');
+        Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detail'])->name('risk-context.detail');
         Route::get('/create', [RiskContextController::class, 'create'])->name('risk-context.create');
         Route::post('/store', [RiskContextController::class, 'store'])->name('risk-context.store');
         Route::get('/edit/{id}', [RiskContextController::class, 'edit'])->name('risk-context.edit');
@@ -575,6 +575,12 @@ Route::group(['middleware' => ['auth']], function () {
         // New routes for update or create functionality
         Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreate'])->name('risk-context.update-or-create');
         Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdate'])->name('risk-context.store-or-update');
+    });
+
+    Route::prefix('risk-context-anper')->group(function () {
+        Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detailAnper'])->name('risk-context-anper.detail');
+        Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreateAnper'])->name('risk-context-anper.update-or-create');
+        Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdateAnper'])->name('risk-context-anper.store-or-update');
     });
 
     Route::prefix('project-risk-context')->group(function () {

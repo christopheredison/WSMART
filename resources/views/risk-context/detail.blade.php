@@ -7,7 +7,7 @@
         <div class="svg-icon svg-icon-secondary">
             @include('partials.icon-tool')
         </div>
-        <h3 class="mb-0">Proyek Risk Context - {{ $project->project_name }}</h3>
+        <h3 class="mb-0">Risk Context - {{ $unit->name }}</h3>
     </div>
 </div>
 
@@ -16,9 +16,9 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">
-                    <i class="bx bx-list-ul mr-2"></i>Proyek Risk Context
+                    <i class="bx bx-list-ul mr-2"></i>Risk Context
                 </h3>
-                <a href="{{ route('project-risk-context.update-or-create', ['project_id' => $project->id]) }}" class="btn btn-primary">
+                <a href="{{ route('risk-context.update-or-create', ['unit_id' => $unit->id, 'periode_id' => $periode->id]) }}" class="btn btn-primary">
                     <span class="bx bx-edit"></span> Update Risk Context
                 </a>
             </div>
@@ -32,8 +32,8 @@
                                 <tbody>
                                     <tr>
                                         <td class="fw-bold" style="width: 5%">1</td>
-                                        <td class="fw-bold" style="width: 25%">Nama Proyek</td>
-                                        <td>{{ $project->project_name }}</td>
+                                        <td class="fw-bold" style="width: 25%">Nama Unit Kerja</td>
+                                        <td>{{ $unit->name ?? '-' }}</td>
                                     </tr>
                                     <tr>
                                         <td class="fw-bold">2</td>
@@ -42,12 +42,12 @@
                                     </tr>
                                     <tr>
                                         <td class="fw-bold">3</td>
-                                        <td class="fw-bold">Pimpinan Tertinggi Proyek</td>
+                                        <td class="fw-bold">Pimpinan Tertinggi Unit Kerja</td>
                                         <td>{{ $riskContexts->first()->pimpinanTertinggi->name ?? '-' }}</td>
                                     </tr>
                                     <tr>
                                         <td class="fw-bold">4</td>
-                                        <td class="fw-bold">Anggota Proyek</td>
+                                        <td class="fw-bold">Anggota Unit Kerja</td>
                                         <td>
                                             @if($riskContexts->first() && $riskContexts->first()->members->count() > 0)
                                                 @foreach($riskContexts->first()->members as $member)

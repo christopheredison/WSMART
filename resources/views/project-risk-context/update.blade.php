@@ -156,7 +156,7 @@
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">Tim Anggota</h5>
                                 <button type="button" class="btn btn-sm btn-primary" onclick="addMember()">
-                                    <i class="bx bx-plus"></i> Tambah Anggota
+                                    <span class="bx bx-plus"></span> Tambah Anggota
                                 </button>
                             </div>
                             <div class="card-body">
@@ -213,7 +213,7 @@
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">Stakeholder Internal</h5>
                                 <button type="button" class="btn btn-sm btn-primary" onclick="addStakeholderInternal()">
-                                    <i class="bx bx-plus"></i> Tambah Stakeholder
+                                    <span class="bx bx-plus"></span> Tambah Stakeholder
                                 </button>
                             </div>
                             <div class="card-body">
@@ -304,7 +304,7 @@
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">Stakeholder External</h5>
                                 <button type="button" class="btn btn-sm btn-primary" onclick="addStakeholderExternal()">
-                                    <i class="bx bx-plus"></i> Tambah Stakeholder
+                                    <span class="bx bx-plus"></span> Tambah Stakeholder
                                 </button>
                             </div>
                             <div class="card-body">
@@ -390,10 +390,10 @@
 
                         <div class="d-flex justify-content-between">
                             <a href="{{ route('project-risk-context.index-by-project-periode', ['projectId' => $projectPeriodeList->id]) }}" class="btn btn-secondary">
-                                <i class="bx bx-arrow-back"></i> Kembali
+                                <span class="bx bx-arrow-back"></span> Kembali
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="bx bx-save"></i> {{ $isEdit ? 'Update' : 'Simpan' }}
+                                <span class="bx bx-save"></span> {{ $isEdit ? 'Update' : 'Simpan' }}
                             </button>
                         </div>
                     </form>

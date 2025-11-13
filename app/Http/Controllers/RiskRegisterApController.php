@@ -193,7 +193,7 @@ class RiskRegisterApController extends Controller
             }
         }
 
-        
+
 
         $avgQuantitativeExposure = null;
         if ($status == DataBatch::STATUS_RANKING) {
@@ -287,49 +287,94 @@ class RiskRegisterApController extends Controller
     public function RiskPeriodeList(Request $request)
     {
         $tableLegend = [
-            ['icon' => '<span class="bx bx-show"></span>', 'label' => 'View'],
-            ['icon' => '<span class="bx bx-list-check"></span>', 'label' => 'Risk Register'],
-            ['icon' => '<span class="bx bx-radar"></span>', 'label' => 'Monitoring'],
-            ['icon' => '<span class="bx bx-dock-bottom"></span>', 'label' => 'Loss Event'],
+            [
+                'icon' => '<span class="bx bx-show"></span>',
+                'label' => 'View'
+            ],
+            [
+                'icon' => '<span class="bx bx-list-check"></span>',
+                'label' => 'Risk Register'
+            ],
+            [
+                'icon' => '<span class="bx bx-radar"></span>',
+                'label' => 'Monitoring'
+            ],
+            [
+                'icon' => '<span class="bx bx-dock-bottom"></span>',
+                'label' => 'Loss Event'
+            ],
+            [
+                'icon' => '<span class="bx bx-target-lock"></span>',
+                'label' => 'Risk Context'
+            ],
         ];
+        
+        // Ambil semua data periode (untuk dropdown filter)
+        $periodes = Periode::orderBy('tahun', 'desc')->get();
 
-        $apAdmin = Gate::check('ap_admin');
+        // Ambil periode aktif jika ada dan set sebagai default pilihan
+        $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
+        $selectedPeriodeId = $request->query('pid') ?? ($activePeriode?->id);
+        $selectedPeriode = $selectedPeriodeId ? Periode::find($selectedPeriodeId) : null;
+        $userUnit = auth()->user()->unit;
         $units = [];
+
+        $apAdmin = Gate::check('ap_admin'); 
         $dataToDisplay = collect();
 
         if ($apAdmin) {
             $units = Unit::where('unit_type_id', 2)->pluck('name', 'id');
             $displayUnits = Unit::where('unit_type_id', 2)->get();
-            $periodes = Periode::orderBy('tahun', 'desc')->get();
 
             foreach ($displayUnits as $unit) {
-                foreach ($periodes as $periode) {
+                if ($selectedPeriode) {
+                    $today = \Carbon\Carbon::today();
+                    $isValid = ((is_null($unit->valid_to)) || $unit->valid_to->isSameDay($today) || $unit->valid_to->isAfter($today))
+                        && ((is_null($unit->valid_from)) || $unit->valid_from->isBefore($today) || $unit->valid_from->isSameDay($today));
+                    $unitStatus = $isValid ? 'valid' : 'expired';
+                    
+                    $riskCount = IdentifikasiRisiko::where('unit_id', $unit->id)
+                        ->where('periode_id', $selectedPeriode->id)
+                        ->count();
+                        
                     $dataToDisplay->push([
                         'unit' => $unit,
-                        'periode' => $periode,
+                        'periode' => $selectedPeriode,
+                        'unit_status' => $unitStatus,
+                        'risk_count' => $riskCount,
                     ]);
                 }
             }
         } else {
-            $userUnit = auth()->user()->unit;
-            if ($userUnit) {
-                $periodes = Periode::orderBy('tahun', 'desc')->get();
-                foreach ($periodes as $periode) {
-                    $dataToDisplay->push([
-                        'unit' => $userUnit,
-                        'periode' => $periode,
-                    ]);
-                }
+            $units = Unit::where('unit_type_id', 2)->where('id', $userUnit->id)->pluck('name', 'id');
+            
+            if ($userUnit && $userUnit->unit_type_id == 2 && $selectedPeriode) { 
+                $today = \Carbon\Carbon::today();
+                $isValid = ((is_null($userUnit->valid_to)) || $userUnit->valid_to->isSameDay($today) || $userUnit->valid_to->isAfter($today))
+                    && ((is_null($userUnit->valid_from)) || $userUnit->valid_from->isBefore($today) || $userUnit->valid_from->isSameDay($today));
+                $unitStatus = $isValid ? 'valid' : 'expired';
+                
+                $riskCount = IdentifikasiRisiko::where('unit_id', $userUnit->id)
+                    ->where('periode_id', $selectedPeriode->id)
+                    ->count();
+                    
+                $dataToDisplay->push([
+                    'unit' => $userUnit,
+                    'periode' => $selectedPeriode,
+                    'unit_status' => $unitStatus,
+                    'risk_count' => $riskCount,
+                ]);
+                
             }
         }
 
-        $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
-
         return view('risk-register-ap.risk-period-list', compact(
-            'dataToDisplay', 
-            'activePeriode', 
-            'tableLegend', 
-            'apAdmin', 
+            'periodes',
+            'activePeriode',
+            'selectedPeriode',
+            'tableLegend',
+            'dataToDisplay',
+            'apAdmin',
             'units'
         ));
     }
@@ -352,7 +397,7 @@ class RiskRegisterApController extends Controller
         if (!$targetUnit) {
             abort(404, 'Unit tidak ditemukan.');
         }
-        
+
         $risikos = IdentifikasiRisiko::where('periode_id', $period)
             ->where('unit_id', $targetUnitId)
             ->with('riskAnalysis')
@@ -903,10 +948,10 @@ class RiskRegisterApController extends Controller
         $periode = $identifikasiRisiko->periode;
         $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
         if ($request->kategori_dampak == 'Kuantitatif') {
-            
+
             $risk_limit = 0;
 
-            
+
             if ($riskLimitPeriode) {
                 $risk_limit = $riskLimitPeriode->risk_limit;
                 $risk_tolerance = $riskLimitPeriode->risk_limit;
@@ -1035,7 +1080,7 @@ class RiskRegisterApController extends Controller
 
         for ($i = 1; $i <= 4; $i++) {
             $nilaiProbResidual = $request->{'nilai_probabilitas_residual_q' . $i};
-            
+
             // Lanjutkan perhitungan hanya jika ada nilai probabilitas di kuartal ini
             if (!is_null($nilaiProbResidual) && $nilaiProbResidual !== '') {
                 if ($request->kategori_dampak == 'Kualitatif') {
@@ -1355,7 +1400,7 @@ class RiskRegisterApController extends Controller
         if($send_type=='mainrisk'){
             //jadikan risiko terpilih menjadi risiko utama
             $selected_risks = $request->input('selected_risks', []);
-            
+
             if (empty($selected_risks)) {
                 return redirect()->route('risk-register-ap.index', [
                     'pid' => $periode_id,
@@ -1363,7 +1408,7 @@ class RiskRegisterApController extends Controller
                 ])
                     ->with('error', 'Tidak ada risiko yang dipilih');
             }
-            
+
             //dd($selected_risks);
             IdentifikasiRisiko::whereIn('id', $selected_risks)
                 ->update(['status_risiko' => IdentifikasiRisiko::STATUS_RISIKO_MAIN]);
@@ -1372,20 +1417,20 @@ class RiskRegisterApController extends Controller
             $dataBatch = DataBatch::where('unit_id', $unit_id)
                 ->where('periode_id', $periode_id)
                 ->first();
-                
+
             if ($dataBatch) {
                 // Update status data batch menjadi selesai
                 $dataBatch->update([
                     'status' => DataBatch::STATUS_UTAMA,
                     'finish' => false
                 ]);
-            }    
+            }
 
             return redirect()->route('risk-register-ap.index', [
                 'pid' => $periode_id,
                 'unit_id' => $unit_id
             ])
-                ->with('success', 'Risiko utama berhasil dikonfirmasi');    
+                ->with('success', 'Risiko utama berhasil dikonfirmasi');
         }
         else{
             // Cek apakah semua risiko sudah dianalisa dan dilakukan rencana perlakuan
@@ -1444,7 +1489,7 @@ class RiskRegisterApController extends Controller
                 ->orderBy('batch', 'desc')
                 ->first();
 
-                
+
             if($send_type == 'rev'){
                 $dataBatch->update(
                     [
@@ -1514,7 +1559,7 @@ class RiskRegisterApController extends Controller
                     else{
                         //cek step order dan min verification
                         if($step_order >= $min_verification){//last send
-                            
+
                             $dataBatch->update([
                                     'status' => DataBatch::STATUS_RANKING,
                                     'finish' => false
@@ -1538,7 +1583,7 @@ class RiskRegisterApController extends Controller
                                 $avgExposure = $quantitativeRisks->avg(function($risk) {
                                     return $risk->riskAnalysis->eksposur_risiko ?? 0;
                                 });
-                                
+
                                 // Tandai risiko kuantitatif yang nilainya di atas rata-rata
                                 foreach ($quantitativeRisks as $risk) {
                                     if (($risk->riskAnalysis->eksposur_risiko ?? 0) > $avgExposure) {
@@ -1548,7 +1593,7 @@ class RiskRegisterApController extends Controller
                                     }
                                 }
                             }
-                            
+
                             // Untuk risiko kualitatif, tandai yang nilai risikonya >= 20
                             foreach ($qualitativeRisks as $risk) {
                                 if (($risk->riskAnalysis->skala_risiko ?? 0) >= 20) {
@@ -1605,7 +1650,7 @@ class RiskRegisterApController extends Controller
             }
         }
 
-        
+
     }
 
     public function verifikasi(Request $request, $riskRegisterId)
@@ -1811,29 +1856,29 @@ class RiskRegisterApController extends Controller
 
         $currentRiskMaps = $risikos->pluck('currentRiskMaps');
         $formattedCurrentRiskMaps = [];
-        
+
         foreach ($risikos as $idx => $risk) {
             $getFallbackValue = function($targetQuarter) use ($risk) {
-                if (isset($risk->current_risk_maps[$targetQuarter]) && 
-                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) && 
+                if (isset($risk->current_risk_maps[$targetQuarter]) &&
+                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) &&
                     !is_null($risk->current_risk_maps[$targetQuarter]['skala_probabilitas'])) {
                     return $risk->current_risk_maps[$targetQuarter];
                 }
-                
+
                 for ($q = $targetQuarter - 1; $q >= 1; $q--) {
-                    if (isset($risk->current_risk_maps[$q]) && 
-                        !is_null($risk->current_risk_maps[$q]['skala_dampak']) && 
+                    if (isset($risk->current_risk_maps[$q]) &&
+                        !is_null($risk->current_risk_maps[$q]['skala_dampak']) &&
                         !is_null($risk->current_risk_maps[$q]['skala_probabilitas'])) {
                         return $risk->current_risk_maps[$q];
                     }
                 }
-                
-                if (isset($risk->current_risk_maps['inherent']) && 
-                    !is_null($risk->current_risk_maps['inherent']['skala_dampak']) && 
+
+                if (isset($risk->current_risk_maps['inherent']) &&
+                    !is_null($risk->current_risk_maps['inherent']['skala_dampak']) &&
                     !is_null($risk->current_risk_maps['inherent']['skala_probabilitas'])) {
                     return $risk->current_risk_maps['inherent'];
                 }
-                
+
                 if ($risk->riskAnalysis) {
                     return [
                         'skala_dampak' => $risk->riskAnalysis->skala_dampak,
@@ -1842,15 +1887,15 @@ class RiskRegisterApController extends Controller
                         'level_risiko' => $risk->riskAnalysis->level_risiko,
                     ];
                 }
-                
+
                 return null;
             };
-            
+
             for ($quarter = 1; $quarter <= 4; $quarter++) {
                 $currentValue = $getFallbackValue($quarter);
-                
-                if ($currentValue && 
-                    !is_null($currentValue['skala_dampak']) && 
+
+                if ($currentValue &&
+                    !is_null($currentValue['skala_dampak']) &&
                     !is_null($currentValue['skala_probabilitas'])) {
                     $currentValue['quarter'] = $quarter;
                     $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
@@ -1871,14 +1916,14 @@ class RiskRegisterApController extends Controller
         if ($risiko->riskAnalysis->kategori_dampak == 'Kuantitatif') {
             $unit = $risiko->unit;
             $periode = $risiko->periode;
-          
+
             $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
             if ($riskLimitPeriode) {
                 $risk_limit = $riskLimitPeriode->risk_limit;
                 $risk_tolerance = $riskLimitPeriode->risk_limit;
             }
         }
-        
+
         // dd($risk_limit, $risk_tolerance);
         return view('risk-register-ap.view', compact('user', 'risikos', 'riskMaps', 'formattedCurrentRiskMaps', 'risk_limit', 'risk_tolerance'));
     }

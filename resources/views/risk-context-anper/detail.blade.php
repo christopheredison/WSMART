@@ -18,8 +18,8 @@
                 <h3 class="card-title">
                     <i class="bx bx-list-ul mr-2"></i>Risk Context
                 </h3>
-                <a href="{{ route('risk-context.update-or-create', ['unit_id' => $unit->id, 'periode_id' => $periode->id]) }}" class="btn btn-primary">
-                    <i class="bx bx-edit"></i> Update Risk Context
+                <a href="{{ route('risk-context-anper.update-or-create', ['unit_id' => $unit->id, 'periode_id' => $periode->id]) }}" class="btn btn-primary">
+                    <span class="bx bx-edit"></span> Update Risk Context
                 </a>
             </div>
             <div class="card-body">
@@ -32,7 +32,7 @@
                                 <tbody>
                                     <tr>
                                         <td class="fw-bold" style="width: 5%">1</td>
-                                        <td class="fw-bold" style="width: 25%">Nama Unit Kerja</td>
+                                        <td class="fw-bold" style="width: 25%">Nama Anak Perusahaan</td>
                                         <td>{{ $unit->name ?? '-' }}</td>
                                     </tr>
                                     <tr>
@@ -42,12 +42,12 @@
                                     </tr>
                                     <tr>
                                         <td class="fw-bold">3</td>
-                                        <td class="fw-bold">Pimpinan Tertinggi Unit Kerja</td>
+                                        <td class="fw-bold">Pimpinan Tertinggi Anak Perusahaan</td>
                                         <td>{{ $riskContexts->first()->pimpinanTertinggi->name ?? '-' }}</td>
                                     </tr>
                                     <tr>
                                         <td class="fw-bold">4</td>
-                                        <td class="fw-bold">Anggota Unit Kerja</td>
+                                        <td class="fw-bold">Anggota Anak Perusahaan</td>
                                         <td>
                                             @if($riskContexts->first() && $riskContexts->first()->members->count() > 0)
                                                 @foreach($riskContexts->first()->members as $member)
