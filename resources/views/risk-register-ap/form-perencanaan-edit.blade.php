@@ -60,7 +60,7 @@
     </div>
     <div class="col-12 col-md-6">
         <div class="form-floating">
-            {{ Form::select('xpic', \App\Models\Jabatan::pluck('name', 'id'), '', ['class' => 'form-select', 'required']) }}
+            {{ Form::select('xpic', \App\Models\Jabatan::where('jabatan_type', 1)->pluck('name', 'id'), '', ['id' => 'picEdit', 'class' => 'form-select select2', 'required']) }}
             <label for="pic">PIC</label>
         </div>
     </div>
