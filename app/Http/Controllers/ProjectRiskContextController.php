@@ -50,7 +50,7 @@ class ProjectRiskContextController extends Controller
     {
         // Ganti logika
         $projects = Project::orderBy('project_name', 'asc')->get();
-        $jabatans = Jabatan::orderBy('name')->get();
+        $jabatans = Jabatan::where('jabatan_type', 2)->orderBy('name')->get();
 
         $selectedProject = null;
         if ($request->project_id) {
@@ -85,7 +85,7 @@ class ProjectRiskContextController extends Controller
             ->findOrFail($id);
 
         $projects = Project::orderBy('project_name', 'asc')->get();
-        $jabatans = Jabatan::orderBy('name')->get();
+        $jabatans = Jabatan::where('jabatan_type', 2)->orderBy('name')->get();
 
         return view('project-risk-context.edit', compact('projectRiskContext', 'projects', 'jabatans'));
     }
@@ -93,7 +93,7 @@ class ProjectRiskContextController extends Controller
     public function updateOrCreate(Request $request)
     {
         $projects = Project::orderBy('project_name', 'asc')->get();
-        $jabatans = Jabatan::orderBy('name')->get();
+        $jabatans = Jabatan::where('jabatan_type', 2)->orderBy('name')->get();
 
         $selectedProject = null;
         if ($request->project_id) {

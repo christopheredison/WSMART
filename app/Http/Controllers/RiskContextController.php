@@ -51,7 +51,7 @@ class RiskContextController extends Controller
         $user = Auth::user();
         $unit = $request->unit_id ? $request->unit_id : $user->unit;
         $periodes = Periode::orderBy('tahun', 'desc')->get();
-        $jabatans = Jabatan::orderBy('name')->get();
+        $jabatans = Jabatan::where('jabatan_type', 1)->orderBy('name')->get();
 
         $selectedPeriode = null;
         if ($request->periode_id) {
@@ -180,7 +180,7 @@ class RiskContextController extends Controller
             ->findOrFail($id);
 
         $periodes = Periode::orderBy('tahun', 'desc')->get();
-        $jabatans = Jabatan::orderBy('name')->get();
+        $jabatans = Jabatan::where('jabatan_type', 1)->orderBy('name')->get();
 
         return view('risk-context.edit', compact('riskContext', 'unit', 'periodes', 'jabatans'));
     }
@@ -191,7 +191,7 @@ class RiskContextController extends Controller
         $unit_id = $request->unit_id ? $request->unit_id : $user->unit_id;
         $unit = Unit::find($unit_id);
         $periodes = Periode::orderBy('tahun', 'desc')->get();
-        $jabatans = Jabatan::orderBy('name')->get();
+        $jabatans = Jabatan::where('jabatan_type', 1)->orderBy('name')->get();
 
         $selectedPeriode = null;
         if ($request->periode_id) {
