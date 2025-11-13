@@ -736,6 +736,9 @@ Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->
     Route::delete('/{riskRegister}', [App\Http\Controllers\CorporateRiskController::class, 'destroy'])->name('destroy');
     Route::get('/{riskRegister}/view', [App\Http\Controllers\CorporateRiskController::class, 'view'])->name('view');
 
+    Route::get('/top-down', [App\Http\Controllers\CorporateRiskController::class, 'topDown'])->name('top-down');
+    Route::post('/top-down', [App\Http\Controllers\CorporateRiskController::class, 'storeTopDown'])->name('store-top-down');
+
     Route::get('/{riskRegister}/analisa', [App\Http\Controllers\CorporateRiskController::class, 'analisa'])->name('analisa');
     Route::post('/{riskRegister}/analisa', [App\Http\Controllers\CorporateRiskController::class, 'doAnalisa'])->name('do-analisa');
 

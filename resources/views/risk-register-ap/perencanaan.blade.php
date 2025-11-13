@@ -197,8 +197,8 @@
         </div>
     </div>
 
-    @include('risk-register-unit._modal_tambah_rencana_perlakuan_risiko')
-    @include('risk-register-unit._modal_edit_rencana_perlakuan_risiko')
+    @include('risk-register-ap._modal_tambah_rencana_perlakuan_risiko')
+    @include('risk-register-ap._modal_edit_rencana_perlakuan_risiko')
 @endsection
 @push('styles')
 <style>
@@ -229,6 +229,13 @@
 <script>
 const penyebabRisiko = @json($identifikasiRisiko->penyebabRisiko->keyBy('id'));
 $(document).ready(function() {
+    $('#picTambah').select2({
+        dropdownParent: $('#modalTambahRencana')
+    });
+
+    $('#picEdit').select2({
+        dropdownParent: $('#modalEditRencana')
+    });
 
     const kategoriDampak = '{{ $analisa->kategori_dampak ?? "" }}';
     // Ambil nilai dampak dari data yang ada

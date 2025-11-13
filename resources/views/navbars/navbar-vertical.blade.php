@@ -152,7 +152,7 @@
         <!-- Executive Summary Menu End -->
 
         @can('corporate_risk_view')
-        <li class="nav-item single-indicator">
+        {{-- <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->is('corporate-risk') ? 'active' : '' }}" href="/corporate-risk/periods"
             role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon">
@@ -160,6 +160,35 @@
               <span class="nav-link-text">Risk Register Corporate</span>
             </span>
           </a>
+        </li> --}}
+        <li class="nav-item">
+            @php
+                $isActive = request()->is('corporate-risk/*');
+            @endphp
+            
+            <a class="nav-link dropdown-indicator {{ $isActive ? 'active' : '' }} {{ !$isActive ? 'collapsed' : '' }}"
+              href="#risk-register-corporate" role="button" data-bs-toggle="collapse"
+              aria-expanded="{{ $isActive ? 'true' : 'false' }}" aria-controls="risk-register-corporate">
+                <div class="d-flex align-items-center">
+                    <i class="menu-icon tf-icons bx bx-buildings"></i>
+                    <span class="nav-link-text">Risk Register Corporate</span>
+                </div>
+            </a>
+            <ul class="nav collapse {{ $isActive ? 'show' : '' }}"
+                id="risk-register-corporate">
+
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('corporate-risk/periods') ? 'active' : '' }}" href="/corporate-risk/periods">
+                        <span class="nav-link-text">Corporate Risk</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('corporate-risk/top-down') ? 'active' : '' }}" href="/corporate-risk/top-down">
+                        <span class="nav-link-text">Top Down Risk</span>
+                    </a>
+                </li>
+            </ul>
         </li>
         @endcan
 

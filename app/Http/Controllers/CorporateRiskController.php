@@ -10,6 +10,7 @@ use App\Models\KategoriRisiko;
 use App\Models\JenisRisiko;
 use App\Models\PeristiwaRisiko;
 use App\Models\DataBatch;
+use App\Models\Tck;
 use Illuminate\Support\Facades\Gate;
 use Carbon\Carbon;
 use App\Models\JenisKontrolEksisting;
@@ -574,6 +575,257 @@ class CorporateRiskController extends Controller
             'masterKris', // Kirim master KRI
             'kontrolEksistings' // Kirim kontrol eksisting
         ));
+    }
+
+    public function topDown(Request $request)
+    {
+        $user = auth()->user();
+        $unitId = $user->unit_id;
+
+        $tck = Tck::where('unit_id', $unitId)->pluck('title', 'id');
+        if ($tck->isEmpty()) {
+            $parentUnitId = Unit::where('id', $unitId)->value('parent_id');
+
+            if ($parentUnitId) {
+                $tck = Tck::where('unit_id', $parentUnitId)->pluck('title', 'id');
+            }
+        }
+
+        $masterKris = MasterKRI::get();
+        $kategoriRisiko = KategoriRisiko::pluck('title','id');
+        $peristiwaRisikos = PeristiwaRisiko::get();
+        $areaDampak = AreaDampak::pluck('type','id');
+        $jenisRisiko = JenisRisiko::pluck('title','id');
+        $units = Unit::where('unit_type_id', 1)->get();
+        $periodes = Periode::where('status', 'active')->get();
+        $selectedPeriode = Periode::where('status', 'active')->first();
+
+        $jenisKontrolEksistings = JenisKontrolEksisting::get();
+        $kontrolEksistings = KontrolEksisting::get();
+        $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
+
+        // Mendapatkan unit (divisi) saat ini
+        $unit = Unit::find($unitId);
+
+        return view('corporate-risk.top-down', compact(
+          'kategoriRisiko',
+          'peristiwaRisikos',
+          'masterKris',
+          'jenisKontrolEksistings',
+          'penilaianEfektifitasKontrols',
+          'kontrolEksistings',
+          'areaDampak',
+          'jenisRisiko',
+          'tck',
+          'periodes',
+          'units',
+          'selectedPeriode',
+        ));
+    }
+
+    public function storeTopDown(Request $request)
+    {
+        // Validasi input
+        $validated = $request->validate([
+            'periode_id' => 'required|exists:periodes,id',
+            //'target_capaian_kinerja' => 'required|exists:tcks,id',
+            //'peristiwa_risiko_id' => 'required|exists:peristiwa_risikos,id',
+            'target_capaian_kinerja' => 'required|string',
+            'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
+            'peristiwa_risiko' => 'required|string',
+            'deskripsi_peristiwa_risiko' => 'required|string',
+            'wbs' => 'nullable|string',
+            'penyebab_risiko' => 'required|array',
+            'penyebab_risiko.*' => 'required|string',
+            //'master_kri_id' => 'nullable|array',
+            //'master_kri_id.*' => 'nullable|exists:master_kri,id',
+            'key_risk_indicator' => 'nullable|array',
+            'key_risk_indicator.*' => 'nullable|string',
+            'satuan_kri' => 'nullable|array',
+            'satuan_kri.*' => 'nullable|string',
+            'batas_aman' => 'nullable|array',
+            'batas_aman.*' => 'nullable|string',
+            'batas_waspada' => 'nullable|array',
+            'batas_waspada.*' => 'nullable|string',
+            'batas_bahaya' => 'nullable|array',
+            'batas_bahaya.*' => 'nullable|string',
+            'jenis_kontrol_eksisting_id' => 'nullable|exists:jenis_kontrol_eksistings,id',
+            //'kontrol_eksisting_id' => 'nullable|array',
+            //'kontrol_eksisting_id.*' => 'nullable|exists:kontrol_eksistings,id',
+            //'kontrol_eksisting' => 'required|string',
+            'kontrol_eksisting' => 'required|array',  // Ubah menjadi array
+            'kontrol_eksisting.*' => 'required|string', // Validasi setiap item
+            'penilaian_efektifitas_kontrol' => 'nullable|exists:penilaian_efektivitas_kontrols,id',
+            'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
+            'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
+            'unit_id' => 'required|exists:units,id',
+        ]);
+
+        $peristiwa_risiko = $request->peristiwa_risiko;
+        $unitId = $request->unit_id;
+
+        // Pengecekan tidak boleh ada peristiwa risiko yang sama di periode dan unit yang sama
+        $existingRisk = IdentifikasiRisiko::where('unit_id', $unitId)
+            ->where('periode_id', $request->periode_id)
+            ->where('peristiwa_risiko', $peristiwa_risiko)
+            ->first();
+
+        if ($existingRisk) {
+            return response()->json([
+                'message' => 'Peristiwa risiko "' . $peristiwa_risiko . '" sudah ada untuk unit ini pada periode yang sama. Silakan gunakan peristiwa risiko yang berbeda atau edit data yang sudah ada.',
+                'redirect' => 'back'
+            ], 422);
+        }
+
+        try {
+            // Konversi format tanggal
+            $waktuMulai = null;
+            $waktuSelesai = null;
+
+            if ($request->perkiraan_waktu_mulai_terpapar_risiko) {
+                $waktuMulai = Carbon::createFromFormat('d/m/Y', $request->perkiraan_waktu_mulai_terpapar_risiko)->format('Y-m-d');
+            }
+
+            if ($request->perkiraan_waktu_selesai_terpapar_risiko) {
+                $waktuSelesai = Carbon::createFromFormat('d/m/Y', $request->perkiraan_waktu_selesai_terpapar_risiko)->format('Y-m-d');
+            }
+
+            // Simpan data risiko
+            $identifikasiRisiko = new IdentifikasiRisiko();
+            $identifikasiRisiko->periode_id = $request->periode_id;
+            // $identifikasiRisiko->tck_id = $request->target_capaian_kinerja;
+            // $tck = Tck::where('id', $request->target_capaian_kinerja)->first();
+
+            // if ($tck) {
+            //     $identifikasiRisiko->target_capaian_kinerja = $tck->title;
+            // }
+            $identifikasiRisiko->target_capaian_kinerja = $request->target_capaian_kinerja;
+            // $identifikasiRisiko->peristiwa_risiko_id = $request->peristiwa_risiko_id;
+            // $peristiwaRisiko = PeristiwaRisiko::find($request->peristiwa_risiko_id);
+            // if ($peristiwaRisiko) {
+            //     $identifikasiRisiko->kategori_risiko_id = $peristiwaRisiko->kategori_risiko_id;
+            //     $identifikasiRisiko->jenis_risiko_id = $peristiwaRisiko->jenis_risiko_id;
+            // }
+            $identifikasiRisiko->jenis_risiko_id = $request->jenis_risiko_id;
+            $jenisRisiko = \App\Models\JenisRisiko::find($request->jenis_risiko_id);
+            if ($jenisRisiko) {
+                $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
+            }
+
+            $identifikasiRisiko->peristiwa_risiko = $request->peristiwa_risiko;
+            $identifikasiRisiko->deskripsi_peristiwa_risiko = $request->deskripsi_peristiwa_risiko;
+            $identifikasiRisiko->wbs = $request->wbs;
+            $identifikasiRisiko->jenis_kontrol_eksisting_id = $request->jenis_kontrol_eksisting_id;
+            //$identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting;
+            $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
+            $identifikasiRisiko->penilaian_efektifitas_kontrol = $request->penilaian_efektifitas_kontrol;
+            $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
+            $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
+            $identifikasiRisiko->user_id = auth()->id();
+            $identifikasiRisiko->unit_id = $unitId;
+            $unit = Unit::find($unitId);
+            if ($unit) {
+                $identifikasiRisiko->unit_type_id = $unit->unit_type_id;
+            }
+            else{
+                $identifikasiRisiko->unit_type_id = 2;
+            }
+            $identifikasiRisiko->status = 1;
+            $identifikasiRisiko->status_progress = 1;
+
+            // Simpan kontrol eksisting
+            // if ($request->has('kontrol_eksisting_id') && is_array($request->kontrol_eksisting_id)) {
+            //     // Ubah array menjadi string dengan pemisah koma
+            //     $kontrolEksisting = implode(',', $request->kontrol_eksisting_id);
+            //     // Simpan ke field kontrol_eksisting
+            //     $identifikasiRisiko->kontrol_eksisting = $kontrolEksisting;
+            // }
+            $identifikasiRisiko->save();
+
+            // Simpan kontrol eksisting ke model KontrolEksisting
+            if ($request->has('kontrol_eksisting') && is_array($request->kontrol_eksisting)) {
+                foreach ($request->kontrol_eksisting as $kontrolEksisting) {
+                    if (!empty($kontrolEksisting)) {
+                        $identifikasiRisiko->kontrolEksistings()->create([
+                            'risiko_id' => $identifikasiRisiko->id,
+                            'peristiwa_risiko_id' => null,
+                            'kontrol_eksisting' => $kontrolEksisting,
+                        ]);
+                    }
+                }
+            }
+
+            // Simpan penyebab risiko
+            if ($request->has('penyebab_risiko') && is_array($request->penyebab_risiko)) {
+                foreach ($request->penyebab_risiko as $penyebab) {
+                    if (!empty($penyebab)) {
+                        $identifikasiRisiko->penyebabRisiko()->create([
+                            'penyebab_risiko' => $penyebab,
+                            'risiko_id' => $identifikasiRisiko->id,
+                        ]);
+                    }
+                }
+            }
+
+            // Simpan KRI
+            // if ($request->has('master_kri_id') && is_array($request->master_kri_id)) {
+            //     $masterKriObj = MasterKRI::whereIn('id', $request->master_kri_id)->get()->keyBy('id');
+
+            //     foreach ($request->master_kri_id as $masterKriId) {
+            //         if (!empty($masterKriId)) {
+            //             $kriObj = $masterKriObj[$masterKriId];
+            //             $identifikasiRisiko->kris()->create([
+            //                 'kri_id' => $masterKriId,  // Ubah kri_id menjadi master_kri_id jika diperlukan
+            //                 'risiko_id' => $identifikasiRisiko->id,  // Tetap sertakan risiko_id
+            //                 'kri' => $kriObj->kri,
+            //                 'satuan_kri' => $kriObj->satuan_kri,
+            //                 'batas_aman' => $kriObj->batas_aman,
+            //                 'batas_waspada' => $kriObj->batas_waspada,
+            //                 'batas_bahaya' => $kriObj->batas_bahaya,
+            //             ]);
+            //         }
+            //     }
+            // }
+            if ($request->has('key_risk_indicator') && is_array($request->key_risk_indicator)) {
+                for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
+                    if (!empty($request->key_risk_indicator[$i])) {
+                        $identifikasiRisiko->kris()->create([
+                            'kri_id' => 0, // Karena tidak menggunakan master_kri_id lagi
+                            'risiko_id' => $identifikasiRisiko->id,
+                            'kri' => $request->key_risk_indicator[$i],
+                            'satuan_kri' => $request->satuan_kri[$i] ?? null,
+                            'batas_aman' => $request->batas_aman[$i] ?? null,
+                            'batas_waspada' => $request->batas_waspada[$i] ?? null,
+                            'batas_bahaya' => $request->batas_bahaya[$i] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            $identifikasiRisiko->riskAnalysis()->create([]);
+            $identifikasiRisiko->rencanaPerlakuanRisiko()->create([]);
+
+            // Tentukan redirect berdasarkan action
+            $action = $request->input('action', 'save');
+
+            // if ($action === 'savenext') {
+            //     // Redirect ke halaman analisis risiko
+            //     return response()->json([
+            //         'message' => 'Data risiko berhasil disimpan',
+            //         'redirect' => route('risk-register-unit.analisa', ['riskRegister' => $identifikasiRisiko->id])
+            //     ]);
+            // } else {
+            //     // Redirect ke halaman index
+            // }
+            return response()->json([
+                'message' => 'Data risiko berhasil dibuat',
+                'redirect' => route('risk-register-unit.index', ['pid' => $identifikasiRisiko->periode_id, 'unit_id' => $identifikasiRisiko->unit_id])
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat menyimpan data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function getDivisionRisks(Unit $unit)
