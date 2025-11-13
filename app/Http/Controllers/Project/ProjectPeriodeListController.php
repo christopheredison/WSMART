@@ -81,12 +81,12 @@ class ProjectPeriodeListController extends BasicCRUDController
             'append' => ['project.projectDivisi', 'project.projectSektor'],
             'withCount' => ['projectRisks'],
         ]);
-        
+
         $periodeOptions = Periode::select('id', 'tahun')->orderBy('tahun')->get()->pluck('tahun', 'id')->toArray();
 
         $user = request()->user();
         $user->load('projects', 'unit');
-        
+
         $userProjectIds = $user->projects->pluck('id');
         $this->userProjectIdsx = $user->projects->pluck('id')->toArray();
 
@@ -95,7 +95,7 @@ class ProjectPeriodeListController extends BasicCRUDController
         if ($user->unit && !in_array($user->level_id ?? 0, [6, 7])) {
             $unitProjectIds = $user->unit->projects()->pluck('id');
         }
-        
+
         // Menggabungkan project IDs dari user dan unit
         $allProjectIds = $userProjectIds->merge($unitProjectIds)->unique();
 
@@ -117,10 +117,10 @@ class ProjectPeriodeListController extends BasicCRUDController
             // if ($userProjectIds->isNotEmpty()) {
             //     $idList = $userProjectIds->join(',');
             //     $query->orderByRaw("
-            //         CASE 
-            //             WHEN project_periode_lists.project_id IN ({$idList}) THEN 1 
-            //             ELSE 2 
-            //         END ASC, 
+            //         CASE
+            //             WHEN project_periode_lists.project_id IN ({$idList}) THEN 1
+            //             ELSE 2
+            //         END ASC,
             //         updated_at DESC
             //     ");
             // } else {
@@ -134,22 +134,22 @@ class ProjectPeriodeListController extends BasicCRUDController
             if ($allProjectIds->isNotEmpty()) {
                 $userIdList = $userProjectIds->join(',');
                 $allIdList = $allProjectIds->join(',');
-                
+
                 if ($userProjectIds->isNotEmpty() && $unitProjectIds->isNotEmpty()) {
                     $query->orderByRaw("
-                        CASE 
+                        CASE
                             WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 1
                             WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 2
-                            ELSE 3 
-                        END ASC, 
+                            ELSE 3
+                        END ASC,
                         updated_at DESC
                     ");
                 } else {
                     $query->orderByRaw("
-                        CASE 
-                            WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 1 
-                            ELSE 2 
-                        END ASC, 
+                        CASE
+                            WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 1
+                            ELSE 2
+                        END ASC,
                         updated_at DESC
                     ");
                 }
@@ -162,7 +162,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 // Jika user adalah user project (level 6 atau 7), hanya tampilkan project miliknya
                 if (in_array($user->level_id ?? 0, [6, 7])) {
                     $query->whereIn('project_id', $userProjectIds);
-                } 
+                }
                 // Jika user adalah user divisi, tampilkan project miliknya dan project di bawah unitnya
                 else if ($user->unit) {
                     $query->whereIn('project_id', $allProjectIds);
@@ -185,21 +185,21 @@ class ProjectPeriodeListController extends BasicCRUDController
             //     return Gate::check('project_admin_access') || $user->hasProject($data);
             // });
             $dataTable->addColumn('has_view', function ($data) use ($user) {
-                return Gate::check('project_periode_view') || 
-                    $user->hasProject($data) || 
+                return Gate::check('project_periode_view') ||
+                    $user->hasProject($data) ||
                     ($user->unit && $data->project && $data->project->cost_center_parent == $user->unit->cost_center);
             });
             $dataTable->addColumn('has_risk_register', function ($data) use ($user) {
                 // Periksa apakah user memiliki permission project_risk_list (bukan project_admin_access)
                 // atau user memiliki proyek tersebut
                 // atau proyek tersebut berada di bawah unit user
-                return Gate::check('project_admin_access') || 
-                    $user->hasProject($data) || 
+                return Gate::check('project_admin_access') ||
+                    $user->hasProject($data) ||
                     ($user->unit && $data->project && $data->project->cost_center_parent == $user->unit->cost_center);
             });
             $dataTable->addColumn('has_monitoring', function ($data) use ($user) {
-                return Gate::check('project_admin_access') || 
-                    $user->hasProject($data) || 
+                return Gate::check('project_admin_access') ||
+                    $user->hasProject($data) ||
                     ($user->unit && $data->project && $data->project->cost_center_parent == $user->unit->cost_center);
             });
         };
@@ -239,7 +239,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'active_state' => '(data, type, row) => row.has_risk_register',
                 'title' => 'Risk Register'
             ];
-            
+
             $this->tableLegend[] = [
               'icon' => '<span class="bx bx-list-check"></span>',
               'label' => 'Risk Register'
@@ -278,18 +278,34 @@ class ProjectPeriodeListController extends BasicCRUDController
               'icon' => '<span class="bx bx-dock-bottom"></span>',
               'label' => 'Loss Event'
             ];
-            
+
+        }
+
+        if (Gate::check('project_risk_context')) {
+            $this->tableActions[] = [
+                'btn_icon' => true,
+                'label' => '<span class="bx bx-target-lock" title="Risk Context"></span>',
+                'action' => 'link',
+                'url' => route('project-risk-context.index-by-project-periode', ['projectId' => ':id']),
+                'title' => 'Risk Context'
+            ];
+
+            $this->tableLegend[] = [
+              'icon' => '<span class="bx bx-target-lock"></span>',
+              'label' => 'Risk Context'
+            ];
+
         }
 
         $this->extraViewData['showKamusRisikoButton'] = true;
-        
+
         return parent::index();
     }
 
     public function store(Request $request)
     {
         $periode = Periode::where('status', 'active')->first();
-        
+
         $request->merge([
             'unit_id' => $request->user()->unit_id,
             'periode_id' => $periode->id

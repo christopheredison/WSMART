@@ -259,7 +259,7 @@ return [
         'sasaran_strategi_delete',
 
         'backups.index',
-        
+
         'risk_monitoring_edit',
 
         'risk_register_verification',
@@ -290,5 +290,8 @@ return [
         'ict_approval',
 
         'get_all_notification',
+
+        'unit_risk_context',
+        'project_risk_context',
     ],
 ];
