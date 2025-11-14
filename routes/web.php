@@ -671,6 +671,7 @@ Route::prefix('risk-register-ap')->group(function () {
     Route::get('/{riskRegister}/view', [RiskRegisterApController::class, 'view'])->name('risk-register-ap.view');
     Route::post('/send', [RiskRegisterApController::class, 'send'])->name('risk-register-ap.send');
     Route::post('/draft', [RiskRegisterApController::class, 'storeAsDraft'])->name('risk-register-ap.store-as-draft');
+    Route::get('/{riskRegister}/notes', [RiskRegisterApController::class, 'getRiskNotes'])->name('risk-register-ap.notes');
 
     Route::get('/{riskRegister}/analisa', [RiskRegisterApController::class, 'analisa'])->name('risk-register-ap.analisa');
     Route::post('/{riskRegister}/analisa', [RiskRegisterApController::class, 'doAnalisa'])->name('risk-register-ap.do-analisa');

@@ -74,7 +74,7 @@
               </tr>
             </thead>
             <tbody class="list" id="bulk-select-body">
-              @forelse ($dataToDisplay as $index => $item)
+              @foreach ($dataToDisplay as $index => $item)
               @php
                   $unit = $item['unit'];
                   $periode = $item['periode'];
@@ -115,8 +115,8 @@
                       <span class="bx bx-show"></span>
                     </a>
                     <a href="{{ route('risk-register-ap.index', ['pid' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
-                       <span class="bx bx-list-check"></span>
-                     </a>
+                      <span class="bx bx-list-check"></span>
+                    </a>
                     <a href="{{ route('risk-register-ap.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
                       <span class="bx bx-radar"></span>
                     </a>
@@ -124,19 +124,14 @@
                       title="Loss Event">
                       <span class="bx bx-dock-bottom"></span>
                     </a>
-                    {{-- Asumsi route risk-context sama --}}
-                    <a href="{{ route('risk-context-anper.detail-anper', ['periodeId' => $periode->id, 'unitId' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+                    <a href="{{ route('risk-context-anper.detail', ['periodeId' => $periode->id, 'unitId' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
                       title="Risk Context">
                       <span class="bx bx-target-lock"></span>
                     </a>
                   @endif
                 </td>
               </tr>
-              @empty
-              <tr>
-                <td colspan="6" class="text-center">Tidak ada data untuk ditampilkan.</td>
-              </tr>
-              @endforelse
+              @endforeach
             </tbody>
           </table>
         </div>
