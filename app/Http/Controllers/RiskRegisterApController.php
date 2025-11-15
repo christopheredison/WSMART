@@ -221,6 +221,14 @@ class RiskRegisterApController extends Controller
               'icon' => '<span class="bx bx-trash text-danger"></span>',
               'label' => 'Hapus'
             ],
+            [
+              'icon' => '<span class="bx-comment-dots"></span>',
+              'label' => 'Catatan'
+            ],
+            [
+              'icon' => '<span class="badge bg-primary">!</span>',
+              'label' => 'Rekomendasi Risiko'
+            ],
         ];
 
         // Hitung status expired divisi berdasarkan valid_to unit
@@ -1392,6 +1400,9 @@ class RiskRegisterApController extends Controller
         $level_id = $user->level_id;
         $periode_id = $request->periode_id;
         $send_type = $request->send_type ?? 'send';
+        
+        $min_verification = 3;
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
 
         if (!$periode_id) {
             return redirect()->route('risk-register-ap.index', [
