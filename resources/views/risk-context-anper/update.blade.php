@@ -14,7 +14,7 @@
                 <div class="card-body">
                     @include('partials.success-message')
                     
-                    <form action="{{ route('risk-context.store-or-update') }}" method="POST">
+                    <form action="{{ route('risk-context-anper.store-or-update') }}" method="POST">
                         @csrf
                         
                         <!-- Informasi Unit -->
@@ -66,7 +66,7 @@
                                             @endforeach
                                         </select>
                                         <small class="form-text text-muted">
-                                            Adalah nama dan jabatan pimpinan tertinggi unit kerja tersebut.
+                                            Adalah nama dan jabatan pimpinan tertinggi anak perusahaan tersebut.
                                         </small>
                                     </div>
                                 </div>
@@ -76,21 +76,21 @@
                                         <input type="text" name="sponsor" class="form-control" 
                                                value="{{ old('sponsor', $riskContext->sponsor ?? '') }}">
                                         <small class="form-text text-muted">
-                                            Adalah pihak yang memiliki unit kerja, individu atau entitas yang menyediakan sumber daya keuangan dalam bentuk tunai atau yang setara untuk proyek.
+                                            Adalah pihak yang memiliki anak perusahaan, individu atau entitas yang menyediakan sumber daya keuangan dalam bentuk tunai atau yang setara untuk proyek.
                                         </small>
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Deskripsi</label>
                                         <textarea name="deskripsi" class="form-control" rows="3">{{ old('deskripsi', $riskContext->deskripsi ?? '') }}</textarea>
                                         <small class="form-text text-muted">
-                                            Gambaran umum unit kerja.
+                                            Gambaran umum anak perusahaan.
                                         </small>
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Anggota Unit Kerja</label>
+                                    <label class="form-label">Anggota Anak Perusahaan</label>
                                     <small class="form-text text-muted d-block mb-2">
-                                        Keseluruhan anggota tim inti (nama dan jabatan) yang terlibat dalam unit kerja yang bersangkutan.
+                                        Keseluruhan anggota tim inti (nama dan jabatan) yang terlibat dalam anak perusahaan yang bersangkutan.
                                     </small>
                                 </div>
                             </div>
@@ -107,14 +107,14 @@
                                         <label class="form-label">Tujuan</label>
                                         <textarea name="tujuan" class="form-control" rows="3">{{ old('tujuan', $riskContext->tujuan ?? '') }}</textarea>
                                         <small class="form-text text-muted">
-                                            Menerangkan latar belakang dan tujuan unit kerja (Risk Owner).
+                                            Menerangkan latar belakang dan tujuan anak perusahaan (Risk Owner).
                                         </small>
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Lingkup Pekerjaan</label>
                                         <textarea name="lingkup_pekerjaan" class="form-control" rows="3">{{ old('lingkup_pekerjaan', $riskContext->lingkup_pekerjaan ?? '') }}</textarea>
                                         <small class="form-text text-muted">
-                                            Adalah semua pekerjaan yang menjadi bagian dari unit kerja yang bersangkutan.
+                                            Adalah semua pekerjaan yang menjadi bagian dari anak perusahaan yang bersangkutan.
                                         </small>
                                     </div>
                                 </div>
@@ -122,7 +122,7 @@
                                     <label class="form-label">Pekerjaan Luar Lingkup</label>
                                     <textarea name="pekerjaan_luar_lingkup" class="form-control" rows="3">{{ old('pekerjaan_luar_lingkup', $riskContext->pekerjaan_luar_lingkup ?? '') }}</textarea>
                                     <small class="form-text text-muted">
-                                        Adalah pekerjaan yang bukan menjadi bagian dari team atau tetapi harus diselesaikan oleh unit kerja tersebut (contoh: pembebesan lahan, pemindahan utilities yang tidak masuk dalam kontrak, dll).
+                                        Adalah pekerjaan yang bukan menjadi bagian dari team atau tetapi harus diselesaikan oleh anak perusahaan tersebut (contoh: pembebesan lahan, pemindahan utilities yang tidak masuk dalam kontrak, dll).
                                     </small>
                                 </div>
                             </div>
@@ -139,14 +139,14 @@
                                         <label class="form-label">Sasaran</label>
                                         <textarea name="sasaran" class="form-control" rows="3">{{ old('sasaran', $riskContext->sasaran ?? '') }}</textarea>
                                         <small class="form-text text-muted">
-                                            Kondisi atau capaian yang harus diselesaikan sesuai target kinerja unit kerja.
+                                            Kondisi atau capaian yang harus diselesaikan sesuai target kinerja anak perusahaan.
                                         </small>
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Batasan</label>
                                         <textarea name="batasan" class="form-control" rows="3">{{ old('batasan', $riskContext->batasan ?? '') }}</textarea>
                                         <small class="form-text text-muted">
-                                            Kondor yang membatasi pekerjaan suatu unit kerja dengan mempertimbangkan isu internal dan eksternal:<br>
+                                            Kondor yang membatasi pekerjaan suatu anak perusahaan dengan mempertimbangkan isu internal dan eksternal:<br>
                                             1. Ada tidaknya milestone<br>
                                             2. Ada tidaknya batasan penggunaan produk impor<br>
                                             3. Ada tidaknya syarat pemakaian tenaga lokal
@@ -157,7 +157,7 @@
                                     <label class="form-label">Asumsi Dasar</label>
                                     <textarea name="asumsi_dasar" class="form-control" rows="3">{{ old('asumsi_dasar', $riskContext->asumsi_dasar ?? '') }}</textarea>
                                     <small class="form-text text-muted">
-                                        Asumsi atau landasan pikiran yang menjadi dasar dalam pencapaian target oleh tim unit kerja.
+                                        Asumsi atau landasan pikiran yang menjadi dasar dalam pencapaian target oleh tim anak perusahaan.
                                     </small>
                                 </div>
                             </div>
@@ -225,7 +225,7 @@
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">Stakeholder Internal</h5>
                                 <button type="button" class="btn btn-sm btn-primary" onclick="addStakeholderInternal()">
-                                    <span class="bx bx-plus"></span> Tambah Stakeholder
+                                    <span class="bx bx-plus"></sp> Tambah Stakeholder
                                 </button>
                             </div>
                             <div class="card-body">
@@ -401,7 +401,7 @@
                         </div>
 
                         <div class="d-flex justify-content-between">
-                            <a href="{{ route('risk-context.detail', ['periodeId' => $selectedPeriode->id, 'unitId' => $unit->id]) }}" class="btn btn-secondary">
+                            <a href="{{ route('risk-context-anper.detail', ['periodeId' => $selectedPeriode->id, 'unitId' => $unit->id]) }}" class="btn btn-secondary">
                                 <span class="bx bx-arrow-back"></span> Kembali
                             </a>
                             <button type="submit" class="btn btn-primary">

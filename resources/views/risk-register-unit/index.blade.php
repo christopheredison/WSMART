@@ -131,7 +131,7 @@
             <thead>
               <tr>
                 <th class="no-sort white-space-nowrap">
-                   @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
+                  @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
                   <div class="form-check mb-0">
                     <input class="form-check-input" type="checkbox" id="select-all" />
                   </div>
@@ -184,7 +184,7 @@
                         isset($avgQuantitativeExposure) && $item->riskAnalysis->eksposur_risiko >= $avgQuantitativeExposure) {
                         $add = '<span class="badge bg-primary">!</span> ';
                     } else if ($item->riskAnalysis && $item->riskAnalysis->kategori_dampak === 'Kualitatif' &&
-                               $item->riskAnalysis->skala_risiko >= 20) {
+                              $item->riskAnalysis->skala_risiko >= 20) {
                         $add = '<span class="badge bg-primary">!</span> ';
                     }
                   @endphp
@@ -295,6 +295,7 @@
           <strong>Catatan Perbaikan:</strong> {{ $batchNotes->notes }}
         </div>
         @endif
+
         @if(isset($pending_risk) && $pending_risk > 0 && $step_order == $dataBatch->step_verification)
         <div class="alert alert-info mb-3">
           <strong>Informasi:</strong> Terdapat {{ $pending_risk }} risiko yang menunggu verifikasi/revisi.
@@ -603,78 +604,78 @@ $(document).ready(function() {
 
   const sendFormEl = document.querySelector('#send-form');
   if (sendFormEl) {
-  sendFormEl.addEventListener('submit', function(event) {
-    event.preventDefault(); // Mencegah form submission otomatis
+    sendFormEl.addEventListener('submit', function(event) {
+      event.preventDefault(); // Mencegah form submission otomatis
 
-    const status = {{ $status ?? 'null' }};
-    const stepOrder = {{ $step_order ?? 'null' }};
+      const status = {{ $status ?? 'null' }};
+      const stepOrder = {{ $step_order ?? 'null' }};
 
-    if(status === 6){
-      //redirect ke halaman risk corporate
-      window.location.href = "{{ route('corporate-risk.index') }}";
-    }
-    else if(status===3){
-      const selectedRisks = [];
-      document.querySelectorAll('.select-item:checked').forEach(function(checkbox) {
-        selectedRisks.push(checkbox.value);
-      });
-
-      // Jika tidak ada risiko yang dipilih, tampilkan peringatan
-      if(selectedRisks.length === 0) {
-        Swal.fire({
-          title: "Peringatan",
-          text: "Silakan pilih minimal satu risiko untuk dijadikan risiko utama",
-          icon: "warning",
-        });
-        return;
+      if(status === 6){
+        //redirect ke halaman risk corporate
+        window.location.href = "{{ route('corporate-risk.index') }}";
       }
+      else if(status===3){
+        const selectedRisks = [];
+        document.querySelectorAll('.select-item:checked').forEach(function(checkbox) {
+          selectedRisks.push(checkbox.value);
+        });
 
-      // Hapus input hidden yang mungkin sudah ada sebelumnya
-      document.querySelectorAll('input[name="selected_risks[]"]').forEach(function(input) {
-        input.remove();
-      });
-
-      // Tambahkan input hidden untuk setiap risiko yang dipilih
-      selectedRisks.forEach(function(riskId) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'selected_risks[]';
-        input.value = riskId;
-        this.appendChild(input);
-      }, this);
-
-      Swal.fire({
-        title: "Apakah Anda yakin?",
-        text: "Terima Risiko Terpilih sebagai Risiko Utama?",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Ya, terima risiko!",
-        cancelButtonText: "Tidak, batal",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          this.submit(); // Kirim form jika dikonfirmasi
+        // Jika tidak ada risiko yang dipilih, tampilkan peringatan
+        if(selectedRisks.length === 0) {
+          Swal.fire({
+            title: "Peringatan",
+            text: "Silakan pilih minimal satu risiko untuk dijadikan risiko utama",
+            icon: "warning",
+          });
+          return;
         }
-      });
-    }
-    else if (status === 5 && (stepOrder === 0 || stepOrder === null)) {// Jika status adalah 5 (revisi) dan step_order adalah 0 atau null, tampilkan modal kirim perbaikan
-      const modal = new bootstrap.Modal(document.getElementById('modalKirimPerbaikanRisiko'));
-      modal.show();
-    } else {
-      // Jika tidak, tampilkan konfirmasi SweetAlert seperti biasa
-      Swal.fire({
-        title: "Apakah Anda yakin?",
-        text: "Semua Data Risiko akan dikirim untuk dilakukan verifikasi selanjutnya dan anda tidak dapat melakukan penambahan risiko dan edit risiko sementara waktu",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Ya, kirim risiko!",
-        cancelButtonText: "Tidak, batal",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          this.submit(); // Kirim form jika dikonfirmasi
-        }
-      });
-    }
-  });
+
+        // Hapus input hidden yang mungkin sudah ada sebelumnya
+        document.querySelectorAll('input[name="selected_risks[]"]').forEach(function(input) {
+          input.remove();
+        });
+
+        // Tambahkan input hidden untuk setiap risiko yang dipilih
+        selectedRisks.forEach(function(riskId) {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'selected_risks[]';
+          input.value = riskId;
+          this.appendChild(input);
+        }, this);
+
+        Swal.fire({
+          title: "Apakah Anda yakin?",
+          text: "Terima Risiko Terpilih sebagai Risiko Utama?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Ya, terima risiko!",
+          cancelButtonText: "Tidak, batal",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.submit(); // Kirim form jika dikonfirmasi
+          }
+        });
+      }
+      else if (status === 5 && (stepOrder === 0 || stepOrder === null)) {// Jika status adalah 5 (revisi) dan step_order adalah 0 atau null, tampilkan modal kirim perbaikan
+        const modal = new bootstrap.Modal(document.getElementById('modalKirimPerbaikanRisiko'));
+        modal.show();
+      } else {
+        // Jika tidak, tampilkan konfirmasi SweetAlert seperti biasa
+        Swal.fire({
+          title: "Apakah Anda yakin?",
+          text: "Semua Data Risiko akan dikirim untuk dilakukan verifikasi selanjutnya dan anda tidak dapat melakukan penambahan risiko dan edit risiko sementara waktu",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Ya, kirim risiko!",
+          cancelButtonText: "Tidak, batal",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.submit(); // Kirim form jika dikonfirmasi
+          }
+        });
+      }
+    });
   }
 
   // Select/Deselect all checkboxes
@@ -708,14 +709,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const addRiskButton = document.getElementById('add-risk-button');
   if (addRiskButton) {
-  addRiskButton.addEventListener('click', function(event) {
-    // Cek apakah status berbeda dari 1
-    if (status !== null && status != 1 && status != 5) {
-      event.preventDefault(); // Mencegah link dibuka
-      alert('Belum bisa menambah data risiko karena sedang dalam proses konfirmasi.');
-    }
-    // Jika status == 1 atau status null, link akan berjalan normal dan mengarah ke halaman buat risiko.
-  });
+    addRiskButton.addEventListener('click', function(event) {
+      // Cek apakah status berbeda dari 1
+      if (status !== null && status != 1 && status != 5) {
+        event.preventDefault(); // Mencegah link dibuka
+        alert('Belum bisa menambah data risiko karena sedang dalam proses konfirmasi.');
+      }
+      // Jika status == 1 atau status null, link akan berjalan normal dan mengarah ke halaman buat risiko.
+    });
   }
 });
 

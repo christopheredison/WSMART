@@ -216,6 +216,8 @@
             @include('project-monitorings._modal_verifikasi')
         @elseif (request()->route()->getName() === 'risk-register-unit.monitorings.index')
             @include('risk-register-unit.monitorings._modal_verifikasi')
+        @elseif (request()->route()->getName() === 'risk-register-ap.monitorings.index')
+            @include('risk-register-ap.monitorings._modal_verifikasi')
         @endif
      @endif
 
@@ -225,8 +227,11 @@
         @elseif (request()->route()->getName() === 'risk-register-unit.monitorings.index')
             @include('risk-register-unit.monitorings._modal_catatan')
             @include('risk-register-unit.monitorings._modal_peluang')
+        @elseif (request()->route()->getName() === 'risk-register-ap.monitorings.index')
+            @include('risk-register-ap.monitorings._modal_catatan')
+            @include('risk-register-ap.monitorings._modal_peluang')
         @endif
-    @endif
+    @endif
 @endsection
 
 @push('styles')
