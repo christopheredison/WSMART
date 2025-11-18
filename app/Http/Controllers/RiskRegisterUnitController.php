@@ -247,6 +247,10 @@ class RiskRegisterUnitController extends Controller
               'label' => 'Hapus'
             ],
             [
+              'icon' => '<span class="bx-comment-dots"></span>',
+              'label' => 'Catatan'
+            ],
+            [
               'icon' => '<span class="badge bg-primary">!</span>',
               'label' => 'Rekomendasi Risiko'
             ],
@@ -1840,8 +1844,6 @@ class RiskRegisterUnitController extends Controller
                     ->with('success', 'Pengiriman risiko berhasil dilakukan. Risiko telah dikirim untuk diverifikasi.');
             }
         }
-
-
     }
 
     public function verifikasi(Request $request, $riskRegisterId)

@@ -564,7 +564,7 @@ Route::group(['middleware' => ['auth']], function () {
 
   Route::prefix('risk-context')->group(function () {
         Route::get('/', [RiskContextController::class, 'index'])->name('risk-context.index');
-        Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'indexbyPeriodeUnit'])->name('risk-context.index-by-periode-unit');
+        Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detail'])->name('risk-context.detail');
         Route::get('/create', [RiskContextController::class, 'create'])->name('risk-context.create');
         Route::post('/store', [RiskContextController::class, 'store'])->name('risk-context.store');
         Route::get('/edit/{id}', [RiskContextController::class, 'edit'])->name('risk-context.edit');
@@ -575,6 +575,12 @@ Route::group(['middleware' => ['auth']], function () {
         // New routes for update or create functionality
         Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreate'])->name('risk-context.update-or-create');
         Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdate'])->name('risk-context.store-or-update');
+    });
+
+    Route::prefix('risk-context-anper')->group(function () {
+        Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detailAnper'])->name('risk-context-anper.detail');
+        Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreateAnper'])->name('risk-context-anper.update-or-create');
+        Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdateAnper'])->name('risk-context-anper.store-or-update');
     });
 
     Route::prefix('project-risk-context')->group(function () {
@@ -651,6 +657,11 @@ Route::prefix('risk-register-ap')->group(function () {
     Route::resource('/periods/{period}/monitorings', RiskRegisterApMonitoringController::class)
             ->names('risk-register-ap.monitorings')
             ->only(['index', 'show', 'edit', 'update']);
+    Route::prefix('risk-register-ap/{period}/monitorings')->name('risk-register-ap.monitorings.')->group(function () {
+        Route::post('send-all', [RiskRegisterApMonitoringController::class, 'sendAllMonitoring'])->name('send.all');
+        Route::post('{monitoring}/verify', [RiskRegisterApMonitoringController::class, 'verifyMonitoring'])->name('verify');
+        Route::get('{risk}/notes', [RiskRegisterApMonitoringController::class, 'getNotes'])->name('notes');
+    });
     Route::get('/', [RiskRegisterApController::class, 'index'])->name('risk-register-ap.index');
     Route::get('/create', [RiskRegisterApController::class, 'create'])->name('risk-register-ap.create');
     Route::post('/', [RiskRegisterApController::class, 'store'])->name('risk-register-ap.store');
@@ -665,6 +676,7 @@ Route::prefix('risk-register-ap')->group(function () {
     Route::get('/{riskRegister}/view', [RiskRegisterApController::class, 'view'])->name('risk-register-ap.view');
     Route::post('/send', [RiskRegisterApController::class, 'send'])->name('risk-register-ap.send');
     Route::post('/draft', [RiskRegisterApController::class, 'storeAsDraft'])->name('risk-register-ap.store-as-draft');
+    Route::get('/{riskRegister}/notes', [RiskRegisterApController::class, 'getRiskNotes'])->name('risk-register-ap.notes');
 
     Route::get('/{riskRegister}/analisa', [RiskRegisterApController::class, 'analisa'])->name('risk-register-ap.analisa');
     Route::post('/{riskRegister}/analisa', [RiskRegisterApController::class, 'doAnalisa'])->name('risk-register-ap.do-analisa');
@@ -735,6 +747,9 @@ Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->
     Route::put('/{riskRegister}', [App\Http\Controllers\CorporateRiskController::class, 'update'])->name('update');
     Route::delete('/{riskRegister}', [App\Http\Controllers\CorporateRiskController::class, 'destroy'])->name('destroy');
     Route::get('/{riskRegister}/view', [App\Http\Controllers\CorporateRiskController::class, 'view'])->name('view');
+
+    Route::get('/top-down', [App\Http\Controllers\CorporateRiskController::class, 'topDown'])->name('top-down');
+    Route::post('/top-down', [App\Http\Controllers\CorporateRiskController::class, 'storeTopDown'])->name('store-top-down');
 
     Route::get('/{riskRegister}/analisa', [App\Http\Controllers\CorporateRiskController::class, 'analisa'])->name('analisa');
     Route::post('/{riskRegister}/analisa', [App\Http\Controllers\CorporateRiskController::class, 'doAnalisa'])->name('do-analisa');

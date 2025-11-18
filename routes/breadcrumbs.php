@@ -105,9 +105,9 @@ Breadcrumbs::for('kamus-risiko-unit.index', function (BreadcrumbTrail $trail) {
 });
 
 // Periode Divisi > Risk Context Divisi
-Breadcrumbs::for('risk-context.index-by-periode-unit', function (BreadcrumbTrail $trail, $periodeId, $unitId) {
+Breadcrumbs::for('risk-context.detail', function (BreadcrumbTrail $trail, $periodeId, $unitId) {
     $trail->parent('risk-register-unit.periods');
-    $trail->push('Risk Context Divisi', route('risk-context.index-by-periode-unit', [$periodeId, $unitId]));
+    $trail->push('Risk Context Divisi', route('risk-context.detail', [$periodeId, $unitId]));
 });
 
 
@@ -198,6 +198,11 @@ Breadcrumbs::for('ap-led.edit', function (BreadcrumbTrail $trail, $periode, $id)
 Breadcrumbs::for('ap-led.show', function (BreadcrumbTrail $trail, $periode, $id) {
     $trail->parent('ap-led.index-by-periode', $periode);
     $trail->push('Detail Loss Event Anak Perusahaan', route('ap-led.show', [$periode, $id]));
+});
+
+Breadcrumbs::for('risk-context-anper.detail', function (BreadcrumbTrail $trail, $periodeId, $unitId) {
+    $trail->parent('risk-register-ap.periods');
+    $trail->push('Risk Context Anak Perusahaan', route('risk-context-anper.detail', [$periodeId, $unitId]));
 });
 
 // Periode Anak Perusahaan > Risk Register Anak Perusahaan > Kamus Risiko Unit
