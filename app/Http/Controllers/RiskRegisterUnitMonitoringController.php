@@ -74,6 +74,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         if ($unit) {
           $this->indexSubtitle = $unit->name;
         }
+        $isUnitMr = $unit->unit_mr;
 
         // if (!(Gate::check('risk_monitoring_list') || $user->hasProject($period))) {
         //     abort(403);
@@ -257,7 +258,8 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ];
         }
 
-        if (Gate::check('risk_monitoring_input')) {
+        $isUserUnitMr = (bool) $user->unit?->unit_mr;
+        if (Gate::check('risk_monitoring_input') && $userLevel == 1 && ($isUnitMr == $isUserUnitMr)) {
             $monitoringRoute = route('risk-register-unit.monitorings.edit', ['period' => request()->route('period'), 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
             $this->tableActions[] = [
                 'label' => 'Monitoring',
@@ -288,7 +290,6 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         }
 
         $hasVerificationMr = Gate::allows('verification_mr');
-        $isUnitMr = (bool) $user->unit?->unit_mr;
         $verificatorLevels = [2, 1];
         if (in_array($user->level_id, $verificatorLevels)) {
             $this->tableActions[] = [
@@ -303,7 +304,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     if (!monitoring || monitoring.is_approved) return false;
                     
                     const userLevel = ' . $user->level_id . ';
-                    const isUnitMr = ' . ($isUnitMr ? 'true' : 'false') . ';
+                    const isUserUnitMr = ' . ($isUserUnitMr ? 'true' : 'false') . ';
                     const hasVerificationMr = ' . ($hasVerificationMr ? 'true' : 'false') . ';
                     const status = monitoring.status;
 
@@ -311,10 +312,10 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     if (userLevel == 2 && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI.') return true;
 
                     // Verifier for Step 3 (Risk Officer Divisi MR -> Risk Owner Divisi MR)
-                    if (userLevel == 1 && isUnitMr && hasVerificationMr && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR.') return true;
+                    if (userLevel == 1 && isUserUnitMr && hasVerificationMr && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR.') return true;
 
                     // Verifier for Step 4 (Risk Owner Divisi MR -> Publish)
-                    if (userLevel == 2 && isUnitMr && hasVerificationMr && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR.') return true;
+                    if (userLevel == 2 && isUserUnitMr && hasVerificationMr && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR.') return true;
                     
                     return false;
                 }',

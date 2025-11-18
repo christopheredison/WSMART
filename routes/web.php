@@ -657,6 +657,11 @@ Route::prefix('risk-register-ap')->group(function () {
     Route::resource('/periods/{period}/monitorings', RiskRegisterApMonitoringController::class)
             ->names('risk-register-ap.monitorings')
             ->only(['index', 'show', 'edit', 'update']);
+    Route::prefix('risk-register-ap/{period}/monitorings')->name('risk-register-ap.monitorings.')->group(function () {
+        Route::post('send-all', [RiskRegisterApMonitoringController::class, 'sendAllMonitoring'])->name('send.all');
+        Route::post('{monitoring}/verify', [RiskRegisterApMonitoringController::class, 'verifyMonitoring'])->name('verify');
+        Route::get('{risk}/notes', [RiskRegisterApMonitoringController::class, 'getNotes'])->name('notes');
+    });
     Route::get('/', [RiskRegisterApController::class, 'index'])->name('risk-register-ap.index');
     Route::get('/create', [RiskRegisterApController::class, 'create'])->name('risk-register-ap.create');
     Route::post('/', [RiskRegisterApController::class, 'store'])->name('risk-register-ap.store');
