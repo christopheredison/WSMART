@@ -110,7 +110,7 @@
                                         </button>
                                         <button class="btn btn-link text-danger p-0" type="button" data-action="delete" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Hapus Rencana Perlakuan">
                                             <i class="bx bx-trash fs-5"></i>
-                                        </button>   
+                                        </button>
                                     </div>
                                 </td>
                                 @if ($index === 0)

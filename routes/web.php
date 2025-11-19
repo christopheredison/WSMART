@@ -463,6 +463,12 @@ Route::group(['middleware' => ['auth']], function () {
     Route::delete('project-led/{id}', [ProjectLEDController::class, 'destroy'])->name('project-led.destroy');
     Route::resource('project-led', ProjectLEDController::class)->except(['create', 'show', 'edit']);
     Route::get('project-leds/{projectId}', [ProjectLEDController::class, 'index'])->name('project-led.index-by-project');
+    Route::group(['prefix' => 'project-led'], function () {
+        Route::get('/files/{id}', [ProjectLEDController::class, 'getFiles'])->name('project-led.files.get');
+        Route::post('/files/store', [ProjectLEDController::class, 'storeFile'])->name('project-led.files.store');
+        Route::delete('/files/{id}', [ProjectLEDController::class, 'destroyFile'])->name('project-led.files.destroy');
+    });
+
     Route::get('kamus-risiko-project', [KamusRisikoProjectController::class, 'index'])->name('kamus-risiko-project.index');
     Route::post('kamus-risiko-project/add-risk', [KamusRisikoProjectController::class, 'addRisk'])->name('kamus-risiko-project.add-risk');
     Route::post('kamus-risiko-project/export', [KamusRisikoProjectController::class, 'exportExcel'])->name('kamus-risiko-project.export');
@@ -545,6 +551,11 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('unit-led/{periode}/{id}/edit', [UnitLEDController::class, 'edit'])->name('unit-led.edit');
     Route::put('unit-led/{id}', [UnitLEDController::class, 'update'])->name('unit-led.update');
     Route::delete('unit-led/{id}', [UnitLEDController::class, 'destroy'])->name('unit-led.destroy');
+    Route::group(['prefix' => 'unit-led'], function () {
+        Route::get('/files/{id}', [UnitLEDController::class, 'getFiles'])->name('unit-led.files.get');
+        Route::post('/files/store', [UnitLEDController::class, 'storeFile'])->name('unit-led.files.store');
+        Route::delete('/files/{id}', [UnitLEDController::class, 'destroyFile'])->name('unit-led.files.destroy');
+    });
 
     Route::get('kamus-risiko-unit', [KamusRisikoUnitController::class, 'index'])->name('kamus-risiko-unit.index');
     Route::post('kamus-risiko-unit/add-risk', [KamusRisikoUnitController::class, 'addRisk'])->name('kamus-risiko-unit.add-risk');
@@ -563,40 +574,52 @@ Route::group(['middleware' => ['auth']], function () {
   });
 
   Route::prefix('risk-context')->group(function () {
-        Route::get('/', [RiskContextController::class, 'index'])->name('risk-context.index');
-        Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detail'])->name('risk-context.detail');
-        Route::get('/create', [RiskContextController::class, 'create'])->name('risk-context.create');
-        Route::post('/store', [RiskContextController::class, 'store'])->name('risk-context.store');
-        Route::get('/edit/{id}', [RiskContextController::class, 'edit'])->name('risk-context.edit');
-        Route::put('/update/{id}', [RiskContextController::class, 'update'])->name('risk-context.update');
-        Route::get('/show/{id}', [RiskContextController::class, 'show'])->name('risk-context.show');
-        Route::delete('/destroy/{id}', [RiskContextController::class, 'destroy'])->name('risk-context.destroy');
+      Route::get('/', [RiskContextController::class, 'index'])->name('risk-context.index');
+      Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detail'])->name('risk-context.detail');
+      Route::get('/create', [RiskContextController::class, 'create'])->name('risk-context.create');
+      Route::post('/store', [RiskContextController::class, 'store'])->name('risk-context.store');
+      Route::get('/edit/{id}', [RiskContextController::class, 'edit'])->name('risk-context.edit');
+      Route::put('/update/{id}', [RiskContextController::class, 'update'])->name('risk-context.update');
+      Route::get('/show/{id}', [RiskContextController::class, 'show'])->name('risk-context.show');
+      Route::delete('/destroy/{id}', [RiskContextController::class, 'destroy'])->name('risk-context.destroy');
 
-        // New routes for update or create functionality
-        Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreate'])->name('risk-context.update-or-create');
-        Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdate'])->name('risk-context.store-or-update');
-    });
+      // New routes for update or create functionality
+      Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreate'])->name('risk-context.update-or-create');
+      Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdate'])->name('risk-context.store-or-update');
 
-    Route::prefix('risk-context-anper')->group(function () {
-        Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detailAnper'])->name('risk-context-anper.detail');
-        Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreateAnper'])->name('risk-context-anper.update-or-create');
-        Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdateAnper'])->name('risk-context-anper.store-or-update');
-    });
+      Route::post('/{id}/submit', [RiskContextController::class, 'submit'])->name('risk-context.submit');
+      Route::post('/{id}/verify', [RiskContextController::class, 'verify'])->name('risk-context.verify');
+      Route::post('/{id}/reject', [RiskContextController::class, 'reject'])->name('risk-context.reject');
+  });
 
-    Route::prefix('project-risk-context')->group(function () {
-        Route::get('/', [ProjectRiskContextController::class, 'index'])->name('project-risk-context.index');
-        Route::get('/project/{projectId}', [ProjectRiskContextController::class, 'indexByProjectPeriode'])->name('project-risk-context.index-by-project-periode');
-        Route::get('/create', [ProjectRiskContextController::class, 'create'])->name('project-risk-context.create');
-        Route::post('/store', [ProjectRiskContextController::class, 'store'])->name('project-risk-context.store');
-        Route::get('/edit/{id}', [ProjectRiskContextController::class, 'edit'])->name('project-risk-context.edit');
-        Route::put('/update/{id}', [ProjectRiskContextController::class, 'update'])->name('project-risk-context.update');
-        Route::get('/show/{id}', [ProjectRiskContextController::class, 'show'])->name('project-risk-context.show');
-        Route::delete('/destroy/{id}', [ProjectRiskContextController::class, 'destroy'])->name('project-risk-context.destroy');
+  Route::prefix('risk-context-anper')->group(function () {
+      Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detailAnper'])->name('risk-context-anper.detail');
+      Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreateAnper'])->name('risk-context-anper.update-or-create');
+      Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdateAnper'])->name('risk-context-anper.store-or-update');
 
-        // New routes for update or create functionality
-        Route::get('/update-or-create', [ProjectRiskContextController::class, 'updateOrCreate'])->name('project-risk-context.update-or-create');
-        Route::post('/store-or-update', [ProjectRiskContextController::class, 'storeOrUpdate'])->name('project-risk-context.store-or-update');
-    });
+      Route::post('/{id}/submit', [RiskContextController::class, 'submit'])->name('risk-context-anper.submit');
+      Route::post('/{id}/verify', [RiskContextController::class, 'verify'])->name('risk-context-anper.verify');
+      Route::post('/{id}/reject', [RiskContextController::class, 'reject'])->name('risk-context-anper.reject');
+  });
+
+  Route::prefix('project-risk-context')->group(function () {
+      Route::get('/', [ProjectRiskContextController::class, 'index'])->name('project-risk-context.index');
+      Route::get('/project/{projectId}', [ProjectRiskContextController::class, 'indexByProjectPeriode'])->name('project-risk-context.index-by-project-periode');
+      Route::get('/create', [ProjectRiskContextController::class, 'create'])->name('project-risk-context.create');
+      Route::post('/store', [ProjectRiskContextController::class, 'store'])->name('project-risk-context.store');
+      Route::get('/edit/{id}', [ProjectRiskContextController::class, 'edit'])->name('project-risk-context.edit');
+      Route::put('/update/{id}', [ProjectRiskContextController::class, 'update'])->name('project-risk-context.update');
+      Route::get('/show/{id}', [ProjectRiskContextController::class, 'show'])->name('project-risk-context.show');
+      Route::delete('/destroy/{id}', [ProjectRiskContextController::class, 'destroy'])->name('project-risk-context.destroy');
+
+      Route::get('/update-or-create', [ProjectRiskContextController::class, 'updateOrCreate'])->name('project-risk-context.update-or-create');
+      Route::post('/store-or-update', [ProjectRiskContextController::class, 'storeOrUpdate'])->name('project-risk-context.store-or-update');
+
+      // Eskalasi
+      Route::post('/{id}/submit', [ProjectRiskContextController::class, 'submit'])->name('project-risk-context.submit');
+      Route::post('/{id}/verify', [ProjectRiskContextController::class, 'verify'])->name('project-risk-context.verify');
+      Route::post('/{id}/reject', [ProjectRiskContextController::class, 'reject'])->name('project-risk-context.reject');
+  });
 });
 
 // Route untuk Measurement Parameter
@@ -698,6 +721,11 @@ Route::get('ap-led/{periode}/{id}/show', [ApLEDController::class, 'show'])->name
 Route::get('ap-led/{periode}/{id}/edit', [ApLEDController::class, 'edit'])->name('ap-led.edit');
 Route::put('ap-led/{id}', [ApLEDController::class, 'update'])->name('ap-led.update');
 Route::delete('ap-led/{id}', [ApLEDController::class, 'destroy'])->name('ap-led.destroy');
+Route::group(['prefix' => 'ap-led'], function () {
+    Route::get('/files/{id}', [ApLEDController::class, 'getFiles'])->name('ap-led.files.get');
+    Route::post('/files/store', [ApLEDController::class, 'storeFile'])->name('ap-led.files.store');
+    Route::delete('/files/{id}', [ApLEDController::class, 'destroyFile'])->name('ap-led.files.destroy');
+});
 
 Route::prefix('rekomendasi-risiko')->name('rekomendasi-risiko.')->group(function () {
     Route::get('/', [RekomendasiRisikoController::class, 'index'])->name('index');

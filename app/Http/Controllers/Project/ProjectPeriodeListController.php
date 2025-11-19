@@ -202,6 +202,11 @@ class ProjectPeriodeListController extends BasicCRUDController
                     $user->hasProject($data) ||
                     ($user->unit && $data->project && $data->project->cost_center_parent == $user->unit->cost_center);
             });
+            $dataTable->addColumn('has_risk_context', function ($data) use ($user) {
+                return Gate::check('project_admin_access') ||
+                    $user->hasProject($data) ||
+                    ($user->unit && $data->project && $data->project->cost_center_parent == $user->unit->cost_center);
+            });
         };
 
         $projectOptions = Project::select('id', 'project_name')->orderBy('project_name');
@@ -287,6 +292,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'label' => '<span class="bx bx-target-lock" title="Risk Context"></span>',
                 'action' => 'link',
                 'url' => route('project-risk-context.index-by-project-periode', ['projectId' => ':id']),
+                'active_state' => '(data, type, row) => row.has_risk_context',
                 'title' => 'Risk Context'
             ];
 

@@ -453,6 +453,7 @@ class RiskContextController extends Controller
                     'sasaran' => $request->sasaran,
                     'batasan' => $request->batasan,
                     'asumsi_dasar' => $request->asumsi_dasar,
+                    'status' => RiskContext::STATUS_DRAFT,
                 ]);
 
                 // Delete existing related data
@@ -531,5 +532,85 @@ class RiskContextController extends Controller
             return back()->withInput()
                 ->with('error', 'Terjadi kesalahan saat menyimpan data: ' . $e->getMessage());
         }
+    }
+
+    // SUBMIT (Risk Officer: Level 1)
+    public function submit($id)
+    {
+        $user = Auth::user();
+
+        // Cek Level Officer (1)
+        if ($user->level_id != 1) {
+            return back()->with('error', 'Akses Ditolak. Hanya Risk Officer yang dapat mengajukan verifikasi.');
+        }
+
+        $context = RiskContext::where('unit_id', $user->unit_id)->findOrFail($id);
+
+        // Validasi Status
+        if ($context->status !== RiskContext::STATUS_DRAFT && $context->status !== RiskContext::STATUS_REVISION) {
+            return back()->with('error', 'Status dokumen tidak valid untuk diajukan.');
+        }
+
+        $context->update([
+            'status' => RiskContext::STATUS_SUBMITTED,
+            'catatan_perbaikan' => null
+        ]);
+
+        return back()->with('success', 'Risk Context berhasil diajukan ke Risk Owner.');
+    }
+
+    // VERIFY (Risk Owner: Level 2)
+    public function verify($id)
+    {
+        $user = Auth::user();
+
+        // Cek Level Owner (2)
+        if ($user->level_id != 2) {
+            return back()->with('error', 'Akses Ditolak. Hanya Risk Owner yang dapat melakukan verifikasi.');
+        }
+
+        $context = RiskContext::where('unit_id', $user->unit_id)->findOrFail($id);
+
+        if ($context->status !== RiskContext::STATUS_SUBMITTED) {
+            return back()->with('error', 'Dokumen belum diajukan.');
+        }
+
+        $context->update([
+            'status' => RiskContext::STATUS_VERIFIED,
+            'verified_by' => $user->id,
+            'verified_at' => now(),
+            'catatan_perbaikan' => null
+        ]);
+
+        return back()->with('success', 'Risk Context berhasil diverifikasi.');
+    }
+
+    // REVISI (Risk Owner: Level 2)
+    public function reject(Request $request, $id)
+    {
+        $user = Auth::user();
+
+        if ($user->level_id != 2) {
+            return back()->with('error', 'Akses Ditolak. Hanya Risk Owner yang dapat melakukan revisi.');
+        }
+
+        $request->validate([
+            'catatan_perbaikan' => 'required|string'
+        ]);
+
+        $context = RiskContext::where('unit_id', $user->unit_id)->findOrFail($id);
+
+        // if ($context->status !== RiskContext::STATUS_SUBMITTED && $context->status !== RiskContext::STATUS_VERIFIED) {
+        //     return back()->with('error', 'Dokumen belum diajukan.');
+        // }
+
+        $context->update([
+            'status' => RiskContext::STATUS_REVISION,
+            'catatan_perbaikan' => $request->catatan_perbaikan,
+            'verified_by' => null,
+            'verified_at' => null
+        ]);
+
+        return back()->with('success', 'Risk Context dikembalikan untuk perbaikan.');
     }
 }

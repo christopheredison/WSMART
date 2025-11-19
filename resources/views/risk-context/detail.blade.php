@@ -2,208 +2,350 @@
 @section('dashboard')
 @include('partials.success-message')
 
-<div class="row mb-5">
-    <div class="col-12 d-flex align-items-center gap-3 position-relative">
-        <div class="svg-icon svg-icon-secondary">
-            @include('partials.icon-tool')
-        </div>
-        <h3 class="mb-0">Risk Context - {{ $unit->name }}</h3>
-    </div>
-</div>
+    @php
+        $context = $riskContexts->first(); 
+        $status = $context ? $context->status : 'Draft';
 
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title">
-                    <i class="bx bx-list-ul mr-2"></i>Risk Context
-                </h3>
-                <a href="{{ route('risk-context.update-or-create', ['unit_id' => $unit->id, 'periode_id' => $periode->id]) }}" class="btn btn-primary">
-                    <span class="bx bx-edit"></span> Update Risk Context
-                </a>
-            </div>
-            <div class="card-body">
-                <!-- I. Informasi Umum -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h6 class="fw-bold mb-3">I. Informasi Umum</h6>
-                        <div class="table-responsive">
-                            <table class="table table-bordered">
-                                <tbody>
-                                    <tr>
-                                        <td class="fw-bold" style="width: 5%">1</td>
-                                        <td class="fw-bold" style="width: 25%">Nama Unit Kerja</td>
-                                        <td>{{ $unit->name ?? '-' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">2</td>
-                                        <td class="fw-bold">Nilai</td>
-                                        <td>{{ $riskContexts->first()->nilai ?? '-' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">3</td>
-                                        <td class="fw-bold">Pimpinan Tertinggi Unit Kerja</td>
-                                        <td>{{ $riskContexts->first()->pimpinanTertinggi->name ?? '-' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">4</td>
-                                        <td class="fw-bold">Anggota Unit Kerja</td>
-                                        <td>
-                                            @if($riskContexts->first() && $riskContexts->first()->members->count() > 0)
-                                                @foreach($riskContexts->first()->members as $member)
-                                                    {{ $member->jabatan->name ?? '-' }}@if(!$loop->last), @endif
-                                                @endforeach
-                                            @else
-                                                -
-                                            @endif
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">5</td>
-                                        <td class="fw-bold">Sponsor</td>
-                                        <td>{{ $riskContexts->first()->sponsor ?? '-' }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+        $user = auth()->user();
+        $isRiskOfficer = ($user->level_id == 1); 
+        $isRiskOwner = ($user->level_id == 2);
+    @endphp
+
+    <div class="row g-5 mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                
+                <div class="card-header d-flex align-items-center gap-3 py-4">
+                    <div class="bg-info-subtle p-2 rounded-4">
+                        <div class="lead__icon">
+                            <div class="svg-icon svg-icon-2x svg-icon-info">
+                                @include('partials.icon-process')
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-block">
+                        <h3 class="m-0">Risk Context Divisi</h2>
+                        <div class="ff-preheading mb-0 mt-1 text-muted">
+                            {{ $unit->name }}
+                        </div>
+                    </div>
+
+                    <div class="ms-auto d-flex align-items-center gap-3">
+                        <div class="d-none d-md-block text-end">
+                            @if($status == 'Draft')
+                                <span class="badge bg-warning">Draft</span>
+                            @elseif($status == 'Submitted' && $isRiskOwner)
+                                <span class="badge bg-info">Menunggu Verifikasi</span>
+                            @elseif($status == 'Revision')
+                                <span class="badge bg-danger">Perlu Perbaikan</span>
+                            @elseif($status == 'Verified')
+                                <span class="badge bg-success">Terverifikasi</span>
+                            @endif
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            {{-- RISK OFFICER (Level 1) --}}
+                            @if($isRiskOfficer)
+                                @if($status == 'Draft' || $status == 'Revision')
+                                    <a href="{{ route('risk-context.update-or-create', ['unit_id' => $unit->id, 'periode_id' => $periode->id]) }}" class="btn btn-sm d-flex align-items-center gap-2 btn-primary">
+                                        <i class="bx bx-edit"></i> {{ $context ? 'Edit Data' : 'Isi Data' }}
+                                    </a>
+                                    
+                                    @if($context)
+                                    <form id="form-submit-context" action="{{ route('risk-context.submit', $context->id) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm d-flex align-items-center gap-2 btn-success">
+                                            <i class="bx bx-send"></i> Ajukan
+                                        </button>
+                                    </form>
+                                    @endif
+                                @elseif($status == 'Submitted')
+                                    <button class="btn btn-sm d-flex align-items-center gap-2 btn-outline-info" disabled>
+                                        <i class="bx bx-time me-1"></i> Menunggu Verifikasi
+                                    </button>
+                                @endif
+                            @endif
+
+                            {{-- RISK OWNER (Level 2) --}}
+                            @if($isRiskOwner && $context)
+                                @if($status == 'Submitted' || $status == 'Verified')
+                                    <button type="button" class="btn btn-sm d-flex align-items-center gap-2 btn-danger" data-bs-toggle="modal" data-bs-target="#modalReject">
+                                        <i class="bx bx-x"></i> Revisi
+                                    </button>
+                                @endif
+                                
+                                @if($status == 'Submitted')
+                                    <form id="form-verify-context" action="{{ route('risk-context.verify', $context->id) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm d-flex align-items-center gap-2 btn-success">
+                                            <i class="bx bx-check-double"></i> Setujui
+                                        </button>
+                                    </form>
+                                @endif
+                            @endif
                         </div>
                     </div>
                 </div>
 
-                <!-- II. Ruang Lingkup -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h6 class="fw-bold mb-3">II. Ruang Lingkup</h6>
-                        <div class="table-responsive">
-                            <table class="table table-bordered">
-                                <tbody>
-                                    <tr>
-                                        <td class="fw-bold" style="width: 5%">6</td>
-                                        <td class="fw-bold" style="width: 25%">Deskripsi</td>
-                                        <td>{{ $riskContexts->first()->deskripsi ?? '-' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">7</td>
-                                        <td class="fw-bold">Tujuan</td>
-                                        <td>{{ $riskContexts->first()->tujuan ?? '-' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">8</td>
-                                        <td class="fw-bold">Lingkup Pekerjaan</td>
-                                        <td>{{ $riskContexts->first()->lingkup_pekerjaan ?? '-' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">9</td>
-                                        <td class="fw-bold">Pekerjaan di luar lingkup</td>
-                                        <td>{{ $riskContexts->first()->pekerjaan_luar_lingkup ?? '-' }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                <div class="card-body p-lg-4">
+                    {{-- Alert Revisi --}}
+                    @if($context && $status == 'Revision' && $context->catatan_perbaikan)
+                    <div class="alert alert-danger d-flex align-items-center mt-0 mb-4" role="alert">
+                        <div class="svg-icon svg-icon-danger me-3">
+                            @include('partials.icon-alert')
+                        </div>
+                        <div class="flex-1 text-break">
+                            <strong>Catatan Perbaikan:</strong><br> {{ $context->catatan_perbaikan }}
                         </div>
                     </div>
-                </div>
+                    @endif
 
-                <!-- III. Konteks -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h6 class="fw-bold mb-3">III. Konteks</h6>
-                        <div class="table-responsive">
-                            <table class="table table-bordered">
-                                <tbody>
-                                    <tr>
-                                        <td class="fw-bold" style="width: 5%">10</td>
-                                        <td class="fw-bold" style="width: 25%">Sasaran</td>
-                                        <td>{{ $riskContexts->first()->sasaran ?? '-' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">11</td>
-                                        <td class="fw-bold">Batasan</td>
-                                        <td>{{ $riskContexts->first()->batasan ?? '-' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">12</td>
-                                        <td class="fw-bold">Asumsi Dasar</td>
-                                        <td>{{ $riskContexts->first()->asumsi_dasar ?? '-' }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    {{-- Alert Verifikasi --}}
+                    @if($context && $status == 'Verified' && $context->verified_at)
+                        <div class="alert alert-success d-flex align-items-center mt-0 mb-4 border-success border-dashed bg-light-success" role="alert">
+                            <i class="bx bx-check-circle fs-3 text-success me-3"></i>
+                            <div class="flex-1">
+                                <strong>Dokumen Terverifikasi</strong><br> oleh <span class="fw-bold">{{ $context->verifier->name ?? 'Risk Owner' }}</span> pada 
+                                {{ \Carbon\Carbon::parse($context->verified_at)->translatedFormat('d F Y, H:i') }}
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    @endif
 
-                <!-- IV. Stakeholder -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h6 class="fw-bold mb-3">IV. Stakeholder</h6>
+                    @if(!$context)
+                        <div class="text-center my-5">
+                            <div class="fs-5 fw-bold text-gray-800">Data Belum Tersedia</div>
+                            <p class="text-muted">Risk Context belum dibuat.</p>
+                            @if($isRiskOfficer)
+                                <a href="{{ route('risk-context.update-or-create', ['unit_id' => $unit->id, 'periode_id' => $periode->id]) }}" class="btn btn-primary mt-3">Mulai Isi Data</a>
+                            @endif
+                        </div>
+                    @else
+                        
+                        @php 
+                          $thClass = "bg-light text-dark fw-bold align-middle";
+                          $tdClass = "align-middle"; 
+                        @endphp
 
-                        <!-- Stakeholder Internal -->
-                        <div class="mb-3">
-                            <h6 class="fw-bold">Stakeholder Internal</h6>
-                            <div class="table-responsive">
-                                <table class="table table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>Nama Stakeholder</th>
-                                            <th>Peran / Fungsi</th>
-                                            <th>Komunikasi yang digunakan untuk masing-masing stakeholder</th>
-                                        </tr>
-                                    </thead>
+                        {{-- I. INFORMASI UMUM --}}
+                        <div class="mb-5">
+                            <h5 class="text-dark fw-bold mb-3">I. Informasi Umum</h5>
+                            <div class="rounded border">
+                                <table class="table table-bordered mb-0 align-middle">
                                     <tbody>
-                                        @if($riskContexts->first() && $riskContexts->first()->stakeholderInternals->count() > 0)
-                                            @foreach($riskContexts->first()->stakeholderInternals as $internal)
-                                            <tr>
-                                                <td>{{ $internal->stakeholder ?? '-' }}</td>
-                                                <td>{{ $internal->peran ?? '-' }}</td>
-                                                <td>{{ $internal->komunikasi ?? '-' }}</td>
-                                            </tr>
-                                            @endforeach
-                                        @else
-                                            <tr>
-                                                <td>-</td>
-                                                <td>-</td>
-                                                <td>-</td>
-                                            </tr>
-                                        @endif
+                                        <tr>
+                                            <td class="{{ $thClass }}" style="width: 5%; text-align:center;">1</td>
+                                            <td class="{{ $thClass }}" style="width: 30%;">Nama Unit Kerja</td>
+                                            <td class="{{ $tdClass }} fw-bold">{{ $unit->name }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="{{ $thClass }}" style="text-align:center;">2</td>
+                                            <td class="{{ $thClass }}">Nilai</td>
+                                            <td class="{{ $tdClass }}">{{ $context->nilai ?? '-' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="{{ $thClass }}" style="text-align:center;">3</td>
+                                            <td class="{{ $thClass }}">Pimpinan Tertinggi</td>
+                                            <td class="{{ $tdClass }}">{{ $context->pimpinanTertinggi->name ?? '-' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="{{ $thClass }}" style="text-align:center;">4</td>
+                                            <td class="{{ $thClass }}">Anggota</td>
+                                            <td class="{{ $tdClass }}">
+                                                @if($context->members->count() > 0)
+                                                    <ul class="mb-0 ps-3 text-gray-700">
+                                                        @foreach($context->members as $member)
+                                                            <li>{{ $member->nama }} <span class="text-muted small">({{ $member->jabatan->name ?? '-' }})</span></li>
+                                                        @endforeach
+                                                    </ul>
+                                                @else <span class="text-muted">-</span> @endif
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="{{ $thClass }}" style="text-align:center;">5</td>
+                                            <td class="{{ $thClass }}">Sponsor</td>
+                                            <td class="{{ $tdClass }}">{{ $context->sponsor ?? '-' }}</td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
 
-                        <!-- Stakeholder Eksternal -->
-                        <div class="mb-3">
-                            <h6 class="fw-bold">Stakeholder Eksternal</h6>
-                            <div class="table-responsive">
-                                <table class="table table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>Nama Stakeholder</th>
-                                            <th>Peran / Fungsi</th>
-                                            <th>Komunikasi yang digunakan untuk masing-masing stakeholder</th>
-                                        </tr>
-                                    </thead>
+                        {{-- II. RUANG LINGKUP --}}
+                        <div class="mb-5">
+                            <h5 class="text-dark fw-bold mb-3">II. Ruang Lingkup</h5>
+                            <div class="rounded border">
+                                <table class="table table-bordered mb-0">
                                     <tbody>
-                                        @if($riskContexts->first() && $riskContexts->first()->stakeholderExternals->count() > 0)
-                                            @foreach($riskContexts->first()->stakeholderExternals as $external)
-                                            <tr>
-                                                <td>{{ $external->stakeholder ?? '-' }}</td>
-                                                <td>{{ $external->peran ?? '-' }}</td>
-                                                <td>{{ $external->komunikasi ?? '-' }}</td>
-                                            </tr>
-                                            @endforeach
-                                        @else
-                                            <tr>
-                                                <td>-</td>
-                                                <td>-</td>
-                                                <td>-</td>
-                                            </tr>
-                                        @endif
+                                        <tr>
+                                            <td class="{{ $thClass }}" style="width: 5%; text-align:center;">6</td>
+                                            <td class="{{ $thClass }}" style="width: 30%;">Deskripsi</td>
+                                            <td class="{{ $tdClass }}">{{ $context->deskripsi ?? '-' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="{{ $thClass }}" style="text-align:center;">7</td>
+                                            <td class="{{ $thClass }}">Tujuan</td>
+                                            <td class="{{ $tdClass }}">{{ $context->tujuan ?? '-' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="{{ $thClass }}" style="text-align:center;">8</td>
+                                            <td class="{{ $thClass }}">Lingkup Pekerjaan</td>
+                                            <td class="{{ $tdClass }}">{{ $context->lingkup_pekerjaan ?? '-' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="{{ $thClass }}" style="text-align:center;">9</td>
+                                            <td class="{{ $thClass }}">Pekerjaan Luar Lingkup</td>
+                                            <td class="{{ $tdClass }}">{{ $context->pekerjaan_luar_lingkup ?? '-' }}</td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-                    </div>
+
+                        {{-- III. KONTEKS --}}
+                        <div class="mb-5">
+                            <h5 class="text-dark fw-bold mb-3">III. Konteks</h5>
+                            <div class="rounded border">
+                                <table class="table table-bordered mb-0">
+                                    <tbody>
+                                        <tr>
+                                            <td class="{{ $thClass }}" style="width: 5%; text-align:center;">10</td>
+                                            <td class="{{ $thClass }}" style="width: 30%;">Sasaran</td>
+                                            <td class="{{ $tdClass }}">{{ $context->sasaran ?? '-' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="{{ $thClass }}" style="text-align:center;">11</td>
+                                            <td class="{{ $thClass }}">Batasan</td>
+                                            <td class="{{ $tdClass }}">{{ $context->batasan ?? '-' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="{{ $thClass }}" style="text-align:center;">12</td>
+                                            <td class="{{ $thClass }}">Asumsi Dasar</td>
+                                            <td class="{{ $tdClass }}">{{ $context->asumsi_dasar ?? '-' }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {{-- IV. STAKEHOLDER --}}
+                        <div class="mb-5">
+                            <h5 class="text-dark fw-bold mb-3">IV. Stakeholder</h5>
+                            
+                            <div class="mb-3">
+                                <h6 class="fw-bold">Stakeholder Internal</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead>
+                                            <tr class="bg-light"><th>Nama</th><th>Peran</th><th>Komunikasi</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse($context->stakeholderInternals as $internal)
+                                                <tr><td>{{ $internal->stakeholder }}</td><td>{{ $internal->peran }}</td><td>{{ $internal->komunikasi }}</td></tr>
+                                            @empty
+                                                <tr><td colspan="3" class="text-center text-muted">-</td></tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6 class="fw-bold">Stakeholder Eksternal</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead>
+                                            <tr class="bg-light"><th>Nama</th><th>Peran</th><th>Komunikasi</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse($context->stakeholderExternals as $external)
+                                                <tr><td>{{ $external->stakeholder }}</td><td>{{ $external->peran }}</td><td>{{ $external->komunikasi }}</td></tr>
+                                            @empty
+                                                <tr><td colspan="3" class="text-center text-muted">-</td></tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                    @endif
                 </div>
             </div>
         </div>
     </div>
-</div>
+
+    {{-- MODAL REVISI --}}
+    @if($context && $isRiskOwner)
+    <div class="modal fade" id="modalReject" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="form-revisi-context" action="{{ route('risk-context.reject', $context->id) }}" method="POST">
+                    @csrf
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold">Revisi Dokumen</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body pt-4">
+                        <div class="alert alert-warning p-3 mb-3 d-flex align-items-center">
+                            <i class="bx bx-error-circle fs-3 text-warning me-3"></i>
+                            <div>Status berubah menjadi <strong>Perlu Perbaikan</strong>.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold required">Catatan Perbaikan</label>
+                            <textarea name="catatan_perbaikan" class="form-control" rows="4" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" id="btn-submit-revisi" class="btn btn-danger">Kirim Revisi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
+
 @endsection
+
+@push('scripts')
+<script>
+    $(document).ready(function() {
+        // 1. Submit
+        $('#form-submit-context').on('submit', function(e) {
+            e.preventDefault();
+            let form = this;
+            Swal.fire({
+                title: 'Ajukan Verifikasi?',
+                text: "Data akan dikirim ke Risk Owner.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Ajukan!',
+                cancelButtonText: 'Batal',
+            }).then((result) => { if (result.isConfirmed) form.submit(); });
+        });
+
+        // 2. Verify
+        $('#form-verify-context').on('submit', function(e) {
+            e.preventDefault();
+            let form = this;
+            Swal.fire({
+                title: 'Setujui Dokumen?',
+                text: "Dokumen akan berstatus Verified.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Setujui!',
+                cancelButtonText: 'Batal',
+            }).then((result) => { if (result.isConfirmed) form.submit(); });
+        });
+
+        // 3. Loading Revisi
+        $('#form-revisi-context').on('submit', function() {
+            let btn = $('#btn-submit-revisi');
+            btn.prop('disabled', true);
+            btn.html('<span class="spinner-border spinner-border-sm me-2" style="width: 0.75rem; height: 0.75rem;" role="status" aria-hidden="true"></span> Mengirim...');
+            return true;
+        });
+    });
+</script>
+@endpush
