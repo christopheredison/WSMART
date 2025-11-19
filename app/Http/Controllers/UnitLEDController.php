@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use App\Models\LossEvent;
+use App\Models\LossEventFile;
 use App\Models\Periode;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\KategoriKejadian;
@@ -871,5 +872,78 @@ class UnitLEDController extends Controller
       }
       
       return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
+    }
+
+    public function getFiles($id)
+    {
+        $files = LossEventFile::where('loss_event_id', $id)
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $files->map(function($file) {
+                return [
+                    'id' => $file->id,
+                    'file_name' => $file->file_name,
+                    'file_type' => $file->file_type,
+                    'file_size' => number_format($file->file_size / 1024, 2) . ' KB',
+                    'file_url' => asset('storage/' . $file->file_path), 
+                    'created_at' => $file->created_at->format('d M Y H:i')
+                ];
+            })
+        ]);
+    }
+
+    public function storeFile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'loss_event_id' => 'required|exists:loss_events,id',
+            'file_dokumen' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png,xls,xlsx|max:20480',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        try {
+            if ($request->hasFile('file_dokumen')) {
+                $file = $request->file('file_dokumen');
+                $originalName = $file->getClientOriginalName();
+                $fileSize = $file->getSize();
+                $fileType = $file->getClientMimeType();
+                
+                $path = $file->store('loss-event-unit', 'public');
+
+                LossEventFile::create([
+                    'loss_event_id' => $request->loss_event_id,
+                    'file_name' => $originalName,
+                    'file_path' => $path,
+                    'file_type' => $fileType,
+                    'file_size' => $fileSize
+                ]);
+
+                return response()->json(['success' => true, 'message' => 'File berhasil diunggah']);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Gagal mengunggah file: ' . $e->getMessage()]);
+        }
+    }
+
+    public function destroyFile($id)
+    {
+        try {
+            $file = LossEventFile::findOrFail($id);
+            
+            if (Storage::disk('public')->exists($file->file_path)) {
+                Storage::disk('public')->delete($file->file_path);
+            }
+
+            $file->delete();
+
+            return response()->json(['success' => true, 'message' => 'File berhasil dihapus']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Gagal menghapus file']);
+        }
     }
 }

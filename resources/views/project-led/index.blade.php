@@ -27,7 +27,7 @@
                     <div class="row" id="table-filter">
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Tahun</label>
-                            <select class="form-select" id="filter-tahun">
+                            <select class="form-select select2" id="filter-tahun">
                                 <option value="">Semua</option>
                                 @php
                                     $currentYear = date('Y');
@@ -40,7 +40,7 @@
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Identifikasi Kejadian</label>
-                            <select class="form-select" id="filter-peristiwa">
+                            <select class="form-select select2" id="filter-peristiwa">
                                 <option value="">Semua</option>
                                 @foreach($peristiwaRisikos as $risiko)
                                     <option value="{{ $risiko->id }}">{{ $risiko->title }}</option>
@@ -49,7 +49,7 @@
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Kategori Kejadian</label>
-                            <select class="form-select" id="filter-kategori">
+                            <select class="form-select select2" id="filter-kategori">
                                 <option value="">Semua</option>
                                 @foreach($kategoriKejadians as $kategori)
                                     <option value="{{ $kategori->id }}">{{ $kategori->kategori_kejadian }}</option>
@@ -77,6 +77,48 @@
                         <tbody class="list">
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalUploadDoc" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Kelola Dokumen Pendukung</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <form id="form-upload-doc" enctype="multipart/form-data">
+                                @csrf
+                                <input type="hidden" name="loss_event_id" id="upload_loss_event_id">
+                                <div class="input-group">
+                                    <input type="file" class="form-control" name="file_dokumen" id="file_dokumen" required>
+                                    <button class="btn btn-primary" type="submit" id="btn-simpan-file">
+                                        <span class="bx bx-upload"></span> Upload
+                                    </button>
+                                </div>
+                                <small class="text-muted">Format: PDF, Doc, Excel, Gambar (Max 10MB)</small>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped" style="table-layout: fixed; width: 100%">
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%" class="text-center">#</th>
+                                    <th style="width: 55%">Nama File</th>
+                                    <th style="width: 25%">Tanggal Upload</th>
+                                    <th style="width: 15%" class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="list-files-body">
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -200,6 +242,126 @@ $(document).ready(function() {
             }
         });
     }
+
+    // 1. Event saat tombol Upload Dokumen di klik (Buka Modal)
+    $(document).on('click', '.btn-upload-doc', function() {
+        let id = $(this).data('id');
+        $('#upload_loss_event_id').val(id);
+        $('#file_dokumen').val('');
+        loadFiles(id);
+        $('#modalUploadDoc').modal('show');
+    });
+
+    // 2. Fungsi Load List File
+    function loadFiles(id) {
+        $('#list-files-body').html('<tr><td colspan="4" class="text-center">Memuat data...</td></tr>');
+        
+        $.ajax({
+            url: '/project-led/files/' + id,
+            type: 'GET',
+            success: function(response) {
+                let html = '';
+                if(response.data.length > 0) {
+                    $.each(response.data, function(i, file) {
+                        html += `
+                            <tr>
+                                <td class="text-center align-middle">${i+1}</td>
+                                
+                                <td class="text-break align-middle">
+                                    <a href="${file.file_url}" target="_blank" class="text-decoration-none fw-bold" data-bs-toggle="tooltip" title="Klik untuk melihat file">
+                                        ${file.file_name}
+                                    </a>
+                                </td>
+                                
+                                <td class="align-middle">${file.created_at}</td>
+                                
+                                <td class="text-center align-middle">
+                                    <button class="btn btn-sm btn-outline-danger btn-delete-file" type="button" data-id="${file.id}" data-bs-toggle="tooltip" title="Hapus File">
+                                        <span class="bx bx-trash"></span> Hapus
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    html = '<tr><td colspan="4" class="text-center text-muted py-3">Belum ada dokumen yang diunggah.</td></tr>';
+                }
+                $('#list-files-body').html(html);
+                $('[data-bs-toggle="tooltip"]').tooltip();
+            },
+            error: function() {
+                $('#list-files-body').html('<tr><td colspan="4" class="text-center text-danger">Gagal memuat data.</td></tr>');
+            }
+        })
+    }
+
+    // 3. Proses Upload File
+    $('#form-upload-doc').on('submit', function(e) {
+        e.preventDefault();
+        let formData = new FormData(this);
+        let btn = $('#btn-simpan-file');
+        let originalText = btn.html();
+
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" style="width: 0.75rem; height: 0.75rem;" role="status"></span> Uploading...');
+
+        $.ajax({
+            url: "{{ route('project-led.files.store') }}",
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(res) {
+                if(res.success) {
+                    loadFiles($('#upload_loss_event_id').val());
+                    $('#file_dokumen').val('');
+                    Swal.fire('Berhasil', res.message, 'success');
+                } else {
+                    Swal.fire('Gagal', res.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                Swal.fire('Error', 'Terjadi kesalahan server', 'error');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+
+    // 4. Proses Hapus File
+    $(document).on('click', '.btn-delete-file', function() {
+        let fileId = $(this).data('id');
+        let currentLossEventId = $('#upload_loss_event_id').val();
+
+        Swal.fire({
+            title: 'Hapus File?',
+            text: "File yang dihapus tidak dapat dikembalikan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/project-led/files/' + fileId,
+                    type: 'DELETE',
+                    data: { _token: '{{ csrf_token() }}' },
+                    success: function(res) {
+                        if(res.success) {
+                            loadFiles(currentLossEventId);
+                            Swal.fire('Terhapus!', res.message, 'success');
+                        } else {
+                            Swal.fire('Gagal', res.message, 'error');
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Error', 'Gagal menghapus file', 'error');
+                    }
+                });
+            }
+        });
+    });
 });
 </script>
 @endpush

@@ -10,6 +10,11 @@ class RiskContext extends Model
 {
     use HasFactory, SoftDeletes;
 
+    const STATUS_DRAFT = 'Draft';
+    const STATUS_SUBMITTED = 'Submitted';
+    const STATUS_REVISION = 'Revision';
+    const STATUS_VERIFIED = 'Verified';
+
     protected $fillable = [
         'unit_id',
         'periode_id',
@@ -23,6 +28,10 @@ class RiskContext extends Model
         'sasaran',
         'batasan',
         'asumsi_dasar',
+        'status',
+        'catatan_perbaikan',
+        'verified_by',
+        'verified_at'
     ];
 
     public function unit()
@@ -53,5 +62,10 @@ class RiskContext extends Model
     public function stakeholderExternals()
     {
         return $this->hasMany(RiskContextStakeholderExternal::class);
+    }
+
+    public function verifier()
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 }
