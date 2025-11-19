@@ -11,6 +11,11 @@ class ProjectRiskContext extends Model
 
     protected $table = 'project_risk_contexts';
 
+    const STATUS_DRAFT = 'Draft';
+    const STATUS_SUBMITTED = 'Submitted'; // Menunggu Verifikasi
+    const STATUS_REVISION = 'Revision';   // Perlu Perbaikan
+    const STATUS_VERIFIED = 'Verified';   // Disetujui
+
     protected $fillable = [
         'project_id',
         'nilai',
@@ -23,6 +28,10 @@ class ProjectRiskContext extends Model
         'sasaran',
         'batasan',
         'asumsi_dasar',
+        'status',
+        'catatan_perbaikan',
+        'verified_by',
+        'verified_at'
     ];
 
     public function project()
@@ -35,7 +44,6 @@ class ProjectRiskContext extends Model
         return $this->belongsTo(Jabatan::class, 'pimpinan_tertinggi_jabatan_id');
     }
 
-    // RELASI HASMANY BARU
     public function members()
     {
         return $this->hasMany(ProjectRiskContextMember::class, 'project_risk_context_id');
@@ -49,5 +57,9 @@ class ProjectRiskContext extends Model
     public function stakeholderExternals()
     {
         return $this->hasMany(ProjectRiskContextStakeholderExternal::class, 'project_risk_context_id');
+    }
+
+    public function verifier() {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 }

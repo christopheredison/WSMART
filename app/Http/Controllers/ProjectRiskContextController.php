@@ -39,7 +39,13 @@ class ProjectRiskContextController extends Controller
         $project = $projectPeriodeList->project;
 
         $riskContexts = ProjectRiskContext::where('project_id', $project->id)
-            ->with(['pimpinanTertinggi', 'members.jabatan', 'stakeholderInternals', 'stakeholderExternals'])
+            ->with([
+                'pimpinanTertinggi', 
+                'members.jabatan', 
+                'stakeholderInternals', 
+                'stakeholderExternals',
+                'verifier'
+            ])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -161,6 +167,8 @@ class ProjectRiskContextController extends Controller
             $projectRiskContext = ProjectRiskContext::where('project_id', $request->project_id)->first();
 
             if ($projectRiskContext) {
+                $contextData['status'] = ProjectRiskContext::STATUS_DRAFT;
+
                 // Update
                 $projectRiskContext->update($contextData);
                 $projectRiskContext->members()->delete();
@@ -248,5 +256,86 @@ class ProjectRiskContextController extends Controller
 
         return redirect()->route('project-risk-context.index')
             ->with('success', 'Project Risk Context berhasil dihapus.');
+    }
+
+    // Risk Officer Mengajukan (Submit)
+    public function submit($id)
+    {
+        $user = auth()->user();
+        
+        // Cek Hak Akses Risk Officer
+        if (!($user->level_id == 6 || is_null($user->level_id))) {
+            return back()->with('error', 'Akses Ditolak. Hanya Risk Officer yang dapat mengajukan verifikasi.');
+        }
+
+        $context = ProjectRiskContext::findOrFail($id);
+
+        // Cek Status Dokumen (Hanya boleh Draft atau Revision)
+        if ($context->status !== ProjectRiskContext::STATUS_DRAFT && $context->status !== ProjectRiskContext::STATUS_REVISION) {
+            return back()->with('error', 'Status dokumen tidak valid untuk diajukan.');
+        }
+
+        $context->update([
+            'status' => ProjectRiskContext::STATUS_SUBMITTED,
+            'catatan_perbaikan' => null
+        ]);
+
+        return back()->with('success', 'Risk Context berhasil diajukan ke Risk Owner.');
+    }
+
+    // Risk Owner Menyetujui (Verify)
+    public function verify($id)
+    {
+        $user = auth()->user();
+
+        // Cek Hak Akses Risk Owner
+        if ($user->level_id != 7) {
+            return back()->with('error', 'Akses Ditolak. Hanya Risk Owner yang dapat menyetujui dokumen ini.');
+        }
+
+        $context = ProjectRiskContext::findOrFail($id);
+        
+        if ($context->status !== ProjectRiskContext::STATUS_SUBMITTED) {
+            return back()->with('error', 'Dokumen belum diajukan.');
+        }
+
+        $context->update([
+            'status' => ProjectRiskContext::STATUS_VERIFIED,
+            'verified_by' => $user->id,
+            'verified_at' => now(),
+            'catatan_perbaikan' => null
+        ]);
+
+        return back()->with('success', 'Risk Context berhasil diverifikasi.');
+    }
+
+    // Risk Owner Menolak/Minta Revisi (Reject)
+    public function reject(Request $request, $id)
+    {
+        $user = auth()->user();
+
+        // Cek Hak Akses Risk Owner
+        if ($user->level_id != 7) {
+            return back()->with('error', 'Akses Ditolak. Hanya Risk Owner yang dapat melakukan revisi.');
+        }
+
+        $request->validate([
+            'catatan_perbaikan' => 'required|string'
+        ]);
+
+        $context = ProjectRiskContext::findOrFail($id);
+
+        // if ($context->status !== ProjectRiskContext::STATUS_SUBMITTED) {
+        //     return back()->with('error', 'Dokumen belum diajukan.');
+        // }
+
+        $context->update([
+            'status' => ProjectRiskContext::STATUS_REVISION,
+            'catatan_perbaikan' => $request->catatan_perbaikan,
+            'verified_by' => null,
+            'verified_at' => null
+        ]);
+
+        return back()->with('success', 'Risk Context dikembalikan untuk perbaikan.');
     }
 }

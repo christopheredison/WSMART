@@ -5,21 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class LossEventFile extends Model
+class LossEventApFile extends Model
 {
     use HasFactory;
 
-    protected $table = 'loss_event_files';
     protected $fillable = [
-        'loss_event_id',
+        'loss_event_ap_id',
         'file_path',
         'file_name',
         'file_type',
         'file_size'
     ];
 
-    public function lostEvent()
+    public function lossEventAp()
     {
-        return $this->belongsTo(LossEvent::class, 'lost_event_id');
+        return $this->belongsTo(LossEventAp::class, 'loss_event_ap_id');
     }
 }

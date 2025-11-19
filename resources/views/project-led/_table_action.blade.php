@@ -1,8 +1,11 @@
 <div class="d-flex gap-2">
     <a href="{{ route('project-led.show', $row->id) }}" 
+        type="button"
         class="btn btn-sm btn-primary" 
-        data-bs-toggle="tooltip" 
-        title="View Data">
+        data-bs-toggle="tooltip"
+        data-bs-title="View"
+        title="View Data"
+    >
         <i class="bx bx-show"></i>
     </a>
     @if ($row->version > 0) 
@@ -13,6 +16,12 @@
           <i class="bx bx-edit"></i>
       </a>
     @endif
+    <button type="button" class="btn btn-sm btn-secondary btn-upload-doc" 
+        data-id="{{ $row->id }}" 
+        data-bs-toggle="tooltip" 
+        title="Upload Dokumen">
+        <i class="bx bx-file"></i>
+    </button>
     <button class="btn btn-sm btn-danger" 
         onclick="deleteData({{ $row->id }})" 
         data-bs-toggle="tooltip" 
