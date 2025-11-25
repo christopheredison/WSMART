@@ -281,7 +281,8 @@ $(document).ready(function() {
       { 
         altInput: false,
         altFormat: "j F Y",
-        dateFormat: "Y-m-d",
+        dateFormat: "d/m/Y",
+        disableMobile: true,
         maxDate: 'today',
       }
     );

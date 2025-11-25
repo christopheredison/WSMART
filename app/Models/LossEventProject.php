@@ -47,6 +47,7 @@ class LossEventProject extends Model
         'biaya_upaya_perbaikan',
         'hasil_perbaikan',
         'version',
+        'project_risk_id',
     ];
 
     public function projectSektor()
@@ -96,5 +97,10 @@ class LossEventProject extends Model
     public function files()
     {
         return $this->hasMany(LossEventProjectFile::class, 'loss_event_project_id');
+    }
+
+    public function risiko()
+    {
+        return $this->belongsTo(ProjectRisk::class, 'project_risk_id');
     }
 }

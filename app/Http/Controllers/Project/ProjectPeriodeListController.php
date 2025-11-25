@@ -9,6 +9,7 @@ use App\Models\ProjectPeriodeList;
 use App\Models\RiskMap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 
 class ProjectPeriodeListController extends BasicCRUDController
 {
@@ -22,27 +23,31 @@ class ProjectPeriodeListController extends BasicCRUDController
         'project_code' => [
             'label' => 'Kode',
             'data' => 'project.meta.profit_center',
+            'name' => 'profit_center',
             'render' => '(data, type, row) => row.project?.meta?.profit_center || "-"',
             'orderable' => false,
-            'searchable' => false,
+            'searchable' => true,
         ],
         'project_id' => [
             'label' => 'Proyek',
             'data' => 'project.project_name',
+            'name' => 'projects.project_name',
             'render' => '(data, type, row) => row.project?.project_name || "-"',
-            'searchable' => true,
             'orderable' => false,
+            'searchable' => true,
         ],
         'ok' => [
             'label' => 'Nilai OK',
             'data' => 'project.meta.omset',
+            'name' => 'omset',
             'render' => '(data, type, row) => row.project?.meta?.omset ? Intl.NumberFormat(\'id-ID\').format(row.project.meta.omset) : "-"',
             'orderable' => false,
-            'searchable' => false,
+            'searchable' => true,
         ],
         'tanggal_mulai' => [
             'label' => 'Tanggal Mulai',
             'data' => 'project.meta.tanggal_mulai',
+            'name' => 'tanggal_mulai',
             'render' => '(data, type, row) => {
                 if (!row.project?.meta?.tanggal_mulai) return "-";
                 const date = new Date(row.project.meta.tanggal_mulai);
@@ -50,7 +55,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 return date.toLocaleDateString("id-ID", options);
             }',
             'orderable' => false,
-            'searchable' => false,
+            'searchable' => true,
         ],
         'skala_risiko' => [
             'label' => 'Nilai Risiko',
@@ -59,7 +64,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 (data) => data ? Intl.NumberFormat('id-ID').format(data) : '-'
                 JS,
             'orderable' => false,
-            'searchable' => false,
+            'searchable' => true,
         ],
         'project_risks_count' => [
             'label' => 'Jumlah Risiko',
@@ -82,117 +87,122 @@ class ProjectPeriodeListController extends BasicCRUDController
             'withCount' => ['projectRisks'],
         ]);
 
-        $periodeOptions = Periode::select('id', 'tahun')->orderBy('tahun')->get()->pluck('tahun', 'id')->toArray();
-
         $user = request()->user();
         $user->load('projects', 'unit');
 
         $userProjectIds = $user->projects->pluck('id');
         $this->userProjectIdsx = $user->projects->pluck('id')->toArray();
 
-        // Mendapatkan project berdasarkan unit jika user memiliki unit
         $unitProjectIds = collect([]);
         if ($user->unit && !in_array($user->level_id ?? 0, [6, 7])) {
             $unitProjectIds = $user->unit->projects()->pluck('id');
         }
 
-        // Menggabungkan project IDs dari user dan unit
         $allProjectIds = $userProjectIds->merge($unitProjectIds)->unique();
 
-        // $this->callbackQuery = function ($query) use ($userProjectIds) {
-        //     if ($userProjectIds->count() > 0) {
-        //         $query->orderByRaw('CASE WHEN project_periode_lists.project_id IN (' . $userProjectIds->join(',') . ') THEN 1 ELSE 2 END');
-        //     } else {
-        //         $query->orderBy('project_id', 'desc');
-        //     }
-        //     $query->orderBy('updated_at', 'desc');
-        //     if (!Gate::check('project_periode_view')) {
-        //         $query->whereIn('project_id', $userProjectIds);
-        //     }
-        // };
-
+        // --- CALLBACK QUERY ---
         $this->callbackQuery = function ($query) use ($userProjectIds, $unitProjectIds, $allProjectIds, $user) {
-            $query->reorder();
+            // Join tabel projects (Wajib untuk sorting/filtering)
+            $query->join('projects', 'project_periode_lists.project_id', '=', 'projects.id');
+            
+            // PERBAIKAN SORTING:
+            // Logika custom order (Prioritas Project & Updated At) HANYA dijalankan
+            // jika User TIDAK sedang melakukan sorting lewat kolom tabel.
+            if (!request()->has('order')) {
+                
+                $query->reorder(); // Reset default order model
 
-            // if ($userProjectIds->isNotEmpty()) {
-            //     $idList = $userProjectIds->join(',');
-            //     $query->orderByRaw("
-            //         CASE
-            //             WHEN project_periode_lists.project_id IN ({$idList}) THEN 1
-            //             ELSE 2
-            //         END ASC,
-            //         updated_at DESC
-            //     ");
-            // } else {
-            //     $query->orderBy('updated_at', 'desc');
-            // }
+                if ($allProjectIds->isNotEmpty()) {
+                    $userIdList = $userProjectIds->join(',');
+                    $allIdList = $allProjectIds->join(',');
 
-            // if (!Gate::check('project_periode_view')) {
-            //     $query->whereIn('project_id', $userProjectIds);
-            // }
-
-            if ($allProjectIds->isNotEmpty()) {
-                $userIdList = $userProjectIds->join(',');
-                $allIdList = $allProjectIds->join(',');
-
-                if ($userProjectIds->isNotEmpty() && $unitProjectIds->isNotEmpty()) {
-                    $query->orderByRaw("
-                        CASE
-                            WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 1
-                            WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 2
-                            ELSE 3
-                        END ASC,
-                        updated_at DESC
-                    ");
-                } else {
-                    $query->orderByRaw("
-                        CASE
-                            WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 1
-                            ELSE 2
-                        END ASC,
-                        updated_at DESC
-                    ");
+                    // Logika Sorting Custom (User Projects > Unit Projects > Others)
+                    if ($userProjectIds->isNotEmpty() && $unitProjectIds->isNotEmpty()) {
+                        $query->orderByRaw("
+                            CASE
+                                WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 1
+                                WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 2
+                                ELSE 3
+                            END ASC
+                        ");
+                    } elseif ($allProjectIds->isNotEmpty()) {
+                        $query->orderByRaw("
+                            CASE
+                                WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 1
+                                ELSE 2
+                            END ASC
+                        ");
+                    }
                 }
-            } else {
-                $query->orderBy('updated_at', 'desc');
+                
+                // Default Secondary Sort
+                $query->orderBy('project_periode_lists.updated_at', 'desc');
             }
 
-            // Filter berdasarkan permission dan level
+            // Filter permission tetap dijalankan (tidak di dalam if)
             if (!Gate::check('project_periode_view')) {
-                // Jika user adalah user project (level 6 atau 7), hanya tampilkan project miliknya
                 if (in_array($user->level_id ?? 0, [6, 7])) {
-                    $query->whereIn('project_id', $userProjectIds);
-                }
-                // Jika user adalah user divisi, tampilkan project miliknya dan project di bawah unitnya
-                else if ($user->unit) {
-                    $query->whereIn('project_id', $allProjectIds);
-                }
-                // Jika tidak memiliki unit, hanya tampilkan project miliknya
-                else {
-                    $query->whereIn('project_id', $userProjectIds);
+                    $query->whereIn('project_periode_lists.project_id', $userProjectIds);
+                } else if ($user->unit) {
+                    $query->whereIn('project_periode_lists.project_id', $allProjectIds);
+                } else {
+                    $query->whereIn('project_periode_lists.project_id', $userProjectIds);
                 }
             }
         };
 
+        // --- DATATABLE CALLBACK ---
         $this->datatableCallback = function ($dataTable) use ($user) {
-            // $dataTable->addColumn('has_view', function ($data) use ($user) {
-            //     return Gate::check('project_periode_view') || $user->hasProject($data);
-            // });
-            // $dataTable->addColumn('has_risk_register', function ($data) use ($user) {
-            //     return Gate::check('project_admin_access') || $user->hasProject($data);
-            // });
-            // $dataTable->addColumn('has_monitoring', function ($data) use ($user) {
-            //     return Gate::check('project_admin_access') || $user->hasProject($data);
-            // });
+            
+            // 1. Sorting & Filter untuk Kode Project (JSON)
+            // Gunakan alias 'profit_center' sesuai 'name' di tableColumns
+            $dataTable->orderColumn('profit_center', function ($query, $order) {
+                $query->orderByRaw("projects.meta->>'profit_center' $order");
+            });
+            $dataTable->filterColumn('profit_center', function($query, $keyword) {
+                $query->whereRaw("projects.meta->>'profit_center' ILIKE ?", ["%{$keyword}%"]);
+            });
+
+            // 2. Sorting & Filter untuk Nama Project
+            // Key ini bisa pakai 'project.project_name' (data) atau 'projects.project_name' (name)
+            $dataTable->orderColumn('project.project_name', function ($query, $order) {
+                $query->orderBy('projects.project_name', $order);
+            });
+            $dataTable->filterColumn('project.project_name', function($query, $keyword) {
+                $query->whereRaw("projects.project_name ILIKE ?", ["%{$keyword}%"]);
+            });
+
+            // 3. Sorting & Filter untuk Nilai OK / Omset
+            // Gunakan alias 'omset'
+            $dataTable->orderColumn('omset', function ($query, $order) {
+                $query->orderByRaw("CAST(COALESCE(projects.meta->>'omset', '0') AS NUMERIC) $order");
+            });
+            $dataTable->filterColumn('omset', function($query, $keyword) {
+                $query->whereRaw("projects.meta->>'omset' ILIKE ?", ["%{$keyword}%"]);
+            });
+
+            // 4. Sorting & Filter untuk Tanggal Mulai
+            // Gunakan alias 'tanggal_mulai'
+            $dataTable->orderColumn('tanggal_mulai', function ($query, $order) {
+                $query->orderByRaw("CAST(NULLIF(projects.meta->>'tanggal_mulai', '') AS DATE) $order NULLS LAST");
+            });
+            $dataTable->filterColumn('tanggal_mulai', function($query, $keyword) {
+                $query->whereRaw("projects.meta->>'tanggal_mulai' ILIKE ?", ["%{$keyword}%"]);
+            });
+
+            // --- FILTERING ---
+            // Pencarian Kode Project (JSON)
+            $dataTable->filterColumn('project.meta.profit_center', function($query, $keyword) {
+                $query->whereRaw("projects.meta->>'profit_center' ILIKE ?", ["%{$keyword}%"]);
+            });
+
+            // Kolom Button Actions
             $dataTable->addColumn('has_view', function ($data) use ($user) {
                 return Gate::check('project_periode_view') ||
                     $user->hasProject($data) ||
                     ($user->unit && $data->project && $data->project->cost_center_parent == $user->unit->cost_center);
             });
             $dataTable->addColumn('has_risk_register', function ($data) use ($user) {
-                // Periksa apakah user memiliki permission project_risk_list (bukan project_admin_access)
-                // atau user memiliki proyek tersebut
-                // atau proyek tersebut berada di bawah unit user
                 return Gate::check('project_admin_access') ||
                     $user->hasProject($data) ||
                     ($user->unit && $data->project && $data->project->cost_center_parent == $user->unit->cost_center);
@@ -219,7 +229,7 @@ class ProjectPeriodeListController extends BasicCRUDController
 
         $this->tableLegend= [];
 
-        if (Gate::check('project_periode_view')) {//semua user diwajibkan ada project_periode_view bila ingin bisa lihat
+        if (Gate::check('project_periode_view')) {
             $this->tableActions[] = [
                 'btn_icon' => true,
                 'label' => '<span class="bx bx-show" title="View"></span>',
@@ -228,11 +238,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'active_state' => '(data, type, row) => row.has_view',
                 'title' => 'View Project'
             ];
-
-            $this->tableLegend[] = [
-              'icon' => '<span class="bx bx-show-alt"></span>',
-              'label' => 'View Project'
-            ];
+            $this->tableLegend[] = ['icon' => '<span class="bx bx-show-alt"></span>', 'label' => 'View Project'];
         }
 
         if (Gate::check('project_risk_list')) {
@@ -244,11 +250,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'active_state' => '(data, type, row) => row.has_risk_register',
                 'title' => 'Risk Register'
             ];
-
-            $this->tableLegend[] = [
-              'icon' => '<span class="bx bx-list-check"></span>',
-              'label' => 'Risk Register'
-            ];
+            $this->tableLegend[] = ['icon' => '<span class="bx bx-list-check"></span>', 'label' => 'Risk Register'];
         }
 
         if (Gate::check('project_monitoring_list')) {
@@ -260,11 +262,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'active_state' => '(data, type, row) => row.has_monitoring',
                 'title' => 'Monitoring'
             ];
-
-            $this->tableLegend[] = [
-              'icon' => '<span class="bx bx-radar"></span>',
-              'label' => 'Monitoring'
-            ];
+            $this->tableLegend[] = ['icon' => '<span class="bx bx-radar"></span>', 'label' => 'Monitoring'];
         }
 
         if (Gate::check('project_led_list')) {
@@ -278,12 +276,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 JS,
                 'title' => 'Loss Event'
             ];
-
-            $this->tableLegend[] = [
-              'icon' => '<span class="bx bx-dock-bottom"></span>',
-              'label' => 'Loss Event'
-            ];
-
+            $this->tableLegend[] = ['icon' => '<span class="bx bx-dock-bottom"></span>', 'label' => 'Loss Event'];
         }
 
         if (Gate::check('project_risk_context')) {
@@ -295,12 +288,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'active_state' => '(data, type, row) => row.has_risk_context',
                 'title' => 'Risk Context'
             ];
-
-            $this->tableLegend[] = [
-              'icon' => '<span class="bx bx-target-lock"></span>',
-              'label' => 'Risk Context'
-            ];
-
+            $this->tableLegend[] = ['icon' => '<span class="bx bx-target-lock"></span>', 'label' => 'Risk Context'];
         }
 
         $this->extraViewData['showKamusRisikoButton'] = true;
@@ -311,12 +299,10 @@ class ProjectPeriodeListController extends BasicCRUDController
     public function store(Request $request)
     {
         $periode = Periode::where('status', 'active')->first();
-
         $request->merge([
             'unit_id' => $request->user()->unit_id,
             'periode_id' => $periode->id
         ]);
-
         return parent::store($request);
     }
 
@@ -347,7 +333,6 @@ class ProjectPeriodeListController extends BasicCRUDController
         }
 
         $sortedRisks = $risks->sortByDesc(function ($risk) {
-            // Beri nilai default -1 jika tidak ada analisa/skala agar tidak error dan ditaruh di bawah
             return $risk->projectRiskAnalisa?->skala_risiko ?? -1;
         });
 
@@ -360,8 +345,10 @@ class ProjectPeriodeListController extends BasicCRUDController
         $tahunMonitorings = $projectPeriode->projectRisks->pluck('projectRiskMonitorings')->flatten()->pluck('tahun')->unique()->toArray();
         $tahunMonitorings[] = $projectPeriode->created_at?->format('Y') ?? date('Y');
         sort($tahunMonitorings);
-        $minTahun = min($tahunMonitorings);
-        $maxTahun = max($tahunMonitorings);
+        
+        $minTahun = (!empty($tahunMonitorings)) ? min($tahunMonitorings) : date('Y');
+        $maxTahun = (!empty($tahunMonitorings)) ? max($tahunMonitorings) : date('Y');
+
         $tahunMonitorings = [];
         for ($tahun = $minTahun; $tahun <= $maxTahun; $tahun++) {
             $tahunMonitorings[] = $tahun;
@@ -376,7 +363,6 @@ class ProjectPeriodeListController extends BasicCRUDController
                     if ($nextValue = ($projectRisk->currentRiskMapsMonth[$tahun . '-' . $month] ?? null)) {
                         $currentValue = $nextValue;
                     }
-
                     $currentValue['tahun'] = $tahun;
                     $currentValue['quarter'] = ceil($month / 3);
                     $currentValue['month'] = $month;

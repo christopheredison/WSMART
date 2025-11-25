@@ -21,12 +21,12 @@
                         <div class="row">
                             <div class="col-12 mb-3">
                                 <label for="nama_kejadian" class="form-label">Nama Kejadian <span class="text-danger">*</span></label>
-                                <textarea class="form-control" id="nama_kejadian" name="nama_kejadian" rows="3" required readonly>{{ $risiko->peristiwa_risiko }}</textarea>
+                                <textarea class="form-control" id="nama_kejadian" name="nama_kejadian" rows="3" required>{{ $risiko->peristiwa_risiko }}</textarea>
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label for="peristiwa_risiko_id" class="form-label">Identifikasi Kejadian <span class="text-danger">*</span></label>
-                                <textarea class="form-control" id="identifikasi_kejadian" name="identifikasi_kejadian" rows="3" required readonly>{{ $risiko->deskripsi_peristiwa_risiko }}</textarea>
+                                <textarea class="form-control" id="identifikasi_kejadian" name="identifikasi_kejadian" rows="3" required>{{ $risiko->deskripsi_peristiwa_risiko }}</textarea>
                             </div>
 
                             <div class="col-md-6 mb-3">
@@ -215,8 +215,9 @@ $(document).ready(function() {
     flatpickr("#tanggal_kejadian", {
         altInput: false,
         altFormat: "j F Y",
-        dateFormat: "Y-m-d",
-        disableMobile: true
+        dateFormat: "d/m/Y",
+        disableMobile: true,
+        maxDate: 'today',
     });
 
     var flatpickrMulai = flatpickr("#timelineRange1", {
