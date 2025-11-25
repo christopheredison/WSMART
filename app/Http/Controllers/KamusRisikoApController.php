@@ -12,6 +12,7 @@ use App\Exports\KamusRisikoApExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Yajra\DataTables\Facades\DataTables;
 
 class KamusRisikoApController extends Controller
 {
@@ -56,7 +57,7 @@ class KamusRisikoApController extends Controller
                 });
             });
 
-            return datatables()->of($query)
+            return DataTables::of($query)
                 ->addIndexColumn()
                 ->addColumn('action', function ($row) {
                       $detailUrl = route('risk-register-ap.view', ['riskRegister' => $row->risiko_id]);

@@ -153,25 +153,40 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    // 1. Setup CSRF Token untuk semua AJAX Request (DataTables & jQuery standard)
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+
     const allProjects = @json($projects);
 
+    // Init Select2
+    $('.select2').select2();
     $('#modal-project-select').select2({
         dropdownParent: $('#selectProjectModal')
     });
 
-    // Initialize DataTable
+    // 2. Initialize DataTables dengan method POST
     var table = $('#kamus-risiko-table').DataTable({
         processing: true,
         serverSide: true,
         ajax: {
             url: "{{ route('kamus-risiko-project.index') }}",
+            type: "POST",
             data: function (d) {
+                // Kirim parameter filter dalam body request
                 d.project_id = $('#project_id').val();
                 d.peristiwa_risiko_id = $('#peristiwa_risiko_id').val();
                 d.jenis_risiko_id = $('#jenis_risiko_id').val();
                 d.level_risiko = $('#level_risiko').val();
                 d.deskripsi_risiko = $('#deskripsi_risiko').val();
                 d.efektivitas = $('#efektivitas').val();
+            },
+            error: function (xhr, error, code) {
+                console.log("DataTables Error:", xhr.responseText);
+                Swal.fire('Error', 'Gagal memuat data. Silakan refresh halaman.', 'error');
             }
         },
         columns: [
@@ -201,88 +216,54 @@ $(document).ready(function() {
             { data: 'realisasi_skala_dampak', name: 'projectRisk.projectRiskMonitoring.skala_dampak' },
             { data: 'realisasi_skala_probabilitas', name: 'projectRisk.projectRiskMonitoring.skala_probabilitas' },
             { data: 'realisasi_level_risiko', name: 'projectRisk.projectRiskMonitoring.level_risiko' },
-            // { data: 'realisasi_eksposur_risiko', name: 'projectRisk.projectRiskMonitoring.eksposur_risiko' },
             
             { data: 'efektivitas', name: 'projectRisk.efektivitas_perlakuan_risiko' },
         ],
-        order: [[2, 'asc']] // Default order by Proyek name
+        order: [[2, 'asc']]
     });
 
-    // Filter button logic
+    // Filter Logic
     $('#filter-form').on('submit', function(e) {
         e.preventDefault();
         table.draw();
     });
 
-    // Reset Filter button logic
     $('#reset-filter-btn').on('click', function() {
-        $('#filter-form').trigger('reset');
+        $('#filter-form')[0].reset(); // Reset native form
         $('.select2').val(null).trigger('change');
         table.draw();
     });
 
-    // Export excel
+    // --- Export Logic (Tetap sama, tapi perhatikan error handling) ---
     $('#export-excel-btn').on('click', function(e) {
         e.preventDefault();
-
         showExportLoading();
+
+        // Menggunakan FormData agar lebih robust menangani banyak input
+        var formData = new FormData(document.getElementById('filter-form'));
 
         $.ajax({
             url: '{{ route("kamus-risiko-project.export") }}',
             type: 'POST',
-            data: $('#filter-form').serialize(), // Mengambil semua data filter dari form
-            xhrFields: {
-                responseType: 'blob' // Response akan berupa file binary
-            },
+            data: formData,
+            processData: false, // Penting untuk FormData
+            contentType: false, // Penting untuk FormData
+            xhrFields: { responseType: 'blob' },
             success: function(data, status, xhr) {
                 hideExportLoading();
-                const blob = new Blob([data], { 
-                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-                });
-                
-                const disposition = xhr.getResponseHeader('Content-Disposition');
-                let filename = 'Kamus_Risiko_Proyek.xlsx'; // Nama default
-                
-                if (disposition && disposition.indexOf('filename=') !== -1) {
-                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                    const matches = filenameRegex.exec(disposition);
-                    if (matches != null && matches[1]) {
-                        filename = matches[1].replace(/['"]/g, '');
-                    }
-                }
-                
+                const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.style.display = 'none';
                 a.href = url;
-                a.download = filename;
+                a.download = 'Kamus_Risiko_Proyek.xlsx';
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
             },
-            error: function(xhr, status, error) {
+            error: function(xhr) {
                 hideExportLoading();
-                let errorMsg = 'Gagal membuat laporan Excel. Silakan coba lagi.';
-                // Coba parse response error jika ada
-                const reader = new FileReader();
-                reader.onload = function() {
-                    try {
-                        const json = JSON.parse(this.result);
-                        if (json && json.message) {
-                            errorMsg = json.message;
-                        }
-                    } catch (e) {
-                        // Biarkan pesan error default
-                    }
-                    Swal.fire({
-                        title: 'Error!',
-                        text: errorMsg,
-                        icon: 'error',
-                        confirmButtonText: 'OK',
-                    });
-                }
-                reader.readAsText(xhr.response);
+                Swal.fire('Error', 'Gagal export data.', 'error');
             }
         });
     });
@@ -297,21 +278,22 @@ $(document).ready(function() {
         $('#export-text').text('Export to Excel');
     }
 
-    // Action button "Ambil Risiko"
-    $('#kamus-risiko-table').on('click', '.btn-ambil-risiko', function () {
+    // --- Logic Ambil Risiko (Refactored) ---
+    // Gunakan event delegation ke 'body' atau wrapper tabel agar tombol tetap jalan setelah redraw
+    $('body').on('click', '.btn-ambil-risiko', function () {
         const riskId = $(this).data('id');
         const rowData = table.row($(this).closest('tr')).data();
-        const riskDescription = rowData.deskripsi_peristiwa_risiko;
+        
+        // Safety check jika rowData undefined (misal view mobile/responsive child row)
+        if(!rowData) return;
 
         $('#modal-risk-id').val(riskId);
-        $('#selectProjectModal').data('risk-description', riskDescription);
-
-        // Reset pilihan
+        $('#selectProjectModal').data('risk-description', rowData.deskripsi_peristiwa_risiko);
         $('#modal-project-select').val(null).trigger('change');
         $('#project-select-error').addClass('d-none');
 
-        projectSelectModal = new bootstrap.Modal(document.getElementById('selectProjectModal'));
-        projectSelectModal.show();
+        const modal = new bootstrap.Modal(document.getElementById('selectProjectModal'));
+        modal.show();
     });
 
     $('#confirm-project-selection-btn').on('click', function() {
@@ -319,64 +301,53 @@ $(document).ready(function() {
         const originalRiskId = $('#modal-risk-id').val();
         const riskDescription = $('#selectProjectModal').data('risk-description');
 
-        // Validasi
         if (!targetProjectId) {
             $('#project-select-error').removeClass('d-none');
             return;
         }
-        
-        // projectSelectModal.hide();
+
+        // Tutup modal bootstrap instance
+        const modalEl = document.getElementById('selectProjectModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
 
         const targetProject = allProjects.find(p => p.id == targetProjectId);
-        const targetProjectName = targetProject ? targetProject.project_name : 'N/A';
         
         Swal.fire({
-            title: 'Konfirmasi Ambil Risiko',
-            html: `Anda yakin ingin menyalin risiko <br><b>"${riskDescription}"</b><br> ke proyek <br><b>"${targetProjectName}"</b>?`,
-            icon: 'warning',
+            title: 'Konfirmasi',
+            html: `Salin risiko <b>"${riskDescription}"</b> ke <b>"${targetProject?.project_name}"</b>?`,
+            icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Ya, Tambahkan!',
+            confirmButtonText: 'Ya, Salin',
             cancelButtonText: 'Batal'
-        }).then((confirmResult) => {
-            if (confirmResult.isConfirmed) {
-                projectSelectModal.hide();
-                Swal.fire({
-                    title: 'Memproses...',
-                    text: 'Mohon tunggu sebentar.',
-                    allowOutsideClick: false,
-                    didOpen: () => Swal.showLoading()
-                });
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({title: 'Memproses...', didOpen: () => Swal.showLoading()});
                 
                 $.ajax({
                     url: "{{ route('kamus-risiko-project.add-risk') }}",
                     type: 'POST',
                     data: {
-                        _token: '{{ csrf_token() }}',
                         original_risk_id: originalRiskId,
                         target_project_id: targetProjectId
                     },
                     success: function(response) {
-                        Swal.fire({ 
-                          icon: 'success', 
-                          title: 'Berhasil!', 
-                          text: response.message
-                        }).then(() => {
-                          const redirectUrlTemplate = "{{ route('projects.risks.index', ['project' => ':projectId']) }}";
-                          const redirectUrl = redirectUrlTemplate.replace(':projectId', response.redirect_project_id);
-                          window.localtion.href = redirectUrl;
+                        Swal.fire('Berhasil!', response.message, 'success').then(() => {
+                            if(response.redirect_project_id) {
+                                window.location.href = "{{ route('projects.risks.index', ['project' => ':id']) }}".replace(':id', response.redirect_project_id);
+                            } else {
+                                table.ajax.reload();
+                            }
                         });
                     },
                     error: function(xhr) {
-                        const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : 'Terjadi kesalahan.';
-                        Swal.fire({ icon: 'error', title: 'Gagal!', text: errorMsg });
+                        let msg = xhr.responseJSON?.message || 'Terjadi kesalahan server.';
+                        Swal.fire('Gagal!', msg, 'error');
                     }
                 });
             }
         });
     });
-
 });
 </script>
 @endpush
