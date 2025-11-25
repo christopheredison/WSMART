@@ -596,7 +596,7 @@ class CorporateRiskController extends Controller
         $peristiwaRisikos = PeristiwaRisiko::get();
         $areaDampak = AreaDampak::pluck('type','id');
         $jenisRisiko = JenisRisiko::pluck('title','id');
-        $units = Unit::where('unit_type_id', 1)->get();
+        $units = Unit::whereIn('unit_type_id', [1, 2])->get();
         $periodes = Periode::where('status', 'active')->get();
         $selectedPeriode = Periode::where('status', 'active')->first();
 
@@ -730,16 +730,9 @@ class CorporateRiskController extends Controller
             else{
                 $identifikasiRisiko->unit_type_id = 2;
             }
+
             $identifikasiRisiko->status = 1;
             $identifikasiRisiko->status_progress = 1;
-
-            // Simpan kontrol eksisting
-            // if ($request->has('kontrol_eksisting_id') && is_array($request->kontrol_eksisting_id)) {
-            //     // Ubah array menjadi string dengan pemisah koma
-            //     $kontrolEksisting = implode(',', $request->kontrol_eksisting_id);
-            //     // Simpan ke field kontrol_eksisting
-            //     $identifikasiRisiko->kontrol_eksisting = $kontrolEksisting;
-            // }
             $identifikasiRisiko->save();
 
             // Simpan kontrol eksisting ke model KontrolEksisting
@@ -768,29 +761,11 @@ class CorporateRiskController extends Controller
             }
 
             // Simpan KRI
-            // if ($request->has('master_kri_id') && is_array($request->master_kri_id)) {
-            //     $masterKriObj = MasterKRI::whereIn('id', $request->master_kri_id)->get()->keyBy('id');
-
-            //     foreach ($request->master_kri_id as $masterKriId) {
-            //         if (!empty($masterKriId)) {
-            //             $kriObj = $masterKriObj[$masterKriId];
-            //             $identifikasiRisiko->kris()->create([
-            //                 'kri_id' => $masterKriId,  // Ubah kri_id menjadi master_kri_id jika diperlukan
-            //                 'risiko_id' => $identifikasiRisiko->id,  // Tetap sertakan risiko_id
-            //                 'kri' => $kriObj->kri,
-            //                 'satuan_kri' => $kriObj->satuan_kri,
-            //                 'batas_aman' => $kriObj->batas_aman,
-            //                 'batas_waspada' => $kriObj->batas_waspada,
-            //                 'batas_bahaya' => $kriObj->batas_bahaya,
-            //             ]);
-            //         }
-            //     }
-            // }
             if ($request->has('key_risk_indicator') && is_array($request->key_risk_indicator)) {
                 for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
                     if (!empty($request->key_risk_indicator[$i])) {
                         $identifikasiRisiko->kris()->create([
-                            'kri_id' => 0, // Karena tidak menggunakan master_kri_id lagi
+                            'kri_id' => 0,
                             'risiko_id' => $identifikasiRisiko->id,
                             'kri' => $request->key_risk_indicator[$i],
                             'satuan_kri' => $request->satuan_kri[$i] ?? null,
@@ -805,21 +780,23 @@ class CorporateRiskController extends Controller
             $identifikasiRisiko->riskAnalysis()->create([]);
             $identifikasiRisiko->rencanaPerlakuanRisiko()->create([]);
 
-            // Tentukan redirect berdasarkan action
-            $action = $request->input('action', 'save');
+            $redirectRoute = '';
 
-            // if ($action === 'savenext') {
-            //     // Redirect ke halaman analisis risiko
-            //     return response()->json([
-            //         'message' => 'Data risiko berhasil disimpan',
-            //         'redirect' => route('risk-register-unit.analisa', ['riskRegister' => $identifikasiRisiko->id])
-            //     ]);
-            // } else {
-            //     // Redirect ke halaman index
-            // }
+            if ($unit->unit_type_id == 2) {
+                $redirectRoute = route('risk-register-ap.index', [
+                    'pid' => $identifikasiRisiko->periode_id,
+                    'unit_id' => $identifikasiRisiko->unit_id
+                ]);
+            } else {
+                $redirectRoute = route('risk-register-unit.index', [
+                    'pid' => $identifikasiRisiko->periode_id,
+                    'unit_id' => $identifikasiRisiko->unit_id
+                ]);
+            }
+
             return response()->json([
                 'message' => 'Data risiko berhasil dibuat',
-                'redirect' => route('risk-register-unit.index', ['pid' => $identifikasiRisiko->periode_id, 'unit_id' => $identifikasiRisiko->unit_id])
+                'redirect' => $redirectRoute
             ]);
         } catch (\Exception $e) {
             return response()->json([

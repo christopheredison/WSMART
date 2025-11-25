@@ -98,6 +98,10 @@ $(document).ready(function() {
         $('[name="progress_fisik_ra"]').val('0.00 %');
         $('[name="progress_fisik_ri"]').val('0.00 %');
         $('#dataModal').modal('show');
+
+        $('#unit_id').select2({
+          dropdownParent: $('#dataModal')
+        });
     });
 
     // 4. Logika Tombol Edit Data
@@ -111,6 +115,10 @@ $(document).ready(function() {
             }
             $('.inputmask-general').trigger('input');
             calculateProgress();
+
+            $('#unit_id').select2({
+              dropdownParent: $('#dataModal')
+            });
         });
     });
 

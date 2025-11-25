@@ -815,7 +815,7 @@ $(document).ready(function() {
         }
     }
     flatpickr("#period_selector", {
-        plugins: [ new monthSelectPlugin({ shorthand: true, dateFormat: "Y-m", altFormat: "F Y", altInput: true }) ],
+        plugins: [ new monthSelectPlugin({ shorthand: true, dateFormat: "Y-m", altFormat: "F Y", altInput: false }) ],
         maxDate: "today", defaultDate: "{{ $selectedPeriod }}",
         onChange: function(d,s,i) { applyFilterAndRefresh(); }
     });

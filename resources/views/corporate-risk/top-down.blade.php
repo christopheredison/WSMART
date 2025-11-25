@@ -30,7 +30,7 @@
                             <div class="divider mb-3 mb-md-5 mt-0">
                                 <div class="divider-text">
                                     {{-- Judul ini akan di-update oleh JavaScript --}}
-                                    <h5 class="mb-0 ff-heading-sm" id="periode-tahun-title">Pilih Periode & Divisi</h5>
+                                    <h5 class="mb-0 ff-heading-sm" id="periode-tahun-title">Pilih Periode & Divisi / Anak Perusahaan</h5>
                                 </div>
                             </div>
                         </div>
@@ -51,12 +51,12 @@
                         <div class="col-md-6">
                             <div class="form-group form-floating">
                                 <select class="form-select select2" id="unit_id" name="unit_id" required>
-                                    <option value="" selected disabled>Pilih Divisi</option>
+                                    <option value="" selected disabled>Pilih Divisi / Anak Perusahaan</option>
                                     @foreach($units as $unit)
                                         <option value="{{ $unit->id }}">{{ $unit->nama ?? $unit->name }}</option> 
                                     @endforeach
                                 </select>
-                                <label for="unit_id">Divisi</label>
+                                <label for="unit_id">Divisi / Anak Perusahaan</label>
                             </div>
                         </div>
                     </div>

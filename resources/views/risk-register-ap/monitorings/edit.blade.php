@@ -25,7 +25,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-12 col-md-4">
             <div class="card bg-primary shadow text-white text-center border-0">
                 <div class="card-body">
@@ -41,7 +41,7 @@
         <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
-                    <h4 class="mb-0 ff-heading-sm">Realisasi Nilai Risiko Residual</h4>
+                    <h4 class="mb-0 ff-heading-sm">Nilai Risiko Residual Realisasi</h4>
                 </div>
             </div>
             <div class="row g-2">
@@ -107,7 +107,7 @@
                             <div class="lead__icon bg-warning rounded-pill">
                                 <i class='bx bx-cube text-white'></i>
                             </div>
-                            <h5>Target Residual</h5>
+                            <h5>Residual Rencana</h5>
                         </div>
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
@@ -164,16 +164,16 @@
                             <div class="lead__icon bg-info rounded-pill">
                                 <i class='bx bxs-cube text-white'></i>
                             </div>
-                            <h5>Realisasi</h5>
+                            <h5>Residual Realisasi</h5>
                         </div>
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
-                                <input 
-                                  class="form-control update-trigger inputmask-rupiah" 
-                                  type="text" 
-                                  id="realisasi_nilai_dampak" 
+                                <input
+                                  class="form-control update-trigger inputmask-rupiah"
+                                  type="text"
+                                  id="realisasi_nilai_dampak"
                                   name="realisasi_nilai_dampak"
-                                  value="{{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}"  
+                                  value="{{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}"
                                   {{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? 'disabled' : '' }}
                                   {{-- {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'max=' . $riskAnalysis->nilai_dampak : '' }} --}}
                                   min="0"
@@ -184,14 +184,14 @@
                             </div>
                             <div class="form-floating">
                                 <input type="hidden" name="realisasi_skala_dampak" id="realisasi_skala_dampak_hidden">
-                                <select 
-                                  class="form-select js-select-hide-search update-trigger" 
+                                <select
+                                  class="form-select js-select-hide-search update-trigger"
                                   name="realisasi_skala_dampak"
                                   id="realisasi_skala_dampak" {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'disabled' : '' }}
                                 >
                                   <option selected disabled>Skala Dampak</option>
                                   @foreach($skalaDampaks as $tingkat => $deskripsi)
-                                  <option value="{{ $tingkat }}" 
+                                  <option value="{{ $tingkat }}"
                                       {{ $riskMonitoring?->skala_dampak == $tingkat ? 'selected' : '' }}
                                       {{ $tingkat > $riskAnalysis->skalaDampakObj?->tingkat ? 'disabled' : '' }}>
                                       {{ $tingkat }} - {{ $deskripsi }}
@@ -202,16 +202,16 @@
                                 <label for="">Realisasi Skala Dampak</label>
                             </div>
                             <div class="form-floating">
-                                <input 
-                                  class="form-control update-trigger" 
-                                  type="number" 
+                                <input
+                                  class="form-control update-trigger"
+                                  type="number"
                                   id="realisasi_nilai_probabilitas"
-                                  name="realisasi_nilai_probabilitas" 
+                                  name="realisasi_nilai_probabilitas"
                                   value="{{ $riskMonitoring?->nilai_probabilitas }}"
                                   {{-- data-max="{{ $riskAnalysis->nilai_probabilitas }}"  --}}
                                   {{-- max="{{ $riskAnalysis->nilai_probabilitas }}" --}}
                                   {{-- oninput="if(this.value > {{ $riskAnalysis->nilai_probabilitas }}) this.value = {{ $riskAnalysis->nilai_probabilitas }};" --}}
-                                  data-max="100" 
+                                  data-max="100"
                                   max="100"
                                   min="0"
                                   oninput="if(this.value > 100) this.value = 100;"
@@ -248,7 +248,7 @@
                     <h4 class="mb-0 ff-heading-sm">Realisasi Penanganan Risiko</h4>
                 </div>
             </div>
-            
+
             {{-- Tambahkan card untuk legend/keterangan --}}
             <div class="row mb-3">
                 <div class="col-12">
@@ -285,7 +285,7 @@
                             </thead>
                             <tbody>
                                 @foreach ($risk->penyebabRisikos as $penyebabRisiko)
-                                    @php 
+                                    @php
                                         $rowSpan = $penyebabRisiko->perlakuanPenyebabRisiko->count() ?: 1;
                                         $outLoop = $loop;
                                     @endphp
@@ -320,9 +320,9 @@
                                                     <input type="textarea" class="input-file-description" name="document_description_{{ $perlakuan->id }}" id="deskripsi_perlakuan_risiko_{{ $perlakuan->id }}">
                                                 </div>
                                                 <div class="text-center">
-                                                    <a href="javascript:void(0)" 
-                                                    class="btn-input-icon btn-action" 
-                                                    data-action="update-realisasi" 
+                                                    <a href="javascript:void(0)"
+                                                    class="btn-input-icon btn-action"
+                                                    data-action="update-realisasi"
                                                     data-bs-toggle="tooltip"
                                                     title="Update Realisasi"
                                                     data-id="{{ $perlakuan->id }}">
@@ -366,7 +366,7 @@
                                         <td>{{ $kriProject->kri ?: '-' }}</td>
                                         <td>{{ $kriProject->satuan_kri ?: '-' }}</td>
                                         <td>{{ $kriProject->batas_aman ?? '-' }}</td>
-                                        <td>{{ $kriProject->batas_waspada ?? '-' }}</td>                    
+                                        <td>{{ $kriProject->batas_waspada ?? '-' }}</td>
                                         <td>{{ $kriProject->batas_bahaya ?? '-' }}</td>
                                         <td class="display-nilai-kri">
                                             {{ $lastMonitoring?->nilai_kri_terkini ?? '-' }}
@@ -386,9 +386,9 @@
                                         <td style="white-space:nowrap">
                                             {{-- <a href="javascript:void(0)" class="hover-underline px-1 btn-action" data-action="update-kri" data-id="{{ $kriProject->id }}">Update KRI</a> --}}
                                             <div class="text-center">
-                                            <a href="javascript:void(0)" 
-                                               class="btn-input-icon btn-action" 
-                                               data-action="update-kri" 
+                                            <a href="javascript:void(0)"
+                                               class="btn-input-icon btn-action"
+                                               data-action="update-kri"
                                                data-bs-toggle="tooltip"
                                                title="Update KRI"
                                                data-id="{{ $kriProject->id }}">
@@ -455,9 +455,9 @@
                                             <td>{{ $perlakuanMonitoring->realisasi_biaya_perlakuan_risiko }}</td>
                                             <td>{{ $perlakuanMonitoring->progress_rencana_perlakuan_risiko }}</td>
                                             <td>
-                                                <button type="button" 
-                                                    class="btn-input-icon btn-action" 
-                                                    data-action="view-details" 
+                                                <button type="button"
+                                                    class="btn-input-icon btn-action"
+                                                    data-action="view-details"
                                                     data-bs-toggle="tooltip"
                                                     title="Detail Mitigasi"
                                                     data-perlakuan-id="{{ $perlakuanPenyebab->id }}"
@@ -512,13 +512,13 @@ function formatRupiah(angka, prefix = 'Rp ') {
     if (angka === null || angka === undefined || angka === '' || angka === '-') {
         return '-';
     }
-    
+
     // Pastikan angka dalam bentuk string dan hapus semua karakter non-numerik
     let number_string = angka.toString().replace(/[^,\d]/g, '');
-    
+
     // Jika angka sudah dalam format dengan titik sebagai pemisah ribuan, hapus titiknya
     number_string = number_string.replace(/\./g, '');
-    
+
     // Pisahkan desimal jika ada
     let split = number_string.split(',');
     let sisa = split[0].length % 3;
@@ -533,7 +533,7 @@ function formatRupiah(angka, prefix = 'Rp ') {
 
     // Gabungkan dengan desimal jika ada
     rupiah = split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
-    
+
     // Tambahkan prefix Rp
     return prefix + rupiah;
 }
@@ -543,7 +543,7 @@ function parseRupiah(rupiahString) {
     if (!rupiahString || rupiahString === '-') {
         return 0;
     }
-    
+
     // Hapus semua karakter kecuali angka dan koma
     return parseFloat(rupiahString.replace(/[^\d,]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
 }
@@ -579,7 +579,7 @@ function refreshSkalaAndLevelRisiko() {
     const domSkalaProbabilitas = $('#realisasi_skala_probabilitas');
     const domSkalaRisiko = $('#realisasi_skala_risiko');
     const domLevelRisiko = $('#realisasi_level_risiko');
-    
+
     console.log('skalaProbabilitas : ' + skalaProbabilitas);
 
     if (skalaProbabilitas) {
@@ -631,7 +631,7 @@ function validateRealisasiForm() {
             field.closest('.form-floating').find('.invalid-feedback').remove();
             return; // Lanjut ke field berikutnya
         }
-        
+
         field.removeClass('is-invalid');
         field.closest('.form-floating').find('.invalid-feedback').remove();
 
@@ -649,9 +649,9 @@ function validateRealisasiForm() {
 
     if (!isValid && firstErrorField) {
     $('html, body').animate({
-            scrollTop: firstErrorField.offset().top - 150 
+            scrollTop: firstErrorField.offset().top - 150
         }, 500);
-        
+
         firstErrorField.focus();
     }
 
@@ -660,7 +660,7 @@ function validateRealisasiForm() {
 
 function submitForm(isClosed) {
     $('.dom-edited').remove();
-            
+
     const formData = new FormData($('#main-form')[0]);
     formData.append('perlakuan_penyebab_risikos', JSON.stringify(perlakuanPenyebabRisikos));
     formData.append('kri_projects', JSON.stringify(kriProjects));
@@ -705,7 +705,7 @@ $(document).ready(function() {
     // Simpan nilai skala dampak inherent dan probabilitas inherent
     const skalaDampakInherent = {{ $riskAnalysis->skalaDampakObj?->tingkat ?? 0 }};
     const nilaiProbabilitasInherent = {{ $riskAnalysis->nilai_probabilitas ?? 0 }};
-    
+
     // Validasi saat memilih skala dampak
     // $('#realisasi_skala_dampak').on('change', function(e) {
     //     // Skip validasi jika perubahan dari hitungRealisasiSkalaDampak()
@@ -752,8 +752,8 @@ $(document).ready(function() {
             const isClosing = (action === 'save-and-close');
             const swalConfig = {
                 title: 'Konfirmasi',
-                text: isClosing 
-                    ? `Apakah Anda yakin ingin menyimpan dan menutup risiko "${namaRisiko}" ini?` 
+                text: isClosing
+                    ? `Apakah Anda yakin ingin menyimpan dan menutup risiko "${namaRisiko}" ini?`
                     : 'Apakah Anda yakin ingin menyimpan data ini?',
                 icon: 'question',
                 showCancelButton: true,
@@ -804,7 +804,7 @@ $(document).ready(function() {
                 let realisasiBiaya = 0;
                 if (latestMonitoring.realisasi_biaya_perlakuan_risiko) {
                     // Jika menggunakan titik sebagai pemisah ribuan (format Indonesia)
-                    if (latestMonitoring.realisasi_biaya_perlakuan_risiko.includes('.') && 
+                    if (latestMonitoring.realisasi_biaya_perlakuan_risiko.includes('.') &&
                         latestMonitoring.realisasi_biaya_perlakuan_risiko.split('.').length > 2) {
                         // Format dengan titik sebagai pemisah ribuan (mis: 2.000.000)
                         realisasiBiaya = parseFloat(latestMonitoring.realisasi_biaya_perlakuan_risiko.replace(/\./g, '').replace(',', '.'));
@@ -816,21 +816,21 @@ $(document).ready(function() {
                 console.log(realisasiBiaya);
                 // Simpan nilai asli di hidden field
                 $('#previous_realisasi_biaya_value').val(realisasiBiaya);
-                
+
                 // Format untuk ditampilkan di UI
                 $('#previous_realisasi_biaya').text(formatRupiah(realisasiBiaya));
-                
+
                 let progress = parseFloat(latestMonitoring.progress_rencana_perlakuan_risiko) || 0;
                 $('#previous_progress').text(progress + '%');
                 $('#previous_progress_value').val(progress);
             } else {
                 $('#previous_realisasi_biaya').text('Belum ada realisasi');
                 $('#previous_realisasi_biaya_value').val(0);
-                
+
                 $('#previous_progress').text('Belum ada progress');
                 $('#previous_progress_value').val(0);
             }
-            
+
             $('#modalUpdateRealisasi :input[name="jenis_program_rkap"]').val(perlakuanPenyebab.jenis_program_rkap);
             $('#modalUpdateRealisasi :input[name="jenis_program_rkap_id"]').val(perlakuanPenyebab.jenis_program_rkap_id);
             $('#modalUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val(perlakuanPenyebab.deskripsi_perlakuan_risiko);
@@ -879,7 +879,7 @@ $(document).ready(function() {
             } else {
                 tableDocument.closest('table').find('tfoot').show();
             }
-            
+
             tableDocument.on('input', '[name="deskripsi_dokumen[]"]', function() {
                 const value = $(this).val();
                 const id = $(this).closest('tr').data('id');
@@ -888,7 +888,7 @@ $(document).ready(function() {
                 const domEdited = domCell.find('.dom-edited');
 
                 console.log(id, domCell);
-                
+
                 const domDeskripsi = domEdited.find('.input-file-description');
                 console.log(domDeskripsi.length);
                 const deskripsi = domDeskripsi.val() ? JSON.parse(domDeskripsi.val()) : {};
@@ -915,7 +915,7 @@ $(document).ready(function() {
             const perlakuanPenyebab = perlakuanPenyebabRisikos[perlakuanId];
             const penyebabRisiko = penyebabRisikoProjects[perlakuanPenyebab.penyebab_risiko_id];
             const perlakuanMonitoring = perlakuanPenyebab?.perlakuan_penyebab_monitorings?.find(m => m.id == id);
-            
+
             if (!perlakuanMonitoring) {
                 Swal.fire('Error', 'Data perlakuan penyebab risiko tidak ditemukan', 'error');
                 return;
@@ -975,7 +975,7 @@ $(document).ready(function() {
         //         return;
         //     }
         // }
-        
+
         if (!$('#formUpdateRealisasi')[0].checkValidity()) {
             $('#formUpdateRealisasi')[0].reportValidity();
             return;
@@ -1002,7 +1002,7 @@ $(document).ready(function() {
         perlakuanPenyebabRisikos[id]['jenis_program_rkap_id'] = jenisProgramRkapId;
         //perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko'] = timelinePerlakuanRisiko.split(' to ');
         perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko'] = timelinePerlakuanRisiko;
-        
+
         // update DOM
         const tr = $('#table-penyebab-risiko tr[data-id="' + id + '"]');
         tr.find('.display-biaya').text('Rp' + Intl.NumberFormat('id-ID').format(realisasiBiayaPerlakuanRisiko));
@@ -1110,13 +1110,16 @@ $(document).ready(function() {
             }
         }
     });
+    
+    var today = new Date();
+    var endOfYear = new Date(today.getFullYear(), 11, 31); // Mendapatkan tanggal terakhir dalam tahun ini
 
     var flatpickrIns = flatpickr("#timelineInput", {
         mode: "single",
-        altInput: true,
+        altInput: false,
         altFormat: "j F Y",
         dateFormat: "d/m/Y",
-        //maxDate: endOfYear,
+        maxDate: endOfYear,
         disableMobile: true
     });
 
@@ -1155,7 +1158,7 @@ $(document).ready(function() {
                 console.log("percentage : " + percentage);
                 console.log("skala : " + skala);
             }
-            
+
             // Set nilai skala dampak dan trigger change event
             skalaDampakSelect.val(skala).trigger('change');
             // Disable select dan pindahkan nilai ke hidden input
