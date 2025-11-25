@@ -626,7 +626,8 @@ class ApLEDController extends Controller
                 'status_asuransi' => $request->status_asuransi,
                 'nilai_premi' => $request->status_asuransi == '1' ? ($request->nilai_premi ?? 0) : 0,
                 'nilai_klaim' => $request->status_asuransi == '1' ? ($request->nilai_klaim ?? 0) : 0,
-                // 'version' => 1,
+                'version' => 1,
+                'risiko_id' => $riskRegister->id,
             ]);
     
             $penyebabData  = json_decode($request->input('penyebab_data'), true);

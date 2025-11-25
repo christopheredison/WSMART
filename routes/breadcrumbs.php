@@ -74,6 +74,13 @@ Breadcrumbs::for('risk-register-unit.monitorings.edit', function (BreadcrumbTrai
     $trail->push('Edit Data Monitoring', route('risk-register-unit.monitorings.edit', [$period, $monitoring]));
 });
 
+// Periode Divisi > Data Monitoring > Ubah Menjadi LED
+Breadcrumbs::for('risk-register-unit.loss-events.create', function (BreadcrumbTrail $trail, $riskRegister) {
+    // Parent adalah View Risiko, karena kita mengubah risiko spesifik ini menjadi LED
+    $trail->parent('risk-register-unit.view', $riskRegister); 
+    $trail->push('Ubah Menjadi LED', route('risk-register-unit.loss-events.create', $riskRegister));
+});
+
 // Periode Divisi > Loss Event Divisi
 Breadcrumbs::for('unit-led.index-by-periode', function (BreadcrumbTrail $trail, $periode) {
     $trail->parent('risk-register-unit.periods');
@@ -182,6 +189,13 @@ Breadcrumbs::for('ap-led.index-by-periode', function (BreadcrumbTrail $trail, $p
     $trail->push('Loss Event Anak Perusahaan', route('ap-led.index-by-periode', [$periode]));
 });
 
+// Periode Anak Perusahaan > Data Monitoring > Ubah Menjadi LED
+Breadcrumbs::for('risk-register-ap.loss-events.create', function (BreadcrumbTrail $trail, $riskRegister) {
+    // Parent adalah View Risiko, karena kita mengubah risiko spesifik ini menjadi LED
+    $trail->parent('risk-register-ap.view', $riskRegister); 
+    $trail->push('Ubah Menjadi LED', route('risk-register-ap.loss-events.create', $riskRegister));
+});
+
 // Periode Anak Perusahaan > Loss Event Anak Perusahaan > Tambah Loss Event Anak Perusahaan
 Breadcrumbs::for('ap-led.create', function (BreadcrumbTrail $trail, $periode) {
     $trail->parent('ap-led.index-by-periode', $periode);
@@ -281,6 +295,12 @@ Breadcrumbs::for('projects.monitorings.documents.index', function (BreadcrumbTra
     $projectRisk = ProjectRisk::find($monitoring);
     $trail->parent('projects.monitorings.index', ['project' => $projectRisk->project_periode_list_id]);
     $trail->push('Dokumen Monitoring', route('projects.monitorings.documents.index', ['monitoring' => $monitoring, 'quarter' => $quarter]));
+});
+
+// projects.loss-events.create
+Breadcrumbs::for('projects.loss-events.create', function (BreadcrumbTrail $trail, $project, $risk) {
+    $trail->parent('projects.risks.view', $project, $risk); 
+    $trail->push('Ubah Menjadi LED', route('projects.loss-events.create', [$project, $risk]));
 });
 
 // projects.leds.index

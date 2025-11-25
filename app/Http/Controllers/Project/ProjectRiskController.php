@@ -581,13 +581,14 @@ class ProjectRiskController extends BasicCRUDController
 
         $this->defaultOrder = [[7, 'desc']];
 
-        $this->importConfig = [
-          'buttonText' => 'Upload Risiko Tender',
-          'route' => route('projects.risks.import-tender', ['project' => $projectPeriodeList->id]),
-          'title' => 'Upload Risiko Tender dari Excel',
-          'instructions' => 'Pastikan file Excel Anda memiliki template yang sesuai.',
-          'templateUrl' => route('download-tender-template'),
-        ];
+        // hide import tender
+        // $this->importConfig = [
+        //   'buttonText' => 'Upload Risiko Tender',
+        //   'route' => route('projects.risks.import-tender', ['project' => $projectPeriodeList->id]),
+        //   'title' => 'Upload Risiko Tender dari Excel',
+        //   'instructions' => 'Pastikan file Excel Anda memiliki template yang sesuai.',
+        //   'templateUrl' => route('download-tender-template'),
+        // ];
 
         $this->extraViewData = [
             'status' => $status,

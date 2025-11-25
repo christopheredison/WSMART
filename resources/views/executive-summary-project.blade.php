@@ -713,7 +713,7 @@ $(document).ready(function() {
                 shorthand: true,
                 dateFormat: "Y-m",
                 altFormat: "F Y",
-                altInput: true,
+                altInput: false,
             })
         ],
         maxDate: "today",

@@ -159,7 +159,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'render' => '(data, type, row) => {
                     if (row.is_closed) return `<div class="badge text-danger bg-danger-subtle">Dihentikan</div>`;
                     if (!row.project_risk_monitoring) return `<div class="badge bg-light text-dark">Belum Dimonitor</div>`;
-                    
+
                     const status = row.project_risk_monitoring.status;
                     const isRevision = row.project_risk_monitoring.is_revision;
                     const isApproved = row.project_risk_monitoring.is_approved;
@@ -218,7 +218,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'active_state' => '(data, type, row) => row.is_closed != 1',
                 'extra_attrs' => [ 'style' => 'font-size: 14px; font-weight: 400;' ]
             ];
-        } 
+        }
 
         $hasVerificationMr = Gate::allows('verification_mr');
         $isUnitMr = (bool) $user->unit?->unit_mr;
@@ -234,18 +234,18 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
                     const monitoring = row.project_risk_monitoring;
                     if (!monitoring || monitoring.is_approved) return false;
-                    
+
                     const userLevel = ' . $user->level_id . ';
                     const hasVerificationMr = ' . ($hasVerificationMr ? 'true' : 'false') . ';
                     const user = '.json_encode($user->load('unit')).';
                     const project = '.json_encode($projectPeriode->project).';
                     const status = monitoring.status;
-                    
+
                     if (userLevel == 7 && status == '.ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_PROJECT.') return true;
                     if (userLevel == 1 && status == '.ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI.' && user.unit && user.unit.cost_center == project.cost_center_parent) return true;
                     if (userLevel == 1 && status == '.ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR.' && user.unit && user.unit.unit_mr == 1 && hasVerificationMr) return true;
                     if (userLevel == 2 && status == '.ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR.' && hasVerificationMr) return true;
-                    
+
                     return false;
                 }',
                 'extra_attrs' => [ 'data-monitoring-id' => '__MONITORING_ID__', 'data-title' => '__RISK_TITLE__', 'data-desc' => '__RISK_DESC__']
@@ -424,15 +424,15 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     ->with('error', 'Analisa untuk risiko "' . $namaRisikoLengkap . '" belum lengkap. Harap lengkapi semua field analisa inheren dan residual.');
             }
         }
-        
+
         // Validasi Rencana Perlakuan Risiko
         $penyebabRisikos = $projectRisk->penyebabRisikoProjects;
-        
+
         if ($penyebabRisikos->isEmpty()) {
             return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
                 ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum memiliki data penyebab dan rencana perlakuan.');
         }
-        
+
         $hasValidPerlakuan = false;
         foreach ($penyebabRisikos as $penyebab) {
             if (!empty($penyebab->penyebab_risiko) && $penyebab->perlakuanPenyebabRisiko->isNotEmpty()) {
@@ -470,24 +470,24 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $project = $projectPeriode->project;
         //dd($project->type);
         if($project->type==2){
-            // $risk_tolerance = $project->rapk_100_rp 
-            //     ?? $project->rapk_70_90_rp 
-            //     ?? $project->rapk_30_50_rp 
-            //     ?? $project->rapk_0_10_rp 
-            //     ?? $project->rapk 
+            // $risk_tolerance = $project->rapk_100_rp
+            //     ?? $project->rapk_70_90_rp
+            //     ?? $project->rapk_30_50_rp
+            //     ?? $project->rapk_0_10_rp
+            //     ?? $project->rapk
             //     ?? 0;
             $risk_tolerance = array_filter([
-                $project->rapk_100_rp, 
-                $project->rapk_70_90_rp, 
-                $project->rapk_30_50_rp, 
-                $project->rapk_0_10_rp, 
+                $project->rapk_100_rp,
+                $project->rapk_70_90_rp,
+                $project->rapk_30_50_rp,
+                $project->rapk_0_10_rp,
                 $project->rapk
             ], function ($value) {
                 return $value !== null && $value != 0;
             });
-            
+
             $risk_tolerance = reset($risk_tolerance) ?: 0;
-            
+
             $risk_tolerance = 2/100 *($risk_tolerance);
             //dd($risk_tolerance);
         }
@@ -498,7 +498,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         else{
             $risk_tolerance = 0;
         }
-        
+
         //$risk_limit = $projectPeriode->risk_limit;
         $risk_limit = ($projectPeriode->project->meta['omset'] ?? 0) * 0.03;
 
@@ -643,14 +643,14 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             $riskMaps = RiskMap::get()->keyBy(function($item) {
                 return $item->skala_dampak . '-' . $item->skala_probabilitas;
             });
-    
+
             $riskMap = $riskMaps[$toCreate['skala_dampak'] . '-' . $tingkatSkalaProbabilitas->tingkat] ?? null;
             if (!$riskMap) {
                 return response()->json([
                     'message' => 'Tidak ada data risk map untuk skala dampak dan probabilitas yang dipilih',
                 ], 422);
             }
-    
+
             $toCreate['skala_risiko'] = $riskMap->nilai_risiko;
             $toCreate['level_risiko'] = $riskMap->level_risiko;
         } else {
@@ -676,50 +676,50 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             $validationData['perlakuan_penyebab'] = $perlakuanPenyebabRequests;
             $validationData['kri_projects'] = $kriProjectRequests;
 
-            $validator = Validator::make($validationData, [
-                // Validasi data monitoring utama
-                'nilai_dampak' => 'required',
-                'skala_dampak' => 'required',
-                'nilai_probabilitas' => 'required',
-                'skala_probabilitas_id' => 'required',
-                'skala_risiko' => 'required',
-                'level_risiko' => 'required',
+            // $validator = Validator::make($validationData, [
+            //     // Validasi data monitoring utama
+            //     'nilai_dampak' => 'required',
+            //     'skala_dampak' => 'required',
+            //     'nilai_probabilitas' => 'required',
+            //     'skala_probabilitas_id' => 'required',
+            //     'skala_risiko' => 'required',
+            //     'level_risiko' => 'required',
 
-                // Validasi data perlakuan (harus ada dan array)
-                'perlakuan_penyebab' => 'present|array',
-                'perlakuan_penyebab.*.progress_rencana_perlakuan_risiko' => 'required',
-                'perlakuan_penyebab.*.realisasi_biaya_perlakuan_risiko' => 'required',
-                'perlakuan_penyebab.*.deskripsi_perlakuan_risiko' => 'required',
-                'perlakuan_penyebab.*.timeline_perlakuan_risiko' => 'required|array|min:1',
+            //     // Validasi data perlakuan (harus ada dan array)
+            //     'perlakuan_penyebab' => 'present|array',
+            //     'perlakuan_penyebab.*.progress_rencana_perlakuan_risiko' => 'required',
+            //     'perlakuan_penyebab.*.realisasi_biaya_perlakuan_risiko' => 'required',
+            //     'perlakuan_penyebab.*.deskripsi_perlakuan_risiko' => 'required',
+            //     'perlakuan_penyebab.*.timeline_perlakuan_risiko' => 'required|array|min:1',
 
-                // Validasi data KRI (harus ada dan array)
-                'kri_projects' => 'present|array',
-                'kri_projects.*.status_kri_terkini' => 'required',
-                'kri_projects.*.nilai_kri_terkini' => 'required',
-            ], [
-                // Custom messages
-                'nilai_dampak.required' => 'Realisasi Nilai Dampak wajib diisi untuk menutup risiko.',
-                'skala_dampak.required' => 'Realisasi Skala Dampak wajib diisi untuk menutup risiko.',
-                'nilai_probabilitas.required' => 'Realisasi Nilai Probabilitas wajib diisi untuk menutup risiko.',
-                'skala_probabilitas_id.required' => 'Realisasi Nilai Probabilitas tidak valid.',
-                'skala_risiko.required' => 'Realisasi Skala Risiko wajib diisi untuk menutup risiko.',
-                'level_risiko.required' => 'Realisasi Level Risiko wajib diisi untuk menutup risiko.',
-                
-                'perlakuan_penyebab.*.progress_rencana_perlakuan_risiko.required' => 'Progress Rencana Perlakuan wajib diisi untuk semua penyebab.',
-                'perlakuan_penyebab.*.realisasi_biaya_perlakuan_risiko.required' => 'Realisasi Biaya Perlakuan wajib diisi untuk semua penyebab.',
-                'perlakuan_penyebab.*.deskripsi_perlakuan_risiko.required' => 'Deskripsi Perlakuan wajib diisi untuk semua penyebab.',
-                'perlakuan_penyebab.*.timeline_perlakuan_risiko.required' => 'Timeline Perlakuan wajib diisi untuk semua penyebab.',
+            //     // Validasi data KRI (harus ada dan array)
+            //     'kri_projects' => 'present|array',
+            //     'kri_projects.*.status_kri_terkini' => 'required',
+            //     'kri_projects.*.nilai_kri_terkini' => 'required',
+            // ], [
+            //     // Custom messages
+            //     'nilai_dampak.required' => 'Realisasi Nilai Dampak wajib diisi untuk menutup risiko.',
+            //     'skala_dampak.required' => 'Realisasi Skala Dampak wajib diisi untuk menutup risiko.',
+            //     'nilai_probabilitas.required' => 'Realisasi Nilai Probabilitas wajib diisi untuk menutup risiko.',
+            //     'skala_probabilitas_id.required' => 'Realisasi Nilai Probabilitas tidak valid.',
+            //     'skala_risiko.required' => 'Realisasi Skala Risiko wajib diisi untuk menutup risiko.',
+            //     'level_risiko.required' => 'Realisasi Level Risiko wajib diisi untuk menutup risiko.',
 
-                'kri_projects.*.status_kri_terkini.required' => 'Status KRI Terkini wajib diisi untuk semua KRI.',
-                'kri_projects.*.nilai_kri_terkini.required' => 'Nilai KRI Terkini wajib diisi untuk semua KRI.',
-            ]);
+            //     'perlakuan_penyebab.*.progress_rencana_perlakuan_risiko.required' => 'Progress Rencana Perlakuan wajib diisi untuk semua penyebab.',
+            //     'perlakuan_penyebab.*.realisasi_biaya_perlakuan_risiko.required' => 'Realisasi Biaya Perlakuan wajib diisi untuk semua penyebab.',
+            //     'perlakuan_penyebab.*.deskripsi_perlakuan_risiko.required' => 'Deskripsi Perlakuan wajib diisi untuk semua penyebab.',
+            //     'perlakuan_penyebab.*.timeline_perlakuan_risiko.required' => 'Timeline Perlakuan wajib diisi untuk semua penyebab.',
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'message' => 'Gagal menutup risiko. Harap lengkapi semua data monitoring.',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
+            //     'kri_projects.*.status_kri_terkini.required' => 'Status KRI Terkini wajib diisi untuk semua KRI.',
+            //     'kri_projects.*.nilai_kri_terkini.required' => 'Nilai KRI Terkini wajib diisi untuk semua KRI.',
+            // ]);
+
+            // if ($validator->fails()) {
+            //     return response()->json([
+            //         'message' => 'Gagal menutup risiko. Harap lengkapi semua data monitoring.',
+            //         'errors' => $validator->errors()
+            //     ], 422);
+            // }
         }
 
         $projectMonitoring = $projectRisk->projectRiskMonitoring()->create($toCreate);
@@ -728,7 +728,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             if (is_string($perlakuanPenyebabRequest['timeline_perlakuan_risiko'])) {
                 $perlakuanPenyebabRequest['timeline_perlakuan_risiko'] = explode(' - ', $perlakuanPenyebabRequest['timeline_perlakuan_risiko']);
             }
-            
+
             if ($perlakuanPenyebabRequest['timeline_perlakuan_risiko'] && count($perlakuanPenyebabRequest['timeline_perlakuan_risiko']) === 1) {
                 $perlakuanPenyebabRequest['timeline_perlakuan_risiko'][] = $perlakuanPenyebabRequest['timeline_perlakuan_risiko'][0];
             }
@@ -772,7 +772,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $projectRisk->refreshRealisasi();
         $projectPeriode->refreshNilai();
 
-        $efektivitas = 0.0; 
+        $efektivitas = 0.0;
 
         $analisa = $projectRisk->projectRiskAnalisa;
         $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
@@ -812,7 +812,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $userLevel = $user->level_id;
         $hasVerificationMr = Gate::allows('verification_mr');
         $isUnitMr = (bool) $user->unit?->unit_mr;
-    
+
         $latestMonitorings = collect([]);
         $riskIds = $projectPeriode->projectRisks()->pluck('id');
         if($riskIds->isNotEmpty()){
@@ -827,14 +827,14 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 $latestMonitorings = ProjectRiskMonitoring::whereIn('id', $latestMonitoringIds)->with('projectRisk')->get();
             }
         }
-        
+
         $buttonText = '';
         $params = [];
         $disabled = 'disabled';
         $allApproved = $latestMonitorings->isNotEmpty() && $latestMonitorings->every(function ($monitoring) {
             return $monitoring->is_approved || $monitoring->projectRisk?->is_closed;
         });
-    
+
         switch ($userLevel) {
             case 6:
                 $openRiskIds = $projectPeriode->projectRisks()->where('is_closed', false)->pluck('id');
@@ -846,7 +846,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     $disabled = '';
                 }
                 break;
-    
+
             case 7:
                 $unitName = 'Divisi';
                 if($projectPeriode->project->cost_center_parent) {
@@ -857,7 +857,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 $params = ['status_dari' => ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_PROJECT, 'status_ke' => ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI];
                 $disabled = $allApproved ? '' : 'disabled';
                 break;
-    
+
             case 1:
                 if ($user->unit && $user->unit->cost_center == $projectPeriode->project->cost_center_parent) {
                     $buttonText = 'Kirim ke Risk Officer Divisi MR';
@@ -870,27 +870,27 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     $disabled = $allApproved ? '' : 'disabled';
                 }
                 break;
-            
+
             case 2:
                 // Tombol aktif JIKA semua item yang menunggu verifikasi level ini (status 5) sudah di-approve
                 if ($isUnitMr && $hasVerificationMr) {
                     $monitoringsForThisStep = $latestMonitorings->where('status', ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR);
-                
+
                     $allApproved = $monitoringsForThisStep->isNotEmpty() &&  $monitoringsForThisStep->every(function ($monitoring) {
                         return $monitoring->is_approved || $monitoring->risiko?->is_closed;
                     });
-    
+
                     $buttonText = 'Terima Semua Monitoring';
                     $params = ['status_dari' => ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR, 'status_ke' => ProjectRiskMonitoring::STATUS_PUBLISHED, 'final' => true];
                     $disabled = $allApproved ? '' : 'disabled';
                 }
                 break;
         }
-    
+
         if ($buttonText) {
             return "<div>" . $this->buildEskalasiForm($buttonText, 'projects.monitorings.send.all', $projectPeriode->id, $params, $disabled) . "</div>";
         }
-    
+
         return null;
     }
 
@@ -1001,14 +1001,14 @@ class ProjectRiskMonitoringController extends BasicCRUDController
     public function sendAllMonitoring(Request $request, ProjectPeriodeList $project)
     {
         $validated = $request->validate([
-            'quarter' => 'required|integer', 
-            'tahun' => 'required|integer', 
+            'quarter' => 'required|integer',
+            'tahun' => 'required|integer',
             'month' => 'required|integer',
-            'status_dari' => 'required|integer', 
+            'status_dari' => 'required|integer',
             'status_ke' => 'required|integer',
             'is_final' => 'nullable|boolean',
         ]);
-        
+
         $riskIds = $project->projectRisks()->pluck('id');
 
         $latestMonitoringIds = ProjectRiskMonitoring::select(DB::raw('MAX(id) as last_id'))
@@ -1017,11 +1017,11 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ->groupBy('risiko_id')->pluck('last_id');
 
         $query = ProjectRiskMonitoring::whereIn('id', $latestMonitoringIds)->where('status', $validated['status_dari']);
-        
+
         if ($validated['status_dari'] > ProjectRiskMonitoring::STATUS_DRAFT_REVISI) {
             $query->where('is_approved', true);
         }
-        
+
         // Reset is_approved ke false untuk level verifikasi berikutnya
         $updateData = [
             'status' => $validated['status_ke'],
@@ -1082,7 +1082,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ->with('user:id,name')
             ->latest()
             ->get();
-            
+
         return response()->json($notes);
     }
 }

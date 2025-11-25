@@ -25,7 +25,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-12 col-md-4">
             <div class="card bg-primary shadow text-white text-center border-0">
                 <div class="card-body">
@@ -44,7 +44,7 @@
                     <h4 class="mb-0 ff-heading-sm">Realisasi Penanganan Risiko</h4>
                 </div>
             </div>
-            
+
             {{-- Tambahkan card untuk legend/keterangan --}}
             <div class="row g-2">
                 <div class="card">
@@ -64,7 +64,7 @@
                             </thead>
                             <tbody>
                                 @foreach ($risk->penyebabRisikos as $penyebabRisiko)
-                                    @php 
+                                    @php
                                         $rowSpan = $penyebabRisiko->perlakuanPenyebabRisiko->count() ?: 1;
                                         $outLoop = $loop;
                                     @endphp
@@ -132,7 +132,7 @@
                                         <td>{{ $kriProject->kri ?: '-' }}</td>
                                         <td>{{ $kriProject->satuan_kri ?: '-' }}</td>
                                         <td>{{ $kriProject->batas_aman ?? '-' }}</td>
-                                        <td>{{ $kriProject->batas_waspada ?? '-' }}</td>                    
+                                        <td>{{ $kriProject->batas_waspada ?? '-' }}</td>
                                         <td>{{ $kriProject->batas_bahaya ?? '-' }}</td>
                                         <td class="display-nilai-kri">
                                             {{ $lastMonitoring?->nilai_kri_terkini ?? '-' }}
@@ -166,7 +166,7 @@
         <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
-                    <h4 class="mb-0 ff-heading-sm">Realisasi Nilai Risiko Residual</h4>
+                    <h4 class="mb-0 ff-heading-sm">Nilai Risiko Residual Realisasi</h4>
                 </div>
             </div>
             <div class="row g-2">
@@ -232,7 +232,7 @@
                             <div class="lead__icon bg-warning rounded-pill">
                                 <i class='bx bx-cube text-white'></i>
                             </div>
-                            <h5>Target Residual</h5>
+                            <h5>Residual Rencana</h5>
                         </div>
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
@@ -289,13 +289,13 @@
                             <div class="lead__icon bg-info rounded-pill">
                                 <i class='bx bxs-cube text-white'></i>
                             </div>
-                            <h5>Realisasi</h5>
+                            <h5>Residual Realisasi</h5>
                         </div>
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
                                 <input class="form-control update-trigger inputmask-rupiah" type="text" id="realisasi_nilai_dampak" name="realisasi_nilai_dampak"
-                                value="Rp {{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}" 
-                                data-max="{{ $riskAnalysis->nilai_dampak }}" 
+                                value="Rp {{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}"
+                                data-max="{{ $riskAnalysis->nilai_dampak }}"
                                 {{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? 'disabled' : '' }}
                                 {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'max=' . $riskAnalysis->nilai_dampak : '' }}
                                 min="0"
@@ -309,7 +309,7 @@
                                 id="realisasi_skala_dampak" disabled>
                                 <option selected disabled>Skala Dampak</option>
                                 @foreach($skalaDampaks as $tingkat => $deskripsi)
-                                <option value="{{ $tingkat }}" 
+                                <option value="{{ $tingkat }}"
                                     {{ $riskMonitoring?->skala_dampak == $tingkat ? 'selected' : '' }}
                                     {{ $tingkat > $riskAnalysis->skalaDampakObj?->tingkat ? 'disabled' : '' }}>
                                     {{ $tingkat }} - {{ $deskripsi }}
@@ -322,7 +322,7 @@
                             <div class="form-floating">
                                 <input class="form-control update-trigger" type="number" id="realisasi_nilai_probabilitas"
                                 name="realisasi_nilai_probabilitas" value="{{ $riskMonitoring?->nilai_probabilitas }}"
-                                data-max="{{ $riskAnalysis->nilai_probabilitas }}" 
+                                data-max="{{ $riskAnalysis->nilai_probabilitas }}"
                                 max="{{ $riskAnalysis->nilai_probabilitas }}"
                                 min="0"
                                 oninput="if(this.value > {{ $riskAnalysis->nilai_probabilitas }}) this.value = {{ $riskAnalysis->nilai_probabilitas }};" value="{{ $riskMonitoring?->nilai_probabilitas }}" disabled>
@@ -425,9 +425,9 @@
                                         <td>{{ $perlakuanMonitoring->realisasi_biaya_perlakuan_risiko }}</td>
                                         <td>{{ $perlakuanMonitoring->progress_rencana_perlakuan_risiko }}</td>
                                         <td>
-                                            <button type="button" 
-                                                class="btn-input-icon btn-action" 
-                                                data-action="view-details" 
+                                            <button type="button"
+                                                class="btn-input-icon btn-action"
+                                                data-action="view-details"
                                                 data-bs-toggle="tooltip"
                                                 title="Detail Mitigasi"
                                                 data-perlakuan-id="{{ $perlakuanPenyebab->id }}"
@@ -539,7 +539,7 @@ $(document).ready(function() {
                     return;
                 }
             }
-            
+
             const formData = new FormData($('#main-form')[0]);
             formData.append('perlakuan_penyebab_risikos', JSON.stringify(perlakuanPenyebabRisikos));
             formData.append('kri_projects', JSON.stringify(kriProjects));
@@ -614,7 +614,7 @@ $(document).ready(function() {
             const perlakuanPenyebab = perlakuanPenyebabRisikos[perlakuanId];
             const penyebabRisiko = penyebabRisikoProjects[perlakuanPenyebab.penyebab_risiko_id];
             const perlakuanMonitoring = perlakuanPenyebab?.perlakuan_penyebab_monitorings?.find(m => m.id == id);
-            
+
             if (!perlakuanMonitoring) {
                 Swal.fire('Error', 'Data perlakuan penyebab risiko tidak ditemukan', 'error');
                 return;
@@ -780,11 +780,11 @@ $(document).ready(function() {
         } else {
             tbody.append('<tr><td colspan="4" class="text-center">Tidak ada data</td></tr>');
         }
-        
+
         $('#modalLihatFile').modal('show');
     });
 
-    
+
     $('.datatable').DataTable({
         paging: true,
         info: false,

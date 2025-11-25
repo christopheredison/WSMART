@@ -718,6 +718,7 @@ class ProjectLEDController extends Controller
           'kategoriRisiko', 
           'jenisRisiko',
           'penyebabRisikoProjectLeds.perlakuanPenyebabRisiko',
+          'risiko',
         ])->findOrFail($id);
         
         $project = Project::find($lossEvent->project_id);

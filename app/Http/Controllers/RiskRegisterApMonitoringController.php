@@ -255,7 +255,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             $this->tableActions[] = [
                 'label' => 'Change to LED',
                 'btn_icon' => false,
-                'action' => 'change_to_led_unit',
+                'action' => 'change_to_led_ap',
                 'active_state' => '(data, type, row) => row.is_closed != 1',
                 'extra_attrs' => [ 'style' => 'font-size: 14px; font-weight: 400;' ]
             ];

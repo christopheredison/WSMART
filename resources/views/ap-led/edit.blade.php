@@ -287,7 +287,14 @@ $(document).ready(function() {
     }
     
     renderPenyebabTable();
-    flatpickr(".flatpickr-date", { altInput: false, altFormat: "j F Y", dateFormat: "Y-m-d" });
+    flatpickr(".flatpickr-date", 
+      {
+        altInput: false,
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
+        maxDate: 'today',
+      }
+    );
     $('.inputmask-rupiah').inputmask({ alias: 'numeric', groupSeparator: '.', autoGroup: true, digits: 0, prefix: 'Rp ', placeholder: '0', rightAlign: false, autoUnmask: true, removeMaskOnSubmit: true });
 
     $('#btn-tambah-penyebab').on('click', function() {
