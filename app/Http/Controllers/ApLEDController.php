@@ -116,7 +116,7 @@ class ApLEDController extends Controller
         $periode = null;
         $identifikasiRisikos = [];
         $user = request()->user();
-        $unitId = $user->unit_id;
+        $unitId = request()->unit_id ?? $user->unit_id;
         if (request()->periode) {
             $periode = Periode::findOrFail(request()->periode);
         }
@@ -157,6 +157,7 @@ class ApLEDController extends Controller
         }
 
         $user = auth()->user();
+        $unit = Unit::findOrFail($request->unit_id ?? $user->unit_id);
 
         DB::beginTransaction();
         try {
@@ -179,7 +180,7 @@ class ApLEDController extends Controller
                 'nilai_premi' => $request->status_asuransi == '1' ? ($request->nilai_premi ?? 0) : 0,
                 'nilai_klaim' => $request->status_asuransi == '1' ? ($request->nilai_klaim ?? 0) : 0,
                 // 'version' => 1,
-                'unit_id' => $user->unit_id,
+                'unit_id' => $unit->id,
             ]);
 
             // Simpan data penyebab dan perlakuan untuk LED
@@ -215,8 +216,8 @@ class ApLEDController extends Controller
             if ($request->input('create_risk_from_led') == '1') {
                 // Buat Unit Risk
                 $newUnitRisk = IdentifikasiRisiko::create([
-                    'unit_type_id' => $user->unit_type_id,
-                    'unit_id' => $user->unit_id,
+                    'unit_type_id' => $unit->unit_type_id,
+                    'unit_id' => $unit->id,
                     'periode_id' => $request->periode_id,
                     'user_id' => $user->id,
                     'peristiwa_risiko' => $request->identifikasi_kejadian,
@@ -357,6 +358,7 @@ class ApLEDController extends Controller
         }
 
         $user = auth()->user();
+        $unit = Unit::findOrFail($request->unit_id ?? $user->unit_id);
 
         DB::beginTransaction();
         try {
@@ -443,8 +445,8 @@ class ApLEDController extends Controller
 
                 // Buat ProjectRisk baru
                 $newUnitRisk = IdentifikasiRisiko::create([
-                    'unit_type_id' => $user->unit_type_id,
-                    'unit_id' => $user->unit_id,
+                    'unit_type_id' => $unit->unit_type_id,
+                    'unit_id' => $unit->id,
                     'periode_id' => $request->periode_id,
                     'user_id' => $user->id,
                     'peristiwa_risiko' => $request->identifikasi_kejadian,
@@ -659,27 +661,30 @@ class ApLEDController extends Controller
                 }
             }
     
+            $efektivitas = 0;
+
+            $analisa = $riskRegister->riskAnalysis;
+            $monitoring = $riskRegister?->lastMonitoringRisiko;
+            $quarter = $monitoring?->quarter ?: 1;
+            $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
+            $skala_risiko_rencana = (float) optional($analisa)['skala_risiko_residual_q' . $quarter];
+            $skala_risiko_realisasi = (float) optional($monitoring)->skala_risiko;
+
+            $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
+
+            // Hindari pembagian dengan nol
+            if ($selisih_inherent_rencana != 0) {
+                $efektivitas = (($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana) * 100;
+            }
+
+            $riskRegister->update([
+              'efektivitas_perlakuan_risiko' => round($efektivitas, 2)
+            ]);
+
             // Cek apakah risiko perlu di-close
             if ($request->input('is_closed') == '1') {
-                $efektivitas = 0;
-
-                $analisa = $riskRegister->riskAnalysis;
-                $monitoring = $riskRegister?->lastMonitoringRisiko;
-                $quarter = $monitoring?->quarter ?: 1;
-                $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
-                $skala_risiko_rencana = (float) optional($analisa)['skala_risiko_residual_q' . $quarter];
-                $skala_risiko_realisasi = (float) optional($monitoring)->skala_risiko;
-
-                $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
-
-                // Hindari pembagian dengan nol
-                if ($selisih_inherent_rencana != 0) {
-                    $efektivitas = ($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana;
-                }
-
                 $riskRegister->update([
                   'is_closed' => true,
-                  'efektivitas_perlakuan_risiko' => $efektivitas
                 ]);
 
                 KamusRisikoAp::updateOrCreate([

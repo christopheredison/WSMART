@@ -352,7 +352,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 'level_risiko_q3' => $analisa->level_risiko_residual_q3 ?? '-',
                 'level_risiko_q4' => $analisa->level_risiko_residual_q4 ?? '-',
                 
-                'nilai_efektivitas' => $risiko->efektivitas_perlakuan_risiko ?? '-',
+                'nilai_efektivitas' => $risiko->efektivitas_perlakuan_risiko ? $risiko->efektivitas_perlakuan_risiko . '%' : '-',
 
                 // Efektifitas Perlakuan Risiko
                 'efektifitas_perlakuan' => $this->calculateEfektifitas($analisa, $risiko),

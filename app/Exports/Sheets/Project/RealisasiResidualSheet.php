@@ -284,7 +284,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 'eksposur_risiko' => $this->formatCurrency($analisa->eksposur_risiko_residual ?? 0),
                 'skala_risiko' => $analisa->skala_risiko_residual ?? '-',
                 'level_risiko' => $analisa->level_risiko_residual ?? '-',
-                'nilai_efektivitas' => $risiko->efektivitas_perlakuan_risiko ?? '-',
+                'nilai_efektivitas' => $risiko->efektivitas_perlakuan_risiko ? $risiko->efektivitas_perlakuan_risiko . '%' : '-',
                 'efektifitas_perlakuan' => $this->calculateEfektifitas($analisa, $risiko),
             ];
 

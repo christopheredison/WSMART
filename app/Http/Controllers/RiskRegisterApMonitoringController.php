@@ -673,11 +673,11 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
 
         // Hindari pembagian dengan nol
         if ($selisih_inherent_rencana != 0) {
-            $efektivitas = ($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana;
+            $efektivitas = (($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana) * 100;
         }
 
         $risk->update([
-            'efektivitas_perlakuan_risiko' => $efektivitas
+            'efektivitas_perlakuan_risiko' => round($efektivitas, 2)
         ]);
 
         if ($request->is_closed == '1') {

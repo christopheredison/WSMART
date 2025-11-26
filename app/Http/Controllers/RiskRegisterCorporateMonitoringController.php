@@ -23,21 +23,13 @@ use App\Models\KamusRisikoUnit;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class RiskRegisterUnitMonitoringController extends BasicCRUDController
+class RiskRegisterCorporateMonitoringController extends BasicCRUDController
 {
     protected $model = IdentifikasiRisiko::class;
     protected $basePermission = 'risk_monitoring';
     protected $resourceName = 'Monitoring Risiko';
-    protected $baseRoute = 'risk-register-unit.monitorings.';
+    protected $baseRoute = 'corporate-risk.monitorings.';
     protected $editType = 'link';
-    
-    public function getRisikoId($id)
-    {
-        $monitoring = UnitRiskMonitoring::findOrFail($id);
-        return response()->json([
-            'identifikasi_risiko_id' => $monitoring->identifikasi_risiko_id
-        ]);
-    }
 
     public function index() {
         $this->baseRouteParams = ['period' => request()->route('period')];
@@ -54,23 +46,8 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         if ($quarter == 4) $defaultMonth = '10';
         $month = request()->input('filters.month', $defaultMonth);
 
-        $targetUnitId = null;
-        $viewAllDivision = Gate::check('view_all_division');
-
-        if ($viewAllDivision) {
-          if (request()->filled('filters.unit_id')) {
-            $targetUnitId = request()->input('filters.unit_id');
-          } elseif (request()->filled('unit_id')) {
-            $targetUnitId = request()->input('unit_id');
-          } else {
-            $firstUnit = Unit::where('unit_type_id', 1)->orderBy('id', 'asc')->first();
-            $targetUnitId = $firstUnit ? $firstUnit->id : null;
-          }
-        } else {
-          $targetUnitId = $user->unit_id;
-        }
-
-        $unit = Unit::find($targetUnitId);
+        $unit = Unit::where('unit_type_id', 4)->first();
+        $targetUnitId = $unit->id;
         if ($unit) {
           $this->indexSubtitle = $unit->name;
         }
@@ -83,7 +60,8 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $this->callbackQuery = function ($query) use ($period, $quarter, $user, $month, $targetUnitId) {
             $query->where('periode_id', $period->id)
                 ->where('unit_id', $targetUnitId)
-                ->where('unit_type_id', 1)
+                ->where('unit_type_id', 4)
+                // ->where('is_corporate', 1)
                 ->with([
                   // 'peristiwaRisiko', 
                   'unit',
@@ -247,7 +225,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         ];
 
         if (Gate::check('risk_monitoring_view')) {
-            $showRoute = route('risk-register-unit.monitorings.show', ['period' => request()->route('period'), 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
+            $showRoute = route('corporate-risk.monitorings.show', ['period' => request()->route('period'), 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
             $this->tableActions[] = [
                 'label' => 'View',
                 'btn_icon' => false,
@@ -260,7 +238,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $isUserUnitMr = (bool) $user->unit?->unit_mr;
         if (Gate::check('risk_monitoring_input') && $userLevel == 1 && ($isUnitMr == $isUserUnitMr)) {
-            $monitoringRoute = route('risk-register-unit.monitorings.edit', ['period' => request()->route('period'), 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
+            $monitoringRoute = route('corporate-risk.monitorings.edit', ['period' => request()->route('period'), 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
             $this->tableActions[] = [
                 'label' => 'Monitoring',
                 'btn_icon' => false,
@@ -342,17 +320,9 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             return $identifikasiRisiko->peristiwaRisiko;
         })->flatten()->unique('id');
 
-        $unitFilterOptions = [];
         $unitFilterAttributes = ['class' => 'form-select select2'];
-
-        if ($viewAllDivision) {
-            $unitFilterOptions = Unit::where('unit_type_id', 1)->pluck('name', 'id')->toArray();
-        } else {
-            if ($user->unit) {
-                $unitFilterOptions = [$user->unit_id => $user->unit->name];
-            }
-            $unitFilterAttributes['disabled'] = true;
-        }
+        $unitFilterOptions = Unit::where('unit_type_id', 4)->pluck('name', 'id')->toArray();
+        $unitFilterAttributes['disabled'] = true;
 
         $filters = [];
         $filters['unit_id'] = [
@@ -491,7 +461,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         //     }
         // }
 
-        return view('risk-register-unit.monitorings.edit', [
+        return view('corporate-risk.monitorings.edit', [
             'period' => $period,
             'risk' => $risk,
             'quarter' => $quarter,
@@ -548,7 +518,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $files = $risk->lastMonitoringRisiko?->perlakuanPenyebabRisikoDocuments->groupBy('perlakuan_penyebab_risiko_unit_id') ?: [];
 
-        return view('risk-register-unit.monitorings.show', [
+        return view('corporate-risk.monitorings.show', [
             'period' => $period,
             'risk' => $risk,
             'quarter' => $quarter,
@@ -655,7 +625,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             if ($documentFiles = $request->{'document_file_' . $id}) {
                 $documentDescriptions = json_decode($request->input('document_description_' . $id, '[]'), true) ?: [];
                 foreach ($documentFiles as $idx => $documentFile) {
-                    $storeFile = $documentFile->store('risk-register-unit-monitoring-documents');
+                    $storeFile = $documentFile->store('corporate-risk-monitoring-documents');
                     PerlakuanPenyebabRisikoUnitDocument::create([
                         'perlakuan_penyebab_risiko_unit_id' => $id,
                         'unit_risk_monitoring_id' => $projectMonitoring->id,
@@ -796,7 +766,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         }
 
         if ($buttonText) {
-            return "<div>" . $this->buildEskalasiForm($buttonText, 'risk-register-unit.monitorings.send.all', $period->id, $period->tahun, $params, $disabled, $targetUnitId) . "</div>";
+            return "<div>" . $this->buildEskalasiForm($buttonText, 'corporate-risk.monitorings.send.all', $period->id, $period->tahun, $params, $disabled, $targetUnitId) . "</div>";
         }
         return null;
     }

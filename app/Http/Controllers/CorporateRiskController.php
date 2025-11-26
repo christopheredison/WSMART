@@ -421,7 +421,8 @@ class CorporateRiskController extends Controller
 
     public function index(Request $request)
     {
-        $unitId = $request->query('unit_id') ?? auth()->user()->unit_id;
+        // $unitId = $request->query('unit_id') ?? auth()->user()->unit_id;
+        $unitId = 1;
         // Ambil periode_id dari parameter URL
         $periodeId = $request->query('pid');
         $batchNotes = null;
@@ -1037,6 +1038,88 @@ class CorporateRiskController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
         }
+    }
+
+    public function view($id)
+    {
+        $user    = request()->user()->load('unit');
+        $risikos = IdentifikasiRisiko::where('id', $id)
+            ->with(['riskAnalysis', 'projectRisks.project', 'projectRisks.projectRiskAnalisa'])
+            ->get();
+
+        $risiko = $risikos->first();
+
+        $currentRiskMaps = $risikos->pluck('currentRiskMaps');
+        $formattedCurrentRiskMaps = [];
+
+        foreach ($risikos as $idx => $risk) {
+            $getFallbackValue = function($targetQuarter) use ($risk) {
+                if (isset($risk->current_risk_maps[$targetQuarter]) &&
+                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) &&
+                    !is_null($risk->current_risk_maps[$targetQuarter]['skala_probabilitas'])) {
+                    return $risk->current_risk_maps[$targetQuarter];
+                }
+
+                for ($q = $targetQuarter - 1; $q >= 1; $q--) {
+                    if (isset($risk->current_risk_maps[$q]) &&
+                        !is_null($risk->current_risk_maps[$q]['skala_dampak']) &&
+                        !is_null($risk->current_risk_maps[$q]['skala_probabilitas'])) {
+                        return $risk->current_risk_maps[$q];
+                    }
+                }
+
+                if (isset($risk->current_risk_maps['inherent']) &&
+                    !is_null($risk->current_risk_maps['inherent']['skala_dampak']) &&
+                    !is_null($risk->current_risk_maps['inherent']['skala_probabilitas'])) {
+                    return $risk->current_risk_maps['inherent'];
+                }
+
+                if ($risk->riskAnalysis) {
+                    return [
+                        'skala_dampak' => $risk->riskAnalysis->skala_dampak,
+                        'skala_probabilitas' => $risk->riskAnalysis->skala_probabilitas->tingkat ?? null,
+                        'skala_risiko' => $risk->riskAnalysis->skala_risiko,
+                        'level_risiko' => $risk->riskAnalysis->level_risiko,
+                    ];
+                }
+
+                return null;
+            };
+
+            for ($quarter = 1; $quarter <= 4; $quarter++) {
+                $currentValue = $getFallbackValue($quarter);
+
+                if ($currentValue &&
+                    !is_null($currentValue['skala_dampak']) &&
+                    !is_null($currentValue['skala_probabilitas'])) {
+                    $currentValue['quarter'] = $quarter;
+                    $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
+                }
+            }
+        }
+
+        $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->skala_dampak . '-' . $item->skala_probabilitas;
+            });
+
+        $risk_tolerance = 0;
+        $risk_limit = 0;
+        $risiko = $risikos->first();
+
+        if ($risiko->riskAnalysis && $risiko->riskAnalysis->kategori_dampak == 'Kuantitatif') {
+            $unit = $risiko->unit;
+            $periode = $risiko->periode;
+
+            $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+            if ($riskLimitPeriode) {
+                $risk_limit = $riskLimitPeriode->risk_limit;
+                $risk_tolerance = $riskLimitPeriode->risk_limit;
+            }
+        }
+
+        return view('corporate-risk.view', compact('user', 'risikos', 'risiko', 'riskMaps', 'formattedCurrentRiskMaps', 'risk_limit', 'risk_tolerance'));
     }
 
     public function analisa(Request $request, $riskRegisterId)

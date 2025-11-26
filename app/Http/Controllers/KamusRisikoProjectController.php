@@ -13,6 +13,7 @@ use App\Exports\KamusRisikoProjectExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Yajra\DataTables\Facades\DataTables;
 
 class KamusRisikoProjectController extends Controller
 {
@@ -31,47 +32,34 @@ class KamusRisikoProjectController extends Controller
                 $query->where('project_id', $request->project_id);
             }
 
-            if ($request->filled('peristiwa_risiko_id')) {
-                $query->whereHas('projectRisk', function ($q) use ($request) {
+            // Filter Relation via ProjectRisk
+            $query->whereHas('projectRisk', function ($q) use ($request) {
+                if ($request->filled('peristiwa_risiko_id')) {
                     $q->where('peristiwa_risiko_id', $request->peristiwa_risiko_id);
-                });
-            }
-
-            if ($request->filled('jenis_risiko_id')) {
-                $query->whereHas('projectRisk', function ($q) use ($request) {
+                }
+                if ($request->filled('jenis_risiko_id')) {
                     $q->where('jenis_risiko_id', $request->jenis_risiko_id);
-                });
-            }
-
-            if ($request->filled('level_risiko')) {
-                $query->whereHas('projectRisk', function ($q) use ($request) {
+                }
+                if ($request->filled('level_risiko')) {
                     $q->where('level_risiko', $request->level_risiko);
-                });
-            }
-
-            if ($request->filled('deskripsi_risiko')) {
-                $query->whereHas('projectRisk', function ($q) use ($request) {
+                }
+                if ($request->filled('deskripsi_risiko')) {
                     $q->where('deskripsi_peristiwa_risiko', 'like', '%' . $request->deskripsi_risiko . '%');
-                });
-            }
-
-            if ($request->filled('efektivitas')) {
-                $query->whereHas('projectRisk', function ($q) use ($request) {
+                }
+                if ($request->filled('efektivitas')) {
                     if ($request->efektivitas == 'efektif') {
-                        // 'Efektif' jika nilainya lebih dari 0
                         $q->where('efektivitas_perlakuan_risiko', '>', 0);
                     } elseif ($request->efektivitas == 'tidak_efektif') {
-                        // 'Tidak Efektif' jika nilainya 0 atau kurang dari 0 (negatif)
                         $q->where('efektivitas_perlakuan_risiko', '<=', 0);
                     }
-                });
-            }
+                }
+            });
 
-            return datatables()->of($query)
+            return DataTables::of($query)
                 ->addIndexColumn()
                 ->addColumn('action', function ($row) {
                     $detailUrl = route('projects.risks.view', ['project' => $row->project_id, 'risk' => $row->project_risk_id]);
-                    
+
                     $btn_view = '<a href="' . $detailUrl . '" target="_blank" class="btn btn-sm btn-info d-flex align-items-center justify-content-center" title="View Detail">
                                     <span class="bx bx-show me-1"></span>
                                     <span>View Detail</span>
@@ -81,7 +69,7 @@ class KamusRisikoProjectController extends Controller
                                     <span class="bx bx-plus me-1"></span>
                                     <span>Ambil Risiko</span>
                                 </button>';
-                    
+
                     return '<div class="d-flex flex-column gap-1">' . $btn_view . $btn_ambil . '</div>';
                 })
                 ->addColumn('proyek', function ($row) {
@@ -166,8 +154,8 @@ class KamusRisikoProjectController extends Controller
                     }
 
                     $class = $efektivitas > 0 ? 'text-success' : ($efektivitas < 0 ? 'text-danger' : 'text-warning');
-                    
-                    return '<span class="fw-bold ' . $class . '">' . $efektivitas . '</span>';
+
+                    return '<span class="fw-bold ' . $class . '">' . $efektivitas . '%</span>';
                 })
                 ->rawColumns(['action', 'level_risiko_inheren', 'level_risiko_residual', 'realisasi_level_risiko', 'efektivitas'])
                 ->make(true);
@@ -199,11 +187,11 @@ class KamusRisikoProjectController extends Controller
             DB::beginTransaction();
 
             $originalRisk = ProjectRisk::with([
-                'penyebabRisikoProjects.perlakuanPenyebabRisiko', 
+                'penyebabRisikoProjects.perlakuanPenyebabRisiko',
                 'kriProjects',
                 'projectRiskAnalisa'
             ])->findOrFail($request->original_risk_id);
-            
+
             $targetPeriodeList = ProjectPeriodeList::where('project_id', $request->target_project_id)->first();
 
             if (!$targetPeriodeList) {
@@ -215,7 +203,7 @@ class KamusRisikoProjectController extends Controller
             //     ->where('deskripsi_peristiwa_risiko', $originalRisk->deskripsi_peristiwa_risiko)
             //     ->where('is_closed', 0)
             //     ->exists();
-                
+
             // if ($isExist) {
             //     return response()->json(['message' => 'Risiko dengan deskripsi yang sama sudah ada di proyek tujuan.'], 422);
             // }
@@ -260,7 +248,7 @@ class KamusRisikoProjectController extends Controller
                 ]);
                 $newKri->save();
             }
-            
+
             DB::commit();
 
             return response()->json(['message' => 'Risiko berhasil ditambahkan ke proyek yang dipilih.']);
@@ -282,14 +270,14 @@ class KamusRisikoProjectController extends Controller
                 'deskripsi_risiko',
                 'efektivitas',
             ]);
-    
+
             $fileName = 'Kamus_Risiko_Proyek_' . date('d-m-Y_H-i-s') . '.xlsx';
-    
+
             $fileContents = Excel::raw(
                 new KamusRisikoProjectExport($filters),
                 \Maatwebsite\Excel\Excel::XLSX
             );
-    
+
             return response($fileContents, 200, [
                 'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'Content-Disposition' => 'attachment; filename="' . $fileName . '"',

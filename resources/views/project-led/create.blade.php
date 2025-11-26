@@ -212,16 +212,16 @@
 <script>
 $(document).ready(function() {
     var flatpickrMulai = flatpickr("#timelineRange1", {
-        altInput: false,
-        altFormat: "j F Y",
-        dateFormat: "d/m/Y",
+        altInput: true,
+        altFormat: "d/m/Y",
+        dateFormat: "Y-m-d",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
-        altInput: false,
-        altFormat: "j F Y",
-        dateFormat: "d/m/Y",
+        altInput: true,
+        altFormat: "d/m/Y",
+        dateFormat: "Y-m-d",
         disableMobile: true
     });
 
@@ -285,10 +285,10 @@ $(document).ready(function() {
     renderPenyebabTable();
     flatpickr(".flatpickr-date", 
       {
-        altInput: false,
-        altFormat: "j F Y",
-        dateFormat: "d/m/Y",
-        disableMobile: true,
+        altInput: true,
+        altFormat: "d/m/Y",
+        dateFormat: "Y-m-d",
+        disableMobile: true
         maxDate: 'today',
       }
     );
