@@ -13,15 +13,14 @@
                         <div class="lead__icon bg-warning-subtle">
                             <div class="svg-icon svg-icon-warning">@include('partials.icon-tool')</div>
                         </div>
-                        <h2 class="h3">Edit Loss Event Anak Perusahaan</h2>
+                        <h2 class="h3">Edit Loss Event Korporat</h2>
                     </div>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('ap-led.update', $lossEvent->id) }}" method="post" id="form-edit-led">
+                    <form action="{{ route('corporate-led.update', $lossEvent->id) }}" method="post" id="form-edit-led">
                         @csrf
                         @method('PUT')
                         <input type="hidden" name="create_risk_from_led" id="create_risk_from_led_input" value="0">
-                        <input type="hidden" id="unit_id" name="unit_id" value="{{ old('unit_id', $lossEvent->unit_id) }}" required>
 
                         <div class="row">
                             <div class="col-12 mb-3">
@@ -179,7 +178,7 @@
                         </div>
 
                         <div class="col-12 mt-4">
-                            <a href="{{ route('ap-led.index-by-periode', ['periode' => $lossEvent->periode_id]) }}" class="btn btn-secondary">Batal</a>
+                            <a href="{{ route('corporate-led.index', ['periode' => $lossEvent->periode_id]) }}" class="btn btn-secondary">Batal</a>
                             <button type="submit" class="btn btn-primary">Update Data</button>
                         </div>
                     </form>
@@ -225,15 +224,15 @@ $(document).ready(function() {
 
     var flatpickrMulai = flatpickr("#timelineRange1", {
         altInput: true,
-        altFormat: "d/m/Y",
-        dateFormat: "Y-m-d",
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
         altInput: true,
-        altFormat: "d/m/Y",
-        dateFormat: "Y-m-d",
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
         disableMobile: true
     });
 
@@ -291,9 +290,9 @@ $(document).ready(function() {
     flatpickr(".flatpickr-date", 
       {
         altInput: true,
-        altFormat: "d/m/Y",
-        dateFormat: "Y-m-d",
-        disableMobile: true
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
+        maxDate: 'today',
       }
     );
     $('.inputmask-rupiah').inputmask({ alias: 'numeric', groupSeparator: '.', autoGroup: true, digits: 0, prefix: 'Rp ', placeholder: '0', rightAlign: false, autoUnmask: true, removeMaskOnSubmit: true });
@@ -493,7 +492,7 @@ $(document).ready(function() {
 
         Swal.fire({
             title: 'Konfirmasi Penyimpanan',
-            text: "Apakah Loss Event ini akan menjadi Risiko baru di Anak Perusahaan?",
+            text: "Apakah Loss Event ini akan menjadi Risiko baru di Divisi?",
             icon: 'question',
             showDenyButton: true,
             showCancelButton: false,

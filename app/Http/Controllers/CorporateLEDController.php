@@ -27,32 +27,16 @@ use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
-class UnitLEDController extends Controller
+class CorporateLEDController extends Controller
 {
     public function index(Request $request, $periodeId = null)
     {
-        $viewAllDivision = Gate::check('view_all_division');
-        $targetUnitId = null;
-        $units = [];
-
-        if ($viewAllDivision) {
-            $units = Unit::where('unit_type_id', 1)->pluck('name', 'id');
-            $targetUnitId = $request->input('unit_id', $units->keys()->first());
-        } else {
-            $targetUnitId = $request->user()->unit_id;
-        }
+        $targetUnitId = Unit::where('unit_type_id', 4)->first()->id;
 
         if ($request->ajax()) {
             $data = LossEvent::with(['kategoriKejadian']);
 
-            $unitToFilter = null;
-            if ($viewAllDivision) {
-                $unitToFilter = $request->input('unit_id');
-            } else {
-                $unitToFilter = $request->user()->unit_id;
-            }
-
-            $data->where('unit_id', $unitToFilter);
+            $data->where('unit_id', $targetUnitId);
             
             if ($request->filled('periode_id') && $request->periode_id !== '') {
                 $data->where('periode_id', $request->periode_id);
@@ -64,7 +48,7 @@ class UnitLEDController extends Controller
             return DataTables::of($data)
                 ->addIndexColumn()
                 ->addColumn('action', function($row) {
-                    return view('unit-led._table_action', compact('row'))->render();
+                    return view('corporate-led._table_action', compact('row'))->render();
                 })
                 ->editColumn('nama_kejadian', function($row) {
                     return $row->nama_kejadian ?? '-';
@@ -95,12 +79,10 @@ class UnitLEDController extends Controller
             $periode = Periode::findOrFail($periodeId);
         }
     
-        return view('unit-led.index', compact(
+        return view('corporate-led.index', compact(
           'periodes', 
           'kategoriKejadians', 
           'periode',
-          'units',
-          'viewAllDivision',
           'targetUnitId',
         ));
     }
@@ -113,13 +95,12 @@ class UnitLEDController extends Controller
         $jabatans = Jabatan::all();
         $periode = null;
         $identifikasiRisikos = [];
-        $user = request()->user();
-        $unitId = request()->unit_id ?? $user->unit_id;
+        $unitId = Unit::where('unit_type_id', 4)->first()->id;
         if (request()->periode) {
             $periode = Periode::findOrFail(request()->periode);
         }
         
-        return view('unit-led.create', compact('periodes', 'kategoriKejadians', 'jenisRisikos', 'jabatans', 'periode', 'unitId'));
+        return view('corporate-led.create', compact('periodes', 'kategoriKejadians', 'jenisRisikos', 'jabatans', 'periode', 'unitId'));
     }
 
     public function store(Request $request)
@@ -263,14 +244,14 @@ class UnitLEDController extends Controller
                 }
 
                 DB::commit();
-                return redirect()->route('risk-register-unit.edit', ['riskRegister' => $newUnitRisk->id])
-                    ->with('success', 'Loss Event berhasil dibuat dan Divisi Risk baru telah ditambahkan.');
+                return redirect()->route('corporate-risk.edit', ['riskRegister' => $newUnitRisk->id])
+                    ->with('success', 'Loss Event berhasil dibuat dan Korporat Risk baru telah ditambahkan.');
             }
 
             // Jika user memilih "Tidak", cukup simpan LED
             DB::commit();
-            return redirect()->route('unit-led.index-by-periode', ['periode' => $request->periode_id])
-                ->with('success', 'Data Loss Event Divisi berhasil ditambahkan.');
+            return redirect()->route('corporate-led.index', ['periode' => $request->periode_id])
+                ->with('success', 'Data Loss Event Korporat berhasil ditambahkan.');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
@@ -308,7 +289,7 @@ class UnitLEDController extends Controller
             ];
         });
 
-        return view('unit-led.edit', compact(
+        return view('corporate-led.edit', compact(
           'lossEvent',
           'periodes',
           'kategoriKejadians',
@@ -322,7 +303,6 @@ class UnitLEDController extends Controller
 
     public function update(Request $request, $id)
     {
-        // dd($request->all());
         $lossEvent = LossEvent::findOrFail($id);
 
         $request->merge([
@@ -491,13 +471,13 @@ class UnitLEDController extends Controller
                 }
 
                 DB::commit();
-                return redirect()->route('risk-register-unit.edit', ['riskRegister' => $newUnitRisk->id])
-                    ->with('success', 'Loss Event berhasil diperbarui dan Divisi Risk baru telah ditambahkan.');
+                return redirect()->route('corporate-risk.edit', ['riskRegister' => $newUnitRisk->id])
+                    ->with('success', 'Loss Event berhasil diperbarui dan Korporat Risk baru telah ditambahkan.');
             }
 
             DB::commit();
-            return redirect()->route('unit-led.index-by-periode', ['periode' => $request->periode_id])
-                ->with('success', 'Data Loss Event Divisi berhasil diperbarui.');
+            return redirect()->route('corporate-led.index', ['periode' => $request->periode_id])
+                ->with('success', 'Data Loss Event Korporat berhasil diperbarui.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -534,7 +514,7 @@ class UnitLEDController extends Controller
           'penyebabRisikoLeds.perlakuanPenyebabRisiko',
         ])->findOrFail($id);
         
-        return view('unit-led.show', compact('lossEvent'));
+        return view('corporate-led.show', compact('lossEvent'));
     }
 
     public function riskChangeToLed(IdentifikasiRisiko $riskRegister)
@@ -571,7 +551,7 @@ class UnitLEDController extends Controller
         $analisa = $risiko->riskAnalysis;
         $jabatans = Jabatan::all();
 
-        return view('unit-led.change-to-led', compact(
+        return view('corporate-led.change-to-led', compact(
             'risiko',
             'kategoriKejadians',
             'jenisRisikos',
@@ -683,7 +663,7 @@ class UnitLEDController extends Controller
             }
 
             $riskRegister->update([
-                'efektivitas_perlakuan_risiko' => round($efektivitas, 2)
+              'efektivitas_perlakuan_risiko' => $efektivitas
             ]);
 
             // Cek apakah risiko perlu di-close
@@ -702,7 +682,7 @@ class UnitLEDController extends Controller
             if ($request->input('create_new_risk') == '1') {
                 $penyebabText = "Risiko " . $request->nama_kejadian;
                 return redirect()->route(
-                    'risk-register-unit.create', 
+                    'corporate-risk.create', 
                     [
                         'penyebab_risiko' => $penyebabText,
                         'pid' => $riskRegister->periode_id
@@ -710,7 +690,7 @@ class UnitLEDController extends Controller
                 )->with('success', 'Loss Event berhasil dibuat. Silakan tambahkan risiko baru.');
             }
 
-            return redirect()->route('risk-register-unit.monitorings.index', ['period' => $riskRegister->periode_id])
+            return redirect()->route('corporate-risk.monitorings.index', ['period' => $riskRegister->periode_id])
             ->with('success', 'Risiko berhasil diubah menjadi Loss Event.');
         } catch (\Exception $e) {
             DB::rollBack();

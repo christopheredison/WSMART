@@ -374,12 +374,12 @@ class IdentifikasiRisiko extends Model
         // Pisahkan risiko berdasarkan kategori dampak (kuantitatif dan kualitatif)
         $quantitativeRisks = $unitRisks->filter(function($risk) {
             return $risk->riskAnalysis && 
-                   $risk->riskAnalysis->kategori_dampak === 'Kuantitatif';
+                  $risk->riskAnalysis->kategori_dampak === 'Kuantitatif';
         });
         
         $qualitativeRisks = $unitRisks->filter(function($risk) {
             return $risk->riskAnalysis && 
-                   $risk->riskAnalysis->kategori_dampak === 'Kualitatif';
+                  $risk->riskAnalysis->kategori_dampak === 'Kualitatif';
         });
         
         // Untuk risiko kuantitatif, hitung rata-rata eksposur risiko

@@ -1115,7 +1115,7 @@ $(document).ready(function() {
 
     var flatpickrIns = flatpickr("#timelineInput", {
         mode: "single",
-        altInput: false,
+        altInput: true,
         altFormat: "j F Y",
         dateFormat: "d/m/Y",
         maxDate: endOfYear,

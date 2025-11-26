@@ -409,3 +409,99 @@ Breadcrumbs::for('rekomendasi-risiko.view', function (BreadcrumbTrail $trail, $r
         route('rekomendasi-risiko.view', $rekomendasi)
     );
 });
+
+// Periode Korporat
+Breadcrumbs::for('corporate-risk.periods', function (BreadcrumbTrail $trail) {
+    $trail->push('Periode Korporat', route('corporate-risk.periods'));
+});
+
+// Periode Korporat > View Periode Korporat
+Breadcrumbs::for('corporate-risk.periods.show', function (BreadcrumbTrail $trail, $period) {
+    $trail->parent('corporate-risk.periods');
+    $trail->push('Risk Register Korporat', route('corporate-risk.periods.show', [$period]));
+});
+
+// Periode Korporat > Risk Register Korporat
+Breadcrumbs::for('corporate-risk.index', function (BreadcrumbTrail $trail) {
+    $trail->parent('corporate-risk.periods');
+    $trail->push('Risk Register Korporat', route('corporate-risk.index'));
+});
+
+// Periode Korporat > Risk Register Korporat > Tambah Risk Register
+Breadcrumbs::for('corporate-risk.create', function (BreadcrumbTrail $trail) {
+    $trail->parent('corporate-risk.index');
+    $trail->push('Tambah Risk Register', route('corporate-risk.create'));
+});
+
+// Periode Korporat > Risk Register Korporat > Edit Risk Register
+Breadcrumbs::for('corporate-risk.edit', function (BreadcrumbTrail $trail, $riskRegister) {
+    $trail->parent('corporate-risk.index');
+    $trail->push('Edit Risk Register', route('corporate-risk.edit', [$riskRegister]));
+});
+
+// Periode Korporat > Risk Register Korporat > Analisa Risiko
+Breadcrumbs::for('corporate-risk.analisa', function (BreadcrumbTrail $trail, $riskRegister) {
+    $trail->parent('corporate-risk.index');
+    $trail->push('Analisa Risiko', route('corporate-risk.analisa', [$riskRegister]));
+});
+
+// Periode Korporat > Risk Register Korporat > Perencanaan Risiko
+Breadcrumbs::for('corporate-risk.perencanaan', function (BreadcrumbTrail $trail, $riskRegister) {
+    $trail->parent('corporate-risk.index');
+    $trail->push('Rencana Perlakuan Risiko', route('corporate-risk.perencanaan', [$riskRegister]));
+});
+
+// Periode Korporat > Risk Register Korporat > View Risiko
+Breadcrumbs::for('corporate-risk.view', function (BreadcrumbTrail $trail, $riskRegister) {
+    $trail->parent('corporate-risk.index');
+    $trail->push('View Risiko', route('corporate-risk.view', [$riskRegister]));
+});
+
+// Periode Korporat > Data Monitoring
+Breadcrumbs::for('corporate-risk.monitorings.index', function (BreadcrumbTrail $trail, $period) {
+    $trail->parent('corporate-risk.periods');
+    $trail->push('Data Monitoring', route('corporate-risk.monitorings.index', [$period]));
+});
+
+// Periode Korporat > Data Monitoring > View Data Monitoring
+Breadcrumbs::for('corporate-risk.monitorings.show', function (BreadcrumbTrail $trail, $period, $monitoring) {
+    $trail->parent('corporate-risk.monitorings.index', $period);
+    $trail->push('View Data Monitoring', route('corporate-risk.monitorings.show', [$period, $monitoring]));
+});
+
+// Periode Korporat > Data Monitoring > Edit Data Monitoring
+Breadcrumbs::for('corporate-risk.monitorings.edit', function (BreadcrumbTrail $trail, $period, $monitoring) {
+    $trail->parent('corporate-risk.monitorings.index', $period);
+    $trail->push('Edit Data Monitoring', route('corporate-risk.monitorings.edit', [$period, $monitoring]));
+});
+
+// Periode Korporat > Data Monitoring > Ubah Menjadi LED
+Breadcrumbs::for('corporate-risk.loss-events.create', function (BreadcrumbTrail $trail, $riskRegister) {
+    // Parent adalah View Risiko, karena kita mengubah risiko spesifik ini menjadi LED
+    $trail->parent('corporate-risk.view', $riskRegister); 
+    $trail->push('Ubah Menjadi LED', route('corporate-risk.loss-events.create', $riskRegister));
+});
+
+// Periode Korporat > Loss Event Korporat
+Breadcrumbs::for('corporate-led.index', function (BreadcrumbTrail $trail, $periode) {
+    $trail->parent('corporate-risk.periods');
+    $trail->push('Loss Event Korporat', route('corporate-led.index', $periode));
+});
+
+// Periode Korporat > Loss Event Korporat > Tambah Loss Event Korporat
+Breadcrumbs::for('corporate-led.create', function (BreadcrumbTrail $trail, $periode) {
+    $trail->parent('corporate-led.index', $periode);
+    $trail->push('Tambah Loss Event Korporat', route('corporate-led.create', $periode));
+});
+
+// Periode Korporat > Loss Event Korporat > Edit Loss Event Korporat
+Breadcrumbs::for('corporate-led.edit', function (BreadcrumbTrail $trail, $periode, $id) {
+    $trail->parent('corporate-led.index', $periode);
+    $trail->push('Edit Loss Event Korporat', route('corporate-led.edit', [$periode, $id]));
+});
+
+// Periode Korporat > Loss Event Korporat > Detail Loss Event Korporat
+Breadcrumbs::for('corporate-led.show', function (BreadcrumbTrail $trail, $periode, $id) {
+    $trail->parent('corporate-led.index', $periode);
+    $trail->push('Detail Loss Event Korporat', route('corporate-led.show', [$periode, $id]));
+});

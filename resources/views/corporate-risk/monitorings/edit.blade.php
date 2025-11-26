@@ -1,4 +1,3 @@
-
 @extends('layouts.default')
 @section('dashboard')
     <div class="row mb-5">
@@ -6,11 +5,11 @@
             <div class="svg-icon svg-icon-secondary">
                 @include('partials.icon-tool')
             </div>
-            <h3 class="mb-0">Input Monitor Risiko <small class="d-block mt-2">{{ $project->project_name }} - {{ $peristiwaRisiko->title }}</small></h3>
+            <h3 class="mb-0">Input Monitor Risiko</h3>
         </div>
     </div>
 
-    <form class="row g-3" method="POST" action="{{ route('projects.risks.store', request()->route('project')) }}" id="main-form">
+    <form class="row g-3" method="POST" id="main-form">
         <input type="hidden" name="draft_key" value="{{ request()->draft_key }}">
         @csrf
 
@@ -22,7 +21,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    {{ $projectRisk->deskripsi_peristiwa_risiko ?: '-' }}
+                    {{ $risk->deskripsi_peristiwa_risiko ?: '-' }}
                 </div>
             </div>
         </div>
@@ -32,9 +31,8 @@
                 <div class="card-body">
                     <i class='bx bx-alarm-exclamation fs-1 mb-3 text-white'></i>
                     <h4>Periode Monitoring</h4>
-                    <h3 class="mb-0">Quarter {{ $quarter }} - Tahun {{ $tahun }}<br/>{{ __('basic.month.' . $month) }}</h3>
+                    <h3 class="mb-0">Quarter {{ $quarter }} - {{ __('basic.month.' . $month) }}</h3>
                     <input type="hidden" name="periode_monitoring" value="{{ $quarter }}">
-                    <input type="hidden" name="tahun" value="{{ $tahun }}">
                     <input type="hidden" name="month" value="{{ $month }}">
                 </div>
             </div>
@@ -58,46 +56,46 @@
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="nilai_dampak_inherent"
-                                value="Rp {{ number_format($projectRiskAnalisa->nilai_dampak, strpos($projectRiskAnalisa->nilai_dampak, '.') !== false ? 2 : 0, ',', '.') }}">
+                                value="Rp {{ number_format($riskAnalysis->nilai_dampak, strpos($riskAnalysis->nilai_dampak, '.') !== false ? 2 : 0, ',', '.') }}">
                                 <label class="form-label" for="">Nilai Dampak Inherent</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="skala_dampak_inherent"
-                                value="{{ $projectRiskAnalisa->skalaDampakObj ? $projectRiskAnalisa->skalaDampakObj?->tingkat . ' - ' . $projectRiskAnalisa->skalaDampakObj?->deskripsi : '-' }}">
+                                value="{{ $riskAnalysis->skalaDampakObj ? $riskAnalysis->skalaDampakObj?->tingkat . ' - ' . $riskAnalysis->skalaDampakObj?->deskripsi : '-' }}">
                                 <label for="">Skala Dampak Inherent</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="nilai_probabilitas_inherent"
-                                value="{{ $projectRiskAnalisa->nilai_probabilitas }}">
+                                value="{{ $riskAnalysis->nilai_probabilitas }}">
                                 <label for="">Nilai Probabilitas Inherent (%)</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="skala_probabilitas_inherent"
-                                value="{{ $projectRiskAnalisa->skalaProbabilitas?->tingkat." - " .$projectRiskAnalisa->skalaProbabilitas?->skala }}">
+                                value="{{ $riskAnalysis->skalaProbabilitas?->tingkat." - " .$riskAnalysis->skalaProbabilitas?->skala }}">
                                 <label for="">Skala Probabilitas Inherent</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="skala_risiko_inherent"
-                                value="{{ $projectRiskAnalisa->skala_risiko }}">
+                                value="{{ $riskAnalysis->skala_risiko }}">
                                 <label for="">Skala Risiko Inherent</label>
                             </div>
                             <div class="form-group pt-3">
-                                <p>Level Risiko Inherent: <span class="ff-heading fw-medium">{{ $projectRiskAnalisa->level_risiko }}</strong>
+                                <p>Level Risiko Inherent: <span class="ff-heading fw-medium">{{ $riskAnalysis->level_risiko }}</strong>
                                 </p>
                                 <label
-                                class=" radio-label low-label {{ strtolower($projectRiskAnalisa->level_risiko) == 'low' ? 'active' : '' }}"
+                                class=" radio-label low-label {{ strtolower($riskAnalysis->level_risiko) == 'low' ? 'active' : '' }}"
                                 for="low"></label>
                                 <label
-                                class="radio-label low-medium-label {{ strtolower($projectRiskAnalisa->level_risiko) == 'low to moderate' ? 'active' : '' }}"
+                                class="radio-label low-medium-label {{ strtolower($riskAnalysis->level_risiko) == 'low to moderate' ? 'active' : '' }}"
                                 for="low-medium"></label>
                                 <label
-                                class="radio-label medium-label {{ strtolower($projectRiskAnalisa->level_risiko) == 'moderate' ? 'active' : '' }}"
+                                class="radio-label medium-label {{ strtolower($riskAnalysis->level_risiko) == 'moderate' ? 'active' : '' }}"
                                 for="medium"></label>
                                 <label
-                                class="radio-label medium-high-label {{ strtolower($projectRiskAnalisa->level_risiko) == 'moderate to high' ? 'active' : '' }}"
+                                class="radio-label medium-high-label {{ strtolower($riskAnalysis->level_risiko) == 'moderate to high' ? 'active' : '' }}"
                                 for="medium-high"></label>
                                 <label
-                                class="radio-label high-label {{ strtolower($projectRiskAnalisa->level_risiko) == 'high' ? 'active' : '' }}"
+                                class="radio-label high-label {{ strtolower($riskAnalysis->level_risiko) == 'high' ? 'active' : '' }}"
                                 for="high"></label>
                             </div>
                         </div>
@@ -114,47 +112,47 @@
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="nilai_dampak_inherent"
-                                value="Rp {{ number_format($projectRiskAnalisa->nilai_dampak_residual, strpos($projectRiskAnalisa->nilai_dampak_residual, '.') !== false ? 2 : 0, ',', '.') }}">
+                                value="Rp {{ number_format($riskAnalysis->{'nilai_dampak_residual_q' . $quarter}, strpos($riskAnalysis->{'nilai_dampak_residual_q' . $quarter}, '.') !== false ? 2 : 0, ',', '.') }}">
                                 <label for="">Target Nilai Dampak</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" id="target_skala_dampak"
                                 name="target_skala_dampak"
-                                value="{{ $projectRiskAnalisa->skalaDampakResidualObj ? $projectRiskAnalisa->skalaDampakResidualObj->tingkat . ' - ' . $projectRiskAnalisa->skalaDampakResidualObj->deskripsi : '-' }}">
+                                value="{{ $riskAnalysis->{'skalaDampakResidualQ' . $quarter . 'Obj'} ? $riskAnalysis->{'skalaDampakResidualQ' . $quarter . 'Obj'}->tingkat . ' - ' . $riskAnalysis->{'skalaDampakResidualQ' . $quarter . 'Obj'}->deskripsi : '-' }}">
                                 <label for="">Target Skala Dampak</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" id="target_nilai_probabilitas"
-                                name="target_nilai_probabilitas" value="{{ $projectRiskAnalisa->nilai_probabilitas_residual }}">
+                                name="target_nilai_probabilitas" value="{{ $riskAnalysis->{'nilai_probabilitas_residual_q' . $quarter} }}">
                                 <label for="">Target Nilai Probabilitas (%)</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="skala_probabilitas_inherent"
-                                value="{{ $projectRiskAnalisa->skalaProbabilitasResidual?->tingkat." - " .$projectRiskAnalisa->skalaProbabilitasResidual?->skala }}">
+                                value="{{ $riskAnalysis->{'skalaProbabilitasResidualQ' . $quarter} ? $riskAnalysis->{'skalaProbabilitasResidualQ' . $quarter}->tingkat . ' - ' . $riskAnalysis->{'skalaProbabilitasResidualQ' . $quarter}->deskripsi : '-' }}">
                                 <label for="">Target Skala Probabilitas</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" id="target_skala_risiko"
-                                name="target_skala_risiko" value="{{ $projectRiskAnalisa->skala_risiko_residual }}">
+                                name="target_skala_risiko" value="{{ $riskAnalysis->{'skala_risiko_residual_q' . $quarter} }}">
                                 <label for="">Target Skala Risiko</label>
                             </div>
                             <div class="form-group pt-3">
-                                <p>Target Level Risiko: <span class="ff-heading fw-medium">{{ $projectRiskAnalisa->level_risiko_residual }}</span>
+                                <p>Target Level Risiko: <span class="ff-heading fw-medium">{{ $riskAnalysis->{'level_risiko_residual_q' . $quarter} }}</span>
                                 </p>
                                 <label
-                                class=" radio-label low-label {{ strtolower($projectRiskAnalisa->level_risiko_residual) == 'low' ? 'active' : '' }}"
+                                class=" radio-label low-label {{ strtolower($riskAnalysis->{'level_risiko_residual_q' . $quarter}) == 'low' ? 'active' : '' }}"
                                 for="low"></label>
                                 <label
-                                class="radio-label low-medium-label {{ strtolower($projectRiskAnalisa->level_risiko_residual) == 'low to moderate' ? 'active' : '' }}"
+                                class="radio-label low-medium-label {{ strtolower($riskAnalysis->{'level_risiko_residual_q' . $quarter}) == 'low to moderate' ? 'active' : '' }}"
                                 for="low-medium"></label>
                                 <label
-                                class="radio-label medium-label {{ strtolower($projectRiskAnalisa->level_risiko_residual) == 'moderate' ? 'active' : '' }}"
+                                class="radio-label medium-label {{ strtolower($riskAnalysis->{'level_risiko_residual_q' . $quarter}) == 'moderate' ? 'active' : '' }}"
                                 for="medium"></label>
                                 <label
-                                class="radio-label medium-high-label {{ strtolower($projectRiskAnalisa->level_risiko_residual) == 'moderate to high' ? 'active' : '' }}"
+                                class="radio-label medium-high-label {{ strtolower($riskAnalysis->{'level_risiko_residual_q' . $quarter}) == 'moderate to high' ? 'active' : '' }}"
                                 for="medium-high"></label>
                                 <label
-                                class="radio-label high-label {{ strtolower($projectRiskAnalisa->level_risiko_residual) == 'high' ? 'active' : '' }}"
+                                class="radio-label high-label {{ strtolower($riskAnalysis->{'level_risiko_residual_q' . $quarter}) == 'high' ? 'active' : '' }}"
                                 for="high"></label>
                             </div>
                         </div>
@@ -175,11 +173,11 @@
                                   type="text"
                                   id="realisasi_nilai_dampak"
                                   name="realisasi_nilai_dampak"
-                                  value="{{ $projectRiskAnalisa->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}"
-                                  {{ $projectRiskAnalisa->kategori_dampak == 'Kualitatif' ? 'disabled' : '' }}
-                                  {{-- {{ $projectRiskAnalisa->kategori_dampak == 'Kuantitatif' ? 'max=' . $projectRiskAnalisa->nilai_dampak : '' }} --}}
+                                  value="{{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? '0' : ($riskMonitoring?->nilai_dampak ?: '0') }}"
+                                  {{ $riskAnalysis->kategori_dampak == 'Kualitatif' ? 'disabled' : '' }}
+                                  {{-- {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'max=' . $riskAnalysis->nilai_dampak : '' }} --}}
                                   min="0"
-                                  {{-- oninput="if(this.value > {{ $projectRiskAnalisa->nilai_dampak }} && '{{ $projectRiskAnalisa->kategori_dampak }}' === 'Kuantitatif') this.value = {{ $projectRiskAnalisa->nilai_dampak }};" --}}
+                                  {{-- oninput="if(this.value > {{ $riskAnalysis->nilai_dampak }} && '{{ $riskAnalysis->kategori_dampak }}' === 'Kuantitatif') this.value = {{ $riskAnalysis->nilai_dampak }};" --}}
                                   required
                                 >
                                 <label for="">Realisasi Nilai Dampak</label>
@@ -189,15 +187,15 @@
                                 <select
                                   class="form-select js-select-hide-search update-trigger"
                                   name="realisasi_skala_dampak"
-                                  id="realisasi_skala_dampak"
+                                  id="realisasi_skala_dampak" {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'disabled' : '' }}
                                 >
                                   <option selected disabled>Skala Dampak</option>
                                   @foreach($skalaDampaks as $tingkat => $deskripsi)
                                   <option value="{{ $tingkat }}"
                                       {{ $riskMonitoring?->skala_dampak == $tingkat ? 'selected' : '' }}
-                                      {{ $tingkat > $projectRiskAnalisa->skalaDampakObj?->tingkat ? 'disabled' : '' }}>
+                                      {{ $tingkat > $riskAnalysis->skalaDampakObj?->tingkat ? 'disabled' : '' }}>
                                       {{ $tingkat }} - {{ $deskripsi }}
-                                      {{ $tingkat > $projectRiskAnalisa->skalaDampakObj?->tingkat ? '(Melebihi Skala Inherent)' : '' }}
+                                      {{ $tingkat > $riskAnalysis->skalaDampakObj?->tingkat ? '(Melebihi Skala Inherent)' : '' }}
                                   </option>
                                   @endforeach
                                 </select>
@@ -210,10 +208,9 @@
                                   id="realisasi_nilai_probabilitas"
                                   name="realisasi_nilai_probabilitas"
                                   value="{{ $riskMonitoring?->nilai_probabilitas }}"
-                                  {{-- data-max="{{ $projectRiskAnalisa->nilai_probabilitas }}"  --}}
-                                  {{-- max="{{ $projectRiskAnalisa->nilai_probabilitas }}" --}}
-                                  {{-- min="0" --}}
-                                  {{-- oninput="if(this.value > {{ $projectRiskAnalisa->nilai_probabilitas }}) this.value = {{ $projectRiskAnalisa->nilai_probabilitas }};" --}}
+                                  {{-- data-max="{{ $riskAnalysis->nilai_probabilitas }}"  --}}
+                                  {{-- max="{{ $riskAnalysis->nilai_probabilitas }}" --}}
+                                  {{-- oninput="if(this.value > {{ $riskAnalysis->nilai_probabilitas }}) this.value = {{ $riskAnalysis->nilai_probabilitas }};" --}}
                                   data-max="100"
                                   max="100"
                                   min="0"
@@ -287,26 +284,35 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($penyebabRisikoProjects as $penyebabRisiko)
+                                @foreach ($risk->penyebabRisikos as $penyebabRisiko)
+                                    @php
+                                        $rowSpan = $penyebabRisiko->perlakuanPenyebabRisiko->count() ?: 1;
+                                        $outLoop = $loop;
+                                    @endphp
                                     @foreach ($penyebabRisiko->perlakuanPenyebabRisiko as $perlakuan)
+                                        @php
+                                            $lastMonitoring = $riskMonitoring?->perlakuanPenyebabMonitorings->where('perlakuan_penyebab_risiko_unit_id', $perlakuan->id)->first();
+                                        @endphp
                                         @if ($loop->index == 0)
                                         <tr data-id="{{ $perlakuan?->id }}">
-                                            <td rowspan="{{ $penyebabRisiko->perlakuanPenyebabRisiko->count() }}">{{ $loop->iteration }}</td>
-                                            <td rowspan="{{ $penyebabRisiko->perlakuanPenyebabRisiko->count() }}">{{ $penyebabRisiko->penyebab_risiko ?: '-' }}</td>
+                                            <td rowspan="{{ $rowSpan }}">{{ $outLoop->iteration }}</td>
+                                            <td rowspan="{{ $rowSpan }}">{{ $penyebabRisiko->penyebab_risiko ?: '-' }}</td>
                                         @else
                                         <tr data-id="{{ $perlakuan->id }}">
                                         @endif
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
                                             <td>
                                               <span class="inputmask-fixed">
-                                                {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') :  '-' }}
                                               </span>
                                             </td>
-                                            <td class="display-progress inputmask-fixed">{{ $perlakuan->progress_rencana_perlakuan_risiko ?? '-' }}</td>
-                                            <td class="display-biaya inputmask-fixed">
-                                              {{  $perlakuan->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                            <td class="display-progress inputmask-fixed">
+                                                {{ $perlakuan->{'progress_rencana_perlakuan_risiko_q' . $quarter} ?? '-' }}
                                             </td>
-                                            <td class="display-timeline">{{ $perlakuan?->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
+                                            <td class="display-biaya inputmask-fixed">
+                                                {{ $perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter} ? 'Rp ' . number_format($perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter}, 0, ',', '.') : '-' }}
+                                            </td>
+                                            <td class="display-timeline">{{ $lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
                                             <td style="white-space:nowrap" class="column-action">
                                                 <div class="d-none dom-saved">
                                                     <div class="upload-container">
@@ -328,7 +334,7 @@
                                     @endforeach
                                 @endforeach
 
-                                @if($penyebabRisikoProjects->isEmpty())
+                                @if($risk->penyebabRisikos->isEmpty())
                                     <tr>
                                         <td colspan="7" class="text-center">Tidak ada data</td>
                                     </tr>
@@ -351,16 +357,19 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($kriProjects as $kriProject)
+                                @foreach ($risk->kris as $kriProject)
+                                    @php
+                                        $lastMonitoring = $riskMonitoring?->kriUnitMonitorings->where('key_risk_indicator_id', $kriProject->id)->first();
+                                    @endphp
                                     <tr data-id="{{ $kriProject->id }}">
                                         <td>{{ $loop->iteration }}</td>
                                         <td>{{ $kriProject->kri ?: '-' }}</td>
                                         <td>{{ $kriProject->satuan_kri ?: '-' }}</td>
-                                        <td>{{ $kriProject->batas_aman ?: '-' }}</td>
-                                        <td>{{ $kriProject->batas_waspada ?: '-' }}</td>
-                                        <td>{{ $kriProject->batas_bahaya ?: '-' }}</td>
+                                        <td>{{ $kriProject->batas_aman ?? '-' }}</td>
+                                        <td>{{ $kriProject->batas_waspada ?? '-' }}</td>
+                                        <td>{{ $kriProject->batas_bahaya ?? '-' }}</td>
                                         <td class="display-nilai-kri">
-                                            {{ $kriProject->nilai_kri_terkini ?? '-' }}
+                                            {{ $lastMonitoring?->nilai_kri_terkini ?? '-' }}
                                         </td>
                                         <td class="display-kondisi">
                                             @php
@@ -369,7 +378,7 @@
                                                     2 => 'Waspada',
                                                     3 => 'Bahaya',
                                                 ];
-                                                $status = $kriProject->status_kri_terkini;
+                                                $status = $lastMonitoring?->status_kri_terkini;
                                                 $displayStatus = $statusMap[$status] ?? '-';
                                             @endphp
                                             {{ $displayStatus }}
@@ -378,18 +387,18 @@
                                             {{-- <a href="javascript:void(0)" class="hover-underline px-1 btn-action" data-action="update-kri" data-id="{{ $kriProject->id }}">Update KRI</a> --}}
                                             <div class="text-center">
                                             <a href="javascript:void(0)"
-                                              class="btn-input-icon btn-action"
-                                              data-action="update-kri"
-                                              data-bs-toggle="tooltip"
-                                              title="Update KRI"
-                                              data-id="{{ $kriProject->id }}">
+                                               class="btn-input-icon btn-action"
+                                               data-action="update-kri"
+                                               data-bs-toggle="tooltip"
+                                               title="Update KRI"
+                                               data-id="{{ $kriProject->id }}">
                                                 <span class="bx bx-chart text-primary"></span>
                                             </a>
                                             </div>
                                         </td>
                                     </tr>
                                 @endforeach
-                                @if($kriProjects->isEmpty())
+                                @if($risk->kris->isEmpty())
                                     <tr>
                                         <td colspan="9" class="text-center">Tidak ada data</td>
                                     </tr>
@@ -427,7 +436,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($penyebabRisikoProjects as $penyebabRisiko)
+                                @foreach ($risk->penyebabRisikos as $penyebabRisiko)
                                 @php
                                     $perlakuanPenyebabMonitorings = $penyebabRisiko->perlakuanPenyebabRisiko->pluck('perlakuanPenyebabMonitorings')->flatten();
                                 @endphp
@@ -470,7 +479,7 @@
         <div class="col-12 mt-5">
             <div class="row g-2">
                 <div class="col-auto">
-                    <a href="{{ route('projects.monitorings.index', ['project' => $projectPeriode->id]) }}" class="btn btn-outline-secondary">Batal</a>
+                    <a href="{{ route('corporate-risk.monitorings.index', ['period' => request()->route('period')]) }}" class="btn btn-outline-secondary">Batal</a>
                 </div>
                 <div class="col-auto">
                     <button type="button" data-action="save" class="btn btn-primary ms-auto btn-action">Simpan</button>
@@ -482,9 +491,9 @@
         </div>
     </form>
 
-    @include('project-monitorings._modal_kri')
-    @include('project-monitorings._modal_penyebab')
-    @include('project-monitorings._modal_mitigasi')
+    @include('corporate-risk.monitorings._modal_kri')
+    @include('corporate-risk.monitorings._modal_penyebab')
+    @include('corporate-risk.monitorings._modal_mitigasi')
 @endsection
 
 @push('styles')
@@ -498,59 +507,53 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
-const penyebabRisikoProjects = @json($penyebabRisikoProjects->keyBy('id'));
-const perlakuanPenyebabRisikos = @json($penyebabRisikoProjects->pluck('perlakuanPenyebabRisiko')->flatten()->keyBy('id'));
-const kriProjects = @json($kriProjects->keyBy('id'));
+// Fungsi untuk memformat angka menjadi format Rupiah
+function formatRupiah(angka, prefix = 'Rp ') {
+    if (angka === null || angka === undefined || angka === '' || angka === '-') {
+        return '-';
+    }
+
+    // Pastikan angka dalam bentuk string dan hapus semua karakter non-numerik
+    let number_string = angka.toString().replace(/[^,\d]/g, '');
+
+    // Jika angka sudah dalam format dengan titik sebagai pemisah ribuan, hapus titiknya
+    number_string = number_string.replace(/\./g, '');
+
+    // Pisahkan desimal jika ada
+    let split = number_string.split(',');
+    let sisa = split[0].length % 3;
+    let rupiah = split[0].substr(0, sisa);
+    let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+    // Tambahkan titik untuk ribuan
+    if (ribuan) {
+        separator = sisa ? '.' : '';
+        rupiah += separator + ribuan.join('.');
+    }
+
+    // Gabungkan dengan desimal jika ada
+    rupiah = split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
+
+    // Tambahkan prefix Rp
+    return prefix + rupiah;
+}
+
+// Fungsi untuk mengkonversi format Rupiah kembali ke angka
+function parseRupiah(rupiahString) {
+    if (!rupiahString || rupiahString === '-') {
+        return 0;
+    }
+
+    // Hapus semua karakter kecuali angka dan koma
+    return parseFloat(rupiahString.replace(/[^\d,]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+const penyebabRisikoProjects = @json($risk->penyebabRisikos->keyBy('id'));
+const perlakuanPenyebabRisikos = @json($risk->penyebabRisikos->pluck('perlakuanPenyebabRisiko')->flatten()->keyBy('id'));
+const kriProjects = @json($risk->kris->keyBy('id'));
 const quarter = {{ $quarter }};
-const namaRisiko = @json($peristiwaRisiko->title);
-const month = @json($month);
-const year = @json($tahun);
-const paddedMonth = String(month).padStart(2, '0');
-const minDateString = dayjs(`${year}-${paddedMonth}-01`, 'YYYY-MM-DD').toDate();
-
-var flatpickrIns = flatpickr("#timelineInput", {
-    mode: "single",
-    altInput: true
-    altFormat: "j F Y",
-    dateFormat: "d/m/Y",
-    minDate: minDateString,
-    disableMobile: true
-});
-
-$("#timelineInput").data('_flatpickr', flatpickrIns);
-
-var timeline1 = flatpickr("#perkiraan_waktu_terpapar_risiko_mulai", {
-    mode: "single",
-    altInput: true
-    altFormat: "j F Y",
-    dateFormat: "d/m/Y",
-    //maxDate: endOfYear,
-    disableMobile: true
-});
-var timeline2 = flatpickr("#perkiraan_waktu_terpapar_risiko_akhir", {
-    mode: "single",
-    altInput: true
-    altFormat: "j F Y",
-    dateFormat: "d/m/Y",
-    //maxDate: endOfYear,
-    disableMobile: true
-});
-var perlakuanWaktu1 = flatpickr("#timeline_perlakuan_risiko_start", {
-    mode: "single",
-    altInput: true
-    altFormat: "j F Y",
-    dateFormat: "d/m/Y",
-    //maxDate: endOfYear,
-    disableMobile: true
-});
-var perlakuanWaktu2 = flatpickr("#timeline_perlakuan_risiko_end", {
-    mode: "single",
-    altInput: true
-    altFormat: "j F Y",
-    dateFormat: "d/m/Y",
-    //maxDate: endOfYear,
-    disableMobile: true
-});
+const riskMonitoring = @json($riskMonitoring);
+const namaRisiko = @json($risk->peristiwa_risiko);
 
 function getSkalaProbabilitasByValue(value) {
     const skalaProbabilitases = @json($skalaProbabilitas);
@@ -566,12 +569,17 @@ function refreshSkalaAndLevelRisiko() {
     const riskMaps = @json($riskMaps);
     const nilaiDampak = parseFloat($('#realisasi_nilai_dampak').val());
     const nilaiProbabilitas = parseFloat($('#realisasi_nilai_probabilitas').val());
-    const skalaDampak = parseFloat($('#realisasi_skala_dampak').val());
+    let skalaDampak = parseFloat($('#realisasi_skala_dampak').val());
+    if (isNaN(skalaDampak)) {
+        skalaDampak = parseFloat($('#realisasi_skala_dampak_hidden').val());
+    }
     const skalaProbabilitas = getSkalaProbabilitasByValue(nilaiProbabilitas);
 
     const domSkalaProbabilitas = $('#realisasi_skala_probabilitas');
     const domSkalaRisiko = $('#realisasi_skala_risiko');
     const domLevelRisiko = $('#realisasi_level_risiko');
+
+    // console.log('skalaProbabilitas : ' + skalaProbabilitas);
 
     if (skalaProbabilitas) {
         domSkalaProbabilitas.val(skalaProbabilitas.tingkat + ' - ' + skalaProbabilitas.skala);
@@ -581,7 +589,10 @@ function refreshSkalaAndLevelRisiko() {
         $('#realisasi_skala_probabilitas_hidden').val('');
     }
 
+    // console.log('skalaDampak : ' + skalaDampak);
+    // console.log('skalaProbabilitas : ' + skalaProbabilitas?.tingkat);
     const riskMap = riskMaps[skalaDampak + '-' + (skalaProbabilitas?.tingkat)];
+    // console.log('riskMap : ' + riskMap);
     if  (riskMap) {
         domSkalaRisiko.val(riskMap.nilai_risiko);
         domLevelRisiko.val(riskMap.level_risiko);
@@ -593,6 +604,11 @@ function refreshSkalaAndLevelRisiko() {
         $('#realisasi_skala_risiko_hidden').val('');
         $('#realisasi_level_risiko_hidden').val('');
     }
+}
+
+function convertDateFormat(dateStr) {
+  const [year, month, day] = dateStr.split('-');
+  return `${day}/${month}/${year}`;
 }
 
 function validateRealisasiForm() {
@@ -654,7 +670,7 @@ function submitForm(isClosed) {
     formData.append('is_closed', isClosed);
 
     $.ajax({
-        url: '{{ route('projects.monitorings.update', ['project' => request()->route('project'), 'monitoring' => request()->route('monitoring')]) }}',
+        url: '{{ route('corporate-risk.monitorings.update', ['period' => request()->route('period'), 'monitoring' => request()->route('monitoring')]) }}',
         type: 'POST',
         data: formData,
         contentType: false,
@@ -666,15 +682,7 @@ function submitForm(isClosed) {
                 icon: 'success',
                 confirmButtonText: 'OK',
             }).then(() => {
-                // let baseUrl = '{{ route('projects.monitorings.index', ['project' => request()->route('project')]) }}';
-
-                // const currentQuarter = '{{ $quarter }}';
-                // const currentTahun = '{{ $tahun }}';
-                // const currentMonth = '{{ $month }}';
-                // const redirectUrl = `${baseUrl}?quarter=${currentQuarter}&tahun=${currentTahun}&month=${currentMonth}`;
-
-                // window.location.href = redirectUrl;
-                window.location.href = '{{ route('projects.monitorings.index', ['project' => request()->route('project')]) }}';
+                window.location.href = '{{ route('corporate-risk.monitorings.index', ['period' => request()->route('period')]) }}';
             });
         },
         error: function(xhr) {
@@ -694,27 +702,27 @@ function submitForm(isClosed) {
 
 $(document).ready(function() {
     // Simpan nilai skala dampak inherent dan probabilitas inherent
-    const skalaDampakInherent = {{ $projectRiskAnalisa->skalaDampakObj?->tingkat ?? 0 }};
-    const nilaiProbabilitasInherent = {{ $projectRiskAnalisa->nilai_probabilitas ?? 0 }};
+    const skalaDampakInherent = {{ $riskAnalysis->skalaDampakObj?->tingkat ?? 0 }};
+    const nilaiProbabilitasInherent = {{ $riskAnalysis->nilai_probabilitas ?? 0 }};
 
     // Validasi saat memilih skala dampak
-    $('#realisasi_skala_dampak').on('change', function(e) {
-        // Skip validasi jika perubahan dari hitungRealisasiSkalaDampak()
-        if (e.originalEvent === undefined) return;
+    // $('#realisasi_skala_dampak').on('change', function(e) {
+    //     // Skip validasi jika perubahan dari hitungRealisasiSkalaDampak()
+    //     if (e.originalEvent === undefined) return;
 
-        const selectedValue = parseInt($(this).val());
-        if (selectedValue > skalaDampakInherent) {
-            Swal.fire({
-                title: 'Peringatan',
-                text: 'Nilai skala dampak realisasi tidak boleh lebih besar dari skala dampak inherent',
-                icon: 'warning',
-                confirmButtonText: 'OK'
-            });
-            $(this).val('').trigger('change');
-        }
-    });
+    //     const selectedValue = parseInt($(this).val());
+    //     if (selectedValue > skalaDampakInherent) {
+    //         Swal.fire({
+    //             title: 'Peringatan',
+    //             text: 'Nilai skala dampak realisasi tidak boleh lebih besar dari skala dampak inherent',
+    //             icon: 'warning',
+    //             confirmButtonText: 'OK'
+    //         });
+    //         $(this).val('').trigger('change');
+    //     }
+    // });
 
-    // // Validasi nilai probabilitas
+    // Validasi nilai probabilitas
     // $('#realisasi_nilai_probabilitas').on('change', function() {
     //     const value = parseFloat($(this).val());
     //     if (value > nilaiProbabilitasInherent) {
@@ -760,19 +768,18 @@ $(document).ready(function() {
         } else if (action === 'update-kri') {
             const kriProject = kriProjects[$(this).data('id')];
             //console.log(kriProject);
-            const latestMonitoring = kriProject.kri_project_monitorings
-                ?.sort((a, b) => b.id - a.id)[0];
+            const latestMonitoring = riskMonitoring?.kri_unit_monitorings?.find(m => m.key_risk_indicator_id == kriProject.id);
 
             $('#modalUpdateKri input[name="kri_project_id"]').val($(this).data('id'));
             $('#modalUpdateKri input[name="key_risk_indicator"]').val(kriProject.kri);
             $('#modalUpdateKri input[name="batas_aman"]').val(kriProject.batas_aman);
             $('#modalUpdateKri input[name="batas_waspada"]').val(kriProject.batas_waspada);
             $('#modalUpdateKri input[name="batas_bahaya"]').val(kriProject.batas_bahaya);
-            $('#modalUpdateKri input[name="nilai_kri"]').val(kriProject.nilai_kri_terkini);
-            $('#modalUpdateKri :input[name="status_kri"]').val(kriProject.status_kri_terkini);
+            // console.log(latestMonitoring);
+            $('#modalUpdateKri input[name="nilai_kri"]').val(latestMonitoring?.nilai_kri_terkini || '');
+            $('#modalUpdateKri :input[name="status_kri"]').val(latestMonitoring?.status_kri_terkini || '').change();
             $('#modalUpdateKri').modal('show');
         } else if (action === 'update-realisasi') {
-            const projectRisk = @json($projectRisk);
             const perlakuanPenyebab = perlakuanPenyebabRisikos[$(this).data('id')];
             if (!perlakuanPenyebab) {
                 Swal.fire('Error', 'Data perlakuan penyebab risiko tidak ditemukan', 'error');
@@ -781,40 +788,59 @@ $(document).ready(function() {
             const penyebabRisiko = penyebabRisikoProjects[perlakuanPenyebab.penyebab_risiko_id];
             $('#modalUpdateRealisasi :input[name="penyebab_risiko_id"]').val($(this).data('id'));
             $('#modalUpdateRealisasi :input[name="penyebab_risiko"]').val(penyebabRisiko.penyebab_risiko);
-
-            if (projectRisk.perkiraan_waktu_terpapar_risiko_mulai) {
-              timeline1.setDate(dayjs(projectRisk.perkiraan_waktu_terpapar_risiko_mulai).format('DD/MM/YYYY'));
-            }
-
-            if (projectRisk.perkiraan_waktu_terpapar_risiko_akhir) {
-              timeline2.setDate(dayjs(projectRisk.perkiraan_waktu_terpapar_risiko_akhir).format('DD/MM/YYYY'));
-            }
-
-            if (perlakuanPenyebab.timeline_perlakuan_risiko_start) {
-              perlakuanWaktu1.setDate(dayjs(perlakuanPenyebab.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
-            }
-
-            if (perlakuanPenyebab.timeline_perlakuan_risiko_end) {
-              perlakuanWaktu2.setDate(dayjs(perlakuanPenyebab.timeline_perlakuan_risiko_end).format('DD/MM/YYYY'));
-            }
-
             $('#modalUpdateRealisasi :input[name="rencana_perlakuan_risiko"]').val(perlakuanPenyebab.rencana_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="biaya_perlakuan_risiko"]').val(perlakuanPenyebab.biaya_perlakuan_risiko);
             $('#modalUpdateRealisasi :input[name="pic"]').val(perlakuanPenyebab.pic);
-            // $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab.realisasi_biaya_perlakuan_risiko === null || perlakuanPenyebab.realisasi_biaya_perlakuan_risiko === '' ? perlakuanPenyebab.biaya_perlakuan_risiko : perlakuanPenyebab.realisasi_biaya_perlakuan_risiko);
-            $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab.realisasi_biaya_perlakuan_risiko ?? 0);
-            $('#modalUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val(perlakuanPenyebab.progress_rencana_perlakuan_risiko);
-            // $('#modalUpdateRealisasi :input[name="jenis_program_rkap"]').val(perlakuanPenyebab.jenis_program_rkap);
-            // $('#modalUpdateRealisasi :input[name="jenis_program_rkap_id"]').val(perlakuanPenyebab.jenis_program_rkap_id);
+            $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab['realisasi_biaya_perlakuan_risiko_q' + quarter] || '');
+            $('#modalUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val(perlakuanPenyebab['progress_rencana_perlakuan_risiko_q' + quarter] || '');
+            // Isi data realisasi sebelumnya
+            const latestMonitoring = riskMonitoring?.perlakuan_penyebab_monitorings
+                ?.sort((a, b) => b.id - a.id)[0];
+
+            if (latestMonitoring) {
+                // Pastikan nilai yang diambil adalah nilai numerik murni
+                //let realisasiBiaya = parseFloat(latestMonitoring.realisasi_biaya_perlakuan_risiko.replace(/[^\d]/g, '')) || 0;
+                let realisasiBiaya = 0;
+                if (latestMonitoring.realisasi_biaya_perlakuan_risiko) {
+                    // Jika menggunakan titik sebagai pemisah ribuan (format Indonesia)
+                    if (latestMonitoring.realisasi_biaya_perlakuan_risiko.includes('.') &&
+                        latestMonitoring.realisasi_biaya_perlakuan_risiko.split('.').length > 2) {
+                        // Format dengan titik sebagai pemisah ribuan (mis: 2.000.000)
+                        realisasiBiaya = parseFloat(latestMonitoring.realisasi_biaya_perlakuan_risiko.replace(/\./g, '').replace(',', '.'));
+                    } else {
+                        // Format dengan titik sebagai pemisah desimal (mis: 2000.00)
+                        realisasiBiaya = parseFloat(latestMonitoring.realisasi_biaya_perlakuan_risiko);
+                    }
+                }
+                // console.log(realisasiBiaya);
+                // Simpan nilai asli di hidden field
+                $('#previous_realisasi_biaya_value').val(realisasiBiaya);
+
+                // Format untuk ditampilkan di UI
+                $('#previous_realisasi_biaya').text(formatRupiah(realisasiBiaya));
+
+                let progress = parseFloat(latestMonitoring.progress_rencana_perlakuan_risiko) || 0;
+                $('#previous_progress').text(progress + '%');
+                $('#previous_progress_value').val(progress);
+            } else {
+                $('#previous_realisasi_biaya').text('Belum ada realisasi');
+                $('#previous_realisasi_biaya_value').val(0);
+
+                $('#previous_progress').text('Belum ada progress');
+                $('#previous_progress_value').val(0);
+            }
+
+            $('#modalUpdateRealisasi :input[name="jenis_program_rkap"]').val(perlakuanPenyebab.jenis_program_rkap);
+            $('#modalUpdateRealisasi :input[name="jenis_program_rkap_id"]').val(perlakuanPenyebab.jenis_program_rkap_id);
             $('#modalUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val(perlakuanPenyebab.deskripsi_perlakuan_risiko);
             if (perlakuanPenyebab.timeline_perlakuan_risiko?.length === 2) {
+                // console.log(perlakuanPenyebab.timeline_perlakuan_risiko[0]);
                 $("#timelineInput").data('_flatpickr').setDate(perlakuanPenyebab.timeline_perlakuan_risiko[0]);
             } else if (perlakuanPenyebab.timeline_perlakuan_risiko) {
                 $("#timelineInput").data('_flatpickr').setDate(perlakuanPenyebab.timeline_perlakuan_risiko);
             } else {
                 $("#timelineInput").data('_flatpickr').clear();
             }
-
             $('#modalUpdateRealisasi').modal('show');
 
             const tableDocument = $('#modalUpdateRealisasi .table-dokumen');
@@ -863,7 +889,7 @@ $(document).ready(function() {
                 // console.log(id, domCell);
 
                 const domDeskripsi = domEdited.find('.input-file-description');
-                console.log(domDeskripsi.length);
+                // console.log(domDeskripsi.length);
                 const deskripsi = domDeskripsi.val() ? JSON.parse(domDeskripsi.val()) : {};
                 deskripsi[id] = value;
                 domDeskripsi.val(JSON.stringify(deskripsi));
@@ -903,14 +929,14 @@ $(document).ready(function() {
             $('#modalMitigasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanMonitoring.realisasi_biaya_perlakuan_risiko);
             $('#modalMitigasi :input[name="progress_perlakuan_risiko"]').val(perlakuanMonitoring.progress_rencana_perlakuan_risiko);
             $('#modalMitigasi :input[name="deskripsi_perlakuan_risiko"]').val(perlakuanMonitoring.deskripsi_perlakuan_risiko);
-            // $('#modalMitigasi :input[name="jenis_program_rkap_id"]').val(perlakuanMonitoring.jenis_program_rkap_id).change();
+            $('#modalMitigasi :input[name="jenis_program_rkap_id"]').val(perlakuanMonitoring.jenis_program_rkap_id).change();
             $('#modalMitigasi :input[name="timeline_perlakuan_risiko"]').val(perlakuanMonitoring.timeline_perlakuan_risiko_start ? Intl.DateTimeFormat('id-ID', {
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit'
             }).format(new Date(perlakuanMonitoring.timeline_perlakuan_risiko_start)) : '');
 
-            const perlakuanDocuments = perlakuanPenyebab.documents.filter(d => d.project_monitoring_id == perlakuanMonitoring.project_monitoring_id);
+            const perlakuanDocuments = perlakuanPenyebab.documents.filter(d => d.unit_risk_monitoring_id == perlakuanMonitoring.unit_risk_monitoring_id);
 
             $('.tabel-dokumen-mitigasi tbody').empty();
             perlakuanDocuments.forEach(function(document) {
@@ -942,6 +968,13 @@ $(document).ready(function() {
     });
 
     $('#btnSimpanUpdateRealisasi').on('click', function() {
+        // Gunakan fungsi validasi dari _modal_penyebab.blade.php jika tersedia
+        // if (typeof validateRealisasiForm === 'function') {
+        //     if (!validateRealisasiForm()) {
+        //         return;
+        //     }
+        // }
+
         if (!$('#formUpdateRealisasi')[0].checkValidity()) {
             $('#formUpdateRealisasi')[0].reportValidity();
             return;
@@ -951,8 +984,8 @@ $(document).ready(function() {
         const progressPerlakuanRisiko = $('#formUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val();
         const deskripsiPerlakuanRisiko = $('#formUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val();
         //const jenisProgramRkap = $('#formUpdateRealisasi :input[name="jenis_program_rkap"]').val();
-        // const jenisProgramRkapId = $('#formUpdateRealisasi :input[name="jenis_program_rkap_id"]').val();
-        // const jenisProgramRkap = $('#formUpdateRealisasi :input[name="jenis_program_rkap_id"] option:selected').text();
+        const jenisProgramRkapId = $('#formUpdateRealisasi :input[name="jenis_program_rkap_id"]').val();
+        const jenisProgramRkap = $('#formUpdateRealisasi :input[name="jenis_program_rkap_id"] option:selected').text();
         const timelinePerlakuanRisiko = $('#formUpdateRealisasi :input[name="timeline_perlakuan_risiko"]').val();
 
         if (!timelinePerlakuanRisiko) {
@@ -961,11 +994,11 @@ $(document).ready(function() {
         }
 
         // update perlakuan penyebab risiko
-        perlakuanPenyebabRisikos[id]['realisasi_biaya_perlakuan_risiko'] = realisasiBiayaPerlakuanRisiko;
-        perlakuanPenyebabRisikos[id]['progress_rencana_perlakuan_risiko'] = progressPerlakuanRisiko;
+        perlakuanPenyebabRisikos[id]['realisasi_biaya_perlakuan_risiko_q' + quarter] = realisasiBiayaPerlakuanRisiko;
+        perlakuanPenyebabRisikos[id]['progress_rencana_perlakuan_risiko_q' + quarter] = progressPerlakuanRisiko;
         perlakuanPenyebabRisikos[id]['deskripsi_perlakuan_risiko'] = deskripsiPerlakuanRisiko;
-        // perlakuanPenyebabRisikos[id]['jenis_program_rkap'] = jenisProgramRkap;
-        // perlakuanPenyebabRisikos[id]['jenis_program_rkap_id'] = jenisProgramRkapId;
+        perlakuanPenyebabRisikos[id]['jenis_program_rkap'] = jenisProgramRkap;
+        perlakuanPenyebabRisikos[id]['jenis_program_rkap_id'] = jenisProgramRkapId;
         //perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko'] = timelinePerlakuanRisiko.split(' to ');
         perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko'] = timelinePerlakuanRisiko;
 
@@ -998,8 +1031,8 @@ $(document).ready(function() {
         const statusText = statusMap[statusKri] || '-';
 
         // update kri
-        kriProjects[id]['nilai_kri_terkini'] = nilaiKri;
-        kriProjects[id]['status_kri_terkini'] = statusKri;
+        kriProjects[id]['nilai_kri_terkini_q' + quarter] = nilaiKri;
+        kriProjects[id]['status_kri_terkini_q' + quarter] = statusKri;
 
         // update DOM
         const tr = $('#table-kri tr[data-id="' + id + '"]');
@@ -1076,6 +1109,20 @@ $(document).ready(function() {
             }
         }
     });
+    
+    var today = new Date();
+    var endOfYear = new Date(today.getFullYear(), 11, 31); // Mendapatkan tanggal terakhir dalam tahun ini
+
+    var flatpickrIns = flatpickr("#timelineInput", {
+        mode: "single",
+        altInput: false,
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
+        maxDate: endOfYear,
+        disableMobile: true
+    });
+
+    $("#timelineInput").data('_flatpickr', flatpickrIns);
 
     // Fungsi untuk menghitung skala dampak berdasarkan persentase
     function hitungSkalaDampak(percentage) {
@@ -1088,14 +1135,16 @@ $(document).ready(function() {
 
     // Fungsi untuk menghitung dan mengatur realisasi_skala_dampak
     function hitungRealisasiSkalaDampak() {
-        const kategoriDampak = '{{ $projectRiskAnalisa->kategori_dampak }}';
+        const kategoriDampak = '{{ $riskAnalysis->kategori_dampak }}';
+        //console.log(kategoriDampak);
+
         const nilaiDampak = parseFloat($('#realisasi_nilai_dampak').val()) || 0;
-        const riskLimit = parseFloat('{{ $risk_limit }}') || 0;
+        const riskLimit = parseFloat('{{ $riskLimit }}') || 0;
         const skalaDampakSelect = $('#realisasi_skala_dampak');
         const skalaDampakHidden = $('#realisasi_skala_dampak_hidden');
 
         if (kategoriDampak === 'Kuantitatif') {
-            console.log("risk limit : " + riskLimit);
+            // console.log("risk limit : " + riskLimit);
             var percentage = 100;
             var skala = 5;
 
@@ -1105,8 +1154,8 @@ $(document).ready(function() {
                 // Hitung skala berdasarkan persentase
                 skala = hitungSkalaDampak(percentage);
 
-                console.log("percentage : " + percentage);
-                console.log("skala : " + skala);
+                // console.log("percentage : " + percentage);
+                // console.log("skala : " + skala);
             }
 
             // Set nilai skala dampak dan trigger change event
@@ -1122,10 +1171,30 @@ $(document).ready(function() {
         }
     }
 
+    /*
+    $('#realisasi_skala_dampak').on('change', function() {
+
+        const value = $(this).val();
+        if (value) {
+            $('#realisasi_skala_dampak_hidden').val(value);
+        }
+
+    });
+    */
+
     // Event listener untuk perubahan nilai dampak
     $('#realisasi_nilai_dampak').on('change', function() {
-        console.log("hitung skala dampak");
+        // console.log("hitung skala dampak");
         hitungRealisasiSkalaDampak();
+        refreshSkalaAndLevelRisiko();
+    });
+
+    $('#realisasi_skala_dampak').on('change', function() {
+        // console.log("update dari skala dampak");
+        const value = $(this).val();
+        if (value) {
+            $('#realisasi_skala_dampak_hidden').val(value);
+        }
         refreshSkalaAndLevelRisiko();
     });
 

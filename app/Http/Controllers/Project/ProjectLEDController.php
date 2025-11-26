@@ -855,27 +855,29 @@ class ProjectLEDController extends Controller
                 }
             }
     
+            $efektivitas = 0.0; 
+
+            $analisa = $risk?->projectRiskAnalisa;
+            $monitoring = $risk?->projectRiskMonitoring;
+            $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
+            $skala_risiko_rencana = (float) optional($analisa)->skala_risiko_residual;
+            $skala_risiko_realisasi = (float) optional($monitoring)->skala_risiko;
+
+            $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
+
+            // Hindari pembagian dengan nol
+            if ($selisih_inherent_rencana != 0) {
+                $efektivitas = (($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana) * 100;
+            }
+
+            $risk->update([
+              'efektivitas_perlakuan_risiko' => $efektivitas,
+            ]);
+
             // Cek apakah risiko perlu di-close
             if ($request->input('is_closed') == '1') {
-                $efektivitas = 0.0; 
-
-                $analisa = $risk?->projectRiskAnalisa;
-                $monitoring = $risk?->projectRiskMonitoring;
-                
-                $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
-                $skala_risiko_rencana = (float) optional($analisa)->skala_risiko_residual;
-                $skala_risiko_realisasi = (float) optional($monitoring)->skala_risiko;
-
-                $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
-
-                // Hindari pembagian dengan nol
-                if ($selisih_inherent_rencana != 0) {
-                    $efektivitas = ($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana;
-                }
-
                 $risk->update([
                   'is_closed' => true,
-                  'efektivitas_perlakuan_risiko' => $efektivitas,
                 ]);
 
                 KamusRisikoProject::updateOrCreate(

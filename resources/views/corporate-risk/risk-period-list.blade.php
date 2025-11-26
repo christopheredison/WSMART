@@ -64,10 +64,10 @@
                     <a href="{{ route('corporate-risk.index', ['pid' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
                       <span class="bx bx-list-check"></span>
                     </a>
-                    <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
+                    <a href="{{ route('corporate-risk.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
                       <span class="bx bx-radar"></span>
                     </a>
-                    <a href="{{ route('unit-led.index-by-periode', ['periode' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+                    <a href="{{ route('corporate-led.index', ['periode' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
                       title="Loss Event">
                       <span class="bx bx-dock-bottom"></span>
                     </a>

@@ -168,7 +168,7 @@ class KamusRisikoUnitController extends Controller
 
                     $class = $efektivitas > 0 ? 'text-success' : ($efektivitas < 0 ? 'text-danger' : 'text-warning');
                     
-                    return '<span class="fw-bold ' . $class . '">' . $efektivitas . '</span>';
+                    return '<span class="fw-bold ' . $class . '">' . $efektivitas . '%</span>';
                 })
                 ->rawColumns(['action', 'level_risiko_inheren', 'level_risiko_residual', 'realisasi_level_risiko', 'efektivitas'])
                 ->make(true);
