@@ -75,6 +75,8 @@ use App\Http\Controllers\KamusRisikoApController;
 use App\Http\Controllers\RekomendasiRisikoController;
 use App\Http\Controllers\RiskContextController;
 use App\Http\Controllers\ProjectRiskContextController;
+use App\Http\Controllers\CorporateLEDController;
+use App\Http\Controllers\RiskRegisterCorporateMonitoringController;
 
 
 
@@ -471,7 +473,7 @@ Route::group(['middleware' => ['auth']], function () {
         Route::delete('/files/{id}', [ProjectLEDController::class, 'destroyFile'])->name('project-led.files.destroy');
     });
 
-    Route::get('kamus-risiko-project', [KamusRisikoProjectController::class, 'index'])->name('kamus-risiko-project.index');
+    Route::match(['get', 'post'], '/kamus-risiko-project', [KamusRisikoProjectController::class, 'index'])->name('kamus-risiko-project.index');
     Route::post('kamus-risiko-project/add-risk', [KamusRisikoProjectController::class, 'addRisk'])->name('kamus-risiko-project.add-risk');
     Route::post('kamus-risiko-project/export', [KamusRisikoProjectController::class, 'exportExcel'])->name('kamus-risiko-project.export');
 
@@ -559,7 +561,7 @@ Route::group(['middleware' => ['auth']], function () {
         Route::delete('/files/{id}', [UnitLEDController::class, 'destroyFile'])->name('unit-led.files.destroy');
     });
 
-    Route::get('kamus-risiko-unit', [KamusRisikoUnitController::class, 'index'])->name('kamus-risiko-unit.index');
+    Route::match(['get', 'post'], 'kamus-risiko-unit', [KamusRisikoUnitController::class, 'index'])->name('kamus-risiko-unit.index');
     Route::post('kamus-risiko-unit/add-risk', [KamusRisikoUnitController::class, 'addRisk'])->name('kamus-risiko-unit.add-risk');
     Route::post('kamus-risiko-unit/export', [KamusRisikoUnitController::class, 'exportExcel'])->name('kamus-risiko-unit.export');
 
@@ -712,7 +714,7 @@ Route::prefix('risk-register-ap')->group(function () {
     Route::post('/{riskRegister}/loss-events', [ApLEDController::class, 'riskChangeToLedStore'])->name('risk-register-ap.loss-events.store')->middleware('can:risk_register_list');
 });
 
-Route::get('kamus-risiko-ap', [KamusRisikoApController::class, 'index'])->name('kamus-risiko-ap.index');
+Route::match(['get', 'post'], 'kamus-risiko-ap', [KamusRisikoApController::class, 'index'])->name('kamus-risiko-ap.index');
 Route::post('kamus-risiko-ap/add-risk', [KamusRisikoApController::class, 'addRisk'])->name('kamus-risiko-ap.add-risk');
 Route::post('kamus-risiko-ap/export', [KamusRisikoApController::class, 'exportExcel'])->name('kamus-risiko-ap.export');
 Route::get('ap-led/', [ApLEDController::class, 'index'])->name('ap-led.index');
@@ -770,6 +772,11 @@ Route::get('/download-tender-template', [ProjectRiskController::class, 'download
 Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->group(function () {
     Route::get('periods', [App\Http\Controllers\CorporateRiskController::class, 'riskPeriodeList'])->name('periods');
     Route::get('/periods/{period}', [App\Http\Controllers\CorporateRiskController::class, 'riskPeriodeDashboard'])->name('periods.show');
+    
+    Route::resource('/periods/{period}/monitorings', RiskRegisterCorporateMonitoringController::class)
+            ->names('monitorings')
+            ->only(['index', 'show', 'edit', 'update']);
+
     Route::get('/', [App\Http\Controllers\CorporateRiskController::class, 'index'])->name('index');
     Route::get('/create', [App\Http\Controllers\CorporateRiskController::class, 'create'])->name('create');
     Route::post('/', [App\Http\Controllers\CorporateRiskController::class, 'store'])->name('store');
@@ -791,6 +798,19 @@ Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->
     Route::put('/{riskRegister}/perencanaan/{id}', [App\Http\Controllers\CorporateRiskController::class, 'updateRencanaPerlakuan'])->name('update-rencana-perlakuan');
 
     Route::get('/get-division-risks/{unit}', [App\Http\Controllers\CorporateRiskController::class, 'getDivisionRisks'])->name('get-division-risks');
+});
+
+Route::prefix('corporate-led')->name('corporate-led.')->middleware(['auth'])->group(function () {
+    Route::get('/{periode}', [CorporateLEDController::class, 'index'])->name('index');
+    Route::get('/{periode}/create', [CorporateLEDController::class, 'create'])->name('create');
+    Route::post('/', [CorporateLEDController::class, 'store'])->name('store');
+    Route::get('/{periode}/{id}/show', [CorporateLEDController::class, 'show'])->name('show');
+    Route::get('/{periode}/{id}/edit', [CorporateLEDController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [CorporateLEDController::class, 'update'])->name('update');
+    Route::delete('/{id}', [CorporateLEDController::class, 'destroy'])->name('destroy');
+    Route::get('/files/{id}', [CorporateLEDController::class, 'getFiles'])->name('files.get');
+    Route::post('/files/store', [CorporateLEDController::class, 'storeFile'])->name('files.store');
+    Route::delete('/files/{id}', [CorporateLEDController::class, 'destroyFile'])->name('files.destroy');
 });
 
 // Notification Routes

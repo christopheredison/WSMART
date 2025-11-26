@@ -1,10 +1,6 @@
 @extends('layouts.default')
 @section('dashboard')
-    @include('partials.success-message')
-    @if(session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-
+@include('partials.success-message')
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -13,49 +9,30 @@
                         <div class="lead__icon bg-warning-subtle">
                             <div class="svg-icon svg-icon-warning">@include('partials.icon-tool')</div>
                         </div>
-                        <h2 class="h3">Edit Loss Event Anak Perusahaan</h2>
+                        <h2 class="h3">Ubah Risiko Menjadi Loss Event Divisi</h2>
                     </div>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('ap-led.update', $lossEvent->id) }}" method="post" id="form-edit-led">
+                    <form action="{{ route('risk-register-unit.loss-events.store', ['riskRegister' => $risiko->id]) }}" method="post" id="form-change-to-led">
                         @csrf
-                        @method('PUT')
-                        <input type="hidden" name="create_risk_from_led" id="create_risk_from_led_input" value="0">
-                        <input type="hidden" id="unit_id" name="unit_id" value="{{ old('unit_id', $lossEvent->unit_id) }}" required>
+                        <input type="hidden" name="is_closed" id="is_closed_input" value="0">
+                        <input type="hidden" name="create_new_risk" id="create_new_risk_input" value="0">
 
                         <div class="row">
                             <div class="col-12 mb-3">
                                 <label for="nama_kejadian" class="form-label">Nama Kejadian <span class="text-danger">*</span></label>
-                                <textarea class="form-control" name="nama_kejadian" rows="3" required>{{ old('nama_kejadian', $lossEvent->nama_kejadian) }}</textarea>
+                                <textarea class="form-control" id="nama_kejadian" name="nama_kejadian" rows="3" required>{{ $risiko->peristiwa_risiko }}</textarea>
                             </div>
 
-                            <div class="col-12 mb-3">
-                                <label for="peristiwa_risiko_id" class="form-label">Identifikasi Kejadian <span class="text-danger">*</span></label>
-                                <textarea class="form-control" id="identifikasi_kejadian" name="identifikasi_kejadian" rows="3" required>{{ old('deskripsi_peristiwa_risiko', $lossEvent->identifikasi_kejadian) }}</textarea>
-                            </div>
-
-                            
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Periode <span class="text-danger">*</span></label>
-                                @if ($periode)
-                                    <input type="hidden" name="periode_id" value="{{ $periode->id }}">
-                                @endif
-                                <select class="form-select @error('periode_id') is-invalid @enderror" name="periode_id" required {{ $periode ? 'disabled' : '' }}>
-                                    <option value="">Pilih Periode</option>
-                                    @foreach($periodes as $periodeItem)
-                                        <option value="{{ $periodeItem->id }}" {{ old('periode_id', $lossEvent?->periode_id) == $periodeItem->id ? 'selected' : '' }}>
-                                            {{ $periodeItem->tahun }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('periode_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                                <label for="peristiwa_risiko_id" class="form-label">Identifikasi Kejadian <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="identifikasi_kejadian" name="identifikasi_kejadian" rows="3" required>{{ $risiko->deskripsi_peristiwa_risiko }}</textarea>
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label for="tanggal_kejadian" class="form-label">Tanggal Kejadian <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control flatpickr-date" name="tanggal_kejadian" value="{{ old('tanggal_kejadian', $lossEvent->tanggal_kejadian) }}" required>
+                                <input type="text" class="form-control" id="tanggal_kejadian" name="tanggal_kejadian" 
+                                      value="{{ \Carbon\Carbon::parse($risiko->perkiraan_waktu_terpapar_risiko_mulai)->format('Y-m-d') }}" required>
                             </div>
 
                             <div class="col-md-6 mb-3">
@@ -63,7 +40,7 @@
                                 <select class="form-select select2" name="kategori_kejadian_id" required>
                                     <option value="">Pilih Kategori Kejadian</option>
                                     @foreach($kategoriKejadians as $kategori)
-                                        <option value="{{ $kategori->id }}" @if(old('kategori_kejadian_id', $lossEvent->kategori_kejadian_id) == $kategori->id) selected @endif>
+                                        <option value="{{ $kategori->id }}" {{ old('kategori_kejadian_id') == $kategori->id ? 'selected' : '' }}>
                                             {{ $kategori->kategori_kejadian }}
                                         </option>
                                     @endforeach
@@ -74,8 +51,8 @@
                                 <label class="form-label">Sumber Penyebab Kejadian <span class="text-danger">*</span></label>
                                 <select class="form-select select2" name="sumber_penyebab_kejadian" required>
                                     <option value="">Pilih Sumber Penyebab</option>
-                                    <option value="1" @if(old('sumber_penyebab_kejadian', $lossEvent->sumber_penyebab_kejadian) == 1) selected @endif>Internal</option>
-                                    <option value="2" @if(old('sumber_penyebab_kejadian', $lossEvent->sumber_penyebab_kejadian) == 2) selected @endif>Eksternal</option>
+                                    <option value="1" {{ old('sumber_penyebab_kejadian') == '1' ? 'selected' : '' }}>Internal</option>
+                                    <option value="2" {{ old('sumber_penyebab_kejadian') == '2' ? 'selected' : '' }}>Eksternal</option>
                                 </select>
                             </div>
 
@@ -83,32 +60,45 @@
                                 <label class="form-label">Kategori Risiko BUMN <span class="text-danger">*</span></label>
                                 <select class="form-select select2" name="kategori_risiko_bumn" required>
                                     <option value="">Pilih Kategori Risiko BUMN</option>
-                                    <option value="1" @if(old('kategori_risiko_bumn', $lossEvent->kategori_risiko_bumn) == 1) selected @endif>Financial</option>
-                                    <option value="2" @if(old('kategori_risiko_bumn', $lossEvent->kategori_risiko_bumn) == 2) selected @endif>Operational</option>
-                                    <option value="3" @if(old('kategori_risiko_bumn', $lossEvent->kategori_risiko_bumn) == 3) selected @endif>Public & Legal</option>
+                                    <option value="1" {{ old('kategori_risiko_bumn') == '1' ? 'selected' : '' }}>Financial</option>
+                                    <option value="2" {{ old('kategori_risiko_bumn') == '2' ? 'selected' : '' }}>Operational</option>
+                                    <option value="3" {{ old('kategori_risiko_bumn') == '3' ? 'selected' : '' }}>Public & Legal</option>
                                 </select>
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Kategori Risiko T2 & T3 BUMN <span class="text-danger">*</span></label>
-                                <input type="hidden" name="kategori_risiko_id" id="kategori_risiko_id" value="{{ old('kategori_risiko_id', $lossEvent->kategori_risiko_id) }}">
-                                <select class="form-select select2" name="jenis_risiko_id" id="jenis_risiko_id" required>
-                                    <option value="">Pilih Jenis Risiko</option>
-                                    @foreach($jenisRisikos as $jenis)
-                                        <option value="{{ $jenis->id }}" data-kategori="{{ $jenis->kategori_risiko_id }}" @if(old('jenis_risiko_id', $lossEvent->jenis_risiko_id) == $jenis->id) selected @endif>
-                                            {{ $jenis->kategoriRisiko->title ?? '' }} – {{ $jenis->title }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                                
+                                @if($risiko->jenis_risiko_id)
+                                    <select class="form-select" required disabled>
+                                        <option selected>{{ $risiko->jenisRisiko->kategoriRisiko->title ?? '' }} – {{ $risiko->jenisRisiko->title ?? '' }}</option>
+                                    </select>
+                                    <input type="hidden" name="kategori_risiko_id" value="{{ $risiko->jenisRisiko->kategori_risiko_id ?? '' }}">
+                                    <input type="hidden" name="jenis_risiko_id" value="{{ $risiko->jenis_risiko_id }}">
+
+                                @else
+                                    <input type="hidden" name="kategori_risiko_id" id="kategori_risiko_id_dynamic">
+                                    <select class="form-select select2" name="jenis_risiko_id" id="jenis_risiko_id_dynamic" required>
+                                        <option value="">Pilih Jenis Risiko...</option>
+                                        @foreach($jenisRisikos as $jenis)
+                                            <option value="{{ $jenis->id }}" data-kategori="{{ $jenis->kategori_risiko_id }}">
+                                                {{ $jenis->kategoriRisiko->title ?? '' }} – {{ $jenis->title }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                @endif
                             </div>
                         </div>
 
                         <input type="hidden" name="penyebab_data" id="penyebab_data_input">
                         <div class="card mt-3">
                             <div class="card-header p-3 d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">Penyebab dan Penanganan Saat Kejadian</h5>
-                                <button type="button" class="btn btn-outline-primary" id="btn-tambah-penyebab">Tambah Penyebab</button>
-                            </div>
+                              <h5 class="mb-0">Penyebab dan Penanganan Saat Kejadian</h5>
+                              <button type="button" class="btn btn-outline-primary" id="btn-tambah-penyebab">
+                                  <span class="bx bx-plus"></span> 
+                                  Tambah Penyebab
+                              </button>
+                          </div>
                             <div class="card-body p-0">
                                 <table class="table table-bordered mb-0">
                                     <thead>
@@ -117,22 +107,25 @@
                                             <th>Penyebab</th>
                                             <th>Penanganan Saat Kejadian</th>
                                             <th style="width: 200px;">PIC</th>
+                                            <th style="width: 50px;">Aksi</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="penyebab-risiko-tbody"></tbody>
+                                    <tbody id="penyebab-risiko-tbody">
+                                    </tbody>
                                 </table>
                             </div>
                         </div>
-
+                        
                         <div class="row mt-4">
                             <div class="col-12 mb-3">
                                 <label for="penjelasan_kerugian" class="form-label">Penjelasan Kerugian <span class="text-danger">*</span></label>
-                                <textarea class="form-control" name="penjelasan_kerugian" rows="3" required>{{ old('penjelasan_kerugian', $lossEvent->penjelasan_kerugian) }}</textarea>
+                                <textarea class="form-control" name="penjelasan_kerugian" rows="3" required>@if($risiko->riskAnalysis?->kategori_dampak == 'Kuantitatif'){{ $risiko->riskAnalysis->asumsi_perhitungan_dampak }}@else{{ $risiko->riskAnalysis?->deskripsi_dampak }}@endif</textarea>
                             </div>
 
                             <div class="col-12 mb-3">
                                 <label class="form-label">Nilai Kerugian (IDR)</label>
-                                <input type="text" class="form-control inputmask-rupiah" name="nilai_kerugian_finansial" value="{{ old('nilai_kerugian_finansial', $lossEvent->nilai_kerugian_finansial) }}">
+                                <input type="text" class="form-control inputmask-rupiah" name="nilai_kerugian_finansial"
+                                      value="@if($risiko->riskAnalysis?->kategori_dampak == 'Kuantitatif'){{ $risiko->riskAnalysis->nilai_dampak }}@else{{ 0 }}@endif">
                             </div>
 
                             <div class="col-md-12 mb-3">
@@ -140,8 +133,8 @@
                                     <div class="col-sm-6">
                                         <label class="form-label">Kejadian Berulang <span class="text-danger">*</span></label>
                                         <select class="form-select" name="kejadian_berulang" id="kejadian_berulang" required>
-                                            <option value="0" @if(old('kejadian_berulang', $lossEvent->kejadian_berulang) == 0) selected @endif>Tidak</option>
-                                            <option value="1" @if(old('kejadian_berulang', $lossEvent->kejadian_berulang) == 1) selected @endif>Ya</option>
+                                            <option value="0" {{ old('kejadian_berulang') == '0' ? 'selected' : '' }}>Tidak</option>
+                                            <option value="1" {{ old('kejadian_berulang') == '1' ? 'selected' : '' }}>Ya</option>
                                         </select>
                                     </div>
                                     <div class="col-sm-6" id="frekuensi_container" style="display: none;">
@@ -149,9 +142,9 @@
                                         <select class="form-select" name="frekuensi_kejadian">
                                             <option value="">Pilih</option>
                                             @for($i=1; $i<=5; $i++)
-                                                <option value="{{ $i }}" @if(old('frekuensi_kejadian', $lossEvent->frekuensi_kejadian) == $i) selected @endif>{{ $i }} kali per tahun</option>
+                                                <option value="{{ $i }}" {{ old('frekuensi_kejadian') == $i ? 'selected' : '' }}>{{ $i }} kali per tahun</option>
                                             @endfor
-                                            <option value="6" @if(old('frekuensi_kejadian', $lossEvent->frekuensi_kejadian) == 6) selected @endif>6 kali atau lebih per tahun</option>
+                                            <option value="6" {{ old('frekuensi_kejadian') == '6' ? 'selected' : '' }}>6 kali atau lebih per tahun</option>
                                         </select>
                                     </div>
                                 </div>
@@ -160,35 +153,34 @@
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Status Asuransi <span class="text-danger">*</span></label>
                                 <select class="form-select" name="status_asuransi" id="status_asuransi" required>
-                                    <option value="0" @if(old('status_asuransi', $lossEvent->status_asuransi) == 0) selected @endif>Tidak</option>
-                                    <option value="1" @if(old('status_asuransi', $lossEvent->status_asuransi) == 1) selected @endif>Ya</option>
+                                    <option value="0" {{ old('status_asuransi') == '0' ? 'selected' : '' }}>Tidak</option>
+                                    <option value="1" {{ old('status_asuransi') == '1' ? 'selected' : '' }}>Ya</option>
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <div class="row">
                                     <div class="col-sm-6" id="premi_container" style="display: none;">
                                         <label class="form-label">Nilai Premi (IDR)</label>
-                                        <input type="text" class="form-control inputmask-rupiah" name="nilai_premi" value="{{ old('nilai_premi', $lossEvent->nilai_premi) }}">
+                                        <input type="text" class="form-control inputmask-rupiah" name="nilai_premi" value="{{ old('nilai_premi') }}">
                                     </div>
                                     <div class="col-sm-6" id="klaim_container" style="display: none;">
                                         <label class="form-label">Nilai Klaim (IDR)</label>
-                                        <input type="text" class="form-control inputmask-rupiah" name="nilai_klaim" value="{{ old('nilai_klaim', $lossEvent->nilai_klaim) }}">
+                                        <input type="text" class="form-control inputmask-rupiah" name="nilai_klaim" value="{{ old('nilai_klaim') }}">
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="col-12 mt-4">
-                            <a href="{{ route('ap-led.index-by-periode', ['periode' => $lossEvent->periode_id]) }}" class="btn btn-secondary">Batal</a>
-                            <button type="submit" class="btn btn-primary">Update Data</button>
+                            <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $risiko->periode_id]) }}" class="btn btn-secondary">Batal</a>
+                            <button type="submit" class="btn btn-primary" id="save-led-button">Simpan LED</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-    
-    {{-- Modal untuk Tambah Penyebab --}}
+
     <div class="modal fade" id="modalPenyebab" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -201,7 +193,6 @@
         </div>
     </div>
 
-    {{-- Modal untuk Penanganan Saat Kejadian --}}
     <div class="modal fade" id="modalRencana" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
@@ -221,87 +212,144 @@
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
 $(document).ready(function() {
-    let penyebabData = @json($penyebabData);
+    flatpickr("#tanggal_kejadian", {
+        altInput: true,
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
+        disableMobile: true,
+        maxDate: "today",
+    });
 
     var flatpickrMulai = flatpickr("#timelineRange1", {
         altInput: true,
-        altFormat: "d/m/Y",
-        dateFormat: "Y-m-d",
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
         altInput: true,
-        altFormat: "d/m/Y",
-        dateFormat: "Y-m-d",
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
         disableMobile: true
     });
 
+    let penyebabData = @json($penyebabData ?? []);
     let currentPenyebabId = null;
     let currentPerlakuanId = null;
-
+    
     function renderPenyebabTable() {
         const tbody = $('#penyebab-risiko-tbody');
         tbody.empty();
         let counter = 1;
+
         if (penyebabData.length === 0) {
-            tbody.html('<tr><td colspan="4" class="text-center">Belum ada data penyebab. Klik "Tambah Penyebab" untuk memulai.</td></tr>');
+            tbody.html('<tr><td colspan="5" class="text-center">Belum ada data penyebab. Klik "Tambah Penyebab" untuk memulai.</td></tr>');
             $('#penyebab_data_input').val('[]');
             return;
         }
-        penyebabData.forEach(penyebab => {
-            let perlakuanHtml = '-';
-            let picHtml = '-';
-            if (penyebab.perlakuan && penyebab.perlakuan.length > 0) {
-                perlakuanHtml = '<ul class="list-unstyled mb-0">';
-                picHtml = '<ul class="list-unstyled mb-0">';
-                penyebab.perlakuan.forEach(p => {
-                    perlakuanHtml += `<li class="d-flex justify-content-between align-items-center">
-                        ${p.rencana_perlakuan_risiko || ''}
-                        <span class="d-flex gap-2">
-                            <button type="button" class="btn btn-link p-0 btn-edit-perlakuan" data-penyebab-id="${penyebab.id}" data-perlakuan-id="${p.id}" title="Edit Rencana"><i class="bx bx-edit-alt"></i></button>
-                            <button type="button" class="btn btn-link text-danger p-0 btn-hapus-perlakuan" data-penyebab-id="${penyebab.id}" data-perlakuan-id="${p.id}" title="Hapus Rencana"><i class="bx bx-trash"></i></button>
-                        </span>
-                    </li>`;
-                    picHtml += `<li>${p.pic_name || ''}</li>`;
-                });
-                perlakuanHtml += '</ul>';
-                picHtml += '</ul>';
-            }
-            const row = `<tr class="table">
-                    <td style="place-content: center;">${counter++}</td>
-                    <td class="">
-                      <div class="d-flex justify-content-between align-items-center"> 
-                        ${penyebab.penyebab_risiko}
-                        <span class="d-flex gap-2">
-                            <button type="button" class="btn btn-link p-0 btn-tambah-rencana" data-penyebab-id="${penyebab.id}" title="Tambah Rencana"><i class="bx bx-plus-circle"></i></button>
-                            <button type="button" class="btn btn-link text-danger p-0 btn-hapus-penyebab" data-id="${penyebab.id}" title="Hapus Penyebab"><i class="bx bx-trash"></i></button>
-                        </span>
-                      </div>
-                    </td>
-                    <td>${perlakuanHtml}</td>
-                    <td>${picHtml}</td>
-                </tr>`;
-            tbody.append(row);
-        });
-        $('#penyebab_data_input').val(JSON.stringify(penyebabData));
-    }
     
+        penyebabData.forEach(penyebab => {
+            const perlakuanList = penyebab.perlakuan || [];
+            const rowspanCount = perlakuanList.length > 0 ? perlakuanList.length : 1;
+
+            const noCell = `<td class="align-middle text-center" rowspan="${rowspanCount}">${counter}</td>`;
+            const penyebabCell = `<td class="align-middle" rowspan="${rowspanCount}">${penyebab.penyebab_risiko}</td>`;
+            
+            const actionMenu = `
+                <div class="dropdown">
+                    <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-toggle="tooltip" title="Pilihan Aksi">
+                        <i class="bx bx-dots-vertical-rounded fs-4"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <a class="dropdown-item btn-edit-penyebab" href="#" data-id="${penyebab.id}"><i class="bx bx-edit-alt me-2"></i>Edit Penyebab</a>
+                        <a class="dropdown-item text-danger btn-hapus-penyebab" href="#" data-id="${penyebab.id}"><i class="bx bx-trash me-2"></i>Hapus Penyebab</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item btn-tambah-rencana" href="#" data-penyebab-id="${penyebab.id}"><i class="bx bx-plus me-2"></i>Tambah Penanganan</a>
+                    </div>
+                </div>`;
+            const actionCell = `<td class="align-middle text-center" rowspan="${rowspanCount}">${actionMenu}</td>`;
+            
+            let rowsHtml = '';
+
+            if (perlakuanList.length > 0) {
+                perlakuanList.forEach((perlakuan, index) => {
+                    const perlakuanActionButtons = `
+                        <span class="d-flex gap-2">
+                            <button type="button" class="btn btn-link p-0 btn-edit-perlakuan" data-penyebab-id="${penyebab.id}" data-perlakuan-id="${perlakuan.id}" data-bs-toggle="tooltip" title="Edit Penanganan"><i class="bx bx-edit-alt"></i></button>
+                            <button type="button" class="btn btn-link text-danger p-0 btn-hapus-perlakuan" data-penyebab-id="${penyebab.id}" data-perlakuan-id="${perlakuan.id}" data-bs-toggle="tooltip" title="Hapus Penanganan"><i class="bx bx-trash"></i></button>
+                        </span>`;
+
+                    const perlakuanCellContent = `<div class="d-flex justify-content-between align-items-center">${perlakuan.rencana_perlakuan_risiko || ''}${perlakuanActionButtons}</div>`;
+                    const picCellContent = perlakuan.pic_name || '-';
+
+                    if (index === 0) {
+                        rowsHtml += `<tr>
+                            ${noCell}
+                            ${penyebabCell}
+                            <td class="align-middle">${perlakuanCellContent}</td>
+                            <td class="align-middle">${picCellContent}</td>
+                            ${actionCell}
+                        </tr>`;
+                    } else {
+                        rowsHtml += `<tr>
+                            <td class="align-middle">${perlakuanCellContent}</td>
+                            <td class="align-middle">${picCellContent}</td>
+                        </tr>`;
+                    }
+                });
+            } else {
+                const tambahPerlakuanBtnHtml = `
+                    <button type="button" class="btn btn-outline-info btn-sm btn-tambah-rencana" 
+                            data-penyebab-id="${penyebab.id}" data-bs-toggle="tooltip" title="Tambah Penanganan Baru untuk penyebab ini">
+                        <i class="bx bx-plus"></i> Tambah Penanganan
+                    </button>`;
+
+                rowsHtml = `<tr>
+                    ${noCell}
+                    ${penyebabCell}
+                    <td class="align-middle text-center">${tambahPerlakuanBtnHtml}</td>
+                    <td class="align-middle text-center">-</td>
+                    ${actionCell}
+                </tr>`;
+            }
+            
+            tbody.append(rowsHtml);
+            counter++;
+        });
+
+        $('#penyebab_data_input').val(JSON.stringify(penyebabData));
+
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+
     renderPenyebabTable();
-    flatpickr(".flatpickr-date", 
-      {
-        altInput: true,
-        altFormat: "d/m/Y",
-        dateFormat: "Y-m-d",
-        disableMobile: true
-      }
-    );
-    $('.inputmask-rupiah').inputmask({ alias: 'numeric', groupSeparator: '.', autoGroup: true, digits: 0, prefix: 'Rp ', placeholder: '0', rightAlign: false, autoUnmask: true, removeMaskOnSubmit: true });
+    flatpickr(".flatpickr-date", { altInput: true, altFormat: "j F Y", dateFormat: "Y-m-d" });
+    $('.inputmask-rupiah').inputmask({
+        alias: 'numeric', groupSeparator: '.', autoGroup: true, digits: 0,
+        prefix: 'Rp ', placeholder: '0', rightAlign: false,
+        autoUnmask: true, removeMaskOnSubmit: true,
+    });
 
     $('#btn-tambah-penyebab').on('click', function() {
         $('#modalPenyebabLabel').text('Tambah Penyebab Baru');
         $('#input-penyebab-risiko').val('');
+        $('#btn-simpan-penyebab').data('mode', 'add');
         $('#modalPenyebab').modal('show');
+    });
+
+    $('body').on('click', '.btn-edit-penyebab', function() {
+        const idToEdit = $(this).data('id');
+        const penyebab = penyebabData.find(p => p.id == idToEdit);
+        if (penyebab) {
+            $('#modalPenyebabLabel').text('Edit Penyebab');
+            $('#input-penyebab-risiko').val(penyebab.penyebab_risiko);
+            $('#btn-simpan-penyebab').data('mode', 'edit').data('id', idToEdit);
+            $('#modalPenyebab').modal('show');
+        }
     });
 
     $('#btn-simpan-penyebab').on('click', function() {
@@ -310,12 +358,27 @@ $(document).ready(function() {
             Swal.fire('Gagal', 'Nama penyebab tidak boleh kosong.', 'error');
             return; 
         }
-        penyebabData.push({ id: `temp_${new Date().getTime()}`, penyebab_risiko: penyebabText, perlakuan: [] });
+
+        const mode = $(this).data('mode');
+        if (mode === 'edit') {
+            const idToUpdate = $(this).data('id');
+            const penyebabIndex = penyebabData.findIndex(p => p.id == idToUpdate);
+            if (penyebabIndex > -1) {
+                penyebabData[penyebabIndex].penyebab_risiko = penyebabText;
+            }
+        } else {
+            penyebabData.push({ 
+                id: `temp_${new Date().getTime()}`, 
+                penyebab_risiko: penyebabText, 
+                perlakuan: []
+            });
+        }
+
         renderPenyebabTable();
         $('#modalPenyebab').modal('hide');
     });
 
-    $('body').on('click', '.btn-hapus-penyebab', function() {;
+    $('body').on('click', '.btn-hapus-penyebab', function() {
         const idToDelete = $(this).data('id');
         Swal.fire({
             title: 'Apakah Anda yakin?',
@@ -337,9 +400,10 @@ $(document).ready(function() {
 
     $('body').on('click', '.btn-tambah-rencana', function() {
         currentPenyebabId = $(this).data('penyebab-id');
-        currentPerlakuanId = null; 
+        currentPerlakuanId = null;
 
         const penyebab = penyebabData.find(p => p.id == currentPenyebabId);
+        if (!penyebab) return;
         
         $('#modalRencanaLabel').text('Tambah Penanganan Saat Kejadian');
         
@@ -360,7 +424,8 @@ $(document).ready(function() {
         currentPerlakuanId = $(this).data('perlakuan-id');
         
         const penyebab = penyebabData.find(p => p.id == currentPenyebabId);
-        const perlakuan = penyebab.perlakuan.find(pl => pl.id == currentPerlakuanId);
+        const perlakuan = penyebab ? penyebab.perlakuan.find(pl => pl.id == currentPerlakuanId) : null;
+        if (!perlakuan) return; 
         
         const form = $('#formRencana');
         form.find('.is-invalid').removeClass('is-invalid');
@@ -380,7 +445,7 @@ $(document).ready(function() {
         
         $('#modalRencana').modal('show');
     });
-
+    
     $('#btn-simpan-rencana').on('click', function() {
         const form = $('#formRencana');
         let isValid = true;
@@ -416,16 +481,19 @@ $(document).ready(function() {
             timeline_selesai_perlakuan_risiko: form.find('[name="timeline_selesai_perlakuan_risiko"]').val(),
             opsi_perlakuan_risiko: form.find('[name="opsi_perlakuan_risiko"]').val(),
             jenis_rencana_perlakuan_risiko: form.find('[name="jenis_rencana_perlakuan_risiko"]').val(),
+            is_original: false
         };
         
         const penyebab = penyebabData.find(p => p.id == currentPenyebabId);
-        
+
         if (currentPerlakuanId) {
             const perlakuanIndex = penyebab.perlakuan.findIndex(pl => pl.id == currentPerlakuanId);
-            perlakuanData.id = currentPerlakuanId;
             penyebab.perlakuan[perlakuanIndex] = { ...penyebab.perlakuan[perlakuanIndex], ...perlakuanData };
         } else {
             perlakuanData.id = `temp_p_${new Date().getTime()}`;
+            if (!penyebab.perlakuan) {
+                penyebab.perlakuan = [];
+            }
             penyebab.perlakuan.push(perlakuanData);
         }
         
@@ -433,13 +501,6 @@ $(document).ready(function() {
         $('#modalRencana').modal('hide');
     });
 
-    // $('body').on('click', '.btn-hapus-perlakuan', function() {
-    //     const penyebabId = $(this).data('penyebab-id');
-    //     const perlakuanId = $(this).data('perlakuan-id');
-    //     const penyebab = penyebabData.find(p => p.id === penyebabId);
-    //     penyebab.perlakuan = penyebab.perlakuan.filter(pl => pl.id !== perlakuanId);
-    //     renderPenyebabTable();
-    // });
     $('body').on('click', '.btn-hapus-perlakuan', function() {
         const penyebabId = $(this).data('penyebab-id');
         const perlakuanId = $(this).data('perlakuan-id');
@@ -463,10 +524,10 @@ $(document).ready(function() {
         });
     });
 
-    // Form Field Handlers
-    $('#jenis_risiko_id').on('change', function() {
+    
+    $('#jenis_risiko_id_dynamic').on('change', function() {
         var kategoriId = $(this).find('option:selected').data('kategori');
-        $('#kategori_risiko_id').val(kategoriId);
+        $('#kategori_risiko_id_dynamic').val(kategoriId);
     });
 
     $('#kejadian_berulang').on('change', function() {
@@ -487,28 +548,57 @@ $(document).ready(function() {
         }
     }).trigger('change');
 
-    $('#form-edit-led').on('submit', function(e) {
-        e.preventDefault();
-        const form = this;
-
-        Swal.fire({
-            title: 'Konfirmasi Penyimpanan',
-            text: "Apakah Loss Event ini akan menjadi Risiko baru di Anak Perusahaan?",
-            icon: 'question',
-            showDenyButton: true,
-            showCancelButton: false,
-            confirmButtonText: 'Ya, Jadikan Risiko',
-            denyButtonText: `Tidak, Simpan LED Saja`,
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $('#create_risk_from_led_input').val('1');
-                form.submit();
-            } else if (result.isDenied) {
-                $('#create_risk_from_led_input').val('0');
-                form.submit();
-            }
-        });
+    
+    $('#save-led-button').on('click', function(e) {
+      e.preventDefault();
+      const form = document.getElementById('form-change-to-led');
+  
+      if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+      }
+  
+      Swal.fire({
+          title: 'Apakah Risiko akan di-close?',
+          text: "Memilih 'Ya' akan menutup risiko ini setelah LED dibuat.",
+          icon: 'question',
+          showDenyButton: true,
+          showCancelButton: false,
+          confirmButtonText: 'Ya, Close Risiko',
+          denyButtonText: `Tidak`,
+          // cancelButtonText: 'Batal'
+      }).then((result) => {
+          if (result.isConfirmed) {
+              // User chose "Ya, Close Risiko"
+              document.getElementById('is_closed_input').value = '1';
+              form.submit();
+  
+          } else if (result.isDenied) {
+              // User chose "Tidak"
+              Swal.fire({
+                  title: 'Apakah menjadi Penyebab Risiko Baru?',
+                  text: "Ini akan mengarahkan Anda ke halaman tambah risiko baru dengan beberapa data terisi.",
+                  icon: 'warning',
+                  showDenyButton: true,
+                  showCancelButton: false,
+                  confirmButtonText: 'Ya, Risiko Baru',
+                  denyButtonText: 'Tidak, Buat LED Saja',
+                  cancelButtonText: 'Batal'
+              }).then((result2) => {
+                  if (result2.isConfirmed) {
+                      // User memilih "Ya, jadi Risiko Baru"
+                      // Tandai form untuk memberitahu controller agar me-redirect ke halaman create risk
+                      document.getElementById('create_new_risk_input').value = '1';
+                      document.getElementById('is_closed_input').value = '0'; // Pastikan is_closed tidak diset
+                      form.submit(); // Submit form untuk menyimpan LED terlebih dahulu
+                  } else if (result2.isDenied) {
+                      // User chose "Tidak, Buat LED Saja" (by clicking outside or X)
+                      document.getElementById('is_closed_input').value = '0';
+                      form.submit();
+                  }
+              });
+          }
+      });
     });
 });
 </script>
