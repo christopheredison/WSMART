@@ -1296,7 +1296,7 @@ class RiskRegisterUnitController extends Controller
                 $projectRisks = ProjectRisk::whereIn('project_id', $projectIds)
                     ->where('status_risiko', 3)
                     ->where('status', ProjectRisk::STATUS_PUBLISHED)
-                    ->with(['project', 'kategoriRisiko', 'projectRiskAnalisa'])
+                    ->with(['project', 'kategoriRisiko', 'projectRiskAnalisa', 'penyebabRisikoProjects'])
                     ->get();
             }
         }
@@ -2057,7 +2057,7 @@ class RiskRegisterUnitController extends Controller
         //     ->get();
 
         $risikos = IdentifikasiRisiko::where('id', $id)
-            ->with(['riskAnalysis', 'projectRisks.project', 'projectRisks.projectRiskAnalisa'])
+            ->with(['riskAnalysis', 'projectRisks.project', 'projectRisks.projectRiskAnalisa', 'projectRisks.penyebabRisikoProjects'])
             ->get();
 
         $risiko = $risikos->first();

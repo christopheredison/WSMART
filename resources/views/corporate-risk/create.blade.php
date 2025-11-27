@@ -285,30 +285,35 @@
                         <span class="bx bx-plus"></span> Pilih Risiko Divisi
                     </button>
                     <div class="table-responsive">
-                        <table class="table table-bordered" id="tabelRisikoDivisiTerpilih">
-                            <thead>
+                        <table class="table table-bordered align-middle" id="tabelRisikoDivisiTerpilih">
+                            <thead class="bg-light">
                                 <tr>
-                                    <th>Divisi</th>
-                                    <th>Peristiwa Risiko</th>
-                                    <th>Level Risiko</th>
-                                    <th>Aksi</th>
+                                    <th style="width: 15%">Divisi</th>
+                                    <th style="width: 20%">Peristiwa Risiko</th>
+                                    <th style="width: 25%">Penyebab Risiko</th>
+                                    <th style="width: 10%" class="text-center">Level Risiko</th>
+                                    <th style="width: 10%" class="text-center">Nilai Risiko</th>
+                                    <th style="width: 10%" class="text-center">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                <tr id="empty-row">
+                                    <td colspan="6" class="text-center text-muted">Belum ada risiko divisi yang dipilih.</td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
             </div>
         </div>
         <div class="modal fade" id="modalPilihRisikoDivisi" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-xl">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Pilih Risiko Divisi</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        {{-- BARU: Filter Divisi --}}
                         <div class="mb-3">
                             <label for="divisi_filter" class="form-label">Filter Berdasarkan Divisi:</label>
                             <select id="divisi_filter" class="form-select select2" style="width: 100%;">
@@ -318,19 +323,22 @@
                                 @endforeach
                             </select>
                         </div>
+
                         <div class="table-responsive">
-                            <table class="table table-bordered" id="tabelRisikoDivisi">
-                                <thead>
+                            <table class="table table-bordered table-hover align-middle" id="tabelRisikoDivisi">
+                                <thead class="table-light sticky-top">
                                     <tr>
-                                        <th>Pilih</th>
-                                        <th>Divisi</th>
-                                        <th>Peristiwa Risiko</th>
-                                        <th>Level Risiko</th>
+                                        <th class="text-center" width="5%">Pilih</th>
+                                        <th width="15%">Divisi</th>
+                                        <th width="20%">Peristiwa Risiko</th>
+                                        <th width="30%">Penyebab Risiko</th>
+                                        <th class="text-center" width="10%">Level Risiko</th>
+                                        <th class="text-center" width="10%">Nilai Risiko</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td colspan="4" class="text-center">Pilih divisi terlebih dahulu.</td>
+                                        <td colspan="6" class="text-center">Pilih divisi terlebih dahulu.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -740,8 +748,8 @@
                     <tr>
                         <td>${risk.project}</td>
                         <td>${risk.peristiwa}</td>
-                        <td>${risk.kategori}</td>
                         <td>${risk.level}</td>
+                        <td>${risk.nilai}</td>
                         <td>
                             <button type="button" class="btn btn-sm btn-danger hapus-risiko" data-index="${index}">
                                 <i class="bx bx-trash"></i>
@@ -787,24 +795,25 @@ $(document).ready(function() {
         const tbody = $('#tabelRisikoDivisi tbody');
         
         if (!unitId) {
-            tbody.html('<tr><td colspan="4" class="text-center">Pilih divisi terlebih dahulu.</td></tr>');
+            tbody.html('<tr><td colspan="6" class="text-center">Pilih divisi terlebih dahulu.</td></tr>');
             return;
         }
 
-        tbody.html('<tr><td colspan="4" class="text-center">Memuat data...</td></tr>');
+        tbody.html('<tr><td colspan="6" class="text-center">Memuat data...</td></tr>');
         
         $.ajax({
-            url: `{{ url('corporate-risk/get-division-risks') }}/${unitId}`,
+            url: `{{ route('corporate-risk.get-division-risks', ['unit' => ':unitId']) }}`.replace(':unitId', unitId),
             type: 'GET',
             success: function(response) {
                 tbody.html(response.html);
-                // Cek kembali checkbox untuk risiko yang sudah ada di 'selectedRisks'
+                
+                // Re-check checkbox yang sudah ada di selectedRisks
                 selectedRisks.forEach(function(risk) {
                     $(`#risk-${risk.id}`).prop('checked', true);
                 });
             },
             error: function() {
-                tbody.html('<tr><td colspan="4" class="text-center text-danger">Gagal memuat data.</td></tr>');
+                tbody.html('<tr><td colspan="6" class="text-center text-danger">Gagal memuat data.</td></tr>');
             }
         });
     });
@@ -812,13 +821,16 @@ $(document).ready(function() {
     $('#btnPilihRisiko').on('click', function() {
         $('.pilih-risiko:checked').each(function() {
             const riskId = $(this).val();
-            // Cek duplikasi sebelum menambahkan
+            
             if (!selectedRisks.some(risk => risk.id === riskId)) {
+                const rawPenyebab = $(this).data('penyebab');
                 selectedRisks.push({
                     id: riskId,
                     divisi: $(this).data('divisi'),
                     peristiwa: $(this).data('peristiwa'),
-                    level: $(this).data('level')
+                    level: $(this).data('level'),
+                    nilai: $(this).data('nilai'),
+                    penyebab: rawPenyebab
                 });
             }
         });
@@ -837,31 +849,63 @@ $(document).ready(function() {
         tbody.empty();
         
         if (selectedRisks.length === 0) {
-             tbody.html('<tr><td colspan="4" class="text-center">Belum ada risiko divisi yang dipilih.</td></tr>');
-        } else {
-            selectedRisks.forEach(function(risk, index) {
-                const row = `
-                    <tr>
-                        <td>${risk.divisi}</td>
-                        <td>${risk.peristiwa}</td>
-                        <td>${risk.level}</td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-danger hapus-risiko" data-index="${index}">
-                                <i class="bx bx-trash"></i>
-                            </button>
-                            <input type="hidden" name="divisi_risk_ids[]" value="${risk.id}">
-                        </td>
-                    </tr>`;
-                tbody.append(row);
-            });
+            tbody.html('<tr id="empty-row"><td colspan="6" class="text-center text-muted">Belum ada risiko divisi yang dipilih.</td></tr>');
+            return;
         }
+
+        selectedRisks.forEach(function(risk, index) {
+            const count = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab.length : 1;
+            const firstPenyebab = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab[0] : '-';
+
+            let html = `
+                <tr>
+                    <td rowspan="${count}" class="bg-white">${risk.divisi}</td>
+                    <td rowspan="${count}" class="bg-white">${risk.peristiwa}</td>
+                    <td>${firstPenyebab}</td>
+                    <td rowspan="${count}" class="text-center bg-white">${risk.level}</td>
+                    <td rowspan="${count}" class="text-center bg-white">${risk.nilai}</td>
+                    <td rowspan="${count}" class="text-center bg-white">
+                        <button type="button" class="btn btn-sm btn-outline-danger hapus-risiko" data-index="${index}">
+                            <i class="bx bx-trash"></i>
+                        </button>
+                        <input type="hidden" name="divisi_risk_ids[]" value="${risk.id}">
+                    </td>
+                </tr>
+            `;
+
+            if (count > 1) {
+                for (let i = 1; i < count; i++) {
+                    html += `
+                        <tr>
+                            <td>${risk.penyebab[i]}</td>
+                        </tr>
+                    `;
+                }
+            }
+
+            tbody.append(html);
+        });
     }
 
-    // Event delegation untuk tombol hapus
-    $('#tabelRisikoDivisiTerpilih').on('click', '.hapus-risiko', function() {
+    $(document).on('click', '.hapus-risiko', function() {
         const index = $(this).data('index');
-        selectedRisks.splice(index, 1);
-        updateSelectedRisksTable();
+        
+        Swal.fire({
+            title: 'Hapus?',
+            text: "Hapus risiko ini dari daftar terpilih?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Ya, Hapus'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const riskIdToRemove = selectedRisks[index].id;
+                $(`#risk-${riskIdToRemove}`).prop('checked', false);
+
+                selectedRisks.splice(index, 1);
+                updateSelectedRisksTable();
+            }
+        });
     });
 });
 </script>
