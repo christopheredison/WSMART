@@ -425,37 +425,23 @@
                             <div class="col-12">
                                 <p>Pilih risiko proyek yang terkait dengan risiko divisi ini:</p>
                                 <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalPilihRisikoProyek">
-                                    <i class="bx bx-plus"></i> Pilih Risiko Proyek
+                                    <span class="bx bx-plus"></span> Pilih Risiko Proyek
                                 </button>
                                 
                                 <div class="table-responsive">
-                                    <table class="table table-bordered" id="tabelRisikoProyekTerpilih">
-                                        <thead>
+                                    <table class="table table-bordered align-middle" id="tabelRisikoProyekTerpilih">
+                                        <thead class="bg-light">
                                             <tr>
-                                                <th>Proyek</th>
-                                                <th>Peristiwa Risiko</th>
-                                                <th>Kategori</th>
-                                                <th>Level Risiko</th>
-                                                <th>Aksi</th>
+                                                <th style="width: 20%">Proyek</th>
+                                                <th style="width: 25%">Peristiwa Risiko</th>
+                                                <th style="width: 25%">Penyebab Risiko</th>
+                                                <th style="width: 10%" class="text-center">Level Risiko</th>
+                                                <th style="width: 10%" class="text-center">Nilai Risiko</th>
+                                                <th style="width: 10%" class="text-center">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <!-- Data risiko proyek terpilih akan ditampilkan di sini melalui JavaScript -->
-                                            @foreach($identifikasiRisiko->projectRisks as $risk)
-                                            <tr>
-                                                <td>{{ $risk->project->project_name }}</td>
-                                                <td>{{ $risk->deskripsi_peristiwa_risiko }}</td>
-                                                <td>{{ $risk->kategoriRisiko->title ?? 'N/A' }}</td>
-                                                <td>{{ $risk->level_risiko }}</td>
-                                                <td>
-                                                    <button type="button" class="btn btn-sm btn-danger hapus-risiko-existing" data-id="{{ $risk->id }}">
-                                                        <i class="bx bx-trash"></i>
-                                                    </button>
-                                                    <input type="hidden" name="project_risk_ids[]" value="{{ $risk->id }}">
-                                                </td>
-                                            </tr>
-                                            @endforeach
-                                        </tbody>
+                                            </tbody>
                                     </table>
                                 </div>
                             </div>
@@ -464,42 +450,77 @@
                 </div>
             </div>
 
-            <!-- Modal Pilih Risiko Proyek -->
             <div class="modal fade" id="modalPilihRisikoProyek" tabindex="-1" aria-labelledby="modalPilihRisikoProyekLabel" aria-hidden="true">
-                <div class="modal-dialog modal-xl">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="modalPilihRisikoProyekLabel">Pilih Risiko Proyek</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
+                            <div class="mb-3">
+                                <input type="text" id="searchRisikoProyek" class="form-control" placeholder="Cari Nama Proyek atau Peristiwa Risiko..." onkeyup="filterTable()">
+                            </div>
+
                             <div class="table-responsive">
-                                <table class="table table-bordered" id="tabelRisikoProyek">
-                                    <thead>
+                                <table class="table table-bordered table-hover align-middle" id="tabelRisikoProyek">
+                                    <thead class="table-light sticky-top">
                                         <tr>
-                                            <th>Pilih</th>
-                                            <th>Proyek</th>
-                                            <th>Peristiwa Risiko</th>
-                                            <th>Kategori</th>
-                                            <th>Level Risiko</th>
+                                            <th class="text-center" width="5%">Pilih</th>
+                                            <th width="20%">Proyek</th>
+                                            <th width="25%">Peristiwa Risiko</th>
+                                            <th width="30%">Penyebab Risiko</th>
+                                            <th class="text-center" width="10%">Level Risiko</th>
+                                            <th class="text-center" width="10%">Nilai Risiko</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach($projectRisks as $risk)
-                                        <tr>
-                                            <td>
-                                                <div class="form-check">
-                                                    <input class="form-check-input pilih-risiko" type="checkbox" value="{{ $risk->id }}" id="risk-{{ $risk->id }}" data-project="{{ $risk->project->project_name }}" data-peristiwa="{{ $risk->deskripsi_peristiwa_risiko }}" data-kategori="{{ $risk->kategoriRisiko->title ?? 'N/A' }}" data-level="{{ $risk->level_risiko }}" {{ $identifikasiRisiko->projectRisks->contains('id', $risk->id) ? 'checked' : '' }}>
-                                                </div>
-                                            </td>
-                                            <td>{{ $risk->project->project_name }}</td>
-                                            <td>{{ $risk->deskripsi_peristiwa_risiko }}</td>
-                                            <td>{{ $risk->kategoriRisiko->title ?? 'N/A' }}</td>
-                                            <td>{{ $risk->level_risiko }}</td>
-                                        </tr>
+                                            @php
+                                                $penyebabs = $risk->penyebabRisikoProjects;
+                                                $count = $penyebabs->count() > 0 ? $penyebabs->count() : 1;
+                                                
+                                                $penyebabList = $penyebabs->pluck('penyebab_risiko')->toArray();
+                                                if(empty($penyebabList)) $penyebabList = ['-'];
+                                                
+                                                // Nilai Risiko
+                                                $nilaiRisiko = $risk->projectRiskAnalisa->skala_risiko ?? '-';
+
+                                                $isChecked = $identifikasiRisiko->projectRisks->contains('id', $risk->id);
+                                            @endphp
+
+                                            <tr class="risk-row">
+                                                <td rowspan="{{ $count }}" class="text-center bg-white">
+                                                    <div class="form-check d-flex justify-content-center">
+                                                        <input class="form-check-input pilih-risiko" type="checkbox" 
+                                                            value="{{ $risk->id }}" 
+                                                            id="risk-{{ $risk->id }}" 
+                                                            data-project="{{ $risk->project->project_name }}" 
+                                                            data-peristiwa="{{ $risk->deskripsi_peristiwa_risiko }}" 
+                                                            data-level="{{ $risk->level_risiko }}"
+                                                            data-nilai="{{ $nilaiRisiko }}"
+                                                            data-penyebab='{{ json_encode($penyebabList) }}'
+                                                            {{ $isChecked ? 'checked' : '' }}>
+                                                    </div>
+                                                </td>
+                                                <td rowspan="{{ $count }}" class="bg-white">{{ $risk->project->project_name }}</td>
+                                                <td rowspan="{{ $count }}" class="bg-white">{{ $risk->deskripsi_peristiwa_risiko }}</td>
+                                                
+                                                <td>{{ $penyebabs->first()->penyebab_risiko ?? '-' }}</td>
+                                                
+                                                <td rowspan="{{ $count }}" class="text-center bg-white">{{ $risk->level_risiko }}</td>
+                                                <td rowspan="{{ $count }}" class="text-center bg-white">{{ $nilaiRisiko }}</td>
+                                            </tr>
+
+                                            @foreach($penyebabs->slice(1) as $p)
+                                            <tr class="risk-row-child">
+                                                <td>{{ $p->penyebab_risiko }}</td>
+                                            </tr>
+                                            @endforeach
                                         @endforeach
                                     </tbody>
                                 </table>
+                                <div id="noDataMessage" class="text-center py-3 text-muted" style="display: none;">Data tidak ditemukan.</div>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -548,6 +569,49 @@
                     });
                 })
                 .catch(error => console.error('Error:', error));
+        }
+    }
+
+    function filterTable() {
+        var input, filter, table, tr, tdProject, tdPeristiwa, i, txtValueProject, txtValuePeristiwa;
+        input = document.getElementById("searchRisikoProyek");
+        filter = input.value.toUpperCase();
+        table = document.getElementById("tabelRisikoProyek");
+        tr = table.getElementsByTagName("tr");
+        
+        var currentParentVisible = false;
+
+        for (i = 1; i < tr.length; i++) {
+            if (tr[i].classList.contains("risk-row")) {
+                tdProject = tr[i].getElementsByTagName("td")[1];
+                tdPeristiwa = tr[i].getElementsByTagName("td")[2];
+                
+                if (tdProject && tdPeristiwa) {
+                    txtValueProject = tdProject.textContent || tdProject.innerText;
+                    txtValuePeristiwa = tdPeristiwa.textContent || tdPeristiwa.innerText;
+                    
+                    if (txtValueProject.toUpperCase().indexOf(filter) > -1 || txtValuePeristiwa.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                        currentParentVisible = true;
+                    } else {
+                        tr[i].style.display = "none";
+                        currentParentVisible = false;
+                    }
+                }
+            } else if (tr[i].classList.contains("risk-row-child")) {
+                if (currentParentVisible) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+        
+        var visibleRows = table.querySelectorAll('tr[style="display: ;"], tr:not([style="display: none;"])');
+        if(visibleRows.length <= 1) {
+            document.getElementById("noDataMessage").style.display = "block";
+        } else {
+            document.getElementById("noDataMessage").style.display = "none";
         }
     }
 
@@ -801,88 +865,119 @@
         // Inisialisasi array dengan data yang sudah ada
         @if(isset($identifikasiRisiko->projectRisks))
             @foreach($identifikasiRisiko->projectRisks as $risk)
+                @php
+                    $existingPenyebabs = $risk->penyebabRisikoProjects->pluck('penyebab_risiko')->toArray();
+                    if(empty($existingPenyebabs)) $existingPenyebabs = ['-'];
+                    $existingNilai = $risk->projectRiskAnalisa->skala_risiko ?? '-';
+                @endphp
+                
                 selectedRisks.push({
                     id: '{{ $risk->id }}',
                     project: '{{ $risk->project->project_name }}',
                     peristiwa: '{{ $risk->deskripsi_peristiwa_risiko }}',
-                    kategori: '{{ $risk->kategoriRisiko->title ?? "N/A" }}',
-                    level: '{{ $risk->level_risiko }}'
+                    level: '{{ $risk->level_risiko }}',
+                    nilai: '{{ $existingNilai }}',
+                    penyebab: @json($existingPenyebabs)
                 });
             @endforeach
         @endif
         
-        // Ketika tombol Pilih di modal diklik
+        updateSelectedRisksTable();
+
+        // Event Handler Tombol Pilih di Modal
         $('#btnPilihRisiko').on('click', function() {
-            // Reset array
-            selectedRisks = [];
+            let tempSelectedIds = [];
             
-            // Ambil semua checkbox yang dipilih
             $('.pilih-risiko:checked').each(function() {
                 const riskId = $(this).val();
-                const projectName = $(this).data('project');
-                const peristiwa = $(this).data('peristiwa');
-                const kategori = $(this).data('kategori');
-                const level = $(this).data('level');
-                
-                // Tambahkan ke array
-                selectedRisks.push({
-                    id: riskId,
-                    project: projectName,
-                    peristiwa: peristiwa,
-                    kategori: kategori,
-                    level: level
-                });
+                tempSelectedIds.push(riskId);
+
+                if (!selectedRisks.some(risk => risk.id === riskId)) {
+                    selectedRisks.push({
+                        id: riskId,
+                        project: $(this).data('project'),
+                        peristiwa: $(this).data('peristiwa'),
+                        level: $(this).data('level'),
+                        nilai: $(this).data('nilai'),
+                        penyebab: $(this).data('penyebab') // Array
+                    });
+                }
             });
+
+            selectedRisks = selectedRisks.filter(risk => tempSelectedIds.includes(risk.id));
             
-            // Perbarui tampilan tabel risiko terpilih
             updateSelectedRisksTable();
-            
-            // Tutup modal
             $('#modalPilihRisikoProyek').modal('hide');
         });
         
-        // Fungsi untuk memperbarui tabel risiko terpilih
+        // Fungsi Render Tabel Terpilih
         function updateSelectedRisksTable() {
             const tbody = $('#tabelRisikoProyekTerpilih tbody');
             tbody.empty();
             
+            if (selectedRisks.length === 0) {
+                tbody.html('<tr><td colspan="6" class="text-center text-muted">Belum ada risiko proyek yang dipilih.</td></tr>');
+                return;
+            }
+
             selectedRisks.forEach(function(risk, index) {
-                const row = `
+                const count = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab.length : 1;
+                const firstPenyebab = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab[0] : '-';
+
+                // Baris Induk
+                let html = `
                     <tr>
-                        <td>${risk.project}</td>
-                        <td>${risk.peristiwa}</td>
-                        <td>${risk.kategori}</td>
-                        <td>${risk.level}</td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-danger hapus-risiko" data-index="${index}">
+                        <td rowspan="${count}" class="bg-white">${risk.project}</td>
+                        <td rowspan="${count}" class="bg-white">${risk.peristiwa}</td>
+                        <td>${firstPenyebab}</td>
+                        <td rowspan="${count}" class="text-center bg-white">${risk.level}</td>
+                        <td rowspan="${count}" class="text-center bg-white">${risk.nilai}</td>
+                        <td rowspan="${count}" class="text-center bg-white">
+                            <button type="button" class="btn btn-sm btn-outline-danger hapus-risiko" data-index="${index}">
                                 <i class="bx bx-trash"></i>
                             </button>
                             <input type="hidden" name="project_risk_ids[]" value="${risk.id}">
                         </td>
                     </tr>
                 `;
-                tbody.append(row);
+
+                // Baris Anak (Penyebab tambahan)
+                if (count > 1) {
+                    for (let i = 1; i < count; i++) {
+                        html += `
+                            <tr>
+                                <td>${risk.penyebab[i]}</td>
+                            </tr>
+                        `;
+                    }
+                }
+
+                tbody.append(html);
             });
-            
-            // Tambahkan event listener untuk tombol hapus
+
             $('.hapus-risiko').on('click', function() {
                 const index = $(this).data('index');
-                selectedRisks.splice(index, 1);
-                updateSelectedRisksTable();
+                const riskIdToRemove = selectedRisks[index].id;
+
+                Swal.fire({
+                    title: 'Hapus?',
+                    text: "Hapus risiko ini dari daftar terpilih?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Ya, Hapus'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        selectedRisks.splice(index, 1);
+                        
+                        $(`#risk-${riskIdToRemove}`).prop('checked', false);
+                        
+                        updateSelectedRisksTable();
+                    }
+                });
             });
         }
-        
-        // Event listener untuk tombol hapus risiko yang sudah ada
-        $(document).on('click', '.hapus-risiko-existing', function() {
-            const id = $(this).data('id');
-            $(this).closest('tr').remove();
-            
-            // Hapus dari array selectedRisks jika ada
-            const index = selectedRisks.findIndex(risk => risk.id === id);
-            if (index !== -1) {
-                selectedRisks.splice(index, 1);
-            }
-        });
     });
 </script>
 @endpush

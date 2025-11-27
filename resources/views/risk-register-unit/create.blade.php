@@ -305,7 +305,7 @@
                             <div class="col-12">
                                 <p>Pilih risiko proyek yang terkait dengan risiko divisi ini:</p>
                                 <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalPilihRisikoProyek">
-                                    <i class="bx bx-plus"></i> Pilih Risiko Proyek
+                                    <span class="bx bx-plus"></span> Pilih Risiko Proyek
                                 </button>
                                 
                                 <div class="table-responsive">
@@ -314,13 +314,17 @@
                                             <tr>
                                                 <th>Proyek</th>
                                                 <th>Peristiwa Risiko</th>
-                                                <th>Kategori</th>
+                                                <th>Penyebab Risiko</th>
                                                 <th>Level Risiko</th>
+                                                <th>Nilai Risiko</th>
                                                 <th>Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <!-- Data risiko proyek terpilih akan ditampilkan di sini melalui JavaScript -->
+                                            <tr id="empty-row">
+                                                <td colspan="6" class="text-center text-muted">Belum ada risiko proyek yang dipilih.</td>
+                                            </tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -332,40 +336,75 @@
 
             <!-- Modal Pilih Risiko Proyek -->
             <div class="modal fade" id="modalPilihRisikoProyek" tabindex="-1" aria-labelledby="modalPilihRisikoProyekLabel" aria-hidden="true">
-                <div class="modal-dialog modal-xl">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="modalPilihRisikoProyekLabel">Pilih Risiko Proyek</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
+                            <div class="mb-3">
+                                <input type="text" id="searchRisikoProyek" class="form-control" placeholder="Cari Nama Proyek atau Peristiwa Risiko..." onkeyup="filterTable()">
+                            </div>
+
                             <div class="table-responsive">
-                                <table class="table table-bordered" id="tabelRisikoProyek">
-                                    <thead>
+                                <table class="table table-bordered table-hover align-middle" id="tabelRisikoProyek">
+                                    <thead class="table-light sticky-top">
                                         <tr>
-                                            <th>Pilih</th>
-                                            <th>Proyek</th>
-                                            <th>Peristiwa Risiko</th>
-                                            <th>Kategori</th>
-                                            <th>Level Risiko</th>
+                                            <th class="text-center" width="5%">Pilih</th>
+                                            <th width="20%">Proyek</th>
+                                            <th width="25%">Peristiwa Risiko</th>
+                                            <th width="30%">Penyebab Risiko</th>
+                                            <th class="text-center" width="10%">Level</th>
+                                            <th class="text-center" width="10%">Nilai</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach($projectRisks as $risk)
-                                        <tr>
-                                            <td>
-                                                <div class="form-check">
-                                                    <input class="form-check-input pilih-risiko" type="checkbox" value="{{ $risk->id }}" id="risk-{{ $risk->id }}" data-project="{{ $risk->project->project_name }}" data-peristiwa="{{ $risk->deskripsi_peristiwa_risiko }}" data-kategori="{{ $risk->kategoriRisiko->title ?? 'N/A' }}" data-level="{{ $risk->level_risiko }}">
-                                                </div>
-                                            </td>
-                                            <td>{{ $risk->project->project_name }}</td>
-                                            <td>{{ $risk->deskripsi_peristiwa_risiko }}</td>
-                                            <td>{{ $risk->kategoriRisiko->title ?? 'N/A' }}</td>
-                                            <td>{{ $risk->level_risiko }}</td>
-                                        </tr>
+                                            @php
+                                                // Ambil relasi penyebab
+                                                $penyebabs = $risk->penyebabRisikoProjects;
+                                                $count = $penyebabs->count() > 0 ? $penyebabs->count() : 1;
+                                                
+                                                // Array text penyebab untuk JS
+                                                $penyebabList = $penyebabs->pluck('penyebab_risiko')->toArray();
+                                                if(empty($penyebabList)) $penyebabList = ['-'];
+                                                
+                                                // Nilai Risiko
+                                                $nilaiRisiko = $risk->projectRiskAnalisa->skala_risiko ?? '-';
+                                            @endphp
+
+                                            <tr class="risk-row">
+                                                <td rowspan="{{ $count }}" class="text-center bg-white">
+                                                    <div class="form-check d-flex justify-content-center">
+                                                        <input class="form-check-input pilih-risiko" type="checkbox" 
+                                                            value="{{ $risk->id }}" 
+                                                            id="risk-{{ $risk->id }}" 
+                                                            data-project="{{ $risk->project->project_name }}" 
+                                                            data-peristiwa="{{ $risk->deskripsi_peristiwa_risiko }}" 
+                                                            data-level="{{ $risk->level_risiko }}"
+                                                            data-nilai="{{ $nilaiRisiko }}"
+                                                            data-penyebab='{{ json_encode($penyebabList) }}'>
+                                                    </div>
+                                                </td>
+                                                <td rowspan="{{ $count }}" class="bg-white">{{ $risk->project->project_name }}</td>
+                                                <td rowspan="{{ $count }}" class="bg-white">{{ $risk->deskripsi_peristiwa_risiko }}</td>
+                                                
+                                                <td>{{ $penyebabs->first()->penyebab_risiko ?? '-' }}</td>
+                                                
+                                                <td rowspan="{{ $count }}" class="text-center bg-white">{{ $risk->level_risiko }}</td>
+                                                <td rowspan="{{ $count }}" class="text-center bg-white">{{ $nilaiRisiko }}</td>
+                                            </tr>
+
+                                            @foreach($penyebabs->slice(1) as $p)
+                                            <tr class="risk-row-child">
+                                                <td>{{ $p->penyebab_risiko }}</td>
+                                            </tr>
+                                            @endforeach
                                         @endforeach
                                     </tbody>
                                 </table>
+                                <div id="noDataMessage" class="text-center py-3 text-muted" style="display: none;">Data tidak ditemukan.</div>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -398,6 +437,49 @@
 
 @push('scripts')
 <script>
+    function filterTable() {
+        var input, filter, table, tr, tdProject, tdPeristiwa, i, txtValueProject, txtValuePeristiwa;
+        input = document.getElementById("searchRisikoProyek");
+        filter = input.value.toUpperCase();
+        table = document.getElementById("tabelRisikoProyek");
+        tr = table.getElementsByTagName("tr");
+        
+        var currentParentVisible = false;
+
+        for (i = 1; i < tr.length; i++) {
+            if (tr[i].classList.contains("risk-row")) {
+                tdProject = tr[i].getElementsByTagName("td")[1];
+                tdPeristiwa = tr[i].getElementsByTagName("td")[2];
+                
+                if (tdProject && tdPeristiwa) {
+                    txtValueProject = tdProject.textContent || tdProject.innerText;
+                    txtValuePeristiwa = tdPeristiwa.textContent || tdPeristiwa.innerText;
+                    
+                    if (txtValueProject.toUpperCase().indexOf(filter) > -1 || txtValuePeristiwa.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                        currentParentVisible = true;
+                    } else {
+                        tr[i].style.display = "none";
+                        currentParentVisible = false;
+                    }
+                }
+            } else if (tr[i].classList.contains("risk-row-child")) {
+                if (currentParentVisible) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+        
+        var visibleRows = table.querySelectorAll('tr[style="display: ;"], tr:not([style="display: none;"])');
+        if(visibleRows.length <= 1) {
+            document.getElementById("noDataMessage").style.display = "block";
+        } else {
+            document.getElementById("noDataMessage").style.display = "none";
+        }
+    }
+
     function removeRow(event) {
         let row = $(event.target).closest('.row');
         row.remove();
@@ -739,30 +821,28 @@
         
         // Ketika tombol Pilih di modal diklik
         $('#btnPilihRisiko').on('click', function() {
-            // Ambil semua checkbox yang dipilih
             $('.pilih-risiko:checked').each(function() {
                 const riskId = $(this).val();
-                const projectName = $(this).data('project');
-                const peristiwa = $(this).data('peristiwa');
-                const kategori = $(this).data('kategori');
-                const level = $(this).data('level');
                 
-                // Cek apakah risiko sudah ada di array
+                // Cek duplikasi
                 if (!selectedRisks.some(risk => risk.id === riskId)) {
+                    const rawPenyebab = $(this).data('penyebab');
+                    
                     selectedRisks.push({
                         id: riskId,
-                        project: projectName,
-                        peristiwa: peristiwa,
-                        kategori: kategori,
-                        level: level
+                        project: $(this).data('project'),
+                        peristiwa: $(this).data('peristiwa'),
+                        level: $(this).data('level'),
+                        nilai: $(this).data('nilai'),
+                        penyebab: rawPenyebab
                     });
                 }
             });
             
-            // Perbarui tampilan tabel risiko terpilih
             updateSelectedRisksTable();
             
-            // Tutup modal
+            // Reset checkbox & tutup modal
+            $('.pilih-risiko').prop('checked', false);
             $('#modalPilihRisikoProyek').modal('hide');
         });
         
@@ -771,29 +851,68 @@
             const tbody = $('#tabelRisikoProyekTerpilih tbody');
             tbody.empty();
             
+            if (selectedRisks.length === 0) {
+                tbody.html('<tr><td colspan="6" class="text-center text-muted">Belum ada risiko proyek yang dipilih.</td></tr>');
+                return;
+            }
+
             selectedRisks.forEach(function(risk, index) {
-                const row = `
+                // Tentukan rowspan berdasarkan jumlah penyebab
+                const count = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab.length : 1;
+                const firstPenyebab = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab[0] : '-';
+
+                // --- Baris Pertama (Induk) ---
+                // Berisi kolom dengan rowspan untuk Proyek, Peristiwa, Level, Nilai, Aksi
+                // Dan kolom Penyebab baris pertama
+                let html = `
                     <tr>
-                        <td>${risk.project}</td>
-                        <td>${risk.peristiwa}</td>
-                        <td>${risk.kategori}</td>
-                        <td>${risk.level}</td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-danger hapus-risiko" data-index="${index}">
+                        <td rowspan="${count}" class="bg-white">${risk.project}</td>
+                        <td rowspan="${count}" class="bg-white">${risk.peristiwa}</td>
+                        <td>${firstPenyebab}</td>
+                        <td rowspan="${count}" class="text-center bg-white">${risk.level}</td>
+                        <td rowspan="${count}" class="text-center bg-white">${risk.nilai}</td>
+                        <td rowspan="${count}" class="text-center bg-white">
+                            <button type="button" class="btn btn-sm btn-outline-danger hapus-risiko" data-index="${index}">
                                 <i class="bx bx-trash"></i>
                             </button>
                             <input type="hidden" name="project_risk_ids[]" value="${risk.id}">
                         </td>
                     </tr>
                 `;
-                tbody.append(row);
+
+                // --- Baris Anak (Sisa Penyebab) ---
+                // Hanya merender kolom Penyebab Risiko
+                if (count > 1) {
+                    for (let i = 1; i < count; i++) {
+                        html += `
+                            <tr>
+                                <td>${risk.penyebab[i]}</td>
+                            </tr>
+                        `;
+                    }
+                }
+
+                tbody.append(html);
             });
             
-            // Tambahkan event listener untuk tombol hapus
+            // Pasang Event Listener Hapus
             $('.hapus-risiko').on('click', function() {
                 const index = $(this).data('index');
-                selectedRisks.splice(index, 1);
-                updateSelectedRisksTable();
+                
+                Swal.fire({
+                    title: 'Hapus?',
+                    text: "Hapus risiko ini dari daftar terpilih?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Ya, Hapus'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        selectedRisks.splice(index, 1); // Hapus dari array
+                        updateSelectedRisksTable(); // Render ulang
+                    }
+                });
             });
         }
     });

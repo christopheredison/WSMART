@@ -41,13 +41,13 @@
                                       data-bs-toggle="tooltip" 
                                       title="Klik untuk melihat detail risiko asal"
                                     >
-                                        <span class="badge bg-primary fs-6">
+                                        <span class="badge bg-input fs-6">
                                             <i class="bx bx-link-external me-1"></i> 
                                             {{ $lossEvent->risiko->peristiwa_risiko ?? 'Detail Risiko Asal' }}
                                         </span>
                                     </a>
                                 @else
-                                    <span class="badge bg-secondary fs-6">Input Manual</span>
+                                    <span class="badge bg-primary fs-6">Input Manual</span>
                                 @endif
                             </div>
                         </div>

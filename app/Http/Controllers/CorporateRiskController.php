@@ -812,7 +812,7 @@ class CorporateRiskController extends Controller
             ->where('unit_type_id', 1)
             ->where('status', IdentifikasiRisiko::STATUS_PUBLISHED)
             ->where('status_risiko', IdentifikasiRisiko::STATUS_RISIKO_MAIN)
-            ->with(['unit', 'kategoriRisiko', 'riskAnalysis'])
+            ->with(['unit', 'kategoriRisiko', 'riskAnalysis', 'penyebabRisiko'])
             ->get();
             
         // Kita akan merender HTML dari sisi server agar lebih mudah di client-side
@@ -925,7 +925,9 @@ class CorporateRiskController extends Controller
             'kontrolEksistings', 
             'penyebabRisiko', 
             'kris', 
-            'divisiRisks' // Eager load relasi divisi risks
+            'divisiRisks.unit',
+            'divisiRisks.riskAnalysis',
+            'divisiRisks.penyebabRisiko',
         ])->findOrFail($id);
 
         $selectedPeriode = Periode::find($identifikasiRisiko->periode_id);
@@ -935,10 +937,8 @@ class CorporateRiskController extends Controller
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
 
-        // --- PERBAIKAN: Tambahkan variabel yang hilang ---
         $masterKris = MasterKRI::get();
         $kontrolEksistings = KontrolEksisting::get();
-        // --- END PERBAIKAN ---
 
         // Ambil daftar Divisi untuk filter modal
         $units = Unit::where('unit_type_id', 1)->orderBy('name')->get();
