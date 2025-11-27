@@ -214,14 +214,14 @@ $(document).ready(function() {
     var flatpickrMulai = flatpickr("#timelineRange1", {
         altInput: true,
         altFormat: "d/m/Y",
-        dateFormat: "Y-m-d",
+        dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
         altInput: true,
         altFormat: "d/m/Y",
-        dateFormat: "Y-m-d",
+        dateFormat: "d/m/Y",
         disableMobile: true
     });
 
@@ -288,8 +288,8 @@ $(document).ready(function() {
         altInput: true,
         altFormat: "d/m/Y",
         dateFormat: "Y-m-d",
-        disableMobile: true
-        maxDate: 'today',
+        disableMobile: true,
+        maxDate: "today",
       }
     );
     $('.inputmask-rupiah').inputmask({ alias: 'numeric', groupSeparator: '.', autoGroup: true, digits: 0, prefix: 'Rp ', placeholder: '0', rightAlign: false, autoUnmask: true, removeMaskOnSubmit: true });

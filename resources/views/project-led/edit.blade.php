@@ -1,10 +1,6 @@
 @extends('layouts.default')
-
 @section('dashboard')
     @include('partials.success-message')
-    @if(session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
 
     <div class="row">
         <div class="col-12">
@@ -215,14 +211,14 @@ $(document).ready(function() {
     var flatpickrMulai = flatpickr("#timelineRange1", {
         altInput: true,
         altFormat: "d/m/Y",
-        dateFormat: "Y-m-d",
+        dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
         altInput: true,
         altFormat: "d/m/Y",
-        dateFormat: "Y-m-d",
+        dateFormat: "d/m/Y",
         disableMobile: true
     });
 
@@ -282,7 +278,7 @@ $(document).ready(function() {
         altInput: true,
         altFormat: "d/m/Y",
         dateFormat: "Y-m-d",
-        disableMobile: true
+        disableMobile: true,
         maxDate: 'today',
       }
     );

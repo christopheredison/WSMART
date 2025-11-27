@@ -1,10 +1,6 @@
 @extends('layouts.default')
 @section('dashboard')
     @include('partials.success-message')
-    @if(session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -207,7 +203,7 @@
                 <form id="formRencana">
                     <div class="modal-header"><h5 class="modal-title" id="modalRencanaLabel">Tambah Penanganan Saat Kejadian</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                     <div class="modal-body">
-                        @include('project-led._form-perencanaan')
+                        @include('unit-led._form-perencanaan')
                     </div>
                     <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="button" class="btn btn-primary" id="btn-simpan-rencana">Simpan</button></div>
                 </form>
@@ -224,14 +220,14 @@ $(document).ready(function() {
 
     var flatpickrMulai = flatpickr("#timelineRange1", {
         altInput: true,
-        altFormat: "j F Y",
+        altFormat: "d/m/Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
         altInput: true,
-        altFormat: "j F Y",
+        altFormat: "d/m/Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
@@ -290,8 +286,9 @@ $(document).ready(function() {
     flatpickr(".flatpickr-date", 
       {
         altInput: true,
-        altFormat: "j F Y",
-        dateFormat: "d/m/Y",
+        altFormat: "d/m/Y",
+        dateFormat: "Y-m-d",
+        disableMobile: true,
         maxDate: 'today',
       }
     );
