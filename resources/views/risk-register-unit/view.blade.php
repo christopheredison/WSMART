@@ -328,7 +328,6 @@
             <div class="card-body">
                 @php
                     $projectRisks = $risiko->projectRisks;
-                    //dd($projectRisks);
                 @endphp
                 
                 @if($projectRisks && $projectRisks->isNotEmpty())
@@ -339,7 +338,9 @@
                                     <th>No</th>
                                     <th>Proyek</th>
                                     <th>Peristiwa Risiko</th>
+                                    <th>Penyebab Risiko</th>
                                     <th>Level Risiko</th>
+                                    <th>Nilai Risiko</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -347,10 +348,26 @@
                                 <tr>
                                     <td>{{ $index + 1 }}</td>
                                     <td>{{ $projectRisk->project->project_name ?? '-' }}</td>
-                                    <td>{{ $projectRisk->peristiwaRisiko->title ?? '-' }}</td>
-                                    <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa->level_risiko ?? '')))}}">
-                                        {{ $projectRisk->projectRiskAnalisa->level_risiko ?? '-' }}
+                                    <td>
+                                        {{ $projectRisk->deskripsi_peristiwa_risiko ?? $projectRisk->peristiwaRisiko->title ?? '-' }}
                                     </td>
+                                    <td>
+                                        @if($projectRisk->penyebabRisikoProjects && $projectRisk->penyebabRisikoProjects->isNotEmpty())
+                                            <ul class="ps-3 mb-0">
+                                                @foreach($projectRisk->penyebabRisikoProjects as $penyebab)
+                                                    <li>{{ $penyebab->penyebab_risiko }}</li>
+                                                @endforeach
+                                            </ul>
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                    <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa->level_risiko ?? '')))}} text-center">
+                                        <span class="fw-bold {{ $projectRisk->projectRiskAnalisa && in_array($projectRisk->projectRiskAnalisa->level_risiko, ['High', 'Very High']) ? 'text-white' : '' }}">
+                                            {{ $projectRisk->projectRiskAnalisa->level_risiko ?? '-' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">{{ $projectRisk->projectRiskAnalisa->skala_risiko ?? '-' }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>
