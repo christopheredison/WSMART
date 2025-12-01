@@ -432,12 +432,12 @@
                                     <table class="table table-bordered align-middle" id="tabelRisikoProyekTerpilih">
                                         <thead class="bg-light">
                                             <tr>
-                                                <th style="width: 20%">Proyek</th>
-                                                <th style="width: 25%">Peristiwa Risiko</th>
-                                                <th style="width: 25%">Penyebab Risiko</th>
-                                                <th style="width: 10%" class="text-center">Level Risiko</th>
-                                                <th style="width: 10%" class="text-center">Nilai Risiko</th>
-                                                <th style="width: 10%" class="text-center">Aksi</th>
+                                                <th width="20%">Proyek</th>
+                                                <th width="25%">Peristiwa Risiko</th>
+                                                <th width="25%">Penyebab Risiko</th>
+                                                <th class="text-center" width="10%">Level Risiko</th>
+                                                <th class="text-center" width="10%">Nilai Risiko</th>
+                                                <th width="10%" class="text-center">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -467,11 +467,11 @@
                                     <thead class="table-light sticky-top">
                                         <tr>
                                             <th class="text-center" width="5%">Pilih</th>
-                                            <th width="20%">Proyek</th>
-                                            <th width="25%">Peristiwa Risiko</th>
+                                            <th width="25%">Proyek</th>
+                                            <th width="30%">Peristiwa Risiko</th>
                                             <th width="30%">Penyebab Risiko</th>
-                                            <th class="text-center" width="10%">Level Risiko</th>
-                                            <th class="text-center" width="10%">Nilai Risiko</th>
+                                            <th class="text-center" width="5%">Level Risiko</th>
+                                            <th class="text-center" width="5%">Nilai Risiko</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -495,6 +495,7 @@
                                                         <input class="form-check-input pilih-risiko" type="checkbox" 
                                                             value="{{ $risk->id }}" 
                                                             id="risk-{{ $risk->id }}" 
+                                                            data-project-id="{{ $risk->project_periode_list_id }}"
                                                             data-project="{{ $risk->project->project_name }}" 
                                                             data-peristiwa="{{ $risk->deskripsi_peristiwa_risiko }}" 
                                                             data-level="{{ $risk->level_risiko }}"
@@ -504,10 +505,12 @@
                                                     </div>
                                                 </td>
                                                 <td rowspan="{{ $count }}" class="bg-white">{{ $risk->project->project_name }}</td>
-                                                <td rowspan="{{ $count }}" class="bg-white">{{ $risk->deskripsi_peristiwa_risiko }}</td>
-                                                
+                                                <td rowspan="{{ $count }}" class="bg-white">
+                                                    <a href="{{ route('projects.risks.view', ['project' => $risk->project_periode_list_id, 'risk' => $risk->id]) }}" target="_blank" class="text-primary fw-bold text-decoration-underline" title="Lihat Detail Risiko">
+                                                        {{ $risk->deskripsi_peristiwa_risiko }}<i class='bx bx-link-external small'></i>
+                                                    </a>
+                                                </td>
                                                 <td>{{ $penyebabs->first()->penyebab_risiko ?? '-' }}</td>
-                                                
                                                 <td rowspan="{{ $count }}" class="text-center bg-white">{{ $risk->level_risiko }}</td>
                                                 <td rowspan="{{ $count }}" class="text-center bg-white">{{ $nilaiRisiko }}</td>
                                             </tr>
@@ -873,6 +876,7 @@
                 
                 selectedRisks.push({
                     id: '{{ $risk->id }}',
+                    projectId: '{{ $risk->project_periode_list_id }}',
                     project: '{{ $risk->project->project_name }}',
                     peristiwa: '{{ $risk->deskripsi_peristiwa_risiko }}',
                     level: '{{ $risk->level_risiko }}',
@@ -895,6 +899,7 @@
                 if (!selectedRisks.some(risk => risk.id === riskId)) {
                     selectedRisks.push({
                         id: riskId,
+                        projectId: $(this).data('project-id'),
                         project: $(this).data('project'),
                         peristiwa: $(this).data('peristiwa'),
                         level: $(this).data('level'),
@@ -923,12 +928,17 @@
             selectedRisks.forEach(function(risk, index) {
                 const count = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab.length : 1;
                 const firstPenyebab = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab[0] : '-';
+                const detailUrl = `/projects/${risk.projectId}/risks/${risk.id}/view`;
 
                 // Baris Induk
                 let html = `
                     <tr>
                         <td rowspan="${count}" class="bg-white">${risk.project}</td>
-                        <td rowspan="${count}" class="bg-white">${risk.peristiwa}</td>
+                        <td rowspan="${count}" class="bg-white">
+                            <a href="${detailUrl}" target="_blank" class="text-primary fw-bold text-decoration-underline" title="Lihat Detail Risiko">
+                                ${risk.peristiwa} <i class='bx bx-link-external small'></i>
+                            </a>
+                        </td>
                         <td>${firstPenyebab}</td>
                         <td rowspan="${count}" class="text-center bg-white">${risk.level}</td>
                         <td rowspan="${count}" class="text-center bg-white">${risk.nilai}</td>
