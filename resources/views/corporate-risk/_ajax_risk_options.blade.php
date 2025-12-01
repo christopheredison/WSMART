@@ -25,7 +25,11 @@
             </div>
         </td>
         <td rowspan="{{ $count }}" class="align-middle bg-white">{{ $risk->unit->name ?? '-' }}</td>
-        <td rowspan="{{ $count }}" class="align-middle bg-white">{{ $risk->peristiwa_risiko }}</td>
+        <td rowspan="{{ $count }}" class="align-middle bg-white">
+          <a href="/risk-register-unit/{{ $risk->id }}/view" target="_blank" class="text-primary fw-bold text-decoration-underline" title="Lihat Detail Risiko">
+            {{ $risk->peristiwa_risiko }} <i class='bx bx-link-external small'></i>
+          </a>
+        </td>
         
         <td class="align-middle">{{ $penyebabs->first()->penyebab_risiko ?? '-' }}</td>
         
