@@ -856,11 +856,16 @@ $(document).ready(function() {
         selectedRisks.forEach(function(risk, index) {
             const count = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab.length : 1;
             const firstPenyebab = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab[0] : '-';
+            const detailUrl = `/risk-register-unit/${risk.id}/view`;
 
             let html = `
                 <tr>
                     <td rowspan="${count}" class="bg-white">${risk.divisi}</td>
-                    <td rowspan="${count}" class="bg-white">${risk.peristiwa}</td>
+                    <td rowspan="${count}" class="bg-white">
+                        <a href="${detailUrl}" target="_blank" class="text-primary fw-bold text-decoration-underline" title="Lihat Detail Risiko">
+                            ${risk.peristiwa} <i class='bx bx-link-external small'></i>
+                        </a>
+                    </td>
                     <td>${firstPenyebab}</td>
                     <td rowspan="${count}" class="text-center bg-white">${risk.level}</td>
                     <td rowspan="${count}" class="text-center bg-white">${risk.nilai}</td>
