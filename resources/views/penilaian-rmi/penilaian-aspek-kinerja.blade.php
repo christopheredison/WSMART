@@ -128,10 +128,10 @@
                   <h4 class="mb-0">Penilaian Kualitas Penerapan Manajemen Risiko (KPMR)</h4>
                   
                   <div class="btn-group">
-                      <button type="button" class="btn btn-info text-white py-2" data-bs-toggle="modal" data-bs-target="#modalEksposurRisiko">
+                      <button type="button" class="btn btn-info text-white py-2" onclick="openRiskModal('eksposur')">
                           <span class="bx bx-table me-1"></span> Data Eksposur Risiko
                       </button>
-                      <button type="button" class="btn btn-primary text-white py-2" data-bs-toggle="modal" data-bs-target="#modalProgressPerlakuan">
+                      <button type="button" class="btn btn-primary text-white py-2" data-bs-toggle="modal" onclick="openRiskModal('progress')">
                           <span class="bx bx-task me-1"></span> Progress Perlakuan
                       </button>
                   </div>
@@ -241,7 +241,7 @@
                   <div class="row mb-3">
                     <div class="col-md-6">
                       <label for="final_rating_id" class="form-label">Final Rating</label>
-                      <select name="final_rating_id" id="final_rating_id" class="form-select" required>
+                      <select name="final_rating_id" id="final_rating_id" class="form-select select2" required>
                         <option value="">-- Pilih Final Rating --</option>
                         @foreach($finalRatings as $rating)
                           <option value="{{ $rating->id }}" data-conversion-score="{{ $rating->conversion_score }}" {{ $existingFinalRatingId == $rating->id ? 'selected' : '' }}>
@@ -319,63 +319,50 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header p-0 mb-4">
-                <h5 class="modal-title">Pencapaian Nilai Eksposur Risiko (Risiko Korporat)</h5>
+                <h5 class="modal-title">Pencapaian Nilai Eksposur Risiko</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="align-middle">Risiko</th>
-                                <th class="align-middle">Penyebab Risiko</th>
-                                <th class="align-middle text-center">Eksposur Risiko Inheren</th>
-                                <th class="align-middle text-center">Target Risiko Residual (Q4)</th>
-                                <th class="align-middle text-center">Realisasi Eksposur Risiko (Terkini)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($corporateRisks as $risk)
+            <div class="modal-body p-0 mb-3">
+                {{-- Filter Unit --}}
+                <div class="card mb-3">
+                    <div class="card-body py-2">
+                        <div class="row align-items-center">
+                            <label class="col-auto col-form-label fw-bold">Pilih Divisi:</label>
+                            <div class="col-md-4">
+                                <select class="form-select risk-unit-selector">
+                                    @foreach($units as $u)
+                                        <option value="{{ $u->id }}" {{ $u->id == $defaultUnitId ? 'selected' : '' }}>
+                                            {{ $u->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <span id="loading-spinner-1" class="spinner-border spinner-border-sm text-primary d-none" role="status"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                  <div class="card-body p-0">
+                    <div class="table-responsive p-0">
+                        <table class="table table-bordered table-striped table-hover">
+                            <thead class="table-light">
                                 <tr>
-                                    <td>
-                                        <strong>{{ $risk->peristiwa_risiko }}</strong>
-                                        <div class="text-muted small">{{ $risk->deskripsi_peristiwa_risiko }}</div>
-                                    </td>
-                                    <td>
-                                        <ul class="ps-3 mb-0">
-                                            @foreach($risk->penyebabRisiko as $penyebab)
-                                                <li>{{ $penyebab->penyebab_risiko }}</li>
-                                            @endforeach
-                                        </ul>
-                                    </td>
-                                    <td class="text-center align-middle">
-                                        {{-- Inheren --}}
-                                        Rp {{ number_format($risk->riskAnalysis->eksposur_risiko ?? 0, 2, ',', '.') }}
-                                    </td>
-                                    <td class="text-center align-middle">
-                                        {{-- Residual Q4 (Target) --}}
-                                        Rp {{ number_format($risk->riskAnalysis->eksposur_risiko_residual_q4 ?? 0, 2, ',', '.') }}
-                                    </td>
-                                    <td class="text-center align-middle">
-                                        {{-- Realisasi Terkini --}}
-                                        @php
-                                            $lastMonitoring = $risk->monitoringRisikos->first();
-                                        @endphp
-                                        @if($lastMonitoring)
-                                            <span class="badge bg-primary">Q{{ $lastMonitoring->quarter }}</span><br>
-                                            Rp {{ number_format($lastMonitoring->eksposure_risiko ?? 0, 2, ',', '.') }}
-                                        @else
-                                            <span class="text-muted">-</span>
-                                        @endif
-                                    </td>
+                                    <th class="align-middle text-center" style="width: 5%">No</th>
+                                    <th class="align-middle" style="width: 25%">Risiko</th>
+                                    <th class="align-middle" style="width: 25%">Penyebab Risiko</th>
+                                    <th class="align-middle text-center" style="width: 15%">Eksposur Inheren</th>
+                                    <th class="align-middle text-center" style="width: 15%">Target Residual (Q4)</th>
+                                    <th class="align-middle text-center" style="width: 15%">Realisasi Terkini</th>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="text-center">Tidak ada data risiko korporat pada periode ini.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody id="tbody-eksposur">
+                            </tbody>
+                        </table>
+                    </div>
+                  </div>
                 </div>
             </div>
             <div class="modal-footer p-0">
@@ -390,112 +377,54 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header p-0 mb-4">
-                <h5 class="modal-title">Pencapaian Output & Progress Perlakuan Risiko (Risiko Korporat)</h5>
+                <h5 class="modal-title">Pencapaian Output & Progress Perlakuan Risiko</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="align-middle">Risiko</th>
-                                <th class="align-middle">Penyebab & Perlakuan</th>
-                                <th class="align-middle text-center" style="width: 15%;">Progress (%)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($corporateRisks as $risk)
-                                @php
-                                    // Hitung total baris yang dibutuhkan untuk rowspan 'Risiko'
-                                    // Kita hitung jumlah penyebab risiko yang punya perlakuan
-                                    // Jika 1 penyebab punya 2 perlakuan, itu akan merender 2 baris (opsional, disini saya buat simple per penyebab)
-                                    $rowspan = $risk->penyebabRisiko->count();
-                                @endphp
-
-                                @foreach($risk->penyebabRisiko as $index => $penyebab)
-                                    <tr>
-                                        {{-- Kolom Risiko (Rowspan hanya di perulangan pertama) --}}
-                                        @if($index === 0)
-                                            <td rowspan="{{ $rowspan > 0 ? $rowspan : 1 }}" class="align-middle bg-white">
-                                                <strong>{{ $risk->peristiwa_risiko }}</strong>
-                                            </td>
-                                        @endif
-
-                                        {{-- Kolom Penyebab & Perlakuan --}}
-                                        <td>
-                                            <div class="mb-2"><strong>Penyebab:</strong> {{ $penyebab->penyebab_risiko }}</div>
-                                            
-                                            {{-- PERBAIKAN: Looping Perlakuan --}}
-                                            @if($penyebab->perlakuanPenyebabRisikoUnit->count() > 0)
-                                                @foreach($penyebab->perlakuanPenyebabRisikoUnit as $perlakuan)
-                                                    @php
-                                                        $lastProgress = $perlakuan->perlakuanPenyebabUnitMonitorings->first();
-                                                        $progressVal = $lastProgress ? $lastProgress->progress_rencana_perlakuan_risiko : 0;
-                                                    @endphp
-                                                    
-                                                    <div class="border rounded p-2 mb-2 bg-light">
-                                                        <div class="text-muted small mb-1">Perlakuan:</div>
-                                                        <div class="mb-2">{{ $perlakuan->rencana_perlakuan_risiko }}</div>
-                                                        
-                                                        {{-- Progress Bar per Perlakuan --}}
-                                                        <div class="d-flex align-items-center">
-                                                            <span class="badge bg-info me-2">Progress: {{ $progressVal }}%</span>
-                                                            <div class="progress flex-grow-1" style="height: 10px;">
-                                                                <div class="progress-bar bg-{{ $progressVal >= 100 ? 'success' : 'info' }}" 
-                                                                    role="progressbar" 
-                                                                    style="width: {{ $progressVal }}%;" 
-                                                                    aria-valuenow="{{ $progressVal }}" 
-                                                                    aria-valuemin="0" 
-                                                                    aria-valuemax="100">
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                            @else
-                                                <span class="text-muted fst-italic">Belum ada rencana perlakuan.</span>
-                                            @endif
-                                        </td>
-
-                                        {{-- Kolom Progress (Summary per Penyebab jika ada banyak perlakuan, atau kosongkan jika detail sudah di kolom tengah) --}}
-                                        <td class="text-center align-middle">
-                                            {{-- Opsional: Menampilkan rata-rata progress untuk penyebab ini --}}
-                                            @php
-                                                $avgPenyebab = 0;
-                                                $countP = 0;
-                                                foreach($penyebab->perlakuanPenyebabRisikoUnit as $p) {
-                                                    $m = $p->perlakuanPenyebabUnitMonitorings->first();
-                                                    $avgPenyebab += $m ? $m->progress_rencana_perlakuan_risiko : 0;
-                                                    $countP++;
-                                                }
-                                                $finalAvg = $countP > 0 ? round($avgPenyebab / $countP) : 0;
-                                            @endphp
-
-                                            @if($countP > 0)
-                                                <div class="fw-bold {{ $finalAvg >= 100 ? 'text-success' : 'text-primary' }}">
-                                                    {{ $finalAvg }}%
-                                                </div>
-                                            @else
-                                                -
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            @empty
+            <div class="modal-body p-0 mb-3">
+                {{-- Filter Unit --}}
+                <div class="card mb-3">
+                    <div class="card-body py-2">
+                        <div class="row align-items-center">
+                            <label class="col-auto col-form-label fw-bold">Pilih Divisi:</label>
+                            <div class="col-md-4">
+                                <select class="form-select risk-unit-selector">
+                                    @foreach($units as $u)
+                                        <option value="{{ $u->id }}" {{ $u->id == $defaultUnitId ? 'selected' : '' }}>
+                                            {{ $u->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <span id="loading-spinner-2" class="spinner-border spinner-border-sm text-primary d-none" role="status"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                  <div class="card-body p-0">
+                    <div class="table-responsive p-0">
+                        <table class="table table-bordered table-striped table-hover">
+                            <thead class="table-light">
                                 <tr>
-                                    <td colspan="3" class="text-center">Tidak ada data risiko korporat.</td>
+                                    <th class="align-middle text-center" style="width: 5%">No</th>
+                                    <th class="align-middle" style="width: 25%">Risiko</th>
+                                    <th class="align-middle" style="width: 50%">Penyebab & Perlakuan</th>
+                                    <th class="align-middle text-center" style="width: 20%">Progress (%)</th>
                                 </tr>
-                            @endforelse
-                        </tbody>
-                        <tfoot class="table-light">
-                            <tr>
-                                <td colspan="2" class="text-end fw-bold">Rata-rata Progress Perlakuan:</td>
-                                <td class="text-center fw-bold fs-5 text-{{ $averageProgress >= 100 ? 'success' : 'primary' }}">
-                                    {{ $averageProgress }}%
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                            </thead>
+                            <tbody id="tbody-progress">
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="3" class="text-end fw-bold">Rata-rata Progress Perlakuan:</td>
+                                    <td class="text-center fw-bold fs-5" id="total-average-progress">0%</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                  </div>
                 </div>
             </div>
             <div class="modal-footer p-0">
@@ -625,6 +554,181 @@
       }
     });
   });
+</script>
+
+<script>
+    // Global variable untuk menyimpan data cache sementara (opsional)
+    let currentPeriodId = "{{ $period->id }}";
+    
+    // Sinkronisasi kedua dropdown (agar jika ubah di modal 1, modal 2 ikut berubah)
+    const unitSelectors = document.querySelectorAll('.risk-unit-selector');
+    unitSelectors.forEach(sel => {
+        sel.addEventListener('change', function() {
+            const val = this.value;
+            // Set value for all selectors
+            unitSelectors.forEach(s => s.value = val);
+            // Fetch data baru
+            fetchRiskData(val);
+        });
+    });
+
+    // Function membuka modal
+    function openRiskModal(type) {
+        const modalId = type === 'eksposur' ? '#modalEksposurRisiko' : '#modalProgressPerlakuan';
+        const myModal = new bootstrap.Modal(document.querySelector(modalId));
+        myModal.show();
+        
+        // Load data pertama kali jika belum ada isi atau refresh
+        const unitId = unitSelectors[0].value;
+        fetchRiskData(unitId);
+    }
+
+    // Function utama fetch data API
+    function fetchRiskData(unitId) {
+        // Tampilkan spinner
+        document.getElementById('loading-spinner-1').classList.remove('d-none');
+        document.getElementById('loading-spinner-2').classList.remove('d-none');
+        
+        // URL API
+        const url = `{{ route('penilaian-rmi.get-risk-data', ':pid') }}?unit_id=${unitId}`.replace(':pid', currentPeriodId);
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                renderTableEksposur(data.risks);
+                renderTableProgress(data.risks, data.average_progress);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Gagal mengambil data risiko.');
+            })
+            .finally(() => {
+                document.getElementById('loading-spinner-1').classList.add('d-none');
+                document.getElementById('loading-spinner-2').classList.add('d-none');
+            });
+    }
+
+    function formatCurrency(value) {
+        if (value === null || value === undefined || value === '') return '-';
+        
+        return 'Rp ' + new Intl.NumberFormat('id-ID', {
+            // minimumFractionDigits: 2,
+            // maximumFractionDigits: 2
+        }).format(value);
+    }
+
+    // Render Tabel 1: Eksposur
+    function renderTableEksposur(risks) {
+        const tbody = document.getElementById('tbody-eksposur');
+        tbody.innerHTML = '';
+
+        if (risks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4">Tidak ada data risiko untuk unit ini.</td></tr>';
+            return;
+        }
+
+        risks.forEach((risk, index) => {
+            let penyebabList = '<ul class="ps-3 mb-0">';
+            risk.penyebab.forEach(p => { penyebabList += `<li>${p}</li>`; });
+            penyebabList += '</ul>';
+
+            let realisasiBadge = risk.realisasi !== null 
+                ? `<span class="badge bg-primary mb-1">Q${risk.realisasi_quarter}</span><br>${formatCurrency(risk.realisasi)}` 
+                : '<span class="text-muted">-</span>';
+
+            const row = `
+                <tr>
+                    <td class="text-center">${index + 1}</td>
+                    <td>
+                        <a href="${risk.detail_url}" target="_blank" class="fw-bold text-decoration-none" title="Klik untuk lihat detail">
+                            ${risk.peristiwa_risiko} <i class='bx bx-link-external small ms-1'></i>
+                        </a>
+                        <div class="text-muted small mt-1">${risk.deskripsi}</div>
+                    </td>
+                    <td>${penyebabList}</td>
+                    <td class="text-center align-middle fw-bold">${formatCurrency(risk.inheren)}</td>
+                    <td class="text-center align-middle">${formatCurrency(risk.residual_target)}</td>
+                    <td class="text-center align-middle">${realisasiBadge}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+
+    // Render Tabel 2: Progress
+    function renderTableProgress(risks, avgProgress) {
+        const tbody = document.getElementById('tbody-progress');
+        tbody.innerHTML = '';
+
+        // Set Total Average
+        const avgEl = document.getElementById('total-average-progress');
+        avgEl.innerText = avgProgress + '%';
+        avgEl.className = `text-center fw-bold fs-5 ${avgProgress >= 100 ? 'text-success' : 'text-primary'}`;
+
+        if (risks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4">Tidak ada data risiko untuk unit ini.</td></tr>';
+            return;
+        }
+
+        let no = 1;
+        risks.forEach(risk => {
+            if(risk.perlakuans.length === 0) {
+                // Jika tidak ada perlakuan, tampilkan baris kosong/info
+                const row = `
+                    <tr>
+                        <td class="text-center">${no++}</td>
+                        <td>
+                            <a href="${risk.detail_url}" target="_blank" class="fw-bold text-decoration-none">
+                                ${risk.peristiwa_risiko}
+                            </a>
+                            <div class="text-muted small mt-1">${risk.deskripsi}</div>
+                        </td>
+                        <td colspan="2" class="text-center text-muted fst-italic">Belum ada rencana perlakuan</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            } else {
+                risk.perlakuans.forEach((perlakuan, pIndex) => {
+                    const row = `
+                        <tr>
+                            ${pIndex === 0 ? `<td class="text-center align-middle bg-white" rowspan="${risk.perlakuans.length}">${no++}</td>` : ''}
+                            ${pIndex === 0 ? `<td class="align-middle bg-white" rowspan="${risk.perlakuans.length}">
+                                <a href="${risk.detail_url}" target="_blank" class="fw-bold text-decoration-none">
+                                    ${risk.peristiwa_risiko} <i class='bx bx-link-external small ms-1'></i>
+                                </a>
+                                <div class="text-muted small mt-1">${risk.deskripsi}</div>
+                            </td>` : ''}
+                            <td>
+                                <div class="mb-1"><strong>Penyebab:</strong> ${perlakuan.penyebab}</div>
+                                <div class="p-2 bg-light border rounded">
+                                    <small class="text-muted">Perlakuan:</small><br>
+                                    ${perlakuan.rencana}
+                                </div>
+                            </td>
+                            <td class="text-center align-middle">
+                                <p class="fw-bold mb-2">
+                                  ${perlakuan.progress}%
+                                </p>
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <div class="progress w-100" style="height: 20px;">
+                                        <div class="progress-bar bg-${perlakuan.progress >= 100 ? 'success' : 'info'}" 
+                                            role="progressbar" 
+                                            style="width: ${perlakuan.progress}%;" 
+                                            aria-valuenow="${perlakuan.progress}" 
+                                            aria-valuemin="0" 
+                                            aria-valuemax="100">
+                                            ${perlakuan.progress}%
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            }
+        });
+    }
 </script>
 @endpush
 

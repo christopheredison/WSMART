@@ -518,6 +518,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::delete('penilaian-rmi/{id}/aspek-kinerja/delete-document/{docId}', [PenilaianRMIController::class,'deleteAspekKinerjaDocument'])->name('penilaian-rmi.aspek-kinerja.delete-document');
     Route::put('penilaian-rmi/{period}/update-penilaian', [PenilaianRMIController::class, 'updatePenilaian'])
     ->name('penilaian-rmi.update-penilaian');
+    Route::get('penilaian-rmi/{periodId}/get-risk-data', [PenilaianRMIController::class, 'getRiskData'])
+    ->name('penilaian-rmi.get-risk-data');
 
     // Metrik Strategi Risiko
     Route::get('metrik-strategi-risiko/{id}/parameter', 'App\Http\Controllers\MetrikStrategiRisikoController@parameter')

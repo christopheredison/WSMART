@@ -774,43 +774,13 @@ class PenilaianRMIController extends Controller
         $finalRatings = FinalRating::orderBy('rating')->get();
         $finalRatingPeriod = FinalRatingPeriod::where('rmi_period_id', $id)->first();
 
-        // Ambil Risiko Korporat (unit_type_id = 4)
-        $periode = Periode::where('tahun', $period->year)->first();
-        $corporateRisks = \App\Models\IdentifikasiRisiko::where('periode_id', $periode->id)
-            ->where('unit_type_id', 4) // Asumsi 4 adalah tipe korporat sesuai Controller CorporateRisk
-            ->whereNull('deleted_at')
-            ->with([
-                'riskAnalysis',
-                'penyebabRisiko.perlakuanPenyebabRisikoUnit.perlakuanPenyebabUnitMonitorings' => function($q) {
-                    $q->orderBy('id', 'desc'); // Ambil monitoring perlakuan terakhir
-                },
-                'monitoringRisikos' => function($q) {
-                    $q->orderBy('quarter', 'desc')->orderBy('id', 'desc'); // Ambil monitoring risiko terakhir
-                }
-            ])
-            ->get();
+        $units = \App\Models\Unit::whereIn('unit_type_id', [1, 2, 4]) 
+                ->orderBy('unit_type_id', 'desc')
+                ->orderBy('name')
+                ->get();
 
-        // Hitung Rata-rata Progress Perlakuan untuk Popup 2
-        $totalProgress = 0;
-        $countPerlakuan = 0;
-
-        foreach ($corporateRisks as $risk) {
-            foreach ($risk->penyebabRisiko as $penyebab) {
-                // PERBAIKAN: Lakukan looping karena perlakuanPenyebabRisikoUnit adalah Collection (hasMany)
-                foreach ($penyebab->perlakuanPenyebabRisikoUnit as $perlakuan) {
-                    
-                    // Ambil monitoring terakhir dari perlakuan tersebut
-                    $lastMonitoring = $perlakuan->perlakuanPenyebabUnitMonitorings->first();
-                    
-                    $progress = $lastMonitoring ? $lastMonitoring->progress_rencana_perlakuan_risiko : 0;
-                    
-                    $totalProgress += $progress;
-                    $countPerlakuan++;
-                }
-            }
-        }
-
-        $averageProgress = $countPerlakuan > 0 ? round($totalProgress / $countPerlakuan, 2) : 0;
+        $corporateUnit = $units->firstWhere('unit_type_id', 4);
+        $defaultUnitId = $corporateUnit ? $corporateUnit->id : ($units->first()->id ?? 0);
         
         return view('penilaian-rmi.penilaian-aspek-kinerja', compact(
             'period',
@@ -820,8 +790,8 @@ class PenilaianRMIController extends Controller
             'existingComments',
             'finalRatings',
             'finalRatingPeriod',
-            'corporateRisks',
-            'averageProgress'
+            'units',
+            'defaultUnitId',
         ));
     }
 
@@ -1109,5 +1079,97 @@ class PenilaianRMIController extends Controller
         ]);
 
         return redirect()->route('penilaian-rmi.index')->with('success', 'Data Penilaian untuk periode ' . $period->year . ' berhasil diperbarui.');
+    }
+
+    public function getRiskData(Request $request, $id)
+    {
+        $unitId = $request->query('unit_id');
+
+        if (!$unitId) {
+            return response()->json(['error' => 'Unit ID required'], 400);
+        }
+        $period = RMIPeriod::findOrFail($id);
+        $periode = Periode::where('tahun', $period->year)->first();
+
+        // Ambil Risiko berdasarkan Periode dan Unit
+        $risks = \App\Models\IdentifikasiRisiko::where('periode_id', $periode->id)
+            ->where('unit_id', $unitId)
+            ->whereNull('deleted_at')
+            // ->whereIn('status_risiko', [3, 4, 5]) 
+            ->with([
+                'riskAnalysis',
+                'penyebabRisiko.perlakuanPenyebabRisikoUnit.perlakuanPenyebabUnitMonitorings' => function($q) {
+                    $q->orderBy('id', 'desc'); // Monitoring perlakuan terakhir
+                },
+                'monitoringRisikos' => function($q) {
+                    $q->orderBy('quarter', 'desc')->orderBy('id', 'desc'); // Monitoring risiko terakhir
+                }
+            ])
+            ->get();
+
+        $data = [];
+        $totalProgress = 0;
+        $countPerlakuan = 0;
+
+        foreach ($risks as $risk) {
+            // Data untuk Tabel 1 (Eksposur)
+            $lastMonitoring = $risk->monitoringRisikos->first();
+
+            $detailUrl = '#';
+
+            switch ($risk->unit_type_id) {
+                case 4: // Korporat
+                    $detailUrl = route('corporate-risk.view', $risk->id);
+                    break;
+                case 1: // Divisi / Unit
+                    $detailUrl = route('risk-register-unit.view', $risk->id);
+                    break;
+                case 2: // Anak Perusahaan
+                    $detailUrl = route('risk-register-ap.view', $risk->id);
+                    break;
+                default:
+                    $detailUrl = route('risk-register-unit.view', $risk->id); 
+                    break;
+            }
+            
+            $riskData = [
+                'id' => $risk->id,
+                'peristiwa_risiko' => $risk->peristiwa_risiko,
+                'deskripsi' => $risk->deskripsi_peristiwa_risiko,
+                'penyebab' => $risk->penyebabRisiko->pluck('penyebab_risiko')->toArray(),
+                'inheren' => $risk->riskAnalysis->eksposur_risiko ?? 0,
+                'residual_target' => $risk->riskAnalysis->eksposur_risiko_residual_q4 ?? 0,
+                'realisasi' => $lastMonitoring ? ($lastMonitoring->eksposure_risiko ?? 0) : null,
+                'realisasi_quarter' => $lastMonitoring ? $lastMonitoring->quarter : null,
+                'detail_url' => $detailUrl,
+                'perlakuans' => []
+            ];
+
+            // Data untuk Tabel 2 (Progress)
+            foreach ($risk->penyebabRisiko as $penyebab) {
+                foreach ($penyebab->perlakuanPenyebabRisikoUnit as $perlakuan) {
+                    $lastProgress = $perlakuan->perlakuanPenyebabUnitMonitorings->first();
+                    $progressVal = $lastProgress ? $lastProgress->progress_rencana_perlakuan_risiko : 0;
+
+                    $riskData['perlakuans'][] = [
+                        'penyebab' => $penyebab->penyebab_risiko,
+                        'rencana' => $perlakuan->rencana_perlakuan_risiko,
+                        'progress' => $progressVal
+                    ];
+
+                    $totalProgress += $progressVal;
+                    $countPerlakuan++;
+                }
+            }
+
+            $data[] = $riskData;
+        }
+
+        $averageProgress = $countPerlakuan > 0 ? round($totalProgress / $countPerlakuan, 2) : 0;
+
+        return response()->json([
+            'risks' => $data,
+            'average_progress' => $averageProgress
+        ]);
     }
 }

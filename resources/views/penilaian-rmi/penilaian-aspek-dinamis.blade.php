@@ -167,10 +167,10 @@
 <!-- Floating Action Buttons -->
 <div class="floating-buttons" id="floatingButtons">
   <button type="button" class="btn btn-primary me-2" id="floatingSaveBtn">
-    <i class="bx bx-save me-1"></i> Simpan Sementara
+    <span class="bx bx-save me-1"></span> Simpan Sementara
   </button>
   <button type="button" class="btn btn-success" id="floatingFinishBtn">
-    <i class="bx bx-check-circle me-1"></i> Selesai
+    <span class="bx bx-check-circle me-1"></span> Selesai
   </button>
 </div>
 @endsection
