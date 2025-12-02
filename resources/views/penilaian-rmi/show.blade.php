@@ -56,7 +56,7 @@
   }
 </style>
 @endpush
-<div class="container my-5">
+<div class="container px-0">
 
   {{-- 1. Informasi Periode & Ringkasan --}}
   <div class="row mb-4">

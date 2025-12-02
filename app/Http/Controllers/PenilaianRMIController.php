@@ -17,6 +17,7 @@ use App\Models\ScoreCriteriaDoc;
 use App\Models\ParameterKinerja;
 use App\Models\PilihanParameterKinerja;
 use App\Models\PenilaianCapaianKinerja;
+use App\Models\Periode;
 use App\Models\DetailPenilaianCapaianKinerja;
 use App\Models\SkalaKinerja;
 use App\Models\SkalaKPMR;
@@ -772,10 +773,55 @@ class PenilaianRMIController extends Controller
 
         $finalRatings = FinalRating::orderBy('rating')->get();
         $finalRatingPeriod = FinalRatingPeriod::where('rmi_period_id', $id)->first();
+
+        // Ambil Risiko Korporat (unit_type_id = 4)
+        $periode = Periode::where('tahun', $period->year)->first();
+        $corporateRisks = \App\Models\IdentifikasiRisiko::where('periode_id', $periode->id)
+            ->where('unit_type_id', 4) // Asumsi 4 adalah tipe korporat sesuai Controller CorporateRisk
+            ->whereNull('deleted_at')
+            ->with([
+                'riskAnalysis',
+                'penyebabRisiko.perlakuanPenyebabRisikoUnit.perlakuanPenyebabUnitMonitorings' => function($q) {
+                    $q->orderBy('id', 'desc'); // Ambil monitoring perlakuan terakhir
+                },
+                'monitoringRisikos' => function($q) {
+                    $q->orderBy('quarter', 'desc')->orderBy('id', 'desc'); // Ambil monitoring risiko terakhir
+                }
+            ])
+            ->get();
+
+        // Hitung Rata-rata Progress Perlakuan untuk Popup 2
+        $totalProgress = 0;
+        $countPerlakuan = 0;
+
+        foreach ($corporateRisks as $risk) {
+            foreach ($risk->penyebabRisiko as $penyebab) {
+                // PERBAIKAN: Lakukan looping karena perlakuanPenyebabRisikoUnit adalah Collection (hasMany)
+                foreach ($penyebab->perlakuanPenyebabRisikoUnit as $perlakuan) {
+                    
+                    // Ambil monitoring terakhir dari perlakuan tersebut
+                    $lastMonitoring = $perlakuan->perlakuanPenyebabUnitMonitorings->first();
+                    
+                    $progress = $lastMonitoring ? $lastMonitoring->progress_rencana_perlakuan_risiko : 0;
+                    
+                    $totalProgress += $progress;
+                    $countPerlakuan++;
+                }
+            }
+        }
+
+        $averageProgress = $countPerlakuan > 0 ? round($totalProgress / $countPerlakuan, 2) : 0;
         
         return view('penilaian-rmi.penilaian-aspek-kinerja', compact(
-            'period', 'paramsCapaian', 'paramsKpmr', 'existing', 'existingComments',
-            'finalRatings', 'finalRatingPeriod'
+            'period',
+            'paramsCapaian',
+            'paramsKpmr',
+            'existing',
+            'existingComments',
+            'finalRatings',
+            'finalRatingPeriod',
+            'corporateRisks',
+            'averageProgress'
         ));
     }
 

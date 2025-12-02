@@ -270,7 +270,7 @@
             </div>
         </div>
         <!-- ::Kontrol End -->
-        
+
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
@@ -394,12 +394,12 @@
 
     $(document).ready(function() {
         try {
-            const urlParams = new URLSearchParams(window.location.search);            
+            const urlParams = new URLSearchParams(window.location.search);
             const penyebabRisikoFromUrl = urlParams.get('penyebab_risiko');
 
             if (penyebabRisikoFromUrl) {
                 const firstPenyebabInput = $('input[name="penyebab_risiko[]"]').first();
-                
+
                 if (firstPenyebabInput.length) {
                     firstPenyebabInput.val(penyebabRisikoFromUrl);
                 }
@@ -490,7 +490,7 @@
         $('#add-column-kri').click(function() {
             row++;
             const peristiwaRisikoId = $('#peristiwa_risiko').val();
-            
+
             let html = `
                 <div class="row g-2">
                     <div class="col-12 col-lg-11">
@@ -552,7 +552,7 @@
             row.find('[name="batas_waspada[]"]').val(kri.batas_waspada);
             row.find('[name="batas_bahaya[]"]').val(kri.batas_bahaya);
         });
-        
+
 
         //var today = new Date();
         //var endOfYear = new Date(today.getFullYear(), 11, 31);
@@ -599,7 +599,7 @@
             const data = new FormData(form[0]);
             const $clickedButton = $(this);
             const originalText = $clickedButton.html();
-            
+
             data.append('action', action);
 
             // Tampilkan konfirmasi sebelum mengirim request
@@ -616,7 +616,7 @@
                 if (result.isConfirmed) {
                     if (window.isSubmitting) return false;
                     window.isSubmitting = true;
-                    
+
                     // Tampilkan loading state dan nonaktifkan tombol
                     $clickedButton.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...');
                     $('.btn-action').prop('disabled', true);
@@ -649,14 +649,14 @@
                                     showConfirmButton: false,
                                     timer: 4500
                                 });
-                                
+
                             }
                         },
                         error: function(xhr) {
                             window.isSubmitting = false;
                             $('.btn-action').prop('disabled', false);
                             $clickedButton.html(originalText);
-                            
+
                             const errors = xhr.responseJSON.errors;
                             if (errors) {
                                 let message = '<ul>';
@@ -696,7 +696,7 @@
                 </div>
             `;
             $('#kontrol-eksisting-body').append(html);
-            
+
             // Enable all delete buttons when we have more than one row
             if ($('#kontrol-eksisting-body .row').length > 1) {
                 $('#kontrol-eksisting-body .btn-icon-danger').prop('disabled', false);
@@ -708,7 +708,7 @@
     $(document).ready(function() {
         // Array untuk menyimpan risiko proyek yang dipilih
         let selectedRisks = [];
-        
+
         // Ketika tombol Pilih di modal diklik
         $('#btnPilihRisiko').on('click', function() {
             // Ambil semua checkbox yang dipilih
@@ -718,7 +718,7 @@
                 const peristiwa = $(this).data('peristiwa');
                 const kategori = $(this).data('kategori');
                 const level = $(this).data('level');
-                
+
                 // Cek apakah risiko sudah ada di array
                 if (!selectedRisks.some(risk => risk.id === riskId)) {
                     selectedRisks.push({
@@ -730,19 +730,19 @@
                     });
                 }
             });
-            
+
             // Perbarui tampilan tabel risiko terpilih
             updateSelectedRisksTable();
-            
+
             // Tutup modal
             $('#modalPilihRisikoProyek').modal('hide');
         });
-        
+
         // Fungsi untuk memperbarui tabel risiko terpilih
         function updateSelectedRisksTable() {
             const tbody = $('#tabelRisikoProyekTerpilih tbody');
             tbody.empty();
-            
+
             selectedRisks.forEach(function(risk, index) {
                 const row = `
                     <tr>
@@ -760,7 +760,7 @@
                 `;
                 tbody.append(row);
             });
-            
+
             // Tambahkan event listener untuk tombol hapus
             $('.hapus-risiko').on('click', function() {
                 const index = $(this).data('index');
@@ -773,7 +773,7 @@
     function removeKontrolRow(event) {
         let row = $(event.target).closest('.row');
         row.remove();
-        
+
         // If only one row remains, disable its delete button
         if ($('#kontrol-eksisting-body .row').length === 1) {
             $('#kontrol-eksisting-body .btn-icon-danger').prop('disabled', true);
@@ -793,20 +793,20 @@ $(document).ready(function() {
     $('#divisi_filter').on('change', function() {
         const unitId = $(this).val();
         const tbody = $('#tabelRisikoDivisi tbody');
-        
+
         if (!unitId) {
             tbody.html('<tr><td colspan="6" class="text-center">Pilih divisi terlebih dahulu.</td></tr>');
             return;
         }
 
         tbody.html('<tr><td colspan="6" class="text-center">Memuat data...</td></tr>');
-        
+
         $.ajax({
             url: `{{ route('corporate-risk.get-division-risks', ['unit' => ':unitId']) }}`.replace(':unitId', unitId),
             type: 'GET',
             success: function(response) {
                 tbody.html(response.html);
-                
+
                 // Re-check checkbox yang sudah ada di selectedRisks
                 selectedRisks.forEach(function(risk) {
                     $(`#risk-${risk.id}`).prop('checked', true);
@@ -817,11 +817,11 @@ $(document).ready(function() {
             }
         });
     });
-    
+
     $('#btnPilihRisiko').on('click', function() {
         $('.pilih-risiko:checked').each(function() {
             const riskId = $(this).val();
-            
+
             if (!selectedRisks.some(risk => risk.id === riskId)) {
                 const rawPenyebab = $(this).data('penyebab');
                 selectedRisks.push({
@@ -843,11 +843,11 @@ $(document).ready(function() {
         updateSelectedRisksTable();
         $('#modalPilihRisikoDivisi').modal('hide');
     });
-    
+
     function updateSelectedRisksTable() {
         const tbody = $('#tabelRisikoDivisiTerpilih tbody');
         tbody.empty();
-        
+
         if (selectedRisks.length === 0) {
             tbody.html('<tr id="empty-row"><td colspan="6" class="text-center text-muted">Belum ada risiko divisi yang dipilih.</td></tr>');
             return;
@@ -894,7 +894,7 @@ $(document).ready(function() {
 
     $(document).on('click', '.hapus-risiko', function() {
         const index = $(this).data('index');
-        
+
         Swal.fire({
             title: 'Hapus?',
             text: "Hapus risiko ini dari daftar terpilih?",
