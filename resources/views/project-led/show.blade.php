@@ -32,6 +32,25 @@
                     <h5 class="mb-3">Informasi Utama Kejadian</h5>
                     <div class="row">
                         <div class="col-12 mb-3">
+                            <label class="form-label fw-bold">Sumber Data</label>
+                            <div>
+                                @if($lossEvent->project_risk_id)
+                                    <a href="{{ route('projects.risks.view', ['project' => $lossEvent?->risiko?->project_periode_list_id, 'risk' => $lossEvent->project_risk_id]) }}"
+                                      target="_blank"
+                                      class="text-decoration-none"
+                                      data-bs-toggle="tooltip"
+                                      title="Klik untuk melihat detail risiko asal">
+                                        <span class="badge bg-info fs-6">
+                                            <i class="bx bx-link-external me-1"></i>
+                                            {{ $lossEvent->peristiwaRisiko->title ?? 'Detail Risiko Asal' }}
+                                        </span>
+                                    </a>
+                                @else
+                                    <span class="badge bg-primary fs-6">Input Manual</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-12 mb-3">
                             <label class="form-label fw-bold">Nama Kejadian</label>
                             <p>{{ $lossEvent->nama_kejadian ?? '-' }}</p>
                         </div>
@@ -48,9 +67,9 @@
                             <p>{{ $lossEvent->kategoriKejadian->kategori_kejadian ?? '-' }}</p>
                         </div>
                     </div>
-                    
+
                     <hr class="my-4">
-                    
+
                     {{-- SECTION: KLASIFIKASI RISIKO --}}
                     <h5 class="mb-3">Klasifikasi Risiko</h5>
                     <div class="row">
@@ -89,7 +108,7 @@
                             <p>{{ $lossEvent->jenisRisiko->title ?? '-' }}</p>
                         </div>
                     </div>
-                    
+
                     <hr class="my-4">
 
                     {{-- SECTION: DETAIL KERUGIAN --}}
@@ -136,7 +155,7 @@
                         </div>
                         @endif
                     </div>
-                    
+
                     <hr class="my-4">
 
                     {{-- SECTION: PENYEBAB DAN PENANGANAN --}}
@@ -150,7 +169,7 @@
                                         {{ $penyebab->penyebab_risiko }}
                                     </p>
                                 </div>
-                                
+
                                 @if($penyebab->perlakuanPenyebabRisiko->isNotEmpty())
                                     <div class="table-responsive">
                                         <table class="table table-bordered table-hover">

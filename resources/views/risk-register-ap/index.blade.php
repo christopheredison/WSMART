@@ -38,7 +38,7 @@
           <div class="row g-2 mb-1">
             @can('ap_admin')
             <div class="col-4 col-sm-2">
-              <label for="filter-unit" class="form-label d-none">Unit</label>
+              <label for="filter-unit" class="form-label d-none">Anak Perusahaan</label>
               <select id="filter-unit" class="form-select select2">
                 @foreach($unit as $id => $name)
                 <option value="{{ $id }}" {{ $unitId == $id ? 'selected' : '' }}>{{ $name }}</option>
@@ -47,7 +47,7 @@
             </div>
             @else
             <div class="col-4 col-sm-2">
-              <label for="filter-unit" class="form-label d-none">Unit</label>
+              <label for="filter-unit" class="form-label d-none">Anak Perusahaan</label>
               <select id="filter-unit" class="form-select select2" disabled>
                 @php
                 $userUnitId = auth()->user()->unit_id;
@@ -110,13 +110,18 @@
                   }
               @endphp
               @can('risk_register_create')
-                @if($status == null || $status == 1 || $status == 5)
-                  <a id="add-risk-button" href="{{ route('risk-register-ap.create', $routeParams) }}" type="button"
-                    class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
-                    data-bs-title="Tambah Risiko">
-                    <span class="bx bx-plus"></span>
-                    <span class="ms-1">Tambah Risiko</span>
-                  </a>
+                @if(
+                  !$unitExpired &&
+                  ($status == null || $status == 1 || $status == 5) &&
+                  $levelId == 1 &&
+                  ($unitId == auth()->user()->unit_id)
+                )
+                <a id="add-risk-button" href="{{ route('risk-register-ap.create', ['pid' => $pid]) }}" type="button"
+                  class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
+                  data-bs-title="Tambah Risiko">
+                  <span class="bx bx-plus"></span>
+                  <span class="ms-1">Tambah Risiko</span>
+                </a>
                 @endif
               @endcan
               </div>
@@ -153,7 +158,7 @@
               <tr>
                 <td class="white-space-nowrap">
                   @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
-                  <div class="form-check mb-0"> 
+                  <div class="form-check mb-0">
                     <input class="form-check-input select-item" type="checkbox" name="selected_items[]"
                       value="{{ $item->id }}" />
                   </div>
@@ -161,7 +166,7 @@
                 </td>
                 <td class="index-number">
                   @if($item->status_risiko== 2)
-                    <span class="badge bg-primary">Rekomendasi</span> 
+                    <span class="badge bg-primary">Rekomendasi</span>
                   @elseif($item->status_risiko == 3 || $item->status_risiko == 4 || $item->status_risiko == 5)
                     <span class="badge bg-danger">Risiko Utama</span>
                   @endif
@@ -172,12 +177,24 @@
                 </td>
                 <td class="unit_type">{{ $item->target_capaian_kinerja ?? '-' }}</td>
                 <td class="kategori_jenis_risiko">{{ $item->kategoriRisiko->title ?? '-' }} - {{ $item->jenisRisiko->title ?? '-' }}</td>
-                <td class="peristiwa_risiko">{{ $item->peristiwa_risiko ?? '-' }}</td>
+                <td class="peristiwa_risiko">
+                  @php
+                    $add = '';
+                    if ($item->riskAnalysis && $item->riskAnalysis->kategori_dampak === 'Kuantitatif' &&
+                        isset($avgQuantitativeExposure) && $item->riskAnalysis->eksposur_risiko >= $avgQuantitativeExposure) {
+                        $add = '<span class="badge bg-primary">!</span> ';
+                    } else if ($item->riskAnalysis && $item->riskAnalysis->kategori_dampak === 'Kualitatif' &&
+                              $item->riskAnalysis->skala_risiko >= 20) {
+                        $add = '<span class="badge bg-primary">!</span> ';
+                    }
+                  @endphp
+                  {!! $add !!}{{ $item->peristiwa_risiko ?? '-' }}
+                </td>
                 <td class="deskripsi_peristiwa_risiko">{{ $item->deskripsi_peristiwa_risiko }}</td>
                 <td class="kontrol_eksisting">{{ $item->jenisKontrolEksisting->jenis_kontrol ?? '-' }}</td>
                 <td class="kategori_dampak">{{ $item->riskAnalysis->kategori_dampak ?? '-' }}</td>
                 <td class="nilai_risiko" @if($item->riskAnalysis && $item->riskAnalysis->level_risiko)
-                    style="background-color: 
+                    style="background-color:
                     @switch(strtolower($item->riskAnalysis->level_risiko))
                         @case('low')
                             #14A20E
@@ -227,24 +244,26 @@
                   On Review
                   @break
                   @case(3)
-                  @php
-                    $lastApproval = \App\Models\ApprovalLog::where('risk_id', $item->id)
-                      ->where('type', 1) // 1 untuk unit
-                      ->orderBy('approved_at', 'desc')
-                      ->with('approver')
-                      ->first();
-                    $levelName = '-';
-                    if ($lastApproval && $lastApproval->approvalStep && $lastApproval->approvalStep->level) {
-                      $levelName = $lastApproval->approvalStep->level->name;
-                    }
-                  @endphp
-                  Accepted By {{ $levelName }}
+                    @php
+                      $acceptedText = 'Accepted';
+                      if ($item->step_verification == 2) {
+                        $acceptedText = 'Accepted by Risk Owner Divisi';
+                      } elseif ($item->step_verification == 3) {
+                        $acceptedText = 'Accepted by Risk Officer MR';
+                      } elseif ($item->step_verification == 3) {
+                        $acceptedText = 'Accepted by Risk Owner MR';
+                      }
+                    @endphp
+                    {{ $acceptedText }}
                   @break
                   @case(4)
                   Accepted
                   @break
                   @case(5)
                   Need Revision or Rejected
+                  @break
+                  @case(6)
+                  Published
                   @break
                   @default
                   Draft
@@ -277,18 +296,19 @@
         </div>
         @endif
 
-        @if(isset($pending_risk) && $pending_risk > 0)
+        @if(isset($pending_risk) && $pending_risk > 0 && $step_order == $dataBatch->step_verification)
         <div class="alert alert-info mb-3">
           <strong>Informasi:</strong> Terdapat {{ $pending_risk }} risiko yang menunggu verifikasi/revisi.
         </div>
         @endif
         {{-- Informasi Average Eksposure Risiko Unit --}}
-        @if($status == 3 && isset($avgQuantitativeExposure))
+        @if(isset($avgQuantitativeExposure))
         <div class="alert alert-primary mb-3">
           <strong>Informasi:</strong> Rata-rata eksposur risiko kuantitatif: Rp {{ number_format($avgQuantitativeExposure, 0, ',', '.') }}
         </div>
         @endif
 
+        @if(!$unitExpired)
         @can('risk_register_send')
         <form id="send-form" action="{{ route('risk-register-ap.send') }}" method="POST" class="d-inline-block">
           @csrf
@@ -303,20 +323,31 @@
               kondisi 2: {{ ($levelId > 1 && intval($status) === 1) ? 'true' : 'false' }}<br>
               kondisi lengkap: {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && intval($status) === 1) ? 'true' : 'false' }}
             </div>
-            @if($status==3 && ($step_order>=$min_verification))
-            <input type="hidden" name="send_type" value="mainrisk">
-            <input type="hidden" name="unit_id" value="{{ $unitId }}">
-            <button id="accept-button" class="btn btn-submit btn-arrow-right">Konfirmasi Risiko Utama</button>
-            @elseif($status==6 && ($step_order>=$min_verification))
-            <input type="hidden" name="send_type" value="corporate-risk">
-            <button id="accept-button" class="btn btn-submit btn-arrow-right">Atur Risiko Korporat</button>
+            {{-- {{$status}}
+            {{$step_order}}
+            {{$dataBatch->step_verification}}
+            {{$pending_risk}}
+            {{$min_verification}} --}}
+            @if(
+              $status==4 &&
+              ($step_order >= $min_verification) &&
+              ($dataBatch->step_verification >= $min_verification)
+            )
+              <input type="hidden" name="send_type" value="mainrisk">
+              <input type="hidden" name="unit_id" value="{{ $unitId }}">
+              <button id="accept-button" class="btn btn-submit btn-arrow-right" {{ (isset($pending_risk) && $pending_risk > 0) ? 'disabled' : '' }}>Publish Risiko</button>
             @else
             <input type="hidden" name="unit_id" value="{{ $unitId }}">
-            <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button>
+              @if(($status == 1 || $status == 5) && !$unitExpired && $levelId == 1 && $unitId == auth()->user()->unit_id)
+                <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || $draft_risk == 0 || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button>
+              @elseif($step_order == $dataBatch->step_verification)
+                <button id="send-button" class="btn btn-submit btn-arrow-right" {{ ($dataBatch && ($dataBatch->step_verification ?? 0) != $step_order) || (isset($pending_risk) && $pending_risk > 0) || ($levelId > 1 && $status == 1) || $status==5 ? 'disabled' : '' }}>Kirim Risiko</button>
+              @endif
             @endif
           @endif
         </form>
         @endcan
+        @endif
       </div>
     </div>
   </div>
@@ -378,6 +409,7 @@
     </div>
   </div>
 </div>
+@include('risk-register-ap._modal_catatan')
 @endsection
 @section('scripts')
 <script>
@@ -445,6 +477,65 @@ function submitVerifikasi(id, status) {
     }
   });
 }
+
+// Fungsi lihat catatan
+function showCatatanRisiko(riskId) {
+    const modalElement = document.getElementById('modalCatatan');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+    const contentDiv = $('#catatan-content');
+
+    // Tampilkan spinner loading
+    contentDiv.html('<div class="d-flex justify-content-center my-4"><div class="spinner-border" role="status"><span class="visually-hidden">Memuat...</span></div></div>');
+
+    // Gunakan route yang sudah di-generate dari PHP
+    const url = "{{ route('risk-register-ap.notes', ['riskRegister' => ':id']) }}".replace(':id', riskId);
+
+    $.ajax({
+        url: url,
+        type: 'GET',
+        success: function(notes) {
+            console.log(notes);
+            if (notes.length === 0) {
+                contentDiv.html('<div class="text-center my-4"><i class="fas fa-comment-slash fa-2x text-muted mb-2"></i><p>Belum ada catatan untuk risiko ini.</p></div>');
+            } else {
+                let html = '';
+                notes.forEach(note => {
+                    const statusBadge = note.status == 1
+                        ? '<span class="badge bg-success-subtle text-success">Diterima</span>'
+                        : '<span class="badge bg-danger-subtle text-danger">Ditolak</span>';
+
+                    const formattedDate = new Date(note.created_at).toLocaleString('id-ID', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    });
+
+                    html += `
+                    <div class="card mb-3 shadow-sm">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                            <div class="fw-bold">
+                                ${note.user ? note.user.name : 'User Tidak Ditemukan'}
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <small class="text-muted me-3">${formattedDate}</small>
+                                ${statusBadge}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text mb-0">${note.notes || '<i>Tidak ada catatan.</i>'}</p>
+                        </div>
+                    </div>
+                    `;
+                });
+                contentDiv.html(html);
+            }
+            modal.show();
+        },
+        error: function() {
+            contentDiv.html('<div class="text-center my-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p>Gagal memuat catatan.</p></div>');
+            modal.show();
+        }
+    });
+}
 </script>
 <script>
 const table = new DataTable('#example');
@@ -483,14 +574,14 @@ $(document).ready(function() {
     //table.column(1).search(unitId).draw();
     const selectedUnitId = $(this).val();
     const currentUrl = new URL(window.location.href);
-    
+
     // Hapus parameter unit_id jika "Semua Unit" dipilih
     if (selectedUnitId === '') {
         currentUrl.searchParams.delete('unit_id');
     } else {
         currentUrl.searchParams.set('unit_id', selectedUnitId);
     }
-    
+
     // Refresh halaman dengan parameter baru
     window.location.href = currentUrl.toString();
   });
@@ -511,78 +602,81 @@ $(document).ready(function() {
     table.column(8).search(riskLevel).draw();
   });
 
-  document.querySelector('#send-form').addEventListener('submit', function(event) {
-    event.preventDefault(); // Mencegah form submission otomatis
+  const sendFormEl = document.querySelector('#send-form');
+  if (sendFormEl) {
+    sendFormEl.addEventListener('submit', function(event) {
+      event.preventDefault(); // Mencegah form submission otomatis
 
-    const status = {{ $status ?? 'null' }};
-    const stepOrder = {{ $step_order ?? 'null' }};
+      const status = {{ $status ?? 'null' }};
+      const stepOrder = {{ $step_order ?? 'null' }};
 
-    if(status === 6){
-      //redirect ke halaman risk corporate
-      window.location.href = "{{ route('corporate-risk.index') }}";
-    }
-    else if(status===3){
-      const selectedRisks = [];
-      document.querySelectorAll('.select-item:checked').forEach(function(checkbox) {
-        selectedRisks.push(checkbox.value);
-      });
-      
-      // Jika tidak ada risiko yang dipilih, tampilkan peringatan
-      if(selectedRisks.length === 0) {
-        Swal.fire({
-          title: "Peringatan",
-          text: "Silakan pilih minimal satu risiko untuk dijadikan risiko utama",
-          icon: "warning",
-        });
-        return;
+      if(status === 6){
+        //redirect ke halaman risk corporate
+        window.location.href = "{{ route('corporate-risk.index') }}";
       }
+      else if(status===3){
+        const selectedRisks = [];
+        document.querySelectorAll('.select-item:checked').forEach(function(checkbox) {
+          selectedRisks.push(checkbox.value);
+        });
 
-      // Hapus input hidden yang mungkin sudah ada sebelumnya
-      document.querySelectorAll('input[name="selected_risks[]"]').forEach(function(input) {
-        input.remove();
-      });
-
-      // Tambahkan input hidden untuk setiap risiko yang dipilih
-      selectedRisks.forEach(function(riskId) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'selected_risks[]';
-        input.value = riskId;
-        this.appendChild(input);
-      }, this);
-
-      Swal.fire({
-        title: "Apakah Anda yakin?",
-        text: "Terima Risiko Terpilih sebagai Risiko Utama?",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Ya, terima risiko!",
-        cancelButtonText: "Tidak, batal",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          this.submit(); // Kirim form jika dikonfirmasi
+        // Jika tidak ada risiko yang dipilih, tampilkan peringatan
+        if(selectedRisks.length === 0) {
+          Swal.fire({
+            title: "Peringatan",
+            text: "Silakan pilih minimal satu risiko untuk dijadikan risiko utama",
+            icon: "warning",
+          });
+          return;
         }
-      });
-    }
-    else if (status === 5 && (stepOrder === 0 || stepOrder === null)) {// Jika status adalah 5 (revisi) dan step_order adalah 0 atau null, tampilkan modal kirim perbaikan
-      const modal = new bootstrap.Modal(document.getElementById('modalKirimPerbaikanRisiko'));
-      modal.show();
-    } else {
-      // Jika tidak, tampilkan konfirmasi SweetAlert seperti biasa
-      Swal.fire({
-        title: "Apakah Anda yakin?",
-        text: "Semua Data Risiko akan dikirim untuk dilakukan verifikasi selanjutnya dan anda tidak dapat melakukan penambahan risiko dan edit risiko sementara waktu",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Ya, kirim risiko!",
-        cancelButtonText: "Tidak, batal",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          this.submit(); // Kirim form jika dikonfirmasi
-        }
-      });
-    }
-  });
+
+        // Hapus input hidden yang mungkin sudah ada sebelumnya
+        document.querySelectorAll('input[name="selected_risks[]"]').forEach(function(input) {
+          input.remove();
+        });
+
+        // Tambahkan input hidden untuk setiap risiko yang dipilih
+        selectedRisks.forEach(function(riskId) {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'selected_risks[]';
+          input.value = riskId;
+          this.appendChild(input);
+        }, this);
+
+        Swal.fire({
+          title: "Apakah Anda yakin?",
+          text: "Terima Risiko Terpilih sebagai Risiko Utama?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Ya, terima risiko!",
+          cancelButtonText: "Tidak, batal",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.submit(); // Kirim form jika dikonfirmasi
+          }
+        });
+      }
+      else if (status === 5 && (stepOrder === 0 || stepOrder === null)) {// Jika status adalah 5 (revisi) dan step_order adalah 0 atau null, tampilkan modal kirim perbaikan
+        const modal = new bootstrap.Modal(document.getElementById('modalKirimPerbaikanRisiko'));
+        modal.show();
+      } else {
+        // Jika tidak, tampilkan konfirmasi SweetAlert seperti biasa
+        Swal.fire({
+          title: "Apakah Anda yakin?",
+          text: "Semua Data Risiko akan dikirim untuk dilakukan verifikasi selanjutnya dan anda tidak dapat melakukan penambahan risiko dan edit risiko sementara waktu",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Ya, kirim risiko!",
+          cancelButtonText: "Tidak, batal",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.submit(); // Kirim form jika dikonfirmasi
+          }
+        });
+      }
+    });
+  }
 
   // Select/Deselect all checkboxes
   $('#select-all').on('click', function() {
@@ -614,15 +708,16 @@ document.addEventListener('DOMContentLoaded', function() {
   //}
 
   const addRiskButton = document.getElementById('add-risk-button');
-
-  addRiskButton.addEventListener('click', function(event) {
-    // Cek apakah status berbeda dari 1
-    if (status !== null && status != 1 && status != 5) {
-      event.preventDefault(); // Mencegah link dibuka
-      alert('Belum bisa menambah data risiko karena sedang dalam proses konfirmasi.');
-    }
-    // Jika status == 1 atau status null, link akan berjalan normal dan mengarah ke halaman buat risiko.
-  });
+  if (addRiskButton) {
+    addRiskButton.addEventListener('click', function(event) {
+      // Cek apakah status berbeda dari 1
+      if (status !== null && status != 1 && status != 5) {
+        event.preventDefault(); // Mencegah link dibuka
+        alert('Belum bisa menambah data risiko karena sedang dalam proses konfirmasi.');
+      }
+      // Jika status == 1 atau status null, link akan berjalan normal dan mengarah ke halaman buat risiko.
+    });
+  }
 });
 
 // Tambahkan event listener untuk tombol kirim perbaikan

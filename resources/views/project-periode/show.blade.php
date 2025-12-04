@@ -259,7 +259,11 @@
                             @forelse($projectPeriode->projectRisks as $projectRisk)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td>{{ $projectRisk->peristiwaRisiko?->title ?? '-' }}</td>
+                                <td>
+                                  <a href="{{ route('projects.risks.view', ['project' => $projectRisk->project_periode_list_id, 'risk' => $projectRisk->id]) }}">
+                                    {{ $projectRisk->peristiwaRisiko?->title ?? '-' }}
+                                  </a>
+                                </td>
                                 <td>{{ $projectRisk->deskripsi_peristiwa_risiko ?? '-' }}</td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak, 0, ',', '.') : '-' }}</td>
                                 <td>

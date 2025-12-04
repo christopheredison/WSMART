@@ -21,12 +21,12 @@
                         <div class="row">
                             <div class="col-12 mb-3">
                                 <label for="nama_kejadian" class="form-label">Nama Kejadian <span class="text-danger">*</span></label>
-                                <textarea class="form-control" id="nama_kejadian" name="nama_kejadian" rows="3" required readonly>{{ $risiko->peristiwa_risiko }}</textarea>
+                                <textarea class="form-control" id="nama_kejadian" name="nama_kejadian" rows="3" required>{{ $risiko->peristiwa_risiko }}</textarea>
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label for="peristiwa_risiko_id" class="form-label">Identifikasi Kejadian <span class="text-danger">*</span></label>
-                                <textarea class="form-control" id="identifikasi_kejadian" name="identifikasi_kejadian" rows="3" required readonly>{{ $risiko->deskripsi_peristiwa_risiko }}</textarea>
+                                <textarea class="form-control" id="identifikasi_kejadian" name="identifikasi_kejadian" rows="3" required>{{ $risiko->deskripsi_peristiwa_risiko }}</textarea>
                             </div>
 
                             <div class="col-md-6 mb-3">
@@ -199,7 +199,7 @@
                 <form id="formRencana">
                     <div class="modal-header"><h5 class="modal-title" id="modalRencanaLabel">Tambah Penanganan Saat Kejadian</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                     <div class="modal-body">
-                        @include('project-led._form-perencanaan')
+                        @include('unit-led._form-perencanaan')
                     </div>
                     <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="button" class="btn btn-primary" id="btn-simpan-rencana">Simpan</button></div>
                 </form>
@@ -213,22 +213,23 @@
 <script>
 $(document).ready(function() {
     flatpickr("#tanggal_kejadian", {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "Y-m-d",
-        disableMobile: true
+        disableMobile: true,
+        maxDate: 'today',
     });
 
     var flatpickrMulai = flatpickr("#timelineRange1", {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
@@ -326,7 +327,6 @@ $(document).ready(function() {
     }
 
     renderPenyebabTable();
-    flatpickr(".flatpickr-date", { altInput: true, altFormat: "j F Y", dateFormat: "Y-m-d" });
     $('.inputmask-rupiah').inputmask({
         alias: 'numeric', groupSeparator: '.', autoGroup: true, digits: 0,
         prefix: 'Rp ', placeholder: '0', rightAlign: false,

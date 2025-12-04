@@ -36,6 +36,8 @@ class SkalaProbabilitas extends Model
             $type = static::TYPE_RISIKO_UMUM;
         }
 
+        $value = floor($value);
+
         return static::where('type_risiko', $type)
             ->where('min', '<=', $value)
             ->orderBy('min', 'desc')

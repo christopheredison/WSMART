@@ -58,7 +58,9 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 $sheet->setCellValue('D1', 'No Risiko');
                 $sheet->setCellValue('E1', 'Peristiwa Risiko');
                 $sheet->setCellValue('F1', 'Realisasi Risiko Residual');
-                $sheet->setCellValue('N1', 'Efektifitas Perlakuan Risiko');
+
+                $sheet->setCellValue('N1', 'Nilai Efektivitas');
+                $sheet->setCellValue('O1', 'Efektifitas Perlakuan Risiko');
 
                 // Row 2: Sub-header kategori realisasi
                 $sheet->setCellValue('F2', 'Asumsi Perhitungan Dampak');
@@ -79,8 +81,10 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 // Merge sel header "Realisasi Risiko Residual" secara horizontal (dari F1 sampai M1)
                 $sheet->mergeCells('F1:M1');
 
-                // Merge sel header "Efektifitas Perlakuan Risiko" secara vertikal (N1 sampai N2)
+                // Merge sel header "Nilai Efektivitas"
                 $sheet->mergeCells('N1:N2');
+                // Merge sel header "Efektifitas Perlakuan Risiko"
+                $sheet->mergeCells('O1:O2');
 
                 // Atur style untuk header utama (Row 1-2) - Biru
                 $headerStyle = [
@@ -100,7 +104,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                         ]
                     ]
                 ];
-                $sheet->getStyle('A1:N2')->applyFromArray($headerStyle);
+                $sheet->getStyle('A1:O2')->applyFromArray($headerStyle);
 
                 // Style khusus untuk sub-header kategori (F2-M2) - Background abu-abu (DBDBDB)
                 $subHeaderStyle = [
@@ -122,25 +126,35 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 ];
                 $sheet->getStyle('F2:M2')->applyFromArray($subHeaderStyle);
 
+                $lastRow = $sheet->getHighestRow();
+
                 $dataStyle = [
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => Border::BORDER_THIN,
                             'color' => ['rgb' => '000000']
                         ]
-                    ]
+                    ],
+                    'alignment' => [
+                        'vertical' => Alignment::VERTICAL_TOP,
+                        'wrapText' => true,
+                    ],
                 ];
-                
-                // Hitung jumlah data aktual untuk border yang tepat
-                $risikoCount = ProjectRisk::where('project_id', $this->projectId)->count();
-                
-                // Border hanya untuk row yang berisi data
-                if ($risikoCount > 0) {
-                    $maxDataRow = 2 + $risikoCount; // Row 1-2 header + data
-                    $sheet->getStyle('A3:N' . $maxDataRow)->applyFromArray($dataStyle);
+
+                // Terapkan border hanya jika ada data (baris > 2)
+                if ($lastRow > 2) {
+                    $dataRange = 'A3:O' . $lastRow;
+                    $sheet->getStyle($dataRange)->applyFromArray($dataStyle);
                     
-                    // Tambahkan pewarnaan background untuk Level Risiko
-                    $this->applyLevelRisikoColoring($sheet, $maxDataRow);
+                    // Set rata tengah horizontal untuk kolom-kolom tertentu
+                    // (Kolom M: Level Risiko, N: Nilai Efektivitas, O: Efektifitas)
+                    $centerCols = ['A', 'B', 'D', 'H', 'I', 'J', 'L', 'M', 'N', 'O'];
+                    foreach ($centerCols as $col) {
+                        $sheet->getStyle("{$col}3:{$col}{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    }
+                    
+                    // Gunakan $lastRow
+                    $this->applyLevelRisikoColoring($sheet, $lastRow);
                 }
 
                 foreach (range('A', 'N') as $column) {
@@ -244,6 +258,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                     'eksposur_risiko' => '-',
                     'skala_risiko' => '-',
                     'level_risiko' => '-',
+                    'nilai_efektivitas' => '-',
                     'efektifitas_perlakuan' => '-',
                 ];
                 
@@ -269,7 +284,8 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 'eksposur_risiko' => $this->formatCurrency($analisa->eksposur_risiko_residual ?? 0),
                 'skala_risiko' => $analisa->skala_risiko_residual ?? '-',
                 'level_risiko' => $analisa->level_risiko_residual ?? '-',
-                'efektifitas_perlakuan' => $this->calculateEfektifitas($analisa),
+                'nilai_efektivitas' => $risiko->efektivitas_perlakuan_risiko ? $risiko->efektivitas_perlakuan_risiko . '%' : '-',
+                'efektifitas_perlakuan' => $this->calculateEfektifitas($analisa, $risiko),
             ];
 
             $exportData->push($rowData);
@@ -326,15 +342,22 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
     /**
      * Calculate efektifitas perlakuan risiko
      */
-    private function calculateEfektifitas($analisa)
+    private function calculateEfektifitas($analisa, $risiko)
     {
-        $levelRisiko = $analisa->level_risiko_residual;
-        
-        if ($levelRisiko && in_array(strtolower($levelRisiko), ['low', 'low to moderate'])) {
-            return 'Efektif';
+        // 1. Cek apakah risiko sudah ditutup (closed)
+        if (!$risiko->is_closed) {
+            return 'Belum Ditutup';
         }
+
+        // 2. Jika sudah ditutup, cek nilai efektivitas dari tabel ProjectRisk ($risiko)
+        $nilaiEfektivitas = (float) $risiko->efektivitas_perlakuan_risiko;
         
-        return 'Tidak Efektif';
+        if ($nilaiEfektivitas > 0) {
+            return 'Efektif';
+        } else {
+            // Ini akan mencakup nilai <= 0 (termasuk 0, negatif, atau null)
+            return 'Tidak Efektif';
+        }
     }
 
     /**

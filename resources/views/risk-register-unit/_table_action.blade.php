@@ -28,12 +28,16 @@
       }
   @endphp
   @if($canVerify)
-  <button type="button" class="btn-input-icon" onclick="showVerifikasiModal({{ $item->id }}, '{{ addslashes($item->peristiwa_risiko) }}', '{{ addslashes($item->deskripsi_peristiwa_risiko) }}')">
+  <button type="button" class="btn-input-icon" onclick="showVerifikasiModal({{ $item->id }}, '{{ json_encode($item->peristiwa_risiko) }}', '{{ json_encode($item->deskripsi_peristiwa_risiko) }}')">
     <span class="bx bx-check-shield text-success" data-bs-toggle="tooltip" title="Verifikasi Risiko"></span>
   </button>
   @endif
   @endcan
 @endif
+
+<a href="javascript:void(0)" class="btn-input-icon" data-id="{{ $item->id }}" onclick="showCatatanRisiko({{ $item->id }})" data-bs-toggle="tooltip" title="Lihat Catatan">
+  <span class="bx bx-comment-dots"></span>
+</a>
 
 @if(!$unitExpired)
   @if(($item->status == 1 || $item->status == null || $item->status == 5) && (auth()->user()->level_id == 1 && auth()->user()->unit_id == $item->unit_id))

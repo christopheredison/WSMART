@@ -32,6 +32,26 @@
                     <h5 class="mb-3">Informasi Utama Kejadian</h5>
                     <div class="row">
                         <div class="col-12 mb-3">
+                            <label class="form-label fw-bold">Sumber Data</label>
+                            <div>
+                                @if($lossEvent->risiko_id)
+                                    <a href="{{ route('risk-register-unit.view', ['riskRegister' => $lossEvent->risiko_id]) }}" 
+                                      target="_blank" 
+                                      class="text-decoration-none"
+                                      data-bs-toggle="tooltip" 
+                                      title="Klik untuk melihat detail risiko asal"
+                                    >
+                                        <span class="badge bg-input fs-6">
+                                            <i class="bx bx-link-external me-1"></i> 
+                                            {{ $lossEvent->risiko->peristiwa_risiko ?? 'Detail Risiko Asal' }}
+                                        </span>
+                                    </a>
+                                @else
+                                    <span class="badge bg-primary fs-6">Input Manual</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-12 mb-3">
                             <label class="form-label fw-bold">Nama Kejadian</label>
                             <p>{{ $lossEvent->nama_kejadian ?? '-' }}</p>
                         </div>

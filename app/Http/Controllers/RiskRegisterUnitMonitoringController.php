@@ -70,6 +70,12 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
           $targetUnitId = $user->unit_id;
         }
 
+        $unit = Unit::find($targetUnitId);
+        if ($unit) {
+          $this->indexSubtitle = $unit->name;
+        }
+        $isUnitMr = $unit->unit_mr;
+
         // if (!(Gate::check('risk_monitoring_list') || $user->hasProject($period))) {
         //     abort(403);
         // }
@@ -252,7 +258,8 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ];
         }
 
-        if (Gate::check('risk_monitoring_input')) {
+        $isUserUnitMr = (bool) $user->unit?->unit_mr;
+        if (Gate::check('risk_monitoring_input') && $userLevel == 1 && ($isUnitMr == $isUserUnitMr)) {
             $monitoringRoute = route('risk-register-unit.monitorings.edit', ['period' => request()->route('period'), 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
             $this->tableActions[] = [
                 'label' => 'Monitoring',
@@ -283,7 +290,6 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         }
 
         $hasVerificationMr = Gate::allows('verification_mr');
-        $isUnitMr = (bool) $user->unit?->unit_mr;
         $verificatorLevels = [2, 1];
         if (in_array($user->level_id, $verificatorLevels)) {
             $this->tableActions[] = [
@@ -298,7 +304,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     if (!monitoring || monitoring.is_approved) return false;
                     
                     const userLevel = ' . $user->level_id . ';
-                    const isUnitMr = ' . ($isUnitMr ? 'true' : 'false') . ';
+                    const isUserUnitMr = ' . ($isUserUnitMr ? 'true' : 'false') . ';
                     const hasVerificationMr = ' . ($hasVerificationMr ? 'true' : 'false') . ';
                     const status = monitoring.status;
 
@@ -306,10 +312,10 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     if (userLevel == 2 && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI.') return true;
 
                     // Verifier for Step 3 (Risk Officer Divisi MR -> Risk Owner Divisi MR)
-                    if (userLevel == 1 && isUnitMr && hasVerificationMr && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR.') return true;
+                    if (userLevel == 1 && isUserUnitMr && hasVerificationMr && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR.') return true;
 
                     // Verifier for Step 4 (Risk Owner Divisi MR -> Publish)
-                    if (userLevel == 2 && isUnitMr && hasVerificationMr && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR.') return true;
+                    if (userLevel == 2 && isUserUnitMr && hasVerificationMr && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR.') return true;
                     
                     return false;
                 }',
@@ -675,24 +681,27 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $risk->refreshRealisasi();
 
+        $efektivitas = 0;
+
+        $analisa = $risk->riskAnalysis;
+        $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
+        $skala_risiko_rencana = (float) optional($analisa)['skala_risiko_residual_q' . $quarter];
+        $skala_risiko_realisasi = (float) ($request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden ?? 0);
+
+        $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
+
+        // Hindari pembagian dengan nol
+        if ($selisih_inherent_rencana != 0) {
+            $efektivitas = (($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana) * 100;
+        }
+
+        $risk->update([
+            'efektivitas_perlakuan_risiko' => round($efektivitas, 2)
+        ]);
+
         if ($request->is_closed == '1') {
-            $efektivitas = 0;
-
-            $analisa = $risk->riskAnalysis;
-            $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
-            $skala_risiko_rencana = (float) optional($analisa)['skala_risiko_residual_q' . $quarter];
-            $skala_risiko_realisasi = (float) ($request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden ?? 0);
-
-            $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
-
-            // Hindari pembagian dengan nol
-            if ($selisih_inherent_rencana != 0) {
-                $efektivitas = ($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana;
-            }
-
             $risk->update([
                 'is_closed' => true,
-                'efektivitas_perlakuan_risiko' => $efektivitas
             ]);
 
             KamusRisikoUnit::updateOrCreate(

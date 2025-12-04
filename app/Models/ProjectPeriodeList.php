@@ -45,6 +45,23 @@ class ProjectPeriodeList extends Model
         return $this->hasMany(ProjectRisk::class);
     }
 
+    public function dataBatches()
+    {
+        return $this->hasMany(DataBatch::class, 'project_id', 'project_id');
+    }
+
+    public function latestDataBatch()
+    {
+        return $this->hasOne(DataBatch::class, 'project_id', 'project_id')
+            ->ofMany([
+                'batch' => 'max',
+                'id' => 'max',
+            ], function ($query) {
+                $query->where('type', 2)
+                    ->whereColumn('periode_id', 'project_periode_lists.periode_id');
+            });
+    }
+
     public function refreshNilai()
     {
         $this->load([

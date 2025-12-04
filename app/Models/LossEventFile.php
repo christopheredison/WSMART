@@ -9,8 +9,14 @@ class LossEventFile extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
     protected $table = 'loss_event_files';
+    protected $fillable = [
+        'loss_event_id',
+        'file_path',
+        'file_name',
+        'file_type',
+        'file_size'
+    ];
 
     public function lostEvent()
     {

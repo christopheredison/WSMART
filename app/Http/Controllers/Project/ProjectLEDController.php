@@ -15,6 +15,7 @@ use App\Models\ProjectPeriodeList;
 use App\Models\ProjectSektor;
 use App\Models\PeristiwaRisiko;
 use App\Models\LossEventProject;
+use App\Models\LossEventProjectFile;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\KategoriKejadian;
 use App\Models\KategoriRisiko;
@@ -116,91 +117,6 @@ class ProjectLEDController extends Controller
         ));
     }
 
-    // public function store(Request $request)
-    // {
-    //     $validator = Validator::make($request->all(), [
-    //         'nama_kejadian' => 'required',
-    //         'tanggal_kejadian' => 'required|date',
-    //         'peristiwa_risiko_id' => 'required',
-    //         'kategori_kejadian_id' => 'required',
-    //         'sumber_penyebab_kejadian' => 'required|in:1,2',
-    //         'penyebab_masalah' => 'required',
-    //         'penanganan_kejadian' => 'required',
-    //         'deskripsi_kejadian' => 'required',
-    //         'kategori_risiko_bumn' => 'required|in:1,2,3',
-    //         'kategori_risiko_id' => 'required',
-    //         'jenis_risiko_id' => 'required',
-    //         'penjelasan_kerugian' => 'required',
-    //         'nilai_kerugian_finansial' => 'nullable|numeric',
-    //         'kejadian_berulang' => 'required|in:0,1',
-    //         'frekuensi_kejadian' => 'required_if:kejadian_berulang,1|nullable|in:1,2,3,4,5,6',
-    //         'rencana_mitigasi' => 'required',
-    //         'realisasi_mitigasi' => 'required',
-    //         'perbaikan_mendatang' => 'required',
-    //         'unit_penanggung_jawab' => 'required',
-    //         'status_asuransi' => 'required|in:0,1',
-    //         'nilai_premi' => 'required_if:status_asuransi,1|nullable|numeric',
-    //         'nilai_klaim' => 'required_if:status_asuransi,1|nullable|numeric',
-    //         'status_risk_register' => 'required|in:0,1',
-    //         'no_urut_risiko' => 'required_if:status_risk_register,1|nullable|exists:project_risks,id',
-    //         'biaya_risiko_inheren' => 'nullable|numeric',
-    //         'biaya_upaya_perbaikan' => 'nullable|numeric',
-    //         'hasil_perbaikan' => 'nullable|numeric',
-    //     ]);
-
-    //     if ($validator->fails()) {
-    //         return redirect()
-    //             ->back()
-    //             ->withErrors($validator)
-    //             ->withInput();
-    //     }
-
-    //     try {
-    //         $data = $request->all();
-    //         $data['tahun'] = Carbon::parse($request->tanggal_kejadian)->format('Y');
-
-    //         $project = null;
-    //         if ($request->status_risk_register == 1) {
-    //             $riskRegister = ProjectRisk::find($request->no_urut_risiko);
-    //             $project = Project::find($riskRegister->project_id);
-    //             $data['project_id'] = $riskRegister->project_id;
-    //         }
-            
-    //         // Set default values for numeric fields
-    //         $data['nilai_kerugian_finansial'] = $request->nilai_kerugian_finansial ?: 0;
-    //         $data['nilai_premi'] = $request->nilai_premi ?: 0;
-    //         $data['nilai_klaim'] = $request->nilai_klaim ?: 0;
-    //         $data['biaya_risiko_inheren'] = $request->biaya_risiko_inheren ?: 0;
-    //         $data['biaya_upaya_perbaikan'] = $request->biaya_upaya_perbaikan ?: 0;
-    //         $data['hasil_perbaikan'] = $request->hasil_perbaikan ?: 0;
-
-    //         $data['unit_penanggung_jawab_jabatan_id'] = $request->unit_penanggung_jawab;
-        
-    //         // Ambil nama jabatan berdasarkan ID
-    //         $jabatan = Jabatan::find($request->unit_penanggung_jawab);
-    //         if ($jabatan) {
-    //             $data['unit_penanggung_jawab'] = $jabatan->name;
-    //         }
-            
-    //         LossEventProject::create($data);
-
-    //         if ($data['project_id'] ?? false) {
-    //             return redirect()
-    //             ->route('project-led.index-by-project', ['projectId' => $data['project_id']])
-    //             ->with('success', 'Data Loss Event Project berhasil ditambahkan');
-    //         }
-
-    //         return redirect()
-    //             ->route('project-led.index')
-    //             ->with('success', 'Data Loss Event Project berhasil ditambahkan');
-    //     } catch (\Exception $e) {
-    //         return redirect()
-    //             ->back()
-    //             ->with('error', 'Terjadi kesalahan saat menyimpan data')
-    //             ->withInput();
-    //     }
-    // }
-
     public function store(Request $request)
     {
         $request->merge([
@@ -213,7 +129,7 @@ class ProjectLEDController extends Controller
             'project_id' => 'required|exists:projects,id',
             'nama_kejadian' => 'required|string',
             'peristiwa_risiko_id' => 'required|exists:peristiwa_risikos,id',
-            'tanggal_kejadian' => 'required|date',
+            'tanggal_kejadian' => 'required',
             'kategori_kejadian_id' => 'required|exists:kategori_kejadians,id',
             'sumber_penyebab_kejadian' => 'required|in:1,2',
             'kategori_risiko_bumn' => 'required|in:1,2,3',
@@ -413,92 +329,6 @@ class ProjectLEDController extends Controller
         ));
     }
 
-    // public function update(Request $request, $id)
-    // {
-    //     $validator = Validator::make($request->all(), [
-    //         'nama_kejadian' => 'required',
-    //         'tanggal_kejadian' => 'required|date',
-    //         'peristiwa_risiko_id' => 'required',
-    //         'kategori_kejadian_id' => 'required',
-    //         'sumber_penyebab_kejadian' => 'required|in:1,2',
-    //         'penyebab_masalah' => 'required',
-    //         'penanganan_kejadian' => 'required',
-    //         'deskripsi_kejadian' => 'required',
-    //         'kategori_risiko_bumn' => 'required|in:1,2,3',
-    //         'kategori_risiko_id' => 'required',
-    //         'jenis_risiko_id' => 'required',
-    //         'penjelasan_kerugian' => 'required',
-    //         'nilai_kerugian_finansial' => 'nullable|numeric',
-    //         'kejadian_berulang' => 'required|in:0,1',
-    //         'frekuensi_kejadian' => 'required_if:kejadian_berulang,1|nullable|in:1,2,3,4,5,6',
-    //         'rencana_mitigasi' => 'required',
-    //         'realisasi_mitigasi' => 'required',
-    //         'perbaikan_mendatang' => 'required',
-    //         'unit_penanggung_jawab' => 'required',
-    //         'status_asuransi' => 'required|in:0,1',
-    //         'nilai_premi' => 'required_if:status_asuransi,1|nullable|numeric',
-    //         'nilai_klaim' => 'required_if:status_asuransi,1|nullable|numeric',
-    //         'status_risk_register' => 'required|in:0,1',
-    //         'no_urut_risiko' => 'required_if:status_risk_register,1|nullable|exists:project_risks,id',
-    //         'biaya_risiko_inheren' => 'nullable|numeric',
-    //         'biaya_upaya_perbaikan' => 'nullable|numeric',
-    //         'hasil_perbaikan' => 'nullable|numeric',
-    //     ]);
-
-    //     if ($validator->fails()) {
-    //         return redirect()
-    //             ->back()
-    //             ->withErrors($validator)
-    //             ->withInput();
-    //     }
-
-    //     try {
-    //         $lossEvent = LossEventProject::findOrFail($id);
-    //         $data = $request->all();
-    //         $data['tahun'] = Carbon::parse($request->tanggal_kejadian)->format('Y');
-
-    //         $project = null;
-    //         if ($request->status_risk_register == 1) {
-    //             $riskRegister = ProjectRisk::find($request->no_urut_risiko);
-    //             $project = Project::find($riskRegister->project_id);
-    //             $data['project_id'] = $riskRegister->project_id;
-    //         }
-            
-    //         // Set default values for numeric fields
-    //         $data['nilai_kerugian_finansial'] = $request->nilai_kerugian_finansial ?: 0;
-    //         $data['nilai_premi'] = $request->nilai_premi ?: 0;
-    //         $data['nilai_klaim'] = $request->nilai_klaim ?: 0;
-    //         $data['biaya_risiko_inheren'] = $request->biaya_risiko_inheren ?: 0;
-    //         $data['biaya_upaya_perbaikan'] = $request->biaya_upaya_perbaikan ?: 0;
-    //         $data['hasil_perbaikan'] = $request->hasil_perbaikan ?: 0;
-
-    //         $data['unit_penanggung_jawab_jabatan_id'] = $request->unit_penanggung_jawab;
-        
-    //         // Ambil nama jabatan berdasarkan ID
-    //         $jabatan = Jabatan::find($request->unit_penanggung_jawab);
-    //         if ($jabatan) {
-    //             $data['unit_penanggung_jawab'] = $jabatan->name;
-    //         }
-            
-    //         $lossEvent->update($data);
-
-    //         if ($data['project_id'] ?? false) {
-    //             return redirect()
-    //             ->route('project-led.index-by-project', ['projectId' => $data['project_id']])
-    //             ->with('success', 'Data Loss Event Project berhasil diperbarui');
-    //         }
-
-    //         return redirect()
-    //             ->route('project-led.index')
-    //             ->with('success', 'Data Loss Event Project berhasil diperbarui');
-    //     } catch (\Exception $e) {
-    //         return redirect()
-    //             ->back()
-    //             ->with('error', 'Terjadi kesalahan saat memperbarui data')
-    //             ->withInput();
-    //     }
-    // }
-
     public function update(Request $request, $id)
     {
         $lossEvent = LossEventProject::findOrFail($id);
@@ -512,7 +342,7 @@ class ProjectLEDController extends Controller
         $validator = Validator::make($request->all(), [
             'nama_kejadian' => 'required|string|max:255',
             'peristiwa_risiko_id' => 'required|exists:peristiwa_risikos,id',
-            'tanggal_kejadian' => 'required|date',
+            'tanggal_kejadian' => 'required',
             'kategori_kejadian_id' => 'required|exists:kategori_kejadians,id',
             'sumber_penyebab_kejadian' => 'required|in:1,2',
             'kategori_risiko_bumn' => 'required|in:1,2,3',
@@ -717,6 +547,7 @@ class ProjectLEDController extends Controller
           'kategoriRisiko', 
           'jenisRisiko',
           'penyebabRisikoProjectLeds.perlakuanPenyebabRisiko',
+          'risiko',
         ])->findOrFail($id);
         
         $project = Project::find($lossEvent->project_id);
@@ -853,27 +684,29 @@ class ProjectLEDController extends Controller
                 }
             }
     
+            $efektivitas = 0.0; 
+
+            $analisa = $risk?->projectRiskAnalisa;
+            $monitoring = $risk?->projectRiskMonitoring;
+            $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
+            $skala_risiko_rencana = (float) optional($analisa)->skala_risiko_residual;
+            $skala_risiko_realisasi = (float) optional($monitoring)->skala_risiko;
+
+            $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
+
+            // Hindari pembagian dengan nol
+            if ($selisih_inherent_rencana != 0) {
+                $efektivitas = (($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana) * 100;
+            }
+
+            $risk->update([
+              'efektivitas_perlakuan_risiko' => $efektivitas,
+            ]);
+
             // Cek apakah risiko perlu di-close
             if ($request->input('is_closed') == '1') {
-                $efektivitas = 0.0; 
-
-                $analisa = $risk?->projectRiskAnalisa;
-                $monitoring = $risk?->projectRiskMonitoring;
-                
-                $skala_risiko_inherent = (float) optional($analisa)->skala_risiko;
-                $skala_risiko_rencana = (float) optional($analisa)->skala_risiko_residual;
-                $skala_risiko_realisasi = (float) optional($monitoring)->skala_risiko;
-
-                $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
-
-                // Hindari pembagian dengan nol
-                if ($selisih_inherent_rencana != 0) {
-                    $efektivitas = ($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana;
-                }
-
                 $risk->update([
                   'is_closed' => true,
-                  'efektivitas_perlakuan_risiko' => $efektivitas,
                 ]);
 
                 KamusRisikoProject::updateOrCreate(
@@ -911,5 +744,78 @@ class ProjectLEDController extends Controller
       }
       
       return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
+    }
+
+    public function getFiles($id)
+    {
+        $files = LossEventProjectFile::where('loss_event_project_id', $id)
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $files->map(function($file) {
+                return [
+                    'id' => $file->id,
+                    'file_name' => $file->file_name,
+                    'file_type' => $file->file_type,
+                    'file_size' => number_format($file->file_size / 1024, 2) . ' KB',
+                    'file_url' => asset('storage/' . $file->file_path), 
+                    'created_at' => $file->created_at->format('d M Y H:i')
+                ];
+            })
+        ]);
+    }
+
+    public function storeFile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'loss_event_id' => 'required|exists:loss_event_projects,id',
+            'file_dokumen' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png,xls,xlsx|max:20480',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        try {
+            if ($request->hasFile('file_dokumen')) {
+                $file = $request->file('file_dokumen');
+                $originalName = $file->getClientOriginalName();
+                $fileSize = $file->getSize();
+                $fileType = $file->getClientMimeType();
+                
+                $path = $file->store('loss-event-project', 'public');
+
+                LossEventProjectFile::create([
+                    'loss_event_project_id' => $request->loss_event_id,
+                    'file_name' => $originalName,
+                    'file_path' => $path,
+                    'file_type' => $fileType,
+                    'file_size' => $fileSize
+                ]);
+
+                return response()->json(['success' => true, 'message' => 'File berhasil diunggah']);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Gagal mengunggah file: ' . $e->getMessage()]);
+        }
+    }
+
+    public function destroyFile($id)
+    {
+        try {
+            $file = LossEventProjectFile::findOrFail($id);
+            
+            if (Storage::disk('public')->exists($file->file_path)) {
+                Storage::disk('public')->delete($file->file_path);
+            }
+
+            $file->delete();
+
+            return response()->json(['success' => true, 'message' => 'File berhasil dihapus']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Gagal menghapus file']);
+        }
     }
 }

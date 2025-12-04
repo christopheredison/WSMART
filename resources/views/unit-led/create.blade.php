@@ -19,6 +19,7 @@
                         @csrf
                         {{-- Hidden input untuk menyimpan pilihan dari sweetalert --}}
                         <input type="hidden" name="create_risk_from_led" id="create_risk_from_led_input" value="0">
+                        <input type="hidden" id="unit_id" name="unit_id" value="{{ old('unit_id', $unitId) }}" required>
 
                         <div class="row">
                             <div class="col-12 mb-3">
@@ -210,7 +211,7 @@
                 <form id="formRencana">
                     <div class="modal-header"><h5 class="modal-title" id="modalRencanaLabel">Tambah Penanganan Saat Kejadian</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                     <div class="modal-body">
-                        @include('project-led._form-perencanaan')
+                        @include('unit-led._form-perencanaan')
                     </div>
                     <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="button" class="btn btn-primary" id="btn-simpan-rencana">Simpan</button></div>
                 </form>
@@ -224,15 +225,15 @@
 <script>
 $(document).ready(function() {
     var flatpickrMulai = flatpickr("#timelineRange1", {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
@@ -295,7 +296,15 @@ $(document).ready(function() {
     }
 
     renderPenyebabTable();
-    flatpickr(".flatpickr-date", { altInput: false, altFormat: "j F Y", dateFormat: "Y-m-d" });
+    flatpickr(".flatpickr-date", 
+      {
+        altInput: true,
+        altFormat: "d/m/Y",
+        dateFormat: "Y-m-d",
+        disableMobile: true,
+        maxDate: 'today',
+      }
+    );
     $('.inputmask-rupiah').inputmask({ alias: 'numeric', groupSeparator: '.', autoGroup: true, digits: 0, prefix: 'Rp ', placeholder: '0', rightAlign: false, autoUnmask: true, removeMaskOnSubmit: true });
 
     $('#btn-tambah-penyebab').on('click', function() {

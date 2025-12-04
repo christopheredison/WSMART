@@ -41,4 +41,14 @@ class LossEventAp extends Model
     {
         return $this->hasMany(PenyebabRisikoApLed::class, 'loss_event_ap_id');
     }
+
+    public function files()
+    {
+        return $this->hasMany(LossEventApFile::class, 'loss_event_ap_id');
+    }
+
+    public function risiko()
+    {
+        return $this->belongsTo(IdentifikasiRisiko::class, 'risiko_id');
+    }
 }

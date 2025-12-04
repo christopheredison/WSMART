@@ -21,12 +21,12 @@
                         <div class="row">
                             <div class="col-12 mb-3">
                                 <label for="nama_kejadian" class="form-label">Nama Kejadian <span class="text-danger">*</span></label>
-                                <textarea class="form-control" id="nama_kejadian" name="nama_kejadian" rows="3" required readonly>{{ $projectRisk->deskripsi_peristiwa_risiko }}</textarea>
+                                <textarea class="form-control" id="nama_kejadian" name="nama_kejadian" rows="3" required>{{ $projectRisk->deskripsi_peristiwa_risiko }}</textarea>
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label for="peristiwa_risiko_id" class="form-label">Identifikasi Kejadian <span class="text-danger">*</span></label>
-                                <select class="form-select" name="peristiwa_risiko_id" id="peristiwa_risiko_id" required disabled>
+                                <select class="form-select" name="peristiwa_risiko_id" id="peristiwa_risiko_id" required>
                                     @foreach($peristiwaRisikos as $risiko)
                                         <option value="{{ $risiko->id }}" {{ $projectRisk->peristiwa_risiko_id == $risiko->id ? 'selected' : '' }}>
                                             {{ $risiko->title }}
@@ -220,22 +220,23 @@
 <script>
 $(document).ready(function() {
     flatpickr("#tanggal_kejadian", {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "Y-m-d",
-        disableMobile: true
+        disableMobile: true,
+        maxDate: 'today',
     });
 
     var flatpickrMulai = flatpickr("#timelineRange1", {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
@@ -335,7 +336,6 @@ $(document).ready(function() {
     }
 
     renderPenyebabTable();
-    flatpickr(".flatpickr-date", { altInput: true, altFormat: "j F Y", dateFormat: "Y-m-d" });
     $('.inputmask-rupiah').inputmask({
         alias: 'numeric', groupSeparator: '.', autoGroup: true, digits: 0,
         prefix: 'Rp ', placeholder: '0', rightAlign: false,

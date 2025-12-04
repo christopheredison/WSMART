@@ -18,10 +18,10 @@ class RiskNote extends Model
         'user_id',
     ];
 
-    public function risiko()
-    {
-        return $this->belongsTo(IdentifikasiRisiko::class, 'risiko_id');
-    }
+    // public function risiko()
+    // {
+    //     return $this->belongsTo(IdentifikasiRisiko::class, 'risiko_id');
+    // }
 
     public function user()
     {

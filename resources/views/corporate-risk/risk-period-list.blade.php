@@ -44,36 +44,35 @@
             </thead>
             <tbody class="list" id="bulk-select-body">
               @forelse ($dataToDisplay as $index => $item)
-              @php
-
+                @php
                     $unit = $item['unit'];
                     $periode = $item['periode'];
                 @endphp
-              <tr>
-                <td class="index-number">{{ $index + 1 }}</td>
-                <td class="unit">{{ $unit->name }}</td>
-                <td class="tahun">{{ $periode->tahun }}</td>
-                <td class="status text-center">
-                  <figure class="badge {{ $periode->status == 'active' ? 'bg-success' : 'bg-secondary' }}">
-                    {{ $periode->status == 'active' ? 'Aktif' : 'Tidak Aktif' }}
-                  </figure>
-                </td>
-                <td class="white-space-nowrap">
-                  <a href="{{ route('corporate-risk.periods.show', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
-                    <span class="bx bx-show"></span>
-                  </a>
-                  <a href="{{ route('corporate-risk.index', ['pid' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
-                    <span class="bx bx-list-check"></span>
-                  </a>
-                  <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
-                    <span class="bx bx-radar"></span>
-                  </a>
-                  <a href="{{ route('unit-led.index-by-periode', ['periode' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
-                    title="Loss Event">
-                    <span class="bx bx-dock-bottom"></span>
-                  </a>
-                </td>
-              </tr>
+                <tr>
+                  <td class="index-number">{{ $index + 1 }}</td>
+                  <td class="unit">{{ $unit }}</td>
+                  <td class="tahun">{{ $periode->tahun }}</td>
+                  <td class="status text-center">
+                    <figure class="badge {{ $periode->status == 'active' ? 'bg-success' : 'bg-secondary' }}">
+                      {{ $periode->status == 'active' ? 'Aktif' : 'Tidak Aktif' }}
+                    </figure>
+                  </td>
+                  <td class="white-space-nowrap">
+                    <a href="{{ route('corporate-risk.periods.show', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
+                      <span class="bx bx-show"></span>
+                    </a>
+                    <a href="{{ route('corporate-risk.index', ['pid' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
+                      <span class="bx bx-list-check"></span>
+                    </a>
+                    <a href="{{ route('corporate-risk.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
+                      <span class="bx bx-radar"></span>
+                    </a>
+                    <a href="{{ route('corporate-led.index', ['periode' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+                      title="Loss Event">
+                      <span class="bx bx-dock-bottom"></span>
+                    </a>
+                  </td>
+                </tr>
               @empty
               <tr>
                 <td colspan="5" class="text-center">Tidak ada data untuk ditampilkan.</td>

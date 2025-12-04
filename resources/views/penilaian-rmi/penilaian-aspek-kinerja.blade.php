@@ -169,7 +169,7 @@
                             $selVal = $oldResponses[$child->id] ?? $exVal;
                           @endphp
                           <div class="card mb-3">
-                            <div class="card-header bg-info text-dark">
+                            <div class="card-header bg-info text-white">
                               <h6 class="mb-0">
                                 {{ $child->code }}. {{ $child->name }}
                                 <span class="badge bg-light text-info ms-2">Bobot: {{ $child->weight }}%</span>

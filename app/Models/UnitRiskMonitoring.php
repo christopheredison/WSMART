@@ -63,6 +63,11 @@ class UnitRiskMonitoring extends Model
         return $this->belongsTo(SkalaProbabilitas::class, 'skala_probabilitas_id');
     }
 
+    public function skalaDampakObj()
+    {
+        return $this->belongsTo(SkalaDampak::class, 'skala_dampak');
+    }
+
     public function perlakuanPenyebabRisikoDocuments()
     {
         return $this->hasMany(PerlakuanPenyebabRisikoUnitDocument::class, 'unit_risk_monitoring_id', 'id');

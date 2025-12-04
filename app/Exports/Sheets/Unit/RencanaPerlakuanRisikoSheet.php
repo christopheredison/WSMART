@@ -158,33 +158,40 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 ];
                 $sheet->getStyle('M2:X2')->applyFromArray($monthHeaderStyle);
 
+                $lastRow = $sheet->getHighestRow();
+
+                // Style untuk data (border dan wrap text)
                 $dataStyle = [
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
                             'color' => ['rgb' => '000000']
                         ]
-                    ]
+                    ],
+                    'alignment' => [
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP, // Rata atas
+                        'wrapText' => true, // Wrap text untuk data
+                    ],
                 ];
-                
-                // Hitung jumlah data aktual untuk border yang tepat
-                $risikosCount = \App\Models\IdentifikasiRisiko::where('periode_id', $this->periodeId)
-                    ->where('unit_id', $this->unitId)
-                    ->count();
-                
-                // Estimasi jumlah row berdasarkan data risiko dan perlakuan
-                $estimatedRows = $risikosCount * 3; // Asumsi rata-rata 3 perlakuan per risiko
-                
-                // Border hanya untuk row yang berisi data (header + data aktual)
-                if ($risikosCount > 0) {
-                    $maxDataRow = 2 + $estimatedRows; // Row 2 (header) + estimasi data
-                    $sheet->getStyle('A3:X' . $maxDataRow)->applyFromArray($dataStyle);
+
+                // Terapkan border hanya jika ada data (baris > 2)
+                if ($lastRow > 2) {
+                    // Terapkan style border dan wrap text ke semua data
+                    $dataRange = 'A3:X' . $lastRow;
+                    $sheet->getStyle($dataRange)->applyFromArray($dataStyle);
+
+                    // Set format text untuk kolom Kode Penyebab Risiko (Kolom D)
+                    $sheet->getStyle('D3:D' . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
                     
-                    // Set format text untuk kolom Kode Penyebab Risiko
-                    $sheet->getStyle('D3:D' . $maxDataRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+                    // Set rata tengah horizontal untuk kolom-kolom tertentu
+                    $centerCols = ['A', 'C', 'D', 'J', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'];
+                    foreach ($centerCols as $col) {
+                        $sheet->getStyle("{$col}3:{$col}{$lastRow}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                    }
                     
                     // Tambahkan pewarnaan timeline berdasarkan data
-                    $this->applyTimelineColoring($sheet, $maxDataRow);
+                    // Gunakan $lastRow, bukan $maxDataRow
+                    $this->applyTimelineColoring($sheet, $lastRow);
                 }
 
                 foreach (range('A', 'X') as $column) {

@@ -26,7 +26,7 @@ if (!empty($action['extra_attrs'])) {
     @endif
     @break
 @case('delete')
-    <button type="button" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'btn btn-link' }} btn-action" data-action="delete_data" data-id="{{ $id }}" data-bg-toggle="tooltip" title="{{ $action['title'] ?? 'Hapus' }}">
+    <button type="button" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'btn btn-link' }} btn-action" data-action="delete_data" data-id="{{ $id }}" data-bs-toggle="tooltip" title="{{ $action['title'] ?? 'Hapus' }}">
         {!! $action['label'] !!}
     </button>
     @break
@@ -41,10 +41,10 @@ if (!empty($action['extra_attrs'])) {
     </a>
     @break
 @case('verifikasi')
-    <button type="button" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'btn btn-link' }}" onclick="showVerifikasiModal({{ $id }}, '{{ addslashes($item->peristiwa_risiko ?? '') }}', '{{ addslashes($item->deskripsi_peristiwa_risiko ?? '') }}')" data-bs-toggle="tooltip" title="{{ $action['title'] ?? 'Verifikasi Risiko' }}" {!! $extraAttributes !!}>
+    <button type="button" class="{{ ($action['btn_icon'] ?? false) ? 'btn-input-icon' : 'btn btn-link' }}" onclick="handleVerifikasiClick({{ $id }})"  data-bs-toggle="tooltip" title="{{ $action['title'] ?? 'Verifikasi Risiko' }}" {!! $extraAttributes !!}>
         {!! $action['label'] !!}
     </button>
-    @break    
+    @break
 @case('change_to_led')
     <button type="button" class="btn btn-link btn-muted-primary  btn-action px-1 py-0" data-action="change_to_led" data-id="{{ $id }}" {!! $extraAttributes !!}>
         <span>{!! $action['label'] !!}</span>
@@ -56,7 +56,7 @@ if (!empty($action['extra_attrs'])) {
     </button>
     @break
 @case('change_to_led_ap')
-    <button type="button" class="btn btn-link btn-muted-primary  btn-action px-1 py-0" data-action="change_to_led_ap" data-id="{{ $id }}">
+    <button type="button" class="btn btn-link btn-muted-primary  btn-action px-1 py-0" data-action="change_to_led_ap" data-id="{{ $id }}" {!! $extraAttributes !!}>
         <span>{!! $action['label'] !!}</span>
     </button>
     @break

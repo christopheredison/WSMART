@@ -212,15 +212,15 @@
 <script>
 $(document).ready(function() {
     var flatpickrMulai = flatpickr("#timelineRange1", {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
@@ -285,10 +285,11 @@ $(document).ready(function() {
     renderPenyebabTable();
     flatpickr(".flatpickr-date", 
       {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "Y-m-d",
-        maxDate: 'today',
+        disableMobile: true,
+        maxDate: "today",
       }
     );
     $('.inputmask-rupiah').inputmask({ alias: 'numeric', groupSeparator: '.', autoGroup: true, digits: 0, prefix: 'Rp ', placeholder: '0', rightAlign: false, autoUnmask: true, removeMaskOnSubmit: true });

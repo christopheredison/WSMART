@@ -73,6 +73,11 @@ use App\Http\Controllers\KamusRisikoProjectController;
 use App\Http\Controllers\KamusRisikoUnitController;
 use App\Http\Controllers\KamusRisikoApController;
 use App\Http\Controllers\RekomendasiRisikoController;
+use App\Http\Controllers\RiskContextController;
+use App\Http\Controllers\ProjectRiskContextController;
+use App\Http\Controllers\CorporateLEDController;
+use App\Http\Controllers\RiskRegisterCorporateMonitoringController;
+
 
 
 /*
@@ -103,7 +108,7 @@ Route::get('/', function () {
     } else {
         // Jika pengguna belum login, arahkan ke halaman welcome
         //return view('welcome');
-        return redirect('https://wzone.wika.co.id/');
+        return redirect('https://new-portal.wika.co.id/');
     }
 });
 Route::get('/top-navbar', function () {
@@ -118,7 +123,7 @@ Route::get('/callback-sso', [LoginController::class, 'callbackSSO']);
 Auth::routes();
 
 Route::group(['middleware' => ['auth']], function () {
-    
+
     Route::post('/opportunities', [OpportunityController::class, 'store'])->name('opportunities.store');
     Route::put('/opportunities/{id}', [OpportunityController::class, 'update'])->name('opportunities.update');
     Route::delete('/opportunities/{id}', [OpportunityController::class, 'destroy'])->name('opportunities.destroy');
@@ -126,7 +131,7 @@ Route::group(['middleware' => ['auth']], function () {
 
     // Get Risiko ID from Monitoring
     Route::get('/monitoring/{id}/get-risiko-id', [RiskRegisterUnitMonitoringController::class, 'getRisikoId'])->name('monitoring.get-risiko-id');
-    
+
     Route::get('/get-sektors/{divisiId}', function ($divisiId) {
         $sektors = ProjectSektor::where('project_divisi_id', $divisiId)
                     ->orderBy('sektor_name')
@@ -177,6 +182,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/executive-summary-corporate', [HomeController::class, 'executiveSummaryCorporate'])->name('executive-summary-corporate');
     Route::get('/executive-summary-corporate-population', [HomeController::class, 'executiveSummaryCorporatePopulation'])->name('executive-summary-corporate-population');
     Route::get('/executive-summary-unit', [HomeController::class, 'executiveSummaryUnit'])->name('executive-summary-unit');
+    Route::get('/executive-summary-anper', [HomeController::class, 'executiveSummaryAnper'])->name('executive-summary-anper');
     Route::get('/executive-summary-project', [HomeController::class, 'executiveSummaryProject'])->name('executive-summary-project');
 
     Route::group(['middleware' => ['can:manajemen_user']],function ()
@@ -406,7 +412,7 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::resource('capaian-tck', CapaianTckController::class);
     Route::resource('capaian-tkmru', CapaianTkmruController::class);
-    Route::resource('jabatan', JabatanController::class)->except(['create', 'show', 'edit', 'destroy', 'update']);
+    Route::resource('jabatan', JabatanController::class)->except(['create', 'show', 'destroy']);
 
     Route::resource('project-divisi', ProjectDivisiController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-sektor', ProjectSektorController::class)->except(['create', 'show', 'edit']);
@@ -436,8 +442,9 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('projects/{project}/risks/{risk}/loss-events/create', [ProjectLEDController::class, 'riskChangeToLed'])->name('projects.loss-events.create')->middleware('can:project_risk_edit');
     Route::post('projects/{project}/risks/{risk}/loss-events', [ProjectLEDController::class, 'riskChangeToLedStore'])->name('projects.loss-events.store')->middleware('can:project_risk_edit');
     Route::post('projects/risks/send', [ProjectRiskController::class, 'send'])->name('projects.risks.send');
+    Route::get('projects/{project}/risks/{risk}/notes', [ProjectRiskController::class, 'getRiskNotes'])->name('projects.risks.notes');
     Route::post('projects/sync-wika', [ProjectController::class, 'syncWika'])->name('projects.sync-wika');
-    
+
     Route::resource('master-kri', MasterKriController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-periode-list', ProjectPeriodeListController::class)->except(['create', 'edit']);
     Route::resource('jenis-kontrol-eksisting', JenisKontrolEksistingController::class)->except(['create', 'show', 'edit']);
@@ -460,7 +467,13 @@ Route::group(['middleware' => ['auth']], function () {
     Route::delete('project-led/{id}', [ProjectLEDController::class, 'destroy'])->name('project-led.destroy');
     Route::resource('project-led', ProjectLEDController::class)->except(['create', 'show', 'edit']);
     Route::get('project-leds/{projectId}', [ProjectLEDController::class, 'index'])->name('project-led.index-by-project');
-    Route::get('kamus-risiko-project', [KamusRisikoProjectController::class, 'index'])->name('kamus-risiko-project.index');
+    Route::group(['prefix' => 'project-led'], function () {
+        Route::get('/files/{id}', [ProjectLEDController::class, 'getFiles'])->name('project-led.files.get');
+        Route::post('/files/store', [ProjectLEDController::class, 'storeFile'])->name('project-led.files.store');
+        Route::delete('/files/{id}', [ProjectLEDController::class, 'destroyFile'])->name('project-led.files.destroy');
+    });
+
+    Route::match(['get', 'post'], '/kamus-risiko-project', [KamusRisikoProjectController::class, 'index'])->name('kamus-risiko-project.index');
     Route::post('kamus-risiko-project/add-risk', [KamusRisikoProjectController::class, 'addRisk'])->name('kamus-risiko-project.add-risk');
     Route::post('kamus-risiko-project/export', [KamusRisikoProjectController::class, 'exportExcel'])->name('kamus-risiko-project.export');
 
@@ -542,8 +555,13 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('unit-led/{periode}/{id}/edit', [UnitLEDController::class, 'edit'])->name('unit-led.edit');
     Route::put('unit-led/{id}', [UnitLEDController::class, 'update'])->name('unit-led.update');
     Route::delete('unit-led/{id}', [UnitLEDController::class, 'destroy'])->name('unit-led.destroy');
+    Route::group(['prefix' => 'unit-led'], function () {
+        Route::get('/files/{id}', [UnitLEDController::class, 'getFiles'])->name('unit-led.files.get');
+        Route::post('/files/store', [UnitLEDController::class, 'storeFile'])->name('unit-led.files.store');
+        Route::delete('/files/{id}', [UnitLEDController::class, 'destroyFile'])->name('unit-led.files.destroy');
+    });
 
-    Route::get('kamus-risiko-unit', [KamusRisikoUnitController::class, 'index'])->name('kamus-risiko-unit.index');
+    Route::match(['get', 'post'], 'kamus-risiko-unit', [KamusRisikoUnitController::class, 'index'])->name('kamus-risiko-unit.index');
     Route::post('kamus-risiko-unit/add-risk', [KamusRisikoUnitController::class, 'addRisk'])->name('kamus-risiko-unit.add-risk');
     Route::post('kamus-risiko-unit/export', [KamusRisikoUnitController::class, 'exportExcel'])->name('kamus-risiko-unit.export');
 
@@ -557,6 +575,54 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('ap', [App\Http\Controllers\LaporanController::class, 'apExport'])->name('laporan.ap.export');
     Route::get('project', [App\Http\Controllers\LaporanController::class, 'project'])->name('laporan.project');
     Route::post('project', [App\Http\Controllers\LaporanController::class, 'projectExport'])->name('laporan.project.export');
+  });
+
+  Route::prefix('risk-context')->group(function () {
+      Route::get('/', [RiskContextController::class, 'index'])->name('risk-context.index');
+      Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detail'])->name('risk-context.detail');
+      Route::get('/create', [RiskContextController::class, 'create'])->name('risk-context.create');
+      Route::post('/store', [RiskContextController::class, 'store'])->name('risk-context.store');
+      Route::get('/edit/{id}', [RiskContextController::class, 'edit'])->name('risk-context.edit');
+      Route::put('/update/{id}', [RiskContextController::class, 'update'])->name('risk-context.update');
+      Route::get('/show/{id}', [RiskContextController::class, 'show'])->name('risk-context.show');
+      Route::delete('/destroy/{id}', [RiskContextController::class, 'destroy'])->name('risk-context.destroy');
+
+      // New routes for update or create functionality
+      Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreate'])->name('risk-context.update-or-create');
+      Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdate'])->name('risk-context.store-or-update');
+
+      Route::post('/{id}/submit', [RiskContextController::class, 'submit'])->name('risk-context.submit');
+      Route::post('/{id}/verify', [RiskContextController::class, 'verify'])->name('risk-context.verify');
+      Route::post('/{id}/reject', [RiskContextController::class, 'reject'])->name('risk-context.reject');
+  });
+
+  Route::prefix('risk-context-anper')->group(function () {
+      Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detailAnper'])->name('risk-context-anper.detail');
+      Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreateAnper'])->name('risk-context-anper.update-or-create');
+      Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdateAnper'])->name('risk-context-anper.store-or-update');
+
+      Route::post('/{id}/submit', [RiskContextController::class, 'submit'])->name('risk-context-anper.submit');
+      Route::post('/{id}/verify', [RiskContextController::class, 'verify'])->name('risk-context-anper.verify');
+      Route::post('/{id}/reject', [RiskContextController::class, 'reject'])->name('risk-context-anper.reject');
+  });
+
+  Route::prefix('project-risk-context')->group(function () {
+      Route::get('/', [ProjectRiskContextController::class, 'index'])->name('project-risk-context.index');
+      Route::get('/project/{projectId}', [ProjectRiskContextController::class, 'indexByProjectPeriode'])->name('project-risk-context.index-by-project-periode');
+      Route::get('/create', [ProjectRiskContextController::class, 'create'])->name('project-risk-context.create');
+      Route::post('/store', [ProjectRiskContextController::class, 'store'])->name('project-risk-context.store');
+      Route::get('/edit/{id}', [ProjectRiskContextController::class, 'edit'])->name('project-risk-context.edit');
+      Route::put('/update/{id}', [ProjectRiskContextController::class, 'update'])->name('project-risk-context.update');
+      Route::get('/show/{id}', [ProjectRiskContextController::class, 'show'])->name('project-risk-context.show');
+      Route::delete('/destroy/{id}', [ProjectRiskContextController::class, 'destroy'])->name('project-risk-context.destroy');
+
+      Route::get('/update-or-create', [ProjectRiskContextController::class, 'updateOrCreate'])->name('project-risk-context.update-or-create');
+      Route::post('/store-or-update', [ProjectRiskContextController::class, 'storeOrUpdate'])->name('project-risk-context.store-or-update');
+
+      // Eskalasi
+      Route::post('/{id}/submit', [ProjectRiskContextController::class, 'submit'])->name('project-risk-context.submit');
+      Route::post('/{id}/verify', [ProjectRiskContextController::class, 'verify'])->name('project-risk-context.verify');
+      Route::post('/{id}/reject', [ProjectRiskContextController::class, 'reject'])->name('project-risk-context.reject');
   });
 });
 
@@ -601,6 +667,7 @@ Route::prefix('risk-register-unit')->middleware('auth')->group(function () {
     Route::get('/{riskRegister}/view', [RiskRegisterUnitController::class, 'view'])->name('risk-register-unit.view');
     Route::post('/send', [RiskRegisterUnitController::class, 'send'])->name('risk-register-unit.send');
     Route::post('/draft', [RiskRegisterUnitController::class, 'storeAsDraft'])->name('risk-register-unit.store-as-draft');
+    Route::get('/{riskRegister}/notes', [RiskRegisterUnitController::class, 'getRiskNotes'])->name('risk-register-unit.notes');
 
     Route::get('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'analisa'])->name('risk-register-unit.analisa');
     Route::post('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'doAnalisa'])->name('risk-register-unit.do-analisa');
@@ -617,6 +684,11 @@ Route::prefix('risk-register-ap')->group(function () {
     Route::resource('/periods/{period}/monitorings', RiskRegisterApMonitoringController::class)
             ->names('risk-register-ap.monitorings')
             ->only(['index', 'show', 'edit', 'update']);
+    Route::prefix('risk-register-ap/{period}/monitorings')->name('risk-register-ap.monitorings.')->group(function () {
+        Route::post('send-all', [RiskRegisterApMonitoringController::class, 'sendAllMonitoring'])->name('send.all');
+        Route::post('{monitoring}/verify', [RiskRegisterApMonitoringController::class, 'verifyMonitoring'])->name('verify');
+        Route::get('{risk}/notes', [RiskRegisterApMonitoringController::class, 'getNotes'])->name('notes');
+    });
     Route::get('/', [RiskRegisterApController::class, 'index'])->name('risk-register-ap.index');
     Route::get('/create', [RiskRegisterApController::class, 'create'])->name('risk-register-ap.create');
     Route::post('/', [RiskRegisterApController::class, 'store'])->name('risk-register-ap.store');
@@ -631,6 +703,7 @@ Route::prefix('risk-register-ap')->group(function () {
     Route::get('/{riskRegister}/view', [RiskRegisterApController::class, 'view'])->name('risk-register-ap.view');
     Route::post('/send', [RiskRegisterApController::class, 'send'])->name('risk-register-ap.send');
     Route::post('/draft', [RiskRegisterApController::class, 'storeAsDraft'])->name('risk-register-ap.store-as-draft');
+    Route::get('/{riskRegister}/notes', [RiskRegisterApController::class, 'getRiskNotes'])->name('risk-register-ap.notes');
 
     Route::get('/{riskRegister}/analisa', [RiskRegisterApController::class, 'analisa'])->name('risk-register-ap.analisa');
     Route::post('/{riskRegister}/analisa', [RiskRegisterApController::class, 'doAnalisa'])->name('risk-register-ap.do-analisa');
@@ -641,7 +714,7 @@ Route::prefix('risk-register-ap')->group(function () {
     Route::post('/{riskRegister}/loss-events', [ApLEDController::class, 'riskChangeToLedStore'])->name('risk-register-ap.loss-events.store')->middleware('can:risk_register_list');
 });
 
-Route::get('kamus-risiko-ap', [KamusRisikoApController::class, 'index'])->name('kamus-risiko-ap.index');
+Route::match(['get', 'post'], 'kamus-risiko-ap', [KamusRisikoApController::class, 'index'])->name('kamus-risiko-ap.index');
 Route::post('kamus-risiko-ap/add-risk', [KamusRisikoApController::class, 'addRisk'])->name('kamus-risiko-ap.add-risk');
 Route::post('kamus-risiko-ap/export', [KamusRisikoApController::class, 'exportExcel'])->name('kamus-risiko-ap.export');
 Route::get('ap-led/', [ApLEDController::class, 'index'])->name('ap-led.index');
@@ -652,17 +725,22 @@ Route::get('ap-led/{periode}/{id}/show', [ApLEDController::class, 'show'])->name
 Route::get('ap-led/{periode}/{id}/edit', [ApLEDController::class, 'edit'])->name('ap-led.edit');
 Route::put('ap-led/{id}', [ApLEDController::class, 'update'])->name('ap-led.update');
 Route::delete('ap-led/{id}', [ApLEDController::class, 'destroy'])->name('ap-led.destroy');
+Route::group(['prefix' => 'ap-led'], function () {
+    Route::get('/files/{id}', [ApLEDController::class, 'getFiles'])->name('ap-led.files.get');
+    Route::post('/files/store', [ApLEDController::class, 'storeFile'])->name('ap-led.files.store');
+    Route::delete('/files/{id}', [ApLEDController::class, 'destroyFile'])->name('ap-led.files.destroy');
+});
 
 Route::prefix('rekomendasi-risiko')->name('rekomendasi-risiko.')->group(function () {
     Route::get('/', [RekomendasiRisikoController::class, 'index'])->name('index');
     Route::post('/', [RekomendasiRisikoController::class, 'store'])->name('store');
     Route::get('/{unit}/{periode}/create', [RekomendasiRisikoController::class, 'create'])->name('create');
     Route::get('/{rekomendasi}/edit', [RekomendasiRisikoController::class, 'edit'])->name('edit');
-    
+
     Route::put('/{rekomendasi}', [RekomendasiRisikoController::class, 'update'])->name('update');
     Route::delete('/{rekomendasi}', [RekomendasiRisikoController::class, 'destroy'])->name('destroy');
     Route::post('/{rekomendasi}/publish', [RekomendasiRisikoController::class, 'publish'])->name('publish');
-    
+
     Route::get('/{rekomendasi}', [RekomendasiRisikoController::class, 'view'])->name('view');
     Route::get('/{unit}/{periode}', [RekomendasiRisikoController::class, 'show'])->name('show');
 });
@@ -694,6 +772,11 @@ Route::get('/download-tender-template', [ProjectRiskController::class, 'download
 Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->group(function () {
     Route::get('periods', [App\Http\Controllers\CorporateRiskController::class, 'riskPeriodeList'])->name('periods');
     Route::get('/periods/{period}', [App\Http\Controllers\CorporateRiskController::class, 'riskPeriodeDashboard'])->name('periods.show');
+    
+    Route::resource('/periods/{period}/monitorings', RiskRegisterCorporateMonitoringController::class)
+            ->names('monitorings')
+            ->only(['index', 'show', 'edit', 'update']);
+
     Route::get('/', [App\Http\Controllers\CorporateRiskController::class, 'index'])->name('index');
     Route::get('/create', [App\Http\Controllers\CorporateRiskController::class, 'create'])->name('create');
     Route::post('/', [App\Http\Controllers\CorporateRiskController::class, 'store'])->name('store');
@@ -701,7 +784,10 @@ Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->
     Route::put('/{riskRegister}', [App\Http\Controllers\CorporateRiskController::class, 'update'])->name('update');
     Route::delete('/{riskRegister}', [App\Http\Controllers\CorporateRiskController::class, 'destroy'])->name('destroy');
     Route::get('/{riskRegister}/view', [App\Http\Controllers\CorporateRiskController::class, 'view'])->name('view');
-    
+
+    Route::get('/top-down', [App\Http\Controllers\CorporateRiskController::class, 'topDown'])->name('top-down');
+    Route::post('/top-down', [App\Http\Controllers\CorporateRiskController::class, 'storeTopDown'])->name('store-top-down');
+
     Route::get('/{riskRegister}/analisa', [App\Http\Controllers\CorporateRiskController::class, 'analisa'])->name('analisa');
     Route::post('/{riskRegister}/analisa', [App\Http\Controllers\CorporateRiskController::class, 'doAnalisa'])->name('do-analisa');
 
@@ -712,6 +798,19 @@ Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->
     Route::put('/{riskRegister}/perencanaan/{id}', [App\Http\Controllers\CorporateRiskController::class, 'updateRencanaPerlakuan'])->name('update-rencana-perlakuan');
 
     Route::get('/get-division-risks/{unit}', [App\Http\Controllers\CorporateRiskController::class, 'getDivisionRisks'])->name('get-division-risks');
+});
+
+Route::prefix('corporate-led')->name('corporate-led.')->middleware(['auth'])->group(function () {
+    Route::get('/{periode}', [CorporateLEDController::class, 'index'])->name('index');
+    Route::get('/{periode}/create', [CorporateLEDController::class, 'create'])->name('create');
+    Route::post('/', [CorporateLEDController::class, 'store'])->name('store');
+    Route::get('/{periode}/{id}/show', [CorporateLEDController::class, 'show'])->name('show');
+    Route::get('/{periode}/{id}/edit', [CorporateLEDController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [CorporateLEDController::class, 'update'])->name('update');
+    Route::delete('/{id}', [CorporateLEDController::class, 'destroy'])->name('destroy');
+    Route::get('/files/{id}', [CorporateLEDController::class, 'getFiles'])->name('files.get');
+    Route::post('/files/store', [CorporateLEDController::class, 'storeFile'])->name('files.store');
+    Route::delete('/files/{id}', [CorporateLEDController::class, 'destroyFile'])->name('files.destroy');
 });
 
 // Notification Routes

@@ -1,19 +1,50 @@
 @forelse($divisiRisks as $risk)
-<tr>
-    <td>
-        <div class="form-check">
-            <input class="form-check-input pilih-risiko" type="checkbox" value="{{ $risk->id }}" id="risk-{{ $risk->id }}"
-                   data-divisi="{{ $risk->unit->name ?? 'N/A' }}" 
-                   data-peristiwa="{{ $risk->peristiwa_risiko }}" 
-                   data-level="{{ optional($risk->riskAnalysis)->level_risiko ?? 'N/A' }}">
-        </div>
-    </td>
-    <td>{{ $risk->unit->name ?? 'N/A' }}</td>
-    <td>{{ $risk->peristiwa_risiko }}</td>
-    <td>{{ optional($risk->riskAnalysis)->level_risiko ?? 'N/A' }}</td>
-</tr>
+    @php
+        $penyebabs = $risk->penyebabRisiko;
+        $count = $penyebabs->count() > 0 ? $penyebabs->count() : 1;
+        
+        // Data untuk JS
+        $penyebabList = $penyebabs->pluck('penyebab_risiko')->toArray();
+        if(empty($penyebabList)) $penyebabList = ['-'];
+        
+        $nilaiRisiko = $risk->riskAnalysis->skala_risiko ?? '-';
+        $levelRisiko = $risk->riskAnalysis->level_risiko ?? '-';
+    @endphp
+
+    <tr class="risk-row">
+        <td rowspan="{{ $count }}" class="text-center align-middle bg-white">
+            <div class="form-check d-flex justify-content-center">
+                <input class="form-check-input pilih-risiko" type="checkbox" 
+                    value="{{ $risk->id }}" 
+                    id="risk-{{ $risk->id }}"
+                    data-divisi="{{ $risk->unit->name ?? '-' }}"
+                    data-peristiwa="{{ $risk->peristiwa_risiko }}"
+                    data-level="{{ $levelRisiko }}"
+                    data-nilai="{{ $nilaiRisiko }}"
+                    data-penyebab='{{ json_encode($penyebabList) }}'>
+            </div>
+        </td>
+        <td rowspan="{{ $count }}" class="align-middle bg-white">{{ $risk->unit->name ?? '-' }}</td>
+        <td rowspan="{{ $count }}" class="align-middle bg-white">
+          <a href="/risk-register-unit/{{ $risk->id }}/view" target="_blank" class="text-primary fw-bold text-decoration-underline" title="Lihat Detail Risiko">
+            {{ $risk->peristiwa_risiko }} <i class='bx bx-link-external small'></i>
+          </a>
+        </td>
+        
+        <td class="align-middle">{{ $penyebabs->first()->penyebab_risiko ?? '-' }}</td>
+        
+        <td rowspan="{{ $count }}" class="text-center align-middle bg-white">{{ $levelRisiko }}</td>
+        <td rowspan="{{ $count }}" class="text-center align-middle bg-white">{{ $nilaiRisiko }}</td>
+    </tr>
+
+    @foreach($penyebabs->slice(1) as $p)
+        <tr class="risk-row-child">
+            <td class="align-middle">{{ $p->penyebab_risiko }}</td>
+        </tr>
+    @endforeach
+
 @empty
-<tr>
-    <td colspan="4" class="text-center">Tidak ada risiko yang ditemukan untuk divisi ini.</td>
-</tr>
+    <tr>
+        <td colspan="6" class="text-center">Tidak ada risiko utama yang tersedia untuk divisi ini.</td>
+    </tr>
 @endforelse

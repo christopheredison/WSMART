@@ -27,7 +27,7 @@
     }
 
     .general-checkbox .form-check input {
-        pointer-events: auto !important; 
+        pointer-events: auto !important;
     }
 </style>
 @endpush
@@ -143,7 +143,7 @@ $(document).ready(function() {
     // Mendapatkan elemen select untuk opsi perlakuan risiko dan jenis rencana perlakuan risiko
     const opsiPerlakuanRisiko = document.getElementById('opsi_perlakuan_risiko');
     const jenisRencanaPerlakuanRisiko = document.getElementById('jenis_rencana_perlakuan_risiko');
-    
+
     // Menambahkan event listener untuk perubahan pada opsi perlakuan risiko
     opsiPerlakuanRisiko.addEventListener('change', function() {
         // Jika opsi perlakuan risiko yang dipilih adalah ID 3 (Accept/monitor)

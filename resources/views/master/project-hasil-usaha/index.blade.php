@@ -120,6 +120,9 @@ $(document).ready(function() {
         $('[name="progress_fisik_ra"]').val('0.00 %');
         $('[name="progress_fisik_ri"]').val('0.00 %');
         $('#dataModal').modal('show');
+        $('#project_id').select2({
+          dropdownParent: $('#dataModal')
+        });
     });
 
     // 4. Tombol Edit Data
@@ -135,6 +138,10 @@ $(document).ready(function() {
             // Trigger inputmask untuk format ulang nilai
             $('.inputmask-general').trigger('input');
             calculateProgress(); // Hitung progress setelah data diisi
+
+            $('#project_id').select2({
+              dropdownParent: $('#dataModal')
+            });
         });
     });
 

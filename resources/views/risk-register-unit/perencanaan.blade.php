@@ -102,7 +102,7 @@
                                 <td class="action-cell">
                                     {{-- <div>
                                         <button class="btn btn-link text-primary" type="button" data-action="edit" data-id="{{ $perlakuan->id }}">Edit</button>
-                                        <button class="btn btn-link text-danger" type="button" data-action="delete" data-id="{{ $perlakuan->id }}">Hapus</button>   
+                                        <button class="btn btn-link text-danger" type="button" data-action="delete" data-id="{{ $perlakuan->id }}">Hapus</button>
                                     </div> --}}
                                     <div class="d-flex gap-2">
                                         <button class="btn btn-link text-primary p-0" type="button" data-action="edit" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Edit Rencana Perlakuan">
@@ -110,7 +110,7 @@
                                         </button>
                                         <button class="btn btn-link text-danger p-0" type="button" data-action="delete" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Hapus Rencana Perlakuan">
                                             <i class="bx bx-trash fs-5"></i>
-                                        </button>   
+                                        </button>
                                     </div>
                                 </td>
                                 @if ($index === 0)
@@ -208,7 +208,7 @@
 
 .xtable-white {
     background-color: #ffffff !important; /* Warna putih */
-} 
+}
 
 .xtable-light tr, .xtable-white tr {
     background-color: inherit !important; /* Warna pewarisan sama */
@@ -229,11 +229,18 @@
 <script>
 const penyebabRisiko = @json($identifikasiRisiko->penyebabRisiko->keyBy('id'));
 $(document).ready(function() {
+    $('#picTambah').select2({
+        dropdownParent: $('#modalTambahRencana')
+    });
+
+    $('#picEdit').select2({
+        dropdownParent: $('#modalEditRencana')
+    });
 
     const kategoriDampak = '{{ $analisa->kategori_dampak ?? "" }}';
     // Ambil nilai dampak dari data yang ada
     const nilaiDampak = {{ $analisa->nilai_dampak ?? 0 }};
-            
+
     // Fungsi untuk validasi biaya
     function validateBiaya(input) {
             // Skip validasi jika kategori dampak Kualitatif atau nilai dampak 0/null
@@ -242,7 +249,7 @@ $(document).ready(function() {
             }
 
             const biayaValue = parseFloat(input.val().replace(/[^0-9.-]+/g, '')) || 0;
-            
+
             if (biayaValue > nilaiDampak) {
                 Swal.fire({
                     title: 'Peringatan!',
@@ -275,7 +282,7 @@ $(document).ready(function() {
 
         // Reset form
         $('#formTambahRencana')[0].reset();
-        
+
         // Reset select2 jika ada
         $('#formTambahRencana select').each(function() {
             $(this).val('').trigger('change');

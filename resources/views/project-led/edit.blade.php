@@ -1,10 +1,6 @@
 @extends('layouts.default')
-
 @section('dashboard')
     @include('partials.success-message')
-    @if(session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
 
     <div class="row">
         <div class="col-12">
@@ -213,15 +209,15 @@ $(document).ready(function() {
     let penyebabData = @json($penyebabData);
 
     var flatpickrMulai = flatpickr("#timelineRange1", {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
 
     var flatpickrSelesai = flatpickr("#timelineRange2", {
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "d/m/Y",
         disableMobile: true
     });
@@ -279,9 +275,10 @@ $(document).ready(function() {
     renderPenyebabTable();
     flatpickr(".flatpickr-date", 
       { 
-        altInput: false,
-        altFormat: "j F Y",
+        altInput: true,
+        altFormat: "d/m/Y",
         dateFormat: "Y-m-d",
+        disableMobile: true,
         maxDate: 'today',
       }
     );

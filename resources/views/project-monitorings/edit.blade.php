@@ -43,7 +43,7 @@
         <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
-                    <h4 class="mb-0 ff-heading-sm">Realisasi Nilai Risiko Residual</h4>
+                    <h4 class="mb-0 ff-heading-sm">Nilai Risiko Residual Realisasi</h4>
                 </div>
             </div>
             <div class="row g-2">
@@ -109,7 +109,7 @@
                             <div class="lead__icon bg-warning rounded-pill">
                                 <i class='bx bx-cube text-white'></i>
                             </div>
-                            <h5>Target Residual</h5>
+                            <h5>Residual Rencana</h5>
                         </div>
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
@@ -166,7 +166,7 @@
                             <div class="lead__icon bg-info rounded-pill">
                                 <i class='bx bxs-cube text-white'></i>
                             </div>
-                            <h5>Realisasi</h5>
+                            <h5>Residual Realisasi</h5>
                         </div>
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
@@ -510,7 +510,7 @@ const minDateString = dayjs(`${year}-${paddedMonth}-01`, 'YYYY-MM-DD').toDate();
 
 var flatpickrIns = flatpickr("#timelineInput", {
     mode: "single",
-    altInput: false,
+    altInput: true
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     minDate: minDateString,
@@ -521,7 +521,7 @@ $("#timelineInput").data('_flatpickr', flatpickrIns);
 
 var timeline1 = flatpickr("#perkiraan_waktu_terpapar_risiko_mulai", {
     mode: "single",
-    altInput: true,
+    altInput: true
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     //maxDate: endOfYear,
@@ -529,7 +529,7 @@ var timeline1 = flatpickr("#perkiraan_waktu_terpapar_risiko_mulai", {
 });
 var timeline2 = flatpickr("#perkiraan_waktu_terpapar_risiko_akhir", {
     mode: "single",
-    altInput: true,
+    altInput: true
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     //maxDate: endOfYear,
@@ -537,7 +537,7 @@ var timeline2 = flatpickr("#perkiraan_waktu_terpapar_risiko_akhir", {
 });
 var perlakuanWaktu1 = flatpickr("#timeline_perlakuan_risiko_start", {
     mode: "single",
-    altInput: true,
+    altInput: true
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     //maxDate: endOfYear,
@@ -545,7 +545,7 @@ var perlakuanWaktu1 = flatpickr("#timeline_perlakuan_risiko_start", {
 });
 var perlakuanWaktu2 = flatpickr("#timeline_perlakuan_risiko_end", {
     mode: "single",
-    altInput: true,
+    altInput: true
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     //maxDate: endOfYear,
@@ -667,7 +667,7 @@ function submitForm(isClosed) {
                 confirmButtonText: 'OK',
             }).then(() => {
                 // let baseUrl = '{{ route('projects.monitorings.index', ['project' => request()->route('project')]) }}';
-                
+
                 // const currentQuarter = '{{ $quarter }}';
                 // const currentTahun = '{{ $tahun }}';
                 // const currentMonth = '{{ $month }}';
