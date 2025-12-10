@@ -17,12 +17,15 @@ use App\Models\ScoreCriteriaDoc;
 use App\Models\ParameterKinerja;
 use App\Models\PilihanParameterKinerja;
 use App\Models\PenilaianCapaianKinerja;
+use App\Models\Periode;
 use App\Models\DetailPenilaianCapaianKinerja;
 use App\Models\SkalaKinerja;
 use App\Models\SkalaKPMR;
 use App\Models\FinalRating;
 use App\Models\FinalRatingPeriod;
 use App\Models\RMIPeriodDocument;
+use App\Models\ParameterKinerjaDocument;
+use Illuminate\Support\Facades\Validator;
 
 class PenilaianRMIController extends Controller
 {
@@ -106,6 +109,13 @@ class PenilaianRMIController extends Controller
             'documents'
         ])->findOrFail($id);
 
+        $evidenceMap = collect();
+        if ($period->penilaianCapaianKinerja) {
+            $penilaianId = $period->penilaianCapaianKinerja->id;
+            
+            $evidenceMap = ParameterKinerjaDocument::where('penilaian_capaian_kinerja_id', $penilaianId)->get()->groupBy('parameter_id');
+        }
+
         // 2. Aspek Dimensi (tetap seperti existing)
         $dimensions = Dimension::with([
             'subDimensions' => fn($q)=> $q->orderBy('id'),
@@ -144,13 +154,14 @@ class PenilaianRMIController extends Controller
 
         // 4. Kirim semua ke view
         return view('penilaian-rmi.show', compact(
-        'period',
-        'dimensions',
-        'parameterScores',
-        'criteriaScores',
-        'dimensionScores',
-        'paramsCapaian',
-        'paramsKpmr'
+            'period',
+            'dimensions',
+            'parameterScores',
+            'criteriaScores',
+            'dimensionScores',
+            'paramsCapaian',
+            'paramsKpmr',
+            'evidenceMap'
         ));
     }
 
@@ -772,10 +783,25 @@ class PenilaianRMIController extends Controller
 
         $finalRatings = FinalRating::orderBy('rating')->get();
         $finalRatingPeriod = FinalRatingPeriod::where('rmi_period_id', $id)->first();
+
+        $units = \App\Models\Unit::whereIn('unit_type_id', [1, 2, 4]) 
+                ->orderBy('unit_type_id', 'desc')
+                ->orderBy('name')
+                ->get();
+
+        $corporateUnit = $units->firstWhere('unit_type_id', 4);
+        $defaultUnitId = $corporateUnit ? $corporateUnit->id : ($units->first()->id ?? 0);
         
         return view('penilaian-rmi.penilaian-aspek-kinerja', compact(
-            'period', 'paramsCapaian', 'paramsKpmr', 'existing', 'existingComments',
-            'finalRatings', 'finalRatingPeriod'
+            'period',
+            'paramsCapaian',
+            'paramsKpmr',
+            'existing',
+            'existingComments',
+            'finalRatings',
+            'finalRatingPeriod',
+            'units',
+            'defaultUnitId',
         ));
     }
 
@@ -1054,14 +1080,200 @@ class PenilaianRMIController extends Controller
     {
         $validated = $request->validate([
             'penilaian' => 'nullable|string|max:255',
+            'tahun_dinilai'  => 'nullable|integer|digits:4',
             'tipe_penilaian' => 'nullable|integer|in:1,2',
         ]);
 
         $period->update([
             'penilaian' => $validated['penilaian'],
+            'tahun_dinilai' => $validated['tahun_dinilai'],
             'tipe_penilaian' => $validated['tipe_penilaian'],
         ]);
 
         return redirect()->route('penilaian-rmi.index')->with('success', 'Data Penilaian untuk periode ' . $period->year . ' berhasil diperbarui.');
+    }
+
+    public function getRiskData(Request $request, $id)
+    {
+        $unitId = $request->query('unit_id');
+
+        if (!$unitId) {
+            return response()->json(['error' => 'Unit ID required'], 400);
+        }
+        $period = RMIPeriod::findOrFail($id);
+        $periode = Periode::where('tahun', $period->year)->first();
+
+        // Ambil Risiko berdasarkan Periode dan Unit
+        $risks = \App\Models\IdentifikasiRisiko::where('periode_id', $periode->id)
+            ->where('unit_id', $unitId)
+            ->whereNull('deleted_at')
+            // ->whereIn('status_risiko', [3, 4, 5]) 
+            ->with([
+                'riskAnalysis',
+                'penyebabRisiko.perlakuanPenyebabRisikoUnit.perlakuanPenyebabUnitMonitorings' => function($q) {
+                    $q->orderBy('id', 'desc'); // Monitoring perlakuan terakhir
+                },
+                'monitoringRisikos' => function($q) {
+                    $q->orderBy('quarter', 'desc')->orderBy('id', 'desc'); // Monitoring risiko terakhir
+                }
+            ])
+            ->get();
+
+        $data = [];
+        $totalProgress = 0;
+        $countPerlakuan = 0;
+
+        foreach ($risks as $risk) {
+            // Data untuk Tabel 1 (Eksposur)
+            $lastMonitoring = $risk->monitoringRisikos->first();
+
+            $detailUrl = '#';
+
+            switch ($risk->unit_type_id) {
+                case 4: // Korporat
+                    $detailUrl = route('corporate-risk.view', $risk->id);
+                    break;
+                case 1: // Divisi / Unit
+                    $detailUrl = route('risk-register-unit.view', $risk->id);
+                    break;
+                case 2: // Anak Perusahaan
+                    $detailUrl = route('risk-register-ap.view', $risk->id);
+                    break;
+                default:
+                    $detailUrl = route('risk-register-unit.view', $risk->id); 
+                    break;
+            }
+            
+            $riskData = [
+                'id' => $risk->id,
+                'peristiwa_risiko' => $risk->peristiwa_risiko,
+                'deskripsi' => $risk->deskripsi_peristiwa_risiko,
+                'penyebab' => $risk->penyebabRisiko->pluck('penyebab_risiko')->toArray(),
+                'inheren' => $risk->riskAnalysis->eksposur_risiko ?? 0,
+                'residual_target' => $risk->riskAnalysis->eksposur_risiko_residual_q4 ?? 0,
+                'realisasi' => $lastMonitoring ? ($lastMonitoring->eksposure_risiko ?? 0) : null,
+                'realisasi_quarter' => $lastMonitoring ? $lastMonitoring->quarter : null,
+                'detail_url' => $detailUrl,
+                'perlakuans' => []
+            ];
+
+            // Data untuk Tabel 2 (Progress)
+            foreach ($risk->penyebabRisiko as $penyebab) {
+                foreach ($penyebab->perlakuanPenyebabRisikoUnit as $perlakuan) {
+                    $lastProgress = $perlakuan->perlakuanPenyebabUnitMonitorings->first();
+                    $progressVal = $lastProgress ? $lastProgress->progress_rencana_perlakuan_risiko : 0;
+
+                    $riskData['perlakuans'][] = [
+                        'penyebab' => $penyebab->penyebab_risiko,
+                        'rencana' => $perlakuan->rencana_perlakuan_risiko,
+                        'progress' => $progressVal
+                    ];
+
+                    $totalProgress += $progressVal;
+                    $countPerlakuan++;
+                }
+            }
+
+            $data[] = $riskData;
+        }
+
+        $averageProgress = $countPerlakuan > 0 ? round($totalProgress / $countPerlakuan, 2) : 0;
+
+        return response()->json([
+            'risks' => $data,
+            'average_progress' => $averageProgress
+        ]);
+    }
+
+    public function getEvidence($periodId, $parameterId)
+    {
+        $penilaian = PenilaianCapaianKinerja::where('user_id', auth()->id())
+            ->where('rmi_period_id', $periodId)
+            ->first();
+
+        if (!$penilaian) {
+            return response()->json(['documents' => []]);
+        }
+
+        $documents = ParameterKinerjaDocument::where('penilaian_capaian_kinerja_id', $penilaian->id)
+            ->where('parameter_id', $parameterId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json(['documents' => $documents]);
+    }
+
+    public function storeEvidence(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'period_id'     => 'required|exists:rmi_periods,id',
+            'parameter_id'  => 'required|exists:parameter_kinerjas,id',
+            'file'          => 'required|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:5120', // Max 5MB
+            'description'   => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $penilaian = PenilaianCapaianKinerja::updateOrCreate(
+                [
+                    'user_id'       => auth()->id(), 
+                    'rmi_period_id' => $request->period_id
+                ],
+                []
+            );
+
+            $file = $request->file('file');
+            $originalName = $file->getClientOriginalName();
+            $path = $file->store("evidence/{$request->period_id}/" . auth()->id(), 'public');
+
+            $doc = ParameterKinerjaDocument::create([
+                'penilaian_capaian_kinerja_id' => $penilaian->id,
+                'parameter_id' => $request->parameter_id,
+                'filename'     => $originalName,
+                'file_path'    => $path,
+                'mimetype'     => $file->getMimeType(),
+                'description'  => $request->description,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true, 
+                'message' => 'Dokumen berhasil diunggah.',
+                'data'    => $doc
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteEvidence($id)
+    {
+        $doc = ParameterKinerjaDocument::find($id);
+
+        if (!$doc) {
+            return response()->json(['success' => false, 'message' => 'Dokumen tidak ditemukan.'], 404);
+        }
+
+        if ($doc->penilaian->user_id != auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        try {
+            Storage::disk('public')->delete($doc->file_path);
+            
+            $doc->delete();
+
+            return response()->json(['success' => true, 'message' => 'Dokumen dihapus.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Gagal menghapus: ' . $e->getMessage()], 500);
+        }
     }
 }

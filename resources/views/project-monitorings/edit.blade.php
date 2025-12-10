@@ -510,7 +510,7 @@ const minDateString = dayjs(`${year}-${paddedMonth}-01`, 'YYYY-MM-DD').toDate();
 
 var flatpickrIns = flatpickr("#timelineInput", {
     mode: "single",
-    altInput: true
+    altInput: true,
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     minDate: minDateString,
@@ -521,7 +521,7 @@ $("#timelineInput").data('_flatpickr', flatpickrIns);
 
 var timeline1 = flatpickr("#perkiraan_waktu_terpapar_risiko_mulai", {
     mode: "single",
-    altInput: true
+    altInput: true,
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     //maxDate: endOfYear,
@@ -529,7 +529,7 @@ var timeline1 = flatpickr("#perkiraan_waktu_terpapar_risiko_mulai", {
 });
 var timeline2 = flatpickr("#perkiraan_waktu_terpapar_risiko_akhir", {
     mode: "single",
-    altInput: true
+    altInput: true,
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     //maxDate: endOfYear,
@@ -537,7 +537,7 @@ var timeline2 = flatpickr("#perkiraan_waktu_terpapar_risiko_akhir", {
 });
 var perlakuanWaktu1 = flatpickr("#timeline_perlakuan_risiko_start", {
     mode: "single",
-    altInput: true
+    altInput: true,
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     //maxDate: endOfYear,
@@ -545,7 +545,7 @@ var perlakuanWaktu1 = flatpickr("#timeline_perlakuan_risiko_start", {
 });
 var perlakuanWaktu2 = flatpickr("#timeline_perlakuan_risiko_end", {
     mode: "single",
-    altInput: true
+    altInput: true,
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     //maxDate: endOfYear,

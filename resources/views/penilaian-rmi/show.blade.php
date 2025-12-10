@@ -56,7 +56,7 @@
   }
 </style>
 @endpush
-<div class="container my-5">
+<div class="container px-0">
 
   {{-- 1. Informasi Periode & Ringkasan --}}
   <div class="row mb-4">
@@ -79,7 +79,8 @@
             <dt class="col-sm-4">Score RMI</dt><dd class="col-sm-8">{{ $period->final_score_rmi }}</dd>
 
             <dt class="col-sm-4">Tanggal Update</dt><dd class="col-sm-8">{{ $period->updated_at->format('d M Y H:i') }}</dd>
-            <dt class="col-sm-4">Penilai</dt><dd class="col-sm-8">
+            <dt class="col-sm-4">Penilai</dt>
+            <dd class="col-sm-8">
               {{ $period->penilaian ?? '-' }} 
               @if($period->tipe_penilaian)
                 <span class="">
@@ -105,6 +106,7 @@
             <dt class="col-sm-6">KPMR</dt><dd class="col-sm-6">{{ $period->kpmr }}</dd>
             <dt class="col-sm-6">Peringkat Komposit Risiko</dt><dd class="col-sm-6">{{ $period->peringkat_komposit_risiko }}</dd>
             <dt class="col-sm-6">Nilai Konversi</dt><dd class="col-sm-6">{{ $period->nilai_konversi }}</dd>
+            <dt class="col-md-6">Reviewed by</dt><dd class="col-sm-6">Internal Audit Division</dd>
           </dl>
         </div>
       </div>
@@ -256,7 +258,13 @@
             <div class="card-body p-0">
               <table class="table mb-0">
                 <thead class="table-light">
-                  <tr><th>No</th><th>Parameter</th><th>Jawaban</th><th>Skala</th><th>Keterangan</th></tr>
+                  <tr>
+                    <th>No</th>
+                    <th>Parameter</th>
+                    <th>Jawaban</th>
+                    <th>Skala</th>
+                    <th>Keterangan</th>
+                  </tr>
                 </thead>
                 <tbody>
                   @foreach($paramsC as $i => $param)
@@ -271,14 +279,14 @@
                         <td>{{ $i+1 }}</td>
                         <td>
                           {{ $param->name }}<br>
-                          <small>
+                          <small class="text-muted">
                             @foreach($param->options as $opt)
                               {{ $opt->code }}. {{ $opt->description }}; 
                             @endforeach
                           </small>
                         </td>
-                        <td>{{ strtoupper($jawab) }}</td>
-                        <td>{{ $skala }}</td>
+                        <td class="text-center fw-bold">{{ strtoupper($jawab) }}</td>
+                        <td class="text-center">{{ $skala }}</td>
                         <td>{{ $ket }}</td>
                       </tr>
                     @else
@@ -287,21 +295,21 @@
                           $d     = $details->get($child->id);
                           $jawab = $d?->pilihan->code  ?? '-';
                           $skala = $d?->pilihan->scale ?? '-';
-                          $ket   = $d?->comment        ?? '-';
+                          $ket   = ($d && !empty($d->comment)) ? $d->comment : '-';
                           $no    = $child->code;
                         @endphp
                         <tr>
                           <td>{{ $no }}</td>
                           <td class="ps-4">
                             {{ $child->name }}<br>
-                            <small>
+                            <small class="text-muted">
                               @foreach($child->options as $opt)
                                 {{ $opt->code }}. {{ $opt->description }}; 
                               @endforeach
                             </small>
                           </td>
-                          <td>{{ strtoupper($jawab) }}</td>
-                          <td>{{ $skala }}</td>
+                          <td class="text-center fw-bold">{{ strtoupper($jawab) }}</td>
+                          <td class="text-center">{{ $skala }}</td>
                           <td>{{ $ket }}</td>
                         </tr>
                       @endforeach
@@ -317,9 +325,15 @@
           <div class="card shadow-sm">
             <div class="card-header bg-warning text-dark">Penilaian KPMR</div>
             <div class="card-body p-0">
-              <table class="table mb-0">
+              <table class="table mb-0 table-hover">
                 <thead class="table-light">
-                  <tr><th>No</th><th>Parameter</th><th>Jawaban</th><th>Skala</th><th>Keterangan</th></tr>
+                  <tr>
+                    <th>No</th>
+                    <th>Parameter</th>
+                    <th>Jawaban</th>
+                    <th>Skala</th>
+                    <th>Keterangan</th>
+                  </tr>
                 </thead>
                 <tbody>
                   @foreach($paramsK as $i => $param)
@@ -328,13 +342,13 @@
                         $d     = $details->get($param->id);
                         $jawab = $d?->pilihan->code  ?? '-';
                         $skala = $d?->pilihan->scale ?? '-';
-                        $ket   = $d?->comment        ?? '-';
+                        $ket   = !empty($d?->comment) ? $d->comment : '-';
                       @endphp
                       <tr>
                         <td>{{ $i+1 }}</td>
                         <td>
                           {{ $param->name }}<br>
-                          <small>
+                          <small class="text-muted">
                             @foreach($param->options as $opt)
                               {{ $opt->code }}. {{ $opt->description }}; 
                             @endforeach
@@ -350,13 +364,13 @@
                           $d     = $details->get($child->id);
                           $jawab = $d?->pilihan->code  ?? '-';
                           $skala = $d?->pilihan->scale ?? '-';
-                          $ket   = $d?->comment        ?? '-';
+                          $ket   = !empty($d?->comment) ? $d->comment : '-';
                         @endphp
                         <tr>
                           <td>{{ $child->code }}</td>
                           <td class="ps-4">
                             {{ $child->name }}<br>
-                            <small>
+                            <small class="text-muted">
                               @foreach($child->options as $opt)
                                 {{ $opt->code }}. {{ $opt->description }}; 
                               @endforeach
