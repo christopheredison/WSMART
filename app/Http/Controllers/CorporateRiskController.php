@@ -815,7 +815,6 @@ class CorporateRiskController extends Controller
             ->with(['unit', 'kategoriRisiko', 'riskAnalysis', 'penyebabRisiko'])
             ->get();
             
-        // Kita akan merender HTML dari sisi server agar lebih mudah di client-side
         return response()->json([
             'html' => view('corporate-risk._ajax_risk_options', compact('divisiRisks'))->render()
         ]);

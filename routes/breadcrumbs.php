@@ -505,3 +505,38 @@ Breadcrumbs::for('corporate-led.show', function (BreadcrumbTrail $trail, $period
     $trail->parent('corporate-led.index', $periode);
     $trail->push('Detail Loss Event Korporat', route('corporate-led.show', [$periode, $id]));
 });
+
+// Penilaian RMI (Halaman Utama / Index)
+Breadcrumbs::for('penilaian-rmi.index', function (BreadcrumbTrail $trail) {
+    $trail->push('Penilaian RMI', route('penilaian-rmi.index'));
+});
+
+// Tambah Penilaian RMI
+Breadcrumbs::for('penilaian-rmi.create', function (BreadcrumbTrail $trail) {
+    $trail->parent('penilaian-rmi.index');
+    $trail->push('Tambah Penilaian', route('penilaian-rmi.create'));
+});
+
+// Edit Penilaian RMI
+Breadcrumbs::for('penilaian-rmi.edit', function (BreadcrumbTrail $trail, $id) {
+    $trail->parent('penilaian-rmi.index');
+    $trail->push('Edit Penilaian', route('penilaian-rmi.edit', $id));
+});
+
+// Detail Penilaian RMI
+Breadcrumbs::for('penilaian-rmi.show', function (BreadcrumbTrail $trail, $id) {
+    $trail->parent('penilaian-rmi.index');
+    $trail->push('Detail Penilaian', route('penilaian-rmi.show', $id));
+});
+
+// Penilaian Aspek Dinamis
+Breadcrumbs::for('penilaian-rmi.aspek-dinamis', function (BreadcrumbTrail $trail, $id) {
+    $trail->parent('penilaian-rmi.show', $id);
+    $trail->push('Aspek Dinamis', route('penilaian-rmi.aspek-dinamis', $id));
+});
+
+// Penilaian Aspek Kinerja
+Breadcrumbs::for('penilaian-rmi.aspek-kinerja', function (BreadcrumbTrail $trail, $id) {
+    $trail->parent('penilaian-rmi.show', $id);
+    $trail->push('Aspek Kinerja', route('penilaian-rmi.aspek-kinerja', $id));
+});

@@ -17,6 +17,7 @@
         <tr>
           <th>#</th>
           <th>Tahun Periode RMI</th>
+          <th>Tahun Dinilai</th>
           <th>Status</th>
           <th>Score RMI</th>
           <th>Score Aspek Dimensi</th>
@@ -35,6 +36,7 @@
           <tr>
             <td>{{ $index + 1 }}</td>
             <td>{{ $period->year }}</td>
+            <td>{{ $period->tahun_dinilai ?? '-' }}</td>
             <td>
               @if($period->status == 1)
                 <span class="badge bg-warning text-dark">Dalam Proses</span>
@@ -79,6 +81,7 @@
                   data-penilaian="{{ $period->penilaian }}"
                   data-tipe-penilaian="{{ $period->tipe_penilaian }}"
                   data-period-year="{{ $period->year }}"
+                  data-tahun-dinilai="{{ $period->tahun_dinilai }}"
                   title="Atur Penilaian Data"
               >
                 <span class="bx bxs-edit-alt" data-bs-toggle="tooltip" title="Atur Penilaian Data"></span>
@@ -106,8 +109,12 @@
         @method('PUT')
         <div class="modal-body">
           <div class="mb-3">
-              <label for="penilaian" class="form-label">Input Penilai</label>
+              <label for="penilaian" class="form-label">Nama Penilai</label>
               <input type="text" class="form-control" id="penilaian" name="penilaian" placeholder="Masukkan nama penilai...">
+          </div>
+          <div class="mb-3">
+              <label for="tahun_dinilai" class="form-label">Tahun Dinilai</label>
+              <input type="number" class="form-control" id="tahun_dinilai" name="tahun_dinilai" placeholder="Contoh: 2024">
           </div>
           <div class="mb-3">
               <label for="tipe_penilaian" class="form-label">Tipe Penilai</label>
@@ -141,11 +148,14 @@ document.addEventListener('DOMContentLoaded', function () {
       const periodYear = button.getAttribute('data-period-year');
       const penilaian = button.getAttribute('data-penilaian');
       const tipePenilaian = button.getAttribute('data-tipe-penilaian');
+      const tahunDinilai = button.getAttribute('data-tahun-dinilai');
 
       const form = penilaianModal.querySelector('#penilaianForm');
       const modalTitleYear = penilaianModal.querySelector('#modalPeriodYear');
       const penilaianInput = penilaianModal.querySelector('#penilaian');
       const tipePenilaianSelect = penilaianModal.querySelector('#tipe_penilaian');
+      const tahunDinilaiInput = penilaianModal.querySelector('#tahun_dinilai');
+
       const actionUrl = `{{ url('penilaian-rmi') }}/${periodId}/update-penilaian`;
 
       form.setAttribute('action', actionUrl);
@@ -153,6 +163,7 @@ document.addEventListener('DOMContentLoaded', function () {
       modalTitleYear.textContent = periodYear;
       penilaianInput.value = penilaian;
       tipePenilaianSelect.value = tipePenilaian;
+      tahunDinilaiInput.value = tahunDinilai;
     });
   }
 });
