@@ -16,6 +16,7 @@ class OpportunityController extends Controller
             'nilai' => 'required',
             'nilai_peluang_realisasi' => 'required',
             'identifikasi_risiko_id' => 'required',
+            'file' => 'nullable|file|max:5120',
         ]);
 
         $opportunity = new Opportunity();
@@ -24,6 +25,14 @@ class OpportunityController extends Controller
         $opportunity->nilai_peluang_rencana = $this->convertToNumeric($request->nilai);
         $opportunity->nilai_peluang_realisasi = $this->convertToNumeric($request->nilai_peluang_realisasi);
         $opportunity->identifikasi_risiko_id = $request->identifikasi_risiko_id;
+
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('opportunities', $filename, 'public');
+            $opportunity->file_path = $path;
+        }
+
         $opportunity->save();
 
         return response()->json(['success' => true, 'message' => 'Peluang berhasil disimpan']);
@@ -45,22 +54,46 @@ class OpportunityController extends Controller
         $opportunity->nilai_peluang_rencana = $this->convertToNumeric($request->nilai);
         $opportunity->nilai_peluang_realisasi = $this->convertToNumeric($request->nilai_peluang_realisasi);
         $opportunity->identifikasi_risiko_id = $request->identifikasi_risiko_id;
+
+        if ($request->hasFile('file')) {
+            if ($opportunity->file_path && Storage::disk('public')->exists($opportunity->file_path)) {
+                Storage::disk('public')->delete($opportunity->file_path);
+            }
+
+            $file = $request->file('file');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('opportunities', $filename, 'public');
+            $opportunity->file_path = $path;
+        }
+
         $opportunity->save();
 
         return response()->json(['success' => true, 'message' => 'Peluang berhasil diperbarui']);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $opportunity = Opportunity::findOrFail($id);
+
+        if ($opportunity->file_path && Storage::disk('public')->exists($opportunity->file_path)) {
+            Storage::disk('public')->delete($opportunity->file_path);
+        }
+
         $opportunity->delete();
+
+        if($request->ajax()){
+            return response()->json(['success' => true, 'message' => 'Data peluang berhasil dihapus']);
+        }
 
         return redirect()->back()->with('success', 'Data peluang berhasil dihapus');
     }
 
     public function getOpportunities($risikoId)
     {
-        $opportunities = Opportunity::where('identifikasi_risiko_id', $risikoId)->get();
+        $opportunities = Opportunity::where('identifikasi_risiko_id', $risikoId)
+            ->orderBy('id', 'desc')
+            ->get();
+
         return response()->json($opportunities);
     }
 
@@ -69,14 +102,10 @@ class OpportunityController extends Controller
         if (empty($value)) {
             return 0;
         }
-        
-        // Hapus semua karakter kecuali angka, titik, dan koma
         $cleanValue = preg_replace('/[^0-9.,]/', '', $value);
-        
-        // Ganti koma dengan titik untuk format desimal
+        $cleanValue = str_replace('.', '', $cleanValue);
         $cleanValue = str_replace(',', '.', $cleanValue);
         
-        // Konversi ke float
         return (float) $cleanValue;
     }
 }

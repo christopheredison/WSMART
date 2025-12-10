@@ -219,7 +219,7 @@
         @elseif (request()->route()->getName() === 'risk-register-ap.monitorings.index')
             @include('risk-register-ap.monitorings._modal_verifikasi')
         @endif
-     @endif
+    @endif
 
     @if (!empty($extraViewData['showCatatanModal']))
         @if (request()->route()->getName() === 'projects.monitorings.index')
@@ -295,7 +295,10 @@ function renderOpportunities(opportunities) {
     if (opportunities.length === 0) {
         tbody.append(`
             <tr id="peluang-empty-row">
-                <td colspan="6" class="text-center">Belum ada data peluang</td>
+                <td colspan="7" class="text-center py-4 text-muted">
+                    <i class="bx bx-folder-open fs-3 mb-2 d-block"></i>
+                    Belum ada data peluang
+                </td>
             </tr>
         `);
         return;
@@ -304,22 +307,34 @@ function renderOpportunities(opportunities) {
     opportunities.forEach((item, index) => {
         const formattedRencana = formatRupiah(item.nilai_peluang_rencana);
         const formattedRealisasi = formatRupiah(item.nilai_peluang_realisasi);
+        
+        let fileHtml = '<span class="text-muted">-</span>';
+        if (item.file_path) {
+            const fileUrl = `/storage/${item.file_path}`; 
+            fileHtml = `
+                <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-outline-info" title="Download Dokumen">
+                    <i class="bx bx-download"></i>
+                </a>
+            `;
+        }
 
         tbody.append(`
             <tr>
-                <td>${index + 1}</td>
+                <td class="text-center">${index + 1}</td>
                 <td>${item.penjelasan_peluang_rencana || '-'}</td>
                 <td>${item.penjelasan_peluang_realisasi || '-'}</td>
-                <td>${formattedRencana}</td>
-                <td>${formattedRealisasi}</td>
+                <td class="text-end">${formattedRencana}</td>
+                <td class="text-end">${formattedRealisasi}</td>
+                <td class="text-center">${fileHtml}</td>
                 <td class="text-center">
                     <div class="d-flex justify-content-center gap-2">
-                        <button type="button" class="btn btn-sm btn-info btn-edit-peluang"
+                        <button type="button" class="btn btn-sm bg-warning btn-edit-peluang"
                             data-id="${item.id}"
                             data-rencana="${item.penjelasan_peluang_rencana || ''}"
                             data-realisasi="${item.penjelasan_peluang_realisasi || ''}"
                             data-nilai-rencana="${item.nilai_peluang_rencana || 0}"
-                            data-nilai-realisasi="${item.nilai_peluang_realisasi || 0}">
+                            data-nilai-realisasi="${item.nilai_peluang_realisasi || 0}"
+                            data-file-path="${item.file_path || ''}">
                             <i class="bx bx-edit-alt"></i>
                         </button>
                         <button type="button" class="btn btn-sm btn-danger btn-delete-peluang" data-id="${item.id}">
@@ -360,11 +375,13 @@ $(document).ready(function() {
         resetPeluangForm();
         $('#peluang-form-title').text('Tambah Peluang Baru');
         $('#peluang-form-container').removeClass('d-none');
+        $('#peluang-form-container')[0].scrollIntoView({ behavior: 'smooth' });
     });
 
     // Botón para cancelar formulario
     $(document).on('click', '#btn-cancel-peluang', function() {
         $('#peluang-form-container').addClass('d-none');
+        resetPeluangForm();
     });
 
     // Botón para editar oportunidad
@@ -374,6 +391,7 @@ $(document).ready(function() {
         const realisasi = $(this).data('realisasi');
         const nilaiRencana = $(this).data('nilai-rencana');
         const nilaiRealisasi = $(this).data('nilai-realisasi');
+        const filePath = $(this).data('file-path');
 
         $('#peluang-id').val(id);
         $('#penjelasan_peluang_rencana').val(rencana);
@@ -386,9 +404,28 @@ $(document).ready(function() {
         $('#nilai_peluang_rencana').val(nilaiRencanaBulat).trigger('input');
         $('#nilai_peluang_realisasi').val(nilaiRealisasiBulat).trigger('input');
 
-        $('#peluang-form-title').text('Edit Peluang');
+        if (filePath) {
+            const fileName = filePath.split('/').pop();
+            $('#current-filename').text(fileName);
+            $('#current-file-display').removeClass('d-none');
+        } else {
+            $('#current-file-display').addClass('d-none');
+        }
+
+        $('#peluang-form-title').html('<i class="bx bx-edit"></i> Edit Peluang');
         $('#peluang-form-container').removeClass('d-none');
+        $('#peluang-form-container')[0].scrollIntoView({ behavior: 'smooth' });
     });
+
+    function resetPeluangForm() {
+        $('#peluang-id').val('');
+        $('#penjelasan_peluang_rencana').val('');
+        $('#penjelasan_peluang_realisasi').val('');
+        $('#nilai_peluang_rencana').val('0').trigger('input');
+        $('#nilai_peluang_realisasi').val('0').trigger('input');
+        $('#file_peluang').val('');
+        $('#current-file-display').addClass('d-none');
+    }
 
     // Fungsi untuk menghapus peluang
     $(document).on('click', '.btn-delete-peluang', function() {
@@ -419,60 +456,61 @@ $(document).ready(function() {
     $(document).on('submit', '#peluang-form', function(e) {
         e.preventDefault();
 
+        const btnSave = $('#btn-save-peluang');
+        const originalText = btnSave.html();
+        btnSave.prop('disabled', true).html('<span class="bx bx-loader-alt bx-spin" style="width: 0.7rem; height: 0.7rem;"></span> Menyimpan...');
+
         const peluangId = $('#peluang-id').val();
         const isUpdate = peluangId !== '';
-
-        // Ambil identifikasi_risiko_id dari hidden field yang sudah diisi di showPeluangModal
         const risikoId = $('#identifikasi-risiko-id').val();
 
-        // Pastikan risikoId ada dan valid
         if (!risikoId) {
-            console.error('ID risiko tidak valid:', risikoId);
-            alert('ID risiko tidak valid. Silakan coba lagi.');
+            alert('ID risiko tidak valid.');
+            btnSave.prop('disabled', false).html(originalText);
             return;
         }
 
-        // Menggunakan FormData untuk mengambil semua data form termasuk CSRF token
         const formData = new FormData(this);
-
-        // Gunakan risikoId dari hidden field
         formData.set('identifikasi_risiko_id', risikoId);
-
-        // Menyesuaikan nama field dengan yang diharapkan controller
+        
+        // Mapping fields
         formData.set('description', formData.get('penjelasan_peluang_rencana'));
         formData.set('penjelasan', formData.get('penjelasan_peluang_realisasi'));
         formData.set('nilai', formData.get('nilai_peluang_rencana'));
 
-        // Jika update, tambahkan method PUT karena FormData tidak mendukung PUT secara langsung
         if (isUpdate) {
-            formData.append('_method', 'PUT');
+            formData.append('_method', 'POST');
+            formData.set('_method', 'POST');
+            formData.append('_method', 'PUT'); 
         }
 
         $.ajax({
             url: isUpdate ? `/opportunities/${peluangId}` : '/opportunities',
-            type: 'POST', // Selalu gunakan POST, untuk PUT kita sudah menambahkan _method di atas
+            type: 'POST',
             data: formData,
             processData: false,
             contentType: false,
             cache: false,
             success: function(response) {
                 $('#peluang-form-container').addClass('d-none');
-                loadOpportunities($('#identifikasi-risiko-id').val());
+                loadOpportunities(risikoId);
+                resetPeluangForm();
             },
-            error: function(error) {
-                console.error('Error saat menyimpan peluang:', error);
-                alert('Terjadi kesalahan saat menyimpan data peluang');
+            error: function(xhr) {
+                console.error('Error:', xhr);
+                let msg = 'Terjadi kesalahan saat menyimpan data.';
+                if(xhr.responseJSON && xhr.responseJSON.message) {
+                    msg = xhr.responseJSON.message;
+                } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    msg = Object.values(xhr.responseJSON.errors)[0][0];
+                }
+                alert(msg);
+            },
+            complete: function() {
+                btnSave.prop('disabled', false).html(originalText);
             }
         });
     });
-
-    function resetPeluangForm() {
-        $('#peluang-id').val('');
-        $('#penjelasan_peluang_rencana').val('');
-        $('#penjelasan_peluang_realisasi').val('');
-        $('#nilai_peluang_rencana').val('0').trigger('input');
-        $('#nilai_peluang_realisasi').val('0').trigger('input');
-    }
 });
 @php
     $hasChangeToLedAction = collect($tableActions ?? [])->contains('action', 'change_to_led');
