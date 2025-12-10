@@ -75,6 +75,16 @@
                       <div class="mt-3">
                         <label for="comment-{{ $param->id }}" class="form-label">Keterangan (opsional)</label>
                         <textarea name="comments[{{ $param->id }}]" id="comment-{{ $param->id }}" class="form-control" rows="2">{{ $oldComments[$param->id] ?? $existingCmt }}</textarea>
+
+                        <div class="mt-3 text-end">
+                          <button
+                            type="button"
+                            class="btn btn-sm btn-outline-primary" 
+                            onclick="openEvidenceModal({{ $param->id }}, '{{ $param->code }}. {{ $param->name }}')"
+                          >
+                            <span class="bx bx-paperclip me-1"></span> Upload Bukti Dukung
+                          </button>
+                        </div>
                       </div>
                     @else
                       @foreach($param->children as $child)
@@ -106,6 +116,16 @@
                             <div class="mt-2">
                               <label for="comment-{{ $child->id }}" class="form-label">Keterangan (opsional)</label>
                               <textarea name="comments[{{ $child->id }}]" id="comment-{{ $child->id }}" class="form-control" rows="1">{{ $oldComments[$child->id] ?? $exCmt }}</textarea>
+
+                              <div class="mt-3 text-end">
+                                <button
+                                  type="button"
+                                  class="btn btn-sm btn-outline-primary" 
+                                  onclick="openEvidenceModal({{ $child->id }}, '{{ $child->code }}. {{ $child->name }}')"
+                                >
+                                  <span class="bx bx-paperclip me-1"></span> Upload Bukti Dukung
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -434,6 +454,62 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalEvidence" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header pt-0 px-0">
+                <h5 class="modal-title">Upload Bukti: <span id="evidenceParamName" class="fw-bold text-primary"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                {{-- Form Upload --}}
+                <div class="card mb-3 bg-light border-0">
+                    <div class="card-body">
+                        <form id="formUploadEvidence" enctype="multipart/form-data">
+                            @csrf
+                            <input type="hidden" name="period_id" value="{{ $period->id }}">
+                            <input type="hidden" name="parameter_id" id="evParamId">
+                            
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-5">
+                                    <label class="form-label small mb-1">Pilih File (Max 5MB)</label>
+                                    <input type="file" class="form-control form-control-sm" name="file" required>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label small mb-1">Keterangan (Opsional)</label>
+                                    <input type="text" class="form-control form-control-sm" name="description" placeholder="Contoh: Bukti Dokumen No...">
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-sm btn-primary w-100" id="btnUploadEv">
+                                        <span class="bx bx-upload"></span> Upload
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="uploadError" class="text-danger small mt-2 d-none"></div>
+                        </form>
+                    </div>
+                </div>
+
+                {{-- Tabel List Evidence --}}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped text-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nama File</th>
+                                <th>Keterangan</th>
+                                <th style="width: 15%">Tgl Upload</th>
+                                <th style="width: 10%">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyEvidence">
+                            <tr><td colspan="4" class="text-center">Memuat data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @push('scripts')
 <script>
   const tabCapaian = new bootstrap.Tab(document.querySelector('#tab-capaian'));
@@ -730,6 +806,175 @@
         });
     }
 </script>
-@endpush
 
+<script>
+    const modalEvidence = new bootstrap.Modal(document.getElementById('modalEvidence'));
+    const formUpload = document.getElementById('formUploadEvidence');
+    const tbodyEv = document.getElementById('tbodyEvidence');
+    const periodId = "{{ $period->id }}";
+
+    // 1. Fungsi Buka Modal
+    function openEvidenceModal(paramId, paramName) {
+        document.getElementById('evidenceParamName').innerHTML = paramName; 
+        
+        document.getElementById('evParamId').value = paramId;
+        document.getElementById('uploadError').classList.add('d-none');
+        formUpload.reset();
+        
+        modalEvidence.show();
+        fetchEvidences(paramId);
+    }
+
+    // 2. Load List Evidence via AJAX
+    function fetchEvidences(paramId) {
+        tbodyEv.innerHTML = '<tr><td colspan="4" class="text-center">Memuat data...</td></tr>';
+        
+        const url = `{{ route('penilaian-rmi.evidence.list', [':pid', ':parId']) }}`
+                    .replace(':pid', periodId)
+                    .replace(':parId', paramId);
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                tbodyEv.innerHTML = '';
+                if(data.documents.length === 0) {
+                    tbodyEv.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Belum ada dokumen yang diupload.</td></tr>';
+                    return;
+                }
+
+                data.documents.forEach(doc => {
+                    const date = new Date(doc.created_at).toLocaleDateString('id-ID');
+                    const fileUrl = `{{ asset('storage') }}/${doc.file_path}`;
+
+                    const row = `
+                        <tr>
+                            <td>
+                                <a href="${fileUrl}" target="_blank" class="text-decoration-none fw-bold">
+                                    <i class="bx bx-file"></i> ${doc.filename}
+                                </a>
+                            </td>
+                            <td>${doc.description || '-'}</td>
+                            <td>${date}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-link text-danger p-0" onclick="deleteEvidence(${doc.id}, ${paramId})" data-bs-toggle="tooltip" title="Hapus Dokumen">
+                                    <i class="bx bx-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tbodyEv.innerHTML += row;
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                tbodyEv.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Gagal memuat data.</td></tr>';
+            });
+    }
+
+    // 3. Handle Upload
+    formUpload.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('btnUploadEv');
+        const originalText = btn.innerHTML;
+        const errorDiv = document.getElementById('uploadError');
+        const paramId = document.getElementById('evParamId').value;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Loading...';
+        errorDiv.classList.add('d-none');
+
+        const formData = new FormData(this);
+
+        fetch("{{ route('penilaian-rmi.evidence.store') }}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                formUpload.reset();
+                document.getElementById('evParamId').value = paramId;
+                fetchEvidences(paramId);
+            } else {
+                errorDiv.innerText = data.message || 'Gagal upload.';
+                errorDiv.classList.remove('d-none');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            errorDiv.innerText = 'Terjadi kesalahan sistem.';
+            errorDiv.classList.remove('d-none');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+    });
+
+    // 4. Handle Delete
+    function deleteEvidence(id, paramId) {
+        Swal.fire({
+            title: 'Apakah Anda yakin?',
+            text: "Dokumen yang dihapus tidak dapat dikembalikan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Sedang menghapus...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const url = `{{ route('penilaian-rmi.evidence.delete', ':id') }}`.replace(':id', id);
+
+                fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Terhapus!',
+                            text: 'Dokumen berhasil dihapus.',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        fetchEvidences(paramId);
+                    } else {
+                        Swal.fire(
+                            'Gagal!',
+                            data.message || 'Terjadi kesalahan saat menghapus.',
+                            'error'
+                        );
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire(
+                        'Error!',
+                        'Terjadi kesalahan koneksi atau server.',
+                        'error'
+                    );
+                });
+            }
+        });
+    }
+</script>
+@endpush
 @endsection

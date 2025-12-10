@@ -39,7 +39,7 @@
                   <!-- Parameter -->
                   <div class="card mb-3">
                     <div class="card-header">
-                      <strong>{{ $parameter->statement }}</strong>
+                      <strong>Parameter {{ $loop->iteration }}: {{ $parameter->statement }}</strong>
                     </div>
                     <div class="card-body">
                       

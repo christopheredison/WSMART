@@ -24,6 +24,8 @@ use App\Models\SkalaKPMR;
 use App\Models\FinalRating;
 use App\Models\FinalRatingPeriod;
 use App\Models\RMIPeriodDocument;
+use App\Models\ParameterKinerjaDocument;
+use Illuminate\Support\Facades\Validator;
 
 class PenilaianRMIController extends Controller
 {
@@ -107,6 +109,13 @@ class PenilaianRMIController extends Controller
             'documents'
         ])->findOrFail($id);
 
+        $evidenceMap = collect();
+        if ($period->penilaianCapaianKinerja) {
+            $penilaianId = $period->penilaianCapaianKinerja->id;
+            
+            $evidenceMap = ParameterKinerjaDocument::where('penilaian_capaian_kinerja_id', $penilaianId)->get()->groupBy('parameter_id');
+        }
+
         // 2. Aspek Dimensi (tetap seperti existing)
         $dimensions = Dimension::with([
             'subDimensions' => fn($q)=> $q->orderBy('id'),
@@ -145,13 +154,14 @@ class PenilaianRMIController extends Controller
 
         // 4. Kirim semua ke view
         return view('penilaian-rmi.show', compact(
-        'period',
-        'dimensions',
-        'parameterScores',
-        'criteriaScores',
-        'dimensionScores',
-        'paramsCapaian',
-        'paramsKpmr'
+            'period',
+            'dimensions',
+            'parameterScores',
+            'criteriaScores',
+            'dimensionScores',
+            'paramsCapaian',
+            'paramsKpmr',
+            'evidenceMap'
         ));
     }
 
@@ -1070,11 +1080,13 @@ class PenilaianRMIController extends Controller
     {
         $validated = $request->validate([
             'penilaian' => 'nullable|string|max:255',
+            'tahun_dinilai'  => 'nullable|integer|digits:4',
             'tipe_penilaian' => 'nullable|integer|in:1,2',
         ]);
 
         $period->update([
             'penilaian' => $validated['penilaian'],
+            'tahun_dinilai' => $validated['tahun_dinilai'],
             'tipe_penilaian' => $validated['tipe_penilaian'],
         ]);
 
@@ -1171,5 +1183,97 @@ class PenilaianRMIController extends Controller
             'risks' => $data,
             'average_progress' => $averageProgress
         ]);
+    }
+
+    public function getEvidence($periodId, $parameterId)
+    {
+        $penilaian = PenilaianCapaianKinerja::where('user_id', auth()->id())
+            ->where('rmi_period_id', $periodId)
+            ->first();
+
+        if (!$penilaian) {
+            return response()->json(['documents' => []]);
+        }
+
+        $documents = ParameterKinerjaDocument::where('penilaian_capaian_kinerja_id', $penilaian->id)
+            ->where('parameter_id', $parameterId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json(['documents' => $documents]);
+    }
+
+    public function storeEvidence(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'period_id'     => 'required|exists:rmi_periods,id',
+            'parameter_id'  => 'required|exists:parameter_kinerjas,id',
+            'file'          => 'required|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:5120', // Max 5MB
+            'description'   => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $penilaian = PenilaianCapaianKinerja::updateOrCreate(
+                [
+                    'user_id'       => auth()->id(), 
+                    'rmi_period_id' => $request->period_id
+                ],
+                []
+            );
+
+            $file = $request->file('file');
+            $originalName = $file->getClientOriginalName();
+            $path = $file->store("evidence/{$request->period_id}/" . auth()->id(), 'public');
+
+            $doc = ParameterKinerjaDocument::create([
+                'penilaian_capaian_kinerja_id' => $penilaian->id,
+                'parameter_id' => $request->parameter_id,
+                'filename'     => $originalName,
+                'file_path'    => $path,
+                'mimetype'     => $file->getMimeType(),
+                'description'  => $request->description,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true, 
+                'message' => 'Dokumen berhasil diunggah.',
+                'data'    => $doc
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteEvidence($id)
+    {
+        $doc = ParameterKinerjaDocument::find($id);
+
+        if (!$doc) {
+            return response()->json(['success' => false, 'message' => 'Dokumen tidak ditemukan.'], 404);
+        }
+
+        if ($doc->penilaian->user_id != auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        try {
+            Storage::disk('public')->delete($doc->file_path);
+            
+            $doc->delete();
+
+            return response()->json(['success' => true, 'message' => 'Dokumen dihapus.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Gagal menghapus: ' . $e->getMessage()], 500);
+        }
     }
 }

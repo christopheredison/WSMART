@@ -521,6 +521,15 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('penilaian-rmi/{periodId}/get-risk-data', [PenilaianRMIController::class, 'getRiskData'])
     ->name('penilaian-rmi.get-risk-data');
 
+    Route::prefix('penilaian-rmi')->name('penilaian-rmi.')->group(function () {
+      Route::get('/evidence/{periodId}/{parameterId}', [App\Http\Controllers\PenilaianRMIController::class, 'getEvidence'])
+          ->name('evidence.list');
+      Route::post('/evidence/store', [App\Http\Controllers\PenilaianRMIController::class, 'storeEvidence'])
+          ->name('evidence.store');
+      Route::delete('/evidence/delete/{id}', [App\Http\Controllers\PenilaianRMIController::class, 'deleteEvidence'])
+          ->name('evidence.delete');
+    });
+
     // Metrik Strategi Risiko
     Route::get('metrik-strategi-risiko/{id}/parameter', 'App\Http\Controllers\MetrikStrategiRisikoController@parameter')
         ->name('metrik-strategi-risiko.parameter');
