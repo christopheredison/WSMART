@@ -33,4 +33,12 @@ class ICTPlanControl extends Model
     {
         return $this->hasMany(ICTDo::class, 'plan_control_id');
     }
+
+    /**
+     * Relasi untuk mengambil 1 data testing (ICTDo) terakhir.
+     */
+    public function latestDo()
+    {
+        return $this->hasOne(ICTDo::class, 'plan_control_id')->latestOfMany();
+    }
 }
