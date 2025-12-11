@@ -59,7 +59,7 @@
 <div class="container px-0">
 
   {{-- 1. Informasi Periode & Ringkasan --}}
-  <div class="row mb-4">
+  {{-- <div class="row mb-4">
     <div class="col-md-6">
       <div class="card border-primary shadow-sm">
         <div class="card-header bg-primary text-white">Informasi Periode RMI</div>
@@ -110,6 +110,134 @@
           </dl>
         </div>
       </div>
+    </div>
+  </div> --}}
+
+  <div class="row mb-4">
+    {{-- CARD 1: INFORMASI UMUM --}}
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100 border-top border-3 border-primary">
+        <div class="card-header bg-white h4">
+            Informasi Periode RMI
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0 align-items-center px-3">
+                <dt class="col-sm-6 px-0 text-muted">Tahun RMI</dt>
+                <dd class="col-sm-6 px-0 fw-bold">{{ $period->year }}</dd>
+                
+                <dt class="col-sm-6 px-0 text-muted">Tahun Dinilai</dt>
+                <dd class="col-sm-6 px-0 fw-bold">{{ $period->tahun_dinilai ?? '-' }}</dd>
+
+                <dt class="col-sm-6 px-0 text-muted">Status</dt>
+                <dd class="col-sm-6 px-0">
+                    @if($period->status==1) <span class="badge bg-warning text-dark">Dalam Proses</span>
+                    @else <span class="badge bg-success">Selesai</span> @endif
+                </dd>
+
+                <dt class="col-sm-6 px-0 text-muted">Tanggal Update</dt>
+                <dd class="col-sm-6 px-0">{{ $period->updated_at->format('d M Y H:i') }}</dd>
+
+                <hr class="my-2 border-light">
+
+                <dt class="col-sm-6 px-0 text-muted">Penilai Internal</dt>
+                <dd class="col-sm-6 px-0">{{ $period->penilaian ?? '-' }}</dd>
+
+                <dt class="col-sm-6 px-0 text-muted">Penilai Eksternal</dt>
+                <dd class="col-sm-6 px-0">{{ $period->penilai_external ?? '-' }}</dd>
+
+                <dt class="col-sm-6 px-0 text-muted">Reviewed by</dt>
+                <dd class="col-sm-6 px-0">Internal Audit Division</dd>
+            </dl>
+        </div>
+      </div>
+    </div>
+
+    {{-- CARD 2: PENILAIAN INTERNAL --}}
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100 border-top border-3 border-success">
+            <div class="card-header bg-white h4 text-success d-flex justify-content-between">
+                <span>Hasil Penilaian Internal</span>
+                {{-- <small class="text-muted fw-normal">{{ $period->penilaian ?? 'Mandiri' }}</small> --}}
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-6 border-end">
+                        <span class="text-muted d-block">Score RMI</span>
+                        <span class="fs-4 fw-bold">{{ $period->score_rmi ?? '-' }}</span>
+                    </div>
+                    <div class="col-6">
+                        <span class="text-muted d-block">Final Score</span>
+                        <span class="fs-4 fw-bold text-success">{{ $period->final_score_rmi ?? '-' }}</span>
+                    </div>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span>Kinerja</span>
+                        <span class="fw-bold">{{ $period->kinerja ?? '-' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span>KPMR</span>
+                        <span class="fw-bold">{{ $period->kpmr ?? '-' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span>Peringkat Komposit</span>
+                        <span class="fw-bold">{{ $period->peringkat_komposit_risiko ?? '-' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span>Nilai Konversi</span>
+                        <span class="fw-bold">{{ $period->nilai_konversi ?? '-' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span>Adjustment</span>
+                        <span class="fw-bold text-danger">{{ $period->adjusment_score ?? '-' }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    {{-- CARD 3: PENILAIAN EKSTERNAL --}}
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100 border-top border-3 border-info">
+            <div class="card-header bg-white h4 text-info d-flex justify-content-between">
+                <span>Hasil Penilaian Eksternal</span>
+                {{-- <small class="text-muted fw-normal">{{ $period->penilai_external ?? '-' }}</small> --}}
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-6 border-end">
+                        <span class="text-muted d-block">Score RMI</span>
+                        <span class="fs-4 fw-bold">{{ $period->score_rmi_external ?? '-' }}</span>
+                    </div>
+                    <div class="col-6">
+                        <span class="text-muted d-block">Final Score</span>
+                        <span class="fs-4 fw-bold text-info">{{ $period->final_score_rmi_external ?? '-' }}</span>
+                    </div>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span>Kinerja</span>
+                        <span class="fw-bold">{{ $period->kinerja_external ?? '-' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span>KPMR</span>
+                        <span class="fw-bold">{{ $period->kpmr_external ?? '-' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span>Peringkat Komposit</span>
+                        <span class="fw-bold">{{ $period->peringkat_komposit_risiko_external ?? '-' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span>Nilai Konversi</span>
+                        <span class="fw-bold">{{ $period->nilai_konversi_external ?? '-' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span>Adjustment</span>
+                        <span class="fw-bold text-danger">{{ $period->adjusment_score_external ?? '-' }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
   </div>
 
