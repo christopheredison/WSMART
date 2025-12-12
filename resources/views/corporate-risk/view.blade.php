@@ -314,7 +314,7 @@
     </div>
     <!-- ::DataRisiko End -->
     
-    <!-- ::DataRisiko Proyek Terkait -->                    
+    <!-- ::DataRisiko Divisi Terkait -->                    
     <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header stepper border-0 pb-0">
@@ -332,23 +332,27 @@
                 
                 @if($divisiRisks && $divisiRisks->isNotEmpty())
                     <div class="table-responsive scrollbar">
-                        <table class="table table-bordered table-striped">
-                            <thead>
+                        <table class="table table-bordered table-striped align-middle">
+                            <thead class="bg-light">
                                 <tr>
-                                    <th>No</th>
-                                    <th>Divisi</th>
-                                    <th>Peristiwa Risiko</th>
-                                    <th>Level Risiko</th>
+                                    <th width="5%" class="text-center">No</th>
+                                    <th width="20%">Divisi</th>
+                                    <th>Peristiwa Risiko</th> <th width="15%" class="text-center">Level Risiko</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach($divisiRisks as $index => $divisiRisk)
                                 <tr>
-                                    <td>{{ $index + 1 }}</td>
+                                    <td class="text-center">{{ $index + 1 }}</td>
                                     <td>{{ $divisiRisk->unit->name ?? '-' }}</td>
-                                    <td>{{ $divisiRisk->peristiwa_risiko ?? '-' }}</td>
-                                    <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($divisiRisk->riskAnalysis->level_risiko ?? '')))}}">
-                                        {{ $divisiRisk->riskAnalysis->level_risiko ?? '-' }}
+                                    <td>
+                                        <a href="{{ route('risk-register-unit.view', $divisiRisk->id) }}" target="_blank" class="text-primary fw-bold text-decoration-underline" title="Klik untuk melihat detail">
+                                            {{ $divisiRisk->peristiwa_risiko ?? '-' }} 
+                                            <i class='bx bx-link-external small ms-1'></i>
+                                        </a>
+                                    </td>
+                                    <td class="text-center bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($divisiRisk->riskAnalysis->level_risiko ?? '')))}}">
+                                        <span class="fw-bold">{{ $divisiRisk->riskAnalysis->level_risiko ?? '-' }}</span>
                                     </td>
                                 </tr>
                                 @endforeach
@@ -356,8 +360,64 @@
                         </table>
                     </div>
                 @else
-                    <div class="alert alert-info">
-                        Tidak ada risiko divisi terkait.
+                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                        <i class="bx bx-info-circle me-2 fs-4"></i>
+                        <div>Tidak ada risiko divisi terkait.</div>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <!-- ::DataRisiko Anak Perusahaan Terkait -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">3</span>
+                    </span>
+                    <span class="h3 mb-0">Risiko Anak Perusahaan Terkait</span>
+                </div>
+            </div>
+            <div class="card-body">
+                @php
+                    $apRisks = $risiko->apRisks;
+                @endphp
+                
+                @if($apRisks && $apRisks->isNotEmpty())
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-bordered table-striped align-middle">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th width="5%" class="text-center">No</th>
+                                    <th width="20%">Anak Perusahaan</th>
+                                    <th>Peristiwa Risiko</th> <th width="15%" class="text-center">Level Risiko</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($apRisks as $index => $apRisk)
+                                <tr>
+                                    <td class="text-center">{{ $index + 1 }}</td>
+                                    <td>{{ $apRisk->unit->name ?? '-' }}</td>
+                                    <td>
+                                        <a href="{{ route('risk-register-ap.view', $apRisk->id) }}" target="_blank" class="text-primary fw-bold text-decoration-underline" title="Klik untuk melihat detail">
+                                            {{ $apRisk->peristiwa_risiko ?? '-' }} 
+                                            <i class='bx bx-link-external small ms-1'></i>
+                                        </a>
+                                    </td>
+                                    <td class="text-center bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($apRisk->riskAnalysis->level_risiko ?? '')))}}">
+                                        <span class="fw-bold">{{ $apRisk->riskAnalysis->level_risiko ?? '-' }}</span>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                        <i class="bx bx-info-circle me-2 fs-4"></i>
+                        <div>Tidak ada risiko anak perusahaan terkait.</div>
                     </div>
                 @endif
             </div>
@@ -370,7 +430,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">3</span>
+                        <span class="nav-item-circle">4</span>
                     </span>
                     <span class="h3 mb-0">Peristiwa Risiko</span>
                 </div>
@@ -405,7 +465,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">4</span>
+                        <span class="nav-item-circle">5</span>
                     </span>
                     <span class="h3 mb-0">Kontrol</span>
                 </div>
@@ -466,7 +526,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">5</span>
+                        <span class="nav-item-circle">6</span>
                     </span>
                     <span class="h3 mb-0">Penyebab Risiko</span>
                 </div>
@@ -531,7 +591,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">6</span>
+                        <span class="nav-item-circle">7</span>
                     </span>
                     <span class="h3 mb-0">Key Risk Indicator</span>
                 </div>
@@ -584,7 +644,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">7</span>
+                        <span class="nav-item-circle">8</span>
                     </span>
                     <span class="h3 mb-0">Analisa Risiko</span>
                 </div>
@@ -629,7 +689,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">8</span>
+                        <span class="nav-item-circle">9</span>
                     </span>
                     <span class="h3 mb-0">Pengukuran Risiko Inheren</span>
                 </div>
@@ -724,7 +784,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">{{ $i + 8 }}</span>
+                        <span class="nav-item-circle">{{ $i + 9 }}</span>
                     </span>
                     <span class="h3 mb-0">Pengukuran Risiko Residual - Quarter {{ $i }}</span>
                 </div>

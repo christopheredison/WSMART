@@ -142,10 +142,119 @@ class ICTController extends Controller
         return redirect()->route('ict.index')->with('success', 'Data ICT Plan berhasil disimpan');
     }
 
+    public function edit($id)
+    {
+        $this->authorize('ict_input');
+        
+        $ictPlan = ICTPlan::with('planControls')->findOrFail($id);
+
+        if (!in_array($ictPlan->status, ['draft', 'rejected'])) {
+            return redirect()->route('ict.index')->with('error', 'Data ini tidak dapat diedit karena statusnya sudah diproses.');
+        }
+
+        $types = [1 => 'Unit', 2 => 'Proyek'];
+        $identifikasiRisikos = IdentifikasiRisiko::select('id', 'peristiwa_risiko')->get();
+        $projectRisks = ProjectRisk::with('peristiwaRisiko')->get();
+
+        return view('ict.edit', compact('ictPlan', 'types', 'identifikasiRisikos', 'projectRisks'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $this->authorize('ict_input');
+        
+        $ictPlan = ICTPlan::findOrFail($id);
+
+        // Validasi input
+        $request->validate([
+            'sasaran_bumn' => 'required',
+            'type' => 'required|in:1,2',
+            'risiko_id' => 'required',
+            'business_process' => 'required',
+            'metode_pengujian' => 'required',
+            'key_control_id' => 'required|array',
+            'key_control' => 'required|array',
+            // 'ict_plan_control_id' => 'array'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $riskChanged = ($ictPlan->risiko_id != $request->risiko_id) || ($ictPlan->type != $request->type);
+
+            $ictPlan->update([
+                'sasaran_bumn' => $request->sasaran_bumn,
+                'risiko_id' => $request->risiko_id,
+                'type' => $request->type,
+                'business_process' => $request->business_process,
+                'metode_pengujian' => $request->metode_pengujian,
+                'status' => ($ictPlan->status == 'rejected') ? 'draft' : $ictPlan->status,
+            ]);
+
+            if ($riskChanged) {
+                // KASUS A: Risiko Berubah Total
+                // Hapus semua kontrol lama & testing terkait, buat baru
+                foreach($ictPlan->planControls as $control) {
+                    $control->dos()->delete();
+                    $control->delete();
+                }
+
+                // Buat baru
+                foreach ($request->key_control_id as $index => $keyControlId) {
+                    ICTPlanControl::create([
+                        'ict_plan_id' => $ictPlan->id,
+                        'key_control_id' => $keyControlId,
+                        'key_control' => $request->key_control[$index],
+                    ]);
+                }
+            } else {
+                // KASUS B: Risiko Sama (Hanya update teks atau susunan)
+                // Ambil semua ID yang ada di form (hidden input)
+                $submittedIds = array_filter($request->ict_plan_control_id ?? []);
+                
+                // Hapus control yang ada di DB tapi TIDAK ada di form submission (artinya user menghapus baris)
+                $controlsToDelete = ICTPlanControl::where('ict_plan_id', $ictPlan->id)
+                                    ->whereNotIn('id', $submittedIds)
+                                    ->get();
+                                    
+                foreach($controlsToDelete as $delControl) {
+                    $delControl->dos()->delete();
+                    $delControl->delete();
+                }
+
+                // Loop inputan user
+                foreach ($request->key_control_id as $index => $masterKeyId) {
+                    $currentId = isset($request->ict_plan_control_id[$index]) ? $request->ict_plan_control_id[$index] : null;
+
+                    if ($currentId) {
+                        // Update Existing
+                        ICTPlanControl::where('id', $currentId)->update([
+                            'key_control_id' => $masterKeyId,
+                            'key_control' => $request->key_control[$index],
+                        ]);
+                    } else {
+                        // Create New
+                        ICTPlanControl::create([
+                            'ict_plan_id' => $ictPlan->id,
+                            'key_control_id' => $masterKeyId,
+                            'key_control' => $request->key_control[$index],
+                        ]);
+                    }
+                }
+            }
+
+            DB::commit();
+            return redirect()->route('ict.show', $ictPlan->id)->with('success', 'Data ICT Plan berhasil diperbarui');
+        } catch (\Exception $e) {
+            DB::rollback();
+            return back()->with('error', 'Gagal update: ' . $e->getMessage());
+        }
+    }
+
     public function testing($id)
     {
         // Ambil data ICTPlan dengan relasi planControls
-        $ictPlan = ICTPlan::with(['planControls'])->findOrFail($id);
+        $ictPlan = ICTPlan::with(['planControls.latestDo'])->findOrFail($id);
         
         // Tentukan peristiwa risiko dan lokasi risiko berdasarkan type
         $peristiwaRisiko = '-';
@@ -178,59 +287,144 @@ class ICTController extends Controller
 
     public function storeTesting(Request $request, $id)
     {
-        // Validasi input
-        $request->validate([
-            'plan_control_id' => 'required|array',
-            'jenis_kontrol' => 'required|array',
-            'bentuk_kontrol' => 'required|array',
-            'level_pengendalian' => 'required|array',
-            'kecukupan_desain_pengendalian_1' => 'required|array',
-            'kecukupan_desain_pengendalian_2' => 'required|array',
-            'kecukupan_desain_pengendalian_3' => 'required|array',
-            'kecukupan_desain_pengendalian_4' => 'required|array',
-            'kecukupan_desain_pengendalian_akhir' => 'required|array',
-            'efektivitas_desain_pengendalian_1' => 'required|array',
-            'efektivitas_desain_pengendalian_2' => 'required|array',
-            'efektivitas_desain_pengendalian_3' => 'required|array',
-            'efektivitas_desain_pengendalian_akhir' => 'required|array',
-            'kesimpulan_akhir' => 'required|array',
-            'hasil_temuan' => 'required|array',
-            'rencana_tindak_lanjut' => 'required|array',
-            'batas_waktu_penyelesaian' => 'required|array',
-            'penanggung_jawab' => 'required|array',
-            'penanggung_jawab_jabatan_id' => 'required|array',
-        ]);
-        
-        // Simpan data ICTDo untuk setiap key control
-        foreach ($request->plan_control_id as $index => $planControlId) {
-            $jabatan = \App\Models\Jabatan::find($request->penanggung_jawab_jabatan_id[$index]);
-            $penanggungJawab = $jabatan ? $jabatan->name : $request->penanggung_jawab[$index];
+        $action = $request->input('action'); // 'draft' atau 'submit'
 
-            ICTDo::create([
-                'plan_control_id' => $planControlId,
-                'jenis_kontrol' => $request->jenis_kontrol[$index],
-                'bentuk_kontrol' => $request->bentuk_kontrol[$index],
-                'level_pengendalian' => $request->level_pengendalian[$index],
-                'kecukupan_desain_pengendalian_1' => $request->kecukupan_desain_pengendalian_1[$index],
-                'kecukupan_desain_pengendalian_2' => $request->kecukupan_desain_pengendalian_2[$index],
-                'kecukupan_desain_pengendalian_3' => $request->kecukupan_desain_pengendalian_3[$index],
-                'kecukupan_desain_pengendalian_4' => $request->kecukupan_desain_pengendalian_4[$index],
-                'kecukupan_desain_pengendalian_akhir' => $request->kecukupan_desain_pengendalian_akhir[$index],
-                'efektivitas_desain_pengendalian_1' => $request->efektivitas_desain_pengendalian_1[$index],
-                'efektivitas_desain_pengendalian_2' => $request->efektivitas_desain_pengendalian_2[$index],
-                'efektivitas_desain_pengendalian_3' => $request->efektivitas_desain_pengendalian_3[$index],
-                'efektivitas_desain_pengendalian_akhir' => $request->efektivitas_desain_pengendalian_akhir[$index],
-                'kesimpulan_akhir' => $request->kesimpulan_akhir[$index],
-                'hasil_temuan' => $request->hasil_temuan[$index],
-                'rencana_tindak_lanjut' => $request->rencana_tindak_lanjut[$index],
-                'batas_waktu_penyelesaian' => $request->batas_waktu_penyelesaian[$index],
-                'penanggung_jawab' => $penanggungJawab,
-                'penanggung_jawab_jabatan_id' => $request->penanggung_jawab_jabatan_id[$index],
-                //'penanggung_jawab' => $request->penanggung_jawab[$index],
-            ]);
+        // 1. Definisi Rules Dasar
+        $rules = [
+            'plan_control_id'   => 'required|array',
+            'plan_control_id.*' => 'required|exists:ict_plan_controls,id',
+        ];
+
+        // 2. List field yang akan divalidasi
+        $fields = [
+            'jenis_kontrol',
+            'bentuk_kontrol',
+            'level_pengendalian',
+            'kecukupan_desain_pengendalian_1',
+            'kecukupan_desain_pengendalian_2',
+            'kecukupan_desain_pengendalian_3',
+            'kecukupan_desain_pengendalian_4',
+            'kecukupan_desain_pengendalian_akhir',
+            'efektivitas_desain_pengendalian_1',
+            'efektivitas_desain_pengendalian_2',
+            'efektivitas_desain_pengendalian_3',
+            'efektivitas_desain_pengendalian_akhir',
+            'kesimpulan_akhir',
+            'hasil_temuan',
+            'rencana_tindak_lanjut',
+            'batas_waktu_penyelesaian',
+            // 'penanggung_jawab_jabatan_id' // Kita validasi manual di bawah agar lebih fleksibel
+        ];
+
+        // 3. Generate Rules untuk Array
+        foreach ($fields as $field) {
+            // Pastikan field dikirim sebagai array
+            $rules[$field] = 'array';
+
+            if ($action === 'draft') {
+                // Draft: Isinya boleh null/kosong
+                $rules["{$field}.*"] = 'nullable';
+            } else {
+                // Submit: Isinya WAJIB terisi
+                $rules["{$field}.*"] = 'required';
+            }
         }
-        
-        return redirect()->route('ict.index')->with('success', 'Data pengujian ICT Plan berhasil disimpan');
+
+        // 4. Validasi Spesifik (Opsional tapi disarankan)
+        if ($action !== 'draft') {
+            // Validasi format tanggal untuk batas waktu
+            $rules['batas_waktu_penyelesaian.*'] = 'required|date'; 
+        }
+
+        // Jalankan Validasi
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules);
+
+        // Custom Validation untuk Penanggung Jawab (karena ada logic OR)
+        $validator->after(function ($validator) use ($request, $action) {
+            if ($action !== 'draft' && $request->has('plan_control_id')) {
+                foreach ($request->plan_control_id as $key => $val) {
+                    $jabatanId = $request->penanggung_jawab_jabatan_id[$key] ?? null;
+                    $manualName = $request->penanggung_jawab[$key] ?? null;
+
+                    // Jika SUBMIT, salah satu dari Jabatan atau Nama Manual harus diisi
+                    if (empty($jabatanId) && empty($manualName)) {
+                        $validator->errors()->add("penanggung_jawab.{$key}", "Penanggung Jawab pada baris ke-" . ($key + 1) . " wajib diisi.");
+                    }
+                }
+            }
+        });
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with('error', 'Mohon lengkapi data yang wajib diisi.');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            foreach ($request->plan_control_id as $index => $planControlId) {
+                
+                // Logic Penanggung Jawab
+                $penanggungJawabName = null;
+                $jabatanId = $request->penanggung_jawab_jabatan_id[$index] ?? null;
+
+                if ($jabatanId) {
+                    $jabatan = \App\Models\Jabatan::find($jabatanId);
+                    $penanggungJawabName = $jabatan ? $jabatan->name : null;
+                } else {
+                    $penanggungJawabName = $request->penanggung_jawab[$index] ?? null;
+                }
+
+                $getValue = function($fieldName) use ($request, $index) {
+                    return isset($request->{$fieldName}[$index]) ? $request->{$fieldName}[$index] : null;
+                };
+
+                ICTDo::updateOrCreate(
+                    ['plan_control_id' => $planControlId], 
+                    [
+                        'jenis_kontrol' => $getValue('jenis_kontrol'),
+                        'bentuk_kontrol' => $getValue('bentuk_kontrol'),
+                        'level_pengendalian' => $getValue('level_pengendalian'),
+                        
+                        'kecukupan_desain_pengendalian_1' => $getValue('kecukupan_desain_pengendalian_1'),
+                        'kecukupan_desain_pengendalian_2' => $getValue('kecukupan_desain_pengendalian_2'),
+                        'kecukupan_desain_pengendalian_3' => $getValue('kecukupan_desain_pengendalian_3'),
+                        'kecukupan_desain_pengendalian_4' => $getValue('kecukupan_desain_pengendalian_4'),
+                        'kecukupan_desain_pengendalian_akhir' => $getValue('kecukupan_desain_pengendalian_akhir'),
+                        
+                        'efektivitas_desain_pengendalian_1' => $getValue('efektivitas_desain_pengendalian_1'),
+                        'efektivitas_desain_pengendalian_2' => $getValue('efektivitas_desain_pengendalian_2'),
+                        'efektivitas_desain_pengendalian_3' => $getValue('efektivitas_desain_pengendalian_3'),
+                        'efektivitas_desain_pengendalian_akhir' => $getValue('efektivitas_desain_pengendalian_akhir'),
+                        
+                        'kesimpulan_akhir' => $getValue('kesimpulan_akhir'),
+                        'hasil_temuan' => $getValue('hasil_temuan'),
+                        'rencana_tindak_lanjut' => $getValue('rencana_tindak_lanjut'),
+                        'batas_waktu_penyelesaian' => $getValue('batas_waktu_penyelesaian'),
+                        
+                        'penanggung_jawab' => $penanggungJawabName,
+                        'penanggung_jawab_jabatan_id' => $jabatanId,
+                    ]
+                );
+            }
+
+            // Jika action submit, kita bisa update status parent
+            if ($action !== 'draft') {
+                // Optional: Update status ICTPlan jika semua sudah diisi
+                // ICTPlan::where('id', $id)->update(['status' => 'pending_approval']);
+            }
+
+            DB::commit();
+
+            $message = ($action === 'draft') 
+                ? 'Draft pengujian berhasil diperbarui.' 
+                : 'Data pengujian ICT Plan berhasil disimpan.';
+
+            return redirect()->route('ict.index')->with('success', $message);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
+        }
     }
 
     public function report($id)

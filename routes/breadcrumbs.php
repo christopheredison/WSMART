@@ -540,3 +540,40 @@ Breadcrumbs::for('penilaian-rmi.aspek-kinerja', function (BreadcrumbTrail $trail
     $trail->parent('penilaian-rmi.show', $id);
     $trail->push('Aspek Kinerja', route('penilaian-rmi.aspek-kinerja', $id));
 });
+
+// ICT Plan (Halaman Utama / Index)
+Breadcrumbs::for('ict.index', function (BreadcrumbTrail $trail) {
+    $trail->push('ICT Plan', route('ict.index'));
+});
+
+// Tambah ICT Plan
+Breadcrumbs::for('ict.create', function (BreadcrumbTrail $trail) {
+    $trail->parent('ict.index');
+    $trail->push('Tambah ICT Plan', route('ict.create'));
+});
+
+// Detail ICT Plan
+Breadcrumbs::for('ict.show', function (BreadcrumbTrail $trail, $ictPlan) {
+    $trail->parent('ict.index');
+    $trail->push('Detail ICT Plan', route('ict.show', $ictPlan));
+});
+
+// Edit ICT Plan
+Breadcrumbs::for('ict.edit', function (BreadcrumbTrail $trail, $ictPlan) {
+    $trail->parent('ict.show', $ictPlan);
+    $trail->push('Edit ICT Plan', route('ict.edit', $ictPlan));
+});
+
+// Testing ICT Plan
+// Hierarki: Index -> Detail -> Testing
+Breadcrumbs::for('ict.testing', function (BreadcrumbTrail $trail, $ictPlan) {
+    $trail->parent('ict.show', $ictPlan);
+    $trail->push('Testing', route('ict.testing', $ictPlan));
+});
+
+// Report ICT Plan
+// Hierarki: Index -> Detail -> Report
+Breadcrumbs::for('ict.report', function (BreadcrumbTrail $trail, $ictPlan) {
+    $trail->parent('ict.show', $ictPlan);
+    $trail->push('Report', route('ict.report', $ictPlan));
+});
