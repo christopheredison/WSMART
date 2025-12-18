@@ -8,7 +8,7 @@
             <h3 class="mb-0">Detail Risiko Project: {{ $projectRisk->peristiwaRisiko?->title ?? 'N/A' }}</h3>
         </div>
     </div>
-    
+
     <div class="card mt-5">
         <div class="card-header stepper border-0 pb-0">
             <div class="nav-link active d-flex align-items-center p-0">
@@ -74,7 +74,7 @@
                                 </tr>
                             </tbody>
                         </table>
-                        
+
                         <!-- begin::Legend -->
                         <div class="risk-map-legend d-flex flex-center gap-3">
                             <div class="d-flex align-items-center gap-1">
@@ -153,7 +153,7 @@
                                 </tr>
                             </tbody>
                         </table>
-                        
+
                         <!-- begin::Legend -->
                         <div class="risk-map-legend d-flex flex-center gap-3">
                             <div class="d-flex align-items-center gap-1">
@@ -200,28 +200,28 @@
                                 <td>{{ $projectRisk->deskripsi_peristiwa_risiko ?? '-' }}</td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak, 0, ',', '.') : '-' }}</td>
                                 <td>
-                                    {{ $projectRisk->projectRiskAnalisa?->skalaDampakObj?->tingkat 
-                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaDampakObj?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaDampakObj?->deskripsi 
+                                    {{ $projectRisk->projectRiskAnalisa?->skalaDampakObj?->tingkat
+                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaDampakObj?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaDampakObj?->deskripsi
                                         : '-' }}
                                 </td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->nilai_probabilitas ?? '-' }}</td>
                                 <td>
-                                    {{ $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->tingkat 
-                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->skala 
+                                    {{ $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->tingkat
+                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->skala
                                         : '-' }}
                                 </td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->skala_risiko ?? '-' }}</td>
                                 <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko ?? '-' }}</td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak_residual ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak_residual, 0, ',', '.') : '-' }}</td>
                                 <td>
-                                    {{ $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat 
-                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->deskripsi 
+                                    {{ $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat
+                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->deskripsi
                                         : '-' }}
                                 </td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->nilai_probabilitas_residual ?? '-' }}</td>
                                 <td>
-                                    {{ $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat 
-                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->skala 
+                                    {{ $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat
+                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->skala
                                         : '-' }}
                                 </td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->skala_risiko_residual ?? '-' }}</td>
@@ -342,19 +342,19 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group mb-4">
+                        {{-- <div class="form-group mb-4">
                             <label class="form-label fw-bold">Penilaian Efektivitas Kontrol</label>
                             <div class="p-3 bg-light rounded">
                                 {{ optional($projectRisk->penilaianEfektivitasKontrolObj)->efektivitas_kontrol ?? '-' }}
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="form-group mb-4">
                             <label class="form-label fw-bold">Perkiraan Waktu Mulai Terpapar Risiko</label>
                             <div class="p-3 bg-light rounded">
                                 {{ $projectRisk->perkiraan_waktu_terpapar_risiko_mulai ? \Carbon\Carbon::parse($projectRisk->perkiraan_waktu_terpapar_risiko_mulai)->format('d F Y') : '-' }}
                             </div>
                         </div>
-                        
+
                         <div class="form-group mb-4">
                             <label class="form-label fw-bold">Perkiraan Waktu Selesai Terpapar Risiko</label>
                             <div class="p-3 bg-light rounded">
@@ -618,7 +618,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     @if($analisa->kategori_dampak === \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF)
                         <div class="col-12">
                             <div class="form-group mb-4">
@@ -895,7 +895,7 @@
 $(document).ready(function () {
     const risks = [@json($projectRisk)]; // Buat jadi array berisi 1 objek
     const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
-    
+
     function initializeMaps() {
         $('#inherentMap .kode-peristiwa, #currentMap .kode-peristiwa').empty();
 

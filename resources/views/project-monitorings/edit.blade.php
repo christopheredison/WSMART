@@ -67,6 +67,11 @@
                                 <label for="">Skala Dampak Inherent</label>
                             </div>
                             <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text"
+                                value="{{ $projectRiskAnalisa->skalaParameterObj ? $projectRiskAnalisa->skalaParameterObj->type_parameter . ' - ' . $projectRiskAnalisa->skalaParameterObj->skala : '-' }}">
+                                <label>Parameter Probabilitas Inherent</label>
+                            </div>
+                            <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="nilai_probabilitas_inherent"
                                 value="{{ $projectRiskAnalisa->nilai_probabilitas }}">
                                 <label for="">Nilai Probabilitas Inherent (%)</label>
@@ -122,6 +127,11 @@
                                 name="target_skala_dampak"
                                 value="{{ $projectRiskAnalisa->skalaDampakResidualObj ? $projectRiskAnalisa->skalaDampakResidualObj->tingkat . ' - ' . $projectRiskAnalisa->skalaDampakResidualObj->deskripsi : '-' }}">
                                 <label for="">Target Skala Dampak</label>
+                            </div>
+                            <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text"
+                                value="{{ $projectRiskAnalisa->skalaParameterResidualObj ? $projectRiskAnalisa->skalaParameterResidualObj->type_parameter . ' - ' . $projectRiskAnalisa->skalaParameterResidualObj->skala : '-' }}">
+                                <label>Target Parameter Probabilitas</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" id="target_nilai_probabilitas"
@@ -204,6 +214,28 @@
                                 <label for="">Realisasi Skala Dampak</label>
                             </div>
                             <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text"
+                                value="{{ $selectedParameterType ?? '-' }}">
+                                <label>Realisasi Parameter Probabilitas</label>
+                            </div>
+                            <div class="form-floating">
+                                <select class="form-select update-trigger" name="realisasi_skala_parameter_id" id="realisasi_skala_parameter_id" required>
+                                    <option value="" selected disabled>Pilih Parameter</option>
+                                    @if($selectedParameterType && isset($groupedSkalaParameters[$selectedParameterType]))
+                                        @foreach($groupedSkalaParameters[$selectedParameterType] as $param)
+                                            <option value="{{ $param->id }}"
+                                                data-min="{{ $param->min }}"
+                                                data-max="{{ $param->max }}"
+                                                data-tingkat="{{ $param->tingkat }}"
+                                                {{ ($riskMonitoring?->skala_parameter_id == $param->id) ? 'selected' : '' }}>
+                                                {{ $param->tingkat }} - {{ $param->skala }}
+                                            </option>
+                                        @endforeach
+                                    @endif
+                                </select>
+                                <label for="">Realisasi Skala Probabilitas</label>
+                            </div>
+                            <div class="form-floating">
                                 <input
                                   class="form-control update-trigger"
                                   type="number"
@@ -248,7 +280,7 @@
         <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
-                    <h4 class="mb-0 ff-heading-sm">Realisasi Penanganan Risiko</h4>
+                    <h4 class="mb-0 ff-heading-sm">Realisasi Perlakuan Risiko</h4>
                 </div>
             </div>
 
@@ -727,6 +759,55 @@ $(document).ready(function() {
     //         $(this).val(nilaiProbabilitasInherent).trigger('change');
     //     }
     // });
+
+    $('#realisasi_skala_parameter_id').on('change', function() {
+        const $selectedOption = $(this).find('option:selected');
+        const min = parseFloat($selectedOption.data('min'));
+        const max = parseFloat($selectedOption.data('max'));
+        const $inputProb = $('#realisasi_nilai_probabilitas');
+
+        if (!isNaN(min) && !isNaN(max)) {
+            // Set atribut biar user tau (optional)
+            $inputProb.attr('min', min);
+            $inputProb.attr('max', max);
+
+            // Trigger validasi nilai jika sudah ada isinya
+            if ($inputProb.val() !== '') {
+                $inputProb.trigger('blur');
+            }
+        }
+    });
+
+    // 2. Validasi Nilai Probabilitas saat diketik/blur
+    $('#realisasi_nilai_probabilitas').on('blur', function() {
+        const $input = $(this);
+        let currentValue = parseFloat($input.val());
+        if (isNaN(currentValue)) return;
+
+        const $scaleSelect = $('#realisasi_skala_parameter_id');
+        const $selectedOption = $scaleSelect.find('option:selected');
+
+        // Jika belum pilih parameter, skip validasi range spesifik (atau paksa user pilih dulu)
+        if (!$selectedOption.val()) return;
+
+        const min = parseFloat($selectedOption.data('min'));
+        const max = parseFloat($selectedOption.data('max'));
+
+        let correctedValue = null;
+
+        if (!isNaN(min) && currentValue < min) correctedValue = min;
+        if (!isNaN(max) && currentValue > max) correctedValue = max;
+
+        if (correctedValue !== null) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: `Nilai probabilitas untuk parameter ini harus berada di antara ${min}% dan ${max}%. Nilai otomatis disesuaikan.`,
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            $input.val(correctedValue).trigger('change');
+        }
+    });
 
     $('#section-realisasi').on('change', '.update-trigger', function() {
         refreshSkalaAndLevelRisiko();

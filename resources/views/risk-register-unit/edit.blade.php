@@ -42,7 +42,7 @@
                                 <label for="target_capaian_kinerja">Sasaran</label>
                             </div>
                         </div>
-                        <div class="col-12">
+                        {{-- <div class="col-12">
                             <div class="form-group d-lg-flex">
                                 <div class="form-floating flex-grow-1">
                                     <select class="form-select select2" id="jenis_risiko_id" name="jenis_risiko_id" required>
@@ -60,7 +60,7 @@
                                     <label for="jenis_risiko_id">Jenis Risiko T2 & T3 KBUMN</label>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="col-12">
                             <div class="form-group form-floating">
                                 <textarea class="form-control" id="peristiwa_risiko" name="peristiwa_risiko" rows="3" placeholder="Peristiwa Risiko" required>{{ $identifikasiRisiko->peristiwa_risiko }}</textarea>
@@ -84,7 +84,7 @@
             </div>
         </div>
         <!-- ::DataRisiko End -->
-        
+
         <!-- ::Peristiwa Risiko Start -->
         {{-- <div class="col-12">
             <div class="card">
@@ -115,7 +115,7 @@
             </div>
         </div> --}}
         <!-- ::Peristiwa Risiko End -->
-        
+
         <!-- ::Penyebab Risiko Start -->
         <div class="col-12">
             <div class="card">
@@ -328,7 +328,7 @@
                 <div class="card-body">
                     <div class="row gy-3 gx-xxl-6 mb-3">
                         <div class="col-md-6 col-lg-5 col-xxl-6">
-                            <div class="form-group d-lg-flex mb-4">
+                            {{-- <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Jenis Kontrol Eksisting</label>
                                 <select name="jenis_kontrol_eksisting_id" class="form-select select2">
                                     <option value="" selected disabled>Jenis Kontrol Eksisting</option>
@@ -337,7 +337,7 @@
                                             {{ $jenisKontrolEksisting->jenis_kontrol }}</option>
                                     @endforeach
                                 </select>
-                            </div>
+                            </div> --}}
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Kontrol Eksisting</label>
                                 <div class="w-100">
@@ -378,7 +378,7 @@
                             </div>
                         </div>
                         <div class="col-md-6 col-lg-7 col-xxl-6">
-                            <div class="form-group d-lg-flex mb-4">
+                            {{-- <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Penilaian Efektivitas
                                     Kontrol</label>
                                 <select class="form-select select2" name="penilaian_efektifitas_kontrol">
@@ -388,7 +388,7 @@
                                             {{ $efektivitasKontrol->efektivitas_kontrol }}</option>
                                     @endforeach
                                 </select>
-                            </div>
+                            </div> --}}
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker2">Perkiraan Waktu Mulai Terpapar Risiko</label>
                                 <input class="form-control datetimepicker" name="perkiraan_waktu_mulai_terpapar_risiko"
@@ -427,7 +427,7 @@
                                 <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalPilihRisikoProyek">
                                     <span class="bx bx-plus"></span> Pilih Risiko Proyek
                                 </button>
-                                
+
                                 <div class="table-responsive">
                                     <table class="table table-bordered align-middle" id="tabelRisikoProyekTerpilih">
                                         <thead class="bg-light">
@@ -479,10 +479,10 @@
                                             @php
                                                 $penyebabs = $risk->penyebabRisikoProjects;
                                                 $count = $penyebabs->count() > 0 ? $penyebabs->count() : 1;
-                                                
+
                                                 $penyebabList = $penyebabs->pluck('penyebab_risiko')->toArray();
                                                 if(empty($penyebabList)) $penyebabList = ['-'];
-                                                
+
                                                 // Nilai Risiko
                                                 $nilaiRisiko = $risk->projectRiskAnalisa->skala_risiko ?? '-';
 
@@ -492,12 +492,12 @@
                                             <tr class="risk-row">
                                                 <td rowspan="{{ $count }}" class="text-center bg-white">
                                                     <div class="form-check d-flex justify-content-center">
-                                                        <input class="form-check-input pilih-risiko" type="checkbox" 
-                                                            value="{{ $risk->id }}" 
-                                                            id="risk-{{ $risk->id }}" 
+                                                        <input class="form-check-input pilih-risiko" type="checkbox"
+                                                            value="{{ $risk->id }}"
+                                                            id="risk-{{ $risk->id }}"
                                                             data-project-id="{{ $risk->project_periode_list_id }}"
-                                                            data-project="{{ $risk->project->project_name }}" 
-                                                            data-peristiwa="{{ $risk->deskripsi_peristiwa_risiko }}" 
+                                                            data-project="{{ $risk->project->project_name }}"
+                                                            data-peristiwa="{{ $risk->deskripsi_peristiwa_risiko }}"
                                                             data-level="{{ $risk->level_risiko }}"
                                                             data-nilai="{{ $nilaiRisiko }}"
                                                             data-penyebab='{{ json_encode($penyebabList) }}'
@@ -581,18 +581,18 @@
         filter = input.value.toUpperCase();
         table = document.getElementById("tabelRisikoProyek");
         tr = table.getElementsByTagName("tr");
-        
+
         var currentParentVisible = false;
 
         for (i = 1; i < tr.length; i++) {
             if (tr[i].classList.contains("risk-row")) {
                 tdProject = tr[i].getElementsByTagName("td")[1];
                 tdPeristiwa = tr[i].getElementsByTagName("td")[2];
-                
+
                 if (tdProject && tdPeristiwa) {
                     txtValueProject = tdProject.textContent || tdProject.innerText;
                     txtValuePeristiwa = tdPeristiwa.textContent || tdPeristiwa.innerText;
-                    
+
                     if (txtValueProject.toUpperCase().indexOf(filter) > -1 || txtValuePeristiwa.toUpperCase().indexOf(filter) > -1) {
                         tr[i].style.display = "";
                         currentParentVisible = true;
@@ -609,7 +609,7 @@
                 }
             }
         }
-        
+
         var visibleRows = table.querySelectorAll('tr[style="display: ;"], tr:not([style="display: none;"])');
         if(visibleRows.length <= 1) {
             document.getElementById("noDataMessage").style.display = "block";
@@ -645,7 +645,7 @@
             </div>
             `;
             $('#penyebab-risiko-body').append(html);
-            
+
             // Enable all delete buttons when we have more than one row
             if ($('#penyebab-risiko-body .row').length > 1) {
                 $('#penyebab-risiko-body .btn-icon-danger').prop('disabled', false);
@@ -656,7 +656,7 @@
         $('#add-column-kri').click(function() {
             row++;
             const peristiwaRisikoId = $('#peristiwa_risiko').val();
-            
+
             let html = `
                 <div class="row g-2">
                     <div class="col-12 col-lg-11">
@@ -725,7 +725,7 @@
             row.find('[name="batas_waspada[]"]').val(kri.batas_waspada);
             row.find('[name="batas_bahaya[]"]').val(kri.batas_bahaya);
         });
-        
+
         var periodeYear = {{ $selectedPeriode->tahun }};
         console.log('Periode Year:', periodeYear);
 
@@ -760,7 +760,7 @@
             const form = $('#main-form');
             const url = form.attr('action');
             const data = new FormData(form[0]);
-            
+
             data.append('action', action);
 
             // Tampilkan konfirmasi sebelum mengirim request
@@ -843,7 +843,7 @@
                 </div>
             `;
             $('#kontrol-eksisting-body').append(html);
-            
+
             // Enable all delete buttons when we have more than one row
             if ($('#kontrol-eksisting-body .row').length > 1) {
                 $('#kontrol-eksisting-body .btn-icon-danger').prop('disabled', false);
@@ -854,7 +854,7 @@
     function removeKontrolRow(event) {
         let row = $(event.target).closest('.row');
         row.remove();
-        
+
         // If only one row remains, disable its delete button
         if ($('#kontrol-eksisting-body .row').length === 1) {
             $('#kontrol-eksisting-body .btn-icon-danger').prop('disabled', true);
@@ -864,7 +864,7 @@
     $(document).ready(function() {
         // Array untuk menyimpan risiko proyek yang dipilih
         let selectedRisks = [];
-        
+
         // Inisialisasi array dengan data yang sudah ada
         @if(isset($identifikasiRisiko->projectRisks))
             @foreach($identifikasiRisiko->projectRisks as $risk)
@@ -873,7 +873,7 @@
                     if(empty($existingPenyebabs)) $existingPenyebabs = ['-'];
                     $existingNilai = $risk->projectRiskAnalisa->skala_risiko ?? '-';
                 @endphp
-                
+
                 selectedRisks.push({
                     id: '{{ $risk->id }}',
                     projectId: '{{ $risk->project_periode_list_id }}',
@@ -885,13 +885,13 @@
                 });
             @endforeach
         @endif
-        
+
         updateSelectedRisksTable();
 
         // Event Handler Tombol Pilih di Modal
         $('#btnPilihRisiko').on('click', function() {
             let tempSelectedIds = [];
-            
+
             $('.pilih-risiko:checked').each(function() {
                 const riskId = $(this).val();
                 tempSelectedIds.push(riskId);
@@ -910,16 +910,16 @@
             });
 
             selectedRisks = selectedRisks.filter(risk => tempSelectedIds.includes(risk.id));
-            
+
             updateSelectedRisksTable();
             $('#modalPilihRisikoProyek').modal('hide');
         });
-        
+
         // Fungsi Render Tabel Terpilih
         function updateSelectedRisksTable() {
             const tbody = $('#tabelRisikoProyekTerpilih tbody');
             tbody.empty();
-            
+
             if (selectedRisks.length === 0) {
                 tbody.html('<tr><td colspan="6" class="text-center text-muted">Belum ada risiko proyek yang dipilih.</td></tr>');
                 return;
@@ -980,9 +980,9 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         selectedRisks.splice(index, 1);
-                        
+
                         $(`#risk-${riskIdToRemove}`).prop('checked', false);
-                        
+
                         updateSelectedRisksTable();
                     }
                 });

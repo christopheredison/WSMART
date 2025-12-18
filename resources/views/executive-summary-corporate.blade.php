@@ -115,7 +115,7 @@
                         <span class="fw-bold fs-5 text-warning">Rp {{ number_format($summaryData['eksposur_risiko_annual'] ?? 0, 0, ',', '.') }}</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span class="text-muted">Residual Realisasi Total s/d {{ $formattedPeriod }}</span>
+                        <span class="text-muted">Residual Residual Total s/d {{ $formattedPeriod }}</span>
                         <span class="fw-bold fs-5 text-warning">Rp {{ number_format($summaryData['eksposur_risiko_total'] ?? 0, 0, ',', '.') }}</span>
                     </li>
                 </ul>
@@ -217,7 +217,7 @@
                 </div>
                 <div class="table-risk-map" id="currentMap">
                     <table class="map-table">
-                        <tbody> 	
+                        <tbody>
                             @for($likelihood = 5; $likelihood >= 1; $likelihood--)
                             <tr>
                                 @if ($likelihood == 5)
@@ -246,7 +246,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
             <h3 class="h4 mb-0">Daftar Risiko (Level Inheren: Moderate to High & High)</h3>
         </div>
@@ -345,8 +345,8 @@
                             @php
                                 $statusClass = '';
                                 $statusNumeric = $kri['status'] ?? 0;
-                                if ($statusNumeric == 3) { $statusClass = 'red'; } 
-                                elseif ($statusNumeric == 2) { $statusClass = 'yellow'; } 
+                                if ($statusNumeric == 3) { $statusClass = 'red'; }
+                                elseif ($statusNumeric == 2) { $statusClass = 'yellow'; }
                                 elseif ($statusNumeric == 1) { $statusClass = 'green'; }
                             @endphp
                             <div class="status-container {{ $statusClass }}"><div class="status-green"></div><div class="status-yellow"></div><div class="status-red"></div></div>
@@ -393,8 +393,8 @@
                             @php
                                 $statusClass = '';
                                 $statusNumeric = $kri['status'] ?? 0;
-                                if ($statusNumeric == 3) { $statusClass = 'red'; } 
-                                elseif ($statusNumeric == 2) { $statusClass = 'yellow'; } 
+                                if ($statusNumeric == 3) { $statusClass = 'red'; }
+                                elseif ($statusNumeric == 2) { $statusClass = 'yellow'; }
                                 elseif ($statusNumeric == 1) { $statusClass = 'green'; }
                             @endphp
                             <div class="status-container {{ $statusClass }}"><div class="status-green"></div><div class="status-yellow"></div><div class="status-red"></div></div>
@@ -441,8 +441,8 @@
                             @php
                                 $statusClass = '';
                                 $statusNumeric = $kri['status'] ?? 0;
-                                if ($statusNumeric == 3) { $statusClass = 'red'; } 
-                                elseif ($statusNumeric == 2) { $statusClass = 'yellow'; } 
+                                if ($statusNumeric == 3) { $statusClass = 'red'; }
+                                elseif ($statusNumeric == 2) { $statusClass = 'yellow'; }
                                 elseif ($statusNumeric == 1) { $statusClass = 'green'; }
                             @endphp
                             <div class="status-container {{ $statusClass }}"><div class="status-green"></div><div class="status-yellow"></div><div class="status-red"></div></div>
@@ -489,8 +489,8 @@
                             @php
                                 $statusClass = '';
                                 $statusNumeric = $kri['status'] ?? 0;
-                                if ($statusNumeric == 3) { $statusClass = 'red'; } 
-                                elseif ($statusNumeric == 2) { $statusClass = 'yellow'; } 
+                                if ($statusNumeric == 3) { $statusClass = 'red'; }
+                                elseif ($statusNumeric == 2) { $statusClass = 'yellow'; }
                                 elseif ($statusNumeric == 1) { $statusClass = 'green'; }
                             @endphp
                             <div class="status-container {{ $statusClass }}"><div class="status-green"></div><div class="status-yellow"></div><div class="status-red"></div></div>
@@ -787,7 +787,7 @@
 <script type="text/javascript">
 document.addEventListener('DOMContentLoaded', function() {
     // Inisialisasi Peta Risiko dan Chart
-    const highImpactRisksJs = @json($highImpactRisksJs ?? []); 
+    const highImpactRisksJs = @json($highImpactRisksJs ?? []);
     const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps ?? []);
     const currentYear = '{{ $currentYear }}';
 
@@ -799,7 +799,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const matrixI = risk.risk_analysis.skala_dampak + '-' + risk.risk_analysis.skala_probabilitas?.tingkat;
                 const cellI = $(`#inherentMap .data-cell[data-matrix="${matrixI}"]`);
                 if (cellI.length) cellI.find('.kode-peristiwa').append(`<span class="box-inherent">${riskNumber}</span>`);
-                
+
                 const matrixR = risk.risk_analysis.skala_dampak_residual + '-' + risk.risk_analysis.skala_probabilitas_residual?.tingkat;
                 const cellR = $(`#inherentMap .data-cell[data-matrix="${matrixR}"]`);
                 if (cellR.length) cellR.find('.kode-peristiwa').append(`<span class="box-residual">${riskNumber}</span>`);
@@ -812,7 +812,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedMonth = {{ $currentMonth }}; // Bulan sudah ditetapkan dari controller
         const selectedYear = currentYear;
         $('#currentMap .kode-peristiwa').empty();
-        
+
         Object.values(highImpactRisksJs).forEach(risk => {
             const riskId = risk.id;
             const riskNumber = 'R' + risk.nomor_urut_js;
@@ -823,7 +823,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const matrixC = currentData.skala_dampak + '-' + currentData.skala_probabilitas;
                 const cellC = $(`#currentMap .data-cell[data-matrix="${matrixC}"]`);
                 if (cellC.length) cellC.find('.kode-peristiwa').append(`<span class="box-current">${riskNumber}</span>`);
-                
+
                 const levelClass = (currentData.level_risiko_formatted || '').toLowerCase().replace(/ /g, '-').replace('to-', '');
                 const td = tableRow.find('.realisasi-level-risiko');
 
@@ -832,7 +832,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 tableRow.find('.realisasi-nilai-probabilitas').html((currentData.nilai_probabilitas_formatted || '-') + '%');
                 tableRow.find('.realisasi-skala-probabilitas').html(currentData.skala_probabilitas_obj?.tingkat || '-');
                 tableRow.find('.realisasi-nilai-risiko').html(currentData.nilai_risiko_formatted);
-                
+
                 td.html(currentData.level_risiko_formatted || '-');
                 td.removeClass('bg-high bg-moderate-high bg-moderate bg-low-moderate bg-low');
                 if (levelClass) {
@@ -867,7 +867,7 @@ document.addEventListener('DOMContentLoaded', function() {
         myChart.setOption(option, true);
         window.addEventListener('resize', () => myChart.resize());
     }
-    
+
     if (efektivitasData.length > 0 && efektivitasData.some(item => item.value > 0)) {
         fillEfektivitasChart(efektivitasData);
     } else {
