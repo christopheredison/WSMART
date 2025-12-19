@@ -39,7 +39,7 @@ class PenilaianRMIController extends Controller
         // Ambil data periode RMI
         //$periods = RMIPeriod::orderBy('year', 'desc')->get();
         $periods = RMIPeriod::orderBy('year', 'desc')
-               ->paginate(10);
+              ->paginate(10);
         
         // Tambahkan status untuk setiap periode
         foreach ($periods as $period) {
@@ -50,8 +50,11 @@ class PenilaianRMIController extends Controller
                 $period->status_text = 'Selesai';
             }
         }
+
+        $skalaKinerjas = SkalaKinerja::orderBy('id', 'asc')->get();
+        $skalaKpmrs    = SkalaKPMR::orderBy('id', 'asc')->get();
         
-        return view('penilaian-rmi.index', compact('periods'));
+        return view('penilaian-rmi.index', compact('periods', 'skalaKinerjas', 'skalaKpmrs'));
     }
     
     /**
@@ -1078,19 +1081,108 @@ class PenilaianRMIController extends Controller
 
     public function updatePenilaian(Request $request, RMIPeriod $period)
     {
-        $validated = $request->validate([
-            'penilaian' => 'nullable|string|max:255',
-            'tahun_dinilai'  => 'nullable|integer|digits:4',
-            'tipe_penilaian' => 'nullable|integer|in:1,2',
-        ]);
+        // 1. Validasi Input
+        $rules = [
+            // --- Data Internal (Metadata) ---
+            'penilaian'     => 'nullable|string|max:255', // Nama Penilai Internal
+            'tahun_dinilai' => 'nullable|integer|digits:4',
+            
+            // --- Data Eksternal (Input Manual) ---
+            'penilai_external'             => 'nullable|string|max:255',
+            'score_rmi_external'           => 'nullable|numeric|min:0',
+            'score_aspek_kinerja_external' => 'nullable|numeric', // Input Manual
+            
+            // Dropdown Pilihan (ID dari tabel master)
+            'kinerja_external_id'          => 'nullable|exists:skala_kinerjas,id',
+            'kpmr_external_id'             => 'nullable|exists:skala_kpmrs,id',
+        ];
 
-        $period->update([
-            'penilaian' => $validated['penilaian'],
+        $validated = $request->validate($rules);
+
+        // 2. Prepare Data Update (Internal)
+        $dataToUpdate = [
+            'penilaian'     => $validated['penilaian'],
             'tahun_dinilai' => $validated['tahun_dinilai'],
-            'tipe_penilaian' => $validated['tipe_penilaian'],
-        ]);
+            'penilai_external' => $validated['penilai_external'],
+        ];
 
-        return redirect()->route('penilaian-rmi.index')->with('success', 'Data Penilaian untuk periode ' . $period->year . ' berhasil diperbarui.');
+        // 3. Logika Perhitungan Otomatis Data Eksternal
+        
+        // A. Score RMI & Deskripsi
+        if (!is_null($request->score_rmi_external)) {
+            $dataToUpdate['score_rmi_external'] = $request->score_rmi_external;
+            // Generate Deskripsi otomatis sesuai range nilai (sama dengan logic internal)
+            $dataToUpdate['score_rmi_external_desc'] = $this->getScoreRMIDesc($request->score_rmi_external);
+        }
+
+        // B. Matriks Kinerja & KPMR (Peringkat & Konversi)
+        $adjusmentExternal = 0; // Default 0
+        
+        if ($request->filled('kinerja_external_id') && $request->filled('kpmr_external_id')) {
+            $kId = $request->kinerja_external_id;
+            $pId = $request->kpmr_external_id;
+
+            // Simpan Label Text (Sesuai struktur DB existing)
+            $skalaKinerja = SkalaKinerja::find($kId);
+            $skalaKpmr    = SkalaKPMR::find($pId);
+            
+            $dataToUpdate['kinerja_external'] = $skalaKinerja->tingkat ?? null;
+            $dataToUpdate['kpmr_external']    = $skalaKpmr->tingkat ?? null;
+
+            // Hitung Peringkat Komposit (Matriks 5x5)
+            // 1=Sangat Baik ... 5=Buruk
+            $matrix = [
+                1 => [1=>1, 2=>1, 3=>2, 4=>3, 5=>3],
+                2 => [1=>1, 2=>2, 3=>2, 4=>3, 5=>4],
+                3 => [1=>2, 2=>2, 3=>3, 4=>4, 5=>4],
+                4 => [1=>2, 2=>3, 3=>4, 4=>4, 5=>5],
+                5 => [1=>3, 2=>3, 3=>4, 4=>5, 5=>5],
+            ];
+            $peringkat = $matrix[$kId][$pId] ?? null;
+            $dataToUpdate['peringkat_komposit_risiko_external'] = $peringkat;
+
+            // Hitung Nilai Konversi
+            $convMap = [1=>100, 2=>78, 3=>55, 4=>33, 5=>10];
+            $dataToUpdate['nilai_konversi_external'] = $convMap[$peringkat] ?? 0;
+        }
+
+        // C. Adjustment Score (Berdasarkan Score Aspek Kinerja External)
+        // Logika sama dengan 'storeAspekKinerja'
+        if (!is_null($request->score_aspek_kinerja_external)) {
+            $sak = $request->score_aspek_kinerja_external;
+            $dataToUpdate['score_aspek_kinerja_external'] = $sak;
+
+            if ($sak > 90)     $adjusmentExternal = 0;
+            elseif ($sak > 80) $adjusmentExternal = -0.25;
+            elseif ($sak > 65) $adjusmentExternal = -0.50;
+            elseif ($sak > 50) $adjusmentExternal = -0.75;
+            else               $adjusmentExternal = -1.00;
+            
+            $dataToUpdate['adjusment_score_external'] = $adjusmentExternal;
+        }
+
+        // D. Final Score RMI External
+        // Logika: Final = Score RMI + Adjustment (Hanya jika Score RMI >= 3.00)
+        if (!is_null($request->score_rmi_external)) {
+            $scoreRmiExt = $request->score_rmi_external;
+            $finalScore  = $scoreRmiExt;
+
+            if ($scoreRmiExt >= 3) {
+                $finalScore = $scoreRmiExt + $adjusmentExternal;
+            }
+
+            // Cap Max/Min
+            if($finalScore > 5) $finalScore = 5;
+            if($finalScore < 0) $finalScore = 0;
+
+            $dataToUpdate['final_score_rmi_external'] = $finalScore;
+        }
+
+        // 4. Eksekusi Update
+        $period->update($dataToUpdate);
+
+        return redirect()->route('penilaian-rmi.index')
+            ->with('success', 'Data Penilaian (Internal & Eksternal) berhasil diperbarui.');
     }
 
     public function getRiskData(Request $request, $id)

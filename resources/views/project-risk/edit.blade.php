@@ -38,7 +38,7 @@
                                                 {{ $sasaranProyek->kpi_desc }}
                                             </option>
                                         @endforeach
-                                        
+
                                         <option value="other">Sasaran Lainnya</option>
                                     </select>
 
@@ -68,7 +68,7 @@
                                 <select class="form-select select2 @error('jenis_risiko_id') is-invalid @enderror" name="jenis_risiko_id" id="jenis_risiko_id" required>
                                     <option value="">Pilih Jenis Risiko</option>
                                     @foreach($jenisRisikos as $jenis)
-                                        <option value="{{ $jenis->id }}" 
+                                        <option value="{{ $jenis->id }}"
                                             data-kategori="{{ $jenis->kategori_risiko_id }}"
                                             {{ old('jenis_risiko_id', $projectRisk->jenis_risiko_id) == $jenis->id ? 'selected' : '' }}>
                                             {{ $jenis->kategoriRisiko->title ?? '' }} – {{ $jenis->title }}
@@ -113,7 +113,8 @@
                         <div class="row g-2">
                             <div class="col">
                                 <div class="form-floating">
-                                    <input type="text" class="form-control" name="penyebab_risiko[]"
+                                    <input type="hidden" name="penyebab_risiko_id[]">
+                                    <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]"
                                         placeholder="Masukkan Penyebab Risiko">
                                     <label>Penyebab Risiko</label>
                                 </div>
@@ -254,7 +255,7 @@
                             </div>
                         </div>
                         <div class="col-md-6 col-lg-7 col-xxl-6">
-                            <div class="form-group d-lg-flex mb-4">
+                            {{-- <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Penilaian Efektivitas
                                     Kontrol</label>
                                 <select class="form-select select2" name="penilaian_efektifitas_kontrol">
@@ -265,7 +266,7 @@
                                             {{ $efektivitasKontrol->efektivitas_kontrol }}</option>
                                     @endforeach
                                 </select>
-                            </div>
+                            </div> --}}
                             {{-- <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker2">Perkiraan
                                     Waktu
@@ -354,7 +355,7 @@
 
         const masterKris = @json($masterKris->keyBy('id'));
         const kontrolExistings = @json($kontrolEksistings->keyBy('id'));
-        
+
         $('#jenis_risiko_id').on('change', function() {
             var selectedOption = $(this).find('option:selected');
             var kategoriId = selectedOption.data('kategori');
@@ -375,7 +376,8 @@
             <div class="row g-2">
                 <div class="col">
                 <div class="form-floating">
-                    <input type="text" class="form-control" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko">
+                    <input type="hidden" name="penyebab_risiko_id[]" value="">
+                    <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko">
                     <label>Penyebab Risiko</label>
                 </div>
                 </div>
@@ -490,7 +492,7 @@
 
         function fetchKontrolEksisting() {
             let peristiwaRisikoId = $('#peristiwa_risiko').val();
-            
+
             if (!peristiwaRisikoId) {
                 $('#table-kontrol tbody').empty();
                 $('.table-empty').show();
@@ -542,19 +544,21 @@
 
         var flatpickrIns1 = flatpickr("#timepicker2", {
             //mode: "range",
-            altInput: false,
+            altInput: true,
             altFormat: "j F Y",
             dateFormat: "d/m/Y",
             //maxDate: endOfYear,
+            defaultDate: "{{ $projectRisk->perkiraan_waktu_terpapar_risiko_mulai ? $projectRisk->perkiraan_waktu_terpapar_risiko_mulai->format('d/m/Y') : '' }}",
             disableMobile: true
         });
 
         var flatpickrIns2 = flatpickr("#timepicker3", {
             //mode: "range",
-            altInput: false,
+            altInput: true,
             altFormat: "j F Y",
             dateFormat: "d/m/Y",
             //maxDate: endOfYear,
+            defaultDate: "{{ $projectRisk->perkiraan_waktu_terpapar_risiko_akhir ? $projectRisk->perkiraan_waktu_terpapar_risiko_akhir->format('d/m/Y') : '' }}",
             disableMobile: true
         });
 
@@ -626,19 +630,19 @@
                     //flatpickrIns.setDate(value.split(' to '));
                 }
                 else if (key === 'perkiraan_waktu_terpapar_risiko_mulai') {
-                    flatpickrIns1.setDate(value);     
+                    // flatpickrIns1.setDate(value);
                 }
                 else if (key === 'perkiraan_waktu_terpapar_risiko_akhir') {
-                    flatpickrIns2.setDate(value);
+                    // flatpickrIns2.setDate(value);
                 }
                 else if (Array.isArray(value)) {
                     if (key === 'penyebab_risiko_projects') {
                         value.forEach((penyebab, index) => {
                             if (index === 0) {
-                                $(`[name="penyebab_risiko[]"]`).val(penyebab.penyebab_risiko);
+                                $('.input-penyebab-risiko').val(penyebab.penyebab_risiko).attr('name', `penyebab_risiko[${penyebab.id}]`);
                             } else {
                                 $('#add-column').click();
-                                $(`[name="penyebab_risiko[]"]`).last().val(penyebab.penyebab_risiko);
+                                $(`.input-penyebab-risiko`).last().val(penyebab.penyebab_risiko).attr('name', `penyebab_risiko[${penyebab.id}]`);
                             }
                         });
                     } else if (key === 'kri_projects') {

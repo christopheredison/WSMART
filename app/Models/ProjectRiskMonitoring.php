@@ -24,6 +24,7 @@ class ProjectRiskMonitoring extends Model
         'skala_dampak',
         'nilai_probabilitas',
         'skala_probabilitas_id',
+        'skala_parameter_id',
         'skala_risiko',
         'level_risiko',
         'eksposure_risiko',
@@ -81,5 +82,10 @@ class ProjectRiskMonitoring extends Model
                     ->whereColumn('quarter', 'project_risk_monitorings.quarter')
                     ->whereColumn('month', 'project_risk_monitorings.month')
                     ->whereColumn('year', 'project_risk_monitorings.tahun');
+    }
+
+    public function skalaParameter()
+    {
+        return $this->belongsTo(SkalaParameter::class, 'skala_parameter_id');
     }
 }

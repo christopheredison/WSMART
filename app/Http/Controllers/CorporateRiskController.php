@@ -562,17 +562,22 @@ class CorporateRiskController extends Controller
         $kontrolEksistings = KontrolEksisting::get();
 
         $units = Unit::where('unit_type_id', 1)->orderBy('name')->get();
+        $apUnits = Unit::where('unit_type_id', 2)->orderBy('name')->get();
 
         // Ambil Risiko Divisi (unit_type_id = 1) yang sudah final untuk dipilih
-        $divisiRisks = IdentifikasiRisiko::where('unit_type_id', 1)
-            ->where('status', IdentifikasiRisiko::STATUS_PUBLISHED)
-            ->with(['unit', 'kategoriRisiko', 'riskAnalysis'])
-            ->get();
+        // $divisiRisks = IdentifikasiRisiko::where('unit_type_id', 1)
+        //     ->where('status', IdentifikasiRisiko::STATUS_PUBLISHED)
+        //     ->with(['unit', 'kategoriRisiko', 'riskAnalysis'])
+        //     ->get();
 
         return view('corporate-risk.create', compact(
             'kategoriRisiko', 'jenisKontrolEksistings', 
-            'penilaianEfektifitasKontrols', 'jenisRisiko', 'selectedPeriode', 
-            'divisiRisks','units', // Kirim daftar unit/divisi ke view
+            'penilaianEfektifitasKontrols',
+            'jenisRisiko',
+            'selectedPeriode', 
+            // 'divisiRisks',
+            'units',
+            'apUnits',
             'masterKris', // Kirim master KRI
             'kontrolEksistings' // Kirim kontrol eksisting
         ));
@@ -820,6 +825,20 @@ class CorporateRiskController extends Controller
         ]);
     }
 
+    public function getApRisks(Unit $unit)
+    {
+        $apRisks = IdentifikasiRisiko::where('unit_id', $unit->id)
+            ->where('unit_type_id', 2)
+            ->where('status', IdentifikasiRisiko::STATUS_PUBLISHED)
+            ->where('status_risiko', IdentifikasiRisiko::STATUS_RISIKO_MAIN)
+            ->with(['unit', 'kategoriRisiko', 'riskAnalysis', 'penyebabRisiko'])
+            ->get();
+
+        return response()->json([
+            'html' => view('corporate-risk._ajax_risk_options', ['divisiRisks' => $apRisks])->render()
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -842,7 +861,9 @@ class CorporateRiskController extends Controller
             'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
             'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
             'divisi_risk_ids' => 'nullable|array',
-            'divisi_risk_ids.*' => 'exists:identifikasi_risikos,id'
+            'divisi_risk_ids.*' => 'exists:identifikasi_risikos,id',
+            'ap_risk_ids' => 'nullable|array',
+            'ap_risk_ids.*' => 'exists:identifikasi_risikos,id'
         ]);
 
         try {
@@ -855,7 +876,7 @@ class CorporateRiskController extends Controller
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
             $identifikasiRisiko->user_id = auth()->id();
             $identifikasiRisiko->unit_type_id = 4; // KORPORAT
-            $identifikasiRisiko->unit_id = auth()->user()->unit_id; 
+            $identifikasiRisiko->unit_id = 1;
             $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
 
             $jenisRisiko = JenisRisiko::find($request->jenis_risiko_id);
@@ -898,6 +919,10 @@ class CorporateRiskController extends Controller
                 $identifikasiRisiko->divisiRisks()->attach($request->divisi_risk_ids);
             }
 
+            if ($request->has('ap_risk_ids')) {
+                $identifikasiRisiko->apRisks()->sync($request->ap_risk_ids);
+            }
+
             $identifikasiRisiko->riskAnalysis()->create([]);
             $identifikasiRisiko->rencanaPerlakuanRisiko()->create([]);
 
@@ -927,6 +952,9 @@ class CorporateRiskController extends Controller
             'divisiRisks.unit',
             'divisiRisks.riskAnalysis',
             'divisiRisks.penyebabRisiko',
+            'apRisks.unit',
+            'apRisks.riskAnalysis',
+            'apRisks.penyebabRisiko',
         ])->findOrFail($id);
 
         $selectedPeriode = Periode::find($identifikasiRisiko->periode_id);
@@ -941,6 +969,7 @@ class CorporateRiskController extends Controller
 
         // Ambil daftar Divisi untuk filter modal
         $units = Unit::where('unit_type_id', 1)->orderBy('name')->get();
+        $apUnits = Unit::where('unit_type_id', 2)->orderBy('name')->get();
 
         // Ambil semua risiko divisi untuk modal (akan difilter oleh AJAX)
         $divisiRisks = collect();
@@ -948,7 +977,7 @@ class CorporateRiskController extends Controller
         return view('corporate-risk.edit', compact(
             'identifikasiRisiko', 'kategoriRisiko', 'jenisKontrolEksistings', 
             'penilaianEfektifitasKontrols', 'jenisRisiko', 'selectedPeriode', 
-            'divisiRisks', 'units', 'masterKris', 'kontrolEksistings'
+            'divisiRisks', 'units', 'apUnits', 'masterKris', 'kontrolEksistings'
         ));
     }
 
@@ -970,15 +999,18 @@ class CorporateRiskController extends Controller
             'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
             'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
             'divisi_risk_ids' => 'nullable|array',
-            'divisi_risk_ids.*' => 'exists:identifikasi_risikos,id'
+            'divisi_risk_ids.*' => 'exists:identifikasi_risikos,id',
+            'ap_risk_ids' => 'nullable|array',
+            'ap_risk_ids.*' => 'exists:identifikasi_risikos,id',
         ]);
 
         try {
             $identifikasiRisiko = IdentifikasiRisiko::findOrFail($id);
             $waktuMulai = $request->perkiraan_waktu_mulai_terpapar_risiko ? Carbon::createFromFormat('d/m/Y', $request->perkiraan_waktu_mulai_terpapar_risiko)->format('Y-m-d') : null;
             $waktuSelesai = $request->perkiraan_waktu_selesai_terpapar_risiko ? Carbon::createFromFormat('d/m/Y', $request->perkiraan_waktu_selesai_terpapar_risiko)->format('Y-m-d') : null;
+            $dataToUpdate = \Illuminate\Support\Arr::except($validated, ['divisi_risk_ids', 'ap_risk_ids', 'penyebab_risiko', 'key_risk_indicator', 'kontrol_eksisting']);
             
-            $identifikasiRisiko->fill($validated);
+            $identifikasiRisiko->fill($dataToUpdate);
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
             $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
@@ -990,7 +1022,7 @@ class CorporateRiskController extends Controller
 
             $identifikasiRisiko->save();
 
-            // Hapus dan buat ulang relasi
+            // Penyebab
             $identifikasiRisiko->penyebabRisiko()->delete();
             if ($request->has('penyebab_risiko')) {
                 foreach ($request->penyebab_risiko as $penyebab) {
@@ -1003,6 +1035,7 @@ class CorporateRiskController extends Controller
                 for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
                     if (!empty($request->key_risk_indicator[$i])) {
                         $identifikasiRisiko->kris()->create([
+                            'kri_id' => 0,
                             'kri' => $request->key_risk_indicator[$i],
                             'satuan_kri' => $request->satuan_kri[$i] ?? null,
                             'batas_aman' => $request->batas_aman[$i] ?? null,
@@ -1021,6 +1054,7 @@ class CorporateRiskController extends Controller
             }
             
             $identifikasiRisiko->divisiRisks()->sync($request->divisi_risk_ids ?? []);
+            $identifikasiRisiko->apRisks()->sync($request->ap_risk_ids ?? []);
             
             $action = $request->input('action', 'save');
             if ($action === 'savenext') {
@@ -1043,7 +1077,15 @@ class CorporateRiskController extends Controller
     {
         $user    = request()->user()->load('unit');
         $risikos = IdentifikasiRisiko::where('id', $id)
-            ->with(['riskAnalysis', 'projectRisks.project', 'projectRisks.projectRiskAnalisa'])
+            ->with([
+              'riskAnalysis',
+              'projectRisks.project',
+              'projectRisks.projectRiskAnalisa',
+              'divisiRisks.unit',
+              'divisiRisks.riskAnalysis',
+              'apRisks.unit',
+              'apRisks.riskAnalysis'
+            ])
             ->get();
 
         $risiko = $risikos->first();

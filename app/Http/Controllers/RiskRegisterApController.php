@@ -319,7 +319,7 @@ class RiskRegisterApController extends Controller
                 'label' => 'Risk Context'
             ],
         ];
-        
+
         // Ambil semua data periode (untuk dropdown filter)
         $periodes = Periode::orderBy('tahun', 'desc')->get();
 
@@ -330,7 +330,7 @@ class RiskRegisterApController extends Controller
         $userUnit = auth()->user()->unit;
         $units = [];
 
-        $apAdmin = Gate::check('ap_admin'); 
+        $apAdmin = Gate::check('ap_admin');
         $dataToDisplay = collect();
 
         if ($apAdmin) {
@@ -343,11 +343,11 @@ class RiskRegisterApController extends Controller
                     $isValid = ((is_null($unit->valid_to)) || $unit->valid_to->isSameDay($today) || $unit->valid_to->isAfter($today))
                         && ((is_null($unit->valid_from)) || $unit->valid_from->isBefore($today) || $unit->valid_from->isSameDay($today));
                     $unitStatus = $isValid ? 'valid' : 'expired';
-                    
+
                     $riskCount = IdentifikasiRisiko::where('unit_id', $unit->id)
                         ->where('periode_id', $selectedPeriode->id)
                         ->count();
-                        
+
                     $dataToDisplay->push([
                         'unit' => $unit,
                         'periode' => $selectedPeriode,
@@ -358,24 +358,24 @@ class RiskRegisterApController extends Controller
             }
         } else {
             $units = Unit::where('unit_type_id', 2)->where('id', $userUnit->id)->pluck('name', 'id');
-            
-            if ($userUnit && $userUnit->unit_type_id == 2 && $selectedPeriode) { 
+
+            if ($userUnit && $userUnit->unit_type_id == 2 && $selectedPeriode) {
                 $today = \Carbon\Carbon::today();
                 $isValid = ((is_null($userUnit->valid_to)) || $userUnit->valid_to->isSameDay($today) || $userUnit->valid_to->isAfter($today))
                     && ((is_null($userUnit->valid_from)) || $userUnit->valid_from->isBefore($today) || $userUnit->valid_from->isSameDay($today));
                 $unitStatus = $isValid ? 'valid' : 'expired';
-                
+
                 $riskCount = IdentifikasiRisiko::where('unit_id', $userUnit->id)
                     ->where('periode_id', $selectedPeriode->id)
                     ->count();
-                    
+
                 $dataToDisplay->push([
                     'unit' => $userUnit,
                     'periode' => $selectedPeriode,
                     'unit_status' => $unitStatus,
                     'risk_count' => $riskCount,
                 ]);
-                
+
             }
         }
 
@@ -444,17 +444,13 @@ class RiskRegisterApController extends Controller
         // Validasi input
         $validated = $request->validate([
             'periode_id' => 'required|exists:periodes,id',
-            //'target_capaian_kinerja' => 'required|exists:tcks,id',
-            //'peristiwa_risiko_id' => 'required|exists:peristiwa_risikos,id',
             'target_capaian_kinerja' => 'required|string',
-            'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
+            // 'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
-            // 'wbs' => 'required|string',
+            'wbs' => 'nullable|string',
             'penyebab_risiko' => 'required|array',
             'penyebab_risiko.*' => 'required|string',
-            //'master_kri_id' => 'nullable|array',
-            //'master_kri_id.*' => 'nullable|exists:master_kri,id',
             'key_risk_indicator' => 'nullable|array',
             'key_risk_indicator.*' => 'nullable|string',
             'satuan_kri' => 'nullable|array',
@@ -465,13 +461,13 @@ class RiskRegisterApController extends Controller
             'batas_waspada.*' => 'nullable|string',
             'batas_bahaya' => 'nullable|array',
             'batas_bahaya.*' => 'nullable|string',
-            'jenis_kontrol_eksisting_id' => 'nullable|exists:jenis_kontrol_eksistings,id',
+            // 'jenis_kontrol_eksisting_id' => 'nullable|exists:jenis_kontrol_eksistings,id',
             //'kontrol_eksisting_id' => 'nullable|array',
             //'kontrol_eksisting_id.*' => 'nullable|exists:kontrol_eksistings,id',
             //'kontrol_eksisting' => 'required|string',
             'kontrol_eksisting' => 'required|array',  // Ubah menjadi array
             'kontrol_eksisting.*' => 'required|string', // Validasi setiap item
-            'penilaian_efektifitas_kontrol' => 'nullable|exists:penilaian_efektivitas_kontrols,id',
+            // 'penilaian_efektifitas_kontrol' => 'nullable|exists:penilaian_efektivitas_kontrols,id',
             'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
             'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
             'unit_id' => 'nullable|exists:units,id',
@@ -512,30 +508,21 @@ class RiskRegisterApController extends Controller
             // Simpan data risiko
             $identifikasiRisiko = new IdentifikasiRisiko();
             $identifikasiRisiko->periode_id = $request->periode_id;
-            // $identifikasiRisiko->tck_id = $request->target_capaian_kinerja;
-            // $tck = Tck::where('id', $request->target_capaian_kinerja)->first();
-
-            // if ($tck) {
-            //     $identifikasiRisiko->target_capaian_kinerja = $tck->title;
-            // }
             $identifikasiRisiko->target_capaian_kinerja = $request->target_capaian_kinerja;
-            // $identifikasiRisiko->peristiwa_risiko_id = $request->peristiwa_risiko_id;
-            // $peristiwaRisiko = PeristiwaRisiko::find($request->peristiwa_risiko_id);
-            // if ($peristiwaRisiko) {
-            //     $identifikasiRisiko->kategori_risiko_id = $peristiwaRisiko->kategori_risiko_id;
-            //     $identifikasiRisiko->jenis_risiko_id = $peristiwaRisiko->jenis_risiko_id;
+
+            // Hilangkan jenis risiko dan kategori risiko
+            // $identifikasiRisiko->jenis_risiko_id = $request->jenis_risiko_id;
+            // $jenisRisiko = \App\Models\JenisRisiko::find($request->jenis_risiko_id);
+            // if ($jenisRisiko) {
+            //     $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
             // }
-            $identifikasiRisiko->jenis_risiko_id = $request->jenis_risiko_id;
-            $jenisRisiko = \App\Models\JenisRisiko::find($request->jenis_risiko_id);
-            if ($jenisRisiko) {
-                $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
-            }
+            $identifikasiRisiko->jenis_risiko_id = 0;
+            $identifikasiRisiko->kategori_risiko_id = 0;
 
             $identifikasiRisiko->peristiwa_risiko = $request->peristiwa_risiko;
             $identifikasiRisiko->deskripsi_peristiwa_risiko = $request->deskripsi_peristiwa_risiko;
-            // $identifikasiRisiko->wbs = $request->wbs;
-            $identifikasiRisiko->jenis_kontrol_eksisting_id = $request->jenis_kontrol_eksisting_id;
-            //$identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting;
+            $identifikasiRisiko->wbs = $request->wbs;
+            // $identifikasiRisiko->jenis_kontrol_eksisting_id = $request->jenis_kontrol_eksisting_id;
             $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
             $identifikasiRisiko->penilaian_efektifitas_kontrol = $request->penilaian_efektifitas_kontrol;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
@@ -1212,10 +1199,10 @@ class RiskRegisterApController extends Controller
         $validated = $request->validate([
             'periode_id' => 'required|exists:periodes,id',
             'target_capaian_kinerja' => 'required|string',
-            'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
+            // 'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
-            // 'wbs' => 'required|string',
+            'wbs' => 'nullable|string',
             'penyebab_risiko' => 'required|array',
             'penyebab_risiko.*' => 'required|string',
             'key_risk_indicator' => 'nullable|array',
@@ -1228,10 +1215,10 @@ class RiskRegisterApController extends Controller
             'batas_waspada.*' => 'nullable|string',
             'batas_bahaya' => 'nullable|array',
             'batas_bahaya.*' => 'nullable|string',
-            'jenis_kontrol_eksisting_id' => 'nullable|exists:jenis_kontrol_eksistings,id',
+            // 'jenis_kontrol_eksisting_id' => 'nullable|exists:jenis_kontrol_eksistings,id',
             'kontrol_eksisting' => 'required|array',
             'kontrol_eksisting.*' => 'required|string',
-            'penilaian_efektifitas_kontrol' => 'nullable|exists:penilaian_efektivitas_kontrols,id',
+            // 'penilaian_efektifitas_kontrol' => 'nullable|exists:penilaian_efektivitas_kontrols,id',
             'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
             'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
         ]);
@@ -1255,19 +1242,20 @@ class RiskRegisterApController extends Controller
             // Update data risiko
             $identifikasiRisiko->periode_id = $request->periode_id;
             $identifikasiRisiko->target_capaian_kinerja = $request->target_capaian_kinerja;
-            $identifikasiRisiko->jenis_risiko_id = $request->jenis_risiko_id;
 
-            $jenisRisiko = \App\Models\JenisRisiko::find($request->jenis_risiko_id);
-            if ($jenisRisiko) {
-                $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
-            }
+            // Hilangkan jenis risiko dan kategori risiko
+            // $identifikasiRisiko->jenis_risiko_id = $request->jenis_risiko_id;
+            // $jenisRisiko = \App\Models\JenisRisiko::find($request->jenis_risiko_id);
+            // if ($jenisRisiko) {
+            //     $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
+            // }
 
             $identifikasiRisiko->peristiwa_risiko = $request->peristiwa_risiko;
             $identifikasiRisiko->deskripsi_peristiwa_risiko = $request->deskripsi_peristiwa_risiko;
-            // $identifikasiRisiko->wbs = $request->wbs;
-            $identifikasiRisiko->jenis_kontrol_eksisting_id = $request->jenis_kontrol_eksisting_id;
+            $identifikasiRisiko->wbs = $request->wbs;
+            // $identifikasiRisiko->jenis_kontrol_eksisting_id = $request->jenis_kontrol_eksisting_id;
             $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
-            $identifikasiRisiko->penilaian_efektifitas_kontrol = $request->penilaian_efektifitas_kontrol;
+            // $identifikasiRisiko->penilaian_efektifitas_kontrol = $request->penilaian_efektifitas_kontrol;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
 
@@ -1400,7 +1388,7 @@ class RiskRegisterApController extends Controller
         $level_id = $user->level_id;
         $periode_id = $request->periode_id;
         $send_type = $request->send_type ?? 'send';
-        
+
         $min_verification = 3;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
 

@@ -30,6 +30,16 @@ class RMIPeriod extends Model
         'penilaian',
         'tipe_penilaian', // 1 : Eksternal, 2 : Internal
         'tahun_dinilai',
+        'penilai_external',
+        'score_rmi_external',
+        'score_rmi_external_desc',
+        'kinerja_external',
+        'kpmr_external',
+        'peringkat_komposit_risiko_external',
+        'nilai_konversi_external',
+        'score_aspek_kinerja_external',
+        'adjusment_score_external',
+        'final_score_rmi_external',
     ];
 
     protected $casts = [

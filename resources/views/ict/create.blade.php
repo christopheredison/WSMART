@@ -104,13 +104,19 @@
       if (type == 1) { // Unit
         // Tambahkan opsi dari IdentifikasiRisiko
         @foreach($identifikasiRisikos as $risiko)
-          risikoSelect.append(new Option('{{ $risiko->peristiwa_risiko }}', '{{ $risiko->id }}'));
+          risikoSelect.append(new Option(
+            '{{ str_replace(["\r", "\n"], " ", $risiko->peristiwa_risiko) }}', 
+            '{{ $risiko->id }}'
+          ));
         @endforeach
       } else if (type == 2) { // Proyek
         // Tambahkan opsi dari ProjectRisk
         @foreach($projectRisks as $risiko)
           @if($risiko->peristiwaRisiko)
-            risikoSelect.append(new Option('{{ $risiko->peristiwaRisiko->title }}', '{{ $risiko->id }}'));
+            risikoSelect.append(new Option(
+              '{{ str_replace(["\r", "\n"], " ", $risiko->peristiwaRisiko->title) }}', 
+              '{{ $risiko->id }}'
+            ));
           @endif
         @endforeach
       }

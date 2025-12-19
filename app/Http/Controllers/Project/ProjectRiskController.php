@@ -386,6 +386,11 @@ class ProjectRiskController extends BasicCRUDController
                     'active_state' => $active_state,
                     //'permissions' => ['project_risk_edit'],
                 ];
+
+                $this->tableLegend[] = [
+                    'icon' => '<span class="bx bx-check-shield text-success"></span>',
+                    'label' => 'Verifikasi Risiko'
+                ];
             }
         }
 
@@ -744,7 +749,7 @@ class ProjectRiskController extends BasicCRUDController
                 'wbs' => 'required',
                 //'target_capaian_kinerja' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
-                'penilaian_efektifitas_kontrol' => 'required',
+                // 'penilaian_efektifitas_kontrol' => 'required',
                 'perkiraan_waktu_mulai_terpapar_risiko' => 'required',
                 'perkiraan_waktu_selesai_terpapar_risiko' => 'required',
                 'penyebab_risiko' => 'required|array|min:1',
@@ -793,7 +798,7 @@ class ProjectRiskController extends BasicCRUDController
                 'project_periode_list_id' => $projectPeriodeList->id,
                 'deskripsi_peristiwa_risiko' => $request->deskripsi_peristiwa_risiko,
                 'jenis_kontrol_eksisting_id' => $request->jenis_kontrol_eksisting_id,
-                'penilaian_efektifitas_kontrol' => $request->penilaian_efektifitas_kontrol,
+                'penilaian_efektifitas_kontrol' => 0,
                 'perkiraan_waktu_terpapar_risiko_mulai' => $perkiraanWaktuTerpaparRisikoMulai,
                 'perkiraan_waktu_terpapar_risiko_akhir' => $perkiraanWaktuTerpaparRisikoAkhir,
                 'kategori_risiko_id' => $request->kategori_risiko_id,
@@ -928,17 +933,16 @@ class ProjectRiskController extends BasicCRUDController
                 'deskripsi_peristiwa_risiko' => 'required',
                 'wbs' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
-                'penilaian_efektifitas_kontrol' => 'required',
-                //'perkiraan_waktu_terpapar_risiko' => 'required',
+                // 'penilaian_efektifitas_kontrol' => 'required',
                 'perkiraan_waktu_terpapar_risiko_mulai' => 'required',
                 'perkiraan_waktu_terpapar_risiko_akhir' => 'required',
                 'penyebab_risiko' => 'required|array|min:1',
                 'penyebab_risiko.*' => 'required|string',
+                // Tambahkan validasi lain jika perlu
             ]);
 
             $user = $request->user();
 
-            //$perkiraanWaktuTerpaparRisiko = explode(' to ', $request->perkiraan_waktu_terpapar_risiko);
             $perkiraanWaktuTerpaparRisikoMulai = DateTime::createFromFormat('d/m/Y', $request->perkiraan_waktu_terpapar_risiko_mulai)->format('Y-m-d');
             $perkiraanWaktuTerpaparRisikoAkhir = DateTime::createFromFormat('d/m/Y', $request->perkiraan_waktu_terpapar_risiko_akhir)->format('Y-m-d');
 
@@ -967,7 +971,7 @@ class ProjectRiskController extends BasicCRUDController
                 'project_periode_list_id' => $projectPeriodeList->id,
                 'deskripsi_peristiwa_risiko' => $request->deskripsi_peristiwa_risiko,
                 'jenis_kontrol_eksisting_id' => $request->jenis_kontrol_eksisting_id,
-                'penilaian_efektifitas_kontrol' => $request->penilaian_efektifitas_kontrol,
+                'penilaian_efektifitas_kontrol' => 0,
                 'perkiraan_waktu_terpapar_risiko_mulai' => $perkiraanWaktuTerpaparRisikoMulai,
                 'perkiraan_waktu_terpapar_risiko_akhir' => $perkiraanWaktuTerpaparRisikoAkhir,
                 'wbs' => $request->wbs,
@@ -977,48 +981,73 @@ class ProjectRiskController extends BasicCRUDController
 
             $projectRisk->update($toUpdate);
 
-            $projectRisk->penyebabRisikoProjects()->delete();
-
-            foreach ($request->penyebab_risiko as $penyebabRisiko) {
-                $projectRisk->penyebabRisikoProjects()->create([
-                    'penyebab_risiko' => $penyebabRisiko,
-                ]);
+            $penyebabRisikoIds = [];
+            foreach ($request->penyebab_risiko as $penyebabRisikoId => $penyebabRisiko) {
+                $exist = $projectRisk->penyebabRisikoProjects()->where('id', $penyebabRisikoId)->first();
+                if ($exist) {
+                    $exist->update([
+                        'penyebab_risiko' => $penyebabRisiko,
+                    ]);
+                } else {
+                    $exist = $projectRisk->penyebabRisikoProjects()->create([
+                        'penyebab_risiko' => $penyebabRisiko,
+                    ]);
+                }
+                $penyebabRisikoIds[] = $exist->id;
             }
+            $projectRisk->penyebabRisikoProjects()->whereNotIn('id', $penyebabRisikoIds)->delete();
 
-            $projectRisk->kriProjects()->delete();
-
-            foreach ($request->key_risk_indicator as $idx => $kri) {
+            $savedKriIds = [];
+            foreach ($request->key_risk_indicator as $key => $kri) {
                 $kriData = [
                     'kri' => $kri,
-                    'satuan_kri' => $request->satuan_kri[$idx] ?? '',
-                    'batas_aman' => $request->batas_aman[$idx] ?? '',
-                    'batas_waspada' => $request->batas_waspada[$idx] ?? '',
-                    'batas_bahaya' => $request->batas_bahaya[$idx] ?? '',
+                    'satuan_kri' => $request->satuan_kri[$key] ?? '',
+                    'batas_aman' => $request->batas_aman[$key] ?? '',
+                    'batas_waspada' => $request->batas_waspada[$key] ?? '',
+                    'batas_bahaya' => $request->batas_bahaya[$key] ?? '',
                 ];
 
-                $projectRisk->kriProjects()->create($kriData);
-            }
+                $existKri = $projectRisk->kriProjects()->find($key);
 
-            $projectRisk->projectKontrolEksistings()->delete();
-
-            foreach ($request->kontrol_eksisting as $kontrolEksisting) {
-                $projectRisk->projectKontrolEksistings()->create([
-                    'kontrol_eksisting_desc' => $kontrolEksisting,
-                ]);
+                if ($existKri) {
+                    $existKri->update($kriData);
+                    $savedKriIds[] = $existKri->id;
+                } else {
+                    $newKri = $projectRisk->kriProjects()->create($kriData);
+                    $savedKriIds[] = $newKri->id;
+                }
             }
+            $projectRisk->kriProjects()->whereNotIn('id', $savedKriIds)->delete();
+
+            $savedKontrolIds = [];
+            foreach ($request->kontrol_eksisting as $key => $kontrolEksistingDesc) {
+                $existKontrol = $projectRisk->projectKontrolEksistings()->find($key);
+
+                if ($existKontrol) {
+                    $existKontrol->update(['kontrol_eksisting_desc' => $kontrolEksistingDesc]);
+                    $savedKontrolIds[] = $existKontrol->id;
+                } else {
+                    $newKontrol = $projectRisk->projectKontrolEksistings()->create([
+                        'kontrol_eksisting_desc' => $kontrolEksistingDesc
+                    ]);
+                    $savedKontrolIds[] = $newKontrol->id;
+                }
+            }
+            $projectRisk->projectKontrolEksistings()->whereNotIn('id', $savedKontrolIds)->delete();
+
 
             if ($request->action === 'savenext') {
-              return [
-                  'redirect' => route('projects.risks.analisa', ['project' => $projectPeriodeList->id, 'risk' => $projectRisk->id]),
-              ];
+                return [
+                    'redirect' => route('projects.risks.analisa', ['project' => $projectPeriodeList->id, 'risk' => $projectRisk->id]),
+                ];
             } else {
-              return [
-                  'redirect' => route('projects.risks.index', ['project' => $projectPeriodeList->id]),
-              ];
+                return [
+                    'redirect' => route('projects.risks.index', ['project' => $projectPeriodeList->id]),
+                ];
             }
 
         } elseif ($request->action === 'draft') {
-
+            // Logic Draft tetap sama seperti kodemu
             $request->validate([
                 'deskripsi_peristiwa_risiko' => 'required',
             ]);

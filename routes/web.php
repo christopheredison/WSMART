@@ -809,6 +809,7 @@ Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->
     Route::put('/{riskRegister}/perencanaan/{id}', [App\Http\Controllers\CorporateRiskController::class, 'updateRencanaPerlakuan'])->name('update-rencana-perlakuan');
 
     Route::get('/get-division-risks/{unit}', [App\Http\Controllers\CorporateRiskController::class, 'getDivisionRisks'])->name('get-division-risks');
+    Route::get('/get-ap-risks/{unit}', [App\Http\Controllers\CorporateRiskController::class, 'getApRisks'])->name('get-ap-risks');
 });
 
 Route::prefix('corporate-led')->name('corporate-led.')->middleware(['auth'])->group(function () {

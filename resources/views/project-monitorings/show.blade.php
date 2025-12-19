@@ -197,6 +197,11 @@
                                 <label for="">Skala Dampak Inherent</label>
                             </div>
                             <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text"
+                                value="{{ $projectRiskAnalisa->skalaParameterObj ? $projectRiskAnalisa->skalaParameterObj->type_parameter . ' - ' . $projectRiskAnalisa->skalaParameterObj->skala : '-' }}">
+                                <label>Parameter Probabilitas Inherent</label>
+                            </div>
+                            <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="nilai_probabilitas_inherent"
                                 value="{{ $projectRiskAnalisa->nilai_probabilitas }}">
                                 <label for="">Nilai Probabilitas Inherent (%)</label>
@@ -254,6 +259,11 @@
                                 <label for="">Target Skala Dampak</label>
                             </div>
                             <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text"
+                                value="{{ $projectRiskAnalisa->skalaParameterResidualObj ? $projectRiskAnalisa->skalaParameterResidualObj->type_parameter . ' - ' . $projectRiskAnalisa->skalaParameterResidualObj->skala : '-' }}">
+                                <label>Target Parameter Probabilitas</label>
+                            </div>
+                            <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" id="target_nilai_probabilitas"
                                 name="target_nilai_probabilitas" value="{{ $projectRiskAnalisa->nilai_probabilitas_residual }}">
                                 <label for="">Target Nilai Probabilitas (%)</label>
@@ -308,6 +318,11 @@
                                 <input class="form-control update-trigger" type="text" id="realisasi_skala_dampak" name="realisasi_skala_dampak"
                                 value="{{ $riskMonitoring?->skalaDampakObj?->tingkat . ' - ' . $riskMonitoring?->skalaDampakObj?->deskripsi }}" disabled>
                                 <label for="">Realisasi Skala Dampak</label>
+                            </div>
+                            <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text"
+                                value="{{ $riskMonitoring?->skalaParameter ? $riskMonitoring->skalaParameter->type_parameter . ' - ' . $riskMonitoring->skalaParameter->skala : '-' }}">
+                                <label>Realisasi Parameter Probabilitas</label>
                             </div>
                             <div class="form-floating">
                                 <input class="form-control update-trigger" type="number" id="realisasi_nilai_probabilitas"

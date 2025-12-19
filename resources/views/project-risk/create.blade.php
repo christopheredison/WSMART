@@ -71,7 +71,7 @@
                                 <select class="form-select select2 @error('jenis_risiko_id') is-invalid @enderror" name="jenis_risiko_id" id="jenis_risiko_id" required>
                                     <option value="">Pilih Jenis Risiko</option>
                                     @foreach($jenisRisikos as $jenis)
-                                        <option value="{{ $jenis->id }}" 
+                                        <option value="{{ $jenis->id }}"
                                             data-kategori="{{ $jenis->kategori_risiko_id }}"
                                             {{ old('jenis_risiko_id') == $jenis->id ? 'selected' : '' }}>
                                             {{ $jenis->kategoriRisiko->title ?? '' }} – {{ $jenis->title }}
@@ -255,7 +255,7 @@
                             </div>
                         </div>
                         <div class="col-md-6 col-lg-7 col-xxl-6">
-                            <div class="form-group d-lg-flex mb-4">
+                            {{-- <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Penilaian Efektivitas
                                     Kontrol</label>
                                 <select class="form-select select2" name="penilaian_efektifitas_kontrol">
@@ -266,7 +266,7 @@
                                             {{ $efektivitasKontrol->efektivitas_kontrol }}</option>
                                     @endforeach
                                 </select>
-                            </div>
+                            </div> --}}
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker2">Perkiraan Waktu Mulai Terpapar Risiko</label>
                                 <input class="form-control datetimepicker" name="perkiraan_waktu_mulai_terpapar_risiko"
@@ -358,12 +358,12 @@
         });
 
         try {
-            const urlParams = new URLSearchParams(window.location.search);            
+            const urlParams = new URLSearchParams(window.location.search);
             const penyebabRisikoFromUrl = urlParams.get('penyebab_risiko');
 
             if (penyebabRisikoFromUrl) {
                 const firstPenyebabInput = $('input[name="penyebab_risiko[]"]').first();
-                
+
                 if (firstPenyebabInput.length) {
                     firstPenyebabInput.val(penyebabRisikoFromUrl);
                 }
@@ -374,7 +374,7 @@
 
         const masterKris = @json($masterKris->keyBy('id'));
         const kontrolExistings = @json($kontrolEksistings->keyBy('id'));
-        
+
         $('#jenis_risiko_id').on('change', function() {
             var selectedOption = $(this).find('option:selected');
             var kategoriId = selectedOption.data('kategori');

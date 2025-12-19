@@ -35,14 +35,14 @@
                             <label class="form-label fw-bold">Sumber Data</label>
                             <div>
                                 @if($lossEvent->risiko_id)
-                                    <a href="{{ route('risk-register-unit.view', ['riskRegister' => $lossEvent->risiko_id]) }}" 
-                                      target="_blank" 
+                                    <a href="{{ route('risk-register-unit.view', ['riskRegister' => $lossEvent->risiko_id]) }}"
+                                      target="_blank"
                                       class="text-decoration-none"
-                                      data-bs-toggle="tooltip" 
+                                      data-bs-toggle="tooltip"
                                       title="Klik untuk melihat detail risiko asal"
                                     >
                                         <span class="badge bg-input fs-6">
-                                            <i class="bx bx-link-external me-1"></i> 
+                                            <i class="bx bx-link-external me-1"></i>
                                             {{ $lossEvent->risiko->peristiwa_risiko ?? 'Detail Risiko Asal' }}
                                         </span>
                                     </a>
@@ -72,9 +72,9 @@
                             <p>{{ $lossEvent->kategoriKejadian->kategori_kejadian ?? '-' }}</p>
                         </div>
                     </div>
-                    
+
                     <hr class="my-4">
-                    
+
                     {{-- SECTION: KLASIFIKASI RISIKO --}}
                     <h5 class="mb-3">Klasifikasi Risiko</h5>
                     <div class="row">
@@ -90,7 +90,7 @@
                                 @endif
                             </p>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        {{-- <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Kategori Risiko BUMN</label>
                             <p>
                                 @if($lossEvent->kategori_risiko_bumn == 1)
@@ -111,9 +111,9 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Jenis Risiko</label>
                             <p>{{ $lossEvent->jenisRisiko->title ?? '-' }}</p>
-                        </div>
+                        </div> --}}
                     </div>
-                    
+
                     <hr class="my-4">
 
                     {{-- SECTION: DETAIL KERUGIAN --}}
@@ -160,7 +160,7 @@
                         </div>
                         @endif
                     </div>
-                    
+
                     <hr class="my-4">
 
                     {{-- SECTION: PENYEBAB DAN PENANGANAN --}}
@@ -174,7 +174,7 @@
                                     {{ $penyebab->penyebab_risiko }}
                                 </p>
                             </div>
-                            
+
                             @if($penyebab->perlakuanPenyebabRisiko->isNotEmpty())
                                 <div class="table-responsive">
                                     <table class="table table-bordered table-hover">
@@ -217,7 +217,7 @@
                             Tidak ada data penyebab dan penanganan yang tercatat.
                         </div>
                     @endforelse
-                    
+
                     <hr class="my-4">
 
                     {{-- SECTION: INFORMASI ASURANSI --}}

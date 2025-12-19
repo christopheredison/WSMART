@@ -352,6 +352,87 @@
             </div>
         </div>
 
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header stepper border-0 pb-0">
+                    <div class="nav-link active d-flex align-items-center p-0">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">6</span></span>
+                        <span class="h3 mb-0">Pilih Risiko Anak Perusahaan Terkait</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p>Pilih risiko anak perusahaan yang terkait dengan risiko korporat ini:</p>
+                    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalPilihRisikoAp">
+                        <span class="bx bx-plus"></span> Pilih Risiko Anak Perusahaan
+                    </button>
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle" id="tabelRisikoApTerpilih">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th style="width: 15%">Anak Perusahaan</th>
+                                    <th style="width: 20%">Peristiwa Risiko</th>
+                                    <th style="width: 25%">Penyebab Risiko</th>
+                                    <th style="width: 10%" class="text-center">Level Risiko</th>
+                                    <th style="width: 10%" class="text-center">Nilai Risiko</th>
+                                    <th style="width: 10%" class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr id="empty-row-ap">
+                                    <td colspan="6" class="text-center text-muted">Belum ada risiko anak perusahaan yang dipilih.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="modalPilihRisikoAp" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Pilih Risiko Anak Perusahaan</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="ap_filter" class="form-label">Filter Berdasarkan Anak Perusahaan:</label>
+                            <select id="ap_filter" class="form-select select2" style="width: 100%;">
+                                <option value="">Pilih Anak Perusahaan</option>
+                                @foreach($apUnits as $unit)
+                                    <option value="{{ $unit->id }}">{{ $unit->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle" id="tabelRisikoAp">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th class="text-center" width="5%">Pilih</th>
+                                        <th width="15%">Unit/AP</th>
+                                        <th width="20%">Peristiwa Risiko</th>
+                                        <th width="30%">Penyebab Risiko</th>
+                                        <th class="text-center" width="10%">Level Risiko</th>
+                                        <th class="text-center" width="10%">Nilai Risiko</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="6" class="text-center">Pilih Anak Perusahaan terlebih dahulu.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                        <button type="button" class="btn btn-primary" id="btnPilihRisikoAp">Pilih</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="col-12 mt-5">
             <div class="row g-2">
                 <div class="col-auto order-1">
@@ -704,72 +785,6 @@
         });
     });
 
-    // Mengelola pemilihan risiko proyek
-    $(document).ready(function() {
-        // Array untuk menyimpan risiko proyek yang dipilih
-        let selectedRisks = [];
-
-        // Ketika tombol Pilih di modal diklik
-        $('#btnPilihRisiko').on('click', function() {
-            // Ambil semua checkbox yang dipilih
-            $('.pilih-risiko:checked').each(function() {
-                const riskId = $(this).val();
-                const projectName = $(this).data('project');
-                const peristiwa = $(this).data('peristiwa');
-                const kategori = $(this).data('kategori');
-                const level = $(this).data('level');
-
-                // Cek apakah risiko sudah ada di array
-                if (!selectedRisks.some(risk => risk.id === riskId)) {
-                    selectedRisks.push({
-                        id: riskId,
-                        project: projectName,
-                        peristiwa: peristiwa,
-                        kategori: kategori,
-                        level: level
-                    });
-                }
-            });
-
-            // Perbarui tampilan tabel risiko terpilih
-            updateSelectedRisksTable();
-
-            // Tutup modal
-            $('#modalPilihRisikoProyek').modal('hide');
-        });
-
-        // Fungsi untuk memperbarui tabel risiko terpilih
-        function updateSelectedRisksTable() {
-            const tbody = $('#tabelRisikoProyekTerpilih tbody');
-            tbody.empty();
-
-            selectedRisks.forEach(function(risk, index) {
-                const row = `
-                    <tr>
-                        <td>${risk.project}</td>
-                        <td>${risk.peristiwa}</td>
-                        <td>${risk.level}</td>
-                        <td>${risk.nilai}</td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-danger hapus-risiko" data-index="${index}">
-                                <i class="bx bx-trash"></i>
-                            </button>
-                            <input type="hidden" name="project_risk_ids[]" value="${risk.id}">
-                        </td>
-                    </tr>
-                `;
-                tbody.append(row);
-            });
-
-            // Tambahkan event listener untuk tombol hapus
-            $('.hapus-risiko').on('click', function() {
-                const index = $(this).data('index');
-                selectedRisks.splice(index, 1);
-                updateSelectedRisksTable();
-            });
-        }
-    });
-
     function removeKontrolRow(event) {
         let row = $(event.target).closest('.row');
         row.remove();
@@ -782,7 +797,7 @@
 </script>
 <script>
 $(document).ready(function() {
-  let selectedRisks = [];
+    let selectedRisks = [];
 
     $('#modalPilihRisikoDivisi').on('shown.bs.modal', function () {
         $('#divisi_filter').select2({
@@ -819,9 +834,12 @@ $(document).ready(function() {
     });
 
     $('#btnPilihRisiko').on('click', function() {
-        $('.pilih-risiko:checked').each(function() {
-            const riskId = $(this).val();
+        const currentlyChecked = new Set();
 
+        $('#tabelRisikoDivisi .pilih-risiko:checked').each(function() {
+            const riskId = $(this).val();
+            currentlyChecked.add(riskId);
+            
             if (!selectedRisks.some(risk => risk.id === riskId)) {
                 const rawPenyebab = $(this).data('penyebab');
                 selectedRisks.push({
@@ -835,9 +853,12 @@ $(document).ready(function() {
             }
         });
 
-        $('.pilih-risiko:not(:checked)').each(function() {
-            const riskId = $(this).val();
-            selectedRisks = selectedRisks.filter(risk => risk.id !== riskId);
+        selectedRisks = selectedRisks.filter(risk => {
+            const checkboxExistsInModal = $(`#tabelRisikoDivisi #risk-${risk.id}`).length > 0;
+            if (checkboxExistsInModal) {
+                return currentlyChecked.has(risk.id);
+            }
+            return true; 
         });
 
         updateSelectedRisksTable();
@@ -909,6 +930,145 @@ $(document).ready(function() {
 
                 selectedRisks.splice(index, 1);
                 updateSelectedRisksTable();
+            }
+        });
+    });
+
+    let selectedRisksAp = [];
+
+    // Init Select2 di Modal AP
+    $('#modalPilihRisikoAp').on('shown.bs.modal', function () {
+        $('#ap_filter').select2({
+            dropdownParent: $('#modalPilihRisikoAp')
+        });
+    });
+
+    // Handle Change Dropdown AP
+    $('#ap_filter').on('change', function() {
+        const unitId = $(this).val();
+        const tbody = $('#tabelRisikoAp tbody');
+
+        if (!unitId) {
+            tbody.html('<tr><td colspan="6" class="text-center">Pilih Anak Perusahaan terlebih dahulu.</td></tr>');
+            return;
+        }
+
+        tbody.html('<tr><td colspan="6" class="text-center">Memuat data...</td></tr>');
+
+        // Panggil Route baru get-ap-risks
+        $.ajax({
+            url: `{{ route('corporate-risk.get-ap-risks', ['unit' => ':unitId']) }}`.replace(':unitId', unitId),
+            type: 'GET',
+            success: function(response) {
+                if(response.html.trim() === "") {
+                    tbody.html('<tr><td colspan="6" class="text-center text-muted">Tidak ada data risiko main yang published pada unit ini.</td></tr>');
+                } else {
+                    tbody.html(response.html);
+                    selectedRisksAp.forEach(function(risk) {
+                        $(`#risk-${risk.id}`).prop('checked', true);
+                    });
+                }
+            },
+            error: function() {
+                tbody.html('<tr><td colspan="6" class="text-center text-danger">Gagal memuat data.</td></tr>');
+            }
+        });
+    });
+
+    $('#btnPilihRisikoAp').on('click', function() {
+        const currentlyChecked = new Set();
+
+        $('#tabelRisikoAp .pilih-risiko:checked').each(function() {
+            const riskId = $(this).val();
+            currentlyChecked.add(riskId);
+
+            if (!selectedRisksAp.some(risk => risk.id === riskId)) {
+                const rawPenyebab = $(this).data('penyebab');
+                selectedRisksAp.push({
+                    id: riskId,
+                    unit_name: $(this).data('divisi'),
+                    peristiwa: $(this).data('peristiwa'),
+                    level: $(this).data('level'),
+                    nilai: $(this).data('nilai'),
+                    penyebab: rawPenyebab
+                });
+            }
+        });
+
+        selectedRisksAp = selectedRisksAp.filter(risk => {
+            const checkboxExistsInModal = $(`#tabelRisikoAp #risk-${risk.id}`).length > 0;
+            if (checkboxExistsInModal) {
+                return currentlyChecked.has(risk.id);
+            }
+            return true; 
+        });
+
+        updateSelectedRisksApTable();
+        $('#modalPilihRisikoAp').modal('hide');
+    });
+
+    function updateSelectedRisksApTable() {
+        const tbody = $('#tabelRisikoApTerpilih tbody');
+        tbody.empty();
+
+        if (selectedRisksAp.length === 0) {
+            tbody.html('<tr id="empty-row-ap"><td colspan="6" class="text-center text-muted">Belum ada risiko anak perusahaan yang dipilih.</td></tr>');
+            return;
+        }
+
+        selectedRisksAp.forEach(function(risk, index) {
+            const count = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab.length : 1;
+            const firstPenyebab = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab[0] : '-';
+            const detailUrl = `/risk-register-ap/${risk.id}/view`; 
+
+            let html = `
+                <tr>
+                    <td rowspan="${count}" class="bg-white">${risk.unit_name}</td>
+                    <td rowspan="${count}" class="bg-white">
+                        <a href="${detailUrl}" target="_blank" class="text-primary fw-bold text-decoration-underline" title="Lihat Detail Risiko">
+                            ${risk.peristiwa} <i class='bx bx-link-external small'></i>
+                        </a>
+                    </td>
+                    <td>${firstPenyebab}</td>
+                    <td rowspan="${count}" class="text-center bg-white">${risk.level}</td>
+                    <td rowspan="${count}" class="text-center bg-white">${risk.nilai}</td>
+                    <td rowspan="${count}" class="text-center bg-white">
+                        <button type="button" class="btn btn-sm btn-outline-danger hapus-risiko-ap" data-index="${index}">
+                            <i class="bx bx-trash"></i>
+                        </button>
+                        <input type="hidden" name="ap_risk_ids[]" value="${risk.id}">
+                    </td>
+                </tr>
+            `;
+
+            if (count > 1) {
+                for (let i = 1; i < count; i++) {
+                    html += `
+                        <tr>
+                            <td>${risk.penyebab[i]}</td>
+                        </tr>
+                    `;
+                }
+            }
+
+            tbody.append(html);
+        });
+    }
+
+    $(document).on('click', '.hapus-risiko-ap', function() {
+        const index = $(this).data('index');
+
+        Swal.fire({
+            title: 'Hapus?',
+            text: "Hapus risiko ini dari daftar terpilih?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Ya, Hapus'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                selectedRisksAp.splice(index, 1);
+                updateSelectedRisksApTable();
             }
         });
     });
