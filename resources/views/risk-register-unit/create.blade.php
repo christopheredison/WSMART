@@ -46,7 +46,7 @@
                                 <label for="target_capaian_kinerja">Sasaran</label>
                             </div>
                         </div>
-                        <div class="col-12">
+                        {{-- <div class="col-12">
                             <div class="form-group d-lg-flex">
                                 <div class="form-floating flex-grow-1">
                                     <select class="form-select select2" id="jenis_risiko_id" name="jenis_risiko_id" required>
@@ -64,7 +64,7 @@
                                     <label for="jenis_risiko_id">Jenis Risiko T2 & T3 KBUMN</label>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="col-12">
                             <div class="form-group form-floating">
                                 <textarea class="form-control" id="peristiwa_risiko" name="peristiwa_risiko" rows="3"  placeholder="Peristiwa Risiko" required>{{ old('peristiwa_risiko') }}</textarea>
@@ -220,7 +220,7 @@
                 <div class="card-body">
                     <div class="row gy-3 gx-xxl-6 mb-3">
                         <div class="col-md-6 col-lg-5 col-xxl-6">
-                            <div class="form-group d-lg-flex mb-4">
+                            {{-- <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Jenis Kontrol Eksisting</label>
                                 <select name="jenis_kontrol_eksisting_id" class="form-select select2">
                                     <option value="" selected disabled>Jenis Kontrol Eksisting</option>
@@ -229,7 +229,7 @@
                                             {{ $jenisKontrolEksisting->jenis_kontrol }}</option>
                                     @endforeach
                                 </select>
-                            </div>
+                            </div> --}}
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Kontrol Eksisting</label>
                                 <div class="w-100">
@@ -257,7 +257,7 @@
                             </div>
                         </div>
                         <div class="col-md-6 col-lg-7 col-xxl-6">
-                            <div class="form-group d-lg-flex mb-4">
+                            {{-- <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Penilaian Efektivitas
                                     Kontrol</label>
                                 <select class="form-select select2" name="penilaian_efektifitas_kontrol">
@@ -268,7 +268,7 @@
                                             {{ $efektivitasKontrol->efektivitas_kontrol }}</option>
                                     @endforeach
                                 </select>
-                            </div>
+                            </div> --}}
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker2">Perkiraan Waktu Mulai Terpapar Risiko</label>
                                 <input class="form-control datetimepicker" name="perkiraan_waktu_mulai_terpapar_risiko"

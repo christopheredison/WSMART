@@ -53,7 +53,7 @@ class UnitLEDController extends Controller
             }
 
             $data->where('unit_id', $unitToFilter);
-            
+
             if ($request->filled('periode_id') && $request->periode_id !== '') {
                 $data->where('periode_id', $request->periode_id);
             }
@@ -87,17 +87,17 @@ class UnitLEDController extends Controller
                 ->rawColumns(['action'])
                 ->make(true);
         }
-    
+
         $periodes = Periode::orderBy('tahun', 'desc')->get();
         $kategoriKejadians = KategoriKejadian::all();
         $periode = null;
         if ($periodeId) {
             $periode = Periode::findOrFail($periodeId);
         }
-    
+
         return view('unit-led.index', compact(
-          'periodes', 
-          'kategoriKejadians', 
+          'periodes',
+          'kategoriKejadians',
           'periode',
           'units',
           'viewAllDivision',
@@ -118,7 +118,7 @@ class UnitLEDController extends Controller
         if (request()->periode) {
             $periode = Periode::findOrFail(request()->periode);
         }
-        
+
         return view('unit-led.create', compact('periodes', 'kategoriKejadians', 'jenisRisikos', 'jabatans', 'periode', 'unitId'));
     }
 
@@ -137,9 +137,9 @@ class UnitLEDController extends Controller
             'tanggal_kejadian' => 'required',
             'kategori_kejadian_id' => 'required|exists:kategori_kejadians,id',
             'sumber_penyebab_kejadian' => 'required|in:1,2',
-            'kategori_risiko_bumn' => 'required|in:1,2,3',
-            'jenis_risiko_id' => 'required|exists:jenis_risikos,id',
-            'kategori_risiko_id' => 'required|exists:kategori_risikos,id',
+            // 'kategori_risiko_bumn' => 'required|in:1,2,3',
+            // 'jenis_risiko_id' => 'required|exists:jenis_risikos,id',
+            // 'kategori_risiko_id' => 'required|exists:kategori_risikos,id',
             'penjelasan_kerugian' => 'required|string',
             'nilai_kerugian_finansial' => 'nullable|numeric|min:0',
             'kejadian_berulang' => 'required|in:0,1',
@@ -167,9 +167,9 @@ class UnitLEDController extends Controller
                 'tahun' => Carbon::parse($request->tanggal_kejadian)->format('Y'),
                 'kategori_kejadian_id' => $request->kategori_kejadian_id,
                 'sumber_penyebab_kejadian' => $request->sumber_penyebab_kejadian,
-                'kategori_risiko_bumn' => $request->kategori_risiko_bumn,
-                'jenis_risiko_id' => $request->jenis_risiko_id,
-                'kategori_risiko_id' => $request->kategori_risiko_id,
+                // 'kategori_risiko_bumn' => $request->kategori_risiko_bumn,
+                // 'jenis_risiko_id' => $request->jenis_risiko_id,
+                // 'kategori_risiko_id' => $request->kategori_risiko_id,
                 'penjelasan_kerugian' => $request->penjelasan_kerugian,
                 'nilai_kerugian_finansial' => $request->nilai_kerugian_finansial ?? 0,
                 'kejadian_berulang' => $request->kejadian_berulang,
@@ -209,7 +209,7 @@ class UnitLEDController extends Controller
                     }
                 }
             }
-            
+
             // 2. JIKA USER MEMILIH "YA", BUAT UNIT RISK BARU
             if ($request->input('create_risk_from_led') == '1') {
                 // Buat Unit Risk
@@ -220,8 +220,8 @@ class UnitLEDController extends Controller
                     'user_id' => $user->id,
                     'peristiwa_risiko' => $request->identifikasi_kejadian,
                     'deskripsi_peristiwa_risiko' => $request->nama_kejadian,
-                    'jenis_risiko_id' => $request->jenis_risiko_id,
-                    'kategori_risiko_id' => $request->kategori_risiko_id,
+                    'jenis_risiko_id' => 0,
+                    'kategori_risiko_id' => 0,
                     'perkiraan_waktu_terpapar_risiko_mulai' => $request->tanggal_kejadian,
                     'perkiraan_waktu_terpapar_risiko_akhir' => $request->tanggal_kejadian,
                 ]);
@@ -330,7 +330,7 @@ class UnitLEDController extends Controller
             'nilai_premi' => $this->cleanRupiah($request->nilai_premi),
             'nilai_klaim' => $this->cleanRupiah($request->nilai_klaim),
         ]);
-        
+
         $validator = Validator::make($request->all(), [
             'periode_id' => 'required',
             'nama_kejadian' => 'required|string|max:255',
@@ -338,9 +338,9 @@ class UnitLEDController extends Controller
             'tanggal_kejadian' => 'required',
             'kategori_kejadian_id' => 'required|exists:kategori_kejadians,id',
             'sumber_penyebab_kejadian' => 'required|in:1,2',
-            'kategori_risiko_bumn' => 'required|in:1,2,3',
-            'jenis_risiko_id' => 'required|exists:jenis_risikos,id',
-            'kategori_risiko_id' => 'required|exists:kategori_risikos,id',
+            // 'kategori_risiko_bumn' => 'required|in:1,2,3',
+            // 'jenis_risiko_id' => 'required|exists:jenis_risikos,id',
+            // 'kategori_risiko_id' => 'required|exists:kategori_risikos,id',
             'penjelasan_kerugian' => 'required|string',
             'nilai_kerugian_finansial' => 'nullable|numeric|min:0',
             'kejadian_berulang' => 'required|in:0,1',
@@ -369,7 +369,7 @@ class UnitLEDController extends Controller
             // dd($penyebabDataFromRequest);
             foreach ($penyebabDataFromRequest as $penyebabItem) {
                 $isNewPenyebab = !isset($penyebabItem['id']) || str_starts_with($penyebabItem['id'], 'temp_');
-                
+
                 $penyebabData = [
                     'loss_event_unit_id' => $lossEvent->id,
                     'penyebab_risiko' => $penyebabItem['penyebab_risiko'],
@@ -432,7 +432,7 @@ class UnitLEDController extends Controller
                     }
                 }
             }
-            
+
             $penyebabToDelete = array_diff($existingPenyebabIds, $requestPenyebabIds);
             if (!empty($penyebabToDelete)) {
               PenyebabRisikoUnitLed::destroy($penyebabToDelete);
@@ -441,7 +441,7 @@ class UnitLEDController extends Controller
             // JIKA USER MEMILIH "YA", BUAT PROJECT RISK BARU
             if ($request->input('create_risk_from_led') == '1') {
 
-                // Buat ProjectRisk baru
+                // Buat Risiko baru
                 $newUnitRisk = IdentifikasiRisiko::create([
                     'unit_type_id' => $unit->unit_type_id,
                     'unit_id' => $unit->id,
@@ -449,8 +449,8 @@ class UnitLEDController extends Controller
                     'user_id' => $user->id,
                     'peristiwa_risiko' => $request->identifikasi_kejadian,
                     'deskripsi_peristiwa_risiko' => $request->nama_kejadian,
-                    'jenis_risiko_id' => $request->jenis_risiko_id,
-                    'kategori_risiko_id' => $request->kategori_risiko_id,
+                    'jenis_risiko_id' => 0,
+                    'kategori_risiko_id' => 0,
                     'perkiraan_waktu_terpapar_risiko_mulai' => $request->tanggal_kejadian,
                     'perkiraan_waktu_terpapar_risiko_akhir' => $request->tanggal_kejadian,
                 ]);
@@ -528,12 +528,12 @@ class UnitLEDController extends Controller
         $lossEvent = LossEvent::with([
           'periode',
           'unit',
-          'kategoriKejadian', 
-          'kategoriRisiko', 
+          'kategoriKejadian',
+          'kategoriRisiko',
           'jenisRisiko',
           'penyebabRisikoLeds.perlakuanPenyebabRisiko',
         ])->findOrFail($id);
-        
+
         return view('unit-led.show', compact('lossEvent'));
     }
 
@@ -565,7 +565,7 @@ class UnitLEDController extends Controller
                 })
             ];
         });
-      
+
         $kategoriKejadians = KategoriKejadian::all();
         $jenisRisikos = JenisRisiko::with('kategoriRisiko')->get();
         $analisa = $risiko->riskAnalysis;
@@ -595,9 +595,9 @@ class UnitLEDController extends Controller
             'tanggal_kejadian' => 'required|date',
             'kategori_kejadian_id' => 'required|exists:kategori_kejadians,id',
             'sumber_penyebab_kejadian' => 'required|in:1,2',
-            'kategori_risiko_bumn' => 'required|in:1,2,3',
-            'jenis_risiko_id' => 'required|exists:jenis_risikos,id',
-            'kategori_risiko_id' => 'required|exists:kategori_risikos,id',
+            // 'kategori_risiko_bumn' => 'required|in:1,2,3',
+            // 'jenis_risiko_id' => 'required|exists:jenis_risikos,id',
+            // 'kategori_risiko_id' => 'required|exists:kategori_risikos,id',
             'penjelasan_kerugian' => 'required|string',
             'nilai_kerugian_finansial' => 'nullable|numeric',
             'kejadian_berulang' => 'required|in:0,1',
@@ -611,7 +611,7 @@ class UnitLEDController extends Controller
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
         }
-        
+
         DB::beginTransaction();
         try {
             $led = LossEvent::create([
@@ -623,9 +623,9 @@ class UnitLEDController extends Controller
                 'tahun' => Carbon::parse($request->tanggal_kejadian)->format('Y'),
                 'kategori_kejadian_id' => $request->kategori_kejadian_id,
                 'sumber_penyebab_kejadian' => $request->sumber_penyebab_kejadian,
-                'kategori_risiko_bumn' => $request->kategori_risiko_bumn,
-                'jenis_risiko_id' => $request->jenis_risiko_id,
-                'kategori_risiko_id' => $request->kategori_risiko_id,
+                // 'kategori_risiko_bumn' => $request->kategori_risiko_bumn,
+                // 'jenis_risiko_id' => $request->jenis_risiko_id,
+                // 'kategori_risiko_id' => $request->kategori_risiko_id,
                 'penjelasan_kerugian' => $request->penjelasan_kerugian,
                 'nilai_kerugian_finansial' => $request->nilai_kerugian_finansial ?? 0,
                 'kejadian_berulang' => $request->kejadian_berulang,
@@ -636,7 +636,7 @@ class UnitLEDController extends Controller
                 'version' => 1,
                 'risiko_id' => $riskRegister->id,
             ]);
-    
+
             $penyebabData  = json_decode($request->input('penyebab_data'), true);
             if (is_array($penyebabData)) {
                 foreach ($penyebabData as $penyebabItem) {
@@ -644,11 +644,11 @@ class UnitLEDController extends Controller
                         'loss_event_unit_id' => $led->id,
                         'penyebab_risiko' => $penyebabItem['penyebab_risiko'],
                     ]);
-    
+
                     if (!empty($penyebabItem['perlakuan']) && is_array($penyebabItem['perlakuan'])) {
                         foreach ($penyebabItem['perlakuan'] as $perlakuanItem) {
                             $jabatan = Jabatan::find($perlakuanItem['pic']);
-    
+
                             PerlakuanPenyebabRisikoUnitLed::create([
                                 'penyebab_risiko_led_id' => $newLedPenyebab->id,
                                 'rencana_perlakuan_risiko' => $perlakuanItem['rencana_perlakuan_risiko'],
@@ -665,7 +665,7 @@ class UnitLEDController extends Controller
                     }
                 }
             }
-    
+
             $efektivitas = 0;
 
             $analisa = $riskRegister->riskAnalysis;
@@ -702,7 +702,7 @@ class UnitLEDController extends Controller
             if ($request->input('create_new_risk') == '1') {
                 $penyebabText = "Risiko " . $request->nama_kejadian;
                 return redirect()->route(
-                    'risk-register-unit.create', 
+                    'risk-register-unit.create',
                     [
                         'penyebab_risiko' => $penyebabText,
                         'pid' => $riskRegister->periode_id
@@ -722,7 +722,7 @@ class UnitLEDController extends Controller
       if (is_null($value) || $value === '') {
           return null;
       }
-      
+
       return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
     }
 
@@ -731,7 +731,7 @@ class UnitLEDController extends Controller
         $files = LossEventFile::where('loss_event_id', $id)
                     ->orderBy('created_at', 'desc')
                     ->get();
-        
+
         return response()->json([
             'success' => true,
             'data' => $files->map(function($file) {
@@ -740,7 +740,7 @@ class UnitLEDController extends Controller
                     'file_name' => $file->file_name,
                     'file_type' => $file->file_type,
                     'file_size' => number_format($file->file_size / 1024, 2) . ' KB',
-                    'file_url' => asset('storage/' . $file->file_path), 
+                    'file_url' => asset('storage/' . $file->file_path),
                     'created_at' => $file->created_at->format('d M Y H:i')
                 ];
             })
@@ -764,7 +764,7 @@ class UnitLEDController extends Controller
                 $originalName = $file->getClientOriginalName();
                 $fileSize = $file->getSize();
                 $fileType = $file->getClientMimeType();
-                
+
                 $path = $file->store('loss-event-unit', 'public');
 
                 LossEventFile::create([
@@ -786,7 +786,7 @@ class UnitLEDController extends Controller
     {
         try {
             $file = LossEventFile::findOrFail($id);
-            
+
             if (Storage::disk('public')->exists($file->file_path)) {
                 Storage::disk('public')->delete($file->file_path);
             }

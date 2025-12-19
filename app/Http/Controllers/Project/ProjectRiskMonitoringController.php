@@ -14,6 +14,7 @@ use App\Models\Level;
 use App\Models\ProjectRiskMonitoring;
 use App\Models\RiskMonitoringNote;
 use App\Models\Unit;
+use App\Models\SkalaParameter;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -362,6 +363,12 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $projectRisk = $projectPeriode->projectRisks()
             ->with([
                 'projectRiskAnalisa',
+                'projectRiskAnalisa.skalaDampakObj',
+                'projectRiskAnalisa.skalaProbabilitas',
+                'projectRiskAnalisa.skalaDampakResidualObj',
+                'projectRiskAnalisa.skalaProbabilitasResidual',
+                'projectRiskAnalisa.skalaParameterObj',
+                'projectRiskAnalisa.skalaParameterResidualObj',
                 'peristiwaRisiko',
                 'kriProjects' => function ($query) use ($quarter, $tahun, $month) {
                     $query->select('k_r_i_projects.*', 'id as status_kri_terkini', 'id as nilai_kri_terkini');
@@ -369,7 +376,8 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                         $query->with('projectMonitoring')->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun, $month) {
                             $query->where('quarter', $quarter)
                                 ->where('tahun', $tahun)
-                                ->where('month', $month);
+                                ->where('month', $month)
+                                ->with('skalaParameter');
                         });
                     });
                 },
@@ -456,6 +464,12 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             return $item->skala_dampak . '-' . $item->skala_probabilitas;
         });
 
+        $skalaParameters = SkalaParameter::all();
+        $groupedSkalaParameters = $skalaParameters->groupBy('type_parameter');
+        $selectedParameterType = null;
+        if ($projectRisk->projectRiskAnalisa && $projectRisk->projectRiskAnalisa->skalaParameterObj) {
+            $selectedParameterType = $projectRisk->projectRiskAnalisa->skalaParameterObj->type_parameter;
+        }
 
         //hitung risk limit dan tolerance
         $risk_tolerance = 0;
@@ -519,7 +533,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'tahun' => $tahun,
             'month' => $month,
             'risk_tolerance' => $risk_tolerance,
-            'risk_limit' => $risk_limit
+            'risk_limit' => $risk_limit,
+            'groupedSkalaParameters' => $groupedSkalaParameters,
+            'selectedParameterType' => $selectedParameterType,
         ]);
     }
 
@@ -540,12 +556,15 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ->with([
                 'peristiwaRisiko',
                 'penyebabRisikoProjects',
+                'projectRiskAnalisa.skalaParameterObj',
+                'projectRiskAnalisa.skalaParameterResidualObj',
                 'kriProjects' => function ($query) use ($quarter, $tahun, $month) {
                     $query->with('kriProjectMonitorings', function ($query) use ($quarter, $tahun, $month) {
                         $query->with('projectMonitoring')->whereHas('projectMonitoring', function ($query) use ($quarter, $tahun, $month) {
                             $query->where('quarter', $quarter)
                                 ->where('tahun', $tahun)
-                                ->where('month', $month);
+                                ->where('month', $month)
+                                ->with('skalaParameter');
                         });
                     });
                 },
@@ -626,6 +645,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'skala_probabilitas_id' => null,
             'skala_risiko' => $request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden,
             'level_risiko' => $request->realisasi_level_risiko ?? $request->realisasi_level_risiko_hidden,
+            'skala_parameter_id' => $request->realisasi_skala_parameter_id,
             'eksposure_risiko' => null,
             'month' => $month,
         ];
@@ -785,7 +805,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         if ($selisih_inherent_rencana != 0) {
             $efektivitas = (($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana) * 100;
         }
-        
+
         $projectRisk->update([
             'efektivitas_perlakuan_risiko' => round($efektivitas, 2)
         ]);

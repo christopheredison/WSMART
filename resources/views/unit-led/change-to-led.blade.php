@@ -31,7 +31,7 @@
 
                             <div class="col-md-6 mb-3">
                                 <label for="tanggal_kejadian" class="form-label">Tanggal Kejadian <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="tanggal_kejadian" name="tanggal_kejadian" 
+                                <input type="text" class="form-control" id="tanggal_kejadian" name="tanggal_kejadian"
                                       value="{{ \Carbon\Carbon::parse($risiko->perkiraan_waktu_terpapar_risiko_mulai)->format('Y-m-d') }}" required>
                             </div>
 
@@ -56,7 +56,7 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-6 mb-3">
+                            {{-- <div class="col-md-6 mb-3">
                                 <label class="form-label">Kategori Risiko BUMN <span class="text-danger">*</span></label>
                                 <select class="form-select select2" name="kategori_risiko_bumn" required>
                                     <option value="">Pilih Kategori Risiko BUMN</option>
@@ -68,7 +68,7 @@
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Kategori Risiko T2 & T3 BUMN <span class="text-danger">*</span></label>
-                                
+
                                 @if($risiko->jenis_risiko_id)
                                     <select class="form-select" required disabled>
                                         <option selected>{{ $risiko->jenisRisiko->kategoriRisiko->title ?? '' }} – {{ $risiko->jenisRisiko->title ?? '' }}</option>
@@ -87,7 +87,7 @@
                                         @endforeach
                                     </select>
                                 @endif
-                            </div>
+                            </div> --}}
                         </div>
 
                         <input type="hidden" name="penyebab_data" id="penyebab_data_input">
@@ -95,7 +95,7 @@
                             <div class="card-header p-3 d-flex justify-content-between align-items-center">
                               <h5 class="mb-0">Penyebab dan Penanganan Saat Kejadian</h5>
                               <button type="button" class="btn btn-outline-primary" id="btn-tambah-penyebab">
-                                  <span class="bx bx-plus"></span> 
+                                  <span class="bx bx-plus"></span>
                                   Tambah Penyebab
                               </button>
                           </div>
@@ -115,7 +115,7 @@
                                 </table>
                             </div>
                         </div>
-                        
+
                         <div class="row mt-4">
                             <div class="col-12 mb-3">
                                 <label for="penjelasan_kerugian" class="form-label">Penjelasan Kerugian <span class="text-danger">*</span></label>
@@ -237,7 +237,7 @@ $(document).ready(function() {
     let penyebabData = @json($penyebabData ?? []);
     let currentPenyebabId = null;
     let currentPerlakuanId = null;
-    
+
     function renderPenyebabTable() {
         const tbody = $('#penyebab-risiko-tbody');
         tbody.empty();
@@ -248,14 +248,14 @@ $(document).ready(function() {
             $('#penyebab_data_input').val('[]');
             return;
         }
-    
+
         penyebabData.forEach(penyebab => {
             const perlakuanList = penyebab.perlakuan || [];
             const rowspanCount = perlakuanList.length > 0 ? perlakuanList.length : 1;
 
             const noCell = `<td class="align-middle text-center" rowspan="${rowspanCount}">${counter}</td>`;
             const penyebabCell = `<td class="align-middle" rowspan="${rowspanCount}">${penyebab.penyebab_risiko}</td>`;
-            
+
             const actionMenu = `
                 <div class="dropdown">
                     <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-toggle="tooltip" title="Pilihan Aksi">
@@ -269,7 +269,7 @@ $(document).ready(function() {
                     </div>
                 </div>`;
             const actionCell = `<td class="align-middle text-center" rowspan="${rowspanCount}">${actionMenu}</td>`;
-            
+
             let rowsHtml = '';
 
             if (perlakuanList.length > 0) {
@@ -300,7 +300,7 @@ $(document).ready(function() {
                 });
             } else {
                 const tambahPerlakuanBtnHtml = `
-                    <button type="button" class="btn btn-outline-info btn-sm btn-tambah-rencana" 
+                    <button type="button" class="btn btn-outline-info btn-sm btn-tambah-rencana"
                             data-penyebab-id="${penyebab.id}" data-bs-toggle="tooltip" title="Tambah Penanganan Baru untuk penyebab ini">
                         <i class="bx bx-plus"></i> Tambah Penanganan
                     </button>`;
@@ -313,7 +313,7 @@ $(document).ready(function() {
                     ${actionCell}
                 </tr>`;
             }
-            
+
             tbody.append(rowsHtml);
             counter++;
         });
@@ -353,9 +353,9 @@ $(document).ready(function() {
 
     $('#btn-simpan-penyebab').on('click', function() {
         const penyebabText = $('#input-penyebab-risiko').val();
-        if (!penyebabText.trim()) { 
+        if (!penyebabText.trim()) {
             Swal.fire('Gagal', 'Nama penyebab tidak boleh kosong.', 'error');
-            return; 
+            return;
         }
 
         const mode = $(this).data('mode');
@@ -366,9 +366,9 @@ $(document).ready(function() {
                 penyebabData[penyebabIndex].penyebab_risiko = penyebabText;
             }
         } else {
-            penyebabData.push({ 
-                id: `temp_${new Date().getTime()}`, 
-                penyebab_risiko: penyebabText, 
+            penyebabData.push({
+                id: `temp_${new Date().getTime()}`,
+                penyebab_risiko: penyebabText,
                 perlakuan: []
             });
         }
@@ -403,34 +403,34 @@ $(document).ready(function() {
 
         const penyebab = penyebabData.find(p => p.id == currentPenyebabId);
         if (!penyebab) return;
-        
+
         $('#modalRencanaLabel').text('Tambah Penanganan Saat Kejadian');
-        
+
         const form = $('#formRencana');
         form[0].reset();
         form.find('select').val('').trigger('change');
         form.find('.is-invalid').removeClass('is-invalid');
         form.find('[name="penyebab_risiko_text"]').val(penyebab.penyebab_risiko);
-        
+
         flatpickrMulai.clear();
         flatpickrSelesai.clear();
-        
+
         $('#modalRencana').modal('show');
     });
 
     $('body').on('click', '.btn-edit-perlakuan', function() {
         currentPenyebabId = $(this).data('penyebab-id');
         currentPerlakuanId = $(this).data('perlakuan-id');
-        
+
         const penyebab = penyebabData.find(p => p.id == currentPenyebabId);
         const perlakuan = penyebab ? penyebab.perlakuan.find(pl => pl.id == currentPerlakuanId) : null;
-        if (!perlakuan) return; 
-        
+        if (!perlakuan) return;
+
         const form = $('#formRencana');
         form.find('.is-invalid').removeClass('is-invalid');
-        
+
         $('#modalRencanaLabel').text('Edit Penanganan Saat Kejadian');
-        
+
         form.find('[name="penyebab_risiko_text"]').val(penyebab.penyebab_risiko);
         form.find('[name="rencana_perlakuan_risiko"]').val(perlakuan.rencana_perlakuan_risiko);
         form.find('[name="output_perlakuan_risiko"]').val(perlakuan.output_perlakuan_risiko);
@@ -438,13 +438,13 @@ $(document).ready(function() {
         form.find('[name="pic"]').val(perlakuan.pic).trigger('change');
         form.find('[name="opsi_perlakuan_risiko"]').val(perlakuan.opsi_perlakuan_risiko);
         form.find('[name="jenis_rencana_perlakuan_risiko"]').val(perlakuan.jenis_rencana_perlakuan_risiko);
-        
+
         flatpickrMulai.setDate(perlakuan.timeline_mulai_perlakuan_risiko, true, 'd/m/Y');
         flatpickrSelesai.setDate(perlakuan.timeline_selesai_perlakuan_risiko, true, 'd/m/Y');
-        
+
         $('#modalRencana').modal('show');
     });
-    
+
     $('#btn-simpan-rencana').on('click', function() {
         const form = $('#formRencana');
         let isValid = true;
@@ -469,7 +469,7 @@ $(document).ready(function() {
             });
             return;
         }
-        
+
         const perlakuanData = {
             rencana_perlakuan_risiko: form.find('[name="rencana_perlakuan_risiko"]').val(),
             output_perlakuan_risiko: form.find('[name="output_perlakuan_risiko"]').val(),
@@ -482,7 +482,7 @@ $(document).ready(function() {
             jenis_rencana_perlakuan_risiko: form.find('[name="jenis_rencana_perlakuan_risiko"]').val(),
             is_original: false
         };
-        
+
         const penyebab = penyebabData.find(p => p.id == currentPenyebabId);
 
         if (currentPerlakuanId) {
@@ -495,7 +495,7 @@ $(document).ready(function() {
             }
             penyebab.perlakuan.push(perlakuanData);
         }
-        
+
         renderPenyebabTable();
         $('#modalRencana').modal('hide');
     });
@@ -503,7 +503,7 @@ $(document).ready(function() {
     $('body').on('click', '.btn-hapus-perlakuan', function() {
         const penyebabId = $(this).data('penyebab-id');
         const perlakuanId = $(this).data('perlakuan-id');
-        
+
         Swal.fire({
             title: 'Apakah Anda yakin?',
             text: "Anda akan menghapus Penanganan Saat Kejadian ini.",
@@ -523,7 +523,7 @@ $(document).ready(function() {
         });
     });
 
-    
+
     $('#jenis_risiko_id_dynamic').on('change', function() {
         var kategoriId = $(this).find('option:selected').data('kategori');
         $('#kategori_risiko_id_dynamic').val(kategoriId);
@@ -547,16 +547,16 @@ $(document).ready(function() {
         }
     }).trigger('change');
 
-    
+
     $('#save-led-button').on('click', function(e) {
       e.preventDefault();
       const form = document.getElementById('form-change-to-led');
-  
+
       if (!form.checkValidity()) {
           form.reportValidity();
           return;
       }
-  
+
       Swal.fire({
           title: 'Apakah Risiko akan di-close?',
           text: "Memilih 'Ya' akan menutup risiko ini setelah LED dibuat.",
@@ -571,7 +571,7 @@ $(document).ready(function() {
               // User chose "Ya, Close Risiko"
               document.getElementById('is_closed_input').value = '1';
               form.submit();
-  
+
           } else if (result.isDenied) {
               // User chose "Tidak"
               Swal.fire({

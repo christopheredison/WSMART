@@ -123,7 +123,7 @@
                 <div class="card-body py-2">
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <span class="text-muted">Realisasi Total s/d {{ $formattedPeriod }}</span>
+                            <span class="text-muted">Residual Total s/d {{ $formattedPeriod }}</span>
                             <span class="fw-bold fs-5 text-warning">Rp {{ number_format($summaryData['eksposur_risiko_total'], 0, ',', '.') }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0">
@@ -247,7 +247,7 @@
                     <div class="table-risk-map" id="currentMap">
                         {{-- KODE PETA RISIKO DIMULAI DI SINI --}}
                         <table class="map-table">
-                          <tbody>  
+                          <tbody>
                                 @for($likelihood = 5; $likelihood >= 1; $likelihood--)
                                 <tr>
                                     @if ($likelihood == 5)
@@ -276,7 +276,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
                 <h3 class="h4 mb-0">Daftar Risiko (Level Inheren: Moderate to High & High)</h3>
             </div>
@@ -298,7 +298,7 @@
                             <th>Skala Probabilitas</th>
                             <th>Nilai Risiko</th>
                             <th>Level Risiko</th>
-                            
+
                             {{-- Residual --}}
                             <th style="min-width: 120px;">Nilai Dampak</th>
                             <th>Skala Dampak</th>
@@ -418,8 +418,8 @@
                                 @php
                                     $statusClass = '';
                                     $statusNumeric = $kri['status'] ?? 0;
-                                    if ($statusNumeric == 3) { $statusClass = 'red'; } 
-                                    elseif ($statusNumeric == 2) { $statusClass = 'yellow'; } 
+                                    if ($statusNumeric == 3) { $statusClass = 'red'; }
+                                    elseif ($statusNumeric == 2) { $statusClass = 'yellow'; }
                                     elseif ($statusNumeric == 1) { $statusClass = 'green'; }
                                 @endphp
                                 <div class="status-container {{ $statusClass }}">
@@ -436,6 +436,23 @@
                         @endforelse
                     </tbody>
                 </table>
+            </div>
+            <div class="status-legend mt-3 d-flex justify-content-end gap-3">
+                <span class="fw-bold align-self-center">
+                  Status:
+                </span>
+                <div class="d-flex align-items-center gap-1 status-container green">
+                    <div class="status-green"></div>
+                    <span>Aman</span>
+                </div>
+                <div class="d-flex align-items-center gap-1 status-container yellow">
+                    <div class="status-yellow"></div>
+                    <span>Waspada</span>
+                </div>
+                <div class="d-flex align-items-center gap-1 status-container red">
+                    <div class="status-red"></div>
+                    <span>Bahaya</span>
+                </div>
             </div>
         </div>
     </div>
@@ -636,7 +653,7 @@
   background-color:#e9ecef;
   border:1px solid #ced4da
 }
-.status-container.green .status-green { 
+.status-container.green .status-green {
   background-color:#28a745
 }
 .status-container.yellow .status-yellow {
@@ -695,13 +712,13 @@ $(document).ready(function() {
         }
     }
     flatpickr("#period_selector", {
-        plugins: [ 
+        plugins: [
           new monthSelectPlugin({
             shorthand: true,
             dateFormat: "Y-m",
             altFormat: "F Y",
             altInput: true
-          }) 
+          })
         ],
         maxDate: "today", defaultDate: "{{ $selectedPeriod }}",
         onChange: function(d,s,i) { applyFilterAndRefresh(); }
@@ -711,7 +728,7 @@ $(document).ready(function() {
     // Inisialisasi semua chart dan peta jika ada data
     @if ($selectedUnitId)
         // Logika untuk Peta Risiko
-        const highImpactRisksJs = @json($highImpactRisksJs); 
+        const highImpactRisksJs = @json($highImpactRisksJs);
         const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
         const highImpactLevels = ['High', 'Moderate to High'];
         const currentYear = '{{ $currentYear }}';
@@ -723,7 +740,7 @@ $(document).ready(function() {
                     const matrixI = risk.risk_analysis.skala_dampak + '-' + risk.risk_analysis.skala_probabilitas?.tingkat;
                     const cellI = $(`#inherentMap .data-cell[data-matrix="${matrixI}"]`);
                     if (cellI.length) cellI.find('.kode-peristiwa').append(`<span class="box-inherent">${riskNumber}</span>`);
-                    
+
                     const matrixR = risk.risk_analysis.skala_dampak_residual + '-' + risk.risk_analysis.skala_probabilitas_residual?.tingkat;
                     const cellR = $(`#inherentMap .data-cell[data-matrix="${matrixR}"]`);
                     if (cellR.length) cellR.find('.kode-peristiwa').append(`<span class="box-residual">${riskNumber}</span>`);
@@ -734,7 +751,7 @@ $(document).ready(function() {
             const selectedMonth = $('#monthSelect').val();
             const selectedYear = $('#tahunSelect').val();
             $('#currentMap .kode-peristiwa').empty();
-            
+
             Object.values(highImpactRisksJs).forEach(risk => {
                 const riskId = risk.id;
                 const riskNumber = 'R' + risk.nomor_urut_js;
@@ -745,7 +762,7 @@ $(document).ready(function() {
                     const matrixC = currentData.skala_dampak + '-' + currentData.skala_probabilitas;
                     const cellC = $(`#currentMap .data-cell[data-matrix="${matrixC}"]`);
                     if (cellC.length) cellC.find('.kode-peristiwa').append(`<span class="box-current">${riskNumber}</span>`);
-                    
+
                     const levelClass = (currentData.level_risiko_formatted || '').toLowerCase().replace(/ /g, '-').replace('to-', '');
                     const td = tableRow.find('.realisasi-level-risiko');
 
@@ -754,7 +771,7 @@ $(document).ready(function() {
                     tableRow.find('.realisasi-nilai-probabilitas').html((currentData.nilai_probabilitas_formatted || '-') + '%');
                     tableRow.find('.realisasi-skala-probabilitas').html(currentData.skala_probabilitas_obj?.tingkat || '-');
                     tableRow.find('.realisasi-nilai-risiko').html(currentData.nilai_risiko_formatted);
-                    
+
                     // [FIX] Logika pewarnaan background
                     td.html(currentData.level_risiko_formatted || '-');
                     td.removeClass('bg-high bg-moderate-high bg-moderate bg-low-moderate bg-low');

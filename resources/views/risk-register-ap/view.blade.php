@@ -276,14 +276,14 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-12">
+                    {{-- <div class="col-12">
                         <div class="form-group">
                             <label class="form-label fw-bold">Jenis Risiko T2 & T3 KBUMN</label>
                             <div class="p-3 bg-light rounded">
                                 {{ optional($risiko->jenisRisiko->kategoriRisiko)->title ?? '-' }} - {{ optional($risiko->jenisRisiko)->title ?? '-' }}
                             </div>
                         </div>
-                    </div>
+                    </div> --}}
                     <div class="col-12">
                         <div class="form-group">
                             <label class="form-label fw-bold">Peristiwa Risiko</label>
@@ -363,12 +363,12 @@
             <div class="card-body">
                 <div class="row gy-3 gx-xxl-6">
                     <div class="col-md-6">
-                        <div class="form-group mb-4">
+                        {{-- <div class="form-group mb-4">
                             <label class="form-label fw-bold">Jenis Kontrol Eksisting</label>
                             <div class="p-3 bg-light rounded">
                                 {{ optional($risiko->jenisKontrolEksisting)->jenis_kontrol ?? '-' }}
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="form-group mb-4">
                             <label class="form-label fw-bold">Kontrol Eksisting</label>
                             @if($risiko->kontrolEksistings && $risiko->kontrolEksistings->isNotEmpty())
@@ -385,12 +385,12 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group mb-4">
+                        {{-- <div class="form-group mb-4">
                             <label class="form-label fw-bold">Penilaian Efektivitas Kontrol</label>
                             <div class="p-3 bg-light rounded">
                                 {{ optional($risiko->penilaianEfektifitasKontrol)->efektivitas_kontrol ?? '-' }}
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="form-group mb-4">
                             <label class="form-label fw-bold">Perkiraan Waktu Mulai Terpapar Risiko</label>
                             <div class="p-3 bg-light rounded">

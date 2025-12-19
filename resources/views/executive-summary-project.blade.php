@@ -159,7 +159,7 @@
                     <div class="w-100 d-flex justify-content-between align-items-center">
                         <ul class="list-group list-group-flush flex-grow-1">
                           <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                              <span class="text-muted">Realisasi Total</span>
+                              <span class="text-muted">Residual Total</span>
                               <span class="fw-bold fs-4 text-warning">Rp {{ number_format($summaryData['eksposur_risiko_total'], 0, ',', '.') }}</span>
                           </li>
                         </ul>
@@ -306,7 +306,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
                 <h3 class="h4 mb-0">Daftar Risiko (Level Inheren: Moderate to High & High)</h3>
             </div>
@@ -328,7 +328,7 @@
                             <th>Skala Probabilitas</th>
                             <th>Nilai Risiko</th>
                             <th>Level Risiko</th>
-                            
+
                             {{-- Residual --}}
                             <th style="min-width: 120px;">Nilai Dampak</th>
                             <th>Skala Dampak</th>
@@ -447,8 +447,8 @@
                                 @php
                                     $statusClass = '';
                                     $statusNumeric = $kri['status'] ?? 0;
-                                    if ($statusNumeric == 3) { $statusClass = 'red'; } 
-                                    elseif ($statusNumeric == 2) { $statusClass = 'yellow'; } 
+                                    if ($statusNumeric == 3) { $statusClass = 'red'; }
+                                    elseif ($statusNumeric == 2) { $statusClass = 'yellow'; }
                                     elseif ($statusNumeric == 1) { $statusClass = 'green'; }
                                 @endphp
                                 <div class="status-container text-center {{ $statusClass }}" style="min-width: 45px;">
@@ -465,6 +465,23 @@
                         @endforelse
                     </tbody>
                 </table>
+            </div>
+            <div class="status-legend mt-3 d-flex justify-content-end gap-3">
+                <span class="fw-bold align-self-center">
+                  Status:
+                </span>
+                <div class="d-flex align-items-center gap-1 status-container green">
+                    <div class="status-green"></div>
+                    <span>Aman</span>
+                </div>
+                <div class="d-flex align-items-center gap-1 status-container yellow">
+                    <div class="status-yellow"></div>
+                    <span>Waspada</span>
+                </div>
+                <div class="d-flex align-items-center gap-1 status-container red">
+                    <div class="status-red"></div>
+                    <span>Bahaya</span>
+                </div>
             </div>
         </div>
     </div>
@@ -702,7 +719,7 @@ $(document).ready(function() {
             if (unitId) params.append('unit_id', unitId);
             if (projectId) params.append('project_id', projectId);
             if (period) params.append('period', period);
-            
+
             window.location.href = `${baseUrl}?${params.toString()}`;
         }
     }
@@ -800,7 +817,7 @@ $(document).ready(function() {
             const selectedMonth = $('#monthSelect').val();
             const selectedYear = $('#tahunSelect').val();
             $('#currentMap .kode-peristiwa').empty();
-            
+
             Object.values(risks).forEach(risk => {
                 const riskId = risk.id;
                 const tableRow = $(`.table-strategi tbody tr[data-risk-id="${riskId}"]`);
@@ -847,7 +864,7 @@ $(document).ready(function() {
     function fillEfektivitasChart(data) {
         var chartDom = document.getElementById('efektivitas-perlakuan-chart');
         if (!chartDom) return; // Hentikan jika elemen tidak ditemukan
-        
+
         var myChart = echarts.init(chartDom);
         var option;
 
@@ -897,7 +914,7 @@ $(document).ready(function() {
 
     // Ambil data dari controller dan panggil fungsi chart
     const efektivitasData = @json($efektivitasPerlakuanData);
-    
+
     // Panggil fungsi hanya jika ada data untuk ditampilkan
     if (efektivitasData.some(item => item.value > 0)) {
         fillEfektivitasChart(efektivitasData);
