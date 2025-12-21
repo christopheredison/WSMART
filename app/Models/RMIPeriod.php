@@ -83,4 +83,10 @@ class RMIPeriod extends Model
     {
         return Helper::encrypt($this->id);
     }
+
+    public function isActive(): bool
+    {
+        $today = now()->startOfDay();
+        return $this->start_date->lte($today) && $this->end_date->gte($today);
+    }
 }

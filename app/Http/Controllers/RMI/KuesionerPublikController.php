@@ -140,6 +140,15 @@ class KuesionerPublikController extends Controller
                 'message' => 'Periode RMI tidak ditemukan.',
             ]);
         }
+
+        if (!$periode->isActive()) {
+            return view('kuesioner_publik.verification_status', [
+                'title' => 'Periode Tidak Aktif',
+                'status' => 'error',
+                'message' => 'Periode RMI saat ini tidak aktif. Anda tidak dapat mengisi kuesioner pada periode ini.',
+            ]);
+        }
+
         $user = KuesionerResponden::where('email', $request->input('email'))
             ->where('rmi_period_id', $periode->id)
             ->where('verification_token', $request->input('verification_token'))
