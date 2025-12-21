@@ -23,7 +23,7 @@
       <div class="col-11 col-md-7 col-lg-6 col-xl-5 col-xxl-4 mt-n7 ms-md-n9 ms-lg-n10 my-md-auto">
         <div class="card h-auto">
           <div class="card-body p-4 p-md-5 p-xl-6 p-xxl-7">
-            <h3 class="text-center mb-4">Verifikasi Email</h3>
+            <h3 class="text-center mb-4">{{ $title ?? 'Verifikasi Email' }}</h3>
             @if($status == 'error')
             <div class="alert alert-danger">
                 {{ $message }}

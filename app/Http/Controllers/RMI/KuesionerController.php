@@ -236,8 +236,8 @@ class KuesionerController extends BasicCRUDController
 
             UserAnswer::updateOrCreate([
                 'period_question_id' => $periodeQuestion->id,
-            ], [
                 'user_survey_id' => $userSurvey->id,
+            ], [
                 'answer_choice_id' => $periodeQuestion->question->answerChoices->where('level', $answer)->first()->id,
                 'level' => $answer,
                 'user_id' => $user->id,

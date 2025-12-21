@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\RMI;
 
 use App\Http\Controllers\Controller;
+use App\Models\KuesionerResponden;
+use App\Models\RMIPeriod;
+use App\Models\UserAnswer;
 use Illuminate\Http\Request;
 
 class KuesionerPublikController extends Controller
@@ -87,8 +90,8 @@ class KuesionerPublikController extends Controller
             return abort(404, 'Periode RMI tidak ditemukan.');
         }
 
-        $email = $request->query('email');
-        $verificationToken = $request->query('verification_token');
+        $email = $request->input('email');
+        $verificationToken = $request->input('verification_token');
 
         $responden = \App\Models\KuesionerResponden::where('email', $email)
             ->where('rmi_period_id', $rmiPeriod->id)
@@ -97,6 +100,7 @@ class KuesionerPublikController extends Controller
 
         if (!$responden) {
             return view('kuesioner_publik.verification_status', [
+                'title' => 'Verifikasi Gagal',
                 'status' => 'error',
                 'message' => 'Data responden tidak ditemukan atau token verifikasi tidak valid.',
             ]);
@@ -104,6 +108,7 @@ class KuesionerPublikController extends Controller
 
         if ($responden->isVerified()) {
             return view('kuesioner_publik.verification_status', [
+                'title' => 'Verifikasi Berhasil',
                 'status' => 'success',
                 'message' => 'Email Anda sudah terverifikasi. Silahkan tunggu instruksi selanjutnya melalui email.',
             ]);
@@ -111,6 +116,7 @@ class KuesionerPublikController extends Controller
 
         if ($responden->verification_token !== $verificationToken) {
             return view('kuesioner_publik.verification_status', [
+                'title' => 'Verifikasi Gagal',
                 'status' => 'error',
                 'message' => 'Token verifikasi tidak valid.',
             ]);
@@ -119,8 +125,132 @@ class KuesionerPublikController extends Controller
         $responden->markAsVerified();
 
         return view('kuesioner_publik.verification_status', [
+            'title' => 'Verifikasi Berhasil',
             'status' => 'success',
             'message' => 'Email Anda telah berhasil diverifikasi. Silahkan tunggu instruksi selanjutnya melalui email.',
+        ]);
+    }
+
+    public function fill(Request $request, $token) {
+        $periode = RMIPeriod::getByToken($token);
+        if (!$periode) {
+            return view('kuesioner_publik.verification_status', [
+                'title' => 'Tidak Ditemukan',
+                'status' => 'error',
+                'message' => 'Periode RMI tidak ditemukan.',
+            ]);
+        }
+        $user = KuesionerResponden::where('email', $request->input('email'))
+            ->where('rmi_period_id', $periode->id)
+            ->where('verification_token', $request->input('verification_token'))
+            ->first();
+
+        if (!$user || !$user->isVerified() || !$user->isApproved()) {
+            return view('kuesioner_publik.verification_status', [
+                'title' => 'Akses Ditolak',
+                'status' => 'error',
+                'message' => 'Akses ditolak. Pastikan Anda telah terverifikasi dan disetujui untuk mengisi kuesioner.',
+            ]);
+        }
+
+        $user->load('group');
+
+        $periode->load(['periodQuestions' => function($query) use ($user) {
+            $query->with(['question' => function($query) use ($user) {
+                $query->where('group_id', $user->group_id);
+                $query->with('answerChoices');
+            }])->whereHas('question', function($query) use ($user) {
+                $query->where('group_id', $user->group_id);
+            });
+        },'userSurvey' => function($query) use ($user) {
+            $query->where('kuesioner_responden_id', $user->id);
+        }]);
+
+        if ($periode->userSurvey?->status == 1) {
+            return view('kuesioner_publik.verification_status', [
+                'title' => 'Kuesioner Sudah Selesai',
+                'status' => 'success',
+                'message' => 'Anda telah menyelesaikan kuesioner ini. Hubungi administrator jika ingin mengulang.',
+            ]);
+        }
+
+        $questions = $periode->periodQuestions;
+        $currentAnswers = $periode->userSurvey?->userAnswers->pluck('level', 'period_question_id');
+        return view('kuesioner_publik.edit', compact('periode', 'questions', 'currentAnswers', 'user', 'token'));
+    }
+
+    public function update(Request $request, $token)
+    {
+        $periode = RMIPeriod::getByToken($token);
+        if (!$periode) {
+            return response()->json([
+                'message' => 'Periode RMI tidak ditemukan.',
+            ], 404);
+        }
+        $user = KuesionerResponden::where('email', $request->input('email'))
+            ->where('rmi_period_id', $periode->id)
+            ->where('verification_token', $request->input('verification_token'))
+            ->first();
+
+        if (!$user || !$user->isVerified() || !$user->isApproved()) {
+            return response()->json([
+                'message' => 'Akses ditolak. Pastikan Anda telah terverifikasi dan disetujui untuk mengisi kuesioner.',
+            ], 403);
+        }
+
+        $periode->load([
+            'userSurvey' => function($query) use ($user) {
+                $query->where('kuesioner_responden_id', $user->id);
+            }, 
+            'periodQuestions' => function($query) use ($user) {
+                $query->whereHas('question', function($query) use ($user) {
+                    $query->where('group_id', $user->group_id);
+                })->with('question.answerChoices');
+            }
+        ]);
+        $answers = $request->answers;
+        $userSurvey = $periode->userSurvey;
+
+        if (!$userSurvey) {
+            $userSurvey = $periode->userSurvey()->create([
+                'kuesioner_responden_id' => $user->id,
+                'status' => '0',
+            ]);
+        }
+
+        if ($userSurvey->status == 1) {
+            return response()->json([
+                'message' => 'Kuesioner sudah selesai diisi',
+            ], 400);
+        }
+
+        foreach ($answers ?? [] as $questionId => $answer) {
+            $periodeQuestion = $periode->periodQuestions->where('id', $questionId)->first();
+
+            if (!$periodeQuestion) {
+                continue;
+            }
+
+            UserAnswer::updateOrCreate([
+                'period_question_id' => $periodeQuestion->id,
+                'user_survey_id' => $userSurvey->id,
+            ], [
+                'answer_choice_id' => $periodeQuestion->question->answerChoices->where('level', $answer)->first()->id,
+                'level' => $answer,
+                'kuesioner_responden_id' => $user->id,
+                'question_notes' => null,
+                'answer_notes' => null,
+            ]);
+        }
+
+        if ($request->complete) {
+            $userSurvey->update([
+                'status' => '1',
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Kuesioner berhasil disimpan',
         ]);
     }
 }

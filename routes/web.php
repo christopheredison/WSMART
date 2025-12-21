@@ -845,4 +845,5 @@ Route::prefix('kuesioner-publik')->as('kuesioner-publik.')->group(function () {
     Route::post('{token}/register', [KuesionerPublikController::class, 'doRegister'])->name('do-register');
     Route::get('{token}/verify', [KuesionerPublikController::class, 'verify'])->name('verify');
     Route::get('{token}/fill', [KuesionerPublikController::class, 'fill'])->name('fill');
+    Route::put('{token}/fill', [KuesionerPublikController::class, 'update'])->name('update');
 });
