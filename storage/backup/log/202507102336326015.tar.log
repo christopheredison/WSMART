@@ -1,0 +1,5 @@
+Starting backup process for 202507102336326015.tar at Fri Jul 11 06:36:50 WIB 2025
+could not find a "pg_dump" to execute
+Backup completed successfully, creating zip archive...
+  adding: 202507102336326015.tar (deflated 90%)
+Backup process completed successfully at Fri Jul 11 06:36:51 WIB 2025

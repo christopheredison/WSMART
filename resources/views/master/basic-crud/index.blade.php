@@ -156,6 +156,11 @@
                             </div>
                         </div>
                     </div>
+                    <div class="col-auto ms-auto mb-3 d-none" id="bulk-verify-container">
+                        <button class="btn btn-success btn-sm" onclick="handleBulkVerifikasiClick()">
+                            <i class="bx bx-check-shield"></i> Verifikasi Risiko (<span id="count-checked">0</span>)
+                        </button>
+                    </div>
                     <table class="table table-bulk-select table-hover ajax-datatable" data-paging="true" data-scroll-y="false"
                         data-filter="true" data-info="true">
                         <thead>
@@ -168,6 +173,13 @@
                                     </div>
                                 </th>
                                 --}}
+                                @if(Route::is('projects.risks.index'))
+                                <th class="white-space-nowrap">
+                                    <div class="form-check mb-0">
+                                        <input class="form-check-input" type="checkbox" id="check-all-risiko" />
+                                    </div>
+                                </th>
+                                @endif
                                 <th class="white-space-nowrap">#</th>
                                 @foreach ($tableColumns as $key => $column)
                                     <th class="sort" data-sort="{{ $key }}" class="{{ $column['class'] ?? '' }}">
@@ -307,10 +319,10 @@ function renderOpportunities(opportunities) {
     opportunities.forEach((item, index) => {
         const formattedRencana = formatRupiah(item.nilai_peluang_rencana);
         const formattedRealisasi = formatRupiah(item.nilai_peluang_realisasi);
-        
+
         let fileHtml = '<span class="text-muted">-</span>';
         if (item.file_path) {
-            const fileUrl = `/storage/${item.file_path}`; 
+            const fileUrl = `/storage/${item.file_path}`;
             fileHtml = `
                 <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-outline-info" title="Download Dokumen">
                     <i class="bx bx-download"></i>
@@ -472,7 +484,7 @@ $(document).ready(function() {
 
         const formData = new FormData(this);
         formData.set('identifikasi_risiko_id', risikoId);
-        
+
         // Mapping fields
         formData.set('description', formData.get('penjelasan_peluang_rencana'));
         formData.set('penjelasan', formData.get('penjelasan_peluang_realisasi'));
@@ -481,7 +493,7 @@ $(document).ready(function() {
         if (isUpdate) {
             formData.append('_method', 'POST');
             formData.set('_method', 'POST');
-            formData.append('_method', 'PUT'); 
+            formData.append('_method', 'PUT');
         }
 
         $.ajax({
@@ -536,21 +548,32 @@ $(document).ready(function() {
     const ledCreateRoute = "{{ route('risk-register-ap.loss-events.create', ['riskRegister' => ':riskRegister']) }}";
 @endif
 
-
-
 const fetchedData = [];
 $(document).ready(function() {
     $("body").tooltip({ selector: '[data-bs-toggle=tooltip]' });
 
     const datatableColumns = [
-        // {
-        //     data: 'id',
-        //     orderable: false,
-        //     searchable: false,
-        //     render: function(data, type, row, meta) {
-        //         return '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" value="' + data + '"></div>';
-        //     }
-        // },
+        @if(Route::is('projects.risks.index'))
+        {
+            data: 'id',
+            orderable: false,
+            searchable: false,
+            render: function(data, type, row, meta) {
+                const uStep = {{ $extraViewData['u_step'] ?? 0 }};
+                const bStep = {{ $extraViewData['b_step'] ?? 0 }};
+
+                // Logika verifikasi
+                const canVerify = (row.status == 2 || row.status == 3) &&
+                                  row.step_verification == uStep &&
+                                  uStep == bStep;
+                                  // && !row.is_closed;
+
+                return `<div class="form-check mb-0">
+                    <input class="form-check-input row-checkbox" type="checkbox" value="${data}" ${canVerify ? '' : 'disabled'}>
+                </div>`;
+            }
+        },
+        @endif
         {
             data: 'id',
             orderable: false,
@@ -983,6 +1006,30 @@ $(document).ready(function() {
             }
         });
     });
+
+    // Event Checkbox
+    $(document).on('change', '#check-all-risiko', function() {
+        $('.row-checkbox:not(:disabled)').prop('checked', this.checked);
+        updateBulkButton();
+    });
+
+    $(document).on('change', '.row-checkbox', function() {
+        updateBulkButton();
+    });
+
+    let selectedIds = [];
+
+    function updateBulkButton() {
+        selectedIds = [];
+        $('.row-checkbox:checked').each(function() { selectedIds.push($(this).val()); });
+        if (selectedIds.length > 0) {
+            $('#bulk-verify-container').removeClass('d-none');
+            $('#count-checked').text(selectedIds.length);
+        } else {
+            $('#bulk-verify-container').addClass('d-none');
+        }
+    }
+
 
     function showDownloadLoading() {
         $('#download-template-btn').prop('disabled', true);

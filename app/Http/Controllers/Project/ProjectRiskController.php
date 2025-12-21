@@ -355,24 +355,6 @@ class ProjectRiskController extends BasicCRUDController
                     'permissions' => ['project_risk_edit'],
                     'active_state' => $active_state
                 ];
-
-
-                if (Gate::check('project_risk_delete') && ($status==1 || $status==5)) {
-                    $this->tableLegend[] = [
-                        'icon' => '<span class="bx bx-trash text-danger"></span>',
-                        'label' => 'Hapus'
-                    ];
-
-                    $this->tableActions[] = [
-                        'label' => '<span class="bx bx-trash text-danger"></span>',
-                        'btn_icon' => true,
-                        'action' => 'delete',
-                        'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']),
-                        'title' => 'Hapus',
-                        'permissions' => ['project_risk_delete'],
-                        'active_state' => 'function(id, type, row) { return (row.status == 1 || row.status == 5); }'
-                    ];
-                }
             }
             //else if($status==2 && $levelId==7){//on verif && level = ROW/P
             else if($u_step == $b_step){//status batch dan step
@@ -391,6 +373,23 @@ class ProjectRiskController extends BasicCRUDController
                 $this->tableLegend[] = [
                     'icon' => '<span class="bx bx-check-shield text-success"></span>',
                     'label' => 'Verifikasi Risiko'
+                ];
+            }
+
+            if (Gate::check('project_risk_delete') && ($status==1 || $status==5)) {
+                $this->tableLegend[] = [
+                    'icon' => '<span class="bx bx-trash text-danger"></span>',
+                    'label' => 'Hapus'
+                ];
+
+                $this->tableActions[] = [
+                    'label' => '<span class="bx bx-trash text-danger"></span>',
+                    'btn_icon' => true,
+                    'action' => 'delete',
+                    'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']),
+                    'title' => 'Hapus',
+                    'permissions' => ['project_risk_delete'],
+                    'active_state' => 'function(id, type, row) { return (row.status == 1 || row.status == 5); }'
                 ];
             }
         }
@@ -600,7 +599,8 @@ class ProjectRiskController extends BasicCRUDController
             'status' => $status,
             'levelId' => $levelId,
             'pending_risk' => $pending_risk,
-            // tambahkan data lain jika diperlukan
+            'u_step' => $u_step,
+            'b_step' => $b_step,
         ];
 
         return parent::index();
@@ -1213,6 +1213,7 @@ class ProjectRiskController extends BasicCRUDController
     public function destroy($resource) {
         try {
             $projectRisk = ProjectRisk::findOrFail(request()->route('risk'));
+            $projectPeriodeList = $projectRisk->projectPeriodeList;
 
             if (!Gate::check('project_risk_delete')) {
                 return response()->json([
@@ -1227,6 +1228,9 @@ class ProjectRiskController extends BasicCRUDController
             // $projectRisk->projectRiskMonitorings()->delete();
             // $projectRisk->projectKontrolEksistings()->delete();
             $projectRisk->delete();
+
+            // $projectPeriodeList->recalculateAnalisa($risk_limit);
+            $projectPeriodeList->refreshNilai();
 
             return response()->json([
                 'message' => 'Data risiko proyek berhasil dihapus.'
@@ -2652,6 +2656,71 @@ class ProjectRiskController extends BasicCRUDController
                 'project' => $project_periode_id
             ])->with('success', 'Semua risiko berhasil dieskalasi dan diverifikasi.');
         }
+    }
+
+    public function bulkVerifikasi(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'status_verifikasi' => 'required|in:terima,tolak',
+            'catatan_verifikasi' => 'required|string',
+        ]);
+
+        $ids = $request->input('ids');
+        $user = auth()->user();
+
+        DB::beginTransaction();
+        try {
+            foreach ($ids as $id) {
+                $projectRisk = ProjectRisk::findOrFail($id);
+                $this->processSingleVerification($projectRisk, $request->status_verifikasi, $request->catatan_verifikasi, $user);
+            }
+            DB::commit();
+            return response()->json(['message' => 'Berhasil memverifikasi ' . count($ids) . ' risiko.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function processSingleVerification($projectRisk, $status, $notes, $user)
+    {
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        $verificationData = $this->getUserVerificationStep($user->level_id, $is_mr);
+        $u_step = $verificationData['u_step'];
+        $min_verification = 4;
+
+        if ($status === 'terima') {
+            if ($u_step >= $min_verification) {
+                $projectRisk->update([
+                    'status' => ProjectRisk::STATUS_TERVERIFIKASI,
+                    'status_progress' => 3,
+                    'status_risiko' => 1,
+                    'step_verification' => $u_step
+                ]);
+            } else {
+                $projectRisk->update([
+                    'status' => ProjectRisk::STATUS_TUNGGU_VERIFIKASI,
+                    'status_progress' => 1,
+                    'step_verification' => $u_step + 1
+                ]);
+            }
+            $noteStatus = 1;
+        } else {
+            $projectRisk->update([
+                'status' => ProjectRisk::STATUS_REJECTED,
+                'status_progress' => 2
+            ]);
+            $noteStatus = 2;
+        }
+
+        RiskNote::create([
+            'risiko_id' => $projectRisk->id,
+            'type' => 2,
+            'status' => $noteStatus,
+            'notes' => $notes,
+            'user_id' => $user->id,
+        ]);
     }
 
     /**

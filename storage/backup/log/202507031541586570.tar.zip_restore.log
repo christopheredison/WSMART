@@ -1,8 +1,8 @@
 --------------------------------
-Starting restore process for 202507031530391585.tar.zip at Thu Jul  3 22:31:17 WIB 2025
+Starting restore process for 202507031541586570.tar.zip at Thu Jul  3 22:42:20 WIB 2025
 Extracting backup file...
-Archive:  /home/webmin/vhosts/rwi/https/storage/backup/202507031530391585.tar.zip
- extracting: /home/webmin/vhosts/rwi/https/storage/backup/temp//202507031530391585.tar
+Archive:  /home/webmin/vhosts/rwi/https/storage/backup/202507031541586570.tar.zip
+ extracting: /home/webmin/vhosts/rwi/https/storage/backup/temp//202507031541586570.tar
 Extraction completed successfully
 Starting database restore...
 
@@ -15,4 +15,4 @@ Restore process completed successfully
 
    INFO  Application is now live.  
 
-Restore process finished successfully at Thu Jul  3 22:31:27 WIB 2025
+Restore process finished successfully at Thu Jul  3 22:42:22 WIB 2025
