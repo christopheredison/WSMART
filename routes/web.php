@@ -77,8 +77,7 @@ use App\Http\Controllers\RiskContextController;
 use App\Http\Controllers\ProjectRiskContextController;
 use App\Http\Controllers\CorporateLEDController;
 use App\Http\Controllers\RiskRegisterCorporateMonitoringController;
-
-
+use App\Http\Controllers\RMI\KuesionerPublikController;
 
 /*
 |--------------------------------------------------------------------------
@@ -835,4 +834,10 @@ Route::prefix('notifications')->middleware(['auth'])->group(function () {
     Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
     Route::post('/mark-multiple-read', [NotificationController::class, 'markMultipleAsRead'])->name('notifications.markMultipleAsRead');
     Route::post('/mark-multiple-unread', [NotificationController::class, 'markMultipleAsUnread'])->name('notifications.markMultipleAsUnread');
+});
+
+Route::prefix('kuesioner-publik')->as('kuesioner-publik.')->group(function () {
+    Route::get('{token}/register', [KuesionerPublikController::class, 'register'])->name('register');
+    Route::post('{token}/register', [KuesionerPublikController::class, 'doRegister'])->name('do-register');
+    Route::get('{token}/verify', [KuesionerPublikController::class, 'verify'])->name('verify');
 });

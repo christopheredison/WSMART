@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Supports\Helper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -47,6 +48,12 @@ class RMIPeriod extends Model
         'end_date' => 'date:Y-m-d',
     ];
 
+    public static function getByToken(string $token): ?RMIPeriod
+    {
+        $id = Helper::decrypt($token);
+        return self::find($id);
+    }
+
     public function periodQuestions()
     {
         return $this->hasMany(PeriodQuestion::class, 'period_id');
@@ -70,5 +77,10 @@ class RMIPeriod extends Model
     public function documents()
     {
         return $this->hasMany(RMIPeriodDocument::class, 'rmi_period_id');
+    }
+
+    public function getTokenAttribute()
+    {
+        return Helper::encrypt($this->id);
     }
 }
