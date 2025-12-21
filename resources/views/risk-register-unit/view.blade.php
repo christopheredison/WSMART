@@ -665,11 +665,11 @@
                         <div class="form-group mb-4">
                             <label class="form-label fw-bold">Kategori Dampak</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->kategori_dampak ?? '-' }}
+                                {{ $analisa?->kategori_dampak ?? '-' }}
                             </div>
                         </div>
                     </div>
-                    @if($analisa->kategori_dampak === 'Kualitatif')
+                    @if($analisa?->kategori_dampak === 'Kualitatif')
                       <div class="col-md-4">
                           <div class="form-group mb-4">
                               <label class="form-label fw-bold">Area Dampak</label>
@@ -710,7 +710,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Nilai Dampak</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->nilai_dampak ? 'Rp ' . number_format($analisa->nilai_dampak, 0, ',', '.') : 'Rp 0' }}
+                                {{ $analisa?->nilai_dampak ? 'Rp ' . number_format($analisa?->nilai_dampak, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>
@@ -718,7 +718,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Nilai Probabilitas (%)</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->nilai_probabilitas ?? '-' }}%
+                                {{ $analisa?->nilai_probabilitas ?? '-' }}%
                             </div>
                         </div>
                     </div>
@@ -726,7 +726,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Eksposur Risiko</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->eksposur_risiko ? 'Rp ' . number_format($analisa->eksposur_risiko, 0, ',', '.') : 'Rp 0' }}
+                                {{ $analisa?->eksposur_risiko ? 'Rp ' . number_format($analisa?->eksposur_risiko, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>
@@ -734,7 +734,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Skala Dampak</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->skala_dampak ? '(' . $analisa->skala_dampak . ') ' . optional($analisa->skalaDampakObj)->deskripsi : '-' }}
+                                {{ $analisa?->skala_dampak ? '(' . $analisa?->skala_dampak . ') ' . optional($analisa?->skalaDampakObj)->deskripsi : '-' }}
                             </div>
                         </div>
                     </div>
@@ -742,7 +742,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Skala Probabilitas</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->skalaProbabilitas ? '(' . $analisa->skalaProbabilitas->tingkat . ') ' . $analisa->skalaProbabilitas->skala : '-' }}
+                                {{ $analisa?->skalaProbabilitas ? '(' . $analisa?->skalaProbabilitas->tingkat . ') ' . $analisa?->skalaProbabilitas->skala : '-' }}
                             </div>
                         </div>
                     </div>
@@ -750,24 +750,24 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Skala Risiko</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->skala_risiko ?? '-' }}
+                                {{ $analisa?->skala_risiko ?? '-' }}
                             </div>
                         </div>
                     </div>
                     <div class="col-md-2">
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Level Risiko</label>
-                            <div class="p-3 rounded bg-{{ str_replace(' ', '-', str_replace('to ', '', strtolower($analisa->level_risiko))) }}">
-                                <span class="text-white fw-bold">{{ $analisa->level_risiko ?? '-' }}</span>
+                            <div class="p-3 rounded bg-{{ str_replace(' ', '-', str_replace('to ', '', strtolower($analisa?->level_risiko))) }}">
+                                <span class="text-white fw-bold">{{ $analisa?->level_risiko ?? '-' }}</span>
                             </div>
                         </div>
                     </div>
-                    @if($analisa->kategori_dampak === 'Kualitatif')
+                    @if($analisa?->kategori_dampak === 'Kualitatif')
                         <div class="col-12">
                             <div class="form-group mb-4">
                                 <label class="form-label fw-bold">Deskripsi Dampak</label>
                                 <div class="p-3 bg-light rounded">
-                                    {{ $analisa->deskripsi_dampak ?? '-' }}
+                                    {{ $analisa?->deskripsi_dampak ?? '-' }}
                                 </div>
                             </div>
                         </div>
@@ -776,7 +776,7 @@
                             <div class="form-group mb-4">
                                 <label class="form-label fw-bold">Asumsi Perhitungan Dampak & Probabilitas Inherent</label>
                                 <div class="p-3 bg-light rounded">
-                                    {{ $analisa->asumsi_perhitungan_dampak ?? '-' }}
+                                    {{ $analisa?->asumsi_perhitungan_dampak ?? '-' }}
                                 </div>
                             </div>
                         </div>
@@ -805,7 +805,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Nilai Dampak</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->{'nilai_dampak_residual_q' . $i} ? 'Rp ' . number_format($analisa->{'nilai_dampak_residual_q' . $i}, 0, ',', '.') : 'Rp 0' }}
+                                {{ $analisa?->{'nilai_dampak_residual_q' . $i} ? 'Rp ' . number_format($analisa?->{'nilai_dampak_residual_q' . $i}, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>
@@ -813,7 +813,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Nilai Probabilitas (%)</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->{'nilai_probabilitas_residual_q' . $i} ?? '-' }}%
+                                {{ $analisa?->{'nilai_probabilitas_residual_q' . $i} ?? '-' }}%
                             </div>
                         </div>
                     </div>
@@ -821,7 +821,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Eksposur Risiko</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->{'eksposur_risiko_residual_q' . $i} ? 'Rp ' . number_format($analisa->{'eksposur_risiko_residual_q' . $i}, 0, ',', '.') : 'Rp 0' }}
+                                {{ $analisa?->{'eksposur_risiko_residual_q' . $i} ? 'Rp ' . number_format($analisa?->{'eksposur_risiko_residual_q' . $i}, 0, ',', '.') : 'Rp 0' }}
                             </div>
                         </div>
                     </div>
@@ -829,7 +829,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Skala Dampak Residual</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->{'skala_dampak_residual_q' . $i} ? '(' . $analisa->{'skala_dampak_residual_q' . $i} . ') ' . optional($analisa->{'skalaDampakResidualQ' . $i . 'Obj'})->deskripsi : '-' }}
+                                {{ $analisa?->{'skala_dampak_residual_q' . $i} ? '(' . $analisa?->{'skala_dampak_residual_q' . $i} . ') ' . optional($analisa?->{'skalaDampakResidualQ' . $i . 'Obj'})->deskripsi : '-' }}
                             </div>
                         </div>
                     </div>
@@ -837,7 +837,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Skala Probabilitas</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->{'skalaProbabilitasResidualQ' . $i} ? '(' . $analisa->{'skalaProbabilitasResidualQ' . $i}->tingkat . ') ' . $analisa->{'skalaProbabilitasResidualQ' . $i}->skala : '-' }}
+                                {{ $analisa?->{'skalaProbabilitasResidualQ' . $i} ? '(' . $analisa?->{'skalaProbabilitasResidualQ' . $i}->tingkat . ') ' . $analisa?->{'skalaProbabilitasResidualQ' . $i}->skala : '-' }}
                             </div>
                         </div>
                     </div>
@@ -845,24 +845,24 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Skala Risiko</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $analisa->{'skala_risiko_residual_q' . $i} ?? '-' }}
+                                {{ $analisa?->{'skala_risiko_residual_q' . $i} ?? '-' }}
                             </div>
                         </div>
                     </div>
                     <div class="col-md-2">
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Level Risiko</label>
-                            <div class="p-3 rounded bg-{{ str_replace(' ', '-', str_replace('to ', '', strtolower($analisa->{'level_risiko_residual_q' . $i}))) }}">
-                                <span class="text-white fw-bold">{{ $analisa->{'level_risiko_residual_q' . $i} ?? '-' }}</span>
+                            <div class="p-3 rounded bg-{{ str_replace(' ', '-', str_replace('to ', '', strtolower($analisa?->{'level_risiko_residual_q' . $i}))) }}">
+                                <span class="text-white fw-bold">{{ $analisa?->{'level_risiko_residual_q' . $i} ?? '-' }}</span>
                             </div>
                         </div>
                     </div>
-                    @if($analisa->kategori_dampak === 'Kualitatif')
+                    @if($analisa?->kategori_dampak === 'Kualitatif')
                         <div class="col-12">
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Deskripsi Dampak Residual Q{{ $i }}</label>
                                 <div class="p-3 bg-light rounded">
-                                    {{ $analisa->{'deskripsi_dampak_residual_q' . $i} ?? '-' }}
+                                    {{ $analisa?->{'deskripsi_dampak_residual_q' . $i} ?? '-' }}
                                 </div>
                             </div>
                         </div>
@@ -871,7 +871,7 @@
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Asumsi Perhitungan Dampak & Probabilitas Residual Q{{ $i }}</label>
                                 <div class="p-3 bg-light rounded">
-                                    {{ $analisa->{'asumsi_perhitungan_dampak_residual_q' . $i} ?? '-' }}
+                                    {{ $analisa?->{'asumsi_perhitungan_dampak_residual_q' . $i} ?? '-' }}
                                 </div>
                             </div>
                         </div>

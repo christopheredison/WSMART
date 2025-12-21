@@ -686,6 +686,7 @@ Route::prefix('risk-register-unit')->middleware('auth')->group(function () {
     Route::post('/{riskRegister}/analisa', [RiskRegisterUnitController::class, 'doAnalisa'])->name('risk-register-unit.do-analisa');
 
     Route::post('/{riskRegister}/verifikasi', [RiskRegisterUnitController::class, 'verifikasi'])->name('risk-register-unit.verifikasi');
+    Route::post('/bulk-verifikasi', [RiskRegisterUnitController::class, 'bulkVerifikasi'])->name('risk-register-unit.bulk-verifikasi');
 
     Route::get('/{riskRegister}/loss-events/create', [UnitLEDController::class, 'riskChangeToLed'])->name('risk-register-unit.loss-events.create')->middleware('can:risk_register_list');
     Route::post('/{riskRegister}/loss-events', [UnitLEDController::class, 'riskChangeToLedStore'])->name('risk-register-unit.loss-events.store')->middleware('can:risk_register_list');

@@ -36,6 +36,11 @@
       <div class="card-body dt-header-true">
         <div id="tableExample3">
           <div class="row g-2 mb-1">
+            <div class="col-auto d-none" id="bulk-verify-container">
+                <button type="button" class="btn btn-success btn-sm align-self-center" onclick="handleBulkVerifikasiClick()">
+                    <span class="bx bx-check-shield"></span> Verifikasi Risiko (<span id="count-checked">0</span>)
+                </button>
+            </div>
             @can('risk_register_all_unit')
             <div class="col-4 col-sm-2">
               <label for="filter-unit" class="form-label d-none">Unit</label>
@@ -131,11 +136,14 @@
             <thead>
               <tr>
                 <th class="no-sort white-space-nowrap">
-                  @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
+                  {{-- @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
                   <div class="form-check mb-0">
                     <input class="form-check-input" type="checkbox" id="select-all" />
                   </div>
-                  @endif
+                  @endif --}}
+                  <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" id="check-all-risiko" />
+                  </div>
                 </th>
                 <th class="white-space-nowrap">#</th>
                 <th class="sort" data-sort="unit">Unit</th>
@@ -156,13 +164,27 @@
             <tbody class="list" id="bulk-select-body">
               @foreach ($risiko as $index => $item)
               <tr>
-                <td class="white-space-nowrap">
+                {{-- <td class="white-space-nowrap">
                   @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
                   <div class="form-check mb-0">
                     <input class="form-check-input select-item" type="checkbox" name="selected_items[]"
                       value="{{ $item->id }}" />
                   </div>
                   @endif
+                </td> --}}
+                <td class="text-center">
+                    @php
+                        $userStep = $u_step ?? 0;
+                        $batchStep = $dataBatch->step_verification ?? 0;
+
+                        $canVerify = ($item->status == 2 || $item->status == 3) &&
+                                    $item->step_verification == $userStep &&
+                                    $userStep == $batchStep;
+                                    // && !$item->is_closed;
+                    @endphp
+                    <div class="form-check mb-0 d-inline-block">
+                        <input class="form-check-input row-checkbox" type="checkbox" value="{{ $item->id }}" {{ $canVerify ? '' : 'disabled' }}>
+                    </div>
                 </td>
                 <td class="index-number">
                   @if($item->status_risiko== 2)
@@ -355,7 +377,7 @@
 <!-- Modal Verifikasi Risiko (Single Modal) -->
 <div class="modal fade" id="modalVerifikasiRisiko" tabindex="-1" aria-labelledby="verifikasiRisikoLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
+    <div class="modal-content p-0">
       <div class="modal-header">
         <h5 class="modal-title" id="verifikasiRisikoLabel">Verifikasi Risiko</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -533,6 +555,133 @@ function showCatatanRisiko(riskId) {
         error: function() {
             contentDiv.html('<div class="text-center my-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p>Gagal memuat catatan.</p></div>');
             modal.show();
+        }
+    });
+}
+
+let currentIds = [];
+let isBulkMode = false;
+
+// Fungsi untuk Select All
+$('#check-all-risiko').on('change', function() {
+    $('.row-checkbox:not(:disabled)').prop('checked', this.checked);
+    toggleBulkButton();
+});
+
+$(document).on('change', '.row-checkbox', function() {
+    toggleBulkButton();
+});
+
+function toggleBulkButton() {
+    const checkedCount = $('.row-checkbox:checked').length;
+    if (checkedCount > 0) {
+        $('#bulk-verify-container').removeClass('d-none');
+        $('#count-checked').text(checkedCount);
+    } else {
+        $('#bulk-verify-container').addClass('d-none');
+    }
+}
+
+// Handler Verifikasi Tunggal (Action dari Tabel)
+function handleVerifikasiClick(id) {
+    const rowData = fetchedData[id]; // Pastikan Anda menyimpan data baris di fetchedData
+    const peristiwa = rowData ? (rowData.peristiwa_risiko || 'Risiko') : 'Risiko';
+    const deskripsi = rowData ? (rowData.deskripsi_peristiwa_risiko || '-') : '-';
+
+    isBulkMode = false;
+    currentIds = [id];
+
+    // Tampilkan info single, sembunyikan info bulk
+    $('#modal-peristiwa-risiko').parent().removeClass('d-none');
+    $('#modal-bulk-info').remove(); // Hapus info bulk jika ada
+
+    showVerifikasiModal(id, peristiwa, deskripsi);
+}
+
+function handleBulkVerifikasiClick() {
+    currentIds = [];
+    $('.row-checkbox:checked').each(function() {
+        currentIds.push($(this).val());
+    });
+
+    isBulkMode = true;
+
+    $('#info-single-risk').addClass('d-none');
+    if($('#modal-bulk-info').length == 0) {
+        $('.modal-body').prepend(`
+            <div id="modal-bulk-info" class="alert alert-info mt-0 mb-4">
+                <i class="bx bx-info-circle"></i> Anda akan memverifikasi <strong>${currentIds.length}</strong> data risiko sekaligus.
+            </div>
+        `);
+    }
+
+    showVerifikasiModal(null, '', '');
+}
+
+function showVerifikasiModal(id, peristiwaRisiko, deskripsiRisiko) {
+    const form = document.getElementById('form-verifikasi');
+    form.reset();
+
+    if(!isBulkMode) {
+        document.getElementById('modal-peristiwa-risiko').textContent = 'Peristiwa Risiko: ' + peristiwaRisiko;
+        document.getElementById('modal-deskripsi-risiko').textContent = deskripsiRisiko;
+        form.action = '{{ url("risk-register-unit") }}/' + id + '/verifikasi';
+        $('#modal-bulk-info').remove();
+        $('#modal-single-info').removeClass('d-none');
+    } else {
+        form.action = '{{ route("risk-register-unit.bulk-verifikasi") }}';
+        $('#modal-single-info').addClass('d-none');
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('modalVerifikasiRisiko'));
+    modal.show();
+
+    document.getElementById('btn-terima-risiko').onclick = function() { submitVerifikasi('terima'); };
+    document.getElementById('btn-tolak-risiko').onclick = function() { submitVerifikasi('tolak'); };
+}
+
+function submitVerifikasi(status) {
+    const form = $('#form-verifikasi');
+    const catatan = $('#catatan-verifikasi').val().trim();
+
+    if (!catatan) {
+        Swal.fire('Peringatan', 'Catatan verifikasi tidak boleh kosong', 'warning');
+        return;
+    }
+
+    Swal.fire({
+        title: status === 'terima' ? 'Terima Risiko?' : 'Kembalikan Risiko?',
+        text: isBulkMode ? `Memproses ${currentIds.length} data.` : 'Data akan diperbarui.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Lanjutkan'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Jika mode massal, gunakan AJAX
+            if (isBulkMode) {
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        ids: currentIds,
+                        status_verifikasi: status,
+                        catatan_verifikasi: catatan
+                    },
+                    success: function(res) {
+                        Swal.fire('Berhasil', res.message, 'success').then(() => {
+                            location.reload();
+                        });
+                    },
+                    error: function(err) {
+                        Swal.fire('Gagal', 'Terjadi kesalahan sistem', 'error');
+                    }
+                });
+            } else {
+                // Jika single, submit form biasa
+                $('#status-verifikasi').val(status);
+                document.getElementById('form-verifikasi').submit();
+            }
         }
     });
 }

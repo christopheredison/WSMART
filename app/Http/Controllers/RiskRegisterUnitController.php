@@ -40,6 +40,7 @@ use App\Models\Project;
 use App\Models\ProjectRisk;
 use App\Models\RiskDivisiProject;
 use App\Models\TaksonomiRisiko;
+use Illuminate\Support\Facades\DB;
 
 class RiskRegisterUnitController extends Controller
 {
@@ -276,6 +277,8 @@ class RiskRegisterUnitController extends Controller
             'pending_risk',
             'min_verification',
             'step_order',
+            'u_step',
+            'user_verification',
             'dataBatch',
             'batchNotes',
             'levelId',
@@ -1687,6 +1690,7 @@ class RiskRegisterUnitController extends Controller
                 if (!$risiko->riskAnalysis) {
                     $belumLengkap = true;
                     $idRisikoBelumLengkap[] = $risiko->id;
+                    dd('analisa', $risiko->id);
                     continue;
                 }
 
@@ -1695,6 +1699,7 @@ class RiskRegisterUnitController extends Controller
                 if ($penyebabRisikos->isEmpty()) {
                     $belumLengkap = true;
                     $idRisikoBelumLengkap[] = $risiko->id;
+                    dd('penyebabRisikos', $risiko->id);
                     continue;
                 }
 
@@ -1703,6 +1708,7 @@ class RiskRegisterUnitController extends Controller
                     if ($penyebabRisiko->perlakuanPenyebabRisikoUnit->isEmpty()) {
                         $belumLengkap = true;
                         $idRisikoBelumLengkap[] = $risiko->id;
+                    dd('perlakuanPenyebabRisikoUnit', $risiko->id);
                         break;
                     }
                 }
@@ -2308,5 +2314,78 @@ class RiskRegisterUnitController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => 'Gagal mengambil data catatan.'], 500);
         }
+    }
+
+    public function bulkVerifikasi(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'status_verifikasi' => 'required|in:terima,tolak',
+            'catatan_verifikasi' => 'required|string',
+        ]);
+
+        $user = auth()->user();
+
+        DB::beginTransaction();
+        try {
+            foreach ($request->ids as $id) {
+                $risk = IdentifikasiRisiko::findOrFail($id);
+                $this->processVerificationLogic($risk, $request->status_verifikasi, $request->catatan_verifikasi, $user);
+            }
+            DB::commit();
+            return response()->json(['message' => 'Berhasil memverifikasi ' . count($request->ids) . ' risiko divisi.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function processVerificationLogic($risk, $status, $catatan, $user)
+    {
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        $unit = Unit::find($risk->unit_id);
+        $verificationData = $this->getUserVerificationStep($user->level_id, $is_mr, $unit->unit_mr);
+        $u_step = $verificationData['u_step'];
+        $min_verification = 3;
+
+        $dataBatch = DataBatch::where('unit_id', $risk->unit_id)
+            ->where('periode_id', $risk->periode_id)
+            ->where('type', 1)
+            ->where('finish', false)
+            ->orderBy('batch', 'desc')
+            ->first();
+
+        if ($status === 'terima') {
+            if($u_step >= $min_verification){
+                $risk->update([
+                    'status' => IdentifikasiRisiko::STATUS_TERVERIFIKASI,
+                    'status_progress' => IdentifikasiRisiko::PROGRESS_ON_ACCEPTED,
+                    'status_risiko' => 1,
+                    'step_verification' => $u_step
+                ]);
+            } else {
+                $risk->update([
+                    'status' => IdentifikasiRisiko::STATUS_TUNGGU_VERIFIKASI,
+                    'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW,
+                    'step_verification' => $u_step + 1
+                ]);
+            }
+            $noteStatus = 1;
+        } else {
+            $risk->update([
+                'status' => IdentifikasiRisiko::STATUS_REJECTED,
+                'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVISION_DELETED
+            ]);
+            if($dataBatch) $dataBatch->update(['status' => DataBatch::STATUS_REVISI]);
+            $noteStatus = 2;
+        }
+
+        RiskNote::create([
+            'risiko_id' => $risk->id,
+            'type' => 1,
+            'status' => $noteStatus,
+            'notes' => $catatan,
+            'user_id' => $user->id,
+        ]);
     }
 }
