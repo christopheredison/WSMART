@@ -432,6 +432,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('projects/{project}/risks/import-tender', [ProjectRiskController::class, 'importTender'])->name('projects.risks.import-tender');
     Route::post('project-risk/{id}/verifikasi', [ProjectRiskController::class, 'verifikasi'])->name('project-risk.verifikasi');
     Route::post('projects/risks/eskalasi', [ProjectRiskController::class, 'eskalasi'])->name('projects.risks.eskalasi');
+    Route::post('projects/risks/bulk-verifikasi', [ProjectRiskController::class, 'bulkVerifikasi'])->name('projects.risks.bulk-verifikasi');
 
     Route::resource('projects/{project}/monitorings', ProjectRiskMonitoringController::class)->names('projects.monitorings')->only(['index', 'show', 'edit', 'update']);
     Route::resource('projects-monitorings/{monitoring}/q-{quarter}/documents', ProjectRiskMonitoringDocumentController::class)->names('projects.monitorings.documents')->only(['index', 'show', 'store', 'destroy']);

@@ -1,18 +1,29 @@
 <!-- Modal Verifikasi Risiko -->
 <div class="modal fade" id="modalVerifikasiRisiko" tabindex="-1" aria-labelledby="verifikasiRisikoLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
+    <div class="modal-content p-0">
       <div class="modal-header">
         <h5 class="modal-title" id="verifikasiRisikoLabel">Verifikasi Risiko</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div class="mb-4">
+        <div id="info-single-risk" class="mb-4">
           <h6 id="modal-peristiwa-risiko">Peristiwa Risiko: </h6>
-          <p id="modal-deskripsi-risiko"></p>
+          <p id="modal-deskripsi-risiko" class="text-muted"></p>
         </div>
+
+        <div id="info-bulk-risk" class="mt-0 mb-4 d-none">
+            <div class="alert alert-info d-flex align-items-center" role="alert">
+                <i class='bx bx-info-circle fs-4 me-2'></i>
+                <div>
+                    Anda akan memverifikasi secara massal sebanyak <strong id="bulk-count">0</strong> data risiko yang telah dipilih.
+                </div>
+            </div>
+        </div>
+
         <form id="form-verifikasi" action="" method="POST">
           @csrf
+          <div id="bulk-ids-container"></div>
           <div class="mb-3">
             <label for="catatan-verifikasi" class="form-label">Catatan Verifikasi</label>
             <textarea class="form-control" id="catatan-verifikasi" name="catatan_verifikasi" rows="4" placeholder="Masukkan catatan verifikasi..." required></textarea>
@@ -27,8 +38,8 @@
             Memproses... <span class="spinner-border spinner-border-sm align-middle ms-2" style="width: 0.75rem; height: 0.75rem;"></span>
           </span>
         </button>
-        <button type="button" class="btn btn-danger" id="btn-kembalikan-risiko"> 
-          <span class="indicator-label">Kembalikan Risiko</span> 
+        <button type="button" class="btn btn-danger" id="btn-kembalikan-risiko">
+          <span class="indicator-label">Kembalikan Risiko</span>
           <span class="indicator-progress d-none">
             Memproses... <span class="spinner-border spinner-border-sm align-middle ms-2" style="width: 0.75rem; height: 0.75rem;"></span>
           </span>
@@ -40,114 +51,127 @@
 </div>
 
 <script>
+let currentIds = [];
 function handleVerifikasiClick(id) {
-  const rowData = fetchedData[id];
-  
-  // if (!rowData) {
-  //     console.error('Data not found for ID:', id);
-  //     alert('Data tidak ditemukan!');
-  //     return;
-  // }
+    const rowData = fetchedData[id];
+    const peristiwaRisiko = rowData.peristiwa_risiko?.title || rowData.peristiwa_risiko || 'Tidak Ada Judul';
+    const deskripsiRisiko = rowData.deskripsi_peristiwa_risiko || 'Tidak Ada Deskripsi';
 
-  const peristiwaRisiko = rowData.peristiwa_risiko?.title || rowData.peristiwa_risiko || 'Tidak Ada Judul';
-  const deskripsiRisiko = rowData.deskripsi_peristiwa_risiko || 'Tidak Ada Deskripsi';
-  showVerifikasiModal(id, peristiwaRisiko, deskripsiRisiko);
+    currentIds = [id];
+    showVerifikasiModal(currentIds, peristiwaRisiko, deskripsiRisiko);
 }
 
-// Fungsi untuk menampilkan modal verifikasi dengan data risiko yang sesuai
-function showVerifikasiModal(id, peristiwaRisiko, deskripsiRisiko) {
-  // Set data risiko ke dalam modal
-  document.getElementById('modal-peristiwa-risiko').textContent = 'Peristiwa Risiko: ' + peristiwaRisiko;
-  document.getElementById('modal-deskripsi-risiko').textContent = deskripsiRisiko;
-
-  // Set action form dengan ID risiko yang dipilih
-  const form = document.getElementById('form-verifikasi');
-  form.action = '{{ url("project-risk") }}/' + id + '/verifikasi'; 
-
-  // Reset form
-  form.reset();
-  document.getElementById('status-verifikasi').value = '';
-
-  const btnTerima = document.getElementById('btn-terima-risiko');
-  const btnKembalikan = document.getElementById('btn-kembalikan-risiko');
-
-  // 1. Aktifkan kembali tombol
-  btnTerima.disabled = false;
-  btnKembalikan.disabled = false;
-
-  // 2. Tampilkan label, sembunyikan spinner (Tombol Terima)
-  btnTerima.querySelector('.indicator-label').classList.remove('d-none');
-  btnTerima.querySelector('.indicator-progress').classList.add('d-none');
-
-  // 3. Tampilkan label, sembunyikan spinner (Tombol Kembalikan)
-  btnKembalikan.querySelector('.indicator-label').classList.remove('d-none');
-  btnKembalikan.querySelector('.indicator-progress').classList.add('d-none');
-
-  // Tampilkan modal
-  const modal = new bootstrap.Modal(document.getElementById('modalVerifikasiRisiko'));
-  modal.show();
-
-  // Set event listener untuk tombol terima dan tolak
-  document.getElementById('btn-terima-risiko').onclick = function() {
-    submitVerifikasi('terima');
-  };
-
-  document.getElementById('btn-kembalikan-risiko').onclick = function() {
-    submitVerifikasi('tolak');
-  };
-}
-
-function submitVerifikasi(status) {
-  // Ambil form verifikasi
-  const form = document.getElementById('form-verifikasi');
-  const statusInput = document.getElementById('status-verifikasi');
-  const catatanInput = document.getElementById('catatan-verifikasi');
-  
-  // Set status verifikasi
-  statusInput.value = status;
-
-  if (!form.checkValidity() || !catatanInput.value.trim()) {
-    Swal.fire({
-      title: 'Peringatan',
-      text: 'Catatan verifikasi tidak boleh kosong',
-      icon: 'warning',
-      confirmButtonText: 'OK'
+function handleBulkVerifikasiClick() {
+    const selectedIds = [];
+    $('.row-checkbox:checked').each(function() {
+        selectedIds.push($(this).val());
     });
-    form.reportValidity();
-    return;
-  }
 
-  const title = status === 'terima' ? 'Terima Risiko?' : 'Kembalikan Risiko?';
-  const text = status === 'terima' ? 'Risiko akan diverifikasi dan diterima' : 'Risiko akan dikembalikan untuk revisi';
-  const confirmButtonText = status === 'terima' ? 'Ya, Terima' : 'Ya, Kembalikan';
-
-  Swal.fire({
-    title: title,
-    text: text,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: confirmButtonText,
-    cancelButtonText: 'Batal'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      const btnTerima = document.getElementById('btn-terima-risiko');
-      const btnKembalikan = document.getElementById('btn-kembalikan-risiko');
-
-      btnTerima.disabled = true;
-      btnKembalikan.disabled = true;
-
-      let clickedButton;
-      if (status === 'terima') {
-        clickedButton = btnTerima;
-      } else {
-        clickedButton = btnKembalikan;
-      }
-
-      clickedButton.querySelector('.indicator-label').classList.add('d-none');
-      clickedButton.querySelector('.indicator-progress').classList.remove('d-none');
-      
-      form.submit();
+    if (selectedIds.length === 0) {
+        Swal.fire('Peringatan', 'Pilih minimal satu risiko terlebih dahulu', 'warning');
+        return;
     }
-  });
+
+    currentIds = selectedIds;
+    showVerifikasiModal(currentIds);
+}
+
+function showVerifikasiModal(ids, peristiwaRisiko = '', deskripsiRisiko = '') {
+    const isBulk = ids.length > 1;
+    const form = document.getElementById('form-verifikasi');
+    const bulkIdsContainer = document.getElementById('bulk-ids-container');
+    const singleInfo = document.getElementById('info-single-risk');
+    const bulkInfo = document.getElementById('info-bulk-risk');
+
+    form.reset();
+    bulkIdsContainer.innerHTML = '';
+
+    if (isBulk) {
+        singleInfo.classList.add('d-none');
+        bulkInfo.classList.remove('d-none');
+        document.getElementById('bulk-count').textContent = ids.length;
+
+        ids.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = id;
+            bulkIdsContainer.appendChild(input);
+        });
+
+        form.action = "{{ route('projects.risks.bulk-verifikasi') }}";
+    } else {
+        singleInfo.classList.remove('d-none');
+        bulkInfo.classList.add('d-none');
+        document.getElementById('modal-peristiwa-risiko').textContent = 'Peristiwa Risiko: ' + peristiwaRisiko;
+        document.getElementById('modal-deskripsi-risiko').textContent = deskripsiRisiko;
+
+        form.action = '{{ url("project-risk") }}/' + ids[0] + '/verifikasi';
+    }
+
+    $('.indicator-label').removeClass('d-none');
+    $('.indicator-progress').addClass('d-none');
+    $('#btn-terima-risiko, #btn-kembalikan-risiko').prop('disabled', false);
+
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalVerifikasiRisiko'));
+    modal.show();
+
+    document.getElementById('btn-terima-risiko').onclick = () => submitVerifikasi('terima', isBulk);
+    document.getElementById('btn-kembalikan-risiko').onclick = () => submitVerifikasi('tolak', isBulk);
+}
+
+function submitVerifikasi(status, isBulk) {
+    const form = document.getElementById('form-verifikasi');
+    const catatan = document.getElementById('catatan-verifikasi').value.trim();
+    document.getElementById('status-verifikasi').value = status;
+
+    if (!catatan) {
+        Swal.fire('Peringatan', 'Catatan verifikasi tidak boleh kosong', 'warning');
+        return;
+    }
+
+    const config = {
+        title: status === 'terima' ? 'Terima Risiko?' : 'Kembalikan Risiko?',
+        text: isBulk ? `Sebanyak ${currentIds.length} data akan diproses.` : 'Data akan diperbarui sesuai status verifikasi.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: status === 'terima' ? 'Ya, Terima' : 'Ya, Kembalikan',
+        cancelButtonText: 'Batal'
+    };
+
+    Swal.fire(config).then((result) => {
+        if (result.isConfirmed) {
+            const btnId = status === 'terima' ? 'btn-terima-risiko' : 'btn-kembalikan-risiko';
+            const btn = document.getElementById(btnId);
+
+            $('#btn-terima-risiko, #btn-kembalikan-risiko').prop('disabled', true);
+            btn.querySelector('.indicator-label').classList.add('d-none');
+            btn.querySelector('.indicator-progress').classList.remove('d-none');
+
+            if (isBulk) {
+                $.ajax({
+                    url: form.action,
+                    type: 'POST',
+                    data: $(form).serialize(),
+                    success: function(res) {
+                        bootstrap.Modal.getInstance(document.getElementById('modalVerifikasiRisiko')).hide();
+                        Swal.fire('Berhasil', res.message, 'success').then(() => {
+                            $('.ajax-datatable').DataTable().ajax.reload();
+                            $('#check-all-risiko').prop('checked', false);
+                            $('#bulk-verify-container').addClass('d-none');
+                        });
+                    },
+                    error: function(err) {
+                        Swal.fire('Gagal', 'Terjadi kesalahan sistem', 'error');
+                        $('#btn-terima-risiko, #btn-kembalikan-risiko').prop('disabled', false);
+                        btn.querySelector('.indicator-label').classList.remove('d-none');
+                        btn.querySelector('.indicator-progress').classList.add('d-none');
+                    }
+                });
+            } else {
+                form.submit();
+            }
+        }
+    });
 }
 </script>
