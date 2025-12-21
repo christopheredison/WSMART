@@ -130,7 +130,8 @@ class KuesionerRespondenController extends BasicCRUDController
                         }
 
                         if (row.user_survey?.status == 1) {
-                            actions += '<a class="btn-input-icon" data-bs-toggle="tooltip" title="" data-bs-original-title="Lihat Jawaban" href="{$showRoute}"><span class="bx bx-show"></span></a><button class="btn-input-icon" data-bs-toggle="tooltip" title="" data-bs-original-title="Reset Status" onclick="resetResponden(' + row.id + ')"><span class="bx bx-refresh"></span></button>'.replace(':id', row.id);
+                            showRoute = "{$showRoute}".replace(':id', row.id);
+                            actions += '<a class="btn-input-icon" data-bs-toggle="tooltip" title="" data-bs-original-title="Lihat Jawaban" href="' + showRoute + '"><span class="bx bx-show"></span></a><button class="btn-input-icon" data-bs-toggle="tooltip" title="" data-bs-original-title="Reset Status" onclick="resetResponden(' + row.id + ')"><span class="bx bx-refresh"></span></button>';
                         }
                         
                         return actions;
