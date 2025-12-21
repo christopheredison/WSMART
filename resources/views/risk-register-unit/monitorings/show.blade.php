@@ -166,6 +166,140 @@
         <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
+                    <h4 class="mb-0 ff-heading-sm">Informasi Taksonomi & Paramter</h4>
+                </div>
+            </div>
+            <div class="col-12 mt-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="fw-bold">Taksonomi Danantara</label>
+                                <p class="p-2 bg-light rounded">{{ $risk->taksonomiRisiko->nama ?? '-' }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="fw-bold">Daftar Parameter Risiko</label>
+                                <ol class="list-input">
+                                    @foreach($risk->parameterRisikos as $param)
+                                        <li class="list-group-item bg-light border-0 mb-1">
+                                            <strong>{{ $param->nama }}</strong> (Formula: {{ $param->formula }}, Satuan: {{ $param->satuan }})
+                                        </li>
+                                    @endforeach
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="divider my-3 my-md-5">
+                <div class="divider-text">
+                    <h4 class="mb-0 ff-heading-sm">Monitoring Nilai Aktual</h4>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="text-muted fw-bold mb-4 small text-uppercase text-center">Nilai Threshold</h5>
+                            <div class="row text-center g-3 mb-4">
+                                <div class="col-md-4 border-end">
+                                    <div class="text-success small fw-bold mb-1">Risk Limit (Aman)</div>
+                                    <div class="fs-4 fw-bolder text-success">Rp {{ number_format($risk->threshold_risk_limit, 0, ',', '.') }}</div>
+                                </div>
+                                <div class="col-md-4 border-end">
+                                    <div class="text-warning small fw-bold mb-1">Risk Appetite (Siaga)</div>
+                                    <div class="fs-4 fw-bolder text-warning">Rp {{ number_format($risk->threshold_risk_appetite, 0, ',', '.') }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-danger small fw-bold mb-1">Risk Tolerance (Bahaya)</div>
+                                    <div class="fs-4 fw-bolder text-danger">Rp {{ number_format($risk->threshold_risk_tolerance, 0, ',', '.') }}</div>
+                                </div>
+                            </div>
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Aktual ({{ $dateCurrent->translatedFormat('F Y') }})</label>
+                                    <div class="p-3 bg-light rounded border-primary border">
+                                        <strong>Rp {{ number_format($riskMonitoring->aktual_current ?? 0, 0, ',', '.') }}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-muted small">Bulan -1 ({{ $dateM1->translatedFormat('F Y') }})</label>
+                                    <div class="p-3 bg-light rounded border italic text-muted">
+                                        Rp {{ number_format($riskMonitoring->aktual_month_1 ?? 0, 0, ',', '.') }}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-muted small">Bulan -2 ({{ $dateM2->translatedFormat('F Y') }})</label>
+                                    <div class="p-3 bg-light rounded border italic text-muted">
+                                        Rp {{ number_format($riskMonitoring->aktual_month_2 ?? 0, 0, ',', '.') }}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Status Hasil Monitoring</label>
+                                    @php
+                                        $status = $riskMonitoring->aktual_status ?? 'N/A';
+                                        $color = 'secondary';
+                                        if($status == 'Aman') $color = 'success';
+                                        if($status == 'Siaga') $color = 'warning';
+                                        if($status == 'Bahaya') $color = 'danger';
+                                    @endphp
+                                    <div class="p-2 rounded text-center fw-bold fs-6 border bg-{{ $color }}-subtle text-{{ $color == 'warning' ? 'dark' : $color }} border-{{ $color }}">
+                                        {{ strtoupper($status) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if($riskMonitoring && $riskMonitoring->pengendalians->isNotEmpty())
+        <div class="col-12">
+            <div class="divider my-3 my-md-5">
+                <div class="divider-text">
+                    <h4 class="mb-0 ff-heading-sm text-danger">Rencana Pengendalian Risiko</h4>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card border-danger">
+                        <div class="card-body">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th width="5%" class="text-center">No</th>
+                                        <th width="30%">Parameter Risiko</th>
+                                        <th>Rencana Pengendalian</th>
+                                        <th>Realisasi Pengendalian</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($riskMonitoring->pengendalians as $pengendalian)
+                                    <tr>
+                                        <td class="text-center">{{ $loop->iteration }}</td>
+                                        <td class="bg-light"><strong>{{ $pengendalian->parameter->nama ?? '-' }}</strong></td>
+                                        <td>{{ $pengendalian->rencana_pengendalian ?? '-' }}</td>
+                                        <td>{{ $pengendalian->realisasi_pengendalian ?? '-' }}</td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <div class="col-12">
+            <div class="divider my-3 my-md-5">
+                <div class="divider-text">
                     <h4 class="mb-0 ff-heading-sm">Nilai Risiko Residual Realisasi</h4>
                 </div>
             </div>

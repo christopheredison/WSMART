@@ -414,22 +414,21 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
     {
         $period = Periode::findOrfail(request()->route('period'));
         $user = request()->user();
-        $month = request()->input('month') ?: '';
-        // if (!(Gate::check('risk_monitoring_edit') || $user->hasProject($period))) {
-        //     abort(403);
-        // }
-
+        $currentYear = $period->tahun;
         $quarter = request()->input('quarter') ?: 1;
-        $risk = $period->identifikasiRisikos()
-            ->findOrFail(request()->route('monitoring'));
+        $month = request()->input('month') ?: '';
 
-        $unit = $risk->unit;
-        $periode = $risk->periode;
+        $risk = $period->identifikasiRisikos()->findOrFail(request()->route('monitoring'));
 
         $risk->load(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
             $query->where('quarter', $quarter);
             $query->where('month', $month);
-            $query->with('perlakuanPenyebabRisikos', 'perlakuanPenyebabMonitorings', 'kriUnitMonitorings');
+            $query->with([
+                'perlakuanPenyebabRisikos',
+                'perlakuanPenyebabMonitorings',
+                'kriUnitMonitorings',
+                'pengendalians'
+            ]);
         }])->load(['penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
             $query->select('perlakuan_penyebab_risiko_units.*', 'id as deskripsi_perlakuan_risiko', 'id as jenis_program_rkap', 'id as jenis_program_rkap_id', 'id as timeline_perlakuan_risiko');
             $query->with(['lastMonitoring' => function ($query) use ($quarter, $month) {
@@ -438,21 +437,31 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     $query->where('month', $month);
                 });
             }]);
-
-            // Log Perlakuan Risiko khusus quarter dan month tertentu
-            // $query->with(['perlakuanPenyebabMonitorings' => function ($query) use ($quarter, $month) {
-            //     $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
-            //         $query->where('quarter', $quarter);
-            //         $query->where('month', $month);
-            //     });
-            // }]);
-
-            // Log Perlakuan Risiko semua data
             $query->with(['perlakuanPenyebabMonitorings' => function ($query) {
                 $query->orderBy('created_at', 'desc');
             }]);
             $query->with(['documents']);
-        }]);
+        }])->load(['taksonomiRisiko', 'parameterRisikos']);
+
+        $unit = $risk->unit;
+        $periode = $risk->periode;
+        $currentYear = date('Y');
+
+        $currentDate = \Carbon\Carbon::create($currentYear, $month, 1);
+        $dateM1 = $currentDate->copy()->subMonth();
+        $dateM2 = $currentDate->copy()->subMonths(2);
+
+        $monitoringM1 = $risk->monitoringRisikos()->where('month', $dateM1->month)->first();
+        $monitoringM2 = $risk->monitoringRisikos()->where('month', $dateM2->month)->first();
+
+        $lastEntry = $risk->monitoringRisikos()
+            ->with('pengendalians')
+            ->where('month', '<', $month)
+            ->orderByDesc('month')
+            ->orderByDesc('id')
+            ->first();
+
+        $historicalPengendalians = $lastEntry ? $lastEntry->pengendalians->keyBy('parameter_id') : collect();
 
         $skalaDampaks = SkalaDampak::pluck('deskripsi', 'tingkat');
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
@@ -503,8 +512,12 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'risk' => $risk,
             'quarter' => $quarter,
             'month' => $month,
+            'tahun' => $currentYear,
             'riskAnalysis' => optional($risk->riskAnalysis),
             'riskMonitoring' => $risk->lastMonitoringRisiko,
+            'monitoringM1' => $monitoringM1,
+            'monitoringM2' => $monitoringM2,
+            'historicalPengendalians' => $historicalPengendalians,
             'skalaDampaks' => $skalaDampaks,
             'skalaProbabilitas' => $skalaProbabilitas,
             'riskMaps' => $riskMaps,
@@ -526,26 +539,31 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $risk = $period->identifikasiRisikos()
             ->findOrFail(request()->route('monitoring'));
 
-        $risk->load(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
-            $query->where('quarter', $quarter);
-            $query->where('month', $month);
-            $query->with('perlakuanPenyebabRisikos', 'perlakuanPenyebabMonitorings', 'kriUnitMonitorings');
-        }])->load(['penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
-            $query->select('perlakuan_penyebab_risiko_units.*', 'id as deskripsi_perlakuan_risiko', 'id as jenis_program_rkap', 'id as jenis_program_rkap_id', 'id as timeline_perlakuan_risiko');
-            $query->with(['lastMonitoring' => function ($query) use ($quarter, $month) {
-                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
-                    $query->where('quarter', $quarter);
-                    $query->where('month', $month);
+        $risk = $period->identifikasiRisikos()
+        ->with([
+            'taksonomiRisiko',
+            'parameterRisikos',
+            'peristiwaRisiko',
+            'riskAnalysis',
+            'lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
+                $query->where('quarter', $quarter)
+                      ->where('month', $month)
+                      ->with('pengendalians.parameter');
+            },
+            'penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
+                $query->with(['lastMonitoring' => function ($q) use ($quarter, $month) {
+                    $q->whereHas('unitRiskMonitoring', function ($q2) use ($quarter, $month) {
+                        $q2->where('quarter', $quarter)->where('month', $month);
+                    });
+                }]);
+            },
+            'kris.kriUnitMonitorings' => function ($query) use ($quarter, $month) {
+                $query->whereHas('unitRiskMonitoring', function ($q) use ($quarter, $month) {
+                    $q->where('quarter', $quarter)->where('month', $month);
                 });
-            }]);
-            $query->with(['perlakuanPenyebabMonitorings' => function ($query) use ($quarter, $month) {
-                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
-                    $query->where('quarter', $quarter);
-                    $query->where('month', $month);
-                });
-            }]);
-            $query->with(['documents']);
-        }]);
+            }
+        ])
+        ->findOrFail(request()->route('monitoring'));
 
         $skalaDampaks = SkalaDampak::pluck('deskripsi', 'tingkat');
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
@@ -554,6 +572,14 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         });
 
         $files = $risk->lastMonitoringRisiko?->perlakuanPenyebabRisikoDocuments->groupBy('perlakuan_penyebab_risiko_unit_id') ?: [];
+
+        $currentYear = $period->tahun;
+        $dateCurrent = \Carbon\Carbon::create($currentYear, $month, 1);
+        $dateM1 = $dateCurrent->copy()->subMonth();
+        $dateM2 = $dateCurrent->copy()->subMonths(2);
+
+        $monitoringM1 = $risk->monitoringRisikos()->where('month', $dateM1->month)->first();
+        $monitoringM2 = $risk->monitoringRisikos()->where('month', $dateM2->month)->first();
 
         return view('risk-register-unit.monitorings.show', [
             'period' => $period,
@@ -566,6 +592,11 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'skalaProbabilitas' => $skalaProbabilitas,
             'riskMaps' => $riskMaps,
             'files' => $files,
+            'monitoringM1' => $monitoringM1,
+            'monitoringM2' => $monitoringM2,
+            'dateCurrent' => $dateCurrent,
+            'dateM1' => $dateM1,
+            'dateM2' => $dateM2,
         ]);
     }
 
@@ -595,9 +626,12 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'skala_risiko' => $request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden,
             'level_risiko' => $request->realisasi_level_risiko ?? $request->realisasi_level_risiko_hidden,
             'eksposure_risiko' => null,
+            'aktual_current' => $this->cleanRupiah($request->aktual_current),
+            'aktual_month_1' => $this->cleanRupiah($request->aktual_month_1),
+            'aktual_month_2' => $this->cleanRupiah($request->aktual_month_2),
+            'aktual_status' => $request->aktual_status,
         ];
 
-        //dd($toCreate);
         if ($request->realisasi_nilai_probabilitas) {
             $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($request->realisasi_nilai_probabilitas);
 
@@ -626,7 +660,6 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             $toCreate['level_risiko'] = null;
         }
 
-
         //perhitungan eksposur risiko
         if ($risk->riskAnalysis?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF) {
             $toCreate['eksposure_risiko'] = floatval($toCreate['skala_dampak']) * (1/100) * floatval($toCreate['nilai_probabilitas']) * ($risk->riskAnalysis?->risk_limit ?: 0);
@@ -636,9 +669,25 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $projectMonitoring = $risk->monitoringRisikos()->create($toCreate);
 
-        $perlakuanPenyebabRequests = json_decode($request->perlakuan_penyebab_risikos, true);
-        $kriProjectRequests = json_decode($request->kri_projects, true);
+        // Simpan Rencana & Realisasi Pengendalian jika status Siaga/Bahaya
+        // $projectMonitoring->pengendalians()->delete();
+        if (in_array($request->aktual_status, ['Siaga', 'Bahaya'])) {
+            $paramIds = $request->input('pengendalian_parameter_id', []);
+            $rencana = $request->input('rencana_pengendalian', []);
+            $realisasi = $request->input('realisasi_pengendalian', []);
 
+            foreach ($paramIds as $key => $pId) {
+                if (!empty($rencana[$key])) {
+                    $projectMonitoring->pengendalians()->create([
+                        'parameter_id' => $pId,
+                        'rencana_pengendalian' => $rencana[$key],
+                        'realisasi_pengendalian' => $realisasi[$key] ?? null,
+                    ]);
+                }
+            }
+        }
+
+        $perlakuanPenyebabRequests = json_decode($request->perlakuan_penyebab_risikos, true);
         foreach ($perlakuanPenyebabRequests as $id => $perlakuanPenyebabRequest) {
             if (is_string($perlakuanPenyebabRequest['timeline_perlakuan_risiko'])) {
                 $perlakuanPenyebabRequest['timeline_perlakuan_risiko'] = explode(' - ', $perlakuanPenyebabRequest['timeline_perlakuan_risiko']);
@@ -677,6 +726,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             }
         }
 
+        $kriProjectRequests = json_decode($request->kri_projects, true);
         foreach ($kriProjectRequests as $id => $kriProjectRequest) {
             $toCreate = [
                 'key_risk_indicator_id' => $kriProjectRequest['id'],
@@ -983,5 +1033,9 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ->get();
 
         return response()->json($notes);
+    }
+
+    private function cleanRupiah($value) {
+        return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
     }
 }

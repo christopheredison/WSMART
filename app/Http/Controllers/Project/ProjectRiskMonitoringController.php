@@ -362,6 +362,8 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $quarter = request()->quarter ?: 1;
         $projectRisk = $projectPeriode->projectRisks()
             ->with([
+                'taksonomiRisiko',
+                'parameterRisikoProjects',
                 'projectRiskAnalisa',
                 'projectRiskAnalisa.skalaDampakObj',
                 'projectRiskAnalisa.skalaProbabilitas',
@@ -404,10 +406,36 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'projectRiskMonitoring' => function ($query) use ($quarter, $tahun, $month) {
                     $query->where('quarter', $quarter)
                         ->where('tahun', $tahun)
-                        ->where('month', $month);
+                        ->where('month', $month)
+                        ->with('pengendalians');
                 },
             ])
             ->findOrFail(request()->route('monitoring'));
+
+        $currentDate = \Carbon\Carbon::create($tahun, $month, 1);
+        $dateM1 = $currentDate->copy()->subMonth();
+        $dateM2 = $currentDate->copy()->subMonths(2);
+
+        // Ambil nilai aktual bulan-bulan sebelumnya
+        $monitoringM1 = $projectRisk->projectRiskMonitorings()
+            ->where('month', $dateM1->month)->where('tahun', $dateM1->year)->first();
+        $monitoringM2 = $projectRisk->projectRiskMonitorings()
+            ->where('month', $dateM2->month)->where('tahun', $dateM2->year)->first();
+
+        // Cari Data Pengendalian Terakhir (dari entri terbaru di database sebelum bulan ini)
+        $lastMonitoringEntry = $projectRisk->projectRiskMonitorings()
+            ->with('pengendalians')
+            ->where(function($q) use ($tahun, $month) {
+                $q->where('tahun', '<', $tahun)
+                  ->orWhere(function($q2) use ($tahun, $month) {
+                      $q2->where('tahun', $tahun)->where('month', '<', $month);
+                  });
+            })
+            ->orderByDesc('tahun')
+            ->orderByDesc('month')
+            ->orderByDesc('id')
+            ->first();
+        $historicalPengendalians = $lastMonitoringEntry ? $lastMonitoringEntry->pengendalians->keyBy('parameter_id') : collect();
 
         $analisa = $projectRisk->projectRiskAnalisa;
         $namaRisikoLengkap = $projectRisk->peristiwaRisiko->title;
@@ -526,6 +554,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'penyebabRisikoProjects' => $projectRisk->penyebabRisikoProjects,
             'kriProjects' => $projectRisk->kriProjects,
             'riskMonitoring' => $projectRisk->projectRiskMonitoring,
+            'monitoringM1' => $monitoringM1,
+            'monitoringM2' => $monitoringM2,
+            'historicalPengendalians' => $historicalPengendalians,
             'skalaDampaks' => SkalaDampak::pluck('deskripsi', 'tingkat'),
             'riskMaps' => $riskMaps,
             'skalaProbabilitas' => $skalaProbabilitas,
@@ -554,6 +585,8 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $month = request()->input('month') ?: '';
         $projectRisk = $projectPeriode->projectRisks()
             ->with([
+                'taksonomiRisiko',
+                'parameterRisikoProjects',
                 'peristiwaRisiko',
                 'penyebabRisikoProjects',
                 'projectRiskAnalisa.skalaParameterObj',
@@ -601,6 +634,15 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $files = $projectMonitoring?->perlakuanPenyebabRisikoDocuments->groupBy('perlakuan_penyebab_risiko_id') ?: [];
 
+        $currentDate = \Carbon\Carbon::create($tahun, $month, 1);
+        $dateM1 = $currentDate->copy()->subMonth();
+        $dateM2 = $currentDate->copy()->subMonths(2);
+
+        $monitoringM1 = $projectRisk->projectRiskMonitorings()
+            ->where('month', $dateM1->month)->where('tahun', $dateM1->year)->first();
+        $monitoringM2 = $projectRisk->projectRiskMonitorings()
+            ->where('month', $dateM2->month)->where('tahun', $dateM2->year)->first();
+
         return view('project-monitorings.show', [
             'projectPeriode' => $projectPeriode,
             'project' => $projectPeriode->project,
@@ -618,6 +660,11 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'tahun' => $tahun,
             'files' => $files,
             'month' => $month,
+            'monitoringM1' => $monitoringM1,
+            'monitoringM2' => $monitoringM2,
+            'dateCurrent' => $currentDate,
+            'dateM1' => $dateM1,
+            'dateM2' => $dateM2,
         ]);
     }
 
@@ -648,9 +695,12 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'skala_parameter_id' => $request->realisasi_skala_parameter_id,
             'eksposure_risiko' => null,
             'month' => $month,
+            'aktual_current' => $this->cleanRupiah($request->aktual_current),
+            'aktual_month_1' => $this->cleanRupiah($request->aktual_month_1),
+            'aktual_month_2' => $this->cleanRupiah($request->aktual_month_2),
+            'aktual_status' => $request->aktual_status,
         ];
 
-        //dd($toCreate);
         if ($request->realisasi_nilai_probabilitas) {
             $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($request->realisasi_nilai_probabilitas);
 
@@ -679,16 +729,12 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             $toCreate['level_risiko'] = null;
         }
 
-
         //perhitungan eksposur risiko
         if ($projectRisk->projectRiskAnalisa?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF) {
             $toCreate['eksposure_risiko'] = floatval($toCreate['skala_dampak']) * (1/100) * floatval($toCreate['nilai_probabilitas']) * ($projectRisk->projectRiskAnalisa?->risk_limit ?: 0);
         } elseif ($projectRisk->projectRiskAnalisa?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
             $toCreate['eksposure_risiko'] = floatval($toCreate['nilai_dampak']) * floatval($toCreate['nilai_probabilitas']) / 100;
         }
-
-        $perlakuanPenyebabRequests = json_decode($request->perlakuan_penyebab_risikos, true);
-        $kriProjectRequests = json_decode($request->kri_projects, true);
 
         if ($request->is_closed == '1') {
             // Gabungkan data untuk validasi
@@ -744,6 +790,25 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $projectMonitoring = $projectRisk->projectRiskMonitoring()->create($toCreate);
 
+        // Simpan Rencana & Realisasi Pengendalian jika status Siaga/Bahaya
+        // $projectMonitoring->pengendalians()->delete();
+        if (in_array($request->aktual_status, ['Siaga', 'Bahaya'])) {
+            $paramIds = $request->input('pengendalian_parameter_id', []);
+            $rencana = $request->input('rencana_pengendalian', []);
+            $realisasi = $request->input('realisasi_pengendalian', []);
+
+            foreach ($paramIds as $key => $pId) {
+                if (!empty($rencana[$key])) {
+                    $projectMonitoring->pengendalians()->create([
+                        'parameter_id' => $pId,
+                        'rencana_pengendalian' => $rencana[$key],
+                        'realisasi_pengendalian' => $realisasi[$key] ?? null,
+                    ]);
+                }
+            }
+        }
+
+        $perlakuanPenyebabRequests = json_decode($request->perlakuan_penyebab_risikos, true);
         foreach ($perlakuanPenyebabRequests as $id => $perlakuanPenyebabRequest) {
             if (is_string($perlakuanPenyebabRequest['timeline_perlakuan_risiko'])) {
                 $perlakuanPenyebabRequest['timeline_perlakuan_risiko'] = explode(' - ', $perlakuanPenyebabRequest['timeline_perlakuan_risiko']);
@@ -780,6 +845,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             }
         }
 
+        $kriProjectRequests = json_decode($request->kri_projects, true);
         foreach ($kriProjectRequests as $id => $kriProjectRequest) {
             $toCreate = [
                 'kri_project_id' => $id,
@@ -1104,5 +1170,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ->get();
 
         return response()->json($notes);
+    }
+
+    private function cleanRupiah($value) {
+        return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
     }
 }
