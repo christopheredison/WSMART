@@ -42,6 +42,10 @@ class ProjectRisk extends Model
         'efektivitas_perlakuan_risiko',
         'sasaran_proyek_id',
         'step_verification',
+        'taksonomi_risiko_id',
+        'threshold_risk_limit',
+        'threshold_risk_appetite',
+        'threshold_risk_tolerance',
     ];
 
     public const STATUS_INPUT_DATA = 1;
@@ -172,6 +176,16 @@ class ProjectRisk extends Model
     public function projectKontrolEksistings()
     {
         return $this->hasMany(ProjectKontrolEksisting::class, 'project_risk_id');
+    }
+
+    public function taksonomiRisiko()
+    {
+        return $this->belongsTo(TaksonomiRisiko::class, 'taksonomi_risiko_id');
+    }
+
+    public function parameterRisikoProjects()
+    {
+        return $this->hasMany(ParameterRisikoProject::class, 'risiko_id');
     }
 
     public function getPerkiraanWaktuTerpaparRisikoAttribute()

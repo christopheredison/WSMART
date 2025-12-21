@@ -219,6 +219,11 @@ return [
         'jenis_rencana_perlakuan_risiko_edit',
         'jenis_rencana_perlakuan_risiko_delete',
 
+        'taksonomi_risiko_list',
+        'taksonomi_risiko_create',
+        'taksonomi_risiko_edit',
+        'taksonomi_risiko_delete',
+
         'opsi_perlakuan_risiko_list',
         'opsi_perlakuan_risiko_create',
         'opsi_perlakuan_risiko_edit',

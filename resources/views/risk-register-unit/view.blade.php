@@ -270,9 +270,25 @@
                 <div class="row g-3 gx-md-5">
                     <div class="col-12">
                         <div class="form-group">
-                            <label class="form-label fw-bold">Sasaran</label>
+                            <label class="form-label fw-bold">Nama Divisi</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko?->unit?->name ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Sasaran Risiko</label>
                             <div class="p-3 bg-light rounded">
                                 {{ $risiko->target_capaian_kinerja ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Taksonomi Danantara</label>
+                            <div class="p-3 bg-light rounded">
+                              {{ $risiko->taksonomiRisiko?->nama ?? '-' }}
                             </div>
                         </div>
                     </div>
@@ -314,169 +330,75 @@
     </div>
     <!-- ::DataRisiko End -->
 
-    <!-- ::DataRisiko Proyek Terkait -->
     <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
-                    <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">2</span>
-                    </span>
-                    <span class="h3 mb-0">Risiko Proyek Terkait</span>
+                    <span class="nav-item-circle-parent"><span class="nav-item-circle">2</span></span>
+                    <span class="h3 mb-0">Parameter Risiko</span>
                 </div>
             </div>
             <div class="card-body">
-                @php
-                    $projectRisks = $risiko->projectRisks;
-                @endphp
-
-                @if($projectRisks && $projectRisks->isNotEmpty())
-                    <div class="table-responsive scrollbar">
-                        <table class="table table-bordered table-striped">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>Proyek</th>
-                                    <th>Peristiwa Risiko</th>
-                                    <th>Penyebab Risiko</th>
-                                    <th>Level Risiko</th>
-                                    <th>Nilai Risiko</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($projectRisks as $index => $projectRisk)
-                                <tr>
-                                    <td>{{ $index + 1 }}</td>
-                                    <td>{{ $projectRisk->project->project_name ?? '-' }}</td>
-                                    <td>
-                                        {{ $projectRisk->deskripsi_peristiwa_risiko ?? $projectRisk->peristiwaRisiko->title ?? '-' }}
-                                    </td>
-                                    <td>
-                                        @if($projectRisk->penyebabRisikoProjects && $projectRisk->penyebabRisikoProjects->isNotEmpty())
-                                            <ul class="ps-3 mb-0">
-                                                @foreach($projectRisk->penyebabRisikoProjects as $penyebab)
-                                                    <li>{{ $penyebab->penyebab_risiko }}</li>
-                                                @endforeach
-                                            </ul>
-                                        @else
-                                            -
-                                        @endif
-                                    </td>
-                                    <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa->level_risiko ?? '')))}} text-center">
-                                        <span class="fw-bold {{ $projectRisk->projectRiskAnalisa && in_array($projectRisk->projectRiskAnalisa->level_risiko, ['High', 'Very High']) ? 'text-white' : '' }}">
-                                            {{ $projectRisk->projectRiskAnalisa->level_risiko ?? '-' }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">{{ $projectRisk->projectRiskAnalisa->skala_risiko ?? '-' }}</td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @else
-                    <div class="alert alert-info">
-                        Tidak ada risiko proyek terkait.
-                    </div>
-                @endif
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">No.</th>
+                                <th>Nama Parameter</th>
+                                <th>Formula</th>
+                                <th>Satuan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($risiko->parameterRisikos as $param)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $param->nama ?? '-' }}</td>
+                                <td>{{ $param->formula ?? '-' }}</td>
+                                <td>{{ $param->satuan ?? '-' }}</td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="4" class="text-center text-muted">Tidak ada parameter risiko</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ::Peristiwa Risiko Start -->
     <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
-                    <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">3</span>
-                    </span>
-                    <span class="h3 mb-0">Peristiwa Risiko</span>
+                    <span class="nav-item-circle-parent"><span class="nav-item-circle">3</span></span>
+                    <span class="h3 mb-0">Threshold</span>
                 </div>
             </div>
             <div class="card-body">
-                <div class="row gy-3 gx-xxl-6">
-                    <div class="col-md-6">
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Peristiwa Risiko</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ $risiko->peristiwa_risiko ?? '-' }}
-                            </div>
+                <div class="row g-3 text-center">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Risk Limit</label>
+                        <div class="p-3 border border-success rounded fw-bold text-success bg-light">
+                            Rp {{ number_format($risiko->threshold_risk_limit, 0, ',', '.') }}
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Deskripsi Peristiwa Risiko</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}
-                            </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Risk Appetite</label>
+                        <div class="p-3 border border-warning rounded fw-bold text-warning bg-light">
+                            Rp {{ number_format($risiko->threshold_risk_appetite, 0, ',', '.') }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Risk Tolerance</label>
+                        <div class="p-3 border border-danger rounded fw-bold text-danger bg-light">
+                            Rp {{ number_format($risiko->threshold_risk_tolerance, 0, ',', '.') }}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- ::Peristiwa Risiko End -->
-
-    <!-- ::Kontrol Start -->
-    <div class="col-12 mb-4">
-        <div class="card">
-            <div class="card-header stepper border-0 pb-0">
-                <div class="nav-link active d-flex align-items-center p-0">
-                    <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">4</span>
-                    </span>
-                    <span class="h3 mb-0">Kontrol</span>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="row gy-3 gx-xxl-6">
-                    <div class="col-md-6">
-                        {{-- <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Jenis Kontrol Eksisting</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ optional($risiko->jenisKontrolEksisting)->jenis_kontrol ?? '-' }}
-                            </div>
-                        </div> --}}
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Kontrol Eksisting</label>
-                            @if($risiko->kontrolEksistings && $risiko->kontrolEksistings->isNotEmpty())
-                                @foreach($risiko->kontrolEksistings as $key=>$kontrol)
-                                    <div class="p-3 bg-light rounded mb-2">
-                                      {{$key + 1}}. {{ $kontrol->kontrol_eksisting }}
-                                    </div>
-                                @endforeach
-                            @else
-                                <div class="p-3 bg-light rounded">
-                                    Tidak ada kontrol eksisting
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        {{-- <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Penilaian Efektivitas Kontrol</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ optional($risiko->penilaianEfektifitasKontrol)->efektivitas_kontrol ?? '-' }}
-                            </div>
-                        </div> --}}
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Perkiraan Waktu Mulai Terpapar Risiko</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ $risiko->perkiraan_waktu_terpapar_risiko_mulai ? \Carbon\Carbon::parse($risiko->perkiraan_waktu_terpapar_risiko_mulai)->format('d F Y') : '-' }}
-                            </div>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Perkiraan Waktu Selesai Terpapar Risiko</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ $risiko->perkiraan_waktu_terpapar_risiko_akhir ? \Carbon\Carbon::parse($risiko->perkiraan_waktu_terpapar_risiko_akhir)->format('d F Y') : '-' }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- ::Kontrol End -->
 
     <!-- ::PenyebabRisiko Start -->
     <div class="col-12 mb-4">
@@ -484,7 +406,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">5</span>
+                        <span class="nav-item-circle">4</span>
                     </span>
                     <span class="h3 mb-0">Penyebab Risiko</span>
                 </div>
@@ -549,7 +471,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">6</span>
+                        <span class="nav-item-circle">5</span>
                     </span>
                     <span class="h3 mb-0">Key Risk Indicator</span>
                 </div>
@@ -596,13 +518,143 @@
     </div>
     <!-- ::KeyRiskIndicator End -->
 
-    <!-- ::AnalisaRisiko Start -->
+    <!-- ::Kontrol Start -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">6</span>
+                    </span>
+                    <span class="h3 mb-0">Kontrol</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row gy-3 gx-xxl-6">
+                    <div class="col-md-6">
+                        {{-- <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Jenis Kontrol Eksisting</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ optional($risiko->jenisKontrolEksisting)->jenis_kontrol ?? '-' }}
+                            </div>
+                        </div> --}}
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Kontrol Eksisting</label>
+                            @if($risiko->kontrolEksistings && $risiko->kontrolEksistings->isNotEmpty())
+                                @foreach($risiko->kontrolEksistings as $key=>$kontrol)
+                                    <div class="p-3 bg-light rounded mb-2">
+                                      {{$key + 1}}. {{ $kontrol->kontrol_eksisting }}
+                                    </div>
+                                @endforeach
+                            @else
+                                <div class="p-3 bg-light rounded">
+                                    Tidak ada kontrol eksisting
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        {{-- <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Penilaian Efektivitas Kontrol</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ optional($risiko->penilaianEfektifitasKontrol)->efektivitas_kontrol ?? '-' }}
+                            </div>
+                        </div> --}}
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Perkiraan Waktu Mulai Terpapar Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko->perkiraan_waktu_terpapar_risiko_mulai ? \Carbon\Carbon::parse($risiko->perkiraan_waktu_terpapar_risiko_mulai)->format('d F Y') : '-' }}
+                            </div>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Perkiraan Waktu Selesai Terpapar Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko->perkiraan_waktu_terpapar_risiko_akhir ? \Carbon\Carbon::parse($risiko->perkiraan_waktu_terpapar_risiko_akhir)->format('d F Y') : '-' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ::Kontrol End -->
+
+    <!-- ::DataRisiko Proyek Terkait -->
     <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
                         <span class="nav-item-circle">7</span>
+                    </span>
+                    <span class="h3 mb-0">Risiko Proyek Terkait</span>
+                </div>
+            </div>
+            <div class="card-body">
+                @php
+                    $projectRisks = $risiko->projectRisks;
+                @endphp
+
+                @if($projectRisks && $projectRisks->isNotEmpty())
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Proyek</th>
+                                    <th>Peristiwa Risiko</th>
+                                    <th>Penyebab Risiko</th>
+                                    <th>Level Risiko</th>
+                                    <th>Nilai Risiko</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($projectRisks as $index => $projectRisk)
+                                <tr>
+                                    <td>{{ $index + 1 }}</td>
+                                    <td>{{ $projectRisk->project->project_name ?? '-' }}</td>
+                                    <td>
+                                        {{ $projectRisk->deskripsi_peristiwa_risiko ?? $projectRisk->peristiwaRisiko->title ?? '-' }}
+                                    </td>
+                                    <td>
+                                        @if($projectRisk->penyebabRisikoProjects && $projectRisk->penyebabRisikoProjects->isNotEmpty())
+                                            <ul class="ps-3 mb-0">
+                                                @foreach($projectRisk->penyebabRisikoProjects as $penyebab)
+                                                    <li>{{ $penyebab->penyebab_risiko }}</li>
+                                                @endforeach
+                                            </ul>
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                    <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa->level_risiko ?? '')))}} text-center">
+                                        <span class="fw-bold {{ $projectRisk->projectRiskAnalisa && in_array($projectRisk->projectRiskAnalisa->level_risiko, ['High', 'Very High']) ? 'text-white' : '' }}">
+                                            {{ $projectRisk->projectRiskAnalisa->level_risiko ?? '-' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">{{ $projectRisk->projectRiskAnalisa->skala_risiko ?? '-' }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="alert alert-info">
+                        Tidak ada risiko proyek terkait.
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+    <!-- ::DataRisiko Proyek Terkait End -->
+
+    <!-- ::AnalisaRisiko Start -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">8</span>
                     </span>
                     <span class="h3 mb-0">Analisa Risiko</span>
                 </div>
@@ -647,7 +699,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">8</span>
+                        <span class="nav-item-circle">9</span>
                     </span>
                     <span class="h3 mb-0">Pengukuran Risiko Inheren</span>
                 </div>
@@ -742,7 +794,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">{{ $i + 8 }}</span>
+                        <span class="nav-item-circle">{{ $i + 9 }}</span>
                     </span>
                     <span class="h3 mb-0">Pengukuran Risiko Residual - Quarter {{ $i }}</span>
                 </div>

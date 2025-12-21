@@ -32,6 +32,10 @@ class ProjectRiskMonitoring extends Model
         'status',
         'is_approved',
         'is_revision',
+        'aktual_current',
+        'aktual_month_1',
+        'aktual_month_2',
+        'aktual_status',
     ];
 
     protected $casts = [
@@ -87,5 +91,10 @@ class ProjectRiskMonitoring extends Model
     public function skalaParameter()
     {
         return $this->belongsTo(SkalaParameter::class, 'skala_parameter_id');
+    }
+
+    public function pengendalians()
+    {
+        return $this->hasMany(ProjectRiskPengendalian::class, 'monitoring_id');
     }
 }
