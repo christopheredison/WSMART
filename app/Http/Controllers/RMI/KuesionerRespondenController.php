@@ -32,7 +32,7 @@ class KuesionerRespondenController extends BasicCRUDController
     public function index()
     {
         $this->callbackQuery = function($query) {
-            return $query->with(['rmiPeriod', 'group', 'approver']);
+            return $query->with(['rmiPeriod', 'group', 'approver', 'userSurvey']);
         };
 
         $this->datatableCallback = function($datatable) {
@@ -44,6 +44,7 @@ class KuesionerRespondenController extends BasicCRUDController
         $showRoute = route('kuesioner-responden.show', ':id');
         $approveRoute = route('kuesioner-responden.approve', ':id');
         $rejectRoute = route('kuesioner-responden.reject', ':id');
+        $resetRoute = route('kuesioner-responden.reset', ':id');
 
         $this->tableColumns = [
             'periode_name' => [
@@ -95,6 +96,21 @@ class KuesionerRespondenController extends BasicCRUDController
                 'data' => 'approver.name',
                 'render' => '(data) => data ? data : "-"',
             ],
+            'survey_status' => [
+                'label' => 'Status Survey',
+                'searchable' => false,
+                'orderable' => false,
+                'data' => 'survey_status',
+                'render' => <<<JS
+                    (data, type, row) => {
+                        if (row.user_survey?.status == 1) {
+                            return '<span class="badge bg-success">Selesai</span>';
+                        } else {
+                            return '<span class="badge bg-warning">Pending</span>';
+                        }
+                    };
+                JS,
+            ],
             'action' => [
                 'label' => 'Action',
                 'searchable' => false,
@@ -111,6 +127,10 @@ class KuesionerRespondenController extends BasicCRUDController
                             if (row.approval_status !== 'rejected') {
                                 actions += '<button class="btn-input-icon" data-bs-toggle="tooltip" title="" data-bs-original-title="Tolak" onclick="rejectResponden(' + row.id + ')"><span class="bx bx-x text-danger"></span></button>';
                             }
+                        }
+
+                        if (row.user_survey?.status == 1) {
+                            actions += '<a class="btn-input-icon" data-bs-toggle="tooltip" title="" data-bs-original-title="Lihat Jawaban" href="{$showRoute}"><span class="bx bx-show"></span></a><button class="btn-input-icon" data-bs-toggle="tooltip" title="" data-bs-original-title="Reset Status" onclick="resetResponden(' + row.id + ')"><span class="bx bx-refresh"></span></button>'.replace(':id', row.id);
                         }
                         
                         return actions;
@@ -209,6 +229,46 @@ class KuesionerRespondenController extends BasicCRUDController
                     }
                 });
             }
+            function resetResponden(id) {
+                Swal.fire({
+                    title: 'Apakah Anda yakin?',
+                    text: "Anda akan mereset status pengisian kuesioner responden ini.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, reset!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire({
+                            title: 'Memproses...',
+                            allowOutsideClick: false,
+                            didOpen: (modal) => {
+                                Swal.showLoading();
+                            }
+                        });
+                        
+                        fetch("{$resetRoute}".replace(":id", id), {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            Swal.close();
+                            if (data.message) {
+                                Swal.fire('Berhasil!', data.message, 'success').then(() => {
+                                    $('.ajax-datatable').DataTable().ajax.reload();
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            Swal.close();
+                            Swal.fire('Error!', 'Terjadi kesalahan saat memproses permintaan.', 'error');
+                        });
+                    }
+                });
+            }
             </script>
             HTML,
         ];
@@ -218,29 +278,33 @@ class KuesionerRespondenController extends BasicCRUDController
 
     public function show($resource)
     {
-        $periode = $this->model::findOrFail($resource);
+        $user = KuesionerResponden::findOrFail($resource);
+        $periode = $user->rmiPeriod;
         $periode->load([
-            'periodQuestions' => function($query) {
-                $query->with(['question' => function($query) {
+            'periodQuestions' => function($query) use ($user) {
+                $query->with(['question' => function($query) use ($user) {
                     $query->with('answerChoices');
-                }]);
+                }])->whereHas('question', function($query) use ($user) {
+                    $query->where('group_id', $user->group_id);
+                });
             },
-            'userSurvey' => function($query) {
-                $query->with('user', 'userAnswers');
+            'userSurvey' => function($query) use ($user) {
+                $query->where('kuesioner_responden_id', $user->id)->with('userAnswers');
             }
         ]);
-        
         $questions = $periode->periodQuestions;
         $userSurvey = $periode->userSurvey;
         $answers = [];
-        
         if ($userSurvey && $userSurvey->userAnswers) {
             foreach ($userSurvey->userAnswers as $answer) {
                 $answers[$answer->period_question_id] = $answer->level;
             }
         }
-        
-        return view('kuesioner-responden.show', compact('periode', 'questions', 'answers', 'userSurvey'));
+        if ($userSurvey?->status == 0) {
+            return redirect()->back()->with('error', 'Kuesioner belum selesai diisi.');
+        }
+        $type = 'responden';
+        return view('kuesioner.show', compact('periode', 'questions', 'answers', 'type'));
     }
 
     public function approve($resource)
@@ -266,6 +330,17 @@ class KuesionerRespondenController extends BasicCRUDController
         
         return response()->json([
             'message' => 'Responden kuesioner berhasil ditolak.',
+        ]);
+    }
+
+    public function reset($resource)
+    {
+        $responden = $this->model::findOrFail($resource);
+
+        $responden->userSurvey()->update(['status' => 0]);
+
+        return response()->json([
+            'message' => 'Status pengisian kuesioner responden berhasil direset.',
         ]);
     }
 }

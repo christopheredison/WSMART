@@ -43,6 +43,11 @@ class KuesionerResponden extends Model
         return $this->belongsTo(User::class, 'validated_by');
     }
 
+    public function userSurvey()
+    {
+        return $this->hasOne(UserSurvey::class, 'kuesioner_responden_id');
+    }
+
     public function isApproved()
     {
         return $this->approval_status === 'approved';

@@ -461,6 +461,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('kuesioner', KuesionerController::class)->except(['create', 'store', 'destroy']);
     Route::post('kuesioner-responden/{resource}/approve', [KuesionerRespondenController::class, 'approve'])->name('kuesioner-responden.approve');
     Route::post('kuesioner-responden/{resource}/reject', [KuesionerRespondenController::class, 'reject'])->name('kuesioner-responden.reject');
+    Route::post('kuesioner-responden/{resource}/reset', [KuesionerRespondenController::class, 'reset'])->name('kuesioner-responden.reset');
     Route::resource('kuesioner-responden', KuesionerRespondenController::class)->except(['create', 'store', 'destroy']);
 
     Route::get('project-led/{project}/create', [ProjectLEDController::class, 'create'])->name('project-led.create');

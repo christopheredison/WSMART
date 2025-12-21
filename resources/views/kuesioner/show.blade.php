@@ -39,7 +39,7 @@
                     <p class="text-center">Tidak ada pertanyaan survey</p>
                 @endif
                 <div class="d-flex justify-content-end mt-4">
-                    <a href="{{ route('kuesioner.index') }}" class="btn btn-secondary">Kembali</a>
+                    <a href="{{ ($type ?? false) == 'responden' ? route('kuesioner-responden.index') : route('kuesioner.index') }}" class="btn btn-secondary">Kembali</a>
                 </div>
             </div>
         </div>
