@@ -648,65 +648,6 @@
             }
         });
 
-        // --- Validasi Threshold Risiko ---
-        const $limit = $('input[name="threshold_risk_limit"]');
-        const $appetite = $('input[name="threshold_risk_appetite"]');
-        const $tolerance = $('input[name="threshold_risk_tolerance"]');
-
-        function getNumericValue(el) {
-            return parseFloat(el.inputmask('unmaskedvalue')) || 0;
-        }
-
-        // Validasi Appetite terhadap Limit
-        $appetite.on('change', function() {
-            let vLimit = getNumericValue($limit);
-            let vAppetite = getNumericValue($(this));
-
-            if (vAppetite <= vLimit && vAppetite !== 0) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Batas Nilai Salah',
-                    text: 'Risk Appetite harus lebih besar dari Risk Limit.',
-                    confirmButtonText: 'Ok'
-                });
-                // Update ke nilai minimum (Limit + 1)
-                $(this).val(vLimit + 1).trigger('input');
-            }
-        });
-
-        // Validasi Tolerance terhadap Appetite
-        $tolerance.on('change', function() {
-            let vAppetite = getNumericValue($appetite);
-            let vTolerance = getNumericValue($(this));
-
-            if (vTolerance <= vAppetite && vTolerance !== 0) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Batas Nilai Salah',
-                    text: 'Risk Tolerance harus lebih besar dari Risk Appetite.',
-                    confirmButtonText: 'Ok'
-                });
-                // Update ke nilai minimum (Appetite + 1)
-                $(this).val(vAppetite + 1).trigger('input');
-            }
-        });
-
-        // Validasi Risk Limit diubah menjadi lebih besar dari Appetite
-        $limit.on('change', function() {
-            let vLimit = getNumericValue($(this));
-            let vAppetite = getNumericValue($appetite);
-
-            if (vLimit >= vAppetite && vAppetite !== 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Penyesuaian Threshold',
-                    text: 'Risk Limit tidak boleh melebihi Appetite. Nilai Appetite akan disesuaikan.',
-                    confirmButtonText: 'Ok'
-                });
-                $appetite.val(vLimit + 1).trigger('change');
-            }
-        });
-
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const penyebabRisikoFromUrl = urlParams.get('penyebab_risiko');

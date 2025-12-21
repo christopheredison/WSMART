@@ -152,7 +152,8 @@ class ProjectPeriodeList extends Model
 
     public function recalculateAnalisa($risk_limit)
     {
-        $projectRisks = ProjectRisk::where('project_id', $this->project_id)
+        $projectRisks = ProjectRisk::where('periode_id', $this->periode_id)
+            ->where('project_id', $this->project_id)
             ->where('id', '!=', request()->route('risk')) // Kecualikan ID yang sedang diproses
             ->whereHas('projectRiskAnalisa', function ($query) {
                 $query->where('kategori_dampak', 'Kuantitatif');
