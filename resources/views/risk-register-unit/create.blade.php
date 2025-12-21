@@ -40,10 +40,36 @@
                         </div>
                     </div>
                     <div class="row g-3 gx-md-5">
-                        <div class="col-12">
+                        {{-- <div class="col-12">
                             <div class="form-group form-floating">
                                 <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Sasaran" required>{{ old('target_capaian_kinerja') }}</textarea>
-                                <label for="target_capaian_kinerja">Sasaran</label>
+                                <label for="target_capaian_kinerja">Sasaran Risiko</label>
+                            </div>
+                        </div> --}}
+
+                        <div class="col-md-12">
+                            <div class="form-group d-lg-flex">
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko</label>
+                                <div class="w-100">
+                                    <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Masukkan Sasaran Risiko" required>
+                                    </textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <div class="form-group d-lg-flex">
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Danantara</label>
+                                <div class="w-100">
+                                    <select class="form-select select2" name="taksonomi_risiko_id" required>
+                                        <option value="">Pilih Taksonomi</option>
+                                        @foreach($taksonomiRisikos as $tax)
+                                            <option value="{{ $tax->id }}" {{ old('taksonomi_risiko_id', $projectRisk->taksonomi_risiko_id ?? '') == $tax->id ? 'selected' : '' }}>
+                                                {{ $tax->nama }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         {{-- <div class="col-12">
@@ -91,13 +117,89 @@
         </div>
         <!-- ::DataRisiko End -->
 
-        <!-- ::PenyebabRisiko Start -->
+        <!-- ::ParameeterRisiko Start -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
                             <span class="nav-item-circle">2</span>
+                        </span>
+                        <span class="h3 mb-0">Parameter Risiko</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="parameter-risiko-body">
+                        <div class="row g-2 mb-3 parameter-row-item">
+                            <div class="col-md-1 text-center d-flex justify-content-center align-items-center">
+                              <span class="number-pill-info">1</span>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input type="hidden" name="parameter_risiko_id[]">
+                                    <input type="text" class="form-control" name="param_nama[]" placeholder="Nama">
+                                    <label>Nama Parameter</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" name="param_formula[]" placeholder="Formula">
+                                    <label>Formula</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" name="param_satuan[]" placeholder="Satuan">
+                                    <label>Satuan</label>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-center">
+                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)"><i class="bx bx-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary rounded-pill p-2 float-end" id="add-parameter"><i class='bx bx-plus fs-5'></i></button>
+                </div>
+            </div>
+        </div>
+        <!-- ::ParameeterRisiko End -->
+
+        <!-- ::Threshold Start -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header stepper border-0 pb-0">
+                    <div class="nav-link active d-flex align-items-center p-0">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">3</span></span>
+                        <span class="h3 mb-0">Threshold</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Limit</label>
+                            <input type="text" class="form-control rupiah-input" name="threshold_risk_limit" value="{{ 0 }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Appetite</label>
+                            <input type="text" class="form-control rupiah-input" name="threshold_risk_appetite" value="{{ 0 }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Tolerance</label>
+                            <input type="text" class="form-control rupiah-input" name="threshold_risk_tolerance" value="{{ 0 }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ::Threshold End -->
+
+        <!-- ::PenyebabRisiko Start -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header stepper border-0 pb-0">
+                    <div class="nav-link active d-flex align-items-center p-0">
+                        <span class="nav-item-circle-parent">
+                            <span class="nav-item-circle">4</span>
                         </span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
@@ -141,7 +243,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">3</span>
+                            <span class="nav-item-circle">5</span>
                         </span>
                         <span class="h3 mb-0">Key Risk Indicator</span>
                     </div>
@@ -212,7 +314,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">4</span>
+                            <span class="nav-item-circle">6</span>
                         </span>
                         <span class="h3 mb-0">Kontrol</span>
                     </div>
@@ -295,7 +397,7 @@
                     <div class="card-header stepper border-0 pb-0">
                         <div class="nav-link active d-flex align-items-center p-0">
                             <span class="nav-item-circle-parent">
-                                <span class="nav-item-circle">5</span>
+                                <span class="nav-item-circle">7</span>
                             </span>
                             <span class="h3 mb-0">Risiko Proyek Terkait</span>
                         </div>
@@ -441,6 +543,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
     function filterTable() {
         var input, filter, table, tr, tdProject, tdPeristiwa, i, txtValueProject, txtValuePeristiwa;
@@ -508,6 +611,43 @@
     }
 
     $(document).ready(function() {
+        $('.select2').select2({
+            width: '100%',
+        });
+
+        $('.rupiah-input').inputmask({
+            alias: 'numeric',
+            groupSeparator: '.',
+            autoGroup: true,
+            digits: 0,
+            digitsOptional: false,
+            prefix: 'Rp ',
+            placeholder: '0',
+            rightAlign: false,
+            autoUnmask: true,
+            removeMaskOnSubmit: true,
+            min: 0,
+            allowMinus: false,
+            onKeyDown: function(e) {
+            if (e.key === 'Backspace' || e.keyCode === 8) {
+                // tunda eksekusi sampai mask selesai di-apply
+                setTimeout(() => {
+                    const unmasked = this.inputmask.unmaskedvalue();
+                    // kalau masih ada angka tersisa
+                    if (unmasked.length > 0) {
+                    // cek posisi cursor
+                    const pos = this.selectionStart;
+                    if (pos === 0) {
+                        // pindahkan ke paling kanan
+                        const end = this.value.length;
+                        this.setSelectionRange(end, end);
+                    }
+                    }
+                }, 0);
+                }
+            }
+        });
+
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const penyebabRisikoFromUrl = urlParams.get('penyebab_risiko');
@@ -577,6 +717,33 @@
         } else {
             console.error('Element #peristiwa_risiko tidak ditemukan.');
         }
+
+        $('#add-parameter').click(function() {
+            let rowIdx = $('.parameter-row-item').length + 1;
+            let html = `
+            <div class="row g-2 mb-3 parameter-row-item">
+                <div class="col-md-1 text-center d-flex justify-content-center align-items-center">
+                  <span class="number-pill-info">${rowIdx}</span>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-floating">
+                        <input type="hidden" name="parameter_risiko_id[]" value="">
+                        <input type="text" class="form-control" name="param_nama[]" placeholder="Nama">
+                        <label>Nama Parameter</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-floating"><input type="text" class="form-control" name="param_formula[]" placeholder="Formula"><label>Formula</label></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-floating"><input type="text" class="form-control" name="param_satuan[]" placeholder="Satuan"><label>Satuan</label></div>
+                </div>
+                <div class="col-auto d-flex align-items-center">
+                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)"><i class="bx bx-trash"></i></button>
+                </div>
+            </div>`;
+            $('#parameter-risiko-body').append(html);
+        });
 
         $('#add-column').click(function() {
             row++;

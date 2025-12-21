@@ -39,6 +39,7 @@ use App\Models\DataBatchNotes;
 use App\Models\Project;
 use App\Models\ProjectRisk;
 use App\Models\RiskDivisiProject;
+use App\Models\TaksonomiRisiko;
 
 class RiskRegisterUnitController extends Controller
 {
@@ -316,6 +317,7 @@ class RiskRegisterUnitController extends Controller
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
         $kontrolEksistings = KontrolEksisting::get();
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
+        $taksonomiRisikos = TaksonomiRisiko::all();
 
         // Mendapatkan unit (divisi) saat ini
         $unit = Unit::find($unitId);
@@ -341,7 +343,7 @@ class RiskRegisterUnitController extends Controller
             }
         }
 
-        return view('risk-register-unit.create',compact('kategoriRisiko','peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings','areaDampak','jenisRisiko','tck','selectedPeriode', 'projects', 'projectRisks'));
+        return view('risk-register-unit.create',compact('kategoriRisiko','peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings','areaDampak','jenisRisiko','tck','selectedPeriode', 'projects', 'projectRisks', 'taksonomiRisikos'));
     }
 
     public function RiskPeriodeList(Request $request)
@@ -609,6 +611,10 @@ class RiskRegisterUnitController extends Controller
             }
             $identifikasiRisiko->status = 1;
             $identifikasiRisiko->status_progress = 1;
+            $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
+            $identifikasiRisiko->threshold_risk_limit = $this->cleanRupiah($request->threshold_risk_limit ?? 0);
+            $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite ?? 0);
+            $identifikasiRisiko->threshold_risk_tolerance = $this->cleanRupiah($request->threshold_risk_tolerance ?? 0);
 
             // Simpan kontrol eksisting
             // if ($request->has('kontrol_eksisting_id') && is_array($request->kontrol_eksisting_id)) {
@@ -618,6 +624,18 @@ class RiskRegisterUnitController extends Controller
             //     $identifikasiRisiko->kontrol_eksisting = $kontrolEksisting;
             // }
             $identifikasiRisiko->save();
+
+            if ($request->has('param_nama')) {
+                foreach ($request->param_nama as $idx => $nama) {
+                    if(!empty($nama)) {
+                        $identifikasiRisiko->parameterRisikos()->create([
+                            'nama' => $nama,
+                            'formula' => $request->param_formula[$idx] ?? '',
+                            'satuan' => $request->param_satuan[$idx] ?? '',
+                        ]);
+                    }
+                }
+            }
 
             // Simpan kontrol eksisting ke model KontrolEksisting
             if ($request->has('kontrol_eksisting') && is_array($request->kontrol_eksisting)) {
@@ -1240,7 +1258,7 @@ class RiskRegisterUnitController extends Controller
         $unitId = $user->unit_id;
 
         // Ambil data identifikasi risiko
-        $identifikasiRisiko = IdentifikasiRisiko::with(['kontrolEksistings', 'penyebabRisiko', 'kris'])->findOrFail($id);
+        $identifikasiRisiko = IdentifikasiRisiko::with(['kontrolEksistings', 'penyebabRisiko', 'kris', 'parameterRisikos'])->findOrFail($id);
 
         // Ambil periode yang dipilih
         $selectedPeriode = Periode::find($identifikasiRisiko->periode_id);
@@ -1263,6 +1281,7 @@ class RiskRegisterUnitController extends Controller
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
         $kontrolEksistings = KontrolEksisting::get();
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
+        $taksonomiRisikos = TaksonomiRisiko::all();
 
         // Mendapatkan unit (divisi) saat ini
         $unit = Unit::find($unitId);
@@ -1301,7 +1320,8 @@ class RiskRegisterUnitController extends Controller
             'tck',
             'selectedPeriode',
             'projects',
-            'projectRisks'
+            'projectRisks',
+            'taksonomiRisikos'
         ));
     }
 
@@ -1370,8 +1390,35 @@ class RiskRegisterUnitController extends Controller
             // $identifikasiRisiko->penilaian_efektifitas_kontrol = $request->penilaian_efektifitas_kontrol;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
+            $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
+            $identifikasiRisiko->threshold_risk_limit = $this->cleanRupiah($request->threshold_risk_limit);
+            $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite);
+            $identifikasiRisiko->threshold_risk_tolerance = $this->cleanRupiah($request->threshold_risk_tolerance);
 
             $identifikasiRisiko->save();
+
+            $savedParamIds = [];
+            if ($request->has('param_nama')) {
+                foreach ($request->param_nama as $key => $nama) {
+                    $dataParam = [
+                        'nama' => $nama,
+                        'formula' => $request->param_formula[$key] ?? '',
+                        'satuan' => $request->param_satuan[$key] ?? '',
+                    ];
+
+                    $paramId = $request->parameter_risiko_id[$key] ?? null;
+                    $exist = $identifikasiRisiko->parameterRisikos()->find($paramId);
+
+                    if ($exist) {
+                        $exist->update($dataParam);
+                        $savedParamIds[] = $exist->id;
+                    } else {
+                        $newParam = $identifikasiRisiko->parameterRisikos()->create($dataParam);
+                        $savedParamIds[] = $newParam->id;
+                    }
+                }
+            }
+            $identifikasiRisiko->parameterRisikos()->whereNotIn('id', $savedParamIds)->delete();
 
             // Hapus kontrol eksisting lama dan buat yang baru
             $identifikasiRisiko->kontrolEksistings()->delete();
@@ -1389,40 +1436,79 @@ class RiskRegisterUnitController extends Controller
                 }
             }
 
-            // Hapus penyebab risiko lama dan buat yang baru
-            $identifikasiRisiko->penyebabRisiko()->delete();
+            // // Hapus penyebab risiko lama dan buat yang baru
+            // $identifikasiRisiko->penyebabRisiko()->delete();
 
-            // Simpan penyebab risiko
-            if ($request->has('penyebab_risiko') && is_array($request->penyebab_risiko)) {
-                foreach ($request->penyebab_risiko as $penyebab) {
-                    if (!empty($penyebab)) {
-                        $identifikasiRisiko->penyebabRisiko()->create([
-                            'penyebab_risiko' => $penyebab,
-                            'risiko_id' => $identifikasiRisiko->id,
-                        ]);
-                    }
+            // // Simpan penyebab risiko
+            // if ($request->has('penyebab_risiko') && is_array($request->penyebab_risiko)) {
+            //     foreach ($request->penyebab_risiko as $penyebab) {
+            //         if (!empty($penyebab)) {
+            //             $identifikasiRisiko->penyebabRisiko()->create([
+            //                 'penyebab_risiko' => $penyebab,
+            //                 'risiko_id' => $identifikasiRisiko->id,
+            //             ]);
+            //         }
+            //     }
+            // }
+
+            $penyebabRisikoIds = [];
+            foreach ($request->penyebab_risiko as $penyebabRisikoId => $penyebabRisiko) {
+                $exist = $identifikasiRisiko->penyebabRisiko()->where('id', $penyebabRisikoId)->first();
+                if ($exist) {
+                    $exist->update([
+                        'penyebab_risiko' => $penyebabRisiko,
+                    ]);
+                } else {
+                    $exist = $identifikasiRisiko->penyebabRisiko()->create([
+                        'penyebab_risiko' => $penyebabRisiko,
+                    ]);
+                }
+                $penyebabRisikoIds[] = $exist->id;
+            }
+            $identifikasiRisiko->penyebabRisiko()->whereNotIn('id', $penyebabRisikoIds)->delete();
+
+            // // Hapus KRI lama dan buat yang baru
+            // $identifikasiRisiko->kris()->delete();
+
+            // // Simpan KRI
+            // if ($request->has('key_risk_indicator') && is_array($request->key_risk_indicator)) {
+            //     for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
+            //         if (!empty($request->key_risk_indicator[$i])) {
+            //             $identifikasiRisiko->kris()->create([
+            //                 'kri_id' => 0, // Karena tidak menggunakan master_kri_id lagi
+            //                 'risiko_id' => $identifikasiRisiko->id,
+            //                 'kri' => $request->key_risk_indicator[$i],
+            //                 'satuan_kri' => $request->satuan_kri[$i] ?? null,
+            //                 'batas_aman' => $request->batas_aman[$i] ?? null,
+            //                 'batas_waspada' => $request->batas_waspada[$i] ?? null,
+            //                 'batas_bahaya' => $request->batas_bahaya[$i] ?? null,
+            //             ]);
+            //         }
+            //     }
+            // }
+
+            $savedKriIds = [];
+            foreach ($request->key_risk_indicator as $key => $kri) {
+                $kriData = [
+                    'kri_id' => 0,
+                    'kri' => $kri,
+                    'satuan_kri' => $request->satuan_kri[$key] ?? '',
+                    'batas_aman' => $request->batas_aman[$key] ?? '',
+                    'batas_waspada' => $request->batas_waspada[$key] ?? '',
+                    'batas_bahaya' => $request->batas_bahaya[$key] ?? '',
+                ];
+
+                $existKri = $identifikasiRisiko->kris()->find($key);
+
+                if ($existKri) {
+                    $existKri->update($kriData);
+                    $savedKriIds[] = $existKri->id;
+                } else {
+                    $newKri = $identifikasiRisiko->kris()->create($kriData);
+                    $savedKriIds[] = $newKri->id;
                 }
             }
-
-            // Hapus KRI lama dan buat yang baru
-            $identifikasiRisiko->kris()->delete();
-
-            // Simpan KRI
-            if ($request->has('key_risk_indicator') && is_array($request->key_risk_indicator)) {
-                for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
-                    if (!empty($request->key_risk_indicator[$i])) {
-                        $identifikasiRisiko->kris()->create([
-                            'kri_id' => 0, // Karena tidak menggunakan master_kri_id lagi
-                            'risiko_id' => $identifikasiRisiko->id,
-                            'kri' => $request->key_risk_indicator[$i],
-                            'satuan_kri' => $request->satuan_kri[$i] ?? null,
-                            'batas_aman' => $request->batas_aman[$i] ?? null,
-                            'batas_waspada' => $request->batas_waspada[$i] ?? null,
-                            'batas_bahaya' => $request->batas_bahaya[$i] ?? null,
-                        ]);
-                    }
-                }
-            }
+            $identifikasiRisiko->kris()->whereNotIn('id', $savedKriIds)->delete();
 
             // Hapus relasi project risk lama dan buat yang baru
             $identifikasiRisiko->projectRisks()->detach();
@@ -2045,7 +2131,15 @@ class RiskRegisterUnitController extends Controller
         //     ->get();
 
         $risikos = IdentifikasiRisiko::where('id', $id)
-            ->with(['riskAnalysis', 'projectRisks.project', 'projectRisks.projectRiskAnalisa', 'projectRisks.penyebabRisikoProjects'])
+            ->with([
+              'taksonomiRisiko',
+              'penyebabRisikos',
+              'parameterRisikos',
+              'riskAnalysis',
+              'projectRisks.project',
+              'projectRisks.projectRiskAnalisa',
+              'projectRisks.penyebabRisikoProjects',
+            ])
             ->get();
 
         $risiko = $risikos->first();

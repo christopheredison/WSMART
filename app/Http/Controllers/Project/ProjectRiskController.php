@@ -19,6 +19,7 @@ use App\Models\RiskMap;
 use App\Models\SkalaProbabilitas;
 use App\Models\PenyebabRisikoProject;
 use App\Models\PerlakuanPenyebabRisiko;
+use App\Models\TaksonomiRisiko;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -723,8 +724,9 @@ class ProjectRiskController extends BasicCRUDController
         $kontrolEksistings = KontrolEksisting::get();
         $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
+        $taksonomiRisikos = TaksonomiRisiko::all();
 
-        return view('project-risk.create', compact('periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos', 'sasaranProyeks'));
+        return view('project-risk.create', compact('periode', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos', 'sasaranProyeks', 'taksonomiRisikos'));
     }
 
     public function store(Request $request)
@@ -805,13 +807,28 @@ class ProjectRiskController extends BasicCRUDController
                 'jenis_risiko_id' => $request->jenis_risiko_id,
                 'kontrol_eksisting' => '',
                 'wbs' => $request->wbs,
-                //penambahan untuk status awal input
                 'status_risiko' => '0',
                 'status_progress'  => '0',
+                'taksonomi_risiko_id' => $request->taksonomi_risiko_id,
+                'threshold_risk_limit' => $this->cleanRupiah($request->threshold_risk_limit),
+                'threshold_risk_appetite' => $this->cleanRupiah($request->threshold_risk_appetite),
+                'threshold_risk_tolerance' => $this->cleanRupiah($request->threshold_risk_tolerance),
                 'status' => 1
             ];
 
             $projectRisk = ProjectRisk::create($toStore);
+
+            if ($request->has('param_nama')) {
+                foreach ($request->param_nama as $idx => $nama) {
+                    if(!empty($nama)) {
+                        $projectRisk->parameterRisikoProjects()->create([
+                            'nama' => $nama,
+                            'formula' => $request->param_formula[$idx] ?? '',
+                            'satuan' => $request->param_satuan[$idx] ?? '',
+                        ]);
+                    }
+                }
+            }
 
             $projectRisk->projectRiskAnalisas()->create([]);
             $projectRisk->projectRiskRencanaPerlakuans()->create([]);
@@ -880,7 +897,7 @@ class ProjectRiskController extends BasicCRUDController
 
     public function edit($resource)
     {
-        $projectRisk = ProjectRisk::with('penyebabRisikoProjects', 'kriProjects', 'peristiwaRisiko')->findOrFail(request()->route('risk'));
+        $projectRisk = ProjectRisk::with('penyebabRisikoProjects', 'kriProjects', 'peristiwaRisiko', 'parameterRisikoProjects')->findOrFail(request()->route('risk'));
 
         //dd($projectRisk);
         $projectPeriodeList = ProjectPeriodeList::findOrFail(request()->route('project'));
@@ -903,12 +920,11 @@ class ProjectRiskController extends BasicCRUDController
         $kontrolEksistingIds = !empty($projectRisk->kontrol_eksisting) ? explode(',', $projectRisk->kontrol_eksisting) : [];
 
         $kontrolEksistings = KontrolEksisting::whereIn('id', $kontrolEksistingIds)->get();
-
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
-
         $jenisRisikos = JenisRisiko::where('kategori_risiko_id', 6)->get();
+        $taksonomiRisikos = TaksonomiRisiko::all();
 
-        return view('project-risk.edit', compact('projectRisk', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos', 'sasaranProyeks'));
+        return view('project-risk.edit', compact('projectRisk', 'project', 'peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings', 'projectPeriodeList', 'jenisRisikos', 'sasaranProyeks', 'taksonomiRisikos'));
     }
 
     public function update(Request $request, $resource)
@@ -977,9 +993,36 @@ class ProjectRiskController extends BasicCRUDController
                 'wbs' => $request->wbs,
                 'target_capaian_kinerja' => $targetCapaianKinerja,
                 'sasaran_proyek_id' => $sasaranProyekId,
+                'taksonomi_risiko_id' => $request->taksonomi_risiko_id,
+                'threshold_risk_limit' => $this->cleanRupiah($request->threshold_risk_limit),
+                'threshold_risk_appetite' => $this->cleanRupiah($request->threshold_risk_appetite),
+                'threshold_risk_tolerance' => $this->cleanRupiah($request->threshold_risk_tolerance),
             ];
 
             $projectRisk->update($toUpdate);
+
+            $savedParamIds = [];
+            if ($request->has('param_nama')) {
+                foreach ($request->param_nama as $key => $nama) {
+                    $dataParam = [
+                        'nama' => $nama,
+                        'formula' => $request->param_formula[$key] ?? '',
+                        'satuan' => $request->param_satuan[$key] ?? '',
+                    ];
+
+                    $paramId = $request->parameter_risiko_id[$key] ?? null;
+                    $exist = $projectRisk->parameterRisikoProjects()->find($paramId);
+
+                    if ($exist) {
+                        $exist->update($dataParam);
+                        $savedParamIds[] = $exist->id;
+                    } else {
+                        $newParam = $projectRisk->parameterRisikoProjects()->create($dataParam);
+                        $savedParamIds[] = $newParam->id;
+                    }
+                }
+            }
+            $projectRisk->parameterRisikoProjects()->whereNotIn('id', $savedParamIds)->delete();
 
             $penyebabRisikoIds = [];
             foreach ($request->penyebab_risiko as $penyebabRisikoId => $penyebabRisiko) {
@@ -1077,6 +1120,8 @@ class ProjectRiskController extends BasicCRUDController
         $projectRisk = ProjectRisk::with([
                 'projectPeriodeList.project',
                 'peristiwaRisiko',
+                'taksonomiRisiko',
+                'penyebabRisikoProjects',
                 'projectRiskAnalisa.skalaDampakObj',
                 'projectRiskAnalisa.skalaProbabilitas',
                 'projectRiskAnalisa.skalaDampakResidualObj',

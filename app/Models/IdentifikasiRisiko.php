@@ -44,6 +44,10 @@ class IdentifikasiRisiko extends Model
         'previous_status_risiko',
         'is_closed',
         'efektivitas_perlakuan_risiko',
+        'taksonomi_risiko_id',
+        'threshold_risk_limit',
+        'threshold_risk_appetite',
+        'threshold_risk_tolerance',
     ];
 
     protected $guarded = [];
@@ -148,6 +152,16 @@ class IdentifikasiRisiko extends Model
         return $this->hasMany(KontrolEksisting::class, 'risiko_id');
     }
 
+    public function taksonomiRisiko()
+    {
+        return $this->belongsTo(TaksonomiRisiko::class, 'taksonomi_risiko_id');
+    }
+
+    public function parameterRisikos()
+    {
+        return $this->hasMany(ParameterRisikoUnit::class, 'risiko_id');
+    }
+
     public function toDraftStructure() {
         $basic = $this->toArray();
         $basic['penyebab_risiko_ids'] = $this->penyebabRisiko->pluck('id')->toArray();
@@ -232,9 +246,9 @@ class IdentifikasiRisiko extends Model
                 'tahun' => 0,
             ],
         ];
-        
-        $currentRiskMap = $currentRiskMaps['inherent']; 
-        
+
+        $currentRiskMap = $currentRiskMaps['inherent'];
+
         $monitorings = $this->monitoringRisikos->keyBy('month');
 
         for ($month = 1; $month <= 12; $month++) {
@@ -253,7 +267,7 @@ class IdentifikasiRisiko extends Model
                 'month' => $month,
                 'tahun' => $projectMonitoring?->tahun ?? $currentRiskMap['tahun'],
             ];
-            
+
             $currentRiskMap = $currentRiskMaps[$month];
         }
 
@@ -358,7 +372,7 @@ class IdentifikasiRisiko extends Model
      * Menentukan risiko utama berdasarkan kriteria:
      * - Untuk risiko kuantitatif: eksposur risiko di atas rata-rata
      * - Untuk risiko kualitatif: skala risiko > 20
-     * 
+     *
      * @param int $unit_id ID unit
      * @param int $periode_id ID periode
      * @return void
@@ -370,24 +384,24 @@ class IdentifikasiRisiko extends Model
             ->where('periode_id', $periode_id)
             ->where('status', 6)
             ->get();
-        
+
         // Pisahkan risiko berdasarkan kategori dampak (kuantitatif dan kualitatif)
         $quantitativeRisks = $unitRisks->filter(function($risk) {
-            return $risk->riskAnalysis && 
+            return $risk->riskAnalysis &&
                   $risk->riskAnalysis->kategori_dampak === 'Kuantitatif';
         });
-        
+
         $qualitativeRisks = $unitRisks->filter(function($risk) {
-            return $risk->riskAnalysis && 
+            return $risk->riskAnalysis &&
                   $risk->riskAnalysis->kategori_dampak === 'Kualitatif';
         });
-        
+
         // Untuk risiko kuantitatif, hitung rata-rata eksposur risiko
         if ($quantitativeRisks->count() > 0) {
             $avgExposure = $quantitativeRisks->avg(function($risk) {
                 return $risk->riskAnalysis->eksposur_risiko ?? 0;
             });
-            
+
             // Update risiko kuantitatif yang eksposurnya di atas rata-rata
             foreach ($quantitativeRisks as $risk) {
                 if (($risk->riskAnalysis->eksposur_risiko ?? 0) > $avgExposure) {
@@ -397,7 +411,7 @@ class IdentifikasiRisiko extends Model
                 }
             }
         }
-        
+
         // Untuk risiko kualitatif, tandai yang skala risikonya > 20
         foreach ($qualitativeRisks as $risk) {
             if (($risk->riskAnalysis->skala_risiko ?? 0) > 20) {
@@ -411,9 +425,9 @@ class IdentifikasiRisiko extends Model
     public function divisiRisks()
     {
         return $this->belongsToMany(
-            IdentifikasiRisiko::class, 
-            'risk_corporate_divisi', 
-            'identifikasi_risiko_corporate_id', 
+            IdentifikasiRisiko::class,
+            'risk_corporate_divisi',
+            'identifikasi_risiko_corporate_id',
             'identifikasi_risiko_divisi_id'
         );
     }
@@ -421,9 +435,9 @@ class IdentifikasiRisiko extends Model
     public function apRisks()
     {
         return $this->belongsToMany(
-            IdentifikasiRisiko::class, 
-            'risk_corporate_ap', 
-            'identifikasi_risiko_corporate_id', 
+            IdentifikasiRisiko::class,
+            'risk_corporate_ap',
+            'identifikasi_risiko_corporate_id',
             'identifikasi_risiko_ap_id'
         );
     }

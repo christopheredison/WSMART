@@ -41,6 +41,7 @@ use App\Http\Controllers\Master\JenisRencanaPerlakuanRisikoController;
 use App\Http\Controllers\Master\KontrolEksistingController;
 use App\Http\Controllers\Master\MasterKriController;
 use App\Http\Controllers\Master\OpsiPerlakuanRisikoController;
+use App\Http\Controllers\Master\TaksonomiRisikoController;
 use App\Http\Controllers\Master\PenilaianEfektivitasKontrolController;
 use App\Http\Controllers\Master\ProjectController;
 use App\Http\Controllers\Master\ProjectDivisiController;
@@ -449,6 +450,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('project-periode-list', ProjectPeriodeListController::class)->except(['create', 'edit']);
     Route::resource('jenis-kontrol-eksisting', JenisKontrolEksistingController::class)->except(['create', 'show', 'edit']);
     Route::resource('kontrol-eksisting', KontrolEksistingController::class)->except(['create', 'show', 'edit']);
+    Route::resource('taksonomi-risiko', TaksonomiRisikoController::class)->except(['create', 'show', 'edit']);
     Route::resource('penilaian-efektivitas-kontrol', PenilaianEfektivitasKontrolController::class)->except(['create', 'show', 'edit']);
     Route::resource('jenis-rencana-perlakuan-risiko', JenisRencanaPerlakuanRisikoController::class)->except(['create', 'show', 'edit']);
     Route::resource('opsi-perlakuan-risiko', OpsiPerlakuanRisikoController::class)->except(['create', 'show', 'edit']);
@@ -783,7 +785,7 @@ Route::get('/download-tender-template', [ProjectRiskController::class, 'download
 Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->group(function () {
     Route::get('periods', [App\Http\Controllers\CorporateRiskController::class, 'riskPeriodeList'])->name('periods');
     Route::get('/periods/{period}', [App\Http\Controllers\CorporateRiskController::class, 'riskPeriodeDashboard'])->name('periods.show');
-    
+
     Route::resource('/periods/{period}/monitorings', RiskRegisterCorporateMonitoringController::class)
             ->names('monitorings')
             ->only(['index', 'show', 'edit', 'update']);

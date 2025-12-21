@@ -51,6 +51,21 @@
                         </div>
                         <div class="col-md-12">
                             <div class="form-group d-lg-flex">
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Danantara</label>
+                                <div class="w-100">
+                                    <select class="form-select select2" name="taksonomi_risiko_id" required>
+                                        <option value="">Pilih Taksonomi</option>
+                                        @foreach($taksonomiRisikos as $tax)
+                                            <option value="{{ $tax->id }}" {{ old('taksonomi_risiko_id', $projectRisk->taksonomi_risiko_id ?? '') == $tax->id ? 'selected' : '' }}>
+                                                {{ $tax->nama }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Peristiwa Risiko</label>
                                 <select class="form-select select2 js-select-hide-search" name="peristiwa_risiko_id"
                                     id="peristiwa_risiko" required>
@@ -97,13 +112,89 @@
         </div>
         <!-- ::DataRisiko End -->
 
-        <!-- ::PenyebabRisiko Start -->
+        <!-- ::ParameeterRisiko Start -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
                             <span class="nav-item-circle">2</span>
+                        </span>
+                        <span class="h3 mb-0">Parameter Risiko</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="parameter-risiko-body">
+                        <div class="row g-2 mb-3 parameter-row-item">
+                            <div class="col-md-1 text-center d-flex justify-content-center align-items-center">
+                              <span class="number-pill-info">1</span>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input type="hidden" name="parameter_risiko_id[]">
+                                    <input type="text" class="form-control" name="param_nama[]" placeholder="Nama">
+                                    <label>Nama Parameter</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" name="param_formula[]" placeholder="Formula">
+                                    <label>Formula</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" name="param_satuan[]" placeholder="Satuan">
+                                    <label>Satuan</label>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-center">
+                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)"><i class="bx bx-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary rounded-pill p-2 float-end" id="add-parameter"><i class='bx bx-plus fs-5'></i></button>
+                </div>
+            </div>
+        </div>
+        <!-- ::ParameeterRisiko End -->
+
+        <!-- ::Threshold Start -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header stepper border-0 pb-0">
+                    <div class="nav-link active d-flex align-items-center p-0">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">3</span></span>
+                        <span class="h3 mb-0">Threshold</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Limit</label>
+                            <input type="text" class="form-control rupiah-input" name="threshold_risk_limit" value="{{ old('threshold_risk_limit', $projectRisk->threshold_risk_limit ?? 0) }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Appetite</label>
+                            <input type="text" class="form-control rupiah-input" name="threshold_risk_appetite" value="{{ old('threshold_risk_appetite', $projectRisk->threshold_risk_appetite ?? 0) }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Tolerance</label>
+                            <input type="text" class="form-control rupiah-input" name="threshold_risk_tolerance" value="{{ old('threshold_risk_tolerance', $projectRisk->threshold_risk_tolerance ?? 0) }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ::Threshold End -->
+
+        <!-- ::PenyebabRisiko Start -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header stepper border-0 pb-0">
+                    <div class="nav-link active d-flex align-items-center p-0">
+                        <span class="nav-item-circle-parent">
+                            <span class="nav-item-circle">4</span>
                         </span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
@@ -148,7 +239,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">3</span>
+                            <span class="nav-item-circle">5</span>
                         </span>
                         <span class="h3 mb-0">Key Risk Indicator</span>
                     </div>
@@ -219,7 +310,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">4</span>
+                            <span class="nav-item-circle">6</span>
                         </span>
                         <span class="h3 mb-0">Kontrol</span>
                     </div>
@@ -318,6 +409,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
     function removeRow(event) {
         let row = $(event.target).closest('.row');
@@ -325,6 +417,39 @@
     }
 
     $(document).ready(function() {
+        $('.rupiah-input').inputmask({
+            alias: 'numeric',
+            groupSeparator: '.',
+            autoGroup: true,
+            digits: 0,
+            digitsOptional: false,
+            prefix: 'Rp ',
+            placeholder: '0',
+            rightAlign: false,
+            autoUnmask: true,
+            removeMaskOnSubmit: true,
+            min: 0,
+            allowMinus: false,
+            onKeyDown: function(e) {
+            if (e.key === 'Backspace' || e.keyCode === 8) {
+                // tunda eksekusi sampai mask selesai di-apply
+                setTimeout(() => {
+                    const unmasked = this.inputmask.unmaskedvalue();
+                    // kalau masih ada angka tersisa
+                    if (unmasked.length > 0) {
+                    // cek posisi cursor
+                    const pos = this.selectionStart;
+                    if (pos === 0) {
+                        // pindahkan ke paling kanan
+                        const end = this.value.length;
+                        this.setSelectionRange(end, end);
+                    }
+                    }
+                }, 0);
+                }
+            }
+        });
+
         const selectedValueFromPHP = @json(old('sasaran_proyek_id', $projectRisk->sasaran_proyek_id));
 
         $('#sasaran_proyek_id').on('change', function() {
@@ -366,6 +491,33 @@
             var selectedOption = $(this).find('option:selected');
             var kategoriId = selectedOption.data('kategori');
             $('#kategori_risiko_id').val(kategoriId);
+        });
+
+        $('#add-parameter').click(function() {
+            let rowIdx = $('.parameter-row-item').length + 1;
+            let html = `
+            <div class="row g-2 mb-3 parameter-row-item">
+                <div class="col-md-1 text-center d-flex justify-content-center align-items-center">
+                  <span class="number-pill-info">${rowIdx}</span>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-floating">
+                        <input type="hidden" name="parameter_risiko_id[]" value="">
+                        <input type="text" class="form-control" name="param_nama[]" placeholder="Nama">
+                        <label>Nama Parameter</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-floating"><input type="text" class="form-control" name="param_formula[]" placeholder="Formula"><label>Formula</label></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-floating"><input type="text" class="form-control" name="param_satuan[]" placeholder="Satuan"><label>Satuan</label></div>
+                </div>
+                <div class="col-auto d-flex align-items-center">
+                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)"><i class="bx bx-trash"></i></button>
+                </div>
+            </div>`;
+            $('#parameter-risiko-body').append(html);
         });
 
         // Add Column Penyebab Risiko
@@ -683,8 +835,25 @@
                         if ($('#table-kontrol tbody tr').length > 0) {
                             $('.table-empty').hide();
                         }
+                    } else if (key === 'parameter_risiko_projects') {
+                        const params = value;
+                        params.forEach((param, index) => {
+                            if (index === 0) {
+                                $('[name="parameter_risiko_id[]"]').first().val(param.id);
+                                $('[name="param_nama[]"]').first().val(param.nama);
+                                $('[name="param_formula[]"]').first().val(param.formula);
+                                $('[name="param_satuan[]"]').first().val(param.satuan);
+                            } else {
+                                $('#add-parameter').click();
+                                $('[name="parameter_risiko_id[]"]').last().val(param.id);
+                                $('[name="param_nama[]"]').last().val(param.nama);
+                                $('[name="param_formula[]"]').last().val(param.formula);
+                                $('[name="param_satuan[]"]').last().val(param.satuan);
+                            }
+                        });
                     }
-                } else {
+                }
+                else {
                     $(`[name="${key}"]`).val(value).change();
                 }
             }
