@@ -17,13 +17,15 @@ class KuesionerResponden extends Model
         'rmi_period_id',
         'verified_at',
         'verification_token',
-        'approved_at',
-        'approved_by',
+        'approval_status',
+        'validated_at',
+        'validated_by',
+        'rejection_notes',
     ];
 
     public $casts = [
         'verified_at' => 'datetime',
-        'approved_at' => 'datetime',
+        'validated_at' => 'datetime',
     ];
 
     public function group()
@@ -38,19 +40,39 @@ class KuesionerResponden extends Model
 
     public function approver()
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->belongsTo(User::class, 'validated_by');
     }
 
     public function isApproved()
     {
-        return $this->approved_at !== null;
+        return $this->approval_status === 'approved';
     }
 
     public function approve($approverId)
     {
-        $this->approved_at = now();
-        $this->approved_by = $approverId;
+        $this->approval_status = 'approved';
+        $this->validated_at = now();
+        $this->validated_by = $approverId;
         $this->save();
+
+        $link = route('kuesioner-publik.fill', ['token' => $this->rmiPeriod->token, 'email' => $this->email, 'verification_token' => $this->verification_token]);
+
+        Mail::send('emails.approval', ['name' => $this->name, 'email' => $this->email, 'link' => $link], function ($message) {
+            $message->to($this->email)->subject('Pendaftaran Kuesioner Disetujui');
+        });
+    }
+
+    public function reject($approverId, $notes = null)
+    {
+        $this->approval_status = 'rejected';
+        $this->validated_at = now();
+        $this->validated_by = $approverId;
+        $this->rejection_notes = $notes;
+        $this->save();
+
+        Mail::send('emails.rejection', ['name' => $this->name, 'email' => $this->email, 'notes' => $notes], function ($message) {
+            $message->to($this->email)->subject('Pendaftaran Kuesioner Ditolak');
+        });
     }
 
     public function isVerified()

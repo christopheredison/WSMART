@@ -32,7 +32,7 @@ class KuesionerPublikController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:kuesioner_respondens,email',
+            'email' => 'required|email|max:255',
             'group_id' => 'required|exists:groups,id',
         ], [
             'name.required' => 'Nama harus diisi.',
@@ -42,7 +42,29 @@ class KuesionerPublikController extends Controller
             'group_id.required' => 'Group harus dipilih.',
             'group_id.exists' => 'Group yang dipilih tidak valid.',
         ]);
+
+        $checkExisting = \App\Models\KuesionerResponden::where('email', $request->input('email'))
+            ->where('rmi_period_id', $rmiPeriod->id)
+            ->first();
+        if ($checkExisting) {
+            if ($checkExisting->isVerified()) {
+                if ($checkExisting->approval_status === 'approved') {
+                    return redirect()->route('kuesioner-publik.register', ['token' => $token])
+                        ->withErrors(['email' => 'Email sudah pernah didaftarkan dan diverifikasi. Silahkan cek kotak masuk email anda.']);
+                } elseif ($checkExisting->approval_status !== 'rejected') {
+                    return redirect()->route('kuesioner-publik.register', ['token' => $token])
+                        ->withErrors(['email' => 'Email sudah pernah didaftarkan tetapi belum diverifikasi. Silahkan cek kotak masuk email anda untuk verifikasi.']);
+                }
+            }
+        }
+
         $verificationToken = \Illuminate\Support\Str::random(32);
+
+        if ($checkExisting) {
+            \App\Models\KuesionerResponden::where('email', $request->input('email'))
+                ->where('rmi_period_id', $rmiPeriod->id)
+                ->delete();
+        }
 
         $responden = \App\Models\KuesionerResponden::create([
             'name' => $request->input('name'),

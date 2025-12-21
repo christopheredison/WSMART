@@ -78,6 +78,7 @@ use App\Http\Controllers\ProjectRiskContextController;
 use App\Http\Controllers\CorporateLEDController;
 use App\Http\Controllers\RiskRegisterCorporateMonitoringController;
 use App\Http\Controllers\RMI\KuesionerPublikController;
+use App\Http\Controllers\RMI\KuesionerRespondenController;
 
 /*
 |--------------------------------------------------------------------------
@@ -458,6 +459,9 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('rmi-period', RMIPeriodController::class)->except(['create', 'edit']);
     Route::resource('question', QuestionController::class)->except(['create', 'edit']);
     Route::resource('kuesioner', KuesionerController::class)->except(['create', 'store', 'destroy']);
+    Route::post('kuesioner-responden/{resource}/approve', [KuesionerRespondenController::class, 'approve'])->name('kuesioner-responden.approve');
+    Route::post('kuesioner-responden/{resource}/reject', [KuesionerRespondenController::class, 'reject'])->name('kuesioner-responden.reject');
+    Route::resource('kuesioner-responden', KuesionerRespondenController::class)->except(['create', 'store', 'destroy']);
 
     Route::get('project-led/{project}/create', [ProjectLEDController::class, 'create'])->name('project-led.create');
     Route::get('project-led/{id}', [ProjectLEDController::class, 'show'])->name('project-led.show');
@@ -840,4 +844,5 @@ Route::prefix('kuesioner-publik')->as('kuesioner-publik.')->group(function () {
     Route::get('{token}/register', [KuesionerPublikController::class, 'register'])->name('register');
     Route::post('{token}/register', [KuesionerPublikController::class, 'doRegister'])->name('do-register');
     Route::get('{token}/verify', [KuesionerPublikController::class, 'verify'])->name('verify');
+    Route::get('{token}/fill', [KuesionerPublikController::class, 'fill'])->name('fill');
 });

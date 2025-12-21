@@ -19,8 +19,10 @@ return new class extends Migration
             $table->foreignId('rmi_period_id')->constrained('rmi_periods')->onDelete('cascade');
             $table->timestamp('verified_at')->nullable();
             $table->string('verification_token')->nullable();
-            $table->timestamp('approved_at')->nullable();
-            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->string('approval_status')->default('pending');
+            $table->timestamp('validated_at')->nullable();
+            $table->foreignId('validated_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->text('rejection_notes')->nullable();
             $table->timestamps();
         });
     }
