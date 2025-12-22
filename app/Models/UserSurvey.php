@@ -11,6 +11,7 @@ class UserSurvey extends Model
 
     protected $fillable = [
         'user_id',
+        'kuesioner_responden_id',
         'period_id', 
         'status'
     ];
@@ -18,6 +19,11 @@ class UserSurvey extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function kuesionerResponden() 
+    {
+        return $this->belongsTo(KuesionerResponden::class, 'kuesioner_responden_id');
     }
 
     public function period() 
