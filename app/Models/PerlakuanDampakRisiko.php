@@ -29,6 +29,11 @@ class PerlakuanDampakRisiko extends Model
         return $this->belongsTo(ProjectRisk::class, 'risiko_id');
     }
 
+    public function picJabatan()
+    {
+        return $this->belongsTo(Jabatan::class, 'pic_jabatan_id');
+    }
+
     public function getWaktuPerlakuanRisikoAttribute() {
         if (!$this->timeline_perlakuan_risiko_start) return '-';
         $start = $this->timeline_perlakuan_risiko_start->format('d M Y');
@@ -40,5 +45,13 @@ class PerlakuanDampakRisiko extends Model
 
     public function getDivisiTerkaitUnitsAttribute() {
         return empty($this->divisi_terkait) ? collect() : Unit::whereIn('id', $this->divisi_terkait)->get();
+    }
+
+    public function perlakuanDampakMonitorings() {
+        return $this->hasMany(PerlakuanDampakMonitoring::class, 'perlakuan_dampak_id');
+    }
+
+    public function lastMonitoring() {
+        return $this->hasOne(PerlakuanDampakMonitoring::class, 'perlakuan_dampak_id')->orderBy('id', 'desc');
     }
 }

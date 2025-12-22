@@ -456,16 +456,68 @@
             <div class="row g-2">
                 <div class="card">
                     <div class="card-body">
+                        <h5 class="mb-2">Perlakuan terhadap Dampak Risiko</h5>
+                        <table class="table" id="table-dampak-risiko">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Dampak Risiko</th>
+                                    <th>Rencana Perlakuan</th>
+                                    <th>Biaya Perlakuan</th>
+                                    <th>Progress (%)</th>
+                                    <th>Realisasi Biaya</th>
+                                    <th>Waktu Perlakuan</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($projectRisk->perlakuanDampakRisikos as $index => $perlakuan)
+                                <tr data-id="{{ $perlakuan->id }}">
+                                    @if ($index == 0)
+                                        <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}">1</td>
+                                        <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}">{{ $projectRisk->deskripsi_dampak }}</td>
+                                    @endif
+                                    <td>{{ $perlakuan->rencana_perlakuan_risiko }}</td>
+                                    <td>Rp {{ number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') }}</td>
+                                    <td class="display-progress">{{ $perlakuan->lastMonitoring?->progress_rencana_perlakuan_risiko ?? '-' }}</td>
+                                    <td class="display-biaya">
+                                        {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                    </td>
+                                    <td class="display-timeline">{{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
+                                    {{-- <td class="text-center">
+                                        <a href="javascript:void(0)" class="btn-input-icon btn-action"
+                                          data-action="update-realisasi-dampak" data-id="{{ $perlakuan->id }}">
+                                            <span class="bx bx-edit-alt text-primary"></span>
+                                        </a>
+                                    </td> --}}
+                                    <td style="white-space:nowrap" class="column-action-impact">
+                                        <div class="d-none dom-saved-impact">
+                                            <div class="upload-container-impact"></div>
+                                            <input type="hidden" class="input-file-description-impact">
+                                        </div>
+                                        <div class="text-center">
+                                            <a href="javascript:void(0)" class="btn-input-icon btn-action"
+                                              data-action="update-realisasi-dampak" data-id="{{ $perlakuan->id }}">
+                                                <span class="bx bx-edit-alt text-primary"></span>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+
+                        <h5 class="mt-6 mb-2">Perlakuan terhadap Penyebab Risiko</h5>
                         <table class="table" id="table-penyebab-risiko">
                             <thead>
                                 <tr>
                                     <th>#</th>
                                     <th>Penyebab Risiko</th>
-                                    <th>Rencana Perlakuan Risiko</th>
-                                    <th>Biaya Perlakuan Risiko</th>
-                                    <th>Progress Perlakuan Risiko</th>
-                                    <th>Realisasi Biaya Perlakuan Risiko</th>
-                                    <th>Waktu Perlakuan Risiko</th>
+                                    <th>Rencana Perlakuan</th>
+                                    <th>Biaya Perlakuan</th>
+                                    <th>Progress (%)</th>
+                                    <th>Realisasi Biaya</th>
+                                    <th>Waktu Perlakuan</th>
                                     <th style="width: 80px; text-align: center;">Action</th>
                                 </tr>
                             </thead>
@@ -519,7 +571,8 @@
                             </tbody>
                         </table>
 
-                        <table class="table mt-7" id="table-kri">
+                        <h5 class="mt-6 mb-2">Perlakuan terhadap KRI</h5>
+                        <table class="table" id="table-kri">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -668,6 +721,7 @@
     @include('project-monitorings._modal_kri')
     @include('project-monitorings._modal_penyebab')
     @include('project-monitorings._modal_mitigasi')
+    @include('project-monitorings._modal_update_realisasi_dampak')
 @endsection
 
 @push('styles')
@@ -683,6 +737,7 @@
 <script>
 const penyebabRisikoProjects = @json($penyebabRisikoProjects->keyBy('id'));
 const perlakuanPenyebabRisikos = @json($penyebabRisikoProjects->pluck('perlakuanPenyebabRisiko')->flatten()->keyBy('id'));
+const perlakuanDampakRisikos = @json($projectRisk->perlakuanDampakRisikos->keyBy('id'));
 const kriProjects = @json($kriProjects->keyBy('id'));
 const quarter = {{ $quarter }};
 const namaRisiko = @json($peristiwaRisiko->title);
@@ -732,6 +787,15 @@ var perlakuanWaktu2 = flatpickr("#timeline_perlakuan_risiko_end", {
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     //maxDate: endOfYear,
+    disableMobile: true
+});
+
+// Flatpickr untuk Dampak
+var impactFlatpickr = flatpickr("#timelineImpactInput", {
+    altInput: true,
+    altFormat: "j F Y",
+    dateFormat: "d/m/Y",
+    minDate: minDateString,
     disableMobile: true
 });
 
@@ -829,6 +893,7 @@ function submitForm(isClosed) {
 
     const formData = new FormData($('#main-form')[0]);
     formData.append('perlakuan_penyebab_risikos', JSON.stringify(perlakuanPenyebabRisikos));
+    formData.append('perlakuan_dampak_risikos', JSON.stringify(perlakuanDampakRisikos));
     formData.append('kri_projects', JSON.stringify(kriProjects));
     formData.append('quarter', quarter);
     formData.append('_method', 'PUT');
@@ -1210,7 +1275,119 @@ $(document).ready(function() {
             }
 
             $('#modalMitigasi').modal('show');
+        } else if (action === 'update-realisasi-dampak') {
+            // const perlakuanDampak = perlakuanDampakRisikos[$(this).data('id')];
+
+            // // Reset dan Isi Modal (Gunakan modal yang sama dengan mitigasi penyebab)
+            // $('#modalUpdateRealisasi :input[name="penyebab_risiko_id"]').val($(this).data('id')); // Kita reuse field ID ini
+            // $('#modalUpdateRealisasi :input[name="penyebab_risiko"]').val("Dampak: " + @json($projectRisk->deskripsi_dampak));
+            // $('#modalUpdateRealisasi :input[name="rencana_perlakuan_risiko"]').val(perlakuanDampak.rencana_perlakuan_risiko);
+            // $('#modalUpdateRealisasi :input[name="biaya_perlakuan_risiko"]').val(perlakuanDampak.biaya_perlakuan_risiko);
+
+            // // Load data monitoring jika sudah ada
+            // const lastMon = perlakuanDampak.last_monitoring;
+            // $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(lastMon?.realisasi_biaya_perlakuan_risiko ?? 0);
+            // $('#modalUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val(lastMon?.progress_rencana_perlakuan_risiko ?? 0);
+            // $('#modalUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val(lastMon?.deskripsi_perlakuan_risiko ?? '');
+
+            // // Set Action Type agar saat simpan, JS tahu ini update Dampak atau Penyebab
+            // $('#btnSimpanUpdateRealisasi').data('target-type', 'dampak');
+            // $('#modalUpdateRealisasi').modal('show');
         }
+    });
+
+    $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
+        const id = $(this).data('id');
+        const perlakuan = perlakuanDampakRisikos[id];
+
+        // Mapping Data ke Modal
+        $('#impact_id').val(id);
+        $('#impact_name').val(@json($projectRisk->deskripsi_dampak));
+        $('#impact_plan').val(perlakuan.rencana_perlakuan_risiko);
+        $('#impact_cost').val('Rp ' + Intl.NumberFormat('id-ID').format(perlakuan.biaya_perlakuan_risiko));
+        $('#impact_pic').val(perlakuan?.pic_jabatan?.name);
+        $('#timeline_perlakuan_risiko_dampak_start').val(dayjs(perlakuan.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
+        $('#timeline_perlakuan_risiko_dampak_end').val(dayjs(perlakuan.timeline_perlakuan_risiko_end).format('DD/MM/YYYY'));
+
+        // Load Realisasi Sebelumnya jika ada
+        const lastMon = perlakuan.last_monitoring;
+        const form = $('#formUpdateRealisasiDampak');
+        form.find('[name="realisasi_biaya_dampak"]').val(lastMon?.realisasi_biaya_perlakuan_risiko ?? 0);
+        form.find('[name="progress_dampak"]').val(lastMon?.progress_rencana_perlakuan_risiko ?? 0);
+        form.find('[name="deskripsi_dampak"]').val(lastMon?.deskripsi_perlakuan_risiko ?? '');
+
+        if(lastMon?.timeline_perlakuan_risiko_start) {
+            impactFlatpickr.setDate(dayjs(lastMon.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
+        } else {
+            impactFlatpickr.clear();
+        }
+
+        // Handle Dokumen (mirip penyebab tapi beda selector)
+        const trImpact = $(`#table-dampak-risiko tr[data-id="${id}"]`);
+        const domCell = trImpact.find('td.column-action-impact');
+        const domSaved = domCell.find('.dom-saved-impact');
+        domCell.find('.dom-edited-impact').remove();
+        const domEdited = domSaved.clone().addClass('dom-edited-impact').removeClass('dom-saved-impact');
+        domCell.append(domEdited);
+
+        // Render ulang list dokumen di modal
+        const tableDocument = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
+        tableDocument.empty();
+
+        // Ambil data deskripsi dari input hidden di baris tabel
+        const domDeskripsiInput = domEdited.find('.input-file-description-impact');
+        const documentDescriptions = domDeskripsiInput.val() ? JSON.parse(domDeskripsiInput.val()) : {};
+
+        // Loop setiap input file yang sudah ada di dom-edited (file yang baru terpilih tapi belum di-save ke server)
+        domEdited.find('input[type=file]').each(function() {
+            const fileName = $(this).prop('files')[0]?.name;
+            const fileId = $(this).prop('id');
+            const description = documentDescriptions[fileId] || '';
+
+            tableDocument.append(`
+                <tr data-id="${fileId}">
+                    <td><span class="dokumen-filename text-truncate d-block" style="max-width: 200px;">${fileName}</span></td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm input-desc-impact"
+                              placeholder="Keterangan..." value="${description}">
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-link btn-sm text-danger btn-delete-doc-impact">Hapus</button>
+                    </td>
+                </tr>
+            `);
+        });
+
+        if (tableDocument.find('tr').length >= 3) {
+            tableDocument.closest('table').find('tfoot').hide();
+        } else {
+            tableDocument.closest('table').find('tfoot').show();
+        }
+
+        $('#modalUpdateRealisasiDampak').modal('show');
+    });
+
+    $('#btnSimpanUpdateRealisasiDampak').on('click', function() {
+        const id = $('#impact_id').val();
+        const form = $('#formUpdateRealisasiDampak');
+
+        if(!form[0].checkValidity()) { form[0].reportValidity(); return; }
+        console.log(perlakuanDampakRisikos[id])
+
+        perlakuanDampakRisikos[id]['realisasi_biaya_perlakuan_risiko'] = form.find('[name="realisasi_biaya_dampak"]').val();
+        perlakuanDampakRisikos[id]['progress_rencana_perlakuan_risiko'] = form.find('[name="progress_dampak"]').val();
+        perlakuanDampakRisikos[id]['deskripsi_perlakuan_risiko'] = form.find('[name="deskripsi_dampak"]').val();
+        perlakuanDampakRisikos[id]['timeline_perlakuan_risiko'] = form.find('[name="timeline_dampak"]').val();
+
+        const tr = $(`#table-dampak-risiko tr[data-id="${id}"]`);
+        tr.find('.display-biaya').text('Rp ' + Intl.NumberFormat('id-ID').format(perlakuanDampakRisikos[id]['realisasi_biaya_perlakuan_risiko']));
+        tr.find('.display-progress').text(perlakuanDampakRisikos[id]['progress_rencana_perlakuan_risiko']);
+        tr.find('.display-timeline').text(perlakuanDampakRisikos[id]['timeline_perlakuan_risiko']);
+
+        tr.find('.dom-saved-impact').remove();
+        tr.find('.dom-edited-impact').removeClass('dom-edited-impact').addClass('dom-saved-impact');
+
+        $('#modalUpdateRealisasiDampak').modal('hide');
     });
 
     $('#btnSimpanUpdateRealisasi').on('click', function() {
@@ -1222,9 +1399,6 @@ $(document).ready(function() {
         const realisasiBiayaPerlakuanRisiko = $('#formUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val();
         const progressPerlakuanRisiko = $('#formUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val();
         const deskripsiPerlakuanRisiko = $('#formUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val();
-        //const jenisProgramRkap = $('#formUpdateRealisasi :input[name="jenis_program_rkap"]').val();
-        // const jenisProgramRkapId = $('#formUpdateRealisasi :input[name="jenis_program_rkap_id"]').val();
-        // const jenisProgramRkap = $('#formUpdateRealisasi :input[name="jenis_program_rkap_id"] option:selected').text();
         const timelinePerlakuanRisiko = $('#formUpdateRealisasi :input[name="timeline_perlakuan_risiko"]').val();
 
         if (!timelinePerlakuanRisiko) {
@@ -1236,9 +1410,6 @@ $(document).ready(function() {
         perlakuanPenyebabRisikos[id]['realisasi_biaya_perlakuan_risiko'] = realisasiBiayaPerlakuanRisiko;
         perlakuanPenyebabRisikos[id]['progress_rencana_perlakuan_risiko'] = progressPerlakuanRisiko;
         perlakuanPenyebabRisikos[id]['deskripsi_perlakuan_risiko'] = deskripsiPerlakuanRisiko;
-        // perlakuanPenyebabRisikos[id]['jenis_program_rkap'] = jenisProgramRkap;
-        // perlakuanPenyebabRisikos[id]['jenis_program_rkap_id'] = jenisProgramRkapId;
-        //perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko'] = timelinePerlakuanRisiko.split(' to ');
         perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko'] = timelinePerlakuanRisiko;
 
         // update DOM

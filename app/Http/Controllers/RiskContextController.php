@@ -544,7 +544,16 @@ class RiskContextController extends Controller
             return back()->with('error', 'Akses Ditolak. Hanya Risk Officer yang dapat mengajukan verifikasi.');
         }
 
-        $context = RiskContext::where('unit_id', $user->unit_id)->findOrFail($id);
+        $context = RiskContext::find($id);
+
+        if (!$context) {
+            return back()->with('error', 'Data Risk Context tidak ditemukan.');
+        }
+
+        // Cek Unit sama dengan User
+        // if ($context->unit_id != $user->unit_id) {
+        //     return back()->with('error', 'Akses Ditolak. Anda tidak dapat mengajukan data dari unit lain.');
+        // }
 
         // Validasi Status
         if ($context->status !== RiskContext::STATUS_DRAFT && $context->status !== RiskContext::STATUS_REVISION) {

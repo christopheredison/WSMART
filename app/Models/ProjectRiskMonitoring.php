@@ -60,6 +60,11 @@ class ProjectRiskMonitoring extends Model
         return $this->hasMany(PerlakuanPenyebabMonitoring::class, 'project_monitoring_id');
     }
 
+    public function perlakuanDampakMonitorings()
+    {
+        return $this->hasMany(PerlakuanDampakMonitoring::class, 'project_monitoring_id');
+    }
+
     public function perlakuanPenyebabRisikoDocuments()
     {
         return $this->hasMany(PerlakuanPenyebabRisikoDocument::class, 'project_monitoring_id');

@@ -409,6 +409,13 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                         ->where('month', $month)
                         ->with('pengendalians');
                 },
+                'perlakuanDampakRisikos' => function ($query) use ($quarter, $tahun, $month) {
+                    $query->with(['lastMonitoring' => function ($q) use ($quarter, $tahun, $month) {
+                        $q->whereHas('projectMonitoring', function ($sq) use ($quarter, $tahun, $month) {
+                            $sq->where('quarter', $quarter)->where('tahun', $tahun)->where('month', $month);
+                        });
+                    }, 'picJabatan']);
+                },
             ])
             ->findOrFail(request()->route('monitoring'));
 
@@ -804,6 +811,36 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                         'rencana_pengendalian' => $rencana[$key],
                         'realisasi_pengendalian' => $realisasi[$key] ?? null,
                     ]);
+                }
+            }
+        }
+
+        $perlakuanDampakReq = json_decode($request->perlakuan_dampak_risikos, true);
+        if($perlakuanDampakReq) {
+            foreach ($perlakuanDampakReq as $id => $item) {
+                $start = null;
+                if (!empty($item['timeline_perlakuan_risiko'])) {
+                    try {
+                        $start = \Carbon\Carbon::createFromFormat('d/m/Y', $item['timeline_perlakuan_risiko'])->format('Y-m-d');
+                    } catch(\Exception $e) {}
+                }
+
+                $monitoringDampak = $projectMonitoring->perlakuanDampakMonitorings()->create([
+                    'perlakuan_dampak_id' => $id,
+                    'progress_rencana_perlakuan_risiko' => $item['progress_rencana_perlakuan_risiko'] ?? 0,
+                    'realisasi_biaya_perlakuan_risiko' => $this->cleanRupiah($item['realisasi_biaya_perlakuan_risiko'] ?? 0),
+                    'deskripsi_perlakuan_risiko' => $item['deskripsi_perlakuan_risiko'] ?? '',
+                    'timeline_perlakuan_risiko_start' => $start,
+                    'timeline_perlakuan_risiko_end' => $start,
+                ]);
+
+                // 2. Simpan Dokumen Dampak
+                if ($documentFiles = $request->{'doc_impact_' . $id}) {
+                    foreach ($documentFiles as $newId => $file) {
+                        $path = $file->store('impact-monitoring-documents');
+                        // Logika simpan ke tabel dokumen perlakuan dampak
+                        // $monitoringDampak->documents()->create([...]);
+                    }
                 }
             }
         }

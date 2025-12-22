@@ -83,21 +83,21 @@
                   class="btn-input-icon"
                   data-bs-toggle="modal"
                   data-bs-target="#penilaianModal"
-                  
+
                   data-period-id="{{ $period->id }}"
                   data-period-year="{{ $period->year }}"
                   data-tahun-dinilai="{{ $period->tahun_dinilai }}"
-                  
+
                   {{-- Data Internal --}}
                   data-penilaian="{{ $period->penilaian }}"
-                  
+
                   {{-- Data Eksternal --}}
                   data-penilai-external="{{ $period->penilai_external }}"
                   data-score-rmi-ext="{{ $period->score_rmi_external }}"
                   data-kinerja-ext-id="{{ $extKinerjaId }}"
                   data-kpmr-ext-id="{{ $extKpmrId }}"
                   data-score-aspek-kinerja-ext="{{ $period->score_aspek_kinerja_external }}"
-                  
+
                   title="Atur Data Penilaian"
               >
                   <span class="bx bxs-edit-alt"></span>
@@ -119,12 +119,12 @@
         <h5 class="modal-title">Setting Penilaian Periode <span id="modalPeriodYear" class="fw-bold"></span></h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      
+
       <form id="penilaianForm" method="POST" action="">
         @csrf
         @method('PUT')
         <div class="modal-body">
-          
+
           <div class="card mb-4 border">
               <div class="card-header bg-white fw-bold text-primary">
                   Data Internal
@@ -192,7 +192,7 @@
                           </div>
                       </div>
                   </div>
-                  
+
                   <div class="alert alert-success d-flex align-items-center mt-2 p-2" role="alert">
                       <i class="bx bx-check-circle me-2"></i>
                       <div class="small">
@@ -218,12 +218,12 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const penilaianModal = document.getElementById('penilaianModal');
-  
+
   if (penilaianModal) {
     penilaianModal.addEventListener('show.bs.modal', function (event) {
       const button = event.relatedTarget;
       const periodId = button.getAttribute('data-period-id');
-      
+
       // Update Action Form
       const form = penilaianModal.querySelector('#penilaianForm');
       form.setAttribute('action', `{{ url('penilaian-rmi') }}/${periodId}/update-penilaian`);
