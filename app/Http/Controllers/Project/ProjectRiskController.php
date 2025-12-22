@@ -715,6 +715,10 @@ class ProjectRiskController extends BasicCRUDController
             }
         }
 
+        //tambahkan sasaran proyek yang ada di database dengan sasaran default (tanpa ada id)
+        $defaultSasaran = SasaranProyek::getDefaults();
+        $sasaranProyeks = $sasaranProyeks->concat($defaultSasaran);
+
         $periode = Periode::where('status','active')->first();
 
         $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
@@ -757,7 +761,7 @@ class ProjectRiskController extends BasicCRUDController
                 'penyebab_risiko' => 'required|array|min:1',
                 'penyebab_risiko.*' => 'required|string',
             ]);
-
+            //dd($request);
             $user = $request->user();
 
             //$perkiraanWaktuTerpaparRisiko = explode(' to ', $request->perkiraan_waktu_terpapar_risiko);
@@ -782,6 +786,10 @@ class ProjectRiskController extends BasicCRUDController
             } else if ($request->sasaran_proyek_id) {
                 // Jika opsi yang sudah ada dipilih
                 $sasaranProyekId = $request->sasaran_proyek_id;
+                // Cek jika ini adalah sasaran default (yang memiliki ID fake 'default_')
+                if (str_starts_with($sasaranProyekId, 'default_')) {
+                    $sasaranProyekId = null;
+                }
                 $targetCapaianKinerja = $request->kpi_desc_selected;
             } else {
                 // Fallback jika tidak ada yang dipilih
@@ -910,8 +918,17 @@ class ProjectRiskController extends BasicCRUDController
 
         $project = $projectPeriodeList->project;
 
-        // Ambil semua data SasaranProyek untuk dropdown
-        $sasaranProyeks = SasaranProyek::get();
+        //get project profit_center
+        $profitCenter = $project->meta['profit_center'] ?? null;
+        
+        $sasaranProyeks = collect();
+        if ($profitCenter) {
+             $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)->get();
+        }
+
+        //tambahkan sasaran proyek yang ada di database dengan sasaran default (tanpa ada id)
+        $defaultSasaran = SasaranProyek::getDefaults();
+        $sasaranProyeks = $sasaranProyeks->concat($defaultSasaran);
 
         $peristiwaRisikos = PeristiwaRisiko::get();
 

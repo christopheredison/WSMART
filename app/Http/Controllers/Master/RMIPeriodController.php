@@ -7,6 +7,7 @@ use App\Models\PeriodQuestion;
 use App\Models\Question;
 use App\Models\RMIPeriod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class RMIPeriodController extends BasicCRUDController
@@ -105,7 +106,7 @@ class RMIPeriodController extends BasicCRUDController
     public function index()
     {
         $this->callbackQuery = function($query) {
-            return $query->withCount('periodQuestions');
+            return $query->select('rmi_periods.*', DB::raw('0 as token'))->withCount('periodQuestions');
         };
 
         $this->editFields = $this->createFields;
@@ -189,6 +190,13 @@ class RMIPeriodController extends BasicCRUDController
                 'action' => 'link',
                 'url' => route('rmi-period.question', ['id' => ':id']),
                 'permissions' => ['rmi_period_view'],
+            ];
+            $this->tableActions[] = [
+                'label' => '<span class="bx bx-globe"></span>',
+                'btn_icon' => true,
+                'action' => 'script',
+                'permissions' => ['rmi_period_view'],
+                'script' => 'const url = "' . route('kuesioner-publik.register', ':token') . '".replace(":token", "${row.token}"); navigator.clipboard.writeText(url); Swal.fire("URL Pendaftaran Pengisian Kuisioner", \'<input type="text" class="form-control" value="\' + url + \'" readonly><br>URL telah disalin ke clipboard.<br>Atau <a href="\' + url + \'" target="_blank">klik disini</a> untuk membukanya sekarang.\', "info");',
             ];
         }
 

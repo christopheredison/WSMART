@@ -341,6 +341,17 @@
           </a>
         </li>
         @endcan
+        @can('kuesioner_responden')
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->routeIs('kuesioner-responden.index') ? 'active' : '' }}" href="{{route('kuesioner-responden.index')}}" role="button"
+            data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon d-flex align-items-center w-100">
+              <i class="menu-icon tf-icons bx bx-poll"></i>
+              <span class="nav-link-text">Responden Kuesioner</span>
+            </span>
+          </a>
+        </li>
+        @endcan
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('ict.index') ? 'active' : '' }}" href="{{route('ict.index')}}" role="button"
             data-bs-toggle="" aria-expanded="false">
