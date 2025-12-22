@@ -991,6 +991,10 @@ class ProjectRiskController extends BasicCRUDController
                 $targetCapaianKinerja = $request->target_capaian_kinerja;
             } else if ($request->sasaran_proyek_id) {
                 $sasaranProyekId = $request->sasaran_proyek_id;
+                // Cek jika ini adalah sasaran default (yang memiliki ID fake 'default_')
+                if (str_starts_with($sasaranProyekId, 'default_')) {
+                    $sasaranProyekId = null;
+                }
                 $targetCapaianKinerja = $request->kpi_desc_selected;
             } else {
                 $targetCapaianKinerja = $request->target_capaian_kinerja;
