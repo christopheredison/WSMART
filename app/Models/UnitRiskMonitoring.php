@@ -26,6 +26,10 @@ class UnitRiskMonitoring extends Model
         'status',
         'is_approved',
         'is_revision',
+        'aktual_current',
+        'aktual_month_1',
+        'aktual_month_2',
+        'aktual_status',
     ];
 
     protected $casts = [
@@ -47,7 +51,7 @@ class UnitRiskMonitoring extends Model
     {
         return $this->hasMany(PerlakuanPenyebabUnitMonitoring::class);
     }
-    
+
     public function opportunities()
     {
         return $this->hasMany(Opportunity::class);
@@ -71,5 +75,10 @@ class UnitRiskMonitoring extends Model
     public function perlakuanPenyebabRisikoDocuments()
     {
         return $this->hasMany(PerlakuanPenyebabRisikoUnitDocument::class, 'unit_risk_monitoring_id', 'id');
+    }
+
+    public function pengendalians()
+    {
+        return $this->hasMany(UnitRiskPengendalian::class, 'monitoring_id');
     }
 }

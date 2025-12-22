@@ -13770,11 +13770,35 @@ div.dt-container div.dt-length label {
 .bs-stepper-content .btn-prev:hover::before {
   left: 0;
 }
+.number-pill-info {
+  font-family: 'Poppins', sans-serif;
+  background-color: rgba(var(--bs-info-rgb), 0.16);
+  font-weight: 600;
+  color: var(--bs-info-active);
+  border-radius: 50rem !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.30938rem;
+  height: 2.30938rem;
+}
 .number-pill-secondary {
   font-family: 'Poppins', sans-serif;
   background-color: rgba(var(--bs-primary-rgb), 0.16);
   font-weight: 600;
   color: var(--bs-primary-active);
+  border-radius: 50rem !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.30938rem;
+  height: 2.30938rem;
+}
+.number-pill-success {
+  font-family: 'Poppins', sans-serif;
+  background-color: rgba(var(--bs-success-rgb), 0.16);
+  font-weight: 600;
+  color: var(--bs-success-active);
   border-radius: 50rem !important;
   display: inline-flex;
   align-items: center;

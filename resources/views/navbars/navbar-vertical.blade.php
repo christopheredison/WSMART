@@ -89,7 +89,7 @@
           </ul>
         </li> --}}
         <!-- Dashboard Menu End -->
-        
+
         <!-- Executive Summary Menu Start -->
         <li class="nav-item">
           @php $shouldOpen = in_array(url()->current(), []) @endphp
@@ -165,7 +165,7 @@
             @php
                 $isActive = request()->is('corporate-risk/*');
             @endphp
-            
+
             <a class="nav-link dropdown-indicator {{ $isActive ? 'active' : '' }} {{ !$isActive ? 'collapsed' : '' }}"
               href="#risk-register-corporate" role="button" data-bs-toggle="collapse"
               aria-expanded="{{ $isActive ? 'true' : 'false' }}" aria-controls="risk-register-corporate">
@@ -364,7 +364,7 @@
 
         <!-- Master Data Start -->
         <li class="nav-item">
-          <a class="nav-link dropdown-indicator {{ request()->is('peristiwa-risiko') ||  request()->is('rencana-kegiatan') ||  request()->is('master-risiko') ||  request()->is('tck') ||  request()->is('area-dampak') ||  request()->is('skala-dampak') ||  request()->is('skala-probabilitas') ||  request()->is('skala-probabilitas') ||  request()->is('sikap-risiko') ||  request()->is('periode') ||  request()->is('kategori-risiko') ||  request()->is('kategori-risiko') ||  request()->is('jenis-risiko') ||  request()->is('peristiwa-risiko') ||  request()->is('unit-type') ||  request()->is('unit') ||  request()->is('roles') || request()->is('users') || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index', 'measurement-parameter.index', 'jabatan.index']) ? 'active' : '' }}"
+          <a class="nav-link dropdown-indicator {{ request()->is('peristiwa-risiko') ||  request()->is('rencana-kegiatan') ||  request()->is('master-risiko') ||  request()->is('tck') ||  request()->is('area-dampak') ||  request()->is('skala-dampak') ||  request()->is('skala-probabilitas') ||  request()->is('skala-probabilitas') ||  request()->is('sikap-risiko') ||  request()->is('periode') ||  request()->is('kategori-risiko') ||  request()->is('kategori-risiko') ||  request()->is('jenis-risiko') ||  request()->is('peristiwa-risiko') ||  request()->is('unit-type') ||  request()->is('unit') ||  request()->is('roles') || request()->is('users') || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'taksonomi-risiko.index', 'kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index', 'measurement-parameter.index', 'jabatan.index']) ? 'active' : '' }}"
             href="#master-data" role="button" data-bs-toggle="collapse" aria-expanded="false"
             aria-controls="master-data">
             <div class="d-flex align-items-center">
@@ -373,7 +373,7 @@
             </div>
           </a>
             <ul
-            class="nav collapse {{ request()->is(['peristiwa-risiko', 'rencana-kegiatan', 'master-risiko', 'tck', 'area-dampak', 'skala-dampak', 'skala-probabilitas', 'sikap-risiko', 'periode', 'kategori-risiko', 'jenis-risiko', 'unit-type', 'unit', 'roles', 'users']) || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index', 'measurement-parameter.index', 'jabatan.index']) ? 'show' : '' }}"
+            class="nav collapse {{ request()->is(['peristiwa-risiko', 'rencana-kegiatan', 'master-risiko', 'tck', 'area-dampak', 'skala-dampak', 'skala-probabilitas', 'sikap-risiko', 'periode', 'kategori-risiko', 'jenis-risiko', 'unit-type', 'unit', 'roles', 'users']) || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'taksonomi-risiko.index','kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index', 'measurement-parameter.index', 'jabatan.index']) ? 'show' : '' }}"
             id="master-data">
 
             @can('project_divisi_list')
@@ -450,6 +450,15 @@
               <a class="nav-link {{ request()->routeIs('penilaian-efektivitas-kontrol.index') ? 'active' : '' }}"
                 href="{{ route('penilaian-efektivitas-kontrol.index') }}">
                 <span class="nav-link-text">Penilaian Efektivitas Kontrol</span>
+              </a>
+            </li>
+            @endcan
+
+            @can('penilaian_efektivitas_kontrol_list')
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('taksonomi-risiko.index') ? 'active' : '' }}"
+                href="{{ route('taksonomi-risiko.index') }}">
+                <span class="nav-link-text">Taksonomi Danantara</span>
               </a>
             </li>
             @endcan
