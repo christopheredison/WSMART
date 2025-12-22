@@ -332,7 +332,7 @@
     $(document).ready(function() {
         $('.select2').select2({
             width: '100%',
-            placeholder: 'Pilih Sasaran Risiko'
+            //placeholder: 'Pilih Sasaran Risiko'
         });
 
         // Handle perubahan pada dropdown sasaran_proyek_id

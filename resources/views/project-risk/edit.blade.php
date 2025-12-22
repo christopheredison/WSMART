@@ -29,21 +29,49 @@
                     <div class="row g-3 gx-md-5">
                         <div class="col-md-12">
                             <div class="form-group d-lg-flex">
+                                @php
+                                    $selectedSasaranId = old('sasaran_proyek_id', $projectRisk->sasaran_proyek_id);
+                                    $targetCapaianKinerja = old('target_capaian_kinerja', $projectRisk->target_capaian_kinerja);
+                                    $isOther = false;
+
+                                    if ($selectedSasaranId) {
+                                        // Case 1: Sasaran ID exists
+                                        $isOther = false;
+                                    } elseif (!empty($targetCapaianKinerja)) {
+                                        // Case 2 & 3: Check if it matches any sasaran (default or database)
+                                        $matchFound = false;
+                                        foreach($sasaranProyeks as $sasaranProyek) {
+                                            // Check if text matches (trimmed to be safe)
+                                            if (trim($sasaranProyek->kpi_desc) == trim($targetCapaianKinerja)) {
+                                                $selectedSasaranId = $sasaranProyek->id;
+                                                $matchFound = true;
+                                                $isOther = false;
+                                                break;
+                                            }
+                                        }
+                                        
+                                        if (!$matchFound) {
+                                            // Case 3: No ID, Text exists but doesn't match any option -> Other
+                                            $isOther = true;
+                                        }
+                                    }
+                                    //echo "Selected Sasaran ID: " . $selectedSasaranId;
+                                    
+                                @endphp
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko</label>
                                 <div class="w-100">
                                     <select class="form-select select2" id="sasaran_proyek_id" name="sasaran_proyek_id">
                                         <option value="">Pilih Sasaran Risiko</option>
                                         @foreach($sasaranProyeks as $sasaranProyek)
-                                            <option value="{{ $sasaranProyek->id }}" data-kpi="{{ $sasaranProyek->kpi_desc }}" {{ old('sasaran_proyek_id', $projectRisk->sasaran_proyek_id) == $sasaranProyek->id ? 'selected' : '' }}>
+                                            <option value="{{ $sasaranProyek->id }}" data-kpi="{{ $sasaranProyek->kpi_desc }}" {{ $selectedSasaranId == $sasaranProyek->id ? 'selected' : '' }}>
                                                 {{ $sasaranProyek->kpi_desc }}
                                             </option>
                                         @endforeach
-
-                                        <option value="other">Sasaran Lainnya</option>
+                                        <option value="other" {{ $isOther ? 'selected' : '' }}>Sasaran Lainnya</option>
                                     </select>
 
-                                    <textarea class="form-control mt-2 d-none" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
-                                        placeholder="Masukkan Sasaran Risiko Lainnya">{{ old('target_capaian_kinerja', $projectRisk->target_capaian_kinerja) }}</textarea>
+                                    <textarea class="form-control mt-2 {{ $isOther ? '' : 'd-none' }}" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
+                                        placeholder="Masukkan Sasaran Risiko Lainnya">{{ $targetCapaianKinerja }}</textarea>
 
                                     <input type="hidden" id="kpi_desc_selected" name="kpi_desc_selected">
                                 </div>
@@ -346,10 +374,36 @@
         });
 
         setTimeout(function() {
-            if (selectedValueFromPHP === null || selectedValueFromPHP == 0) {
-                $('#sasaran_proyek_id').val('other').trigger('change');
-            } else if (selectedValueFromPHP) {
-                $('#sasaran_proyek_id').val(selectedValueFromPHP).trigger('change');
+            const sasaranIdFromDb = @json($projectRisk->sasaran_proyek_id);
+            const targetCapaianFromDb = @json($projectRisk->target_capaian_kinerja);
+
+            // Jika ID kosong tapi ada text target capaian (migrasi dari data lama atau default sasaran)
+            if (!sasaranIdFromDb && targetCapaianFromDb) {
+                let matchFound = false;
+                
+                // Loop semua option untuk cari yang text-nya sama
+                $('#sasaran_proyek_id option').each(function() {
+                    // Skip option placeholder
+                    if (!$(this).val()) return;
+                    
+                    // Bandingkan text (trim whitespace)
+                    // Ambil text dari data-kpi jika ada, atau text content
+                    const optionText = $(this).data('kpi') ? $(this).data('kpi') : $(this).text().trim();
+                    
+                    if (optionText === targetCapaianFromDb.trim()) {
+                        $('#sasaran_proyek_id').val($(this).val()).trigger('change');
+                        matchFound = true;
+                        return false; // break loop
+                    }
+                });
+
+                // Jika tidak ada yang cocok, set ke 'other'
+                if (!matchFound) {
+                    $('#sasaran_proyek_id').val('other').trigger('change');
+                }
+            } else {
+                // Jika sudah ada ID atau kondisi normal, trigger change untuk update UI
+                $('#sasaran_proyek_id').trigger('change');
             }
         }, 100);
 
