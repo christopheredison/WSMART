@@ -250,6 +250,12 @@
                 <div class="card-body">
                   @php
                     $existingFinalRatingId = $finalRatingPeriod->final_rating_id ?? old('final_rating_id');
+                    
+                    // Default to rating 3 if no existing data
+                    if (!$existingFinalRatingId) {
+                        $existingFinalRatingId = 3;
+                    }
+
                     $existingConversionScore = null;
 
                     if ($existingFinalRatingId) {
