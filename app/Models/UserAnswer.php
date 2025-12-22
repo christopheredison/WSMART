@@ -16,6 +16,7 @@ class UserAnswer extends Model
         'answer_choice_id',
         'level',
         'user_id',
+        'kuesioner_responden_id',
         'question_notes',
         'answer_notes',
     ];
@@ -33,5 +34,10 @@ class UserAnswer extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function kuesionerResponden()
+    {
+        return $this->belongsTo(KuesionerResponden::class, 'kuesioner_responden_id');
     }
 }
