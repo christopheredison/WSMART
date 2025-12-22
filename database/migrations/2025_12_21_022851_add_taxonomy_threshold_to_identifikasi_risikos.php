@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('identifikasi_risikos', function (Blueprint $table) {
-            $table->unsignedBigInteger('taksonomi_risiko_id')->nullable()->after('sasaran_proyek_id');
+            $table->unsignedBigInteger('taksonomi_risiko_id')->nullable();
             $table->foreign('taksonomi_risiko_id')->references('id')->on('taksonomi_risikos')->onDelete('set null');
 
             $table->decimal('threshold_risk_limit', 20, 2)->default(0)->after('status');
