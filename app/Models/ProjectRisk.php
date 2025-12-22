@@ -46,6 +46,7 @@ class ProjectRisk extends Model
         'threshold_risk_limit',
         'threshold_risk_appetite',
         'threshold_risk_tolerance',
+        'deskripsi_dampak',
     ];
 
     public const STATUS_INPUT_DATA = 1;
@@ -186,6 +187,11 @@ class ProjectRisk extends Model
     public function parameterRisikoProjects()
     {
         return $this->hasMany(ParameterRisikoProject::class, 'risiko_id');
+    }
+
+    public function perlakuanDampakRisikos()
+    {
+        return $this->hasMany(PerlakuanDampakRisiko::class, 'risiko_id');
     }
 
     public function getPerkiraanWaktuTerpaparRisikoAttribute()

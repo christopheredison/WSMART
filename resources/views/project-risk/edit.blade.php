@@ -49,14 +49,14 @@
                                                 break;
                                             }
                                         }
-                                        
+
                                         if (!$matchFound) {
                                             // Case 3: No ID, Text exists but doesn't match any option -> Other
                                             $isOther = true;
                                         }
                                     }
                                     //echo "Selected Sasaran ID: " . $selectedSasaranId;
-                                    
+
                                 @endphp
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko</label>
                                 <div class="w-100">
@@ -132,6 +132,13 @@
                                 <textarea class="form-control" id="wbs" name="wbs" rows="3"
                                     placeholder="WBS" required>{{ old('wbs', $projectRisk->wbs) }}</textarea>
                                 <label for="wbs">WBS</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-group form-floating">
+                                <textarea class="form-control" id="deskripsi_dampak" name="deskripsi_dampak" rows="3"
+                                    value="{{ old('deskripsi_dampak', $projectRisk->deskripsi_dampak) }}" placeholder="Deskripsi Dampak" required></textarea>
+                                <label for="deskripsi_dampak">Deskripsi Dampak Risiko</label>
                             </div>
                         </div>
                     </div>
@@ -505,16 +512,16 @@
             // Jika ID kosong tapi ada text target capaian (migrasi dari data lama atau default sasaran)
             if (!sasaranIdFromDb && targetCapaianFromDb) {
                 let matchFound = false;
-                
+
                 // Loop semua option untuk cari yang text-nya sama
                 $('#sasaran_proyek_id option').each(function() {
                     // Skip option placeholder
                     if (!$(this).val()) return;
-                    
+
                     // Bandingkan text (trim whitespace)
                     // Ambil text dari data-kpi jika ada, atau text content
                     const optionText = $(this).data('kpi') ? $(this).data('kpi') : $(this).text().trim();
-                    
+
                     if (optionText === targetCapaianFromDb.trim()) {
                         $('#sasaran_proyek_id').val($(this).val()).trigger('change');
                         matchFound = true;

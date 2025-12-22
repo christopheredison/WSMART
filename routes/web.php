@@ -500,6 +500,11 @@ Route::group(['middleware' => ['auth']], function () {
     Route::put('/rencana-perlakuan/{id}', [ProjectRiskController::class, 'updateRencanaPerlakuan'])->name('rencana-perlakuan.update');
     Route::get('/rencana-perlakuan/{id}', [ProjectRiskController::class, 'editRencanaPerlakuan']);
 
+    Route::post('/rencana-perlakuan-dampak/tambah', [ProjectRiskController::class, 'simpanRencanaPerlakuanDampak']);
+    Route::get('/rencana-perlakuan-dampak/{id}', [ProjectRiskController::class, 'editRencanaPerlakuanDampak']);
+    Route::put('/rencana-perlakuan-dampak/{id}', [ProjectRiskController::class, 'updateRencanaPerlakuanDampak']);
+    Route::delete('/rencana-perlakuan-dampak/{id}', [ProjectRiskController::class, 'hapusRencanaPerlakuanDampak']);
+
     Route::get('/master-kri/{peristiwaRisikoId}', [MasterKriController::class, 'getByPeristiwaRisiko']);
 
     Route::get('/get-kontrol-eksisting', [ProjectRiskController::class, 'getKontrolEksisting']);

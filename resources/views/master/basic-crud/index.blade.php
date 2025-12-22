@@ -82,7 +82,7 @@
                                     </a>
                                 </div>
                             @else
-                                @if((empty($extraViewData['status']) || $extraViewData['status'] == \App\Models\DataBatch::STATUS_PROSES) && (empty($extraViewData['levelId']) || $extraViewData['levelId'] == 6))
+                                @if((empty($extraViewData['status']) || $extraViewData['status'] == \App\Models\DataBatch::STATUS_PROSES || $extraViewData['status'] == \App\Models\DataBatch::STATUS_REVISI) && (empty($extraViewData['levelId']) || $extraViewData['levelId'] == 6))
                                 <div id="bulk-select-replace-element" class="col-auto ms-auto">
                                     <a class="btn btn-outline-info btn-sm" href="{{ route($baseRoute . 'create', $baseRouteParams ?? []) }}">
                                         <span class="bx bx-plus"></span>
@@ -307,10 +307,10 @@ function renderOpportunities(opportunities) {
     opportunities.forEach((item, index) => {
         const formattedRencana = formatRupiah(item.nilai_peluang_rencana);
         const formattedRealisasi = formatRupiah(item.nilai_peluang_realisasi);
-        
+
         let fileHtml = '<span class="text-muted">-</span>';
         if (item.file_path) {
-            const fileUrl = `/storage/${item.file_path}`; 
+            const fileUrl = `/storage/${item.file_path}`;
             fileHtml = `
                 <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-outline-info" title="Download Dokumen">
                     <i class="bx bx-download"></i>
@@ -472,7 +472,7 @@ $(document).ready(function() {
 
         const formData = new FormData(this);
         formData.set('identifikasi_risiko_id', risikoId);
-        
+
         // Mapping fields
         formData.set('description', formData.get('penjelasan_peluang_rencana'));
         formData.set('penjelasan', formData.get('penjelasan_peluang_realisasi'));
@@ -481,7 +481,7 @@ $(document).ready(function() {
         if (isUpdate) {
             formData.append('_method', 'POST');
             formData.set('_method', 'POST');
-            formData.append('_method', 'PUT'); 
+            formData.append('_method', 'PUT');
         }
 
         $.ajax({

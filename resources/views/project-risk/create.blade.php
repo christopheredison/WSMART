@@ -109,6 +109,13 @@
                                 <label for="wbs">WBS</label>
                             </div>
                         </div>
+                        <div class="col-12">
+                            <div class="form-group form-floating">
+                                <textarea class="form-control" id="deskripsi_dampak" name="deskripsi_dampak" rows="3"
+                                    value="{{ old('deskripsi_dampak') }}" placeholder="Deskripsi Dampak" required></textarea>
+                                <label for="deskripsi_dampak">Deskripsi Dampak Risiko</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -54,6 +54,14 @@
             <div class="card-body">
                 <div class="row g-3 gx-md-5">
                     <div class="col-md-6">
+                        <h3>Deskripsi Peristiwa Risiko</h3>
+                        <p>{{ $projectRisk->deskripsi_peristiwa_risiko ?: '-' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h3>Deskripsi Dampak Risiko</h3>
+                        <p>{{ $projectRisk->deskripsi_dampak ?: '-' }}</p>
+                    </div>
+                    <div class="col-12">
                         <h3>Penyebab Risiko</h3>
                         <ul>
                             @foreach ($projectRisk->penyebabRisikoProjects as $penyebab)
@@ -63,10 +71,6 @@
                         @if ($projectRisk->penyebabRisikoProjects->isEmpty())
                             <em class="text-muted">Tidak ada penyebab risiko</em>
                         @endif
-                    </div>
-                    <div class="col-6">
-                        <h3>Deskripsi Peristiwa Risiko</h3>
-                        <p>{{ $projectRisk->deskripsi_peristiwa_risiko ?: '-' }}</p>
                     </div>
                 </div>
             </div>
@@ -85,15 +89,15 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label>Kategori Dampak</label>
-                        {{ Form::select('kategori_dampak', 
-                            [ 
+                        {{ Form::select('kategori_dampak',
+                            [
                                 \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF => 'Kuantitatif'
                             ],
-                            $analisa->kategori_dampak ?? \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF, 
+                            $analisa->kategori_dampak ?? \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF,
                             [
-                                'id' => 'kategoriDampak', 
-                                // 'placeholder' => 'Pilih kategori Dampak', 
-                                'class' => 'form-select', 
+                                'id' => 'kategoriDampak',
+                                // 'placeholder' => 'Pilih kategori Dampak',
+                                'class' => 'form-select',
                                 'required' => true
                             ]
                         ) }}
@@ -181,7 +185,7 @@
                         <label>Level Risiko</label>
                         {{ Form::text('level_risiko', '', ['class' => 'form-control', 'disabled' => true, 'required' => true]) }}
                     </div>
-                </div>                
+                </div>
                 <div class="row" id="divDeskripsiDampak">
                     <div class="col-md-12">
                         <label id="labelDeskripsiDampak">Deskripsi Dampak</label>
@@ -254,7 +258,7 @@
                         <label>Level Risiko</label>
                         {{ Form::text('level_risiko_residual', '', ['class' => 'form-control', 'disabled' => true, 'required' => true]) }}
                     </div>
-                </div>                
+                </div>
                 <div class="row" id="divDeskripsiDampakResidual">
                     <div class="col-md-12">
                         <label id="labelDeskripsiDampak">Deskripsi Dampak Residual</label>
@@ -340,7 +344,7 @@
         100% { transform: rotate(360deg); }
     }
 </style>
-@endpush  
+@endpush
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
@@ -409,7 +413,7 @@ $(document).ready(function() {
     const $paramTypeInherent = $('#skala_parameter_type');
     const $scaleInherent = $('#skala_parameter_id');
     const $nilaiProbInherent = $('[name="nilai_probabilitas"]');
-    
+
     const $paramTypeResidual = $('#skala_parameter_type_residual');
     const $scaleResidual = $('#skala_parameter_residual_id');
     const $nilaiProbResidual = $('[name="nilai_probabilitas_residual"]');
@@ -518,7 +522,7 @@ $(document).ready(function() {
         const $scaleSelect = $scaleInherent;
         const min = parseFloat($scaleSelect.find('option:selected').data('min'));
         const max = parseFloat($scaleSelect.find('option:selected').data('max'));
-        
+
         let correctedValue = null;
 
         if (!isNaN(min) && currentValue < min) correctedValue = min;
@@ -544,7 +548,7 @@ $(document).ready(function() {
         const min = parseFloat($scaleSelect.find('option:selected').data('min'));
         const max = parseFloat($scaleSelect.find('option:selected').data('max'));
         const inherentValue = parseFloat($nilaiProbInherent.val());
-        
+
         let correctedValue = null;
         let reason = '';
 
@@ -590,16 +594,16 @@ $(document).ready(function() {
 
         if (savedInherentScaleId) {
             const $selectedInherent = $scaleInherent.find('option:selected');
-            $nilaiProbInherent.prop('disabled', false).attr({ 
-                min: $selectedInherent.data('min'), 
-                max: $selectedInherent.data('max') 
+            $nilaiProbInherent.prop('disabled', false).attr({
+                min: $selectedInherent.data('min'),
+                max: $selectedInherent.data('max')
             });
         }
         if (savedResidualScaleId) {
             const $selectedResidual = $scaleResidual.find('option:selected');
-            $nilaiProbResidual.prop('disabled', false).attr({ 
-                min: $selectedResidual.data('min'), 
-                max: $selectedResidual.data('max') 
+            $nilaiProbResidual.prop('disabled', false).attr({
+                min: $selectedResidual.data('min'),
+                max: $selectedResidual.data('max')
             });
         }
 
@@ -618,8 +622,8 @@ $(document).ready(function() {
 
         const nilaiProbabilitasInput = $('[name="nilai_probabilitas"]');
         const nilaiProbabilitasResidualInput = $('[name="nilai_probabilitas_residual"]');
-        
-        const nilaiProbabilitas = parseFloat(nilaiProbabilitasInput.val()); 
+
+        const nilaiProbabilitas = parseFloat(nilaiProbabilitasInput.val());
         const nilaiResidual = parseFloat(nilaiProbabilitasResidualInput.val());
 
         if (isResidual && !isNaN(nilaiProbabilitas) && nilaiResidual > nilaiProbabilitas) {
@@ -708,7 +712,7 @@ $(document).ready(function() {
                 form[0].reportValidity();
                 return;
             }
-            
+
             const formData = new FormData(form[0]);
             const url = "{{ route('projects.risks.do-analisa', ['project' => $projectPeriodeList->id, 'risk' => $projectRisk->id]) }}";
 
@@ -823,7 +827,7 @@ $(document).ready(function() {
         if (currentValueResidual > selectedSkalaDampak) {
             $skalaDampakResidual.val('').trigger('change');
         }
-        
+
         $skalaDampakResidual.find('option').each(function () {
             if (!$(this).val()) return;
 
@@ -984,10 +988,10 @@ $(document).ready(function() {
 
     $('#skala_dampak').change(function () {
         var selectedSkalaDampak = parseInt($(this).val()); // Ambil nilai skala dampak yang dipilih
-        
+
         // Reset skala dampak residual ke placeholder
         $('#skala_dampak_residual').val('').change();
-        
+
         // Nonaktifkan opsi skala dampak residual yang lebih besar dari skala dampak
         $('#skala_dampak_residual option').each(function () {
             var optionValue = parseInt($(this).val());
@@ -1037,12 +1041,12 @@ $(document).ready(function() {
 
         if (!isNaN(currentValue) && currentValue > maxValue) {
             input.val(maxValue);
-            input.trigger('change'); 
+            input.trigger('change');
         }
 
         const nilaiProbabilitasInput = $('[name="nilai_probabilitas"]');
         const nilaiProbabilitasResidualInput = $('[name="nilai_probabilitas_residual"]');
-        
+
         const nilaiProbabilitas = parseFloat(nilaiProbabilitasInput.val()) || 0;
         const nilaiResidual = parseFloat(nilaiProbabilitasResidualInput.val()) || 0;
 
@@ -1079,7 +1083,7 @@ $(document).ready(function() {
         const $button = $(this);
         const $icon = $button.find('i');
         const $nilaiProbabilitas = $('[name="nilai_probabilitas"]');
-        
+
         // Tampilkan loading spinner
         $icon.removeClass('bx-calculator').addClass('loading-spinner');
         $button.prop('disabled', true);
@@ -1096,7 +1100,7 @@ $(document).ready(function() {
                 if (response.success) {
                     // Update nilai probabilitas
                     $nilaiProbabilitas.val(response.probability).trigger('change');
-                    
+
                     Swal.fire({
                         title: 'Berhasil',
                         text: 'Perhitungan Poisson berhasil dilakukan',
@@ -1123,7 +1127,7 @@ $(document).ready(function() {
         const $button = $(this);
         const $icon = $button.find('i');
         const $nilaiProbabilitas = $('[name="nilai_probabilitas_residual"]');
-        
+
         // Tampilkan loading spinner
         $icon.removeClass('bx-calculator').addClass('loading-spinner');
         $button.prop('disabled', true);
@@ -1140,7 +1144,7 @@ $(document).ready(function() {
                 if (response.success) {
                     // Update nilai probabilitas
                     $nilaiProbabilitas.val(response.probability).trigger('change');
-                    
+
                     Swal.fire({
                         title: 'Berhasil',
                         text: 'Perhitungan Poisson berhasil dilakukan',

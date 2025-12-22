@@ -47,6 +47,7 @@ use App\Models\ApprovalStep;
 use App\Models\DataBatchNotes;
 use App\Supports\ApiHC;
 use App\Supports\ApiWika;
+use App\Models\PerlakuanDampakRisiko;
 
 
 class ProjectRiskController extends BasicCRUDController
@@ -752,6 +753,7 @@ class ProjectRiskController extends BasicCRUDController
                 'kategori_risiko_id' => 'required',
                 'jenis_risiko_id' => 'required',
                 'deskripsi_peristiwa_risiko' => 'required',
+                'deskripsi_dampak' => 'required',
                 'wbs' => 'required',
                 //'target_capaian_kinerja' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
@@ -807,6 +809,7 @@ class ProjectRiskController extends BasicCRUDController
                 'sasaran_proyek_id' => $sasaranProyekId,
                 'project_periode_list_id' => $projectPeriodeList->id,
                 'deskripsi_peristiwa_risiko' => $request->deskripsi_peristiwa_risiko,
+                'deskripsi_dampak' => $request->deskripsi_dampak,
                 'jenis_kontrol_eksisting_id' => $request->jenis_kontrol_eksisting_id,
                 'penilaian_efektifitas_kontrol' => 0,
                 'perkiraan_waktu_terpapar_risiko_mulai' => $perkiraanWaktuTerpaparRisikoMulai,
@@ -920,7 +923,7 @@ class ProjectRiskController extends BasicCRUDController
 
         //get project profit_center
         $profitCenter = $project->meta['profit_center'] ?? null;
-        
+
         $sasaranProyeks = collect();
         if ($profitCenter) {
              $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)->get();
@@ -964,6 +967,7 @@ class ProjectRiskController extends BasicCRUDController
                 'kategori_risiko_id' => 'required',
                 'jenis_risiko_id' => 'required',
                 'deskripsi_peristiwa_risiko' => 'required',
+                'deskripsi_dampak' => 'required',
                 'wbs' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
                 // 'penilaian_efektifitas_kontrol' => 'required',
@@ -1003,6 +1007,7 @@ class ProjectRiskController extends BasicCRUDController
                 'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
                 'project_periode_list_id' => $projectPeriodeList->id,
                 'deskripsi_peristiwa_risiko' => $request->deskripsi_peristiwa_risiko,
+                'deskripsi_dampak' => $request->deskripsi_dampak,
                 'jenis_kontrol_eksisting_id' => $request->jenis_kontrol_eksisting_id,
                 'penilaian_efektifitas_kontrol' => 0,
                 'perkiraan_waktu_terpapar_risiko_mulai' => $perkiraanWaktuTerpaparRisikoMulai,
@@ -1546,7 +1551,8 @@ class ProjectRiskController extends BasicCRUDController
 
     public function rencana(Request $request, $resource) {
         $projectRisk = ProjectRisk::with([
-            'penyebabRisikoProjects.perlakuanPenyebabRisiko' // Eager load relasi
+            'penyebabRisikoProjects.perlakuanPenyebabRisiko',
+            'perlakuanDampakRisikos',
         ])->findOrFail(request()->route('risk'));
 
         //dd($projectRisk->penyebabRisikoProjects);
@@ -1781,6 +1787,108 @@ class ProjectRiskController extends BasicCRUDController
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function simpanRencanaPerlakuanDampak(Request $request)
+    {
+        $validated = $request->validate([
+            'risiko_id' => 'required|exists:project_risks,id',
+            'rencana_perlakuan_risiko' => 'required',
+            'output_perlakuan_risiko' => 'required',
+            'biaya_perlakuan_risiko' => 'required|numeric',
+            'pic' => 'required',
+            'opsi_perlakuan_risiko' => 'required',
+            'timeline_mulai_perlakuan_risiko' => 'required',
+            'timeline_selesai_perlakuan_risiko' => 'required',
+        ]);
+
+        $jabatan = Jabatan::find($request->pic);
+
+        PerlakuanDampakRisiko::create([
+            'risiko_id' => $request->risiko_id,
+            'rencana_perlakuan_risiko' => $request->rencana_perlakuan_risiko,
+            'output_perlakuan_risiko' => $request->output_perlakuan_risiko,
+            'biaya_perlakuan_risiko' => $request->biaya_perlakuan_risiko,
+            'pic' => $jabatan?->name ?? '-',
+            'pic_jabatan_id' => $request->pic,
+            'divisi_terkait' => $request->divisi_terkait ?? [],
+            'opsi_perlakuan_risiko' => $request->opsi_perlakuan_risiko,
+            'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $request->timeline_mulai_perlakuan_risiko)->format('Y-m-d'),
+            'timeline_perlakuan_risiko_end' => Carbon::createFromFormat('d/m/Y', $request->timeline_selesai_perlakuan_risiko)->format('Y-m-d'),
+        ]);
+
+        return response()->json(['message' => 'Rencana Perlakuan Dampak berhasil ditambahkan!']);
+    }
+
+    public function editRencanaPerlakuanDampak($id)
+    {
+        $perlakuan = PerlakuanDampakRisiko::with('projectRisk')->findOrFail($id);
+
+        return response()->json([
+            'id'                => $perlakuan->id,
+            'risiko_id'         => $perlakuan->risiko_id,
+            'deskripsi_dampak'  => $perlakuan->projectRisk->deskripsi_dampak,
+            'rencana_perlakuan_risiko'           => $perlakuan->rencana_perlakuan_risiko,
+            'output_perlakuan_risiko'            => $perlakuan->output_perlakuan_risiko,
+            'opsi_perlakuan_risiko'              => $perlakuan->opsi_perlakuan_risiko,
+            'biaya_perlakuan_risiko'             => $perlakuan->biaya_perlakuan_risiko,
+            'pic_jabatan_id'            => $perlakuan->pic_jabatan_id,
+            'divisi_terkait'    => $perlakuan->divisi_terkait,
+            'timeline_perlakuan_risiko_start'         => $perlakuan->timeline_perlakuan_risiko_start ? $perlakuan->timeline_perlakuan_risiko_start->format('d/m/Y') : null,
+            'timeline_perlakuan_risiko_end'       => $perlakuan->timeline_perlakuan_risiko_end ? $perlakuan->timeline_perlakuan_risiko_end->format('d/m/Y') : null,
+        ]);
+    }
+
+    public function updateRencanaPerlakuanDampak(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'xd_output_perlakuan_risiko' => 'required',
+            'xd_output_perlakuan_risiko'  => 'required',
+            'xd_opsi_perlakuan_risiko'    => 'required',
+            'xd_biaya_perlakuan_risiko'   => 'required|numeric',
+            'xd_pic'                      => 'required',
+            'xd_divisi_terkait'           => 'nullable|array',
+            'xd_timeline_mulai_perlakuan_risiko'   => 'required',
+            'xd_timeline_selesai_perlakuan_risiko' => 'required',
+        ]);
+
+        $perlakuan = PerlakuanDampakRisiko::findOrFail($id);
+        $jabatan = Jabatan::find($request->xpic);
+
+        $perlakuan->update([
+            'rencana_perlakuan_risiko' => $validated['xd_output_perlakuan_risiko'],
+            'output_perlakuan_risiko'  => $validated['xd_output_perlakuan_risiko'],
+            'opsi_perlakuan_risiko'    => $validated['xd_opsi_perlakuan_risiko'],
+            'biaya_perlakuan_risiko'   => $validated['xd_biaya_perlakuan_risiko'],
+            'pic'                      => $jabatan?->name ?? '-',
+            'pic_jabatan_id'           => $validated['xd_pic'],
+            'divisi_terkait'           => $request->xd_divisi_terkait ?? [],
+            'timeline_perlakuan_risiko_start' => Carbon::createFromFormat('d/m/Y', $validated['xd_timeline_mulai_perlakuan_risiko'])->format('Y-m-d'),
+            'timeline_perlakuan_risiko_end'   => Carbon::createFromFormat('d/m/Y', $validated['xd_timeline_selesai_perlakuan_risiko'])->format('Y-m-d'),
+        ]);
+
+        return response()->json(['message' => 'Rencana perlakuan dampak berhasil diperbarui.']);
+    }
+
+    public function hapusRencanaPerlakuanDampak($id)
+    {
+        try {
+            $perlakuan = \App\Models\PerlakuanDampakRisiko::findOrFail($id);
+
+            // Eksekusi penghapusan
+            $perlakuan->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Rencana perlakuan dampak berhasil dihapus.'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal menghapus data: ' . $e->getMessage()
             ], 500);
         }
     }
