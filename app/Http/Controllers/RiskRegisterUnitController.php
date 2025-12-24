@@ -1690,7 +1690,6 @@ class RiskRegisterUnitController extends Controller
                 if (!$risiko->riskAnalysis) {
                     $belumLengkap = true;
                     $idRisikoBelumLengkap[] = $risiko->id;
-                    dd('analisa', $risiko->id);
                     continue;
                 }
 
@@ -1699,7 +1698,6 @@ class RiskRegisterUnitController extends Controller
                 if ($penyebabRisikos->isEmpty()) {
                     $belumLengkap = true;
                     $idRisikoBelumLengkap[] = $risiko->id;
-                    dd('penyebabRisikos', $risiko->id);
                     continue;
                 }
 
@@ -1708,7 +1706,6 @@ class RiskRegisterUnitController extends Controller
                     if ($penyebabRisiko->perlakuanPenyebabRisikoUnit->isEmpty()) {
                         $belumLengkap = true;
                         $idRisikoBelumLengkap[] = $risiko->id;
-                    dd('perlakuanPenyebabRisikoUnit', $risiko->id);
                         break;
                     }
                 }

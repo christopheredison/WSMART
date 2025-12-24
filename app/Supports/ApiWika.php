@@ -92,17 +92,17 @@ class ApiWika
         $result = $this->apiRequest('GET', 'scorecard/kpi', [
             'period' => $period,
         ]);
-        
+
         return $result['data'] ?? [];
     }
-    
+
     public function getKPIRev($tahun, $profit_center)
     {
         $result = $this->apiRequest('GET', 'scorecard/target_akhir_tahun/kpi', [
             'tahun' => $tahun,
             'profit_center' => $profit_center,
         ]);
-        
+
         return $result;
     }
 
