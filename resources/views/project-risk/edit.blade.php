@@ -77,7 +77,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-12">
+                        {{-- <div class="col-md-12">
                             <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Danantara</label>
                                 <div class="w-100">
@@ -91,17 +91,36 @@
                                     </select>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="col-md-12">
                             <div class="form-group d-lg-flex">
+                                @php
+                                    $selectedPeristiwaId = old('peristiwa_risiko_id', $projectRisk->peristiwa_risiko_id);
+                                    $manualPeristiwa = old('rencana_kegiatan', $projectRisk->rencana_kegiatan);
+                                    $isOtherPeristiwa = false;
+
+                                    if (!$selectedPeristiwaId && !empty($manualPeristiwa)) {
+                                        $isOtherPeristiwa = true;
+                                    }
+                                @endphp
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Peristiwa Risiko</label>
-                                <select class="form-select select2 js-select-hide-search" name="peristiwa_risiko_id"
-                                    id="peristiwa_risiko" required>
-                                    <option selected>Pilih</option>
-                                    @foreach ($peristiwaRisikos as $peristiwaRisiko)
-                                        <option value="{{ $peristiwaRisiko->id }}" {{ old('peristiwa_risiko_id', $projectRisk->peristiwa_risiko_id) == $peristiwaRisiko->id ? 'selected' : '' }}>{{ $peristiwaRisiko->title }}</option>
-                                    @endforeach
-                                </select>
+                                <div class="w-100">
+                                    <select class="form-select select2 js-select-hide-search" name="peristiwa_risiko_id" id="peristiwa_risiko" required>
+                                        @foreach ($peristiwaRisikos as $peristiwaRisiko)
+                                            <option value="{{ $peristiwaRisiko->id }}"
+                                                {{ $selectedPeristiwaId == $peristiwaRisiko->id ? 'selected' : '' }}>
+                                                {{ $peristiwaRisiko->title }}
+                                            </option>
+                                        @endforeach
+                                        <option value="other" {{ $isOtherPeristiwa ? 'selected' : '' }}>Lainnya</option>
+                                    </select>
+
+                                    <textarea class="form-control mt-2 {{ $isOtherPeristiwa ? '' : 'd-none' }}"
+                                        id="peristiwa_risiko_lainnya"
+                                        name="rencana_kegiatan"
+                                        rows="3"
+                                        placeholder="Masukkan Peristiwa Risiko Lainnya">{{ $manualPeristiwa }}</textarea>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-12">
@@ -147,8 +166,8 @@
         </div>
         <!-- ::DataRisiko End -->
 
-        <!-- ::ParameeterRisiko Start -->
-        <div class="col-12">
+        <!-- ::ParameterRisiko Start -->
+        {{-- <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
@@ -191,11 +210,11 @@
                     <button type="button" class="btn btn-outline-secondary rounded-pill p-2 float-end" id="add-parameter"><i class='bx bx-plus fs-5'></i></button>
                 </div>
             </div>
-        </div>
-        <!-- ::ParameeterRisiko End -->
+        </div> --}}
+        <!-- ::ParameterRisiko End -->
 
         <!-- ::Threshold Start -->
-        <div class="col-12">
+        {{-- <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
@@ -220,7 +239,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> --}}
         <!-- ::Threshold End -->
 
         <!-- ::PenyebabRisiko Start -->
@@ -229,7 +248,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">4</span>
+                            <span class="nav-item-circle">3</span>
                         </span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
@@ -274,7 +293,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">5</span>
+                            <span class="nav-item-circle">4</span>
                         </span>
                         <span class="h3 mb-0">Key Risk Indicator</span>
                     </div>
@@ -345,7 +364,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">6</span>
+                            <span class="nav-item-circle">5</span>
                         </span>
                         <span class="h3 mb-0">Kontrol</span>
                     </div>
@@ -484,6 +503,24 @@
                 }
             }
         });
+
+        $('#peristiwa_risiko').on('change', function() {
+            const selectedValue = $(this).val();
+            const otherTextarea = $('#peristiwa_risiko_lainnya');
+
+            if (selectedValue === 'other') {
+                otherTextarea.removeClass('d-none').attr('required', true);
+            } else {
+                otherTextarea.addClass('d-none').attr('required', false);
+                if (selectedValue !== "") {
+                    otherTextarea.val('');
+                }
+            }
+        });
+
+        if ($('#peristiwa_risiko').val() === 'other') {
+            $('#peristiwa_risiko_lainnya').removeClass('d-none').attr('required', true);
+        }
 
         const selectedValueFromPHP = @json(old('sasaran_proyek_id', $projectRisk->sasaran_proyek_id));
 
@@ -848,6 +885,9 @@
                 else if (key === 'perkiraan_waktu_terpapar_risiko_akhir') {
                     // flatpickrIns2.setDate(value);
                 }
+                else if (key === 'peristiwa_risiko_id' || key === 'sasaran_proyek_id') {
+                    continue;
+                }
                 else if (Array.isArray(value)) {
                     if (key === 'penyebab_risiko_projects') {
                         value.forEach((penyebab, index) => {
@@ -919,6 +959,9 @@
                 }
             }
         }
+
+        $('#peristiwa_risiko').trigger('change');
+        $('#sasaran_proyek_id').trigger('change');
 
         $('#add-kontrol-eksisting').click(function() {
             const html = `

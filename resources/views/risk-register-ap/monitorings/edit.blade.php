@@ -429,9 +429,9 @@
                                     <th>Waktu Perlakuan Risiko</th>
                                     <th>PIC</th>
                                     <th>Rencana Perlakuan Risiko</th>
-                                    <th>Anggaran (Rp)</th>
+                                    <th>Rencana Biaya Perlakuan Risiko (Rp)</th>
                                     <th>Deskripsi Perlakuan Risiko</th>
-                                    <th>Realisasi Anggaran (Rp)</th>
+                                    <th>Realisasi Biaya Perlakuan Risiko (Rp)</th>
                                     <th>Progress (%)</th>
                                     <th>Action</th>
                                 </tr>

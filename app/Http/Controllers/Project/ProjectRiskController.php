@@ -74,7 +74,9 @@ class ProjectRiskController extends BasicCRUDController
         'peristiwa_risiko' => [
             'label' => 'Peristiwa Risiko',
             'data' => 'peristiwaRisiko.title',
-            'render' => '(data, type, row) => row.peristiwa_risiko?.title || "-"',
+            'render' => '(data, type, row) => {
+                return row.peristiwa_risiko?.title || row.rencana_kegiatan || "-";
+            }',
             'class' => 'mw-10r',
         ],
         'deskripsi_peristiwa_risiko' => [
@@ -736,7 +738,6 @@ class ProjectRiskController extends BasicCRUDController
 
     public function store(Request $request)
     {
-        //dd($request->kontrol_eksisting_id);
         $projectPeriodeList = ProjectPeriodeList::findOrFail(request()->route('project'));
 
         $user = request()->user();
@@ -750,6 +751,7 @@ class ProjectRiskController extends BasicCRUDController
         if ($request->action === 'save' || $request->action === 'savenext') {
             $request->validate([
                 'peristiwa_risiko_id' => 'required',
+                'rencana_kegiatan' => $request->peristiwa_risiko_id === 'other' ? 'required' : 'nullable',
                 'kategori_risiko_id' => 'required',
                 'jenis_risiko_id' => 'required',
                 'deskripsi_peristiwa_risiko' => 'required',
@@ -798,13 +800,22 @@ class ProjectRiskController extends BasicCRUDController
                 $targetCapaianKinerja = $request->target_capaian_kinerja;
             }
 
+            $peristiwaRisikoId = $request->peristiwa_risiko_id;
+            $rencanaKegiatan = null;
+
+            if ($peristiwaRisikoId === 'other') {
+                $peristiwaRisikoId = 0;
+                $rencanaKegiatan = $request->rencana_kegiatan;
+            }
+
             $toStore = [
                 'unit_type_id' => $user->unit_type_id,
                 'unit_id' => $user->unit_id,
                 'periode_id' => 0,
                 'user_id' => $user->id,
                 'project_id' => $project->id,
-                'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
+                'peristiwa_risiko_id' => $peristiwaRisikoId,
+                'rencana_kegiatan' => $rencanaKegiatan,
                 'target_capaian_kinerja' => $targetCapaianKinerja,
                 'sasaran_proyek_id' => $sasaranProyekId,
                 'project_periode_list_id' => $projectPeriodeList->id,
@@ -820,26 +831,26 @@ class ProjectRiskController extends BasicCRUDController
                 'wbs' => $request->wbs,
                 'status_risiko' => '0',
                 'status_progress'  => '0',
-                'taksonomi_risiko_id' => $request->taksonomi_risiko_id,
-                'threshold_risk_limit' => $this->cleanRupiah($request->threshold_risk_limit),
-                'threshold_risk_appetite' => $this->cleanRupiah($request->threshold_risk_appetite),
-                'threshold_risk_tolerance' => $this->cleanRupiah($request->threshold_risk_tolerance),
+                // 'taksonomi_risiko_id' => $request->taksonomi_risiko_id,
+                // 'threshold_risk_limit' => $this->cleanRupiah($request->threshold_risk_limit),
+                // 'threshold_risk_appetite' => $this->cleanRupiah($request->threshold_risk_appetite),
+                // 'threshold_risk_tolerance' => $this->cleanRupiah($request->threshold_risk_tolerance),
                 'status' => 1
             ];
 
             $projectRisk = ProjectRisk::create($toStore);
 
-            if ($request->has('param_nama')) {
-                foreach ($request->param_nama as $idx => $nama) {
-                    if(!empty($nama)) {
-                        $projectRisk->parameterRisikoProjects()->create([
-                            'nama' => $nama,
-                            'formula' => $request->param_formula[$idx] ?? '',
-                            'satuan' => $request->param_satuan[$idx] ?? '',
-                        ]);
-                    }
-                }
-            }
+            // if ($request->has('param_nama')) {
+            //     foreach ($request->param_nama as $idx => $nama) {
+            //         if(!empty($nama)) {
+            //             $projectRisk->parameterRisikoProjects()->create([
+            //                 'nama' => $nama,
+            //                 'formula' => $request->param_formula[$idx] ?? '',
+            //                 'satuan' => $request->param_satuan[$idx] ?? '',
+            //             ]);
+            //         }
+            //     }
+            // }
 
             $projectRisk->projectRiskAnalisas()->create([]);
             $projectRisk->projectRiskRencanaPerlakuans()->create([]);
@@ -926,7 +937,7 @@ class ProjectRiskController extends BasicCRUDController
 
         $sasaranProyeks = collect();
         if ($profitCenter) {
-             $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)->get();
+            $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)->get();
         }
 
         //tambahkan sasaran proyek yang ada di database dengan sasaran default (tanpa ada id)
@@ -1000,6 +1011,14 @@ class ProjectRiskController extends BasicCRUDController
                 $targetCapaianKinerja = $request->target_capaian_kinerja;
             }
 
+            $peristiwaRisikoId = $request->peristiwa_risiko_id;
+            $rencanaKegiatan = null;
+
+            if ($peristiwaRisikoId === 'other') {
+                $peristiwaRisikoId = 0;
+                $rencanaKegiatan = $request->rencana_kegiatan;
+            }
+
             $toUpdate = [
                 'unit_type_id' => $user->unit_type_id,
                 'unit_id' => $user->unit_id,
@@ -1008,7 +1027,8 @@ class ProjectRiskController extends BasicCRUDController
                 'project_id' => $project->id,
                 'kategori_risiko_id' => $request->kategori_risiko_id,
                 'jenis_risiko_id' => $request->jenis_risiko_id,
-                'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
+                'peristiwa_risiko_id' => $peristiwaRisikoId,
+                'rencana_kegiatan' => $rencanaKegiatan,
                 'project_periode_list_id' => $projectPeriodeList->id,
                 'deskripsi_peristiwa_risiko' => $request->deskripsi_peristiwa_risiko,
                 'deskripsi_dampak' => $request->deskripsi_dampak,
@@ -1019,36 +1039,36 @@ class ProjectRiskController extends BasicCRUDController
                 'wbs' => $request->wbs,
                 'target_capaian_kinerja' => $targetCapaianKinerja,
                 'sasaran_proyek_id' => $sasaranProyekId,
-                'taksonomi_risiko_id' => $request->taksonomi_risiko_id,
-                'threshold_risk_limit' => $this->cleanRupiah($request->threshold_risk_limit),
-                'threshold_risk_appetite' => $this->cleanRupiah($request->threshold_risk_appetite),
-                'threshold_risk_tolerance' => $this->cleanRupiah($request->threshold_risk_tolerance),
+                // 'taksonomi_risiko_id' => $request->taksonomi_risiko_id,
+                // 'threshold_risk_limit' => $this->cleanRupiah($request->threshold_risk_limit),
+                // 'threshold_risk_appetite' => $this->cleanRupiah($request->threshold_risk_appetite),
+                // 'threshold_risk_tolerance' => $this->cleanRupiah($request->threshold_risk_tolerance),
             ];
 
             $projectRisk->update($toUpdate);
 
-            $savedParamIds = [];
-            if ($request->has('param_nama')) {
-                foreach ($request->param_nama as $key => $nama) {
-                    $dataParam = [
-                        'nama' => $nama,
-                        'formula' => $request->param_formula[$key] ?? '',
-                        'satuan' => $request->param_satuan[$key] ?? '',
-                    ];
+            // $savedParamIds = [];
+            // if ($request->has('param_nama')) {
+            //     foreach ($request->param_nama as $key => $nama) {
+            //         $dataParam = [
+            //             'nama' => $nama,
+            //             'formula' => $request->param_formula[$key] ?? '',
+            //             'satuan' => $request->param_satuan[$key] ?? '',
+            //         ];
 
-                    $paramId = $request->parameter_risiko_id[$key] ?? null;
-                    $exist = $projectRisk->parameterRisikoProjects()->find($paramId);
+            //         $paramId = $request->parameter_risiko_id[$key] ?? null;
+            //         $exist = $projectRisk->parameterRisikoProjects()->find($paramId);
 
-                    if ($exist) {
-                        $exist->update($dataParam);
-                        $savedParamIds[] = $exist->id;
-                    } else {
-                        $newParam = $projectRisk->parameterRisikoProjects()->create($dataParam);
-                        $savedParamIds[] = $newParam->id;
-                    }
-                }
-            }
-            $projectRisk->parameterRisikoProjects()->whereNotIn('id', $savedParamIds)->delete();
+            //         if ($exist) {
+            //             $exist->update($dataParam);
+            //             $savedParamIds[] = $exist->id;
+            //         } else {
+            //             $newParam = $projectRisk->parameterRisikoProjects()->create($dataParam);
+            //             $savedParamIds[] = $newParam->id;
+            //         }
+            //     }
+            // }
+            // $projectRisk->parameterRisikoProjects()->whereNotIn('id', $savedParamIds)->delete();
 
             $penyebabRisikoIds = [];
             foreach ($request->penyebab_risiko as $penyebabRisikoId => $penyebabRisiko) {

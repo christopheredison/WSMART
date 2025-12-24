@@ -268,19 +268,19 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-12">
+                    {{-- <div class="col-md-12">
                         <div class="form-group">
                             <label class="form-label fw-bold">Taksonomi Danantara</label>
                             <div class="p-3 bg-light rounded">
                               {{ $projectRisk->taksonomiRisiko?->nama ?? '-' }}
                             </div>
                         </div>
-                    </div>
+                    </div> --}}
                     <div class="col-12">
                         <div class="form-group">
                             <label class="form-label fw-bold">Peristiwa Risiko</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $projectRisk->peristiwaRisiko->title ?? $projectRisk->peristiwa_risiko ?? '-' }}
+                                {{ $projectRisk->peristiwa_risiko_id === 0 ? $projectRisk->rencana_kegiatan : $projectRisk->peristiwaRisiko->title ?? $projectRisk->peristiwa_risiko ?? '-' }}
                             </div>
                         </div>
                     </div>
@@ -314,7 +314,7 @@
     </div>
     <!-- ::DataRisiko End -->
 
-    <div class="col-12 mb-4">
+    {{-- <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
@@ -382,7 +382,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> --}}
 
     <!-- ::PenyebabRisiko Start -->
     <div class="col-12 mb-4">
@@ -390,7 +390,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">4</span>
+                        <span class="nav-item-circle">2</span>
                     </span>
                     <span class="h3 mb-0">Penyebab Risiko</span>
                 </div>
@@ -455,7 +455,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">5</span>
+                        <span class="nav-item-circle">3</span>
                     </span>
                     <span class="h3 mb-0">Key Risk Indicator</span>
                 </div>
@@ -508,7 +508,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">6</span>
+                        <span class="nav-item-circle">4</span>
                     </span>
                     <span class="h3 mb-0">Kontrol</span>
                 </div>

@@ -5,7 +5,7 @@
             <div class="svg-icon svg-icon-secondary">
                 @include('partials.icon-tool')
             </div>
-            <h3 class="mb-0">Monitor Risiko <small class="d-block mt-2">{{ $project->project_name }} - {{ $peristiwaRisiko->title }}</small></h3>
+            <h3 class="mb-0">Monitor Risiko <small class="d-block mt-2">{{ $project->project_name }} - {{ $projectRisk->peristiwa_risiko_id ? $project?->peristiwaRisiko?->title :  $projectRisk->rencana_kegiatan }}</small></h3>
         </div>
     </div>
 
@@ -170,7 +170,7 @@
             </div>
         </div>
 
-        <div class="col-12">
+        {{-- <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
                     <h4 class="mb-0 ff-heading-sm">Informasi Taksonomi & Paramter</h4>
@@ -302,7 +302,7 @@
                 </div>
             </div>
         </div>
-        @endif
+        @endif --}}
 
         <div class="col-12">
             <div class="divider my-3 my-md-5">
@@ -546,9 +546,9 @@
                                 <th>Waktu Perlakuan Risiko</th>
                                 <th>PIC</th>
                                 <th>Rencana Perlakuan Risiko</th>
-                                <th>Anggaran (Rp)</th>
+                                <th>Rencana Biaya Perlakuan Risiko (Rp)</th>
                                 <th>Deskripsi Perlakuan Risiko</th>
-                                <th>Realisasi Anggaran (Rp)</th>
+                                <th>Realisasi Biaya Perlakuan Risiko (Rp)</th>
                                 <th>Progress (%)</th>
                                 <th>Action</th>
                             </tr>

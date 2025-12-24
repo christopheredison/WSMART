@@ -52,7 +52,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-12">
+                        {{-- <div class="col-md-12">
                             <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Danantara</label>
                                 <div class="w-100">
@@ -66,17 +66,27 @@
                                     </select>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="col-md-12">
                             <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Peristiwa Risiko</label>
-                                <select class="form-select select2 js-select-hide-search" name="peristiwa_risiko_id"
-                                    id="peristiwa_risiko" required>
-                                    <option selected>Pilih</option>
-                                    @foreach ($peristiwaRisikos as $peristiwaRisiko)
-                                        <option value="{{ $peristiwaRisiko->id }}">{{ $peristiwaRisiko->title }}</option>
-                                    @endforeach
-                                </select>
+                                <div class="w-100">
+                                    <select class="form-select select2 js-select-hide-search" name="peristiwa_risiko_id"
+                                        id="peristiwa_risiko" required>
+                                        <option selected>Pilih Peristiwa Risiko</option>
+                                        @foreach ($peristiwaRisikos as $peristiwaRisiko)
+                                            <option value="{{ $peristiwaRisiko->id }}">{{ $peristiwaRisiko->title }}</option>
+                                        @endforeach
+                                        <option value="other" {{ old('peristiwa_risiko_id') == 'other' || (!empty($projectRisk->rencana_kegiatan) && empty($projectRisk->peristiwa_risiko_id)) ? 'selected' : '' }}>Lainnya</option>
+                                    </select>
+                                    <textarea
+                                      class="form-control mt-2 {{ (old('peristiwa_risiko_id') == 'other' || (!empty($projectRisk->rencana_kegiatan) && empty($projectRisk->peristiwa_risiko_id))) ? '' : 'd-none' }}"
+                                      id="peristiwa_risiko_lainnya"
+                                      name="rencana_kegiatan"
+                                      rows="3"
+                                      placeholder="Masukkan Peristiwa Risiko Lainnya"
+                                    >{{ old('rencana_kegiatan', $projectRisk->rencana_kegiatan ?? '') }}</textarea>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-12">
@@ -122,8 +132,8 @@
         </div>
         <!-- ::DataRisiko End -->
 
-        <!-- ::ParameeterRisiko Start -->
-        <div class="col-12">
+        <!-- ::ParameterRisiko Start -->
+        {{-- <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
@@ -166,11 +176,11 @@
                     <button type="button" class="btn btn-outline-secondary rounded-pill p-2 float-end" id="add-parameter"><i class='bx bx-plus fs-5'></i></button>
                 </div>
             </div>
-        </div>
-        <!-- ::ParameeterRisiko End -->
+        </div> --}}
+        <!-- ::ParameterRisiko End -->
 
         <!-- ::Threshold Start -->
-        <div class="col-12">
+        {{-- <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
@@ -195,7 +205,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> --}}
         <!-- ::Threshold End -->
 
         <!-- ::PenyebabRisiko Start -->
@@ -204,7 +214,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">4</span>
+                            <span class="nav-item-circle">3</span>
                         </span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
@@ -248,7 +258,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">5</span>
+                            <span class="nav-item-circle">4</span>
                         </span>
                         <span class="h3 mb-0">Key Risk Indicator</span>
                     </div>
@@ -319,7 +329,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">6</span>
+                            <span class="nav-item-circle">5</span>
                         </span>
                         <span class="h3 mb-0">Kontrol</span>
                     </div>
@@ -427,6 +437,17 @@
                 .catch(error => console.error('Error:', error));
         }
     }
+
+    $('#peristiwa_risiko').on('change', function() {
+        const selectedValue = $(this).val();
+        const otherTextarea = $('#peristiwa_risiko_lainnya');
+
+        if (selectedValue === 'other') {
+            otherTextarea.removeClass('d-none').attr('required', true);
+        } else {
+            otherTextarea.addClass('d-none').attr('required', false).val('');
+        }
+    });
 
     $(document).ready(function() {
         $('.select2').select2({

@@ -27,7 +27,7 @@
     }
 
     .general-checkbox .form-check input {
-        pointer-events: auto !important; 
+        pointer-events: auto !important;
     }
 </style>
 @endpush
@@ -114,30 +114,6 @@ $(document).ready(function() {
         if (value < 0) {
             $(this).val(0);
         }
-    });
-
-    //var today = new Date();
-    //var endOfYear = new Date(today.getFullYear(), 11, 31);
-    const projectRisk = @json($projectRisk);
-
-    var flatpickrIns1 = flatpickr("#timelineRange1", {
-        //mode: "range",
-        altInput: false,
-        altFormat: "j F Y",
-        dateFormat: "d/m/Y",
-        minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
-        maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
-        disableMobile: true
-    });
-
-    var flatpickrIns2 = flatpickr("#timelineRange2", {
-        //mode: "range",
-        altInput: false,
-        altFormat: "j F Y",
-        dateFormat: "d/m/Y",
-        minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
-        maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
-        disableMobile: true
     });
 })
 </script>

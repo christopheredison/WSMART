@@ -87,7 +87,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'peristiwa_risiko' => [
                 'label' => 'Peristiwa Risiko',
                 'data' => 'peristiwaRisiko.title',
-                'render' => '(data, type, row) => row.peristiwa_risiko?.title || "-"',
+                'render' => '(data, type, row) => {
+                    return row.peristiwa_risiko?.title || row.rencana_kegiatan || "-";
+                }',
             ],
             'deskripsi_peristiwa_risiko' => [
                 'label' => 'Deskripsi Peristiwa Risiko',
@@ -362,8 +364,8 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $quarter = request()->quarter ?: 1;
         $projectRisk = $projectPeriode->projectRisks()
             ->with([
-                'taksonomiRisiko',
-                'parameterRisikoProjects',
+                // 'taksonomiRisiko',
+                // 'parameterRisikoProjects',
                 'projectRiskAnalisa',
                 'projectRiskAnalisa.skalaDampakObj',
                 'projectRiskAnalisa.skalaProbabilitas',
@@ -419,33 +421,34 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ])
             ->findOrFail(request()->route('monitoring'));
 
-        $currentDate = \Carbon\Carbon::create($tahun, $month, 1);
-        $dateM1 = $currentDate->copy()->subMonth();
-        $dateM2 = $currentDate->copy()->subMonths(2);
+        // [HIDE] Template Danantara
+        // $currentDate = \Carbon\Carbon::create($tahun, $month, 1);
+        // $dateM1 = $currentDate->copy()->subMonth();
+        // $dateM2 = $currentDate->copy()->subMonths(2);
 
-        // Ambil nilai aktual bulan-bulan sebelumnya
-        $monitoringM1 = $projectRisk->projectRiskMonitorings()
-            ->where('month', $dateM1->month)->where('tahun', $dateM1->year)->first();
-        $monitoringM2 = $projectRisk->projectRiskMonitorings()
-            ->where('month', $dateM2->month)->where('tahun', $dateM2->year)->first();
+        // // Ambil nilai aktual bulan-bulan sebelumnya
+        // $monitoringM1 = $projectRisk->projectRiskMonitorings()
+        //     ->where('month', $dateM1->month)->where('tahun', $dateM1->year)->first();
+        // $monitoringM2 = $projectRisk->projectRiskMonitorings()
+        //     ->where('month', $dateM2->month)->where('tahun', $dateM2->year)->first();
 
-        // Cari Data Pengendalian Terakhir (dari entri terbaru di database sebelum bulan ini)
-        $lastMonitoringEntry = $projectRisk->projectRiskMonitorings()
-            ->with('pengendalians')
-            ->where(function($q) use ($tahun, $month) {
-                $q->where('tahun', '<', $tahun)
-                  ->orWhere(function($q2) use ($tahun, $month) {
-                      $q2->where('tahun', $tahun)->where('month', '<', $month);
-                  });
-            })
-            ->orderByDesc('tahun')
-            ->orderByDesc('month')
-            ->orderByDesc('id')
-            ->first();
-        $historicalPengendalians = $lastMonitoringEntry ? $lastMonitoringEntry->pengendalians->keyBy('parameter_id') : collect();
+        // // Cari Data Pengendalian Terakhir (dari entri terbaru di database sebelum bulan ini)
+        // $lastMonitoringEntry = $projectRisk->projectRiskMonitorings()
+        //     ->with('pengendalians')
+        //     ->where(function($q) use ($tahun, $month) {
+        //         $q->where('tahun', '<', $tahun)
+        //           ->orWhere(function($q2) use ($tahun, $month) {
+        //               $q2->where('tahun', $tahun)->where('month', '<', $month);
+        //           });
+        //     })
+        //     ->orderByDesc('tahun')
+        //     ->orderByDesc('month')
+        //     ->orderByDesc('id')
+        //     ->first();
+        // $historicalPengendalians = $lastMonitoringEntry ? $lastMonitoringEntry->pengendalians->keyBy('parameter_id') : collect();
 
         $analisa = $projectRisk->projectRiskAnalisa;
-        $namaRisikoLengkap = $projectRisk->peristiwaRisiko->title;
+        $namaRisikoLengkap = $projectRisk->peristiwa_risiko_id ? $projectRisk?->peristiwaRisiko?->title : $projectRisk->rencana_kegiatan;
         if (!empty($projectRisk->deskripsi_peristiwa_risiko)) {
             $namaRisikoLengkap .= ' - ' . $projectRisk->deskripsi_peristiwa_risiko;
         }
@@ -561,9 +564,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'penyebabRisikoProjects' => $projectRisk->penyebabRisikoProjects,
             'kriProjects' => $projectRisk->kriProjects,
             'riskMonitoring' => $projectRisk->projectRiskMonitoring,
-            'monitoringM1' => $monitoringM1,
-            'monitoringM2' => $monitoringM2,
-            'historicalPengendalians' => $historicalPengendalians,
+            // 'monitoringM1' => $monitoringM1, // template Danatara
+            // 'monitoringM2' => $monitoringM2,
+            // 'historicalPengendalians' => $historicalPengendalians,
             'skalaDampaks' => SkalaDampak::pluck('deskripsi', 'tingkat'),
             'riskMaps' => $riskMaps,
             'skalaProbabilitas' => $skalaProbabilitas,
@@ -702,10 +705,10 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'skala_parameter_id' => $request->realisasi_skala_parameter_id,
             'eksposure_risiko' => null,
             'month' => $month,
-            'aktual_current' => $this->cleanRupiah($request->aktual_current),
-            'aktual_month_1' => $this->cleanRupiah($request->aktual_month_1),
-            'aktual_month_2' => $this->cleanRupiah($request->aktual_month_2),
-            'aktual_status' => $request->aktual_status,
+            // 'aktual_current' => $this->cleanRupiah($request->aktual_current), // [HIDE] Template Danantara
+            // 'aktual_month_1' => $this->cleanRupiah($request->aktual_month_1),
+            // 'aktual_month_2' => $this->cleanRupiah($request->aktual_month_2),
+            // 'aktual_status' => $request->aktual_status,
         ];
 
         if ($request->realisasi_nilai_probabilitas) {
@@ -797,23 +800,23 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $projectMonitoring = $projectRisk->projectRiskMonitoring()->create($toCreate);
 
-        // Simpan Rencana & Realisasi Pengendalian jika status Siaga/Bahaya
-        // $projectMonitoring->pengendalians()->delete();
-        if (in_array($request->aktual_status, ['Siaga', 'Bahaya'])) {
-            $paramIds = $request->input('pengendalian_parameter_id', []);
-            $rencana = $request->input('rencana_pengendalian', []);
-            $realisasi = $request->input('realisasi_pengendalian', []);
+        // [HIDE] Simpan Rencana & Realisasi Pengendalian jika status Siaga/Bahaya
+        // // $projectMonitoring->pengendalians()->delete();
+        // if (in_array($request->aktual_status, ['Siaga', 'Bahaya'])) {
+        //     $paramIds = $request->input('pengendalian_parameter_id', []);
+        //     $rencana = $request->input('rencana_pengendalian', []);
+        //     $realisasi = $request->input('realisasi_pengendalian', []);
 
-            foreach ($paramIds as $key => $pId) {
-                if (!empty($rencana[$key])) {
-                    $projectMonitoring->pengendalians()->create([
-                        'parameter_id' => $pId,
-                        'rencana_pengendalian' => $rencana[$key],
-                        'realisasi_pengendalian' => $realisasi[$key] ?? null,
-                    ]);
-                }
-            }
-        }
+        //     foreach ($paramIds as $key => $pId) {
+        //         if (!empty($rencana[$key])) {
+        //             $projectMonitoring->pengendalians()->create([
+        //                 'parameter_id' => $pId,
+        //                 'rencana_pengendalian' => $rencana[$key],
+        //                 'realisasi_pengendalian' => $realisasi[$key] ?? null,
+        //             ]);
+        //         }
+        //     }
+        // }
 
         $perlakuanDampakReq = json_decode($request->perlakuan_dampak_risikos, true);
         if($perlakuanDampakReq) {

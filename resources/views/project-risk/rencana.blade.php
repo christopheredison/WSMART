@@ -53,93 +53,12 @@
         </div>
     </div>
 
-    <div class="card mb-5">
-        <div class="card-header stepper border-0 pb-0">
-            <div class="nav-link active d-flex align-items-center p-0">
-                <span class="nav-item-circle-parent">
-                    <span class="nav-item-circle">3</span>
-                </span>
-                <span class="h3 mb-0">Perlakuan Risiko terhadap Dampak Risiko</span>
-            </div>
-        </div>
-        <div class="card-body">
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Dampak Risiko</th>
-                        <th>Rencana Perlakuan</th>
-                        <th>Biaya</th>
-                        <th>PIC</th>
-                        <th>Divisi Terkait</th>
-                        <th>Timeline Perlakuan Risiko</th>
-                        <th>Action</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @php $totalBiayaDampak = 0; @endphp
-                    @if ($projectRisk->perlakuanDampakRisikos->isNotEmpty())
-                        @foreach ($projectRisk->perlakuanDampakRisikos as $index => $perlakuan)
-                            @php $totalBiayaDampak += $perlakuan->biaya_perlakuan_risiko; @endphp
-                            <tr>
-                                @if ($index === 0)
-                                    <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}">1</td>
-                                    <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}">{{ $projectRisk->deskripsi_dampak }}</td>
-                                @endif
-                                <td>{{ $perlakuan->rencana_perlakuan_risiko }}</td>
-                                <td>{{ 'Rp' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') }}</td>
-                                <td>{{ $perlakuan->pic }}</td>
-                                <td>{{ $perlakuan->divisi_terkait_units->pluck('name')->implode(', ') ?: '-' }}</td>
-                                <td>{{ $perlakuan->waktu_perlakuan_risiko }}</td>
-                                <td class="action-cell">
-                                    <div class="d-flex gap-2">
-                                        <button class="btn btn-link text-primary p-0" type="button" data-action="edit-dampak" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Edit Rencana Perlakuan Dampak">
-                                            <i class="bx bx-edit-alt fs-5"></i>
-                                        </button>
-                                        <button class="btn btn-link text-danger p-0" type="button" data-action="delete-dampak" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Hapus Rencana Perlakuan Dampak">
-                                            <i class="bx bx-trash fs-5"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                                @if ($index === 0)
-                                    <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}" class="text-center">
-                                        <button class="btn btn-primary btn-sm" type="button" data-action="add-dampak" data-id="{{ $projectRisk->id }}" data-dampak="{{ $projectRisk->deskripsi_dampak }}" data-bs-toggle="tooltip" data-bs-title="Tambah Rencana Dampak">
-                                            <i class="bx bx-plus-circle"></i>
-                                        </button>
-                                    </td>
-                                @endif
-                            </tr>
-                        @endforeach
-                    @else
-                        <tr>
-                            <td>1</td>
-                            <td>{{ $projectRisk->deskripsi_dampak }}</td>
-                            <td colspan="5" class="text-center">Belum ada rencana perlakuan</td>
-                            <td class="text-center">
-                                <button class="btn btn-primary btn-sm" type="button" data-action="add-dampak" data-id="{{ $projectRisk->id }}" data-dampak="{{ $projectRisk->deskripsi_dampak }}" data-bs-toggle="tooltip" data-bs-title="Tambah Rencana Dampak">
-                                    <i class="bx bx-plus-circle"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    @endif
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3" class="text-end fw-bold">Total Biaya Perlakuan:</td>
-                        <td class="fw-bold">{{ 'Rp' . number_format($totalBiayaDampak, 0, ',', '.') }}</td>
-                        <td colspan="4"></td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
 
     <div class="card mb-5">
         <div class="card-header stepper border-0 pb-0">
             <div class="nav-link active d-flex align-items-center p-0">
                 <span class="nav-item-circle-parent">
-                    <span class="nav-item-circle">4</span>
+                    <span class="nav-item-circle">3</span>
                 </span>
                 <span class="h3 mb-0">Perlakuan Risiko terhadap Penyebab Risiko</span>
             </div>
@@ -226,6 +145,88 @@
                 </tr>
             </tfoot>
         </table>
+        </div>
+    </div>
+
+    <div class="card mb-5">
+        <div class="card-header stepper border-0 pb-0">
+            <div class="nav-link active d-flex align-items-center p-0">
+                <span class="nav-item-circle-parent">
+                    <span class="nav-item-circle">4</span>
+                </span>
+                <span class="h3 mb-0">Perlakuan Risiko terhadap Dampak Risiko</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Dampak Risiko</th>
+                        <th>Rencana Perlakuan</th>
+                        <th>Biaya</th>
+                        <th>PIC</th>
+                        <th>Divisi Terkait</th>
+                        <th>Timeline Perlakuan Risiko</th>
+                        <th>Action</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @php $totalBiayaDampak = 0; @endphp
+                    @if ($projectRisk->perlakuanDampakRisikos->isNotEmpty())
+                        @foreach ($projectRisk->perlakuanDampakRisikos as $index => $perlakuan)
+                            @php $totalBiayaDampak += $perlakuan->biaya_perlakuan_risiko; @endphp
+                            <tr>
+                                @if ($index === 0)
+                                    <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}">1</td>
+                                    <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}">{{ $projectRisk->deskripsi_dampak }}</td>
+                                @endif
+                                <td>{{ $perlakuan->rencana_perlakuan_risiko }}</td>
+                                <td>{{ 'Rp' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') }}</td>
+                                <td>{{ $perlakuan?->picJabatan?->name ?? '-' }}</td>
+                                <td>{{ $perlakuan->divisi_terkait_units->pluck('name')->implode(', ') ?: '-' }}</td>
+                                <td>{{ $perlakuan->waktu_perlakuan_risiko }}</td>
+                                <td class="action-cell">
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-link text-primary p-0" type="button" data-action="edit-dampak" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Edit Rencana Perlakuan Dampak">
+                                            <i class="bx bx-edit-alt fs-5"></i>
+                                        </button>
+                                        <button class="btn btn-link text-danger p-0" type="button" data-action="delete-dampak" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Hapus Rencana Perlakuan Dampak">
+                                            <i class="bx bx-trash fs-5"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                @if ($index === 0)
+                                    <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}" class="text-center">
+                                        <button class="btn btn-primary btn-sm" type="button" data-action="add-dampak" data-id="{{ $projectRisk->id }}" data-dampak="{{ $projectRisk->deskripsi_dampak }}" data-bs-toggle="tooltip" data-bs-title="Tambah Rencana Dampak">
+                                            <i class="bx bx-plus-circle"></i>
+                                        </button>
+                                    </td>
+                                @endif
+                            </tr>
+                        @endforeach
+                    @else
+                        <tr>
+                            <td>1</td>
+                            <td>{{ $projectRisk->deskripsi_dampak }}</td>
+                            <td colspan="5" class="text-center">Belum ada rencana perlakuan</td>
+                            <td class="text-center">
+                                <button class="btn btn-primary btn-sm" type="button" data-action="add-dampak" data-id="{{ $projectRisk->id }}" data-dampak="{{ $projectRisk->deskripsi_dampak }}" data-bs-toggle="tooltip" data-bs-title="Tambah Rencana Dampak">
+                                    <i class="bx bx-plus-circle"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    @endif
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-end fw-bold">Total Biaya Perlakuan:</td>
+                        <td class="fw-bold">{{ 'Rp' . number_format($totalBiayaDampak, 0, ',', '.') }}</td>
+                        <td colspan="4"></td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
     </div>
 
@@ -462,13 +463,71 @@ $(document).ready(function() {
     $('#picTambahDampak, #divisiTerkaitTambahDampak').select2({ dropdownParent: $('#modalTambahRencanaDampak') });
     $('#picEditDampak, #divisiTerkaitEditDampak').select2({ dropdownParent: $('#modalEditRencanaDampak') });
 
+    const projectRisk = @json($projectRisk);
     // Flatpickr Instance - Penyebab
-    const fpCause1 = flatpickr("#xtimelineRange1", { dateFormat: "d/m/Y" });
-    const fpCause2 = flatpickr("#xtimelineRange2", { dateFormat: "d/m/Y" });
+    const flatpickrIns1 = flatpickr("#timelineRange1", {
+        //mode: "range",
+        altInput: false,
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
+        minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+        maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
+        disableMobile: true
+    });
+
+    const flatpickrIns2 = flatpickr("#timelineRange2", {
+        //mode: "range",
+        altInput: false,
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
+        minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+        maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
+        disableMobile: true
+    });
+
+    const fpCause1 = flatpickr("#xtimelineRange1", {
+      dateFormat: "d/m/Y",
+      minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+      maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
+      disableMobile: true
+    });
+    const fpCause2 = flatpickr("#xtimelineRange2", {
+      dateFormat: "d/m/Y",
+      minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+      maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
+      disableMobile: true
+    });
 
     // Flatpickr Instance - Dampak
-    const fpImpact1 = flatpickr("#xtimelineDampak1", { dateFormat: "d/m/Y" });
-    const fpImpact2 = flatpickr("#xtimelineDampak2", { dateFormat: "d/m/Y" });
+    const fpImpactNew1 = flatpickr("#timelineDampak1", {
+        altInput: false,
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
+        minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+        maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
+        disableMobile: true
+    });
+    const fpImpactNew2 = flatpickr("#timelineDampak2", {
+        altInput: false,
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
+        minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+        maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
+        disableMobile: true
+    });
+
+    const fpImpact1 = flatpickr("#xtimelineDampak1", {
+      dateFormat: "d/m/Y",
+      minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+      maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
+      disableMobile: true
+    });
+    const fpImpact2 = flatpickr("#xtimelineDampak2", {
+      dateFormat: "d/m/Y",
+      minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+      maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
+      disableMobile: true
+    });
 
     const kategoriDampak = '{{ $analisa->kategori_dampak ?? "" }}';
     const nilaiDampak = {{ $analisa->nilai_dampak ?? 0 }};
@@ -537,7 +596,7 @@ $(document).ready(function() {
         // Reset input rupiah
         $('#formTambahRencana .inputmask-rupiah').val('0');
 
-        $('#penyebabRisikoId').val(penyebabId); // Set nilai penyebab risiko di input hidden
+        $('#penyebabRisikoId').val(penyebabId);
         $('input[name="penyebab_risiko"]').val(penyebabNama);
 
         $('#modalTambahRencana').modal('show'); // Tampilkan modal
@@ -633,6 +692,11 @@ $(document).ready(function() {
         $('#formTambahRencanaDampak')[0].reset();
         $('#risikoIdDampak').val(id);
         $('#formTambahRencanaDampak input[name="deskripsi_dampak"]').val(dampak);
+
+        $('#formTambahRencanaDampak select').each(function() {
+            $(this).val('').trigger('change');
+        });
+        $('#formTambahRencanaDampak .inputmask-rupiah').val('0');
 
         $('#modalTambahRencanaDampak').modal('show');
     });
