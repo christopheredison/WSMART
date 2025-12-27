@@ -614,10 +614,10 @@ class RiskRegisterUnitController extends Controller
             }
             $identifikasiRisiko->status = 1;
             $identifikasiRisiko->status_progress = 1;
-            $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
-            $identifikasiRisiko->threshold_risk_limit = $this->cleanRupiah($request->threshold_risk_limit ?? 0);
-            $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite ?? 0);
-            $identifikasiRisiko->threshold_risk_tolerance = $this->cleanRupiah($request->threshold_risk_tolerance ?? 0);
+            // $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
+            // $identifikasiRisiko->threshold_risk_limit = $this->cleanRupiah($request->threshold_risk_limit ?? 0);
+            // $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite ?? 0);
+            // $identifikasiRisiko->threshold_risk_tolerance = $this->cleanRupiah($request->threshold_risk_tolerance ?? 0);
 
             // Simpan kontrol eksisting
             // if ($request->has('kontrol_eksisting_id') && is_array($request->kontrol_eksisting_id)) {
@@ -628,17 +628,17 @@ class RiskRegisterUnitController extends Controller
             // }
             $identifikasiRisiko->save();
 
-            if ($request->has('param_nama')) {
-                foreach ($request->param_nama as $idx => $nama) {
-                    if(!empty($nama)) {
-                        $identifikasiRisiko->parameterRisikos()->create([
-                            'nama' => $nama,
-                            'formula' => $request->param_formula[$idx] ?? '',
-                            'satuan' => $request->param_satuan[$idx] ?? '',
-                        ]);
-                    }
-                }
-            }
+            // if ($request->has('param_nama')) {
+            //     foreach ($request->param_nama as $idx => $nama) {
+            //         if(!empty($nama)) {
+            //             $identifikasiRisiko->parameterRisikos()->create([
+            //                 'nama' => $nama,
+            //                 'formula' => $request->param_formula[$idx] ?? '',
+            //                 'satuan' => $request->param_satuan[$idx] ?? '',
+            //             ]);
+            //         }
+            //     }
+            // }
 
             // Simpan kontrol eksisting ke model KontrolEksisting
             if ($request->has('kontrol_eksisting') && is_array($request->kontrol_eksisting)) {
@@ -1393,35 +1393,35 @@ class RiskRegisterUnitController extends Controller
             // $identifikasiRisiko->penilaian_efektifitas_kontrol = $request->penilaian_efektifitas_kontrol;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
-            $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
-            $identifikasiRisiko->threshold_risk_limit = $this->cleanRupiah($request->threshold_risk_limit);
-            $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite);
-            $identifikasiRisiko->threshold_risk_tolerance = $this->cleanRupiah($request->threshold_risk_tolerance);
+            // $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
+            // $identifikasiRisiko->threshold_risk_limit = $this->cleanRupiah($request->threshold_risk_limit);
+            // $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite);
+            // $identifikasiRisiko->threshold_risk_tolerance = $this->cleanRupiah($request->threshold_risk_tolerance);
 
             $identifikasiRisiko->save();
 
-            $savedParamIds = [];
-            if ($request->has('param_nama')) {
-                foreach ($request->param_nama as $key => $nama) {
-                    $dataParam = [
-                        'nama' => $nama,
-                        'formula' => $request->param_formula[$key] ?? '',
-                        'satuan' => $request->param_satuan[$key] ?? '',
-                    ];
+            // $savedParamIds = [];
+            // if ($request->has('param_nama')) {
+            //     foreach ($request->param_nama as $key => $nama) {
+            //         $dataParam = [
+            //             'nama' => $nama,
+            //             'formula' => $request->param_formula[$key] ?? '',
+            //             'satuan' => $request->param_satuan[$key] ?? '',
+            //         ];
 
-                    $paramId = $request->parameter_risiko_id[$key] ?? null;
-                    $exist = $identifikasiRisiko->parameterRisikos()->find($paramId);
+            //         $paramId = $request->parameter_risiko_id[$key] ?? null;
+            //         $exist = $identifikasiRisiko->parameterRisikos()->find($paramId);
 
-                    if ($exist) {
-                        $exist->update($dataParam);
-                        $savedParamIds[] = $exist->id;
-                    } else {
-                        $newParam = $identifikasiRisiko->parameterRisikos()->create($dataParam);
-                        $savedParamIds[] = $newParam->id;
-                    }
-                }
-            }
-            $identifikasiRisiko->parameterRisikos()->whereNotIn('id', $savedParamIds)->delete();
+            //         if ($exist) {
+            //             $exist->update($dataParam);
+            //             $savedParamIds[] = $exist->id;
+            //         } else {
+            //             $newParam = $identifikasiRisiko->parameterRisikos()->create($dataParam);
+            //             $savedParamIds[] = $newParam->id;
+            //         }
+            //     }
+            // }
+            // $identifikasiRisiko->parameterRisikos()->whereNotIn('id', $savedParamIds)->delete();
 
             // Hapus kontrol eksisting lama dan buat yang baru
             $identifikasiRisiko->kontrolEksistings()->delete();

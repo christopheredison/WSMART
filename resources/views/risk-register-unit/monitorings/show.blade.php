@@ -91,7 +91,7 @@
                                             <td class="display-biaya inputmask-fixed">
                                                 {{ isset($perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter}) ? 'Rp ' . number_format($perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter}, 0, ',', '.') : '-' }}
                                             </td>
-                                            <td class="display-timeline">{{ $lastMonitoring?->timeline_perlakuan_risiko_start->format('d/m/Y') ?: '-' }}</td>
+                                            <td class="display-timeline">{{ $lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
                                                     <i class='bx bx-file fs-5'></i>
@@ -163,7 +163,7 @@
             </div>
         </div>
 
-        <div class="col-12">
+        {{-- <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
                     <h4 class="mb-0 ff-heading-sm">Informasi Taksonomi & Paramter</h4>
@@ -295,7 +295,7 @@
                 </div>
             </div>
         </div>
-        @endif
+        @endif --}}
 
         <div class="col-12">
             <div class="divider my-3 my-md-5">

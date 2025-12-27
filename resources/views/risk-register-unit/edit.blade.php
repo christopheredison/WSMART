@@ -52,7 +52,8 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-12">
+                        {{-- Template Danantara --}}
+                        {{-- <div class="col-md-12">
                             <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Danantara</label>
                                 <div class="w-100">
@@ -66,7 +67,7 @@
                                     </select>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
                         {{-- <div class="col-12">
                             <div class="form-group d-lg-flex">
                                 <div class="form-floating flex-grow-1">
@@ -141,7 +142,7 @@
         </div> --}}
         <!-- ::Peristiwa Risiko End -->
 
-        <!-- ::ParameeterRisiko Start -->
+        {{-- <!-- ::ParameeterRisiko Start -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
@@ -215,7 +216,7 @@
                 </div>
             </div>
         </div>
-        <!-- ::Threshold End -->
+        <!-- ::Threshold End --> --}}
 
         <!-- ::Penyebab Risiko Start -->
         <div class="col-12">
@@ -223,7 +224,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">4</span>
+                            <span class="nav-item-circle">3</span>
                         </span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
@@ -268,7 +269,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">5</span>
+                            <span class="nav-item-circle">4</span>
                         </span>
                         <span class="h3 mb-0">Key Risk Indicator</span>
                     </div>
@@ -339,7 +340,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">6</span>
+                            <span class="nav-item-circle">5</span>
                         </span>
                         <span class="h3 mb-0">Kontrol</span>
                     </div>
@@ -434,7 +435,7 @@
                     <div class="card-header stepper border-0 pb-0">
                         <div class="nav-link active d-flex align-items-center p-0">
                             <span class="nav-item-circle-parent">
-                                <span class="nav-item-circle">5</span>
+                                <span class="nav-item-circle">6</span>
                             </span>
                             <span class="h3 mb-0">Risiko Proyek Terkait</span>
                         </div>

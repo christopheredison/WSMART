@@ -440,28 +440,32 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 $query->orderBy('created_at', 'desc');
             }]);
             $query->with(['documents']);
-        }])->load(['taksonomiRisiko', 'parameterRisikos']);
+        }])->load([
+          // 'taksonomiRisiko',
+          // 'parameterRisikos',
+        ]);
 
         $unit = $risk->unit;
         $periode = $risk->periode;
         // $currentYear = date('Y');
         $currentYear = $period->tahun;
 
-        $currentDate = \Carbon\Carbon::create($currentYear, $month, 1);
-        $dateM1 = $currentDate->copy()->subMonth();
-        $dateM2 = $currentDate->copy()->subMonths(2);
+        // [HIDE] Template Dananatara
+        // $currentDate = \Carbon\Carbon::create($currentYear, $month, 1);
+        // $dateM1 = $currentDate->copy()->subMonth();
+        // $dateM2 = $currentDate->copy()->subMonths(2);
 
-        $monitoringM1 = $risk->monitoringRisikos()->where('month', $dateM1->month)->first();
-        $monitoringM2 = $risk->monitoringRisikos()->where('month', $dateM2->month)->first();
+        // $monitoringM1 = $risk->monitoringRisikos()->where('month', $dateM1->month)->first();
+        // $monitoringM2 = $risk->monitoringRisikos()->where('month', $dateM2->month)->first();
 
-        $lastEntry = $risk->monitoringRisikos()
-            ->with('pengendalians')
-            ->where('month', '<', $month)
-            ->orderByDesc('month')
-            ->orderByDesc('id')
-            ->first();
+        // $lastEntry = $risk->monitoringRisikos()
+        //     ->with('pengendalians')
+        //     ->where('month', '<', $month)
+        //     ->orderByDesc('month')
+        //     ->orderByDesc('id')
+        //     ->first();
 
-        $historicalPengendalians = $lastEntry ? $lastEntry->pengendalians->keyBy('parameter_id') : collect();
+        // $historicalPengendalians = $lastEntry ? $lastEntry->pengendalians->keyBy('parameter_id') : collect();
 
         $skalaDampaks = SkalaDampak::pluck('deskripsi', 'tingkat');
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
@@ -515,9 +519,9 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'tahun' => $currentYear,
             'riskAnalysis' => optional($risk->riskAnalysis),
             'riskMonitoring' => $risk->lastMonitoringRisiko,
-            'monitoringM1' => $monitoringM1,
-            'monitoringM2' => $monitoringM2,
-            'historicalPengendalians' => $historicalPengendalians,
+            // 'monitoringM1' => $monitoringM1,
+            // 'monitoringM2' => $monitoringM2,
+            // 'historicalPengendalians' => $historicalPengendalians,
             'skalaDampaks' => $skalaDampaks,
             'skalaProbabilitas' => $skalaProbabilitas,
             'riskMaps' => $riskMaps,
@@ -623,10 +627,10 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'skala_risiko' => $request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden,
             'level_risiko' => $request->realisasi_level_risiko ?? $request->realisasi_level_risiko_hidden,
             'eksposure_risiko' => null,
-            'aktual_current' => $this->cleanRupiah($request->aktual_current),
-            'aktual_month_1' => $this->cleanRupiah($request->aktual_month_1),
-            'aktual_month_2' => $this->cleanRupiah($request->aktual_month_2),
-            'aktual_status' => $request->aktual_status,
+            // 'aktual_current' => $this->cleanRupiah($request->aktual_current),
+            // 'aktual_month_1' => $this->cleanRupiah($request->aktual_month_1),
+            // 'aktual_month_2' => $this->cleanRupiah($request->aktual_month_2),
+            // 'aktual_status' => $request->aktual_status,
         ];
 
         if ($request->realisasi_nilai_probabilitas) {
@@ -666,23 +670,24 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $projectMonitoring = $risk->monitoringRisikos()->create($toCreate);
 
-        // Simpan Rencana & Realisasi Pengendalian jika status Siaga/Bahaya
-        // $projectMonitoring->pengendalians()->delete();
-        if (in_array($request->aktual_status, ['Siaga', 'Bahaya'])) {
-            $paramIds = $request->input('pengendalian_parameter_id', []);
-            $rencana = $request->input('rencana_pengendalian', []);
-            $realisasi = $request->input('realisasi_pengendalian', []);
+        // [HIDE] Template DANATARA
+        // // Simpan Rencana & Realisasi Pengendalian jika status Siaga/Bahaya
+        // // $projectMonitoring->pengendalians()->delete();
+        // if (in_array($request->aktual_status, ['Siaga', 'Bahaya'])) {
+        //     $paramIds = $request->input('pengendalian_parameter_id', []);
+        //     $rencana = $request->input('rencana_pengendalian', []);
+        //     $realisasi = $request->input('realisasi_pengendalian', []);
 
-            foreach ($paramIds as $key => $pId) {
-                if (!empty($rencana[$key])) {
-                    $projectMonitoring->pengendalians()->create([
-                        'parameter_id' => $pId,
-                        'rencana_pengendalian' => $rencana[$key],
-                        'realisasi_pengendalian' => $realisasi[$key] ?? null,
-                    ]);
-                }
-            }
-        }
+        //     foreach ($paramIds as $key => $pId) {
+        //         if (!empty($rencana[$key])) {
+        //             $projectMonitoring->pengendalians()->create([
+        //                 'parameter_id' => $pId,
+        //                 'rencana_pengendalian' => $rencana[$key],
+        //                 'realisasi_pengendalian' => $realisasi[$key] ?? null,
+        //             ]);
+        //         }
+        //     }
+        // }
 
         $perlakuanPenyebabRequests = json_decode($request->perlakuan_penyebab_risikos, true);
         foreach ($perlakuanPenyebabRequests as $id => $perlakuanPenyebabRequest) {
