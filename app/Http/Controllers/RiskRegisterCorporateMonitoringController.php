@@ -63,7 +63,7 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
                 ->where('unit_type_id', 4)
                 // ->where('is_corporate', 1)
                 ->with([
-                  // 'peristiwaRisiko', 
+                  // 'peristiwaRisiko',
                   'unit',
                   'riskAnalysis.skalaProbabilitasResidualQ' . $quarter]
                 )
@@ -212,13 +212,13 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
                         default:
                             return "-";
                     }
-                    
+
                     if (statusText) {
                         return monitoring.is_approved
                             ? `<div class="badge bg-info">Terverifikasi ${statusText}</div>`
                             : `<div class="badge border border-info text-info">Menunggu Verifikasi ${statusText}</div>`;
                     }
-                    
+
                     return "-";
                 }',
             ],
@@ -256,7 +256,7 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
                 'active_state' => '(data, type, row) => row.is_closed != 1',
                 'extra_attrs' => [ 'style' => 'font-size: 14px; font-weight: 400;' ]
             ];
-            
+
             $this->tableActions[] = [
                 'label' => 'Peluang',
                 'btn_icon' => false,
@@ -280,7 +280,7 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
 
                     const monitoring = row.last_monitoring_risiko;
                     if (!monitoring || monitoring.is_approved) return false;
-                    
+
                     const userLevel = ' . $user->level_id . ';
                     const isUserUnitMr = ' . ($isUserUnitMr ? 'true' : 'false') . ';
                     const hasVerificationMr = ' . ($hasVerificationMr ? 'true' : 'false') . ';
@@ -294,7 +294,7 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
 
                     // Verifier for Step 4 (Risk Owner Divisi MR -> Publish)
                     if (userLevel == 2 && isUserUnitMr && hasVerificationMr && status == '.UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR.') return true;
-                    
+
                     return false;
                 }',
                 'extra_attrs' => [ 'data-monitoring-id' => '__MONITORING_ID__', 'data-title' => '__RISK_TITLE__', 'data-desc' => '__RISK_DESC__']
@@ -384,22 +384,21 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
     {
         $period = Periode::findOrfail(request()->route('period'));
         $user = request()->user();
-        $month = request()->input('month') ?: '';
-        // if (!(Gate::check('risk_monitoring_edit') || $user->hasProject($period))) {
-        //     abort(403);
-        // }
-
         $quarter = request()->input('quarter') ?: 1;
+        $month = request()->input('month') ?: '';
+
         $risk = $period->identifikasiRisikos()
             ->findOrFail(request()->route('monitoring'));
-
-        $unit = $risk->unit;
-        $periode = $risk->periode;
 
         $risk->load(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
             $query->where('quarter', $quarter);
             $query->where('month', $month);
-            $query->with('perlakuanPenyebabRisikos', 'perlakuanPenyebabMonitorings', 'kriUnitMonitorings');
+            $query->with([
+              'perlakuanPenyebabRisikos',
+              'perlakuanPenyebabMonitorings',
+              'kriUnitMonitorings',
+              'pengendalians'
+            ]);
         }])->load(['penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
             $query->select('perlakuan_penyebab_risiko_units.*', 'id as deskripsi_perlakuan_risiko', 'id as jenis_program_rkap', 'id as jenis_program_rkap_id', 'id as timeline_perlakuan_risiko');
             $query->with(['lastMonitoring' => function ($query) use ($quarter, $month) {
@@ -415,7 +414,27 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
                 });
             }]);
             $query->with(['documents']);
-        }]);
+        }])->load(['taksonomiRisiko', 'parameterRisikos']);
+
+        $unit = $risk->unit;
+        $periode = $risk->periode;
+        $currentYear = $period->tahun;
+
+        $currentDate = \Carbon\Carbon::create($currentYear, $month, 1);
+        $dateM1 = $currentDate->copy()->subMonth();
+        $dateM2 = $currentDate->copy()->subMonths(2);
+
+        $monitoringM1 = $risk->monitoringRisikos()->where('month', $dateM1->month)->first();
+        $monitoringM2 = $risk->monitoringRisikos()->where('month', $dateM2->month)->first();
+
+        $lastEntry = $risk->monitoringRisikos()
+            ->with('pengendalians')
+            ->where('month', '<', $month)
+            ->orderByDesc('month')
+            ->orderByDesc('id')
+            ->first();
+
+        $historicalPengendalians = $lastEntry ? $lastEntry->pengendalians->keyBy('parameter_id') : collect();
 
         $skalaDampaks = SkalaDampak::pluck('deskripsi', 'tingkat');
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
@@ -466,8 +485,12 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
             'risk' => $risk,
             'quarter' => $quarter,
             'month' => $month,
+            'tahun' => $currentYear,
             'riskAnalysis' => optional($risk->riskAnalysis),
             'riskMonitoring' => $risk->lastMonitoringRisiko,
+            'monitoringM1' => $monitoringM1,
+            'monitoringM2' => $monitoringM2,
+            'historicalPengendalians' => $historicalPengendalians,
             'skalaDampaks' => $skalaDampaks,
             'skalaProbabilitas' => $skalaProbabilitas,
             'riskMaps' => $riskMaps,
@@ -486,29 +509,55 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
         }
 
         $quarter = request()->input('quarter') ?: 1;
-        $risk = $period->identifikasiRisikos()
-            ->findOrFail(request()->route('monitoring'));
+        // $risk = $period->identifikasiRisikos()
+        //     ->findOrFail(request()->route('monitoring'));
 
-        $risk->load(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
-            $query->where('quarter', $quarter);
-            $query->where('month', $month);
-            $query->with('perlakuanPenyebabRisikos', 'perlakuanPenyebabMonitorings', 'kriUnitMonitorings');
-        }])->load(['penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
-            $query->select('perlakuan_penyebab_risiko_units.*', 'id as deskripsi_perlakuan_risiko', 'id as jenis_program_rkap', 'id as jenis_program_rkap_id', 'id as timeline_perlakuan_risiko');
-            $query->with(['lastMonitoring' => function ($query) use ($quarter, $month) {
-                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
-                    $query->where('quarter', $quarter);
-                    $query->where('month', $month);
+        // $risk->load(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
+        //     $query->where('quarter', $quarter);
+        //     $query->where('month', $month);
+        //     $query->with('perlakuanPenyebabRisikos', 'perlakuanPenyebabMonitorings', 'kriUnitMonitorings');
+        // }])->load(['penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
+        //     $query->select('perlakuan_penyebab_risiko_units.*', 'id as deskripsi_perlakuan_risiko', 'id as jenis_program_rkap', 'id as jenis_program_rkap_id', 'id as timeline_perlakuan_risiko');
+        //     $query->with(['lastMonitoring' => function ($query) use ($quarter, $month) {
+        //         $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
+        //             $query->where('quarter', $quarter);
+        //             $query->where('month', $month);
+        //         });
+        //     }]);
+        //     $query->with(['perlakuanPenyebabMonitorings' => function ($query) use ($quarter, $month) {
+        //         $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
+        //             $query->where('quarter', $quarter);
+        //             $query->where('month', $month);
+        //         });
+        //     }]);
+        //     $query->with(['documents']);
+        // }]);
+
+        $risk = $period->identifikasiRisikos()
+        ->with([
+            'taksonomiRisiko',
+            'parameterRisikos',
+            'peristiwaRisiko',
+            'riskAnalysis',
+            'lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
+                $query->where('quarter', $quarter)
+                      ->where('month', $month)
+                      ->with('pengendalians.parameter');
+            },
+            'penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
+                $query->with(['lastMonitoring' => function ($q) use ($quarter, $month) {
+                    $q->whereHas('unitRiskMonitoring', function ($q2) use ($quarter, $month) {
+                        $q2->where('quarter', $quarter)->where('month', $month);
+                    });
+                }]);
+            },
+            'kris.kriUnitMonitorings' => function ($query) use ($quarter, $month) {
+                $query->whereHas('unitRiskMonitoring', function ($q) use ($quarter, $month) {
+                    $q->where('quarter', $quarter)->where('month', $month);
                 });
-            }]);
-            $query->with(['perlakuanPenyebabMonitorings' => function ($query) use ($quarter, $month) {
-                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
-                    $query->where('quarter', $quarter);
-                    $query->where('month', $month);
-                });
-            }]);
-            $query->with(['documents']);
-        }]);
+            }
+        ])
+        ->findOrFail(request()->route('monitoring'));
 
         $skalaDampaks = SkalaDampak::pluck('deskripsi', 'tingkat');
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
@@ -517,6 +566,14 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
         });
 
         $files = $risk->lastMonitoringRisiko?->perlakuanPenyebabRisikoDocuments->groupBy('perlakuan_penyebab_risiko_unit_id') ?: [];
+
+        $currentYear = $period->tahun;
+        $dateCurrent = \Carbon\Carbon::create($currentYear, $month, 1);
+        $dateM1 = $dateCurrent->copy()->subMonth();
+        $dateM2 = $dateCurrent->copy()->subMonths(2);
+
+        $monitoringM1 = $risk->monitoringRisikos()->where('month', $dateM1->month)->first();
+        $monitoringM2 = $risk->monitoringRisikos()->where('month', $dateM2->month)->first();
 
         return view('corporate-risk.monitorings.show', [
             'period' => $period,
@@ -529,6 +586,11 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
             'skalaProbabilitas' => $skalaProbabilitas,
             'riskMaps' => $riskMaps,
             'files' => $files,
+            'monitoringM1' => $monitoringM1,
+            'monitoringM2' => $monitoringM2,
+            'dateCurrent' => $dateCurrent,
+            'dateM1' => $dateM1,
+            'dateM2' => $dateM2,
         ]);
     }
 
@@ -558,9 +620,12 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
             'skala_risiko' => $request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden,
             'level_risiko' => $request->realisasi_level_risiko ?? $request->realisasi_level_risiko_hidden,
             'eksposure_risiko' => null,
+            'aktual_current' => $this->cleanRupiah($request->aktual_current),
+            'aktual_month_1' => $this->cleanRupiah($request->aktual_month_1),
+            'aktual_month_2' => $this->cleanRupiah($request->aktual_month_2),
+            'aktual_status' => $request->aktual_status,
         ];
 
-        //dd($toCreate);
         if ($request->realisasi_nilai_probabilitas) {
             $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($request->realisasi_nilai_probabilitas);
 
@@ -573,14 +638,14 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
             $riskMaps = RiskMap::get()->keyBy(function($item) {
                 return $item->skala_dampak . '-' . $item->skala_probabilitas;
             });
-    
+
             $riskMap = $riskMaps[$toCreate['skala_dampak'] . '-' . $tingkatSkalaProbabilitas->tingkat] ?? null;
             if (!$riskMap) {
                 return response()->json([
                     'message' => 'Tidak ada data risk map untuk skala dampak dan probabilitas yang dipilih',
                 ], 422);
             }
-    
+
             $toCreate['skala_risiko'] = $riskMap->nilai_risiko;
             $toCreate['level_risiko'] = $riskMap->level_risiko;
         } else {
@@ -599,14 +664,30 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
 
         $projectMonitoring = $risk->monitoringRisikos()->create($toCreate);
 
-        $perlakuanPenyebabRequests = json_decode($request->perlakuan_penyebab_risikos, true);
-        $kriProjectRequests = json_decode($request->kri_projects, true);
+        // Simpan Rencana & Realisasi Pengendalian jika status Siaga/Bahaya
+        // $projectMonitoring->pengendalians()->delete();
+        if (in_array($request->aktual_status, ['Siaga', 'Bahaya'])) {
+            $paramIds = $request->input('pengendalian_parameter_id', []);
+            $rencana = $request->input('rencana_pengendalian', []);
+            $realisasi = $request->input('realisasi_pengendalian', []);
 
+            foreach ($paramIds as $key => $pId) {
+                if (!empty($rencana[$key])) {
+                    $projectMonitoring->pengendalians()->create([
+                        'parameter_id' => $pId,
+                        'rencana_pengendalian' => $rencana[$key],
+                        'realisasi_pengendalian' => $realisasi[$key] ?? null,
+                    ]);
+                }
+            }
+        }
+
+        $perlakuanPenyebabRequests = json_decode($request->perlakuan_penyebab_risikos, true);
         foreach ($perlakuanPenyebabRequests as $id => $perlakuanPenyebabRequest) {
             if (is_string($perlakuanPenyebabRequest['timeline_perlakuan_risiko'])) {
                 $perlakuanPenyebabRequest['timeline_perlakuan_risiko'] = explode(' - ', $perlakuanPenyebabRequest['timeline_perlakuan_risiko']);
             }
-            
+
             if ($perlakuanPenyebabRequest['timeline_perlakuan_risiko'] && count($perlakuanPenyebabRequest['timeline_perlakuan_risiko']) === 1) {
                 $perlakuanPenyebabRequest['timeline_perlakuan_risiko'][] = $perlakuanPenyebabRequest['timeline_perlakuan_risiko'][0];
             }
@@ -640,6 +721,7 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
             }
         }
 
+        $kriProjectRequests = json_decode($request->kri_projects, true);
         foreach ($kriProjectRequests as $id => $kriProjectRequest) {
             $toCreate = [
                 'key_risk_indicator_id' => $kriProjectRequest['id'],
@@ -710,12 +792,12 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
                 ->where('month', $month)
                 ->groupBy('identifikasi_risiko_id')
                 ->pluck('last_id');
-            
+
             if ($latestMonitoringIds->isNotEmpty()) {
                 $latestMonitorings = UnitRiskMonitoring::whereIn('id', $latestMonitoringIds)->get();
             }
         }
-        
+
         $buttonText = '';
         $params = [];
         $disabled = 'disabled';
@@ -725,7 +807,7 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
                 if ($isUnitMr && $hasVerificationMr) {
                     // Step 3: Kirim ke Risk Owner Divisi MR
                     $allApproved = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR)->isNotEmpty() && $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR)->every('is_approved', true);
-                    
+
                     $buttonText = "Kirim ke Risk Owner {$unitMrName}";
 
                     $params = ['status_dari' => UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR, 'status_ke' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR];
@@ -750,15 +832,15 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
                     $allApproved = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR)->isNotEmpty() && $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR)->every('is_approved', true);
 
                     $buttonText = 'Verifikasi Monitoring';
-                    
+
                     $params = ['status_dari' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR, 'status_ke' => UnitRiskMonitoring::STATUS_PUBLISHED, 'final' => true];
                     $disabled = $allApproved ? '' : 'disabled';
                 } else {
                     // Step 2: Kirim ke Risk Officer Divisi MR
                     $allApproved = $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI)->isNotEmpty() && $latestMonitorings->where('status', UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI)->every('is_approved', true);
-                    
+
                     $buttonText = "Kirim ke Risk Officer {$unitMrName}";
-                    
+
                     $params = ['status_dari' => UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI, 'status_ke' => UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR];
                     $disabled = $allApproved ? '' : 'disabled';
                 }
@@ -831,7 +913,7 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
                     }
                 });
             }
-            
+
             $(document).ready(function() {
                 $('#table-filter select[name="quarter"]').on('change', function() {
                     const quarter = $(this).val();
@@ -860,13 +942,13 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
     {
         $validated = $request->validate([
             'unit_id' => 'required|integer|exists:units,id',
-            'quarter' => 'required|integer', 
+            'quarter' => 'required|integer',
             'month' => 'required|integer',
-            'status_dari' => 'required|integer', 
+            'status_dari' => 'required|integer',
             'status_ke' => 'required|integer',
             'is_final' => 'nullable|boolean',
         ]);
-        
+
         $riskIds = IdentifikasiRisiko::where('periode_id', $period->id)
             ->where('unit_id', $validated['unit_id'])
             ->pluck('id');
@@ -882,7 +964,7 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
         }
 
         $query = UnitRiskMonitoring::whereIn('id', $latestMonitoringIds)->where('status', $validated['status_dari']);
-        
+
         if ($validated['status_dari'] > UnitRiskMonitoring::STATUS_DRAFT_REVISI) {
             $query->where('is_approved', true);
         }
@@ -921,8 +1003,8 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
                 'user_id' => Auth::id(),
                 'status' => $validated['status_verifikasi'] == 'terima' ? 1 : 0,
                 'notes' => $validated['notes'],
-                'quarter' => $monitoring->quarter, 
-                'month' => $monitoring->month, 
+                'quarter' => $monitoring->quarter,
+                'month' => $monitoring->month,
                 'year' => null,
             ]);
         });
@@ -944,7 +1026,11 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
             ->with('user:id,name') // Ambil hanya id dan nama user
             ->latest()
             ->get();
-            
+
         return response()->json($notes);
+    }
+
+    private function cleanRupiah($value) {
+        return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
     }
 }

@@ -41,6 +41,180 @@
         <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
+                    <h4 class="mb-0 ff-heading-sm">Informasi Taksonomi & Parameter</h4>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3 gap-2">
+                                <div class="lead__icon bg-primary-subtle p-2 rounded-pill">
+                                    <i class='bx bx-category fs-3 m-0 text-primary'></i>
+                                </div>
+                                <h5 class="card-title mb-0">Taksonomi Danantara</h5>
+                            </div>
+                            <div class="p-3 bg-light rounded border-start border-primary border-4">
+                                <span class="fw-bold text-dark">{{ $risk->taksonomiRisiko->nama ?? '-' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3 gap-2">
+                                <div class="lead__icon bg-primary-subtle p-2 rounded-pill">
+                                    <i class='bx bx-list-ul fs-3 m-0 text-primary'></i>
+                                </div>
+                                <h5 class="card-title mb-0">Daftar Parameter Risiko</h5>
+                            </div>
+
+                            <div class="table-responsive p-0">
+                                <table class="table table-sm table-hover border">
+                                    <thead class="table-light text-uppercase">
+                                        <tr>
+                                            <th class="text-center" style="width: 50px;">No</th>
+                                            <th>Nama Parameter</th>
+                                            <th>Formula</th>
+                                            <th class="text-center">Satuan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($risk->parameterRisikos as $param)
+                                            <tr>
+                                                <td class="text-center align-middle font-monospace">{{ $loop->iteration }}</td>
+                                                <td class="align-middle fw-bold text-dark">{{ $param->nama }}</td>
+                                                <td class="align-middle text-muted">
+                                                    <code class="px-2 py-1 bg-light rounded text-danger small">{{ $param->formula ?: '-' }}</code>
+                                                </td>
+                                                <td class="text-center align-middle">
+                                                    <span class="badge bg-info-subtle text-info px-3">{{ $param->satuan ?: '-' }}</span>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="4" class="text-center py-4 text-muted">Tidak ada parameter risiko yang terdaftar.</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="divider my-3 my-md-5">
+                <div class="divider-text">
+                    <h4 class="mb-0 ff-heading-sm">Monitoring Nilai Aktual</h4>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="text-muted fw-bold mb-4 small text-uppercase text-center">Nilai Threshold</h5>
+                            <div class="row text-center g-3 mb-4">
+                                <div class="col-md-4 border-end">
+                                    <div class="text-success small fw-bold mb-1">Risk Limit (Aman)</div>
+                                    <div class="fs-4 fw-bolder text-success">Rp {{ number_format($risk->threshold_risk_limit, 0, ',', '.') }}</div>
+                                </div>
+                                <div class="col-md-4 border-end">
+                                    <div class="text-warning small fw-bold mb-1">Risk Appetite (Siaga)</div>
+                                    <div class="fs-4 fw-bolder text-warning">Rp {{ number_format($risk->threshold_risk_appetite, 0, ',', '.') }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-danger small fw-bold mb-1">Risk Tolerance (Bahaya)</div>
+                                    <div class="fs-4 fw-bolder text-danger">Rp {{ number_format($risk->threshold_risk_tolerance, 0, ',', '.') }}</div>
+                                </div>
+                            </div>
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Aktual ({{ $dateCurrent->translatedFormat('F Y') }})</label>
+                                    <div class="p-3 bg-light rounded border-primary border">
+                                        <strong>Rp {{ number_format($riskMonitoring->aktual_current ?? 0, 0, ',', '.') }}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-muted small">Bulan -1 ({{ $dateM1->translatedFormat('F Y') }})</label>
+                                    <div class="p-3 bg-light rounded border italic text-muted">
+                                        Rp {{ number_format($riskMonitoring->aktual_month_1 ?? 0, 0, ',', '.') }}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-muted small">Bulan -2 ({{ $dateM2->translatedFormat('F Y') }})</label>
+                                    <div class="p-3 bg-light rounded border italic text-muted">
+                                        Rp {{ number_format($riskMonitoring->aktual_month_2 ?? 0, 0, ',', '.') }}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Status Hasil Monitoring</label>
+                                    @php
+                                        $status = $riskMonitoring->aktual_status ?? 'N/A';
+                                        $color = 'secondary';
+                                        if($status == 'Aman') $color = 'success';
+                                        if($status == 'Siaga') $color = 'warning';
+                                        if($status == 'Bahaya') $color = 'danger';
+                                    @endphp
+                                    <div class="p-2 rounded text-center fw-bold fs-6 border bg-{{ $color }}-subtle text-{{ $color == 'warning' ? 'dark' : $color }} border-{{ $color }}">
+                                        {{ strtoupper($status) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if($riskMonitoring && $riskMonitoring->pengendalians->isNotEmpty())
+        <div class="col-12">
+            <div class="divider my-3 my-md-5">
+                <div class="divider-text">
+                    <h4 class="mb-0 ff-heading-sm text-danger">Rencana Pengendalian Risiko</h4>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card border-danger">
+                        <div class="card-body">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th width="5%" class="text-center">No</th>
+                                        <th width="30%">Parameter Risiko</th>
+                                        <th>Rencana Pengendalian</th>
+                                        <th>Realisasi Pengendalian</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($riskMonitoring->pengendalians as $pengendalian)
+                                    <tr>
+                                        <td class="text-center">{{ $loop->iteration }}</td>
+                                        <td class="bg-light"><strong>{{ $pengendalian->parameter->nama ?? '-' }}</strong></td>
+                                        <td>{{ $pengendalian->rencana_pengendalian ?? '-' }}</td>
+                                        <td>{{ $pengendalian->realisasi_pengendalian ?? '-' }}</td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <div class="col-12">
+            <div class="divider my-3 my-md-5">
+                <div class="divider-text">
                     <h4 class="mb-0 ff-heading-sm">Realisasi Perlakuan Risiko</h4>
                 </div>
             </div>
@@ -91,7 +265,7 @@
                                             <td class="display-biaya inputmask-fixed">
                                                 {{ isset($perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter}) ? 'Rp ' . number_format($perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter}, 0, ',', '.') : '-' }}
                                             </td>
-                                            <td class="display-timeline">{{ $lastMonitoring?->timeline_perlakuan_risiko_start->format('d/m/Y') ?: '-' }}</td>
+                                            <td class="display-timeline">{{ $lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
                                                     <i class='bx bx-file fs-5'></i>

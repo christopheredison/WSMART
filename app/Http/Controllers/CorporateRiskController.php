@@ -23,6 +23,7 @@ use App\Models\PerlakuanPenyebabRisikoUnit;
 use App\Models\Jabatan;
 use App\Models\MasterKRI;
 use App\Models\KontrolEksisting;
+use App\Models\TaksonomiRisiko;
 
 class CorporateRiskController extends Controller
 {
@@ -31,7 +32,7 @@ class CorporateRiskController extends Controller
     //     // Ambil periode_id dari parameter URL
     //     $periodeId = $request->query('pid');
     //     $unitId = $request->query('unit_id');
-        
+
     //     // Jika tidak ada parameter periode, gunakan periode aktif
     //     if (!$periodeId) {
     //         $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
@@ -40,7 +41,7 @@ class CorporateRiskController extends Controller
 
     //     // Ambil data periode yang dipilih
     //     $selectedPeriode = Periode::find($periodeId);
-        
+
     //     // Query untuk risiko utama (main)
     //     $risikoMainQuery = IdentifikasiRisiko::with([
     //         'unit',
@@ -88,13 +89,13 @@ class CorporateRiskController extends Controller
     //     $risikoMain = $risikoMain->sortBy(function($risk) {
     //         // Prioritaskan risiko rekomendasi korporat
     //         $statusPriority = $risk->status_risiko == IdentifikasiRisiko::STATUS_RISIKO_CORPORATE_RECOMMENDATION ? 0 : 1;
-            
+
     //         // Kemudian urutkan berdasarkan skala risiko (nilai lebih tinggi lebih dulu)
     //         $skalaRisiko = -1 * ($risk->riskAnalysis->skala_risiko ?? 0);
-            
+
     //         // Jika skala risiko sama, urutkan berdasarkan eksposur risiko (nilai lebih tinggi lebih dulu)
     //         $eksposurRisiko = -1 * ($risk->riskAnalysis->eksposur_risiko ?? 0);
-            
+
     //         return [$statusPriority, $skalaRisiko, $eksposurRisiko];
     //     })->values();
 
@@ -102,10 +103,10 @@ class CorporateRiskController extends Controller
     //     $risikoCorporate = $risikoCorporate->sortBy(function($risk) {
     //         // Urutkan berdasarkan skala risiko (nilai lebih tinggi lebih dulu)
     //         $skalaRisiko = -1 * ($risk->riskAnalysis->skala_risiko ?? 0);
-            
+
     //         // Jika skala risiko sama, urutkan berdasarkan eksposur risiko (nilai lebih tinggi lebih dulu)
     //         $eksposurRisiko = -1 * ($risk->riskAnalysis->eksposur_risiko ?? 0);
-            
+
     //         return [$skalaRisiko, $eksposurRisiko];
     //     })->values();
 
@@ -129,7 +130,7 @@ class CorporateRiskController extends Controller
 
     //     $showRankingButton = false;
     //     $showCorporateButton = false;
-        
+
     //     if ($selectedPeriode) {
     //         // Jika status_progress null, maka bisa ranking
     //         $showRankingButton = is_null($selectedPeriode->status_progress);
@@ -138,12 +139,12 @@ class CorporateRiskController extends Controller
     //     }
 
     //     return view('corporate-risk.index', compact(
-    //         'risikoMain', 
+    //         'risikoMain',
     //         'risikoCorporate',
-    //         'unit', 
+    //         'unit',
     //         'periodes',
-    //         'peristiwaRisiko', 
-    //         'jenisRisiko', 
+    //         'peristiwaRisiko',
+    //         'jenisRisiko',
     //         'selectedPeriode',
     //         'unitId',
     //         'showRankingButton',
@@ -162,15 +163,15 @@ class CorporateRiskController extends Controller
 
         // Ambil risiko yang dipilih
         $selectedRisks = $request->input('selected_risks', []);
-        
+
         if (empty($selectedRisks)) {
             return redirect()->route('corporate-risk.index')
                 ->with('error', 'Tidak ada risiko yang dipilih');
         }
-        
+
         // Ambil risiko yang akan diupdate
         $risikos = IdentifikasiRisiko::whereIn('id', $selectedRisks)->get();
-        
+
         // Update status risiko menjadi corporate dan simpan status sebelumnya
         foreach ($risikos as $risiko) {
             $risiko->update([
@@ -212,7 +213,7 @@ class CorporateRiskController extends Controller
             $avgExposure = $quantitativeRisks->avg(function($risk) {
                 return $risk->riskAnalysis->eksposur_risiko ?? 0;
             });
-            
+
             // Update risiko kuantitatif yang nilainya di atas rata-rata
             foreach ($quantitativeRisks as $risk) {
                 if (($risk->riskAnalysis->eksposur_risiko ?? 0) > $avgExposure) {
@@ -222,7 +223,7 @@ class CorporateRiskController extends Controller
                 }
             }
         }
-        
+
         // Update risiko kualitatif yang nilai risikonya >= 20
         foreach ($qualitativeRisks as $risk) {
             if (($risk->riskAnalysis->skala_risiko ?? 0) >= 20) {
@@ -264,18 +265,18 @@ class CorporateRiskController extends Controller
 
         $riskId = $request->input('risk_id');
         $periodeId = $request->input('periode_id');
-        
+
         // Ambil risiko yang akan dikembalikan
         $risiko = IdentifikasiRisiko::find($riskId);
-        
+
         if (!$risiko) {
             return redirect()->route('corporate-risk.index', ['pid' => $periodeId])
                 ->with('error', 'Risiko tidak ditemukan');
         }
-        
+
         // Kembalikan ke status sebelumnya jika ada, jika tidak kembalikan ke STATUS_RISIKO_MAIN
         $previousStatus = $risiko->previous_status_risiko ?? IdentifikasiRisiko::STATUS_RISIKO_MAIN;
-        
+
         $risiko->update([
             'status_risiko' => $previousStatus,
             'previous_status_risiko' => null
@@ -365,9 +366,9 @@ class CorporateRiskController extends Controller
         }
 
         return view('corporate-risk.risk-period-list', compact(
-          'periodes', 
-          'activePeriode', 
-          'tableLegend', 
+          'periodes',
+          'activePeriode',
+          'tableLegend',
           'dataToDisplay',
           'units',
         ));
@@ -563,6 +564,7 @@ class CorporateRiskController extends Controller
 
         $units = Unit::where('unit_type_id', 1)->orderBy('name')->get();
         $apUnits = Unit::where('unit_type_id', 2)->orderBy('name')->get();
+        $taksonomiRisikos = TaksonomiRisiko::all();
 
         // Ambil Risiko Divisi (unit_type_id = 1) yang sudah final untuk dipilih
         // $divisiRisks = IdentifikasiRisiko::where('unit_type_id', 1)
@@ -571,15 +573,16 @@ class CorporateRiskController extends Controller
         //     ->get();
 
         return view('corporate-risk.create', compact(
-            'kategoriRisiko', 'jenisKontrolEksistings', 
+            'kategoriRisiko', 'jenisKontrolEksistings',
             'penilaianEfektifitasKontrols',
             'jenisRisiko',
-            'selectedPeriode', 
+            'selectedPeriode',
             // 'divisiRisks',
             'units',
             'apUnits',
-            'masterKris', // Kirim master KRI
-            'kontrolEksistings' // Kirim kontrol eksisting
+            'masterKris',
+            'kontrolEksistings',
+            'taksonomiRisikos',
         ));
     }
 
@@ -819,7 +822,7 @@ class CorporateRiskController extends Controller
             ->where('status_risiko', IdentifikasiRisiko::STATUS_RISIKO_MAIN)
             ->with(['unit', 'kategoriRisiko', 'riskAnalysis', 'penyebabRisiko'])
             ->get();
-            
+
         return response()->json([
             'html' => view('corporate-risk._ajax_risk_options', compact('divisiRisks'))->render()
         ]);
@@ -878,6 +881,10 @@ class CorporateRiskController extends Controller
             $identifikasiRisiko->unit_type_id = 4; // KORPORAT
             $identifikasiRisiko->unit_id = 1;
             $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
+            $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
+            $identifikasiRisiko->threshold_risk_limit = $this->cleanRupiah($request->threshold_risk_limit ?? 0);
+            $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite ?? 0);
+            $identifikasiRisiko->threshold_risk_tolerance = $this->cleanRupiah($request->threshold_risk_tolerance ?? 0);
 
             $jenisRisiko = JenisRisiko::find($request->jenis_risiko_id);
             if ($jenisRisiko) {
@@ -885,6 +892,18 @@ class CorporateRiskController extends Controller
             }
 
             $identifikasiRisiko->save();
+
+            if ($request->has('param_nama')) {
+                foreach ($request->param_nama as $idx => $nama) {
+                    if(!empty($nama)) {
+                        $identifikasiRisiko->parameterRisikos()->create([
+                            'nama' => $nama,
+                            'formula' => $request->param_formula[$idx] ?? '',
+                            'satuan' => $request->param_satuan[$idx] ?? '',
+                        ]);
+                    }
+                }
+            }
 
             // Simpan relasi
             if ($request->has('penyebab_risiko')) {
@@ -914,7 +933,7 @@ class CorporateRiskController extends Controller
                     if (!empty($kontrol)) $identifikasiRisiko->kontrolEksistings()->create(['kontrol_eksisting' => $kontrol]);
                 }
             }
-            
+
             if ($request->has('divisi_risk_ids')) {
                 $identifikasiRisiko->divisiRisks()->attach($request->divisi_risk_ids);
             }
@@ -946,9 +965,10 @@ class CorporateRiskController extends Controller
     public function edit($id)
     {
         $identifikasiRisiko = IdentifikasiRisiko::with([
-            'kontrolEksistings', 
-            'penyebabRisiko', 
-            'kris', 
+            'parameterRisikos',
+            'kontrolEksistings',
+            'penyebabRisiko',
+            'kris',
             'divisiRisks.unit',
             'divisiRisks.riskAnalysis',
             'divisiRisks.penyebabRisiko',
@@ -958,7 +978,7 @@ class CorporateRiskController extends Controller
         ])->findOrFail($id);
 
         $selectedPeriode = Periode::find($identifikasiRisiko->periode_id);
-    
+
         $kategoriRisiko = KategoriRisiko::pluck('title','id');
         $jenisRisiko = JenisRisiko::pluck('title','id');
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
@@ -966,6 +986,7 @@ class CorporateRiskController extends Controller
 
         $masterKris = MasterKRI::get();
         $kontrolEksistings = KontrolEksisting::get();
+        $taksonomiRisikos = TaksonomiRisiko::all();
 
         // Ambil daftar Divisi untuk filter modal
         $units = Unit::where('unit_type_id', 1)->orderBy('name')->get();
@@ -975,9 +996,9 @@ class CorporateRiskController extends Controller
         $divisiRisks = collect();
 
         return view('corporate-risk.edit', compact(
-            'identifikasiRisiko', 'kategoriRisiko', 'jenisKontrolEksistings', 
-            'penilaianEfektifitasKontrols', 'jenisRisiko', 'selectedPeriode', 
-            'divisiRisks', 'units', 'apUnits', 'masterKris', 'kontrolEksistings'
+            'identifikasiRisiko', 'kategoriRisiko', 'jenisKontrolEksistings',
+            'penilaianEfektifitasKontrols', 'jenisRisiko', 'selectedPeriode',
+            'divisiRisks', 'units', 'apUnits', 'masterKris', 'kontrolEksistings', 'taksonomiRisikos'
         ));
     }
 
@@ -986,7 +1007,7 @@ class CorporateRiskController extends Controller
         $validated = $request->validate([
             'periode_id' => 'required|exists:periodes,id',
             'target_capaian_kinerja' => 'required|string',
-            'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
+            // 'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
             'penyebab_risiko' => 'required|array',
@@ -1009,12 +1030,16 @@ class CorporateRiskController extends Controller
             $waktuMulai = $request->perkiraan_waktu_mulai_terpapar_risiko ? Carbon::createFromFormat('d/m/Y', $request->perkiraan_waktu_mulai_terpapar_risiko)->format('Y-m-d') : null;
             $waktuSelesai = $request->perkiraan_waktu_selesai_terpapar_risiko ? Carbon::createFromFormat('d/m/Y', $request->perkiraan_waktu_selesai_terpapar_risiko)->format('Y-m-d') : null;
             $dataToUpdate = \Illuminate\Support\Arr::except($validated, ['divisi_risk_ids', 'ap_risk_ids', 'penyebab_risiko', 'key_risk_indicator', 'kontrol_eksisting']);
-            
+
             $identifikasiRisiko->fill($dataToUpdate);
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
             $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
-            
+            $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
+            $identifikasiRisiko->threshold_risk_limit = $this->cleanRupiah($request->threshold_risk_limit);
+            $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite);
+            $identifikasiRisiko->threshold_risk_tolerance = $this->cleanRupiah($request->threshold_risk_tolerance);
+
             $jenisRisiko = JenisRisiko::find($request->jenis_risiko_id);
             if ($jenisRisiko) {
                 $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
@@ -1022,40 +1047,102 @@ class CorporateRiskController extends Controller
 
             $identifikasiRisiko->save();
 
-            // Penyebab
-            $identifikasiRisiko->penyebabRisiko()->delete();
-            if ($request->has('penyebab_risiko')) {
-                foreach ($request->penyebab_risiko as $penyebab) {
-                    if (!empty($penyebab)) $identifikasiRisiko->penyebabRisiko()->create(['penyebab_risiko' => $penyebab]);
-                }
-            }
-            
-            $identifikasiRisiko->kris()->delete();
-            if ($request->has('key_risk_indicator')) {
-                for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
-                    if (!empty($request->key_risk_indicator[$i])) {
-                        $identifikasiRisiko->kris()->create([
-                            'kri_id' => 0,
-                            'kri' => $request->key_risk_indicator[$i],
-                            'satuan_kri' => $request->satuan_kri[$i] ?? null,
-                            'batas_aman' => $request->batas_aman[$i] ?? null,
-                            'batas_waspada' => $request->batas_waspada[$i] ?? null,
-                            'batas_bahaya' => $request->batas_bahaya[$i] ?? null,
-                        ]);
+            $savedParamIds = [];
+            if ($request->has('param_nama')) {
+                foreach ($request->param_nama as $key => $nama) {
+                    $dataParam = [
+                        'nama' => $nama,
+                        'formula' => $request->param_formula[$key] ?? '',
+                        'satuan' => $request->param_satuan[$key] ?? '',
+                    ];
+
+                    $paramId = $request->parameter_risiko_id[$key] ?? null;
+                    $exist = $identifikasiRisiko->parameterRisikos()->find($paramId);
+
+                    if ($exist) {
+                        $exist->update($dataParam);
+                        $savedParamIds[] = $exist->id;
+                    } else {
+                        $newParam = $identifikasiRisiko->parameterRisikos()->create($dataParam);
+                        $savedParamIds[] = $newParam->id;
                     }
                 }
             }
-            
+            $identifikasiRisiko->parameterRisikos()->whereNotIn('id', $savedParamIds)->delete();
+
+            // Penyebab
+            // $identifikasiRisiko->penyebabRisiko()->delete();
+            // if ($request->has('penyebab_risiko')) {
+            //     foreach ($request->penyebab_risiko as $penyebab) {
+            //         if (!empty($penyebab)) $identifikasiRisiko->penyebabRisiko()->create(['penyebab_risiko' => $penyebab]);
+            //     }
+            // }
+
+            $penyebabRisikoIds = [];
+            foreach ($request->penyebab_risiko as $penyebabRisikoId => $penyebabRisiko) {
+                $exist = $identifikasiRisiko->penyebabRisiko()->where('id', $penyebabRisikoId)->first();
+                if ($exist) {
+                    $exist->update([
+                        'penyebab_risiko' => $penyebabRisiko,
+                    ]);
+                } else {
+                    $exist = $identifikasiRisiko->penyebabRisiko()->create([
+                        'penyebab_risiko' => $penyebabRisiko,
+                    ]);
+                }
+                $penyebabRisikoIds[] = $exist->id;
+            }
+            $identifikasiRisiko->penyebabRisiko()->whereNotIn('id', $penyebabRisikoIds)->delete();
+
+            // $identifikasiRisiko->kris()->delete();
+            // if ($request->has('key_risk_indicator')) {
+            //     for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
+            //         if (!empty($request->key_risk_indicator[$i])) {
+            //             $identifikasiRisiko->kris()->create([
+            //                 'kri_id' => 0,
+            //                 'kri' => $request->key_risk_indicator[$i],
+            //                 'satuan_kri' => $request->satuan_kri[$i] ?? null,
+            //                 'batas_aman' => $request->batas_aman[$i] ?? null,
+            //                 'batas_waspada' => $request->batas_waspada[$i] ?? null,
+            //                 'batas_bahaya' => $request->batas_bahaya[$i] ?? null,
+            //             ]);
+            //         }
+            //     }
+            // }
+
+            $savedKriIds = [];
+            foreach ($request->key_risk_indicator as $key => $kri) {
+                $kriData = [
+                    'kri_id' => 0,
+                    'kri' => $kri,
+                    'satuan_kri' => $request->satuan_kri[$key] ?? '',
+                    'batas_aman' => $request->batas_aman[$key] ?? '',
+                    'batas_waspada' => $request->batas_waspada[$key] ?? '',
+                    'batas_bahaya' => $request->batas_bahaya[$key] ?? '',
+                ];
+
+                $existKri = $identifikasiRisiko->kris()->find($key);
+
+                if ($existKri) {
+                    $existKri->update($kriData);
+                    $savedKriIds[] = $existKri->id;
+                } else {
+                    $newKri = $identifikasiRisiko->kris()->create($kriData);
+                    $savedKriIds[] = $newKri->id;
+                }
+            }
+            $identifikasiRisiko->kris()->whereNotIn('id', $savedKriIds)->delete();
+
             $identifikasiRisiko->kontrolEksistings()->delete();
             if ($request->has('kontrol_eksisting')) {
                 foreach ($request->kontrol_eksisting as $kontrol) {
                     if (!empty($kontrol)) $identifikasiRisiko->kontrolEksistings()->create(['kontrol_eksisting' => $kontrol]);
                 }
             }
-            
+
             $identifikasiRisiko->divisiRisks()->sync($request->divisi_risk_ids ?? []);
             $identifikasiRisiko->apRisks()->sync($request->ap_risk_ids ?? []);
-            
+
             $action = $request->input('action', 'save');
             if ($action === 'savenext') {
                 return response()->json([
@@ -1078,6 +1165,9 @@ class CorporateRiskController extends Controller
         $user    = request()->user()->load('unit');
         $risikos = IdentifikasiRisiko::where('id', $id)
             ->with([
+              'taksonomiRisiko',
+              'penyebabRisikos',
+              'parameterRisikos',
               'riskAnalysis',
               'projectRisks.project',
               'projectRisks.projectRiskAnalisa',
@@ -1254,7 +1344,7 @@ class CorporateRiskController extends Controller
         ));
     }
 
-    
+
     public function doAnalisa(Request $request, $riskRegisterId)
     {
         $identifikasiRisiko = IdentifikasiRisiko::findOrFail($riskRegisterId);
@@ -1307,10 +1397,10 @@ class CorporateRiskController extends Controller
         $periode = $identifikasiRisiko->periode;
         $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
         if ($request->kategori_dampak == 'Kuantitatif') {
-            
+
             $risk_limit = 0;
 
-            
+
             if ($riskLimitPeriode) {
                 $risk_limit = $riskLimitPeriode->risk_limit;
                 $risk_tolerance = $riskLimitPeriode->risk_limit;
@@ -1443,7 +1533,7 @@ class CorporateRiskController extends Controller
 
         for ($i = 1; $i <= 4; $i++) {
             $nilaiProbResidual = $request->{'nilai_probabilitas_residual_q' . $i};
-            
+
             // Lanjutkan perhitungan hanya jika ada nilai probabilitas di kuartal ini
             if (!is_null($nilaiProbResidual) && $nilaiProbResidual !== '') {
                 if ($request->kategori_dampak == 'Kualitatif') {

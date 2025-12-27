@@ -34,10 +34,26 @@
                         <div class="col-12">
                             <div class="form-group form-floating">
                                 <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Sasaran" required>{{ old('target_capaian_kinerja') }}</textarea>
-                                <label for="target_capaian_kinerja">Sasaran</label>
+                                <label for="target_capaian_kinerja">Sasaran Risiko</label>
                             </div>
                         </div>
-                        <div class="col-12">
+
+                        <div class="col-md-12">
+                            <div class="form-group d-lg-flex">
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Danantara</label>
+                                <div class="w-100">
+                                    <select class="form-select select2" name="taksonomi_risiko_id" required>
+                                        <option value="">Pilih Taksonomi</option>
+                                        @foreach($taksonomiRisikos as $tax)
+                                            <option value="{{ $tax->id }}" {{ old('taksonomi_risiko_id', $projectRisk->taksonomi_risiko_id ?? '') == $tax->id ? 'selected' : '' }}>
+                                                {{ $tax->nama }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        {{-- <div class="col-12">
                             <div class="form-group d-lg-flex">
                                 <div class="form-floating flex-grow-1">
                                     <select class="form-select select2" id="jenis_risiko_id" name="jenis_risiko_id" required>
@@ -55,7 +71,7 @@
                                     <label for="jenis_risiko_id">Jenis Risiko T2 & T3 KBUMN</label>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="col-12">
                             <div class="form-group form-floating">
                                 <textarea class="form-control" id="peristiwa_risiko" name="peristiwa_risiko" rows="3"  placeholder="Peristiwa Risiko" required>{{ old('peristiwa_risiko') }}</textarea>
@@ -74,13 +90,89 @@
             </div>
         </div>
 
-        <!-- ::PenyebabRisiko Start -->
+        <!-- ::ParameeterRisiko Start -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
                             <span class="nav-item-circle">2</span>
+                        </span>
+                        <span class="h3 mb-0">Parameter Risiko</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="parameter-risiko-body">
+                        <div class="row g-2 mb-3 parameter-row-item">
+                            <div class="col-md-1 text-center d-flex justify-content-center align-items-center">
+                              <span class="number-pill-info">1</span>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input type="hidden" name="parameter_risiko_id[]">
+                                    <input type="text" class="form-control" name="param_nama[]" placeholder="Nama">
+                                    <label>Nama Parameter</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" name="param_formula[]" placeholder="Formula">
+                                    <label>Formula</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" name="param_satuan[]" placeholder="Satuan">
+                                    <label>Satuan</label>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-center">
+                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)"><i class="bx bx-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary rounded-pill p-2 float-end" id="add-parameter"><i class='bx bx-plus fs-5'></i></button>
+                </div>
+            </div>
+        </div>
+        <!-- ::ParameeterRisiko End -->
+
+        <!-- ::Threshold Start -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header stepper border-0 pb-0">
+                    <div class="nav-link active d-flex align-items-center p-0">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">3</span></span>
+                        <span class="h3 mb-0">Threshold</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Limit</label>
+                            <input type="text" class="form-control rupiah-input" name="threshold_risk_limit" value="{{ 0 }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Appetite</label>
+                            <input type="text" class="form-control rupiah-input" name="threshold_risk_appetite" value="{{ 0 }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Tolerance</label>
+                            <input type="text" class="form-control rupiah-input" name="threshold_risk_tolerance" value="{{ 0 }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ::Threshold End -->
+
+        <!-- ::PenyebabRisiko Start -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header stepper border-0 pb-0">
+                    <div class="nav-link active d-flex align-items-center p-0">
+                        <span class="nav-item-circle-parent">
+                            <span class="nav-item-circle">4</span>
                         </span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
@@ -124,7 +216,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">3</span>
+                            <span class="nav-item-circle">5</span>
                         </span>
                         <span class="h3 mb-0">Key Risk Indicator</span>
                     </div>
@@ -450,6 +542,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
     function removeRow(event) {
         let row = $(event.target).closest('.row');
@@ -474,7 +567,44 @@
     }
 
     $(document).ready(function() {
-        try {
+      $('.select2').select2({
+          width: '100%',
+      });
+
+      $('.rupiah-input').inputmask({
+          alias: 'numeric',
+          groupSeparator: '.',
+          autoGroup: true,
+          digits: 0,
+          digitsOptional: false,
+          prefix: 'Rp ',
+          placeholder: '0',
+          rightAlign: false,
+          autoUnmask: true,
+          removeMaskOnSubmit: true,
+          min: 0,
+          allowMinus: false,
+          onKeyDown: function(e) {
+          if (e.key === 'Backspace' || e.keyCode === 8) {
+              // tunda eksekusi sampai mask selesai di-apply
+              setTimeout(() => {
+                  const unmasked = this.inputmask.unmaskedvalue();
+                  // kalau masih ada angka tersisa
+                  if (unmasked.length > 0) {
+                  // cek posisi cursor
+                  const pos = this.selectionStart;
+                  if (pos === 0) {
+                      // pindahkan ke paling kanan
+                      const end = this.value.length;
+                      this.setSelectionRange(end, end);
+                  }
+                  }
+              }, 0);
+              }
+          }
+      });
+
+      try {
             const urlParams = new URLSearchParams(window.location.search);
             const penyebabRisikoFromUrl = urlParams.get('penyebab_risiko');
 
@@ -543,6 +673,33 @@
         } else {
             console.error('Element #peristiwa_risiko tidak ditemukan.');
         }
+
+        $('#add-parameter').click(function() {
+            let rowIdx = $('.parameter-row-item').length + 1;
+            let html = `
+            <div class="row g-2 mb-3 parameter-row-item">
+                <div class="col-md-1 text-center d-flex justify-content-center align-items-center">
+                  <span class="number-pill-info">${rowIdx}</span>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-floating">
+                        <input type="hidden" name="parameter_risiko_id[]" value="">
+                        <input type="text" class="form-control" name="param_nama[]" placeholder="Nama">
+                        <label>Nama Parameter</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-floating"><input type="text" class="form-control" name="param_formula[]" placeholder="Formula"><label>Formula</label></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-floating"><input type="text" class="form-control" name="param_satuan[]" placeholder="Satuan"><label>Satuan</label></div>
+                </div>
+                <div class="col-auto d-flex align-items-center">
+                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)"><i class="bx bx-trash"></i></button>
+                </div>
+            </div>`;
+            $('#parameter-risiko-body').append(html);
+        });
 
         $('#add-column').click(function() {
             row++;
@@ -783,6 +940,79 @@
                 $('#kontrol-eksisting-body .btn-icon-danger').prop('disabled', false);
             }
         });
+
+        function getUnmaskedValue(selector) {
+            let val = $(selector).inputmask('unmaskedvalue');
+            return parseFloat(val) || 0;
+        }
+
+        function setMaskedValue(element, value) {
+            $(element).val(value).trigger('input');
+        }
+
+        // Validasi hierarki: Limit < Appetite < Tolerance
+        $('input[name="threshold_risk_limit"], input[name="threshold_risk_appetite"], input[name="threshold_risk_tolerance"]').on('change', function() {
+            let limit = getUnmaskedValue('input[name="threshold_risk_limit"]');
+            let appetite = getUnmaskedValue('input[name="threshold_risk_appetite"]');
+            let tolerance = getUnmaskedValue('input[name="threshold_risk_tolerance"]');
+
+            const targetName = $(this).attr('name');
+
+            // Cek jika Appetite <= Limit
+            if (targetName === 'threshold_risk_appetite' && appetite > 0 && appetite <= limit) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Batas Nilai Tidak Valid',
+                    text: 'Nilai Risk Appetite harus lebih besar dari Risk Limit (Rp ' + limit.toLocaleString('id-ID') + ').',
+                });
+                // Set nilai minimal: Limit + 1
+                setMaskedValue(this, limit + 1);
+                return;
+            }
+
+            // Cek jika Tolerance <= Appetite
+            if (targetName === 'threshold_risk_tolerance' && tolerance > 0 && tolerance <= appetite) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Batas Nilai Tidak Valid',
+                    text: 'Nilai Risk Tolerance harus lebih besar dari Risk Appetite (Rp ' + appetite.toLocaleString('id-ID') + ').',
+                });
+                // Set nilai minimal: Appetite + 1
+                setMaskedValue(this, appetite + 1);
+                return;
+            }
+
+            // Cek jika Tolerance <= Limit (kasus jika Appetite nol)
+            if (targetName === 'threshold_risk_tolerance' && appetite === 0 && tolerance > 0 && tolerance <= limit) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Batas Nilai Tidak Valid',
+                    text: 'Nilai Risk Tolerance harus lebih besar dari Risk Limit (Rp ' + limit.toLocaleString('id-ID') + ').',
+                });
+                setMaskedValue(this, limit + 1);
+                return;
+            }
+
+            // Cek jika Limit diubah menjadi lebih besar dari Appetite/Tolerance yang sudah ada
+            if (targetName === 'threshold_risk_limit') {
+                if (appetite > 0 && limit >= appetite) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Penyesuaian Nilai',
+                        text: 'Risk Limit tidak boleh melampaui Appetite. Nilai Appetite dan Tolerance akan disesuaikan otomatis.',
+                    });
+                    setMaskedValue('input[name="threshold_risk_appetite"]', limit + 1);
+                    setMaskedValue('input[name="threshold_risk_tolerance"]', limit + 2);
+                } else if (tolerance > 0 && limit >= tolerance) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Penyesuaian Nilai',
+                        text: 'Risk Limit tidak boleh melampaui Tolerance. Nilai Tolerance akan disesuaikan otomatis.',
+                    });
+                    setMaskedValue('input[name="threshold_risk_tolerance"]', limit + 1);
+                }
+            }
+        });
     });
 
     function removeKontrolRow(event) {
@@ -839,7 +1069,7 @@ $(document).ready(function() {
         $('#tabelRisikoDivisi .pilih-risiko:checked').each(function() {
             const riskId = $(this).val();
             currentlyChecked.add(riskId);
-            
+
             if (!selectedRisks.some(risk => risk.id === riskId)) {
                 const rawPenyebab = $(this).data('penyebab');
                 selectedRisks.push({
@@ -858,7 +1088,7 @@ $(document).ready(function() {
             if (checkboxExistsInModal) {
                 return currentlyChecked.has(risk.id);
             }
-            return true; 
+            return true;
         });
 
         updateSelectedRisksTable();
@@ -1000,7 +1230,7 @@ $(document).ready(function() {
             if (checkboxExistsInModal) {
                 return currentlyChecked.has(risk.id);
             }
-            return true; 
+            return true;
         });
 
         updateSelectedRisksApTable();
@@ -1019,7 +1249,7 @@ $(document).ready(function() {
         selectedRisksAp.forEach(function(risk, index) {
             const count = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab.length : 1;
             const firstPenyebab = (risk.penyebab && risk.penyebab.length > 0) ? risk.penyebab[0] : '-';
-            const detailUrl = `/risk-register-ap/${risk.id}/view`; 
+            const detailUrl = `/risk-register-ap/${risk.id}/view`;
 
             let html = `
                 <tr>

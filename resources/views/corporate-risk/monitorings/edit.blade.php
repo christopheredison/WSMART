@@ -242,6 +242,197 @@
             </div>
         </div>
 
+        @php
+            use Carbon\Carbon;
+            // Asumsi $month dan $tahun dikirim dari controller
+            $dateCurrent = Carbon::create($tahun, $month, 1);
+            $dateM1 = $dateCurrent->copy()->subMonth();
+            $dateM2 = $dateCurrent->copy()->subMonths(2);
+        @endphp
+        <div class="col-12">
+            <div class="divider my-3 my-md-5">
+                <div class="divider-text">
+                    <h4 class="mb-0 ff-heading-sm">Informasi Taksonomi & Parameter</h4>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3 gap-2">
+                                <div class="lead__icon bg-primary-subtle p-2 rounded-pill">
+                                    <i class='bx bx-category fs-3 m-0 text-primary'></i>
+                                </div>
+                                <h5 class="card-title mb-0">Taksonomi Danantara</h5>
+                            </div>
+                            <div class="p-3 bg-light rounded border-start border-primary border-4">
+                                <span class="fw-bold text-dark">{{ $risk->taksonomiRisiko->nama ?? '-' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3 gap-2">
+                                <div class="lead__icon bg-primary-subtle p-2 rounded-pill">
+                                    <i class='bx bx-list-ul fs-3 m-0 text-primary'></i>
+                                </div>
+                                <h5 class="card-title mb-0">Daftar Parameter Risiko</h5>
+                            </div>
+
+                            <div class="table-responsive p-0">
+                                <table class="table table-sm table-hover border">
+                                    <thead class="table-light text-uppercase">
+                                        <tr>
+                                            <th class="text-center" style="width: 50px;">No</th>
+                                            <th>Nama Parameter</th>
+                                            <th>Formula</th>
+                                            <th class="text-center">Satuan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($risk->parameterRisikos as $param)
+                                            <tr>
+                                                <td class="text-center align-middle font-monospace">{{ $loop->iteration }}</td>
+                                                <td class="align-middle fw-bold text-dark">{{ $param->nama }}</td>
+                                                <td class="align-middle text-muted">
+                                                    <code class="px-2 py-1 bg-light rounded text-danger small">{{ $param->formula ?: '-' }}</code>
+                                                </td>
+                                                <td class="text-center align-middle">
+                                                    <span class="badge bg-info-subtle text-info px-3">{{ $param->satuan ?: '-' }}</span>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="4" class="text-center py-4 text-muted">Tidak ada parameter risiko yang terdaftar.</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="divider my-3 my-md-5">
+                <div class="divider-text">
+                    <h4 class="mb-0 ff-heading-sm">Monitoring Nilai Aktual</h4>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="text-muted fw-bold mb-4 small text-uppercase text-center">Nilai Threshold</h5>
+                            <div class="row text-center g-3 mb-4">
+                                <div class="col-md-4 border-end">
+                                    <div class="text-success small fw-bold mb-1">Risk Limit (Aman)</div>
+                                    <div class="fs-4 fw-bolder text-success">Rp {{ number_format($risk->threshold_risk_limit, 0, ',', '.') }}</div>
+                                </div>
+                                <div class="col-md-4 border-end">
+                                    <div class="text-warning small fw-bold mb-1">Risk Appetite (Siaga)</div>
+                                    <div class="fs-4 fw-bolder text-warning">Rp {{ number_format($risk->threshold_risk_appetite, 0, ',', '.') }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-danger small fw-bold mb-1">Risk Tolerance (Bahaya)</div>
+                                    <div class="fs-4 fw-bolder text-danger">Rp {{ number_format($risk->threshold_risk_tolerance, 0, ',', '.') }}</div>
+                                </div>
+                            </div>
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Aktual ({{ $dateCurrent->translatedFormat('F Y') }})</label>
+                                    <input type="text" class="form-control inputmask-rupiah aktual-trigger border-primary shadow-sm"
+                                          name="aktual_current" id="aktual_current"
+                                          value="{{ $riskMonitoring->aktual_current ?? 0 }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-muted small">Bulan -1 ({{ $dateM1->translatedFormat('F Y') }})</label>
+                                    <input type="text" class="form-control inputmask-rupiah border-light bg-light"
+                                          name="aktual_month_1"
+                                          value="{{ $riskMonitoring->aktual_month_1 ?? ($monitoringM1->aktual_current ?? 0) }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-muted small">Bulan -2 ({{ $dateM2->translatedFormat('F Y') }})</label>
+                                    <input type="text" class="form-control inputmask-rupiah border-light bg-light"
+                                          name="aktual_month_2"
+                                          value="{{ $riskMonitoring->aktual_month_2 ?? ($monitoringM2->aktual_current ?? 0) }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Status Monitoring</label>
+                                    <div id="status-badge-container" class="p-2 rounded text-center fw-bold fs-6 border" style="background: #fdfdfd; min-height: 40px;">
+                                        MENUNGGU INPUT...
+                                    </div>
+                                    <input type="hidden" name="aktual_status" id="aktual_status_hidden">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="pengendalian-section" class="col-12 d-none">
+            <div class="divider my-3 my-md-5">
+                <div class="divider-text">
+                    <h4 class="mb-0 ff-heading-sm text-danger">Rencana Pengendalian Risiko</h4>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card border-danger">
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0" id="table-pengendalian">
+                                  <thead class="bg-light">
+                                      <tr>
+                                          <th width="5%" class="text-center py-3">No</th>
+                                          <th width="25%" class="py-3">Parameter Risiko</th>
+                                          <th class="py-3">Rencana Pengendalian</th>
+                                          <th class="py-3">Realisasi Pengendalian</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      @foreach($risk->parameterRisikos as $param)
+                                      @php
+                                          // 1. Cek apakah ada data pengendalian untuk bulan yang sedang diedit saat ini
+                                          $currentP = $risk->lastMonitoringRisiko ?
+                                                      $risk->lastMonitoringRisiko->pengendalians->where('parameter_id', $param->id)->first() : null;
+
+                                          // 2. Jika tidak ada, gunakan data historis terakhir yang ditemukan di controller
+                                          $rencanaVal = $currentP->rencana_pengendalian ?? ($historicalPengendalians->get($param->id)->rencana_pengendalian ?? '');
+                                          $realisasiVal = $currentP->realisasi_pengendalian ?? ($historicalPengendalians->get($param->id)->realisasi_pengendalian ?? '');
+                                      @endphp
+                                      <tr>
+                                          <td class="text-center">{{ $loop->iteration }}</td>
+                                          <td class="bg-light">
+                                              <input type="hidden" name="pengendalian_parameter_id[]" value="{{ $param->id }}">
+                                              <strong>{{ $param->nama }}</strong>
+                                          </td>
+                                          <td>
+                                              <textarea class="form-control shadow-none" name="rencana_pengendalian[]" rows="2">{{ $rencanaVal }}</textarea>
+                                          </td>
+                                          <td>
+                                              <textarea class="form-control shadow-none" name="realisasi_pengendalian[]" rows="2">{{ $realisasiVal }}</textarea>
+                                          </td>
+                                      </tr>
+                                      @endforeach
+                                  </tbody>
+                              </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
@@ -387,11 +578,12 @@
                                             {{-- <a href="javascript:void(0)" class="hover-underline px-1 btn-action" data-action="update-kri" data-id="{{ $kriProject->id }}">Update KRI</a> --}}
                                             <div class="text-center">
                                             <a href="javascript:void(0)"
-                                               class="btn-input-icon btn-action"
-                                               data-action="update-kri"
-                                               data-bs-toggle="tooltip"
-                                               title="Update KRI"
-                                               data-id="{{ $kriProject->id }}">
+                                              class="btn-input-icon btn-action"
+                                              data-action="update-kri"
+                                              data-bs-toggle="tooltip"
+                                              title="Update KRI"
+                                              data-id="{{ $kriProject->id }}"
+                                            >
                                                 <span class="bx bx-chart text-primary"></span>
                                             </a>
                                             </div>
@@ -701,6 +893,46 @@ function submitForm(isClosed) {
 }
 
 $(document).ready(function() {
+    const thresholds = {
+        limit: parseFloat("{{ $risk->threshold_risk_limit }}") || 0,
+        appetite: parseFloat("{{ $risk->threshold_risk_appetite }}") || 0,
+        tolerance: parseFloat("{{ $risk->threshold_risk_tolerance }}") || 0
+    };
+
+    function updateMonitoringStatus() {
+        const val = $('#aktual_current').val();
+        // Bersihkan mask jika perlu (atau gunakan autoUnmask dari inputmask)
+        const aktual = parseFloat(val) || 0;
+
+        let status = "Aman";
+        let colorClass = "border-success text-success bg-success-subtle";
+
+        if (aktual > thresholds.tolerance) {
+            status = "Bahaya";
+            colorClass = "border-danger text-danger bg-danger-subtle";
+        } else if (aktual >= thresholds.appetite) {
+            status = "Siaga";
+            colorClass = "border-warning text-warning bg-warning-subtle";
+        }
+
+        // Update Tampilan Badge Status
+        $('#status-badge-container').text(status).removeClass().addClass('p-2 rounded text-center fw-bold fs-6 border ' + colorClass);
+        $('#aktual_status_hidden').val(status);
+
+        // Tampilkan tabel pengendalian jika status Siaga/Bahaya
+        if (status === "Siaga" || status === "Bahaya") {
+            $('#pengendalian-section').removeClass('d-none').addClass('animate__animated animate__fadeIn');
+        } else {
+            $('#pengendalian-section').addClass('d-none');
+        }
+    }
+
+    // Trigger saat input aktual berubah
+    $('#aktual_current').on('change keyup', updateMonitoringStatus);
+
+    // Jalankan saat pertama load
+    updateMonitoringStatus();
+
     // Simpan nilai skala dampak inherent dan probabilitas inherent
     const skalaDampakInherent = {{ $riskAnalysis->skalaDampakObj?->tingkat ?? 0 }};
     const nilaiProbabilitasInherent = {{ $riskAnalysis->nilai_probabilitas ?? 0 }};

@@ -414,7 +414,6 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
     {
         $period = Periode::findOrfail(request()->route('period'));
         $user = request()->user();
-        $currentYear = $period->tahun;
         $quarter = request()->input('quarter') ?: 1;
         $month = request()->input('month') ?: '';
 
@@ -445,7 +444,8 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $unit = $risk->unit;
         $periode = $risk->periode;
-        $currentYear = date('Y');
+        // $currentYear = date('Y');
+        $currentYear = $period->tahun;
 
         $currentDate = \Carbon\Carbon::create($currentYear, $month, 1);
         $dateM1 = $currentDate->copy()->subMonth();
@@ -536,9 +536,6 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         }
 
         $quarter = request()->input('quarter') ?: 1;
-        $risk = $period->identifikasiRisikos()
-            ->findOrFail(request()->route('monitoring'));
-
         $risk = $period->identifikasiRisikos()
         ->with([
             'taksonomiRisiko',

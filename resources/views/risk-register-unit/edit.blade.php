@@ -675,6 +675,7 @@
                 }
             }
         });
+
         const masterKris = @json($masterKris->keyBy('id'));
         const kontrolExistings = @json($kontrolEksistings->keyBy('id'));
         // Add Column Penyebab Risiko
