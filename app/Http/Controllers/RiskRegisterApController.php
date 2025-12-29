@@ -36,6 +36,7 @@ use App\Models\ApprovalLog;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalStep;
 use App\Models\DataBatchNotes;
+use App\Models\PerlakuanDampakRisikoUnit;
 
 class RiskRegisterApController extends Controller
 {
@@ -449,6 +450,8 @@ class RiskRegisterApController extends Controller
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
             'wbs' => 'nullable|string',
+            'dampak_risiko' => 'required|array|min:1',
+            'dampak_risiko.*' => 'required|string',
             'penyebab_risiko' => 'required|array',
             'penyebab_risiko.*' => 'required|string',
             'key_risk_indicator' => 'nullable|array',
@@ -563,6 +566,16 @@ class RiskRegisterApController extends Controller
             $identifikasiRisiko->riskAnalysis()->create([]);
             $identifikasiRisiko->rencanaPerlakuanRisiko()->create([]);
 
+            // Simpan dampak risiko
+            if ($request->has('dampak_risiko') && is_array($request->dampak_risiko)) {
+                foreach ($request->dampak_risiko as $dampak) {
+                    $identifikasiRisiko->dampakRisikos()->create([
+                        'risiko_id' => $identifikasiRisiko->id,
+                        'dampak_risiko' => $dampak,
+                    ]);
+                }
+            }
+
             // Simpan penyebab risiko
             if ($request->has('penyebab_risiko') && is_array($request->penyebab_risiko)) {
                 foreach ($request->penyebab_risiko as $penyebab) {
@@ -576,24 +589,6 @@ class RiskRegisterApController extends Controller
             }
 
             // Simpan KRI
-            // if ($request->has('master_kri_id') && is_array($request->master_kri_id)) {
-            //     $masterKriObj = MasterKRI::whereIn('id', $request->master_kri_id)->get()->keyBy('id');
-
-            //     foreach ($request->master_kri_id as $masterKriId) {
-            //         if (!empty($masterKriId)) {
-            //             $kriObj = $masterKriObj[$masterKriId];
-            //             $identifikasiRisiko->kris()->create([
-            //                 'kri_id' => $masterKriId,  // Ubah kri_id menjadi master_kri_id jika diperlukan
-            //                 'risiko_id' => $identifikasiRisiko->id,  // Tetap sertakan risiko_id
-            //                 'kri' => $kriObj->kri,
-            //                 'satuan_kri' => $kriObj->satuan_kri,
-            //                 'batas_aman' => $kriObj->batas_aman,
-            //                 'batas_waspada' => $kriObj->batas_waspada,
-            //                 'batas_bahaya' => $kriObj->batas_bahaya,
-            //             ]);
-            //         }
-            //     }
-            // }
             if ($request->has('key_risk_indicator') && is_array($request->key_risk_indicator)) {
                 for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
                     if (!empty($request->key_risk_indicator[$i])) {
@@ -728,6 +723,7 @@ class RiskRegisterApController extends Controller
     {
         $identifikasiRisiko = IdentifikasiRisiko::with([
             'penyebabRisiko.perlakuanPenyebabRisiko',
+            'dampakRisikos.perlakuanDampakRisikos',
             'kris',
             'riskAnalysis',
             'peristiwaRisiko',
@@ -1154,7 +1150,12 @@ class RiskRegisterApController extends Controller
         $unitId = $user->unit_id;
 
         // Ambil data identifikasi risiko
-        $identifikasiRisiko = IdentifikasiRisiko::with(['kontrolEksistings', 'penyebabRisiko', 'kris'])->findOrFail($id);
+        $identifikasiRisiko = IdentifikasiRisiko::with([
+          'dampakRisikos',
+          'kontrolEksistings',
+          'penyebabRisiko',
+          'kris',
+        ])->findOrFail($id);
 
         // Ambil periode yang dipilih
         $selectedPeriode = Periode::find($identifikasiRisiko->periode_id);
@@ -1203,6 +1204,8 @@ class RiskRegisterApController extends Controller
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
             'wbs' => 'nullable|string',
+            'dampak_risiko' => 'required|array|min:1',
+            'dampak_risiko.*' => 'required|string',
             'penyebab_risiko' => 'required|array',
             'penyebab_risiko.*' => 'required|string',
             'key_risk_indicator' => 'nullable|array',
@@ -1277,40 +1280,61 @@ class RiskRegisterApController extends Controller
                 }
             }
 
-            // Hapus penyebab risiko lama dan buat yang baru
-            $identifikasiRisiko->penyebabRisiko()->delete();
+            $dampakRisikoIds = [];
+            foreach ($request->dampak_risiko as $dampakRisikoId => $dampakRisiko) {
+                $exist = $identifikasiRisiko->dampakRisikos()->where('id', $dampakRisikoId)->first();
 
-            // Simpan penyebab risiko
-            if ($request->has('penyebab_risiko') && is_array($request->penyebab_risiko)) {
-                foreach ($request->penyebab_risiko as $penyebab) {
-                    if (!empty($penyebab)) {
-                        $identifikasiRisiko->penyebabRisiko()->create([
-                            'penyebab_risiko' => $penyebab,
-                            'risiko_id' => $identifikasiRisiko->id,
-                        ]);
-                    }
+                if ($exist) {
+                    $exist->update([
+                        'dampak_risiko' => $dampakRisiko,
+                    ]);
+                } else {
+                    $exist = $identifikasiRisiko->dampakRisikos()->create([
+                        'dampak_risiko' => $dampakRisiko
+                    ]);
+                }
+                $dampakRisikoIds[] = $exist->id;
+            }
+            $identifikasiRisiko->dampakRisikos()->whereNotIn('id', $dampakRisikoIds)->delete();
+
+            $penyebabRisikoIds = [];
+            foreach ($request->penyebab_risiko as $penyebabRisikoId => $penyebabRisiko) {
+                $exist = $identifikasiRisiko->penyebabRisiko()->where('id', $penyebabRisikoId)->first();
+                if ($exist) {
+                    $exist->update([
+                        'penyebab_risiko' => $penyebabRisiko,
+                    ]);
+                } else {
+                    $exist = $identifikasiRisiko->penyebabRisiko()->create([
+                        'penyebab_risiko' => $penyebabRisiko,
+                    ]);
+                }
+                $penyebabRisikoIds[] = $exist->id;
+            }
+            $identifikasiRisiko->penyebabRisiko()->whereNotIn('id', $penyebabRisikoIds)->delete();
+
+            $savedKriIds = [];
+            foreach ($request->key_risk_indicator as $key => $kri) {
+                $kriData = [
+                    'kri_id' => 0,
+                    'kri' => $kri,
+                    'satuan_kri' => $request->satuan_kri[$key] ?? '',
+                    'batas_aman' => $request->batas_aman[$key] ?? '',
+                    'batas_waspada' => $request->batas_waspada[$key] ?? '',
+                    'batas_bahaya' => $request->batas_bahaya[$key] ?? '',
+                ];
+
+                $existKri = $identifikasiRisiko->kris()->find($key);
+
+                if ($existKri) {
+                    $existKri->update($kriData);
+                    $savedKriIds[] = $existKri->id;
+                } else {
+                    $newKri = $identifikasiRisiko->kris()->create($kriData);
+                    $savedKriIds[] = $newKri->id;
                 }
             }
-
-            // Hapus KRI lama dan buat yang baru
-            $identifikasiRisiko->kris()->delete();
-
-            // Simpan KRI
-            if ($request->has('key_risk_indicator') && is_array($request->key_risk_indicator)) {
-                for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
-                    if (!empty($request->key_risk_indicator[$i])) {
-                        $identifikasiRisiko->kris()->create([
-                            'kri_id' => 0, // Karena tidak menggunakan master_kri_id lagi
-                            'risiko_id' => $identifikasiRisiko->id,
-                            'kri' => $request->key_risk_indicator[$i],
-                            'satuan_kri' => $request->satuan_kri[$i] ?? null,
-                            'batas_aman' => $request->batas_aman[$i] ?? null,
-                            'batas_waspada' => $request->batas_waspada[$i] ?? null,
-                            'batas_bahaya' => $request->batas_bahaya[$i] ?? null,
-                        ]);
-                    }
-                }
-            }
+            $identifikasiRisiko->kris()->whereNotIn('id', $savedKriIds)->delete();
 
             // Tentukan redirect berdasarkan action
             $action = $request->input('action', 'save');
@@ -1913,7 +1937,13 @@ class RiskRegisterApController extends Controller
     {
         $user    = request()->user()->load('unit');
         $risikos = IdentifikasiRisiko::where('id', $id)
-            ->with('riskAnalysis')
+            ->with([
+              // 'taksonomiRisiko',
+              'dampakRisikos',
+              'penyebabRisikos',
+              // 'parameterRisikos',
+              'riskAnalysis',
+            ])
             ->get();
 
         $currentRiskMaps = $risikos->pluck('currentRiskMaps');

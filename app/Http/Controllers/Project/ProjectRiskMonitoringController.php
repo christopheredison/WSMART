@@ -821,42 +821,41 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $perlakuanDampakReq = json_decode($request->perlakuan_dampak_risikos, true);
         if($perlakuanDampakReq) {
             foreach ($perlakuanDampakReq as $id => $item) {
+                $perlakuanModel = \App\Models\PerlakuanDampakRisiko::find($id);
+                if (!$perlakuanModel) continue;
+
                 $start = null;
                 if (!empty($item['timeline_perlakuan_risiko'])) {
                     try {
                         $start = \Carbon\Carbon::createFromFormat('d/m/Y', $item['timeline_perlakuan_risiko'])->format('Y-m-d');
-                    } catch(\Exception $e) {}
+                    } catch(\Exception $e) {
+                        $start = \Carbon\Carbon::parse($item['timeline_perlakuan_risiko'])->format('Y-m-d');
+                    }
                 }
 
-                $monitoringDampak = $projectMonitoring->perlakuanDampakMonitorings()->create([
+                $projectMonitoring->perlakuanDampakMonitorings()->create([
                     'perlakuan_dampak_id' => $id,
+                    'dampak_risiko_id' => $perlakuanModel->dampak_risiko_id,
                     'progress_rencana_perlakuan_risiko' => $item['progress_rencana_perlakuan_risiko'] ?? 0,
                     'realisasi_biaya_perlakuan_risiko' => $this->cleanRupiah($item['realisasi_biaya_perlakuan_risiko'] ?? 0),
                     'deskripsi_perlakuan_risiko' => $item['deskripsi_perlakuan_risiko'] ?? '',
                     'timeline_perlakuan_risiko_start' => $start,
                     'timeline_perlakuan_risiko_end' => $start,
                 ]);
-
-                // 2. Simpan Dokumen Dampak
-                if ($documentFiles = $request->{'doc_impact_' . $id}) {
-                    foreach ($documentFiles as $newId => $file) {
-                        $path = $file->store('impact-monitoring-documents');
-                        // Logika simpan ke tabel dokumen perlakuan dampak
-                        // $monitoringDampak->documents()->create([...]);
-                    }
-                }
             }
         }
 
         $perlakuanPenyebabRequests = json_decode($request->perlakuan_penyebab_risikos, true);
         foreach ($perlakuanPenyebabRequests as $id => $perlakuanPenyebabRequest) {
-            if (is_string($perlakuanPenyebabRequest['timeline_perlakuan_risiko'])) {
-                $perlakuanPenyebabRequest['timeline_perlakuan_risiko'] = explode(' - ', $perlakuanPenyebabRequest['timeline_perlakuan_risiko']);
+            $start = null;
+            if (!empty($perlakuanPenyebabRequest['timeline_perlakuan_risiko'])) {
+                try {
+                    $start = \Carbon\Carbon::createFromFormat('d/m/Y', $perlakuanPenyebabRequest['timeline_perlakuan_risiko'])->format('Y-m-d');
+                } catch(\Exception $e) {
+                    $start = \Carbon\Carbon::parse($perlakuanPenyebabRequest['timeline_perlakuan_risiko'])->format('Y-m-d');
+                }
             }
 
-            if ($perlakuanPenyebabRequest['timeline_perlakuan_risiko'] && count($perlakuanPenyebabRequest['timeline_perlakuan_risiko']) === 1) {
-                $perlakuanPenyebabRequest['timeline_perlakuan_risiko'][] = $perlakuanPenyebabRequest['timeline_perlakuan_risiko'][0];
-            }
             $toCreate = [
                 'perlakuan_penyebab_id' => $id,
                 'progress_rencana_perlakuan_risiko' => $perlakuanPenyebabRequest['progress_rencana_perlakuan_risiko'] ?? null,
@@ -864,9 +863,10 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'deskripsi_perlakuan_risiko' => $perlakuanPenyebabRequest['deskripsi_perlakuan_risiko'] ?? null,
                 'jenis_program_rkap' => $perlakuanPenyebabRequest['jenis_program_rkap'] ?? null,
                 'jenis_program_rkap_id' => $perlakuanPenyebabRequest['jenis_program_rkap_id'] ?? null,
-                'timeline_perlakuan_risiko_start' => ($perlakuanPenyebabRequest['timeline_perlakuan_risiko'][0] ?? '') ? DateTime::createFromFormat('d/m/Y', $perlakuanPenyebabRequest['timeline_perlakuan_risiko'][0])->format('Y-m-d') : null,
-                'timeline_perlakuan_risiko_end' => ($perlakuanPenyebabRequest['timeline_perlakuan_risiko'][1] ?? '') ? DateTime::createFromFormat('d/m/Y', $perlakuanPenyebabRequest['timeline_perlakuan_risiko'][1])->format('Y-m-d') : null,
+                'timeline_perlakuan_risiko_start' => $start,
+                'timeline_perlakuan_risiko_end' => $start,
             ];
+
             $projectMonitoring->perlakuanPenyebabMonitorings()->create($toCreate);
 
             if ($documentFiles = $request->{'document_file_' . $id}) {

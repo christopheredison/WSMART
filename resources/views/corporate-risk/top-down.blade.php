@@ -53,7 +53,7 @@
                                 <select class="form-select select2" id="unit_id" name="unit_id" required>
                                     <option value="" selected disabled>Pilih Divisi / Anak Perusahaan</option>
                                     @foreach($units as $unit)
-                                        <option value="{{ $unit->id }}">{{ $unit->nama ?? $unit->name }}</option> 
+                                        <option value="{{ $unit->id }}">{{ $unit->nama ?? $unit->name }}</option>
                                     @endforeach
                                 </select>
                                 <label for="unit_id">Divisi / Anak Perusahaan</label>
@@ -88,11 +88,11 @@
                     <div class="row g-3 gx-md-5">
                         <div class="col-12">
                             <div class="form-group form-floating">
-                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Sasaran" required>{{ old('target_capaian_kinerja') }}</textarea>
-                                <label for="target_capaian_kinerja">Sasaran</label>
+                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Sasaran Risiko" required>{{ old('target_capaian_kinerja') }}</textarea>
+                                <label for="target_capaian_kinerja">Sasaran Risiko</label>
                             </div>
                         </div>
-                        <div class="col-12">
+                        {{-- <div class="col-12">
                             <div class="form-group d-lg-flex">
                                 <div class="form-floating flex-grow-1">
                                     <select class="form-select select2" id="jenis_risiko_id" name="jenis_risiko_id" required>
@@ -110,7 +110,7 @@
                                     <label for="jenis_risiko_id">Jenis Risiko T2 & T3 KBUMN</label>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="col-12">
                             <div class="form-group form-floating">
                                 <textarea class="form-control" id="peristiwa_risiko" name="peristiwa_risiko" rows="3"  placeholder="Peristiwa Risiko" required>{{ old('peristiwa_risiko') }}</textarea>
@@ -373,12 +373,12 @@
 
     $(document).ready(function() {
         try {
-            const urlParams = new URLSearchParams(window.location.search);            
+            const urlParams = new URLSearchParams(window.location.search);
             const penyebabRisikoFromUrl = urlParams.get('penyebab_risiko');
 
             if (penyebabRisikoFromUrl) {
                 const firstPenyebabInput = $('input[name="penyebab_risiko[]"]').first();
-                
+
                 if (firstPenyebabInput.length) {
                     firstPenyebabInput.val(penyebabRisikoFromUrl);
                 }
@@ -469,7 +469,7 @@
         $('#add-column-kri').click(function() {
             row++;
             const peristiwaRisikoId = $('#peristiwa_risiko').val();
-            
+
             let html = `
                 <div class="row g-2">
                     <div class="col-12 col-lg-11">
@@ -531,7 +531,7 @@
             row.find('[name="batas_waspada[]"]').val(kri.batas_waspada);
             row.find('[name="batas_bahaya[]"]').val(kri.batas_bahaya);
         });
-        
+
 
         //var today = new Date();
         //var endOfYear = new Date(today.getFullYear(), 11, 31);
@@ -627,7 +627,7 @@
             const data = new FormData(form[0]);
             const $clickedButton = $(this);
             const originalText = $clickedButton.html();
-            
+
             data.append('action', action);
 
             // Tampilkan konfirmasi sebelum mengirim request
@@ -644,7 +644,7 @@
                 if (result.isConfirmed) {
                     if (window.isSubmitting) return false;
                     window.isSubmitting = true;
-                    
+
                     // Tampilkan loading state dan nonaktifkan tombol
                     $clickedButton.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...');
                     $('.btn-action').prop('disabled', true);
@@ -677,14 +677,14 @@
                                     showConfirmButton: false,
                                     timer: 4500
                                 });
-                                
+
                             }
                         },
                         error: function(xhr) {
                             window.isSubmitting = false;
                             $('.btn-action').prop('disabled', false);
                             $clickedButton.html(originalText);
-                            
+
                             const errors = xhr.responseJSON.errors;
                             if (errors) {
                                 let message = '<ul>';
@@ -724,7 +724,7 @@
                 </div>
             `;
             $('#kontrol-eksisting-body').append(html);
-            
+
             // Enable all delete buttons when we have more than one row
             if ($('#kontrol-eksisting-body .row').length > 1) {
                 $('#kontrol-eksisting-body .btn-icon-danger').prop('disabled', false);
@@ -735,7 +735,7 @@
     function removeKontrolRow(event) {
         let row = $(event.target).closest('.row');
         row.remove();
-        
+
         // If only one row remains, disable its delete button
         if ($('#kontrol-eksisting-body .row').length === 1) {
             $('#kontrol-eksisting-body .btn-icon-danger').prop('disabled', true);

@@ -53,6 +53,16 @@ class IdentifikasiRisiko extends Model
     protected $guarded = [];
     protected $table = 'identifikasi_risikos';
 
+    public function perlakuanDampakRisikos()
+    {
+        return $this->hasMany(PerlakuanDampakRisikoUnit::class, 'risiko_id');
+    }
+
+    public function dampakRisikos()
+    {
+        return $this->hasMany(DampakRisikoUnit::class, 'risiko_id');
+    }
+
     public function penyebabRisiko()
     {
         return $this->hasMany(PenyebabRisiko::class, 'risiko_id');

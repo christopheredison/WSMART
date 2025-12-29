@@ -52,6 +52,11 @@ class UnitRiskMonitoring extends Model
         return $this->hasMany(PerlakuanPenyebabUnitMonitoring::class);
     }
 
+    public function perlakuanDampakMonitorings()
+    {
+        return $this->hasMany(PerlakuanDampakMonitoringUnit::class, 'monitoring_id');
+    }
+
     public function opportunities()
     {
         return $this->hasMany(Opportunity::class);

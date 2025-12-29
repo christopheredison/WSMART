@@ -40,7 +40,10 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
     }
 
     public function index() {
-        $this->baseRouteParams = ['period' => request()->route('period')];
+        $this->baseRouteParams = [
+          'period' => request()->route('period'),
+          'unit_id' => request()->query('unit_id'),
+        ];
         $period = Periode::with('identifikasiRisikos.peristiwaRisiko')->findOrfail(request()->route('period'));
         $cb = fn ($fn) => $fn;
 
@@ -417,37 +420,82 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $quarter = request()->input('quarter') ?: 1;
         $month = request()->input('month') ?: '';
 
-        $risk = $period->identifikasiRisikos()->findOrFail(request()->route('monitoring'));
+        // $risk = $period->identifikasiRisikos()->findOrFail(request()->route('monitoring'));
 
-        $risk->load(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
-            $query->where('quarter', $quarter);
-            $query->where('month', $month);
-            $query->with([
-                'perlakuanPenyebabRisikos',
-                'perlakuanPenyebabMonitorings',
-                'kriUnitMonitorings',
-                'pengendalians'
-            ]);
-        }])->load(['penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
-            $query->select('perlakuan_penyebab_risiko_units.*', 'id as deskripsi_perlakuan_risiko', 'id as jenis_program_rkap', 'id as jenis_program_rkap_id', 'id as timeline_perlakuan_risiko');
-            $query->with(['lastMonitoring' => function ($query) use ($quarter, $month) {
-                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
-                    $query->where('quarter', $quarter);
-                    $query->where('month', $month);
-                });
-            }]);
-            $query->with(['perlakuanPenyebabMonitorings' => function ($query) {
-                $query->orderBy('created_at', 'desc');
-            }]);
-            $query->with(['documents']);
-        }])->load([
-          // 'taksonomiRisiko',
-          // 'parameterRisikos',
+        // $risk->load(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
+        //     $query->where('quarter', $quarter);
+        //     $query->where('month', $month);
+        //     $query->with([
+        //         'perlakuanPenyebabRisikos',
+        //         'perlakuanPenyebabMonitorings',
+        //         'kriUnitMonitorings',
+        //         'pengendalians'
+        //     ]);
+        // }])->load(['penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
+        //     $query->select('perlakuan_penyebab_risiko_units.*', 'id as deskripsi_perlakuan_risiko', 'id as jenis_program_rkap', 'id as jenis_program_rkap_id', 'id as timeline_perlakuan_risiko');
+        //     $query->with(['lastMonitoring' => function ($query) use ($quarter, $month) {
+        //         $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
+        //             $query->where('quarter', $quarter);
+        //             $query->where('month', $month);
+        //         });
+        //     }]);
+        //     $query->with(['perlakuanPenyebabMonitorings' => function ($query) {
+        //         $query->orderBy('created_at', 'desc');
+        //     }]);
+        //     $query->with(['documents']);
+        // }])->load([
+        //   // 'taksonomiRisiko',
+        //   // 'parameterRisikos',
+        // ]);
+
+        $risk = $period->identifikasiRisikos()
+            ->with([
+                'unit',
+                'periode',
+                'riskAnalysis',
+                'peristiwaRisiko',
+            ])
+            ->findOrFail(request()->route('monitoring'));
+
+        $risk->load([
+            'lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
+                $query->where('quarter', $quarter);
+                if ($month) $query->where('month', $month);
+                $query->with([
+                    'perlakuanPenyebabRisikos',
+                    'perlakuanPenyebabMonitorings',
+                    'kriUnitMonitorings',
+                    'pengendalians'
+                ]);
+            },
+            // Load Perlakuan Penyebab
+            'penyebabRisikos.perlakuanPenyebabRisikoUnit' => function ($query) use ($quarter, $month) {
+                $query->with(['lastMonitoring' => function ($q) use ($quarter, $month) {
+                    $q->whereHas('unitRiskMonitoring', function ($sq) use ($quarter, $month) {
+                        $sq->where('quarter', $quarter);
+                        if ($month) $sq->where('month', $month);
+                    });
+                }]);
+            },
+            // Load Perlakuan Dampak
+            'perlakuanDampakRisikos' => function ($query) use ($quarter, $month) {
+                $query->with([
+                    'picJabatan',
+                    'dampakRisikoUnit',
+                    'lastMonitoring' => function ($q) use ($quarter, $month) {
+                        $q->whereHas('unitRiskMonitoring', function ($sq) use ($quarter, $month) {
+                            $sq->where('quarter', $quarter);
+                            if ($month) $sq->where('month', $month);
+                        });
+                    }
+                ]);
+            },
+            // 'taksonomiRisiko',
+            // 'parameterRisikos',
         ]);
 
         $unit = $risk->unit;
         $periode = $risk->periode;
-        // $currentYear = date('Y');
         $currentYear = $period->tahun;
 
         // [HIDE] Template Dananatara
@@ -689,25 +737,55 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         //     }
         // }
 
+        $perlakuanDampakReq = json_decode($request->perlakuan_dampak_risikos, true);
+        if($perlakuanDampakReq) {
+            foreach ($perlakuanDampakReq as $id => $item) {
+                $perlakuanModel = \App\Models\PerlakuanDampakRisikoUnit::find($id);
+                if (!$perlakuanModel) continue;
+
+                $start = null;
+                if (!empty($item['timeline_perlakuan_risiko'])) {
+                    try {
+                        $start = \Carbon\Carbon::createFromFormat('d/m/Y', $item['timeline_perlakuan_risiko'])->format('Y-m-d');
+                    } catch(\Exception $e) {
+                        $start = \Carbon\Carbon::parse($item['timeline_perlakuan_risiko'])->format('Y-m-d');
+                    }
+                }
+
+                $projectMonitoring->perlakuanDampakMonitorings()->create([
+                    'perlakuan_dampak_id' => $id,
+                    'dampak_risiko_id' => $perlakuanModel->dampak_risiko_id,
+                    'progress_rencana_perlakuan_risiko' => $item['progress_rencana_perlakuan_risiko'] ?? 0,
+                    'realisasi_biaya_perlakuan_risiko' => $this->cleanRupiah($item['realisasi_biaya_perlakuan_risiko'] ?? 0),
+                    'deskripsi_perlakuan_risiko' => $item['deskripsi_perlakuan_risiko'] ?? '',
+                    'timeline_perlakuan_risiko_start' => $start,
+                    'timeline_perlakuan_risiko_end' => $start,
+                ]);
+            }
+        }
+
         $perlakuanPenyebabRequests = json_decode($request->perlakuan_penyebab_risikos, true);
         foreach ($perlakuanPenyebabRequests as $id => $perlakuanPenyebabRequest) {
-            if (is_string($perlakuanPenyebabRequest['timeline_perlakuan_risiko'])) {
-                $perlakuanPenyebabRequest['timeline_perlakuan_risiko'] = explode(' - ', $perlakuanPenyebabRequest['timeline_perlakuan_risiko']);
+            $start = null;
+            if (!empty($perlakuanPenyebabRequest['timeline_perlakuan_risiko'])) {
+                try {
+                    $start = \Carbon\Carbon::createFromFormat('d/m/Y', $perlakuanPenyebabRequest['timeline_perlakuan_risiko'])->format('Y-m-d');
+                } catch(\Exception $e) {
+                    $start = \Carbon\Carbon::parse($perlakuanPenyebabRequest['timeline_perlakuan_risiko'])->format('Y-m-d');
+                }
             }
 
-            if ($perlakuanPenyebabRequest['timeline_perlakuan_risiko'] && count($perlakuanPenyebabRequest['timeline_perlakuan_risiko']) === 1) {
-                $perlakuanPenyebabRequest['timeline_perlakuan_risiko'][] = $perlakuanPenyebabRequest['timeline_perlakuan_risiko'][0];
-            }
             $toCreate = [
                 'perlakuan_penyebab_risiko_unit_id' => $id,
-                'progress_rencana_perlakuan_risiko' => $perlakuanPenyebabRequest['progress_rencana_perlakuan_risiko_q' . $quarter] ?? null,
-                'realisasi_biaya_perlakuan_risiko' => $perlakuanPenyebabRequest['realisasi_biaya_perlakuan_risiko_q' . $quarter] ?? null,
+                'progress_rencana_perlakuan_risiko' => $perlakuanPenyebabRequest['progress_rencana_perlakuan_risiko_q' . $quarter] ?? 0,
+                'realisasi_biaya_perlakuan_risiko' => $perlakuanPenyebabRequest['realisasi_biaya_perlakuan_risiko_q' . $quarter] ?? 0,
                 'deskripsi_perlakuan_risiko' => $perlakuanPenyebabRequest['deskripsi_perlakuan_risiko'] ?? null,
                 'jenis_program_rkap' => $perlakuanPenyebabRequest['jenis_program_rkap'] ?? null,
                 'jenis_program_rkap_id' => $perlakuanPenyebabRequest['jenis_program_rkap_id'] ?? null,
-                'timeline_perlakuan_risiko_start' => ($perlakuanPenyebabRequest['timeline_perlakuan_risiko'][0] ?? '') ? DateTime::createFromFormat('d/m/Y', $perlakuanPenyebabRequest['timeline_perlakuan_risiko'][0])->format('Y-m-d') : null,
-                'timeline_perlakuan_risiko_end' => ($perlakuanPenyebabRequest['timeline_perlakuan_risiko'][1] ?? '') ? DateTime::createFromFormat('d/m/Y', $perlakuanPenyebabRequest['timeline_perlakuan_risiko'][1])->format('Y-m-d') : null,
+                'timeline_perlakuan_risiko_start' => $start,
+                'timeline_perlakuan_risiko_end' => $start,
             ];
+
             $projectMonitoring->perlakuanPenyebabMonitorings()->create($toCreate);
 
             if ($documentFiles = $request->{'document_file_' . $id}) {

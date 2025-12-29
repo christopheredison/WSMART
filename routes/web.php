@@ -699,6 +699,11 @@ Route::prefix('risk-register-unit')->middleware('auth')->group(function () {
 
     Route::get('/{riskRegister}/loss-events/create', [UnitLEDController::class, 'riskChangeToLed'])->name('risk-register-unit.loss-events.create')->middleware('can:risk_register_list');
     Route::post('/{riskRegister}/loss-events', [UnitLEDController::class, 'riskChangeToLedStore'])->name('risk-register-unit.loss-events.store')->middleware('can:risk_register_list');
+
+    Route::post('/rencana-perlakuan-dampak/tambah', [RiskRegisterUnitController::class, 'simpanRencanaPerlakuanDampak']);
+    Route::get('/rencana-perlakuan-dampak/{id}', [RiskRegisterUnitController::class, 'editRencanaPerlakuanDampak']);
+    Route::put('/rencana-perlakuan-dampak/{id}', [RiskRegisterUnitController::class, 'updateRencanaPerlakuanDampak']);
+    Route::delete('/rencana-perlakuan-dampak/{id}', [RiskRegisterUnitController::class, 'hapusRencanaPerlakuanDampak']);
 });
 
 Route::prefix('risk-register-ap')->group(function () {

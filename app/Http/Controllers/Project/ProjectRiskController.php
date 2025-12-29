@@ -310,13 +310,15 @@ class ProjectRiskController extends BasicCRUDController
             //dd($status, $levelId, $u_step, $b_step);
 
             if(($status==1 || $status==5) && $levelId==6){//on proses/revisi dan level = RO
-                $active_state = null;
-                if($status == 5) {
-                    // Jika status batch 5, maka status risk juga harus 5
-                    $active_state = 'function(id, type, row) { return row.status === 5; }';
-                } else {
-                    $active_state = 'function(id, type, row) { return row.status === 1; }';
-                }
+                $active_state = 'function(id, type, row) { return row.status === 1 || row.status === 5; }';
+
+                // $active_state = null;
+                // if($status == 5) {
+                //     // Jika status batch 5, maka status risk juga harus 5
+                //     $active_state = 'function(id, type, row) { return row.status === 5; }';
+                // } else {
+                //     $active_state = 'function(id, type, row) { return row.status === 1; }';
+                // }
 
                 $this->tableLegend = [
                     [
@@ -755,7 +757,7 @@ class ProjectRiskController extends BasicCRUDController
                 'kategori_risiko_id' => 'required',
                 'jenis_risiko_id' => 'required',
                 'deskripsi_peristiwa_risiko' => 'required',
-                'deskripsi_dampak' => 'required',
+                // 'deskripsi_dampak' => 'required',
                 'wbs' => 'required',
                 //'target_capaian_kinerja' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
@@ -764,8 +766,10 @@ class ProjectRiskController extends BasicCRUDController
                 'perkiraan_waktu_selesai_terpapar_risiko' => 'required',
                 'penyebab_risiko' => 'required|array|min:1',
                 'penyebab_risiko.*' => 'required|string',
+                'dampak_risiko' => 'required|array|min:1',
+                'dampak_risiko.*' => 'required|string',
             ]);
-            //dd($request);
+
             $user = $request->user();
 
             //$perkiraanWaktuTerpaparRisiko = explode(' to ', $request->perkiraan_waktu_terpapar_risiko);
@@ -855,6 +859,12 @@ class ProjectRiskController extends BasicCRUDController
             $projectRisk->projectRiskAnalisas()->create([]);
             $projectRisk->projectRiskRencanaPerlakuans()->create([]);
 
+            foreach ($request->dampak_risiko as $textDampak) {
+                $projectRisk->dampakRisikoProjects()->create([
+                    'dampak_risiko' => $textDampak
+                ]);
+            }
+
             foreach ($request->penyebab_risiko as $penyebabRisiko) {
                 $projectRisk->penyebabRisikoProjects()->create([
                     'penyebab_risiko' => $penyebabRisiko,
@@ -919,7 +929,13 @@ class ProjectRiskController extends BasicCRUDController
 
     public function edit($resource)
     {
-        $projectRisk = ProjectRisk::with('penyebabRisikoProjects', 'kriProjects', 'peristiwaRisiko', 'parameterRisikoProjects')->findOrFail(request()->route('risk'));
+        $projectRisk = ProjectRisk::with([
+          'penyebabRisikoProjects',
+          'kriProjects',
+          'peristiwaRisiko',
+          'parameterRisikoProjects',
+          'dampakRisikoProjects',
+        ])->findOrFail(request()->route('risk'));
 
         //dd($projectRisk);
         $projectPeriodeList = ProjectPeriodeList::findOrFail(request()->route('project'));
@@ -978,7 +994,7 @@ class ProjectRiskController extends BasicCRUDController
                 'kategori_risiko_id' => 'required',
                 'jenis_risiko_id' => 'required',
                 'deskripsi_peristiwa_risiko' => 'required',
-                'deskripsi_dampak' => 'required',
+                // 'deskripsi_dampak' => 'required',
                 'wbs' => 'required',
                 'jenis_kontrol_eksisting_id' => 'required',
                 // 'penilaian_efektifitas_kontrol' => 'required',
@@ -986,7 +1002,8 @@ class ProjectRiskController extends BasicCRUDController
                 'perkiraan_waktu_terpapar_risiko_akhir' => 'required',
                 'penyebab_risiko' => 'required|array|min:1',
                 'penyebab_risiko.*' => 'required|string',
-                // Tambahkan validasi lain jika perlu
+                'dampak_risiko' => 'required|array|min:1',
+                'dampak_risiko.*' => 'required|string',
             ]);
 
             $user = $request->user();
@@ -1069,6 +1086,23 @@ class ProjectRiskController extends BasicCRUDController
             //     }
             // }
             // $projectRisk->parameterRisikoProjects()->whereNotIn('id', $savedParamIds)->delete();
+
+            $dampakRisikoIds = [];
+            foreach ($request->dampak_risiko as $dampakRisikoId => $dampakRisiko) {
+                $exist = $projectRisk->dampakRisikoProjects()->where('id', $dampakRisikoId)->first();
+
+                if ($exist) {
+                    $exist->update([
+                        'dampak_risiko' => $dampakRisiko,
+                    ]);
+                } else {
+                    $exist = $projectRisk->dampakRisikoProjects()->create([
+                        'dampak_risiko' => $dampakRisiko
+                    ]);
+                }
+                $dampakRisikoIds[] = $exist->id;
+            }
+            $projectRisk->dampakRisikoProjects()->whereNotIn('id', $dampakRisikoIds)->delete();
 
             $penyebabRisikoIds = [];
             foreach ($request->penyebab_risiko as $penyebabRisikoId => $penyebabRisiko) {
@@ -1167,6 +1201,7 @@ class ProjectRiskController extends BasicCRUDController
                 'projectPeriodeList.project',
                 'peristiwaRisiko',
                 'taksonomiRisiko',
+                'dampakRisikoProjects',
                 'penyebabRisikoProjects',
                 'projectRiskAnalisa.skalaDampakObj',
                 'projectRiskAnalisa.skalaProbabilitas',
@@ -1819,6 +1854,7 @@ class ProjectRiskController extends BasicCRUDController
     {
         $validated = $request->validate([
             'risiko_id' => 'required|exists:project_risks,id',
+            'dampak_risiko_id' => 'required|exists:dampak_risiko_projects,id',
             'rencana_perlakuan_risiko' => 'required',
             'output_perlakuan_risiko' => 'required',
             'biaya_perlakuan_risiko' => 'required|numeric',
@@ -1832,6 +1868,7 @@ class ProjectRiskController extends BasicCRUDController
 
         PerlakuanDampakRisiko::create([
             'risiko_id' => $request->risiko_id,
+            'dampak_risiko_id' => $request->dampak_risiko_id,
             'rencana_perlakuan_risiko' => $request->rencana_perlakuan_risiko,
             'output_perlakuan_risiko' => $request->output_perlakuan_risiko,
             'biaya_perlakuan_risiko' => $request->biaya_perlakuan_risiko,
@@ -1848,12 +1885,13 @@ class ProjectRiskController extends BasicCRUDController
 
     public function editRencanaPerlakuanDampak($id)
     {
-        $perlakuan = PerlakuanDampakRisiko::with('projectRisk')->findOrFail($id);
+        $perlakuan = PerlakuanDampakRisiko::with('projectRisk', 'dampakRisikoProject')->findOrFail($id);
 
         return response()->json([
             'id'                => $perlakuan->id,
             'risiko_id'         => $perlakuan->risiko_id,
-            'deskripsi_dampak'  => $perlakuan->projectRisk->deskripsi_dampak,
+            'dampak_risiko_id' => $perlakuan->dampak_risiko_id,
+            'deskripsi_dampak'  => $perlakuan->dampakRisikoProject->dampak_risiko,
             'rencana_perlakuan_risiko'           => $perlakuan->rencana_perlakuan_risiko,
             'output_perlakuan_risiko'            => $perlakuan->output_perlakuan_risiko,
             'opsi_perlakuan_risiko'              => $perlakuan->opsi_perlakuan_risiko,
@@ -1899,7 +1937,7 @@ class ProjectRiskController extends BasicCRUDController
     public function hapusRencanaPerlakuanDampak($id)
     {
         try {
-            $perlakuan = \App\Models\PerlakuanDampakRisiko::findOrFail($id);
+            $perlakuan = PerlakuanDampakRisiko::findOrFail($id);
 
             // Eksekusi penghapusan
             $perlakuan->delete();

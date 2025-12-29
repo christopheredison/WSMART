@@ -34,7 +34,7 @@
                     <div class="row g-3 gx-md-5">
                         <div class="col-12">
                             <div class="form-group form-floating">
-                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Sasaran" required>{{ old('target_capaian_kinerja', $identifikasiRisiko->target_capaian_kinerja) }}</textarea>
+                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Sasaran Risiko" required>{{ old('target_capaian_kinerja', $identifikasiRisiko->target_capaian_kinerja) }}</textarea>
                                 <label for="target_capaian_kinerja">Sasaran Risiko</label>
                             </div>
                         </div>
@@ -89,7 +89,6 @@
                 </div>
             </div>
         </div>
-
 
         <!-- ::ParameeterRisiko Start -->
         <div class="col-12">
@@ -167,13 +166,54 @@
         </div>
         <!-- ::Threshold End -->
 
-        <!-- ::Penyebab Risiko Start -->
+        <!-- ::DampakRisiko Start -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
                             <span class="nav-item-circle">4</span>
+                        </span>
+                        <span class="h3 mb-0">Dampak Risiko</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="dampak-risiko-body">
+                        <div class="row g-2 mb-3 dampak-row-item">
+                            <div class="col">
+                                <div class="form-floating">
+                                    <input type="hidden" name="penyebab_dampak_id[]">
+                                    <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required></textarea>
+                                    <label>Dampak Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-center">
+                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
+                                    <i class="bx bx-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto ms-auto">
+                            <button type="button" class="btn btn-outline-secondary rounded-pill p-2" id="add-dampak"
+                                data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Tambah Dampak Risiko">
+                                <i class='bx bx-plus fs-5'></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ::DampakRisiko End -->
+
+        <!-- ::Penyebab Risiko Start -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header stepper border-0 pb-0">
+                    <div class="nav-link active d-flex align-items-center p-0">
+                        <span class="nav-item-circle-parent">
+                            <span class="nav-item-circle">3</span>
                         </span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
@@ -217,7 +257,7 @@
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent"><span class="nav-item-circle">5</span></span>
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">6</span></span>
                         <span class="h3 mb-0">Key Risk Indicator</span>
                     </div>
                 </div>
@@ -287,7 +327,7 @@
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent"><span class="nav-item-circle">6</span></span>
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">7</span></span>
                         <span class="h3 mb-0">Kontrol</span>
                     </div>
                 </div>
@@ -378,7 +418,7 @@
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent"><span class="nav-item-circle">5</span></span>
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">8</span></span>
                         <span class="h3 mb-0">Pilih Risiko Divisi Terkait</span>
                     </div>
                 </div>
@@ -460,7 +500,7 @@
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent"><span class="nav-item-circle">6</span></span>
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">9</span></span>
                         <span class="h3 mb-0">Pilih Risiko Anak Perusahaan Terkait</span>
                     </div>
                 </div>
@@ -616,6 +656,26 @@
 
         const masterKris = @json($masterKris->keyBy('id'));
         const kontrolExistings = @json($kontrolEksistings->keyBy('id'));
+
+        $('#add-dampak').click(function() {
+            let html = `
+            <div class="row g-2 mb-3 dampak-row-item">
+                <div class="col">
+                    <div class="form-floating">
+                        <input type="hidden" name="penyebab_dampak_id[]">
+                        <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required></textarea>
+                        <label>Dampak Risiko</label>
+                    </div>
+                </div>
+                <div class="col-auto d-flex align-items-center">
+                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
+                        <i class="bx bx-trash"></i>
+                    </button>
+                </div>
+            </div>`;
+            $('#dampak-risiko-body').append(html);
+        });
+
         // Add Column Penyebab Risiko
         let row = 0;
 
@@ -874,6 +934,15 @@
                             } else {
                                 $('#add-column').click();
                                 $(`.input-penyebab-risiko`).last().val(penyebab.penyebab_risiko).attr('name', `penyebab_risiko[${penyebab.id}]`);
+                            }
+                        });
+                    } else if (key === 'dampak_risikos') {
+                        value.forEach((dampak, index) => {
+                            if (index === 0) {
+                                $('.input-dampak-risiko').val(dampak.dampak_risiko).attr('name', `dampak_risiko[${dampak.id}]`);
+                            } else {
+                                $('#add-dampak').click();
+                                $(`.input-dampak-risiko`).last().val(dampak.dampak_risiko).attr('name', `dampak_risiko[${dampak.id}]`);
                             }
                         });
                     } else if (key === 'kris') {

@@ -384,13 +384,78 @@
         </div>
     </div> --}}
 
-    <!-- ::PenyebabRisiko Start -->
+    <!-- ::DampakRisiko Start -->
     <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
                         <span class="nav-item-circle">2</span>
+                    </span>
+                    <span class="h3 mb-0">Dampak Risiko</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">#</th>
+                                <th width="25%">Dampak Risiko</th>
+                                <th width="25%">Rencana Perlakuan Risiko</th>
+                                <th width="25%">Output Perlakuan Risiko</th>
+                                <th width="20%">Biaya Perlakuan Risiko</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php $totalBiaya = 0; @endphp
+                            @forelse($projectRisk->dampakRisikoProjects as $dampak)
+                                @if($dampak->perlakuanDampakRisikos && $dampak->perlakuanDampakRisikos->isNotEmpty())
+                                    @foreach($dampak->perlakuanDampakRisikos as $perlakuan)
+                                        @php $totalBiaya += $perlakuan->biaya_perlakuan_risiko ?? 0; @endphp
+                                        <tr>
+                                            @if($loop->first)
+                                                <td rowspan="{{ $dampak->perlakuanDampakRisikos->count() }}">{{ $loop->parent->iteration }}</td>
+                                                <td rowspan="{{ $dampak->perlakuanDampakRisikos->count() }}">{{ $dampak->dampak_risiko }}</td>
+                                            @endif
+                                            <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
+                                            <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
+                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
+                                        </tr>
+                                    @endforeach
+                                @else
+                                    <tr>
+                                        <td>{{ $loop->iteration }}</td>
+                                        <td>{{ $dampak->dampak_risiko }}</td>
+                                        <td colspan="3" class="text-center text-muted">Belum ada rencana perlakuan</td>
+                                    </tr>
+                                @endif
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">Tidak ada dampak risiko</td>
+                                </tr>
+                            @endforelse
+                            @if($totalBiaya > 0)
+                                <tr class="table-warning">
+                                    <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
+                                    <td class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                                </tr>
+                            @endif
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ::DampakRisiko End -->
+
+    <!-- ::PenyebabRisiko Start -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">3</span>
                     </span>
                     <span class="h3 mb-0">Penyebab Risiko</span>
                 </div>
@@ -455,7 +520,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">3</span>
+                        <span class="nav-item-circle">4</span>
                     </span>
                     <span class="h3 mb-0">Key Risk Indicator</span>
                 </div>
@@ -508,7 +573,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">4</span>
+                        <span class="nav-item-circle">5</span>
                     </span>
                     <span class="h3 mb-0">Kontrol</span>
                 </div>
@@ -570,7 +635,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">5</span>
+                        <span class="nav-item-circle">6</span>
                     </span>
                     <span class="h3 mb-0">Analisa Risiko</span>
                 </div>
@@ -625,7 +690,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">6</span>
+                        <span class="nav-item-circle">7</span>
                     </span>
                     <span class="h3 mb-0">Pengukuran Risiko Inheren</span>
                 </div>
@@ -728,7 +793,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">7</span>
+                        <span class="nav-item-circle">8</span>
                     </span>
                     <span class="h3 mb-0">Pengukuran Risiko Residual</span>
                 </div>
@@ -832,7 +897,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">8</span>
+                        <span class="nav-item-circle">9</span>
                     </span>
                     <span class="h3 mb-0">Monitoring Risiko</span>
                 </div>

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class PerlakuanDampakRisiko extends Model
+class PerlakuanDampakRisikoUnit extends Model
 {
     protected $fillable = [
         'risiko_id',
@@ -26,13 +26,13 @@ class PerlakuanDampakRisiko extends Model
         'divisi_terkait' => 'array',
     ];
 
-    public function projectRisk() {
-        return $this->belongsTo(ProjectRisk::class, 'risiko_id');
+    public function risiko() {
+        return $this->belongsTo(IdentifikasiRisiko::class, 'risiko_id');
     }
 
-    public function dampakRisikoProject()
+    public function dampakRisikoUnit()
     {
-        return $this->belongTo(DampakRisikoProject::class, 'dampak_risiko_id');
+        return $this->belongsTo(DampakRisikoUnit::class, 'dampak_risiko_id', 'id');
     }
 
     public function picJabatan()
@@ -54,10 +54,10 @@ class PerlakuanDampakRisiko extends Model
     }
 
     public function perlakuanDampakMonitorings() {
-        return $this->hasMany(PerlakuanDampakMonitoring::class, 'perlakuan_dampak_id');
+        return $this->hasMany(PerlakuanDampakMonitoringUnit::class, 'perlakuan_dampak_id');
     }
 
     public function lastMonitoring() {
-        return $this->hasOne(PerlakuanDampakMonitoring::class, 'perlakuan_dampak_id')->orderBy('id', 'desc');
+        return $this->hasOne(PerlakuanDampakMonitoringUnit::class, 'perlakuan_dampak_id')->orderBy('id', 'desc');
     }
 }

@@ -48,17 +48,87 @@
             {{-- Tambahkan card untuk legend/keterangan --}}
             <div class="row g-2">
                 <div class="card">
+
                     <div class="card-body">
+                        <h5 class="mb-2">Perlakuan terhadap Dampak Risiko</h5>
+                        <table class="table table-bordered" id="table-dampak-risiko">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Dampak Risiko</th>
+                                    <th>Rencana Perlakuan</th>
+                                    <th>Biaya Perlakuan</th>
+                                    <th>Progress (%)</th>
+                                    <th>Realisasi Biaya</th>
+                                    <th>Waktu Perlakuan</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @php $totalBiayaDampak = 0; @endphp
+                                @foreach ($risk->dampakRisikos as $dampak)
+                                    @php
+                                        $perlakuans = $risk->perlakuanDampakRisikos->where('dampak_risiko_id', $dampak->id);
+                                        $rowSpan = max($perlakuans->count(), 1);
+                                    @endphp
+
+                                    @foreach ($perlakuans->isEmpty() ? [null] : $perlakuans as $perlakuan)
+                                        @if ($loop->index == 0)
+                                            <tr data-id="{{ $perlakuan?->id }}">
+                                                <td rowspan="{{ $rowSpan }}">{{ $loop->parent->iteration }}</td>
+                                                <td rowspan="{{ $rowSpan }}">{{ $dampak->dampak_risiko }}</td>
+                                        @else
+                                            <tr data-id="{{ $perlakuan->id }}">
+                                        @endif
+
+                                        @if($perlakuan)
+                                            @php $totalBiayaDampak += $perlakuan->biaya_perlakuan_risiko ?? 0; @endphp
+                                            <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
+                                            <td>
+                                                <span class="inputmask-fixed">
+                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                </span>
+                                            </td>
+                                            <td class="display-progress inputmask-fixed">
+                                                {{ $perlakuan->lastMonitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
+                                            </td>
+                                            <td class="display-biaya inputmask-fixed">
+                                                {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                            </td>
+                                            <td class="display-timeline">
+                                                {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}
+                                            </td>
+                                            <td>
+                                                  <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
+                                                      <i class='bx bx-file fs-5'></i>
+                                                  </button>
+                                              </td>
+                                        @else
+                                            <td colspan="6" class="text-center text-muted italic">Belum ada rencana perlakuan</td>
+                                        @endif
+                                        </tr>
+                                    @endforeach
+                                @endforeach
+
+                                @if($risk->dampakRisikos->isEmpty())
+                                    <tr>
+                                        <td colspan="8" class="text-center">Tidak ada data dampak risiko</td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                        </table>
+
+                        <h5 class="mt-6 mb-2">Perlakuan terhadap Penyebab Risiko</h5>
                         <table class="table" id="table-penyebab-risiko">
                             <thead>
                                 <tr>
                                     <th>#</th>
                                     <th>Penyebab Risiko</th>
-                                    <th>Rencana Perlakuan Risiko</th>
-                                    <th>Biaya Perlakuan Risiko</th>
-                                    <th>Progress Perlakuan Risiko</th>
-                                    <th>Realisasi Biaya Perlakuan Risiko</th>
-                                    <th>Waktu Perlakuan Risiko</th>
+                                    <th>Rencana Perlakuan</th>
+                                    <th>Biaya Perlakuan</th>
+                                    <th>Progress (%)</th>
+                                    <th>Realisasi Biaya</th>
+                                    <th>Waktu Perlakuan</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -80,14 +150,18 @@
                                         <tr data-id="{{ $perlakuan->id }}">
                                         @endif
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
-                                            <td><span class="inputmask-fixed">{{ $perlakuan->biaya_perlakuan_risiko ?: '-' }}</span></td>
+                                            <td>
+                                              <span class="inputmask-fixed">
+                                                {{ isset($perlakuan->biaya_perlakuan_risiko) ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                              </span>
+                                            </td>
                                             <td class="display-progress inputmask-fixed">
                                                 {{ $perlakuan->{'progress_rencana_perlakuan_risiko_q' . $quarter} ?? '-' }}
                                             </td>
                                             <td class="display-biaya inputmask-fixed">
-                                                {{ $perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter} ?? '-' }}
+                                                {{ isset($perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter}) ? 'Rp ' . number_format($perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter}, 0, ',', '.') : '-' }}
                                             </td>
-                                            <td class="display-timeline">{{ $lastMonitoring?->timeline_perlakuan_risiko_start->format('d/m/Y') ?: '-' }}</td>
+                                            <td class="display-timeline">{{ $lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
                                                     <i class='bx bx-file fs-5'></i>
@@ -105,7 +179,8 @@
                             </tbody>
                         </table>
 
-                        <table class="table mt-7" id="table-kri">
+                        <h5 class="mt-6 mb-2">Perlakuan terhadap KRI</h5>
+                        <table class="table" id="table-kri">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -233,7 +308,7 @@
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="nilai_dampak_residual"
-                                value="Rp {{ number_format($riskAnalysis->{'nilai_dampak_residual_q' . $quarter}, strpos($riskAnalysis->{'nilai_dampak_residual_q' . $quarter}, '.') !== false ? 2 : 0, ',', '.') }}">
+                                value="Rp {{ number_format($riskAnalysis->{'nilai_dampak_residual_q' . $quarter}, strpos($riskAnalysis->{'nilai_dampak_residual_q' . $quarter}, '.') !== false ? 0 : 0, ',', '.') }}">
                                 <label for="">Target Nilai Dampak</label>
                             </div>
                             <div class="form-floating">

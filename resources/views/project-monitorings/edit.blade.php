@@ -457,7 +457,7 @@
                 <div class="card">
                     <div class="card-body">
                         <h5 class="mb-2">Perlakuan terhadap Dampak Risiko</h5>
-                        <table class="table" id="table-dampak-risiko">
+                        <table class="table table-bordered" id="table-dampak-risiko">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -467,43 +467,70 @@
                                     <th>Progress (%)</th>
                                     <th>Realisasi Biaya</th>
                                     <th>Waktu Perlakuan</th>
-                                    <th class="text-center">Action</th>
+                                    <th style="width: 80px; text-align: center;">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($projectRisk->perlakuanDampakRisikos as $index => $perlakuan)
-                                <tr data-id="{{ $perlakuan->id }}">
-                                    @if ($index == 0)
-                                        <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}">1</td>
-                                        <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}">{{ $projectRisk->deskripsi_dampak }}</td>
-                                    @endif
-                                    <td>{{ $perlakuan->rencana_perlakuan_risiko }}</td>
-                                    <td>Rp {{ number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') }}</td>
-                                    <td class="display-progress">{{ $perlakuan->lastMonitoring?->progress_rencana_perlakuan_risiko ?? '-' }}</td>
-                                    <td class="display-biaya">
-                                        {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
-                                    </td>
-                                    <td class="display-timeline">{{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
-                                    {{-- <td class="text-center">
-                                        <a href="javascript:void(0)" class="btn-input-icon btn-action"
-                                          data-action="update-realisasi-dampak" data-id="{{ $perlakuan->id }}">
-                                            <span class="bx bx-edit-alt text-primary"></span>
-                                        </a>
-                                    </td> --}}
-                                    <td style="white-space:nowrap" class="column-action-impact">
-                                        <div class="d-none dom-saved-impact">
-                                            <div class="upload-container-impact"></div>
-                                            <input type="hidden" class="input-file-description-impact">
-                                        </div>
-                                        <div class="text-center">
-                                            <a href="javascript:void(0)" class="btn-input-icon btn-action"
-                                              data-action="update-realisasi-dampak" data-id="{{ $perlakuan->id }}">
-                                                <span class="bx bx-edit-alt text-primary"></span>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
+                                @php $totalBiayaDampak = 0; @endphp
+                                @foreach ($projectRisk->dampakRisikoProjects as $dampak)
+                                    @php
+                                        $perlakuans = $projectRisk->perlakuanDampakRisikos->where('dampak_risiko_id', $dampak->id);
+                                        $rowSpan = max($perlakuans->count(), 1);
+                                    @endphp
+
+                                    @foreach ($perlakuans->isEmpty() ? [null] : $perlakuans as $perlakuan)
+                                        @if ($loop->index == 0)
+                                            <tr data-id="{{ $perlakuan?->id }}">
+                                                <td rowspan="{{ $rowSpan }}">{{ $loop->parent->iteration }}</td>
+                                                <td rowspan="{{ $rowSpan }}">{{ $dampak->dampak_risiko }}</td>
+                                        @else
+                                            <tr data-id="{{ $perlakuan->id }}">
+                                        @endif
+
+                                        @if($perlakuan)
+                                            @php $totalBiayaDampak += $perlakuan->biaya_perlakuan_risiko ?? 0; @endphp
+                                            <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
+                                            <td>
+                                                <span class="inputmask-fixed">
+                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                </span>
+                                            </td>
+                                            <td class="display-progress inputmask-fixed text-center">
+                                                {{ $perlakuan->lastMonitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
+                                            </td>
+                                            <td class="display-biaya inputmask-fixed">
+                                                {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                            </td>
+                                            <td class="display-timeline text-center">
+                                                {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}
+                                            </td>
+                                            <td class="column-action-impact">
+                                                <div class="d-none dom-saved-impact">
+                                                    <div class="upload-container-impact"></div>
+                                                    <input type="hidden" class="input-file-description-impact">
+                                                </div>
+                                                <div class="text-center">
+                                                    <a href="javascript:void(0)"
+                                                      class="btn-input-icon btn-action"
+                                                      data-action="update-realisasi-dampak"
+                                                      data-id="{{ $perlakuan->id }}"
+                                                      data-dampak-text="{{ $dampak->dampak_risiko }}">
+                                                        <span class="bx bx-edit-alt text-primary"></span>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        @else
+                                            <td colspan="6" class="text-center text-muted italic">Belum ada rencana perlakuan</td>
+                                        @endif
+                                        </tr>
+                                    @endforeach
                                 @endforeach
+
+                                @if($projectRisk->dampakRisikoProjects->isEmpty())
+                                    <tr>
+                                        <td colspan="8" class="text-center">Tidak ada data dampak risiko</td>
+                                    </tr>
+                                @endif
                             </tbody>
                         </table>
 
@@ -537,11 +564,11 @@
                                                 {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
                                               </span>
                                             </td>
-                                            <td class="display-progress inputmask-fixed">{{ $perlakuan->progress_rencana_perlakuan_risiko ?? '-' }}</td>
+                                            <td class="display-progress inputmask-fixed text-center">{{ $perlakuan->progress_rencana_perlakuan_risiko ?? '-' }}</td>
                                             <td class="display-biaya inputmask-fixed">
                                               {{  $perlakuan->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
                                             </td>
-                                            <td class="display-timeline">{{ $perlakuan?->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
+                                            <td class="display-timeline text-center">{{ $perlakuan?->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
                                             <td style="white-space:nowrap" class="column-action">
                                                 <div class="d-none dom-saved">
                                                     <div class="upload-container">
@@ -735,23 +762,58 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
+const projectRisk = @json($projectRisk);
 const penyebabRisikoProjects = @json($penyebabRisikoProjects->keyBy('id'));
-const perlakuanPenyebabRisikos = @json($penyebabRisikoProjects->pluck('perlakuanPenyebabRisiko')->flatten()->keyBy('id'));
-const perlakuanDampakRisikos = @json($projectRisk->perlakuanDampakRisikos->keyBy('id'));
+const jsonPerlakuanPenyebabRisikos = @json($penyebabRisikoProjects->pluck('perlakuanPenyebabRisiko')->flatten()->keyBy('id'));
+const perlakuanPenyebabRisikos = Object.fromEntries(
+    Object.entries(jsonPerlakuanPenyebabRisikos).map(([key, value]) => {
+        return [
+            key,
+            {
+                ...value,
+                "realisasi_biaya_perlakuan_risiko": value?.last_monitoring?.realisasi_biaya_perlakuan_risiko ? parseFloat(value?.last_monitoring?.realisasi_biaya_perlakuan_risiko) : 0.00,
+                "progress_rencana_perlakuan_risiko": value?.last_monitoring?.progress_rencana_perlakuan_risiko ?? 0,
+                "deskripsi_perlakuan_risiko": value?.last_monitoring?.deskripsi_perlakuan_risiko ?? "",
+                "timeline_perlakuan_risiko": value?.last_monitoring?.timeline_perlakuan_risiko_start ?? ""
+            }
+        ];
+    })
+);
+console.log(perlakuanPenyebabRisikos);
+
+const jsonPerlakuanDampakRisikos = @json($projectRisk->perlakuanDampakRisikos->keyBy('id'));
+const perlakuanDampakRisikos = Object.fromEntries(
+    Object.entries(jsonPerlakuanDampakRisikos).map(([key, value]) => {
+        return [
+            key,
+            {
+                ...value,
+                "realisasi_biaya_perlakuan_risiko": value?.last_monitoring?.realisasi_biaya_perlakuan_risiko ? parseFloat(value?.last_monitoring?.realisasi_biaya_perlakuan_risiko) : 0.00,
+                "progress_rencana_perlakuan_risiko": value?.last_monitoring?.progress_rencana_perlakuan_risiko ?? 0,
+                "deskripsi_perlakuan_risiko": value?.last_monitoring?.deskripsi_perlakuan_risiko ?? "",
+                "timeline_perlakuan_risiko": value?.last_monitoring?.timeline_perlakuan_risiko_start ?? ""
+            }
+        ];
+    })
+);
+console.log(perlakuanDampakRisikos);
+
 const kriProjects = @json($kriProjects->keyBy('id'));
 const quarter = {{ $quarter }};
 const namaRisiko = @json($projectRisk->peristiwa_risiko_id ? $peristiwaRisiko->title : $projectRisk->rencana_kegiatan);
 const month = @json($month);
 const year = @json($tahun);
-const paddedMonth = String(month).padStart(2, '0');
-const minDateString = dayjs(`${year}-${paddedMonth}-01`, 'YYYY-MM-DD').toDate();
+// const paddedMonth = String(month).padStart(2, '0');
+// const minDateString = dayjs(`${year}-${paddedMonth}-01`, 'YYYY-MM-DD').toDate();
 
 var flatpickrIns = flatpickr("#timelineInput", {
     mode: "single",
     altInput: true,
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
-    minDate: minDateString,
+    // minDate: minDateString,
+    minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+    maxDate: dayjs().toDate(),
     disableMobile: true
 });
 
@@ -795,7 +857,9 @@ var impactFlatpickr = flatpickr("#timelineImpactInput", {
     altInput: true,
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
-    minDate: minDateString,
+    // minDate: minDateString,
+    minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+    maxDate: dayjs().toDate(),
     disableMobile: true
 });
 
@@ -1109,7 +1173,6 @@ $(document).ready(function() {
             $('#modalUpdateKri :input[name="status_kri"]').val(kriProject.status_kri_terkini);
             $('#modalUpdateKri').modal('show');
         } else if (action === 'update-realisasi') {
-            const projectRisk = @json($projectRisk);
             const perlakuanPenyebab = perlakuanPenyebabRisikos[$(this).data('id')];
             if (!perlakuanPenyebab) {
                 Swal.fire('Error', 'Data perlakuan penyebab risiko tidak ditemukan', 'error');
@@ -1299,19 +1362,24 @@ $(document).ready(function() {
     $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
         const id = $(this).data('id');
         const perlakuan = perlakuanDampakRisikos[id];
+        const dampakText = $(this).data('dampak-text');
+
+        if (!perlakuan) return;
 
         // Mapping Data ke Modal
         $('#impact_id').val(id);
-        $('#impact_name').val(@json($projectRisk->deskripsi_dampak));
+        $('#impact_name').val(dampakText);
         $('#impact_plan').val(perlakuan.rencana_perlakuan_risiko);
         $('#impact_cost').val('Rp ' + Intl.NumberFormat('id-ID').format(perlakuan.biaya_perlakuan_risiko));
         $('#impact_pic').val(perlakuan?.pic_jabatan?.name);
+
         $('#timeline_perlakuan_risiko_dampak_start').val(dayjs(perlakuan.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
         $('#timeline_perlakuan_risiko_dampak_end').val(dayjs(perlakuan.timeline_perlakuan_risiko_end).format('DD/MM/YYYY'));
 
         // Load Realisasi Sebelumnya jika ada
         const lastMon = perlakuan.last_monitoring;
         const form = $('#formUpdateRealisasiDampak');
+
         form.find('[name="realisasi_biaya_dampak"]').val(lastMon?.realisasi_biaya_perlakuan_risiko ?? 0);
         form.find('[name="progress_dampak"]').val(lastMon?.progress_rencana_perlakuan_risiko ?? 0);
         form.find('[name="deskripsi_dampak"]').val(lastMon?.deskripsi_perlakuan_risiko ?? '');

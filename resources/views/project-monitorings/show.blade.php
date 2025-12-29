@@ -38,136 +38,210 @@
         </div>
 
         <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <table class="table" id="table-penyebab-risiko">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Penyebab Risiko</th>
-                                <th>Rencana Perlakuan Risiko</th>
-                                <th>Biaya Perlakuan Risiko</th>
-                                <th>Progress Perlakuan Risiko</th>
-                                <th>Realisasi Biaya Perlakuan Risiko</th>
-                                <th>Waktu Perlakuan Risiko</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($penyebabRisikoProjects as $penyebabRisiko)
-                                @php $rowSpan = $penyebabRisiko->perlakuanPenyebabRisiko->count() ?: 1 @endphp
-                                <tr data-id="{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->id }}">
-                                    <td rowspan="{{ $rowSpan }}">{{ $loop->iteration }}</td>
-                                    <td rowspan="{{ $rowSpan }}">{{ $penyebabRisiko->penyebab_risiko ?: '-' }}</td>
-                                    <td>{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->rencana_perlakuan_risiko ?: '-' }}</td>
-                                    <td>
-                                      <span class="inputmask-fixed">
-                                        {{ isset(($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->biaya_perlakuan_risiko) ? 'Rp ' . number_format($penyebabRisiko->perlakuanPenyebabRisiko[0]->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
-                                      </span>
-                                    </td>
-                                    {{-- <td class="display-progress inputmask-fixed">{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->{'progress_rencana_perlakuan_risiko_q' . $quarter } ?: '-' }}</td>
-                                    <td class="display-biaya inputmask-fixed">{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->{'realisasi_biaya_perlakuan_risiko_q' . $quarter } ?: '-' }}</td> --}}
-                                    <td class="display-progress inputmask-fixed">
-                                        {{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->last_monitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
-                                    </td>
-                                    <td class="display-biaya inputmask-fixed">
-                                        {{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->last_monitoring?->realisasi_biaya_perlakuan_risiko ?? '-' }}
-                                    </td>
-                                    <td class="display-timeline">{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0]?? null)?->last_monitoring?->waktu_perlakuan_risiko?: '-' }}</td>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
-                                            <i class='bx bx-file fs-5'></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                @if ($penyebabRisiko->perlakuanPenyebabRisiko->count() > 1)
-                                    @foreach ($penyebabRisiko->perlakuanPenyebabRisiko as $perlakuan)
-                                        @if ($loop->index == 0)
-                                            @continue
-                                        @endif
-                                        <tr data-id="{{ $perlakuan->id }}">
-                                            <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
-                                            <td><span class="inputmask-fixed">{{ $perlakuan->biaya_perlakuan_risiko ?: '-' }}</span></td>
-                                            {{-- <td class="display-progress inputmask-fixed">{{ $perlakuan->{'progress_rencana_perlakuan_risiko_q' . $quarter } ?: '-' }}</td>
-                                            <td class="display-biaya inputmask-fixed">{{ $perlakuan->{'realisasi_biaya_perlakuan_risiko_q' . $quarter } ?: '-' }}</td> --}}
-                                            <td class="display-progress inputmask-fixed">
-                                                {{ $perlakuan->last_monitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
-                                            </td>
-                                            <td class="display-biaya inputmask-fixed">
-                                                {{
-                                                  $perlakuan?->last_monitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->last_monitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-'
-                                                }}
-                                            </td>
-                                            <td class="display-timeline">{{ $perlakuan?->last_monitoring?->waktu_perlakuan_risiko?: '-' }}</td>
-                                            <td>
-                                                <!-- <button type="button" class="btn btn-sm btn-link lihat-file-btn">Lihat File</button> -->
-                                                <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
-                                                    <i class='bx bx-file fs-5'></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                @endif
-                            @endforeach
-
-                            @if($penyebabRisikoProjects->isEmpty())
-                                <tr>
-                                    <td colspan="7" class="text-center">Tidak ada data</td>
-                                </tr>
-                            @endif
-                        </tbody>
-                    </table>
-
-                    <table class="table mt-7" id="table-kri">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Key Risk Indicator</th>
-                                <th>Satuan KRI</th>
-                                <th>Batas Aman</th>
-                                <th>Batas Waspada</th>
-                                <th>Batas Bahaya</th>
-                                <th>Nilai KRI</th>
-                                <th>Kondisi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($kriProjects as $kriProject)
-                                <tr data-id="{{ $kriProject->id }}">
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $kriProject->kri ?: '-' }}</td>
-                                    <td>{{ $kriProject->satuan_kri ?: '-' }}</td>
-                                    <td>{{ $kriProject->batas_aman ?: '-' }}</td>
-                                    <td>{{ $kriProject->batas_waspada ?: '-' }}</td>
-                                    <td>{{ $kriProject->batas_bahaya ?: '-' }}</td>
-                                    {{-- <td class="display-nilai-kri">{{ $kriProject->{'nilai_kri_terkini_q' . $quarter} ?: '-' }}</td>
-                                    <td class="display-kondisi">{{ $kriProject->{'status_kri_terkini_q' . $quarter} ?: '-' }}</td> --}}
-                                    <td class="display-nilai-kri">
-                                        {{ $kriProject->last_monitoring?->nilai_kri_terkini ?? '-' }}
-                                    </td>
-                                    <td class="display-kondisi">
-                                        @php
-                                            $statusMap = [
-                                                1 => 'Aman',
-                                                2 => 'Waspada',
-                                                3 => 'Bahaya',
-                                            ];
-                                            $status = $kriProject->last_monitoring?->status_kri_terkini;
-                                            $displayStatus = $statusMap[$status] ?? '-';
-                                        @endphp
-                                        {{ $displayStatus }}
-                                    </td>
-                                </tr>
-                            @endforeach
-                            @if($kriProjects->isEmpty())
-                                <tr>
-                                    <td colspan="9" class="text-center">Tidak ada data</td>
-                                </tr>
-                            @endif
-                        </tbody>
-                    </table>
+            <div class="divider my-3 my-md-5">
+                <div class="divider-text">
+                    <h4 class="mb-0 ff-heading-sm">Realisasi Perlakuan Risiko</h4>
                 </div>
             </div>
+
+            <div class="row g-2">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="mb-2">Perlakuan terhadap Dampak Risiko</h5>
+                        <table class="table table-bordered" id="table-dampak-risiko">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Dampak Risiko</th>
+                                    <th>Rencana Perlakuan</th>
+                                    <th>Biaya Perlakuan</th>
+                                    <th>Progress (%)</th>
+                                    <th>Realisasi Biaya</th>
+                                    <th>Waktu Perlakuan</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @php $totalBiayaDampak = 0; @endphp
+                                @foreach ($projectRisk->dampakRisikoProjects as $dampak)
+                                    @php
+                                        $perlakuans = $projectRisk->perlakuanDampakRisikos->where('dampak_risiko_id', $dampak->id);
+                                        $rowSpan = max($perlakuans->count(), 1);
+                                    @endphp
+
+                                    @foreach ($perlakuans->isEmpty() ? [null] : $perlakuans as $perlakuan)
+                                        @if ($loop->index == 0)
+                                            <tr data-id="{{ $perlakuan?->id }}">
+                                                <td rowspan="{{ $rowSpan }}">{{ $loop->parent->iteration }}</td>
+                                                <td rowspan="{{ $rowSpan }}">{{ $dampak->dampak_risiko }}</td>
+                                        @else
+                                            <tr data-id="{{ $perlakuan->id }}">
+                                        @endif
+
+                                        @if($perlakuan)
+                                            @php $totalBiayaDampak += $perlakuan->biaya_perlakuan_risiko ?? 0; @endphp
+                                            <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
+                                            <td>
+                                                <span class="inputmask-fixed">
+                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                </span>
+                                            </td>
+                                            <td class="display-progress inputmask-fixed  text-center">
+                                                {{ $perlakuan->lastMonitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
+                                            </td>
+                                            <td class="display-biaya inputmask-fixed">
+                                                {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                            </td>
+                                            <td class="display-timeline text-center">
+                                                {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}
+                                            </td>
+                                            <td>
+                                                  <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
+                                                      <i class='bx bx-file fs-5'></i>
+                                                  </button>
+                                              </td>
+                                        @else
+                                            <td colspan="6" class="text-center text-muted italic">Belum ada rencana perlakuan</td>
+                                        @endif
+                                        </tr>
+                                    @endforeach
+                                @endforeach
+
+                                @if($projectRisk->dampakRisikoProjects->isEmpty())
+                                    <tr>
+                                        <td colspan="8" class="text-center">Tidak ada data dampak risiko</td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                        </table>
+
+                        <h5 class="mt-6 mb-2">Perlakuan terhadap Penyebab Risiko</h5>
+                        <table class="table" id="table-penyebab-risiko">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Penyebab Risiko</th>
+                                    <th>Rencana Perlakuan</th>
+                                    <th>Biaya Perlakuan</th>
+                                    <th>Progress (%)</th>
+                                    <th>Realisasi Biaya</th>
+                                    <th>Waktu Perlakuan</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($penyebabRisikoProjects as $penyebabRisiko)
+                                    @php $rowSpan = $penyebabRisiko->perlakuanPenyebabRisiko->count() ?: 1 @endphp
+                                    <tr data-id="{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->id }}">
+                                        <td rowspan="{{ $rowSpan }}">{{ $loop->iteration }}</td>
+                                        <td rowspan="{{ $rowSpan }}">{{ $penyebabRisiko->penyebab_risiko ?: '-' }}</td>
+                                        <td>{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->rencana_perlakuan_risiko ?: '-' }}</td>
+                                        <td>
+                                          <span class="inputmask-fixed">
+                                            {{ isset(($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->biaya_perlakuan_risiko) ? 'Rp ' . number_format($penyebabRisiko->perlakuanPenyebabRisiko[0]->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                          </span>
+                                        </td>
+                                        <td class="display-progress inputmask-fixed text-center">
+                                            {{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->last_monitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
+                                        </td>
+                                        <td class="display-biaya inputmask-fixed">
+                                            {{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->last_monitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format(($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->last_monitoring?->realisasi_biaya_perlakuan_risiko, '0', ',', '.') : '-' }}
+                                        </td>
+                                        <td class="display-timeline text-center">{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0]?? null)?->last_monitoring?->waktu_perlakuan_risiko?: '-' }}</td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
+                                                <i class='bx bx-file fs-5'></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    @if ($penyebabRisiko->perlakuanPenyebabRisiko->count() > 1)
+                                        @foreach ($penyebabRisiko->perlakuanPenyebabRisiko as $perlakuan)
+                                            @if ($loop->index == 0)
+                                                @continue
+                                            @endif
+                                            <tr data-id="{{ $perlakuan->id }}">
+                                                <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
+                                                <td><span class="inputmask-fixed">{{ $perlakuan->biaya_perlakuan_risiko ?: '-' }}</span></td>
+                                                <td class="display-progress inputmask-fixed text-center">
+                                                    {{ $perlakuan->last_monitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
+                                                </td>
+                                                <td class="display-biaya inputmask-fixed">
+                                                    {{
+                                                      $perlakuan?->last_monitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->last_monitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-'
+                                                    }}
+                                                </td>
+                                                <td class="display-timeline text-center">{{ $perlakuan?->last_monitoring?->waktu_perlakuan_risiko?: '-' }}</td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
+                                                        <i class='bx bx-file fs-5'></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @endif
+                                @endforeach
+
+                                @if($penyebabRisikoProjects->isEmpty())
+                                    <tr>
+                                        <td colspan="7" class="text-center">Tidak ada data</td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                        </table>
+
+                        <h5 class="mt-6 mb-2">Perlakuan terhadap KRI</h5>
+                        <table class="table" id="table-kri">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Key Risk Indicator</th>
+                                    <th>Satuan KRI</th>
+                                    <th>Batas Aman</th>
+                                    <th>Batas Waspada</th>
+                                    <th>Batas Bahaya</th>
+                                    <th>Nilai KRI</th>
+                                    <th>Kondisi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($kriProjects as $kriProject)
+                                    <tr data-id="{{ $kriProject->id }}">
+                                        <td>{{ $loop->iteration }}</td>
+                                        <td>{{ $kriProject->kri ?: '-' }}</td>
+                                        <td>{{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td>{{ $kriProject->batas_aman ?: '-' }}</td>
+                                        <td>{{ $kriProject->batas_waspada ?: '-' }}</td>
+                                        <td>{{ $kriProject->batas_bahaya ?: '-' }}</td>
+                                        {{-- <td class="display-nilai-kri">{{ $kriProject->{'nilai_kri_terkini_q' . $quarter} ?: '-' }}</td>
+                                        <td class="display-kondisi">{{ $kriProject->{'status_kri_terkini_q' . $quarter} ?: '-' }}</td> --}}
+                                        <td class="display-nilai-kri">
+                                            {{ $kriProject->last_monitoring?->nilai_kri_terkini ?? '-' }}
+                                        </td>
+                                        <td class="display-kondisi">
+                                            @php
+                                                $statusMap = [
+                                                    1 => 'Aman',
+                                                    2 => 'Waspada',
+                                                    3 => 'Bahaya',
+                                                ];
+                                                $status = $kriProject->last_monitoring?->status_kri_terkini;
+                                                $displayStatus = $statusMap[$status] ?? '-';
+                                            @endphp
+                                            {{ $displayStatus }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                @if($kriProjects->isEmpty())
+                                    <tr>
+                                        <td colspan="9" class="text-center">Tidak ada data</td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         {{-- <div class="col-12">
@@ -580,7 +654,7 @@
                                                 title="Detail Mitigasi"
                                                 data-perlakuan-id="{{ $perlakuanPenyebab->id }}"
                                                 data-id="{{ $perlakuanMonitoring->id }}">
-                                                 <span class="bx bx-show text-primary"></span>
+                                                <span class="bx bx-show text-primary"></span>
                                         </button>
                                         </td>
                                     </tr>

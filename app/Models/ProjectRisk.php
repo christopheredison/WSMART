@@ -194,6 +194,11 @@ class ProjectRisk extends Model
         return $this->hasMany(PerlakuanDampakRisiko::class, 'risiko_id');
     }
 
+    public function dampakRisikoProjects()
+    {
+        return $this->hasMany(DampakRisikoProject::class, 'risiko_id');
+    }
+
     public function getPerkiraanWaktuTerpaparRisikoAttribute()
     {
         return $this->perkiraan_waktu_terpapar_risiko_mulai->format('d/m/Y') . ' to ' . $this->perkiraan_waktu_terpapar_risiko_akhir->format('d/m/Y');

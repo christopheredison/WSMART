@@ -10,7 +10,7 @@
 @endpush
 
 <div class="row g-2">
-    {{ Form::hidden('risiko_id', $projectRisk->id, ['id' => 'risikoIdDampak']) }}
+    {{ Form::hidden('risiko_id', $identifikasiRisiko->id, ['id' => 'risikoIdDampak']) }}
     <input type="hidden" name="dampak_risiko_id" id="dampakRisikoIdInput">
 
     <div class="col-12">
@@ -68,17 +68,17 @@
 
     <div class="col-12 col-md-6">
         <div class="form-floating">
-            {{ Form::select('pic', \App\Models\Jabatan::where('jabatan_type', 2)->pluck('name', 'id'), '', ['id' => 'picTambahDampak', 'class' => 'form-select select2', 'required']) }}
+            {{ Form::select('pic', \App\Models\Jabatan::where('jabatan_type', 1)->pluck('name', 'id'), '', ['id' => 'picTambahDampak', 'class' => 'form-select select2', 'required']) }}
             <label for="picTambahDampak">PIC</label>
         </div>
     </div>
 
-    <div class="col-12">
+    {{-- <div class="col-12">
         <div class="form-floating related-divisions-dampak">
             {{ Form::select('divisi_terkait[]', \App\Models\Unit::where('unit_type_id', 1)->pluck('name', 'id'), '', ['id' => 'divisiTerkaitTambahDampak', 'class' => 'form-select select2', 'multiple' => 'multiple', 'style' => 'width: 100%']) }}
             <label for="divisiTerkaitTambahDampak">Divisi Terkait</label>
         </div>
-    </div>
+    </div> --}}
 
     <div class="col-12 col-md-6">
         <div class="form-floating">

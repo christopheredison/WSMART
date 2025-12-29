@@ -54,6 +54,20 @@
             </div>
             <div class="card-body">
                 <div class="row g-3 gx-md-5">
+                    <div class="col-12">
+                        <h3>Deskripsi Peristiwa Risiko</h3>
+                        <p>{{ $identifikasiRisiko->deskripsi_peristiwa_risiko ?: '-' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h3>Dampak Risiko</h3>
+                        <ul>
+                            @forelse ($identifikasiRisiko->dampakRisikos as $dampak)
+                                <li>{{ $dampak->dampak_risiko }}</li>
+                            @empty
+                                <li class="text-muted italic">Tidak ada dampak risiko</li>
+                            @endforelse
+                        </ul>
+                    </div>
                     <div class="col-md-6">
                         <h3>Penyebab Risiko</h3>
                         <ul>
@@ -62,12 +76,8 @@
                             @endforeach
                         </ul>
                         @if ($identifikasiRisiko->penyebabRisiko->isEmpty())
-                            <em class="text-muted">Tidak ada penyebab risiko</em>
+                            <em class="text-muted italic">Tidak ada penyebab risiko</em>
                         @endif
-                    </div>
-                    <div class="col-6">
-                        <h3>Deskripsi Peristiwa Risiko</h3>
-                        <p>{{ $identifikasiRisiko->deskripsi_peristiwa_risiko ?: '-' }}</p>
                     </div>
                 </div>
             </div>
@@ -87,12 +97,12 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label>Kategori Dampak</label>
-                        {{ Form::select('kategori_dampak', 
-                            [ 
-                                'Kuantitatif' => 'Kuantitatif', 
-                                'Kualitatif' => 'Kualitatif' 
-                            ],  
-                            $analisa->kategori_dampak ?? 'Kuantitatif', 
+                        {{ Form::select('kategori_dampak',
+                            [
+                                'Kuantitatif' => 'Kuantitatif',
+                                'Kualitatif' => 'Kualitatif'
+                            ],
+                            $analisa->kategori_dampak ?? 'Kuantitatif',
                             ['id' => 'kategoriDampak', 'placeholder' => 'Pilih kategori Dampak', 'class' => 'form-select', 'required' => true]
                         ) }}
                     </div>
@@ -132,7 +142,7 @@
                         <div class="d-flex align-items-center">
                             <label>Nilai Probabilitas (%)</label>
                             <!-- <button type="button" class="btn btn-link p-0" id="btnCalculatePoisson" title="Hitung">
-                                <i class='bx bx-calculator bx-sm'></i> 
+                                <i class='bx bx-calculator bx-sm'></i>
                             </button> -->
                         </div>
                         {{ Form::number('nilai_probabilitas', $analisa->nilai_probabilitas, ['class' => 'form-control', 'required' => true, 'step' => 0.01, 'min' => 0, 'max' => 100, 'onkeypress' => 'return isNumberKey(event)', 'id' => 'nilai_probabilitas']) }}
@@ -145,11 +155,11 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label>Skala Dampak</label>
-                        {{ Form::select('skala_dampak', 
+                        {{ Form::select('skala_dampak',
                             \App\Models\SkalaDampak::get()->mapWithKeys(function($item) {
                                 return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi];
-                            }), 
-                            $analisa->skala_dampak, 
+                            }),
+                            $analisa->skala_dampak,
                             ['class' => 'form-select', 'placeholder' => 'Pilih Skala Dampak', 'required' => true, 'id' => 'skala_dampak']
                         ) }}
                         <input type="hidden" name="skala_dampak_hidden" id="skala_dampak_hidden" value="{{ $analisa->skala_dampak }}">
@@ -166,7 +176,7 @@
                         <label>Level Risiko</label>
                         {{ Form::text('level_risiko', '', ['class' => 'form-control', 'disabled' => true, 'required' => true]) }}
                     </div>
-                </div>                
+                </div>
                 <div class="row" id="divDeskripsiDampak">
                     <div class="col-md-12">
                         <label id="labelDeskripsiDampak">Deskripsi Dampak</label>
@@ -219,11 +229,11 @@
                                 <i class='bx bx-show bx-sm'></i> <!-- Boxicons Eye Icon -->
                             </button>
                         </div>
-                        {{ Form::select('skala_dampak_residual_q' . $i, 
+                        {{ Form::select('skala_dampak_residual_q' . $i,
                                             \App\Models\SkalaDampak::get()->mapWithKeys(function($item) {
                                                 return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi];
-                                            }), 
-                                            $analisa->{'skala_dampak_residual_q' . $i} ?? '', 
+                                            }),
+                                            $analisa->{'skala_dampak_residual_q' . $i} ?? '',
                                             ['class' => 'form-select', 'placeholder' => 'Pilih Skala Dampak Residual Q' . $i, 'required' => true, 'id' => 'skala_dampak_residual_q' . $i]
                                         ) }}
                         <input type="hidden" name="skala_dampak_residual_q{{ $i }}_hidden" id="skala_dampak_residual_q{{ $i }}_hidden" value="{{ $analisa->{'skala_dampak_residual_q' . $i} ?? '' }}">
@@ -240,7 +250,7 @@
                         <label>Level Risiko</label>
                         {{ Form::text('level_risiko_residual_q' . $i, '', ['class' => 'form-control', 'disabled' => true, 'required' => true]) }}
                     </div>
-                </div>                
+                </div>
                 <div class="row" id="divDeskripsiDampakResidualQ{{ $i }}">
                     <div class="col-md-12">
                         <label>Deskripsi Dampak Residual Q{{ $i }}</label>
@@ -343,7 +353,7 @@
         100% { transform: rotate(360deg); }
     }
 </style>
-@endpush  
+@endpush
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
@@ -380,7 +390,7 @@ function updateSkalaProbabilitas(residual = false, quarter = null) {
 }
 
 function refreshEksposureRisiko(residual = false, quarter = null) {
-  
+
   let suffix = '';
   if (residual) {
     if (typeof quarter === 'number' && quarter >= 1 && quarter <= 4) {
@@ -389,7 +399,7 @@ function refreshEksposureRisiko(residual = false, quarter = null) {
       suffix = `_residual`;
     }
   }
-  
+
   const domEksposurRisiko = $(`[name="eksposur_risiko${suffix}"]`);
   const kategoriDampak = $('[name="kategori_dampak"]').val();
   const nilaiProbabilitas = parseFloat(
@@ -413,7 +423,7 @@ function refreshEksposureRisiko(residual = false, quarter = null) {
     }
 
   } else if (kategoriDampak === "Kualitatif") {
-    
+
     const skalaDampak = parseFloat(
       $(`[name="skala_dampak${suffix}"]`).val()
     );
@@ -478,7 +488,7 @@ function isNumberKey(evt) {
 // Fungsi untuk validasi custom formAdd commentMore actions
 function validateForm() {
     let isValid = true;
-    
+
     // Hapus error sebelumnya
     $('.is-invalid').removeClass('is-invalid');
     $('.invalid-feedback').remove();
@@ -550,7 +560,7 @@ function validateForm() {
                     isThisQuarterComplete = false;
                 }
             }
-            
+
             if (isThisQuarterComplete) {
                 isAnyQuarterFilled = true;
             } else {
@@ -576,7 +586,7 @@ function validateForm() {
 function validateResidualValues() {
     let errors = [];
     const kategoriDampak = $('[name="kategori_dampak"]').val();
-    
+
     const nilaiDampakInheren = parseRupiahToNumber($('#nilai_dampak').val());
     const nilaiProbInheren = parseFloat($('#nilai_probabilitas').val()) || 0;
     const skalaDampakInheren = parseInt($('#skala_dampak').val()) || 0;
@@ -645,7 +655,7 @@ function addFieldError(fieldName, message) {
         // Hapus pesan error sebelumnya agar tidak duplikat
         field.siblings('.invalid-feedback').remove();
         field.next('.invalid-feedback').remove();
-        
+
         // Tambahkan pesan error baru
         field.after(`<div class="invalid-feedback d-block">${message}</div>`);
     }
@@ -680,7 +690,7 @@ $(document).ready(function() {
                 $nilaiDampakInput.val().replace(/[^0-9.-]+/g, '')
             ) || 0;
 
-            
+
             const $skalaDampak       = $(`[name="skala_dampak${suffix}"]`);
             const $skalaDampakHidden = $(`#skala_dampak${suffix}_hidden`);
 
@@ -688,20 +698,20 @@ $(document).ready(function() {
             if ($skalaDampak.length === 0 || $skalaDampakHidden.length === 0) {
                 return;
             }
-            
+
             let skala = $skalaDampak.val() || '';
             // Jika Anda ingin default 5 ketika riskLimit = 0 dan autoCalculate = true:
             if (typeof autoCalculate !== 'undefined' && autoCalculate && riskLimit === 0) {
                 skala = 5;
             }
-            
+
             if (riskLimit > 0) {
                 // Hitung persentase: (nilaiDampak / riskLimit) * 100
                 const percentage = (nilaiDampak / riskLimit) * 100;
                 // Panggil fungsi calculateSkalaDampak → harus mengembalikan 1..5
                 skala = calculateSkalaDampak(percentage);
             }
-            
+
             $skalaDampakHidden.val($skalaDampak.val());
             $skalaDampak.val(skala).change();
         });
@@ -773,10 +783,10 @@ $(document).ready(function() {
             for (let i = 1; i <= 4; i++) {
                 // Sembunyikan deskripsi dampak residual
                 $(`#divDeskripsiDampakResidualQ${i}`).hide();
-                
+
                 // Tampilkan asumsi dampak residual
                 $(`#divAsumsiDampakResidualQ${i}`).show();
-                
+
                 // Set required untuk asumsi perhitungan
                 //$(`#asumsi_perhitungan_dampak_residual_q${i}`).prop('required', true);
 
@@ -802,10 +812,10 @@ $(document).ready(function() {
             for (let i = 1; i <= 4; i++) {
                 // Tampilkan deskripsi dampak residual
                 $(`#divDeskripsiDampakResidualQ${i}`).show();
-                
+
                 // Sembunyikan asumsi dampak residual
                 $(`#divAsumsiDampakResidualQ${i}`).hide();
-                
+
                 // Set not required untuk asumsi perhitungan
                 $(`#asumsi_perhitungan_dampak_residual_q${i}`).prop('required', false);
 
@@ -828,10 +838,10 @@ $(document).ready(function() {
             for (let i = 1; i <= 4; i++) {
                 // Tampilkan deskripsi dampak residual
                 $(`#divDeskripsiDampakResidualQ${i}`).show();
-                
+
                 // Sembunyikan asumsi dampak residual
                 $(`#divAsumsiDampakResidualQ${i}`).hide();
-                
+
                 // Set not required untuk asumsi perhitungan
                 $(`#asumsi_perhitungan_dampak_residual_q${i}`).prop('required', false);
 
@@ -864,10 +874,10 @@ $(document).ready(function() {
 
     $('#skala_dampak').change(function () {
         var selectedSkalaDampak = parseInt($(this).val()); // Ambil nilai skala dampak yang dipilih
-        
+
         // Reset skala dampak residual ke placeholder
         $('#skala_dampak_residual').val('').change();
-        
+
         // Nonaktifkan opsi skala dampak residual yang lebih besar dari skala dampak
         $('#skala_dampak_residual option').each(function () {
             var optionValue = parseInt($(this).val());
@@ -882,7 +892,7 @@ $(document).ready(function() {
     $('[name="nilai_dampak"],[name="skala_dampak"]').on('change', function() {
         refreshEksposureRisiko();
         refreshSkalaAndLevelRisiko();
-        
+
     }).change();
 
     $('[name="nilai_dampak"]').on('change', function() {
@@ -1029,7 +1039,7 @@ $(document).ready(function() {
             form[0].reportValidity();
             return;
         }
-        
+
         // Validate residual values
         if (!validateResidualValues()) {
             return;
@@ -1059,7 +1069,7 @@ $(document).ready(function() {
                 formData.append('eksposur_risiko', $('#eksposur_risiko').val());
                 formData.append('skala_risiko', $('#skala_risiko').val());
                 formData.append('level_risiko', $('#level_risiko').val());
-                
+
                 for (let i = 1; i <= 4; i++) {
                     formData.append(`eksposur_risiko_residual_q${i}`, $(`#eksposur_risiko_residual_q${i}`).val());
                     formData.append(`skala_risiko_residual_q${i}`, $(`#skala_risiko_residual_q${i}`).val());
@@ -1067,7 +1077,7 @@ $(document).ready(function() {
                 }
 
                 const url = "{{ route('risk-register-ap.do-analisa', $identifikasiRisiko->id) }}";
-                
+
                 $.ajax({
                     url: url,
                     type: 'POST',
@@ -1112,7 +1122,7 @@ $(document).ready(function() {
                         });
                     }
                 });
-                
+
             }
         });
     });

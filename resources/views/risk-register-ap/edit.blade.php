@@ -38,8 +38,8 @@
                     <div class="row g-3 gx-md-5">
                         <div class="col-12">
                             <div class="form-group form-floating">
-                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Sasaran" required>{{ $identifikasiRisiko->target_capaian_kinerja }}</textarea>
-                                <label for="target_capaian_kinerja">Sasaran</label>
+                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Sasaran Risiko" required>{{ $identifikasiRisiko->target_capaian_kinerja }}</textarea>
+                                <label for="target_capaian_kinerja">Sasaran Risiko</label>
                             </div>
                         </div>
                         <div class="col-12">
@@ -84,7 +84,7 @@
             </div>
         </div>
         <!-- ::DataRisiko End -->
-        
+
         <!-- ::Peristiwa Risiko Start -->
         {{-- <div class="col-12">
             <div class="card">
@@ -115,8 +115,8 @@
             </div>
         </div> --}}
         <!-- ::Peristiwa Risiko End -->
-        
-        <!-- ::Penyebab Risiko Start -->
+
+        <!-- ::DampakRisiko Start -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
@@ -124,62 +124,77 @@
                         <span class="nav-item-circle-parent">
                             <span class="nav-item-circle">2</span>
                         </span>
+                        <span class="h3 mb-0">Dampak Risiko</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="dampak-risiko-body">
+                        <div class="row g-2 mb-3 dampak-row-item">
+                            <div class="col">
+                                <div class="form-floating">
+                                    <input type="hidden" name="penyebab_dampak_id[]">
+                                    <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required></textarea>
+                                    <label>Dampak Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-center">
+                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
+                                    <i class="bx bx-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto ms-auto">
+                            <button type="button" class="btn btn-outline-secondary rounded-pill p-2" id="add-dampak"
+                                data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Tambah Dampak Risiko">
+                                <i class='bx bx-plus fs-5'></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ::DampakRisiko End -->
+
+        <!-- ::Penyebab Risiko Start -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header stepper border-0 pb-0">
+                    <div class="nav-link active d-flex align-items-center p-0">
+                        <span class="nav-item-circle-parent">
+                            <span class="nav-item-circle">3</span>
+                        </span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="row gy-3 gx-xxl-6 mb-3">
-                        <div class="col-12">
-                            <div class="form-group d-lg-flex mb-4">
-                                {{-- <label class="form-label label-lg-start col-lg-5 col-xl-4">Penyebab Risiko</label> --}}
-                                <div class="w-100">
-                                    <div id="penyebab-risiko-body">
-                                        @forelse($identifikasiRisiko->penyebabRisiko as $index => $penyebab)
-                                            <div class="row g-2">
-                                                <div class="col">
-                                                    <div class="form-floating">
-                                                        <input type="text" class="form-control" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko" value="{{ $penyebab->penyebab_risiko }}">
-                                                        <label>Penyebab Risiko</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-auto d-flex align-items-center">
-                                                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)" {{ count($identifikasiRisiko->penyebabRisiko) <= 1 ? 'disabled' : '' }}>
-                                                        <i class="bx bx-trash"></i>
-                                                    </button>
-                                                </div>
-                                                <div class="col-12 mt-0">
-                                                    <hr>
-                                                </div>
-                                            </div>
-                                        @empty
-                                            <div class="row g-2">
-                                                <div class="col">
-                                                    <div class="form-floating">
-                                                        <input type="text" class="form-control" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko">
-                                                        <label>Penyebab Risiko</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-auto d-flex align-items-center">
-                                                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)" disabled>
-                                                        <i class="bx bx-trash"></i>
-                                                    </button>
-                                                </div>
-                                                <div class="col-12 mt-0">
-                                                    <hr>
-                                                </div>
-                                            </div>
-                                        @endforelse
-                                    </div>
-                                    <div class="row mt-2">
-                                        <div class="col-auto ms-auto">
-                                            <button type="button" class="btn btn-outline-secondary rounded-pill p-2" id="add-column"
-                                                data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Tambah Penyebab Risiko">
-                                                <i class='bx bx-plus fs-5'></i>
-                                            </button>
-                                        </div>
-                                    </div>
+                    <div id="penyebab-risiko-body">
+                        <div class="row g-2">
+                            <div class="col">
+                                <div class="form-floating">
+                                    <input type="hidden" name="penyebab_risiko_id[]">
+                                    <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]"
+                                        placeholder="Masukkan Penyebab Risiko">
+                                    <label>Penyebab Risiko</label>
                                 </div>
                             </div>
+                            <div class="col-auto d-flex align-items-center">
+                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
+                                    <i class="bx bx-trash"></i>
+                                </button>
+                            </div>
+                            <div class="col-12 mt-0">
+                                <hr>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto ms-auto">
+                            <button type="button" class="btn btn-outline-secondary rounded-pill p-2" id="add-column"
+                                data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Tambah Penyebab Risiko">
+                                <i class='bx bx-plus fs-5'></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -193,7 +208,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">3</span>
+                            <span class="nav-item-circle">4</span>
                         </span>
                         <span class="h3 mb-0">Key Risk Indicator</span>
                     </div>
@@ -320,7 +335,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">4</span>
+                            <span class="nav-item-circle">5</span>
                         </span>
                         <span class="h3 mb-0">Kontrol</span>
                     </div>
@@ -451,6 +466,26 @@
     $(document).ready(function() {
         const masterKris = @json($masterKris->keyBy('id'));
         const kontrolExistings = @json($kontrolEksistings->keyBy('id'));
+
+        $('#add-dampak').click(function() {
+            let html = `
+            <div class="row g-2 mb-3 dampak-row-item">
+                <div class="col">
+                    <div class="form-floating">
+                        <input type="hidden" name="penyebab_dampak_id[]">
+                        <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required></textarea>
+                        <label>Dampak Risiko</label>
+                    </div>
+                </div>
+                <div class="col-auto d-flex align-items-center">
+                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
+                        <i class="bx bx-trash"></i>
+                    </button>
+                </div>
+            </div>`;
+            $('#dampak-risiko-body').append(html);
+        });
+
         // Add Column Penyebab Risiko
         let row = 0;
 
@@ -460,7 +495,8 @@
             <div class="row g-2">
                 <div class="col">
                 <div class="form-floating">
-                    <input type="text" class="form-control" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko">
+                    <input type="hidden" name="penyebab_risiko_id[]" value="">
+                    <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko">
                     <label>Penyebab Risiko</label>
                 </div>
                 </div>
@@ -475,7 +511,7 @@
             </div>
             `;
             $('#penyebab-risiko-body').append(html);
-            
+
             // Enable all delete buttons when we have more than one row
             if ($('#penyebab-risiko-body .row').length > 1) {
                 $('#penyebab-risiko-body .btn-icon-danger').prop('disabled', false);
@@ -486,7 +522,7 @@
         $('#add-column-kri').click(function() {
             row++;
             const peristiwaRisikoId = $('#peristiwa_risiko').val();
-            
+
             let html = `
                 <div class="row g-2">
                     <div class="col-12 col-lg-11">
@@ -555,7 +591,7 @@
             row.find('[name="batas_waspada[]"]').val(kri.batas_waspada);
             row.find('[name="batas_bahaya[]"]').val(kri.batas_bahaya);
         });
-        
+
         var periodeYear = {{ $selectedPeriode->tahun }};
         console.log('Periode Year:', periodeYear);
 
@@ -590,7 +626,7 @@
             const form = $('#main-form');
             const url = form.attr('action');
             const data = new FormData(form[0]);
-            
+
             data.append('action', action);
 
             // Tampilkan konfirmasi sebelum mengirim request
@@ -659,6 +695,71 @@
             });
         });
 
+        const preloadedData = @json($identifikasiRisiko);
+
+        for (const key in preloadedData) {
+            if (preloadedData.hasOwnProperty(key)) {
+                const value = preloadedData[key];
+                if (Array.isArray(value)) {
+                    if (key === 'penyebab_risiko') {
+                        value.forEach((penyebab, index) => {
+                            if (index === 0) {
+                                $('.input-penyebab-risiko').val(penyebab.penyebab_risiko).attr('name', `penyebab_risiko[${penyebab.id}]`);
+                            } else {
+                                $('#add-column').click();
+                                $(`.input-penyebab-risiko`).last().val(penyebab.penyebab_risiko).attr('name', `penyebab_risiko[${penyebab.id}]`);
+                            }
+                        });
+                    } else if (key === 'dampak_risikos') {
+                        value.forEach((dampak, index) => {
+                            if (index === 0) {
+                                $('.input-dampak-risiko').val(dampak.dampak_risiko).attr('name', `dampak_risiko[${dampak.id}]`);
+                            } else {
+                                $('#add-dampak').click();
+                                $(`.input-dampak-risiko`).last().val(dampak.dampak_risiko).attr('name', `dampak_risiko[${dampak.id}]`);
+                            }
+                        });
+                    } else if (key === 'kris') {
+                        value.forEach((kri, index) => {
+                            if (index === 0) {
+                                $(`[name="key_risk_indicator[]"]`).val(kri.kri);
+                                $(`[name="satuan_kri[]"]`).val(kri.satuan_kri);
+                                $(`[name="batas_aman[]"]`).val(kri.batas_aman);
+                                $(`[name="batas_waspada[]"]`).val(kri.batas_waspada);
+                                $(`[name="batas_bahaya[]"]`).val(kri.batas_bahaya);
+                            } else {
+                                $('#add-column-kri').click();
+                                $(`[name="key_risk_indicator[]"]`).last().val(kri.kri);
+                                $(`[name="satuan_kri[]"]`).last().val(kri.satuan_kri);
+                                $(`[name="batas_aman[]"]`).last().val(kri.batas_aman);
+                                $(`[name="batas_waspada[]"]`).last().val(kri.batas_waspada);
+                                $(`[name="batas_bahaya[]"]`).last().val(kri.batas_bahaya);
+                            }
+                        });
+                    } else if (key === 'parameter_risikos') {
+                        const params = value;
+                        params.forEach((param, index) => {
+                            if (index === 0) {
+                                $('[name="parameter_risiko_id[]"]').first().val(param.id);
+                                $('[name="param_nama[]"]').first().val(param.nama);
+                                $('[name="param_formula[]"]').first().val(param.formula);
+                                $('[name="param_satuan[]"]').first().val(param.satuan);
+                            } else {
+                                $('#add-parameter').click();
+                                $('[name="parameter_risiko_id[]"]').last().val(param.id);
+                                $('[name="param_nama[]"]').last().val(param.nama);
+                                $('[name="param_formula[]"]').last().val(param.formula);
+                                $('[name="param_satuan[]"]').last().val(param.satuan);
+                            }
+                        });
+                    }
+                }
+                else {
+                    $(`[name="${key}"]`).val(value).change();
+                }
+            }
+        }
+
         $('#add-kontrol-eksisting').click(function() {
             let html = `
                 <div class="row g-2 mb-2">
@@ -673,7 +774,7 @@
                 </div>
             `;
             $('#kontrol-eksisting-body').append(html);
-            
+
             // Enable all delete buttons when we have more than one row
             if ($('#kontrol-eksisting-body .row').length > 1) {
                 $('#kontrol-eksisting-body .btn-icon-danger').prop('disabled', false);
@@ -684,7 +785,7 @@
     function removeKontrolRow(event) {
         let row = $(event.target).closest('.row');
         row.remove();
-        
+
         // If only one row remains, disable its delete button
         if ($('#kontrol-eksisting-body .row').length === 1) {
             $('#kontrol-eksisting-body .btn-icon-danger').prop('disabled', true);

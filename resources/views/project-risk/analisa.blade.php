@@ -53,15 +53,21 @@
             </div>
             <div class="card-body">
                 <div class="row g-3 gx-md-5">
-                    <div class="col-md-6">
+                    <div class="col-12">
                         <h3>Deskripsi Peristiwa Risiko</h3>
                         <p>{{ $projectRisk->deskripsi_peristiwa_risiko ?: '-' }}</p>
                     </div>
                     <div class="col-md-6">
-                        <h3>Deskripsi Dampak Risiko</h3>
-                        <p>{{ $projectRisk->deskripsi_dampak ?: '-' }}</p>
+                        <h3>Dampak Risiko</h3>
+                        <ul>
+                            @forelse ($projectRisk->dampakRisikoProjects as $dampak)
+                                <li>{{ $dampak->dampak_risiko }}</li>
+                            @empty
+                                <li class="text-muted italic">Tidak ada dampak risiko</li>
+                            @endforelse
+                        </ul>
                     </div>
-                    <div class="col-12">
+                    <div class="col-md-6">
                         <h3>Penyebab Risiko</h3>
                         <ul>
                             @foreach ($projectRisk->penyebabRisikoProjects as $penyebab)

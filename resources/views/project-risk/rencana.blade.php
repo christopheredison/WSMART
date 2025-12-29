@@ -174,50 +174,63 @@
                 </thead>
                 <tbody>
                     @php $totalBiayaDampak = 0; @endphp
-                    @if ($projectRisk->perlakuanDampakRisikos->isNotEmpty())
-                        @foreach ($projectRisk->perlakuanDampakRisikos as $index => $perlakuan)
-                            @php $totalBiayaDampak += $perlakuan->biaya_perlakuan_risiko; @endphp
+                        @foreach($projectRisk->dampakRisikoProjects as $dampak)
+                            @php
+                                $perlakuans = \App\Models\PerlakuanDampakRisiko::where('dampak_risiko_id', $dampak->id)->get();
+                                $rowSpan = max($perlakuans->count(), 1);
+                            @endphp
                             <tr>
-                                @if ($index === 0)
-                                    <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}">1</td>
-                                    <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}">{{ $projectRisk->deskripsi_dampak }}</td>
-                                @endif
-                                <td>{{ $perlakuan->rencana_perlakuan_risiko }}</td>
-                                <td>{{ 'Rp' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') }}</td>
-                                <td>{{ $perlakuan?->picJabatan?->name ?? '-' }}</td>
-                                <td>{{ $perlakuan->divisi_terkait_units->pluck('name')->implode(', ') ?: '-' }}</td>
-                                <td>{{ $perlakuan->waktu_perlakuan_risiko }}</td>
-                                <td class="action-cell">
-                                    <div class="d-flex gap-2">
-                                        <button class="btn btn-link text-primary p-0" type="button" data-action="edit-dampak" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Edit Rencana Perlakuan Dampak">
-                                            <i class="bx bx-edit-alt fs-5"></i>
-                                        </button>
-                                        <button class="btn btn-link text-danger p-0" type="button" data-action="delete-dampak" data-id="{{ $perlakuan->id }}" data-bs-toggle="tooltip" data-bs-title="Hapus Rencana Perlakuan Dampak">
-                                            <i class="bx bx-trash fs-5"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                                @if ($index === 0)
-                                    <td rowspan="{{ $projectRisk->perlakuanDampakRisikos->count() }}" class="text-center">
-                                        <button class="btn btn-primary btn-sm" type="button" data-action="add-dampak" data-id="{{ $projectRisk->id }}" data-dampak="{{ $projectRisk->deskripsi_dampak }}" data-bs-toggle="tooltip" data-bs-title="Tambah Rencana Dampak">
+                                <td rowspan="{{ $rowSpan }}">{{ $loop->iteration }}</td>
+                                <td rowspan="{{ $rowSpan }}">{{ $dampak->dampak_risiko }}</td>
+
+                                @if($perlakuans->isNotEmpty())
+                                    @foreach($perlakuans as $idx => $p)
+                                        @php $totalBiayaDampak += $p->biaya_perlakuan_risiko; @endphp
+                                        @if($idx > 0) <tr> @endif
+                                        <td>{{ $p->rencana_perlakuan_risiko }}</td>
+                                        <td>{{ 'Rp' . number_format($p->biaya_perlakuan_risiko, 0, ',', '.') }}</td>
+                                        <td>{{ $p->pic }}</td>
+                                        <td>{{ $p->divisi_terkait_units->pluck('name')->implode(', ') ?: '-' }}</td>
+                                        <td>{{ $p->waktu_perlakuan_risiko }}</td>
+                                        <td class="text-center">
+                                            <div class="d-flex gap-2 justify-content-center">
+                                                <button class="btn btn-link text-primary p-0" type="button"
+                                                    data-action="edit-dampak" data-id="{{ $p->id }}"
+                                                    data-risiko-id="{{ $projectRisk->id }}" data-dampak-risiko-id="{{ $dampak->id }}"
+                                                    data-bs-toggle="tooltip" title="Edit">
+                                                    <i class="bx bx-edit-alt fs-5"></i>
+                                                </button>
+                                                <button class="btn btn-link text-danger p-0" type="button"
+                                                    data-action="delete-dampak" data-id="{{ $p->id }}"
+                                                    data-bs-toggle="tooltip" title="Hapus">
+                                                    <i class="bx bx-trash fs-5"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        @if($idx === 0)
+                                            <td rowspan="{{ $rowSpan }}" class="text-center align-middle">
+                                                <button class="btn btn-primary btn-sm" type="button"
+                                                    data-action="add-dampak" data-risiko-id="{{ $projectRisk->id }}" data-id="{{ $dampak->id }}"
+                                                    data-dampak="{{ $dampak->dampak_risiko }}"
+                                                    data-bs-toggle="tooltip" title="Tambah Rencana Dampak">
+                                                    <i class="bx bx-plus-circle"></i>
+                                                </button>
+                                            </td>
+                                        @endif
+                                        @if($idx > 0) </tr> @endif
+                                    @endforeach
+                                @else
+                                    <td colspan="5" class="text-center text-muted italic">Belum ada perlakuan</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-primary btn-sm" type="button"
+                                            data-action="add-dampak" data-id="{{ $dampak->id }}"
+                                            data-dampak="{{ $dampak->dampak_risiko }}">
                                             <i class="bx bx-plus-circle"></i>
                                         </button>
                                     </td>
                                 @endif
                             </tr>
                         @endforeach
-                    @else
-                        <tr>
-                            <td>1</td>
-                            <td>{{ $projectRisk->deskripsi_dampak }}</td>
-                            <td colspan="5" class="text-center">Belum ada rencana perlakuan</td>
-                            <td class="text-center">
-                                <button class="btn btn-primary btn-sm" type="button" data-action="add-dampak" data-id="{{ $projectRisk->id }}" data-dampak="{{ $projectRisk->deskripsi_dampak }}" data-bs-toggle="tooltip" data-bs-title="Tambah Rencana Dampak">
-                                    <i class="bx bx-plus-circle"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    @endif
                 </tbody>
                 <tfoot>
                     <tr>
@@ -683,14 +696,15 @@ $(document).ready(function() {
         });
     });
 
-
     // Click Add Dampak
     $(document).on('click', 'button[data-action="add-dampak"]', function() {
         const id = $(this).data('id');
+        const risiko = $(this).data('risiko-id');
         const dampak = $(this).data('dampak');
 
         $('#formTambahRencanaDampak')[0].reset();
-        $('#risikoIdDampak').val(id);
+        $('#dampakRisikoIdInput').val(id);
+        $('#risikoIdDampak').val(risiko);
         $('#formTambahRencanaDampak input[name="deskripsi_dampak"]').val(dampak);
 
         $('#formTambahRencanaDampak select').each(function() {
@@ -720,8 +734,14 @@ $(document).ready(function() {
     // Click Edit Dampak
     $(document).on('click', 'button[data-action="edit-dampak"]', function() {
         const id = $(this).data('id');
+        const risikoId = $(this).data('risiko-id');
+        const dampakRisikoId = $(this).data('dampak-risiko-id');
         $.get(`/rencana-perlakuan-dampak/${id}`, function(data) {
             $('#xdPerlakuanId').val(data.id);
+            $('#xdRisikoId').val(risikoId);
+            $('#xdDampakRisikoId').val(dampakRisikoId);
+
+            $('#formEditRencanaDampak [name="xd_deskripsi_dampak"]').val(data.deskripsi_dampak);
             $('#formEditRencanaDampak [name="xd_rencana_perlakuan_risiko"]').val(data.rencana_perlakuan_risiko);
             $('#formEditRencanaDampak [name="xd_output_perlakuan_risiko"]').val(data.output_perlakuan_risiko);
             $('#formEditRencanaDampak [name="xd_biaya_perlakuan_risiko"]').val(data.biaya_perlakuan_risiko);

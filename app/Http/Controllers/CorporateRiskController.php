@@ -24,6 +24,7 @@ use App\Models\Jabatan;
 use App\Models\MasterKRI;
 use App\Models\KontrolEksisting;
 use App\Models\TaksonomiRisiko;
+use App\Models\PerlakuanDampakRisikoUnit;
 
 class CorporateRiskController extends Controller
 {
@@ -640,10 +641,12 @@ class CorporateRiskController extends Controller
             //'target_capaian_kinerja' => 'required|exists:tcks,id',
             //'peristiwa_risiko_id' => 'required|exists:peristiwa_risikos,id',
             'target_capaian_kinerja' => 'required|string',
-            'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
+            // 'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
             'wbs' => 'nullable|string',
+            'dampak_risiko' => 'required|array|min:1',
+            'dampak_risiko.*' => 'required|string',
             'penyebab_risiko' => 'required|array',
             'penyebab_risiko.*' => 'required|string',
             //'master_kri_id' => 'nullable|array',
@@ -709,17 +712,14 @@ class CorporateRiskController extends Controller
             //     $identifikasiRisiko->target_capaian_kinerja = $tck->title;
             // }
             $identifikasiRisiko->target_capaian_kinerja = $request->target_capaian_kinerja;
-            // $identifikasiRisiko->peristiwa_risiko_id = $request->peristiwa_risiko_id;
-            // $peristiwaRisiko = PeristiwaRisiko::find($request->peristiwa_risiko_id);
-            // if ($peristiwaRisiko) {
-            //     $identifikasiRisiko->kategori_risiko_id = $peristiwaRisiko->kategori_risiko_id;
-            //     $identifikasiRisiko->jenis_risiko_id = $peristiwaRisiko->jenis_risiko_id;
+
+            // $identifikasiRisiko->jenis_risiko_id = $request->jenis_risiko_id;
+            // $jenisRisiko = \App\Models\JenisRisiko::find($request->jenis_risiko_id);
+            // if ($jenisRisiko) {
+            //     $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
             // }
-            $identifikasiRisiko->jenis_risiko_id = $request->jenis_risiko_id;
-            $jenisRisiko = \App\Models\JenisRisiko::find($request->jenis_risiko_id);
-            if ($jenisRisiko) {
-                $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
-            }
+            $identifikasiRisiko->jenis_risiko_id = 0;
+            $identifikasiRisiko->kategori_risiko_id = 0;
 
             $identifikasiRisiko->peristiwa_risiko = $request->peristiwa_risiko;
             $identifikasiRisiko->deskripsi_peristiwa_risiko = $request->deskripsi_peristiwa_risiko;
@@ -754,6 +754,16 @@ class CorporateRiskController extends Controller
                             'kontrol_eksisting' => $kontrolEksisting,
                         ]);
                     }
+                }
+            }
+
+            // Simpan dampak risiko
+            if ($request->has('dampak_risiko') && is_array($request->dampak_risiko)) {
+                foreach ($request->dampak_risiko as $dampak) {
+                    $identifikasiRisiko->dampakRisikos()->create([
+                        'risiko_id' => $identifikasiRisiko->id,
+                        'dampak_risiko' => $dampak,
+                    ]);
                 }
             }
 
@@ -847,9 +857,11 @@ class CorporateRiskController extends Controller
         $validated = $request->validate([
             'periode_id' => 'required|exists:periodes,id',
             'target_capaian_kinerja' => 'required|string',
-            'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
+            // 'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
+            'dampak_risiko' => 'required|array|min:1',
+            'dampak_risiko.*' => 'required|string',
             'penyebab_risiko' => 'required|array',
             'penyebab_risiko.*' => 'required|string',
             'key_risk_indicator' => 'nullable|array',
@@ -886,10 +898,12 @@ class CorporateRiskController extends Controller
             $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite ?? 0);
             $identifikasiRisiko->threshold_risk_tolerance = $this->cleanRupiah($request->threshold_risk_tolerance ?? 0);
 
-            $jenisRisiko = JenisRisiko::find($request->jenis_risiko_id);
-            if ($jenisRisiko) {
-                $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
-            }
+            // $jenisRisiko = JenisRisiko::find($request->jenis_risiko_id);
+            // if ($jenisRisiko) {
+            //     $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
+            // }
+            $identifikasiRisiko->jenis_risiko_id = 0;
+            $identifikasiRisiko->kategori_risiko_id = 0;
 
             $identifikasiRisiko->save();
 
@@ -905,14 +919,30 @@ class CorporateRiskController extends Controller
                 }
             }
 
-            // Simpan relasi
-            if ($request->has('penyebab_risiko')) {
-                foreach ($request->penyebab_risiko as $penyebab) {
-                    if (!empty($penyebab)) $identifikasiRisiko->penyebabRisiko()->create(['penyebab_risiko' => $penyebab]);
+            // Simpan dampak risiko
+            if ($request->has('dampak_risiko') && is_array($request->dampak_risiko)) {
+                foreach ($request->dampak_risiko as $dampak) {
+                    $identifikasiRisiko->dampakRisikos()->create([
+                        'risiko_id' => $identifikasiRisiko->id,
+                        'dampak_risiko' => $dampak,
+                    ]);
                 }
             }
 
-            if ($request->has('key_risk_indicator')) {
+            // Simpan penyebab risiko
+            if ($request->has('penyebab_risiko') && is_array($request->penyebab_risiko)) {
+                foreach ($request->penyebab_risiko as $penyebab) {
+                    if (!empty($penyebab)) {
+                        $identifikasiRisiko->penyebabRisiko()->create([
+                            'penyebab_risiko' => $penyebab,
+                            'risiko_id' => $identifikasiRisiko->id,
+                        ]);
+                    }
+                }
+            }
+
+            // Simpan KRI
+            if ($request->has('key_risk_indicator') && is_array($request->key_risk_indicator)) {
                 for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
                     if (!empty($request->key_risk_indicator[$i])) {
                         $identifikasiRisiko->kris()->create([
@@ -967,6 +997,7 @@ class CorporateRiskController extends Controller
         $identifikasiRisiko = IdentifikasiRisiko::with([
             'parameterRisikos',
             'kontrolEksistings',
+            'dampakRisikos',
             'penyebabRisiko',
             'kris',
             'divisiRisks.unit',
@@ -1010,6 +1041,8 @@ class CorporateRiskController extends Controller
             // 'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
+            'dampak_risiko' => 'required|array|min:1',
+            'dampak_risiko.*' => 'required|string',
             'penyebab_risiko' => 'required|array',
             'penyebab_risiko.*' => 'required|string',
             'key_risk_indicator' => 'nullable|array',
@@ -1040,10 +1073,12 @@ class CorporateRiskController extends Controller
             $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite);
             $identifikasiRisiko->threshold_risk_tolerance = $this->cleanRupiah($request->threshold_risk_tolerance);
 
-            $jenisRisiko = JenisRisiko::find($request->jenis_risiko_id);
-            if ($jenisRisiko) {
-                $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
-            }
+            // $jenisRisiko = JenisRisiko::find($request->jenis_risiko_id);
+            // if ($jenisRisiko) {
+            //     $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
+            // }
+            $identifikasiRisiko->jenis_risiko_id = 0;
+            $identifikasiRisiko->kategori_risiko_id = 0;
 
             $identifikasiRisiko->save();
 
@@ -1070,13 +1105,22 @@ class CorporateRiskController extends Controller
             }
             $identifikasiRisiko->parameterRisikos()->whereNotIn('id', $savedParamIds)->delete();
 
-            // Penyebab
-            // $identifikasiRisiko->penyebabRisiko()->delete();
-            // if ($request->has('penyebab_risiko')) {
-            //     foreach ($request->penyebab_risiko as $penyebab) {
-            //         if (!empty($penyebab)) $identifikasiRisiko->penyebabRisiko()->create(['penyebab_risiko' => $penyebab]);
-            //     }
-            // }
+            $dampakRisikoIds = [];
+            foreach ($request->dampak_risiko as $dampakRisikoId => $dampakRisiko) {
+                $exist = $identifikasiRisiko->dampakRisikos()->where('id', $dampakRisikoId)->first();
+
+                if ($exist) {
+                    $exist->update([
+                        'dampak_risiko' => $dampakRisiko,
+                    ]);
+                } else {
+                    $exist = $identifikasiRisiko->dampakRisikos()->create([
+                        'dampak_risiko' => $dampakRisiko
+                    ]);
+                }
+                $dampakRisikoIds[] = $exist->id;
+            }
+            $identifikasiRisiko->dampakRisikos()->whereNotIn('id', $dampakRisikoIds)->delete();
 
             $penyebabRisikoIds = [];
             foreach ($request->penyebab_risiko as $penyebabRisikoId => $penyebabRisiko) {
@@ -1093,22 +1137,6 @@ class CorporateRiskController extends Controller
                 $penyebabRisikoIds[] = $exist->id;
             }
             $identifikasiRisiko->penyebabRisiko()->whereNotIn('id', $penyebabRisikoIds)->delete();
-
-            // $identifikasiRisiko->kris()->delete();
-            // if ($request->has('key_risk_indicator')) {
-            //     for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
-            //         if (!empty($request->key_risk_indicator[$i])) {
-            //             $identifikasiRisiko->kris()->create([
-            //                 'kri_id' => 0,
-            //                 'kri' => $request->key_risk_indicator[$i],
-            //                 'satuan_kri' => $request->satuan_kri[$i] ?? null,
-            //                 'batas_aman' => $request->batas_aman[$i] ?? null,
-            //                 'batas_waspada' => $request->batas_waspada[$i] ?? null,
-            //                 'batas_bahaya' => $request->batas_bahaya[$i] ?? null,
-            //             ]);
-            //         }
-            //     }
-            // }
 
             $savedKriIds = [];
             foreach ($request->key_risk_indicator as $key => $kri) {
@@ -1166,6 +1194,7 @@ class CorporateRiskController extends Controller
         $risikos = IdentifikasiRisiko::where('id', $id)
             ->with([
               'taksonomiRisiko',
+              'dampakRisikos',
               'penyebabRisikos',
               'parameterRisikos',
               'riskAnalysis',
@@ -1599,6 +1628,7 @@ class CorporateRiskController extends Controller
     {
         $identifikasiRisiko = IdentifikasiRisiko::with([
             'penyebabRisiko.perlakuanPenyebabRisiko',
+            'dampakRisikos.perlakuanDampakRisikos',
             'kris',
             'riskAnalysis',
             'peristiwaRisiko',

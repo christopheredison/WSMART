@@ -28,7 +28,6 @@ class PerlakuanPenyebabRisikoUnit extends Model
         'realisasi_biaya_perlakuan_risiko_q2',
         'realisasi_biaya_perlakuan_risiko_q3',
         'realisasi_biaya_perlakuan_risiko_q4',
-
     ];
 
     protected $casts = [
@@ -89,9 +88,9 @@ class PerlakuanPenyebabRisikoUnit extends Model
         }
 
         $start = $this->timeline_perlakuan_risiko_start->format('d M Y');
-        
+
         // Jika tanggal start dan end sama, tampilkan hanya satu tanggal
-        if ($this->timeline_perlakuan_risiko_end && 
+        if ($this->timeline_perlakuan_risiko_end &&
             $this->timeline_perlakuan_risiko_start->format('Y-m-d') === $this->timeline_perlakuan_risiko_end->format('Y-m-d')) {
             return $start;
         }
@@ -113,7 +112,7 @@ class PerlakuanPenyebabRisikoUnit extends Model
     {
         return $this->hasMany(PerlakuanPenyebabUnitMonitoring::class, 'perlakuan_penyebab_risiko_unit_id', 'id');
     }
-    
+
     public function picJabatan()
     {
         return $this->belongsTo(Jabatan::class, 'pic_jabatan_id');

@@ -11,7 +11,7 @@
 
 <div class="row g-2">
     {{ Form::hidden('xd_perlakuan_id', '', ['id' => 'xdPerlakuanId']) }}
-    {{ Form::hidden('xd_risiko_id', $projectRisk->id, ['id' => 'xdRisikoId']) }}
+    {{ Form::hidden('xd_risiko_id', $identifikasiRisiko->id, ['id' => 'xdRisikoId']) }}
     <input type="hidden" name="dampak_risiko_id" id="xdDampakRisikoId">
 
     <div class="col-12">
@@ -69,17 +69,17 @@
 
     <div class="col-12 col-md-6">
         <div class="form-floating">
-            {{ Form::select('xd_pic', \App\Models\Jabatan::where('jabatan_type', 2)->pluck('name', 'id'), '', ['id' => 'picEditDampak', 'class' => 'form-select select2', 'required']) }}
+            {{ Form::select('xd_pic', \App\Models\Jabatan::where('jabatan_type', 1)->pluck('name', 'id'), '', ['id' => 'picEditDampak', 'class' => 'form-select select2', 'required']) }}
             <label for="picEditDampak">PIC</label>
         </div>
     </div>
 
-    <div class="col-12">
+    {{-- <div class="col-12">
         <div class="form-floating xd-related-divisions">
             {{ Form::select('xd_divisi_terkait[]', \App\Models\Unit::where('unit_type_id', 1)->pluck('name', 'id'), '', ['id' => 'divisiTerkaitEditDampak', 'class' => 'form-select select2', 'multiple' => 'multiple', 'style' => 'width: 100%']) }}
             <label for="divisiTerkaitEditDampak">Divisi Terkait</label>
         </div>
-    </div>
+    </div> --}}
 
     <div class="col-12 col-md-6">
         <div class="form-floating">
