@@ -24,14 +24,24 @@
                                 <textarea class="form-control" id="nama_kejadian" name="nama_kejadian" rows="3" required>{{ $projectRisk->deskripsi_peristiwa_risiko }}</textarea>
                             </div>
 
+                            @php
+                                $selectedPeristiwaId = old('peristiwa_risiko_id', $projectRisk->peristiwa_risiko_id);
+                                $manualPeristiwa = old('rencana_kegiatan', $projectRisk->rencana_kegiatan);
+                                $isOtherPeristiwa = false;
+
+                                if (!$selectedPeristiwaId && !empty($manualPeristiwa)) {
+                                    $isOtherPeristiwa = true;
+                                }
+                            @endphp
                             <div class="col-md-6 mb-3">
                                 <label for="peristiwa_risiko_id" class="form-label">Identifikasi Kejadian <span class="text-danger">*</span></label>
-                                <select class="form-select" name="peristiwa_risiko_id" id="peristiwa_risiko_id" required>
+                                <select class="form-select select2" name="peristiwa_risiko_id" id="peristiwa_risiko_id" required>
                                     @foreach($peristiwaRisikos as $risiko)
                                         <option value="{{ $risiko->id }}" {{ $projectRisk->peristiwa_risiko_id == $risiko->id ? 'selected' : '' }}>
                                             {{ $risiko->title }}
                                         </option>
                                     @endforeach
+                                    <option value="other" {{ $isOtherPeristiwa ? 'selected' : '' }}>Lainnya</option>
                                 </select>
                                 <input type="hidden" name="peristiwa_risiko_id" value="{{ $projectRisk->peristiwa_risiko_id }}">
                             </div>
@@ -40,6 +50,15 @@
                                 <label for="tanggal_kejadian" class="form-label">Tanggal Kejadian <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="tanggal_kejadian" name="tanggal_kejadian"
                                       value="{{ \Carbon\Carbon::parse($projectRisk->perkiraan_waktu_terpapar_risiko_mulai)->format('Y-m-d') }}" required>
+                            </div>
+
+                            <div class="col-12 mb-3 {{ $isOtherPeristiwa ? '' : 'd-none' }}">
+                                <textarea
+                                  class="form-control mt-2"
+                                  id="peristiwa_risiko_lainnya"
+                                  name="rencana_kegiatan"
+                                  rows="3"
+                                  placeholder="Masukkan Peristiwa Risiko Lainnya">{{ $manualPeristiwa }}</textarea>
                             </div>
 
                             <div class="col-md-6 mb-3">

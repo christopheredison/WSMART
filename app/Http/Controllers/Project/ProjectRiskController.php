@@ -75,7 +75,7 @@ class ProjectRiskController extends BasicCRUDController
             'label' => 'Peristiwa Risiko',
             'data' => 'peristiwaRisiko.title',
             'render' => '(data, type, row) => {
-                return row.peristiwa_risiko?.title || row.rencana_kegiatan || "-";
+                return row.peristiwa_risiko?.title ? row.rencana_kegiatan || "-";
             }',
             'class' => 'mw-10r',
         ],
@@ -415,6 +415,8 @@ class ProjectRiskController extends BasicCRUDController
         ];
 
         $catatanRoute = route('projects.risks.notes', ['project' => request()->route('project'), 'risk' => ':id']);
+        $csrfToken = csrf_token();
+        $bulkRoute = route("projects.risks.bulk-verifikasi", ["project" => $projectPeriodeListId]);
 
         $this->extraScripts[] = <<<SCRIPT
         <script>
@@ -474,6 +476,103 @@ class ProjectRiskController extends BasicCRUDController
                 }
             });
         }
+
+        let currentIds = [];
+        let isBulkMode = false;
+
+        // 1. Logic Select All & Checkbox Validation
+        $(document).on('change', '#check-all-risiko', function() {
+            // Hanya pilih checkbox yang tidak disabled (sesuai wewenang step-nya)
+            $('.row-checkbox:not(:disabled)').prop('checked', this.checked);
+            toggleBulkButton();
+        });
+
+        $(document).on('change', '.row-checkbox', function() {
+            toggleBulkButton();
+        });
+
+        function toggleBulkButton() {
+            const checkedCount = $('.row-checkbox:checked').length;
+            if (checkedCount > 0) {
+                $('#bulk-verify-container').removeClass('d-none');
+                $('#count-checked').text(checkedCount);
+            } else {
+                $('#bulk-verify-container').addClass('d-none');
+                $('#check-all-risiko').prop('checked', false);
+            }
+        }
+
+        // 2. Handler Tombol Bulk Click
+        function handleBulkVerifikasiClick() {
+            currentIds = [];
+            $('.row-checkbox:checked').each(function() {
+                currentIds.push($(this).val());
+            });
+
+            isBulkMode = true;
+
+            // Sembunyikan info single risk, tampilkan info bulk
+            $('#modal-peristiwa-risiko').closest('.mb-4').addClass('d-none');
+
+            if($('#modal-bulk-info').length == 0) {
+                $('.modal-body').prepend(`
+                    <div id="modal-bulk-info" class="alert alert-info mt-0 mb-4">
+                        <i class="bx bx-info-circle"></i> Anda akan memverifikasi <strong>\${currentIds.length}</strong> data risiko proyek sekaligus.
+                    </div>
+                `);
+            } else {
+                $('#modal-bulk-info strong').text(currentIds.length);
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('modalVerifikasiRisiko'));
+            modal.show();
+
+            // Override fungsi tombol di footer modal
+            document.getElementById('btn-terima-risiko').onclick = function() { submitBulk('terima'); };
+            document.getElementById('btn-tolak-risiko').onclick = function() { submitBulk('tolak'); };
+        }
+
+        // 3. Submit Bulk
+        function submitBulk(status) {
+            const catatan = $('#catatan-verifikasi').val().trim();
+
+            if (!catatan) {
+                Swal.fire('Peringatan', 'Catatan verifikasi tidak boleh kosong', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: status === 'terima' ? 'Terima Risiko Terpilih?' : 'Kembalikan Risiko Terpilih?',
+                text: `Memproses \${currentIds.length} data.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Lanjutkan'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '{$bulkRoute}',
+                        type: 'POST',
+                        data: {
+                            _token: '{$csrfToken}',
+                            ids: currentIds,
+                            status_verifikasi: status,
+                            catatan_verifikasi: catatan
+                        },
+                        beforeSend: function() {
+                            Swal.fire({ title: 'Sedang memproses...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+                        },
+                        success: function(res) {
+                            Swal.fire('Berhasil', res.message, 'success').then(() => {
+                                location.reload();
+                            });
+                        },
+                        error: function(err) {
+                            Swal.fire('Gagal', 'Terjadi kesalahan sistem', 'error');
+                        }
+                    });
+                }
+            });
+        }
         </script>
         SCRIPT;
 
@@ -506,7 +605,7 @@ class ProjectRiskController extends BasicCRUDController
                     row.skala_risiko >= 20) {
                     add = '<span class="badge bg-primary">!</span> ';
                 }
-                return add + (row.peristiwa_risiko?.title || '-');
+                return add + (row.peristiwa_risiko?.title || row?.rencana_kegiatan || '-');
             }
             JS;
 
@@ -605,7 +704,9 @@ class ProjectRiskController extends BasicCRUDController
             'status' => $status,
             'levelId' => $levelId,
             'pending_risk' => $pending_risk,
-            // tambahkan data lain jika diperlukan
+            'u_step' => $u_step,
+            'b_step' => $dataBatch->step_verification,
+            'showBulkCheckbox' => true,
         ];
 
         return parent::index();
@@ -2341,7 +2442,7 @@ class ProjectRiskController extends BasicCRUDController
                 if ($risiko) {
                     // Ambil deskripsi peristiwa risiko
                     $deskripsi = $risiko->deskripsi_peristiwa_risiko ?:
-                                 ($risiko->peristiwaRisiko ? $risiko->peristiwaRisiko->title : 'Risiko #' . $risiko->id);
+                                ($risiko->peristiwaRisiko ? $risiko->peristiwaRisiko->title : 'Risiko #' . $risiko->id);
                     $risikoTidakLengkap[] = $deskripsi;
                 }
             }
@@ -2618,15 +2719,25 @@ class ProjectRiskController extends BasicCRUDController
             $message = 'Risiko berhasil diverifikasi dan diterima.';
         } else {
             Log::channel('verification')->info('Verifikasi risiko project dengan ID: ' . $projectRisk->id . ' ditolak oleh user dengan ID: ' . auth()->id());
+
+            // Jika sedang di step 3 (Risk Officer MR) atau 4 (Risk Owner MR), kembalikan ke step 2 (Risk Officer Divisi)
+            $targetStep = $projectRisk->step_verification;
+            if ($targetStep == 3 || $targetStep == 4) {
+                $targetStep = 2;
+            }
+
             // Update status risiko menjadi revisi (kembali ke draft)
             $projectRisk->update([
                 'status' => ProjectRisk::STATUS_REJECTED,
-                'status_progress' => 2
+                'status_progress' => 2,
+                'step_verification' => $targetStep
             ]);
 
-            $dataBatch->update([
+            if ($dataBatch) {
+                $dataBatch->update([
                     'status' => DataBatch::STATUS_REVISI,
                 ]);
+            }
 
             //semua batch notes perlu diupdate sudah read jadi unread menjadi false
             $batchNotes = DataBatchNotes::where('data_batch_id', $dataBatch->id)
@@ -2669,6 +2780,88 @@ class ProjectRiskController extends BasicCRUDController
 
         return redirect()->route('projects.risks.index', ['project' => $projectPeriodeList->id])
             ->with('success', $message);
+    }
+
+    public function bulkVerifikasi(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'status_verifikasi' => 'required|in:terima,tolak',
+            'catatan_verifikasi' => 'required|string',
+        ]);
+
+        $user = auth()->user();
+
+        DB::beginTransaction();
+        try {
+            foreach ($request->ids as $id) {
+                $risk = ProjectRisk::findOrFail($id);
+                // Panggil fungsi proses dengan logika Step 2
+                $this->processProjectRiskVerification($risk, $request->status_verifikasi, $request->catatan_verifikasi, $user);
+            }
+            DB::commit();
+            return response()->json(['message' => 'Berhasil memverifikasi ' . count($request->ids) . ' risiko proyek.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function processProjectRiskVerification($projectRisk, $status, $catatan, $user)
+    {
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        $verificationData = $this->getUserVerificationStep($user->level_id, $is_mr);
+        $u_step = $verificationData['u_step'];
+        $min_verification = 4;
+
+        $dataBatch = DataBatch::where('project_id', $projectRisk->project_id)
+            ->where('type', 2)
+            ->where('finish', false)
+            ->orderBy('batch', 'desc')
+            ->first();
+
+        if ($status === 'terima') {
+            if ($u_step >= $min_verification) {
+                $projectRisk->update([
+                    'status' => ProjectRisk::STATUS_TERVERIFIKASI, // 4
+                    'status_progress' => 3, // Accepted
+                    'status_risiko' => 1,
+                    'step_verification' => $u_step
+                ]);
+            } else {
+                $projectRisk->update([
+                    'status' => ProjectRisk::STATUS_TUNGGU_VERIFIKASI, // 3
+                    'status_progress' => 1, // On Review
+                    'step_verification' => $u_step + 1
+                ]);
+            }
+            $noteStatus = 1; // Diterima
+        } else {
+            // LOGIKA KHUSUS: Jika dari Step 3 atau 4, kembalikan ke Step 2
+            $targetStep = $projectRisk->step_verification;
+            if ($targetStep == 3 || $targetStep == 4) {
+                $targetStep = 2;
+            }
+
+            $projectRisk->update([
+                'status' => ProjectRisk::STATUS_REJECTED, // 5
+                'status_progress' => 2, // Revision
+                'step_verification' => $targetStep
+            ]);
+
+            if($dataBatch) {
+                $dataBatch->update(['status' => DataBatch::STATUS_REVISI]);
+            }
+            $noteStatus = 2; // Ditolak
+        }
+
+        RiskNote::create([
+            'risiko_id' => $projectRisk->id,
+            'type' => 2,
+            'status' => $noteStatus,
+            'notes' => $catatan,
+            'user_id' => $user->id,
+        ]);
     }
 
     public function eskalasi(Request $request)

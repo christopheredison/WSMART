@@ -40,7 +40,7 @@ class ProjectLEDController extends Controller
             if ($projectId) {
                 $data->where('project_id', $projectId);
             }
-            
+
             if ($request->filled('tahun') && $request->tahun !== '') {
                 $data->where('tahun', $request->tahun);
             }
@@ -77,7 +77,7 @@ class ProjectLEDController extends Controller
                 ->rawColumns(['action'])
                 ->make(true);
         }
-    
+
         $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
         $kategoriKejadians = KategoriKejadian::all();
 
@@ -85,7 +85,7 @@ class ProjectLEDController extends Controller
         if ($projectId) {
             $project = Project::find($projectId);
         }
-    
+
         return view('project-led.index', compact('peristiwaRisikos', 'kategoriKejadians', 'projectId', 'project'));
     }
 
@@ -106,9 +106,9 @@ class ProjectLEDController extends Controller
         $jabatans = Jabatan::all();
 
         return view('project-led.create', compact(
-            'projectSektors', 
-            'peristiwaRisikos', 
-            'projects', 
+            'projectSektors',
+            'peristiwaRisikos',
+            'projects',
             'kategoriKejadians',
             'kategoriRisikos',
             'jenisRisikos',
@@ -128,7 +128,8 @@ class ProjectLEDController extends Controller
         $validator = Validator::make($request->all(), [
             'project_id' => 'required|exists:projects,id',
             'nama_kejadian' => 'required|string',
-            'peristiwa_risiko_id' => 'required|exists:peristiwa_risikos,id',
+            'peristiwa_risiko_id' => 'required',
+            'deskripsi_kejadian' => $request->peristiw_risiko_id == 'other' ? 'required|string' : 'nullable|string',
             'tanggal_kejadian' => 'required',
             'kategori_kejadian_id' => 'required|exists:kategori_kejadians,id',
             'sumber_penyebab_kejadian' => 'required|in:1,2',
@@ -155,6 +156,7 @@ class ProjectLEDController extends Controller
                 'project_id' => $request->project_id,
                 'nama_kejadian' => $request->nama_kejadian,
                 'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
+                'deskripsi_kejadian' => $request->deskripsi_kejadian ?? null,
                 'tanggal_kejadian' => $request->tanggal_kejadian,
                 'tahun' => Carbon::parse($request->tanggal_kejadian)->format('Y'),
                 'kategori_kejadian_id' => $request->kategori_kejadian_id,
@@ -200,7 +202,7 @@ class ProjectLEDController extends Controller
                     }
                 }
             }
-            
+
             // 2. JIKA USER MEMILIH "YA", BUAT PROJECT RISK BARU
             if ($request->input('create_risk_from_led') == '1') {
                 $projectPeriodeList = ProjectPeriodeList::findOrFail($request->project_id);
@@ -277,7 +279,7 @@ class ProjectLEDController extends Controller
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
         }
     }
-    
+
     public function edit($project, $id)
     {
         $lossEvent = LossEventProject::with('penyebabRisikoProjectLeds.perlakuanPenyebabRisiko')->findOrFail($id);
@@ -315,10 +317,10 @@ class ProjectLEDController extends Controller
         });
 
         return view('project-led.edit', compact(
-            'lossEvent', 
-            'projectSektors', 
-            'peristiwaRisikos', 
-            'projects', 
+            'lossEvent',
+            'projectSektors',
+            'peristiwaRisikos',
+            'projects',
             'kategoriKejadians',
             'kategoriRisikos',
             'jenisRisikos',
@@ -373,7 +375,7 @@ class ProjectLEDController extends Controller
             // dd($penyebabDataFromRequest);
             foreach ($penyebabDataFromRequest as $penyebabItem) {
                 $isNewPenyebab = !isset($penyebabItem['id']) || str_starts_with($penyebabItem['id'], 'temp_');
-                
+
                 $penyebabData = [
                     'loss_event_project_id' => $lossEvent->id,
                     'penyebab_risiko' => $penyebabItem['penyebab_risiko'],
@@ -436,7 +438,7 @@ class ProjectLEDController extends Controller
                     }
                 }
             }
-            
+
             $penyebabToDelete = array_diff($existingPenyebabIds, $requestPenyebabIds);
             if (!empty($penyebabToDelete)) {
               PenyebabRisikoProjectLed::destroy($penyebabToDelete);
@@ -542,14 +544,14 @@ class ProjectLEDController extends Controller
     public function show($id)
     {
         $lossEvent = LossEventProject::with([
-          'peristiwaRisiko', 
-          'kategoriKejadian', 
-          'kategoriRisiko', 
+          'peristiwaRisiko',
+          'kategoriKejadian',
+          'kategoriRisiko',
           'jenisRisiko',
           'penyebabRisikoProjectLeds.perlakuanPenyebabRisiko',
           'risiko',
         ])->findOrFail($id);
-        
+
         $project = Project::find($lossEvent->project_id);
         return view('project-led.show', compact('lossEvent', 'project'));
     }
@@ -582,13 +584,13 @@ class ProjectLEDController extends Controller
                 })
             ];
         });
-      
+
         $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
         $kategoriKejadians = KategoriKejadian::all();
         $jenisRisikos = JenisRisiko::with('kategoriRisiko')->get();
         $analisa = $projectRisk->projectRiskAnalisa;
         $jabatans = Jabatan::all();
-        
+
         return view('project-led.change-to-led', compact(
             'project',
             'projectRisk',
@@ -611,7 +613,8 @@ class ProjectLEDController extends Controller
 
         $validator = Validator::make($request->all(), [
             'nama_kejadian' => 'required|string',
-            'peristiwa_risiko_id' => 'required|exists:peristiwa_risikos,id',
+            'peristiwa_risiko_id' => 'required',
+            'deskripsi_kejadian' => $request->peristiw_risiko_id == 'other' ? 'required|string' : 'nullable|string',
             'tanggal_kejadian' => 'required|date',
             'kategori_kejadian_id' => 'required|exists:kategori_kejadians,id',
             'sumber_penyebab_kejadian' => 'required|in:1,2',
@@ -631,7 +634,7 @@ class ProjectLEDController extends Controller
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
         }
-        
+
         DB::beginTransaction();
         try {
             $led = LossEventProject::create([
@@ -639,6 +642,7 @@ class ProjectLEDController extends Controller
                 'project_risk_id' => $risk->id,
                 'nama_kejadian' => $request->nama_kejadian,
                 'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
+                'deskripsi_kejadian' => $request->deskripsi_kejadian ?? null,
                 'tanggal_kejadian' => $request->tanggal_kejadian,
                 'tahun' => Carbon::parse($request->tanggal_kejadian)->format('Y'),
                 'kategori_kejadian_id' => $request->kategori_kejadian_id,
@@ -655,7 +659,7 @@ class ProjectLEDController extends Controller
                 'nilai_klaim' => $request->status_asuransi == '1' ? ($request->nilai_klaim ?? 0) : 0,
                 'version' => 1,
             ]);
-    
+
             $penyebabData  = json_decode($request->input('penyebab_data'), true);
             if (is_array($penyebabData)) {
                 foreach ($penyebabData as $penyebabItem) {
@@ -663,11 +667,11 @@ class ProjectLEDController extends Controller
                         'loss_event_project_id' => $led->id,
                         'penyebab_risiko' => $penyebabItem['penyebab_risiko'],
                     ]);
-    
+
                     if (!empty($penyebabItem['perlakuan']) && is_array($penyebabItem['perlakuan'])) {
                         foreach ($penyebabItem['perlakuan'] as $perlakuanItem) {
                             $jabatan = Jabatan::find($perlakuanItem['pic']);
-    
+
                             PerlakuanPenyebabRisikoProjectLed::create([
                                 'penyebab_risiko_led_id' => $newLedPenyebab->id,
                                 'rencana_perlakuan_risiko' => $perlakuanItem['rencana_perlakuan_risiko'],
@@ -683,8 +687,8 @@ class ProjectLEDController extends Controller
                     }
                 }
             }
-    
-            $efektivitas = 0.0; 
+
+            $efektivitas = 0.0;
 
             $analisa = $risk?->projectRiskAnalisa;
             $monitoring = $risk?->projectRiskMonitoring;
@@ -722,9 +726,9 @@ class ProjectLEDController extends Controller
             if ($request->input('create_new_risk') == '1') {
                 $penyebabText = "Risiko " . $request->nama_kejadian;
                 return redirect()->route(
-                    'projects.risks.create', 
+                    'projects.risks.create',
                     [
-                        'project' => $project->id, 
+                        'project' => $project->id,
                         'penyebab_risiko' => $penyebabText
                     ]
                 )->with('success', 'Loss Event berhasil dibuat. Silakan tambahkan risiko baru.');
@@ -742,7 +746,7 @@ class ProjectLEDController extends Controller
       if (is_null($value) || $value === '') {
           return null;
       }
-      
+
       return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
     }
 
@@ -751,7 +755,7 @@ class ProjectLEDController extends Controller
         $files = LossEventProjectFile::where('loss_event_project_id', $id)
                     ->orderBy('created_at', 'desc')
                     ->get();
-        
+
         return response()->json([
             'success' => true,
             'data' => $files->map(function($file) {
@@ -760,7 +764,7 @@ class ProjectLEDController extends Controller
                     'file_name' => $file->file_name,
                     'file_type' => $file->file_type,
                     'file_size' => number_format($file->file_size / 1024, 2) . ' KB',
-                    'file_url' => asset('storage/' . $file->file_path), 
+                    'file_url' => asset('storage/' . $file->file_path),
                     'created_at' => $file->created_at->format('d M Y H:i')
                 ];
             })
@@ -784,7 +788,7 @@ class ProjectLEDController extends Controller
                 $originalName = $file->getClientOriginalName();
                 $fileSize = $file->getSize();
                 $fileType = $file->getClientMimeType();
-                
+
                 $path = $file->store('loss-event-project', 'public');
 
                 LossEventProjectFile::create([
@@ -806,7 +810,7 @@ class ProjectLEDController extends Controller
     {
         try {
             $file = LossEventProjectFile::findOrFail($id);
-            
+
             if (Storage::disk('public')->exists($file->file_path)) {
                 Storage::disk('public')->delete($file->file_path);
             }

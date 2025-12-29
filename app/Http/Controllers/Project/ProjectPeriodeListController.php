@@ -28,6 +28,14 @@ class ProjectPeriodeListController extends BasicCRUDController
             'orderable' => false,
             'searchable' => true,
         ],
+        // 'const_center_parent' => [
+        //     'label' => 'Divisi',
+        //     'data' => 'project.cost_center_parent',
+        //     'name' => 'cost_center_parent',
+        //     'render' => '(data, type, row) => row.project?.divisi?.name || "-"',
+        //     'orderable' => false,
+        //     'searchable' => false,
+        // ],
         'project_id' => [
             'label' => 'Proyek',
             'data' => 'project.project_name',
@@ -83,7 +91,7 @@ class ProjectPeriodeListController extends BasicCRUDController
 
     public function index() {
         request()->merge([
-            'append' => ['project.projectDivisi', 'project.projectSektor'],
+            'append' => ['project.divisi', 'project.projectSektor'],
             'withCount' => ['projectRisks'],
         ]);
 
@@ -104,12 +112,12 @@ class ProjectPeriodeListController extends BasicCRUDController
         $this->callbackQuery = function ($query) use ($userProjectIds, $unitProjectIds, $allProjectIds, $user) {
             // Join tabel projects (Wajib untuk sorting/filtering)
             $query->join('projects', 'project_periode_lists.project_id', '=', 'projects.id');
-            
+
             // PERBAIKAN SORTING:
             // Logika custom order (Prioritas Project & Updated At) HANYA dijalankan
             // jika User TIDAK sedang melakukan sorting lewat kolom tabel.
             if (!request()->has('order')) {
-                
+
                 $query->reorder(); // Reset default order model
 
                 if ($allProjectIds->isNotEmpty()) {
@@ -134,7 +142,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                         ");
                     }
                 }
-                
+
                 // Default Secondary Sort
                 $query->orderBy('project_periode_lists.updated_at', 'desc');
             }
@@ -153,7 +161,7 @@ class ProjectPeriodeListController extends BasicCRUDController
 
         // --- DATATABLE CALLBACK ---
         $this->datatableCallback = function ($dataTable) use ($user) {
-            
+
             // 1. Sorting & Filter untuk Kode Project (JSON)
             // Gunakan alias 'profit_center' sesuai 'name' di tableColumns
             $dataTable->orderColumn('profit_center', function ($query, $order) {
@@ -345,7 +353,7 @@ class ProjectPeriodeListController extends BasicCRUDController
         $tahunMonitorings = $projectPeriode->projectRisks->pluck('projectRiskMonitorings')->flatten()->pluck('tahun')->unique()->toArray();
         $tahunMonitorings[] = $projectPeriode->created_at?->format('Y') ?? date('Y');
         sort($tahunMonitorings);
-        
+
         $minTahun = (!empty($tahunMonitorings)) ? min($tahunMonitorings) : date('Y');
         $maxTahun = (!empty($tahunMonitorings)) ? max($tahunMonitorings) : date('Y');
 

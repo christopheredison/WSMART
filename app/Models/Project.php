@@ -138,6 +138,11 @@ class Project extends Model
         return $this->belongsTo(ProjectLocation::class, 'project_location_id');
     }
 
+    public function divisi()
+    {
+        return $this->belongsTo(Unit::class, 'cost_center_parent', 'cost_center');
+    }
+
     public function getMasaPelaksanaanAttribute()
     {
         return ($this->masa_pelaksanaan_start?->format('d/m/Y')) . ' - ' . ($this->masa_pelaksanaan_end?->format('d/m/Y'));

@@ -156,18 +156,21 @@
                             </div>
                         </div>
                     </div>
+                    <div class="col-auto mb-3 d-none" id="bulk-verify-container">
+                        <button type="button" class="btn btn-success btn-sm align-self-center" onclick="handleBulkVerifikasiClick()">
+                            <span class="bx bx-check-shield"></span> Verifikasi Risiko (<span id="count-checked">0</span>)
+                        </button>
+                    </div>
                     <table class="table table-bulk-select table-hover ajax-datatable" data-paging="true" data-scroll-y="false"
                         data-filter="true" data-info="true">
                         <thead>
                             <tr>
-                                {{--
-                                <th class="white-space-nowrap">
+                                {{-- <th class="white-space-nowrap">
                                     <div class="form-check mb-0">
                                         <input class="form-check-input" type="checkbox"
                                             data-bulk-select='{"body":"bulk-select-body","actions":"bulk-select-actions","replacedElement":"bulk-select-replace-element"}' />
                                     </div>
-                                </th>
-                                --}}
+                                </th> --}}
                                 <th class="white-space-nowrap">#</th>
                                 @foreach ($tableColumns as $key => $column)
                                     <th class="sort" data-sort="{{ $key }}" class="{{ $column['class'] ?? '' }}">
@@ -536,8 +539,6 @@ $(document).ready(function() {
     const ledCreateRoute = "{{ route('risk-register-ap.loss-events.create', ['riskRegister' => ':riskRegister']) }}";
 @endif
 
-
-
 const fetchedData = [];
 $(document).ready(function() {
     $("body").tooltip({ selector: '[data-bs-toggle=tooltip]' });
@@ -551,6 +552,28 @@ $(document).ready(function() {
         //         return '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" value="' + data + '"></div>';
         //     }
         // },
+        @if(!empty($extraViewData['showBulkCheckbox']))
+        {
+            data: 'id',
+            orderable: false,
+            searchable: false,
+            render: function(data, type, row, meta) {
+                // Ambil data step dari PHP extraViewData
+                const userStep = {{ $extraViewData['u_step'] ?? 0 }};
+                const batchStep = {{ $extraViewData['b_step'] ?? 0 }};
+
+                // Validasi: Risiko bisa dicentang jika status 2/3 dan step-nya cocok dengan user + batch
+                const canVerify = (row.status == 2 || row.status == 3) &&
+                                    row.step_verification == userStep &&
+                                    userStep == batchStep;
+
+                return `
+                    <div class="form-check mb-0">
+                        <input class="form-check-input row-checkbox" type="checkbox" value="${data}" ${canVerify ? '' : 'disabled'}>
+                    </div>`;
+            }
+        },
+        @endif
         {
             data: 'id',
             orderable: false,

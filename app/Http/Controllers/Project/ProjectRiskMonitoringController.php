@@ -1174,9 +1174,17 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             if ($validated['status_verifikasi'] == 'terima') {
                 $monitoring->update(['is_approved' => true]);
             } else {
-                // Jika ditolak, status kembali ke 1 (Draft/Revisi), dan is_revision ditandai true
+                // Jika ditolak, pada status 4 (Risk Officer MR) atau 5 (Risk Owner MR), kembalikan ke status 3 (Risk Officer Divisi)
+                $targetStatus = $monitoring->status;
+                if ($targetStatus == ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR || $targetStatus == ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR) {
+                    $targetStatus = ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI; // 3
+                } else {
+                    // Jika bukan, status kembali ke 1 (Draft/Revisi), dan is_revision ditandai true
+                    $targetStatus = ProjectRiskMonitoring::STATUS_DRAFT_REVISI;
+                }
+
                 $monitoring->update([
-                    'status' => ProjectRiskMonitoring::STATUS_DRAFT_REVISI,
+                    'status' => $targetStatus,
                     'is_approved' => false,
                     'is_revision' => true,
                 ]);

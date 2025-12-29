@@ -11,9 +11,9 @@ class ProjectRiskMonitoring extends Model
 
     public const STATUS_DRAFT_REVISI = 1;
     public const STATUS_VERIFIKASI_RO_PROJECT = 2;   // Menunggu Level 7
-    public const STATUS_VERIFIKASI_RO_DIVISI = 3;    // Menunggu Level 1 (Divisi)
-    public const STATUS_VERIFIKASI_RO_DIVISI_MR = 4; // Menunggu Level 1 (MR)
-    public const STATUS_VERIFIKASI_ROW_DIVISI_MR = 5;// Menunggu Level 2 (ROW MR)
+    public const STATUS_VERIFIKASI_RO_DIVISI = 3;    // Menunggu Level 1 (Officer Divisi)
+    public const STATUS_VERIFIKASI_RO_DIVISI_MR = 4; // Menunggu Level 1 (Officer MR)
+    public const STATUS_VERIFIKASI_ROW_DIVISI_MR = 5;// Menunggu Level 2 (Owner MR)
     public const STATUS_PUBLISHED = 6;
 
     protected $fillable = [
