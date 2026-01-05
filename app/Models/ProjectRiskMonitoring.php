@@ -14,7 +14,7 @@ class ProjectRiskMonitoring extends Model
     public const STATUS_VERIFIKASI_RO_DIVISI = 3;    // Menunggu Level 1 (Officer Divisi)
     public const STATUS_VERIFIKASI_RO_DIVISI_MR = 4; // Menunggu Level 1 (Officer MR)
     public const STATUS_VERIFIKASI_ROW_DIVISI_MR = 5;// Menunggu Level 2 (Owner MR)
-    public const STATUS_PUBLISHED = 6;
+    public const STATUS_PUBLISHED = 100; // 6 (Legacy Published)
 
     protected $fillable = [
         'risiko_id',
@@ -101,5 +101,26 @@ class ProjectRiskMonitoring extends Model
     public function pengendalians()
     {
         return $this->hasMany(ProjectRiskPengendalian::class, 'monitoring_id');
+    }
+
+    public static function getWorkflow()
+    {
+        return [
+            1 => ['level' => 6, 'label' => 'Risk Officer Project'], // Input
+            2 => ['level' => 7, 'label' => 'Risk Owner Project'],   // Verifikasi 1
+            3 => ['level' => 1, 'label' => 'Risk Officer Divisi', 'unit_mr' => false], // Verifikasi 2
+            4 => ['level' => 1, 'label' => 'Risk Officer MR', 'permission' => 'verification_mr', 'unit_mr' => true], // Verifikasi 3
+            5 => ['level' => 2, 'label' => 'Risk Owner MR', 'permission' => 'verification_mr', 'unit_mr' => true,], // Verifikasi Final
+        ];
+    }
+
+    public static function getReturnStatus($currentStatus)
+    {
+        return match ((int)$currentStatus) {
+            2, 3 => 1, // Step 2 (Owner Proyek) & 3 (Officer Divisi) kembali ke Step 1 (Officer Proyek)
+            4    => 3, // Step 4 (Officer MR) kembali ke Step 3 (Officer Divisi)
+            5    => 4, // Step 5 (Owner MR) kembali ke Step 4 (Officer MR)
+            default => 1,
+        };
     }
 }

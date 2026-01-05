@@ -40,7 +40,7 @@ class PenilaianRMIController extends Controller
         //$periods = RMIPeriod::orderBy('year', 'desc')->get();
         $periods = RMIPeriod::orderBy('year', 'desc')
               ->paginate(10);
-        
+
         // Tambahkan status untuk setiap periode
         foreach ($periods as $period) {
             // Tentukan status periode berdasarkan field status di model
@@ -53,10 +53,10 @@ class PenilaianRMIController extends Controller
 
         $skalaKinerjas = SkalaKinerja::orderBy('id', 'asc')->get();
         $skalaKpmrs    = SkalaKPMR::orderBy('id', 'asc')->get();
-        
+
         return view('penilaian-rmi.index', compact('periods', 'skalaKinerjas', 'skalaKpmrs'));
     }
-    
+
     /**
      * Display the specified resource.
      *
@@ -66,7 +66,7 @@ class PenilaianRMIController extends Controller
     public function showxx($id)
     {
         $period = RMIPeriod::findOrFail($id);
-        
+
         // Ambil semua dimensi dengan sub dimensi dan parameter
         $dimensions = Dimension::with([
             'subDimensions' => function($query) {
@@ -82,25 +82,25 @@ class PenilaianRMIController extends Controller
                 $query->orderBy('id', 'asc');
             }
         ])->orderBy('id', 'asc')->get();
-        
+
         // Ambil skor parameter untuk periode ini
         $parameterScores = ScoreParameter::where('period_id', $id)
             ->whereNull('deleted_at')
             ->get()
             ->keyBy('parameter_id');
-            
+
         // Ambil skor kriteria untuk periode ini
         $criteriaScores = ScoreCriteria::where('period_id', $id)
             ->whereNull('deleted_at')
             ->with('documents') // Ambil dokumen terkait
             ->get()
             ->keyBy('parameter_criteria_id');
-            
+
         // Ambil skor dimensi
         $dimensionScores = DimensionAspectEvaluation::whereNull('deleted_at')
             ->get()
             ->keyBy('sub_dimension_id');
-        
+
         return view('penilaian-rmi.show', compact('period', 'dimensions', 'parameterScores', 'criteriaScores', 'dimensionScores'));
     }
 
@@ -115,7 +115,7 @@ class PenilaianRMIController extends Controller
         $evidenceMap = collect();
         if ($period->penilaianCapaianKinerja) {
             $penilaianId = $period->penilaianCapaianKinerja->id;
-            
+
             $evidenceMap = ParameterKinerjaDocument::where('penilaian_capaian_kinerja_id', $penilaianId)->get()->groupBy('parameter_id');
         }
 
@@ -168,7 +168,7 @@ class PenilaianRMIController extends Controller
         ));
     }
 
-    
+
     /**
      * Menampilkan halaman penilaian aspek dinamis
      *
@@ -179,7 +179,7 @@ class PenilaianRMIController extends Controller
     {
         // Ambil data periode
         $period = RMIPeriod::findOrFail($id);
-        
+
         // Ambil semua dimensi dengan sub dimensi dan parameter
         $dimensions = Dimension::with([
             'subDimensions' => function($query) {
@@ -192,7 +192,7 @@ class PenilaianRMIController extends Controller
                 }]);
             }
         ])->orderBy('id', 'asc')->get();
-        
+
         // Ambil skor yang sudah ada
         // $scores = ScoreCriteria::where('period_id', $id)
         //     ->pluck('score', 'parameter_criteria_id')
@@ -205,10 +205,10 @@ class PenilaianRMIController extends Controller
             $scores[$sc->parameter_criteria_id] = $sc->score;
             $gapAnalysis[$sc->parameter_criteria_id] = $sc->gap_analysis;
         }
-        
+
         return view('penilaian-rmi.penilaian-aspek-dinamis', compact('period', 'dimensions', 'scores', 'gapAnalysis'));
     }
-    
+
     /**
      * Menyimpan hasil penilaian aspek dinamis
      *
@@ -241,10 +241,10 @@ class PenilaianRMIController extends Controller
                 'gap_analysis.*' => 'nullable|string'
             ]);
         }
-        
+
         // Ambil periode
         $period = RMIPeriod::findOrFail($periodId);
-        
+
         // Simpan skor kriteria dan gap analysis
         if ($request->has('scores')) {
             \Log::info('masuk ke dalam blok hasScores');
@@ -254,18 +254,18 @@ class PenilaianRMIController extends Controller
                 $existing = ScoreCriteria::where('period_id', $periodId)
                     ->where('parameter_criteria_id', $criteriaId)
                     ->first();
-            
+
                 // Cek apakah ada perubahan
                 if ($existing && $existing->score == $score && $existing->gap_analysis == $gap) {
                     // Tidak ada perubahan, skip proses hapus dan insert
                     continue;
                 }
-            
+
                 // Jika ada, hapus data lama
                 ScoreCriteria::where('period_id', $periodId)
                     ->where('parameter_criteria_id', $criteriaId)
                     ->delete();
-            
+
                 // Buat skor baru dengan gap analysis
                 ScoreCriteria::create([
                     'period_id' => $periodId,
@@ -299,24 +299,24 @@ class PenilaianRMIController extends Controller
                 }
             }
         }
-        
+
         // Jika action adalah finish
         if ($request->action === 'finish') {
             // Ambil semua parameter
             $parameters = MeasurementParameter::all();
-            
+
             // Hitung skor untuk setiap parameter
             foreach ($parameters as $parameter) {
                 // Ambil semua kriteria untuk parameter ini
                 $criterias = ParameterCriteria::where('parameter_id', $parameter->id)->get();
-                
+
                 // Jika parameter tidak memiliki kriteria, set skor parameter menjadi null
                 if ($criterias->isEmpty()) {
                     // Soft delete skor parameter lama jika ada
                     ScoreParameter::where('period_id', $periodId)
                         ->where('parameter_id', $parameter->id)
                         ->delete();
-                        
+
                     // Buat skor parameter baru
                     ScoreParameter::create([
                         'period_id' => $periodId,
@@ -328,36 +328,36 @@ class PenilaianRMIController extends Controller
                     ]);
                     continue;
                 }
-                
+
                 // Ambil skor terendah dari semua kriteria parameter
                 $lowestScore = null;
-                
+
                 foreach ($criterias as $criteria) {
                     $criteriaScore = ScoreCriteria::where('period_id', $periodId)
                         ->where('parameter_criteria_id', $criteria->id)
                         ->whereNull('deleted_at')
                         ->first();
-                    
+
                     if ($criteriaScore) {
                         if ($lowestScore === null || $criteriaScore->score < $lowestScore) {
                             $lowestScore = $criteriaScore->score;
                         }
                     }
                 }
-                
+
                 // Jika ada skor terendah, simpan ke score_parameters
                 if ($lowestScore !== null) {
                     // Tentukan deskripsi skor parameter
                     $scoreDesc = $this->getScoreParameterDesc($lowestScore);
-                    
+
                     // Tentukan prioritas wawancara
                     $prioritasWawancara = $this->getPrioritasWawancara($lowestScore);
-                    
+
                     // Soft delete skor parameter lama jika ada
                     ScoreParameter::where('period_id', $periodId)
                         ->where('parameter_id', $parameter->id)
                         ->delete();
-                        
+
                     // Buat skor parameter baru
                     ScoreParameter::create([
                         'period_id' => $periodId,
@@ -369,29 +369,29 @@ class PenilaianRMIController extends Controller
                     ]);
                 }
             }
-            
+
             // Hitung skor dimensi
             $this->calculateDimensionScores($periodId);
-            
+
             // Hitung skor RMI
             $this->calculateRMIScore($periodId);
-            
+
             // Update status periode menjadi selesai
             $period->update([
                 'status' => 2, // Selesai
             ]);
-            
+
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Penilaian Aspek Dimensi berhasil diselesaikan.'
                 ]);
             }
-            
+
             return redirect()->route('penilaian-rmi.index')
                 ->with('success', 'Penilaian Aspek Dimensi berhasil diselesaikan.');
         }
-        
+
         // Untuk simpan sementara
         if ($request->ajax()) {
             return response()->json([
@@ -399,7 +399,7 @@ class PenilaianRMIController extends Controller
                 'message' => 'Data berhasil disimpan sementara'
             ]);
         }
-        
+
         return redirect()->route('penilaian-rmi.index')
             ->with('success', 'Penilaian Aspek Dimensi berhasil disimpan sementara.');
     }
@@ -411,46 +411,46 @@ class PenilaianRMIController extends Controller
     {
         // Ambil semua sub dimensi
         $subDimensions = SubDimension::all();
-        
+
         foreach ($subDimensions as $subDimension) {
             // Ambil semua parameter untuk sub dimensi ini
             $parameters = MeasurementParameter::where('sub_dimension_id', $subDimension->id)->get();
-            
+
             if ($parameters->isEmpty()) {
                 continue;
             }
-            
+
             // Ambil skor parameter untuk periode ini
             $parameterScores = ScoreParameter::where('period_id', $periodId)
                 ->whereIn('parameter_id', $parameters->pluck('id'))
                 ->whereNull('deleted_at')
                 ->get();
-            
+
             if ($parameterScores->isEmpty()) {
                 continue;
             }
-            
+
             // Hitung rata-rata skor parameter
             $totalScore = 0;
             $countScore = 0;
-            
+
             foreach ($parameterScores as $parameterScore) {
                 if ($parameterScore->score !== null) {
                     $totalScore += $parameterScore->score;
                     $countScore++;
                 }
             }
-            
+
             if ($countScore > 0) {
                 $averageScore = $totalScore / $countScore;
-                
+
                 // Tentukan deskripsi skor dimensi
                 $scoreDimensionDesc = $this->getScoreDimensionDesc($averageScore);
-                
+
                 // Soft delete skor dimensi lama jika ada
                 DimensionAspectEvaluation::where('sub_dimension_id', $subDimension->id)
                     ->delete();
-                    
+
                 // Buat skor dimensi baru
                 DimensionAspectEvaluation::create([
                     'sub_dimension_id' => $subDimension->id,
@@ -465,53 +465,53 @@ class PenilaianRMIController extends Controller
     {
         // Ambil semua dimensi
         $dimensions = Dimension::all();
-        
+
         foreach ($dimensions as $dimension) {
             // Ambil semua sub dimensi untuk dimensi ini
             $subDimensions = SubDimension::where('dimension_id', $dimension->id)->get();
-            
+
             if ($subDimensions->isEmpty()) {
                 continue;
             }
-            
+
             // Ambil semua parameter untuk sub dimensi ini
             $parameterIds = MeasurementParameter::whereIn('sub_dimension_id', $subDimensions->pluck('id'))->pluck('id');
-            
+
             if ($parameterIds->isEmpty()) {
                 continue;
             }
-            
+
             // Ambil skor parameter untuk periode ini
             $parameterScores = ScoreParameter::where('period_id', $periodId)
                 ->whereIn('parameter_id', $parameterIds)
                 ->whereNull('deleted_at')
                 ->get();
-            
+
             if ($parameterScores->isEmpty()) {
                 continue;
             }
-            
+
             // Hitung rata-rata skor parameter untuk dimensi ini
             $totalScore = 0;
             $countScore = 0;
-            
+
             foreach ($parameterScores as $parameterScore) {
                 if ($parameterScore->score !== null) {
                     $totalScore += $parameterScore->score;
                     $countScore++;
                 }
             }
-            
+
             if ($countScore > 0) {
                 $averageScore = $totalScore / $countScore;
-                
+
                 // Tentukan deskripsi skor dimensi
                 $scoreDimensionDesc = $this->getScoreDimensionDesc($averageScore);
-                
+
                 // Soft delete skor dimensi lama jika ada
                 DimensionAspectEvaluation::where('dimension_id', $dimension->id)
                     ->delete();
-                    
+
                 // Buat skor dimensi baru
                 DimensionAspectEvaluation::create([
                     'dimension_id' => $dimension->id,
@@ -531,49 +531,49 @@ class PenilaianRMIController extends Controller
         $dimensions = Dimension::all();
         $totalScore = 0;
         $countDimension = 0;
-        
+
         foreach ($dimensions as $dimension) {
             // Ambil semua sub dimensi untuk dimensi ini
             $subDimensions = SubDimension::where('dimension_id', $dimension->id)->get();
-            
+
             if ($subDimensions->isEmpty()) {
                 continue;
             }
-            
+
             // Ambil skor dimensi untuk sub dimensi ini
             $dimensionScores = DimensionAspectEvaluation::whereIn('sub_dimension_id', $subDimensions->pluck('id'))
                 ->whereNull('deleted_at')
                 ->get();
-            
+
             if ($dimensionScores->isEmpty()) {
                 continue;
             }
-            
+
             // Hitung rata-rata skor dimensi
             $dimensionTotalScore = 0;
             $dimensionCount = 0;
-            
+
             foreach ($dimensionScores as $dimensionScore) {
                 if ($dimensionScore->score_dimension !== null) {
                     $dimensionTotalScore += $dimensionScore->score_dimension;
                     $dimensionCount++;
                 }
             }
-            
+
             if ($dimensionCount > 0) {
                 $dimensionAverageScore = $dimensionTotalScore / $dimensionCount;
                 $totalScore += $dimensionAverageScore;
                 $countDimension++;
             }
         }
-        
+
         // Hitung skor RMI
         if ($countDimension > 0) {
             $rmiScore = $totalScore / $countDimension;
-            
+
             // Tentukan deskripsi skor RMI
             $rmiScoreDesc = $this->getScoreRMIDesc($rmiScore);
-            
+
             // Update skor RMI pada periode
             $period = RMIPeriod::findOrFail($periodId);
             $period->update([
@@ -592,24 +592,24 @@ class PenilaianRMIController extends Controller
         $parameterScores = ScoreParameter::where('period_id', $periodId)
             ->whereNull('deleted_at')
             ->get();
-        
+
         $totalScore = 0;
         $countScore = 0;
-        
+
         foreach ($parameterScores as $parameterScore) {
             if ($parameterScore->score !== null) {
                 $totalScore += $parameterScore->score;
                 $countScore++;
             }
         }
-        
+
         // Hitung skor RMI
         if ($countScore > 0) {
             $rmiScore = $totalScore / $countScore;
-            
+
             // Tentukan deskripsi skor RMI
             $rmiScoreDesc = $this->getScoreRMIDesc($rmiScore);
-            
+
             // Update skor RMI pada periode
             $period = RMIPeriod::findOrFail($periodId);
             $period->update([
@@ -730,13 +730,13 @@ class PenilaianRMIController extends Controller
             ->where('parameter_criteria_id', $criteriaId)
             ->whereNull('deleted_at')
             ->first();
-            
+
         return response()->json([
             'gap_analysis' => $scoreCriteria ? $scoreCriteria->gap_analysis : '',
             'documents' => $scoreCriteria ? $scoreCriteria->documents : []
         ]);
     }
-    
+
     /**
      * Menghapus dokumen gap analysis
      */
@@ -745,7 +745,7 @@ class PenilaianRMIController extends Controller
         $document = ScoreCriteriaDoc::findOrFail($docId);
         Storage::disk('public')->delete($document->path);
         $document->delete();
-        
+
         return response()->json(['success' => true]);
     }
 
@@ -782,19 +782,19 @@ class PenilaianRMIController extends Controller
         $existingComments = $penilaian
             ? $penilaian->details->pluck('comment','parameter_id')->toArray()
             : [];
-        
+
 
         $finalRatings = FinalRating::orderBy('rating')->get();
         $finalRatingPeriod = FinalRatingPeriod::where('rmi_period_id', $id)->first();
 
-        $units = \App\Models\Unit::whereIn('unit_type_id', [1, 2, 4]) 
+        $units = \App\Models\Unit::whereIn('unit_type_id', [1, 2, 4])
                 ->orderBy('unit_type_id', 'desc')
                 ->orderBy('name')
                 ->get();
 
         $corporateUnit = $units->firstWhere('unit_type_id', 4);
         $defaultUnitId = $corporateUnit ? $corporateUnit->id : ($units->first()->id ?? 0);
-        
+
         return view('penilaian-rmi.penilaian-aspek-kinerja', compact(
             'period',
             'paramsCapaian',
@@ -817,7 +817,7 @@ class PenilaianRMIController extends Controller
         //     'comments.*'  => 'nullable|string',
         //     'action'      => 'required|string|in:save_capaian,back_to_capaian,finish,save_kpmr,finish_final_rating,back_to_kpmr',
         //     'final_rating_id' => 'required_if:action,finish_final_rating|exists:final_ratings,id',
-            
+
         // ]);
 
         // Validasi dasar
@@ -838,7 +838,7 @@ class PenilaianRMIController extends Controller
         }
 
         $data = $request->validate($rules);
-        
+
         // 2. Ambil atau buat master Penilaian
         $penilaian = PenilaianCapaianKinerja::updateOrCreate(
             ['user_id'=>auth()->id(), 'rmi_period_id'=>$periodId],
@@ -936,7 +936,7 @@ class PenilaianRMIController extends Controller
                     })
                     ->where(function($q) use($totalKpmr){
                         $q->whereNull('max')->orWhere('max','>',(int) floor($totalKpmr));
-                    }) 
+                    })
                     ->first();
 
         // 6. Simpan total & skala di Penilaian
@@ -974,13 +974,13 @@ class PenilaianRMIController extends Controller
             $finalRatingId = $data['final_rating_id'];
             $finalRating = FinalRating::findOrFail($finalRatingId);
             $period = RMIPeriod::findOrFail($periodId);
-            
+
             // Hitung score_bobot_konversi (50% dari conversion_score)
             $scoreBobotKonversi = $finalRating->conversion_score * 0.5;
-            
+
             // Hitung total_score_kinerja (score_bobot_konversi + 50% dari nilai_konversi)
             $totalScoreKinerja = $scoreBobotKonversi + ($period->nilai_konversi * 0.5);
-            
+
             // Tentukan penyesuaian_skor_aspek_dimensi berdasarkan total_score_kinerja
             $penyesuaianSkor = 0;
             if ($totalScoreKinerja > 90) {
@@ -994,13 +994,13 @@ class PenilaianRMIController extends Controller
             } else {
                 $penyesuaianSkor = -1;
             }
-            
+
             // Hitung final_score_rmi jika nilai_score_rmi >= 3
             $finalScoreRmi = $period->score_rmi;
             if ($period->score_rmi >= 3) {
                 $finalScoreRmi = $period->score_rmi + $penyesuaianSkor;
             }
-            
+
             // Simpan atau update FinalRatingPeriod
             FinalRatingPeriod::updateOrCreate(
                 ['rmi_period_id' => $periodId],
@@ -1017,7 +1017,7 @@ class PenilaianRMIController extends Controller
                     if ($file && $file->isValid()) {
                         $originalFilename = $file->getClientOriginalName();
                         $path = $file->store("rmi_period_docs/{$periodId}", 'public');
-                        
+
                         RMIPeriodDocument::create([
                             'rmi_period_id' => $periodId,
                             'file_name' => $originalFilename,
@@ -1028,14 +1028,14 @@ class PenilaianRMIController extends Controller
                     }
                 }
             }
-            
+
             // Update RMIPeriod
             $period->update([
                 'score_aspek_kinerja' => $totalScoreKinerja,
                 'adjusment_score' => $penyesuaianSkor,
                 'final_score_rmi' => $finalScoreRmi
             ]);
-            
+
             return redirect()->route('penilaian-rmi.index')
                             ->with('success', 'Penilaian Aspek Kinerja, KPMR, dan Final Rating selesai disimpan.');
         }
@@ -1050,12 +1050,12 @@ class PenilaianRMIController extends Controller
         case 'back_to_capaian':
             return redirect()->route('penilaian-rmi.aspek-kinerja',$periodId)
                             ->with('active_tab','capaian');
-                             
+
         case 'save_kpmr':
             return redirect()->route('penilaian-rmi.aspek-kinerja',$periodId)
                             ->with('success','Penilaian KPMR disimpan.')
                             ->with('active_tab','final_rating')
-                            ->withInput();                                       
+                            ->withInput();
         case 'back_to_kpmr':
             return redirect()->route('penilaian-rmi.aspek-kinerja',$periodId)
                             ->with('active_tab','kpmr');
@@ -1075,7 +1075,7 @@ class PenilaianRMIController extends Controller
         $document = RMIPeriodDocument::findOrFail($docId);
         Storage::disk('public')->delete($document->file_path);
         $document->delete();
-        
+
         return response()->json(['success' => true, 'message' => 'Dokumen berhasil dihapus.']);
     }
 
@@ -1086,12 +1086,12 @@ class PenilaianRMIController extends Controller
             // --- Data Internal (Metadata) ---
             'penilaian'     => 'nullable|string|max:255', // Nama Penilai Internal
             'tahun_dinilai' => 'nullable|integer|digits:4',
-            
+
             // --- Data Eksternal (Input Manual) ---
             'penilai_external'             => 'nullable|string|max:255',
             'score_rmi_external'           => 'nullable|numeric|min:0',
             'score_aspek_kinerja_external' => 'nullable|numeric', // Input Manual
-            
+
             // Dropdown Pilihan (ID dari tabel master)
             'kinerja_external_id'          => 'nullable|exists:skala_kinerjas,id',
             'kpmr_external_id'             => 'nullable|exists:skala_kpmrs,id',
@@ -1107,7 +1107,7 @@ class PenilaianRMIController extends Controller
         ];
 
         // 3. Logika Perhitungan Otomatis Data Eksternal
-        
+
         // A. Score RMI & Deskripsi
         if (!is_null($request->score_rmi_external)) {
             $dataToUpdate['score_rmi_external'] = $request->score_rmi_external;
@@ -1117,7 +1117,7 @@ class PenilaianRMIController extends Controller
 
         // B. Matriks Kinerja & KPMR (Peringkat & Konversi)
         $adjusmentExternal = 0; // Default 0
-        
+
         if ($request->filled('kinerja_external_id') && $request->filled('kpmr_external_id')) {
             $kId = $request->kinerja_external_id;
             $pId = $request->kpmr_external_id;
@@ -1125,7 +1125,7 @@ class PenilaianRMIController extends Controller
             // Simpan Label Text (Sesuai struktur DB existing)
             $skalaKinerja = SkalaKinerja::find($kId);
             $skalaKpmr    = SkalaKPMR::find($pId);
-            
+
             $dataToUpdate['kinerja_external'] = $skalaKinerja->tingkat ?? null;
             $dataToUpdate['kpmr_external']    = $skalaKpmr->tingkat ?? null;
 
@@ -1157,7 +1157,7 @@ class PenilaianRMIController extends Controller
             elseif ($sak > 65) $adjusmentExternal = -0.50;
             elseif ($sak > 50) $adjusmentExternal = -0.75;
             else               $adjusmentExternal = -1.00;
-            
+
             $dataToUpdate['adjusment_score_external'] = $adjusmentExternal;
         }
 
@@ -1195,11 +1195,18 @@ class PenilaianRMIController extends Controller
         $period = RMIPeriod::findOrFail($id);
         $periode = Periode::where('tahun', $period->year)->first();
 
+        if (!$periode) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Master data Periode untuk tahun ' . $period->year . ' tidak ditemukan di sistem.'
+            ], 404);
+        }
+
         // Ambil Risiko berdasarkan Periode dan Unit
         $risks = \App\Models\IdentifikasiRisiko::where('periode_id', $periode->id)
             ->where('unit_id', $unitId)
             ->whereNull('deleted_at')
-            // ->whereIn('status_risiko', [3, 4, 5]) 
+            // ->whereIn('status_risiko', [3, 4, 5])
             ->with([
                 'riskAnalysis',
                 'penyebabRisiko.perlakuanPenyebabRisikoUnit.perlakuanPenyebabUnitMonitorings' => function($q) {
@@ -1232,10 +1239,10 @@ class PenilaianRMIController extends Controller
                     $detailUrl = route('risk-register-ap.view', $risk->id);
                     break;
                 default:
-                    $detailUrl = route('risk-register-unit.view', $risk->id); 
+                    $detailUrl = route('risk-register-unit.view', $risk->id);
                     break;
             }
-            
+
             $riskData = [
                 'id' => $risk->id,
                 'peristiwa_risiko' => $risk->peristiwa_risiko,
@@ -1313,7 +1320,7 @@ class PenilaianRMIController extends Controller
 
             $penilaian = PenilaianCapaianKinerja::updateOrCreate(
                 [
-                    'user_id'       => auth()->id(), 
+                    'user_id'       => auth()->id(),
                     'rmi_period_id' => $request->period_id
                 ],
                 []
@@ -1335,7 +1342,7 @@ class PenilaianRMIController extends Controller
             DB::commit();
 
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => 'Dokumen berhasil diunggah.',
                 'data'    => $doc
             ]);
@@ -1360,7 +1367,7 @@ class PenilaianRMIController extends Controller
 
         try {
             Storage::disk('public')->delete($doc->file_path);
-            
+
             $doc->delete();
 
             return response()->json(['success' => true, 'message' => 'Dokumen dihapus.']);

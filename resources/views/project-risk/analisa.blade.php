@@ -120,7 +120,7 @@
                     </div>
                     <div class="col-md-4" id="div_risk_limit">
                         <label>Risk Limit</label>
-                        {{ Form::text('_risk_limit', $risk_limit, ['class' => 'form-control inputmask-rupiah', 'readonly' => true, 'required' => true, 'id' => 'risk_limit']) }}
+                        {{ Form::text('_risk_limit', $risk_limit, ['class' => 'form-control inputmask-rupiah', 'readonly' => true, 'required' => true, 'id' => 'risk_limit', 'autocomplete' => 'off']) }}
                     </div>
                 </div>
             </div>

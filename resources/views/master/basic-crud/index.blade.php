@@ -131,6 +131,39 @@
                 @endif
 
                 <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-end gap-3">
+                        @if(!empty($extraViewData['summaryInfo']))
+                            @php $summary = $extraViewData['summaryInfo']; @endphp
+                            <div class="alert alert-{{ $summary['type'] }} alert-dismissible fade show d-flex align-items-center mt-0 mb-3 flex-grow-1" role="alert">
+                                <div class="bg-{{ $summary['type'] }} text-white rounded-circle p-0 me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                                    <i class="bx {{ $summary['icon'] }} text-white fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1 pe-4">
+                                    {!! $summary['message'] !!}
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        @endif
+                        @if(isset($extraViewData['escalationConfig']) && $extraViewData['escalationConfig']['show'])
+                            @php $esc = $extraViewData['escalationConfig']; @endphp
+                            <form id="form-eskalasi-action" action="{{ $esc['route'] }}" method="POST" class="d-inline-block">
+                                @csrf
+                                @if(isset($esc['parameters']) && is_array($esc['parameters']))
+                                    @foreach($esc['parameters'] as $name => $value)
+                                        <input type="hidden" name="{{ $name }}" value="{{ $value }}">
+                                    @endforeach
+                                @endif
+
+                                <button type="button"
+                                    class="btn mb-2 {{ str_contains(strtolower($esc['label']), 'publish') ? 'btn-success' : 'btn-info' }} btn-arrow-right"
+                                    onclick="submitEskalasiForm('form-eskalasi-action', '{{ $esc['label'] }}')"
+                                    {{ ($esc['disabled'] ?? false) ? 'disabled' : '' }}>
+                                    {{ $esc['label'] }}
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+
                     @if ($availableFilters)
                     <div class="row" id="table-filter">
                         @foreach ($availableFilters as $filterName => $filter)
@@ -171,6 +204,13 @@
                                             data-bulk-select='{"body":"bulk-select-body","actions":"bulk-select-actions","replacedElement":"bulk-select-replace-element"}' />
                                     </div>
                                 </th> --}}
+                                @if(!empty($extraViewData['showBulkCheckbox']))
+                                <th class="white-space-nowrap">
+                                    <div class="form-check mb-0">
+                                        <input class="form-check-input" type="checkbox" id="check-all-risiko" />
+                                    </div>
+                                </th>
+                                @endif
                                 <th class="white-space-nowrap">#</th>
                                 @foreach ($tableColumns as $key => $column)
                                     <th class="sort" data-sort="{{ $key }}" class="{{ $column['class'] ?? '' }}">
@@ -588,7 +628,11 @@ $(document).ready(function() {
     @foreach ($tableColumns as $key => $column)
         tempColumn = @json($column);
         @if ($column['render'] ?? false)
-        tempColumn.render = {!! $column['render'] !!};
+            tempColumn.render = {!! $column['render'] !!};
+        @endif
+
+        @if ($column['createdCell'] ?? false)
+            tempColumn.createdCell = {!! $column['createdCell'] !!};
         @endif
         datatableColumns.push(tempColumn);
     @endforeach
@@ -646,7 +690,10 @@ $(document).ready(function() {
         filter: false,
         info: true,
         select: true,
-        paging: false,
+        paging: true,
+        lengthChange: true,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        pageLength: 10,
         language: {
             search: "_INPUT_",
             searchPlaceholder: "Search...",
@@ -677,7 +724,7 @@ $(document).ready(function() {
         responsive: true,
         columnDefs: [
             {"width": "1%", "targets": 0},
-            {"width": "20%", "targets": 1},
+            {"width": "1%", "targets": 1},
             {"width": "1%", "targets": -1},
             {"orderable": false, "targets": [0,1]} // Can't order
         ],

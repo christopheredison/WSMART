@@ -55,6 +55,8 @@ class ProjectRisk extends Model
     public const STATUS_TERVERIFIKASI = 4;
     public const STATUS_REJECTED = 5;
     public const STATUS_PUBLISHED = 6;
+    public const STATUS_REJECTED_FROM_OFFICER_MR = 7;
+    public const STATUS_REJECTED_FROM_OWNER_MR = 8;
 
     public const LEVEL_RISIKO_LOW = 'Low';
     public const LEVEL_RISIKO_LOW_TO_MODERATE = 'Low To Moderate';

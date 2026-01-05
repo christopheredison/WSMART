@@ -27,8 +27,8 @@
             Memproses... <span class="spinner-border spinner-border-sm align-middle ms-2" style="width: 0.75rem; height: 0.75rem;"></span>
           </span>
         </button>
-        <button type="button" class="btn btn-danger" id="btn-kembalikan-risiko"> 
-          <span class="indicator-label">Kembalikan Risiko</span> 
+        <button type="button" class="btn btn-danger" id="btn-tolak-risiko">
+          <span class="indicator-label">Kembalikan Risiko</span>
           <span class="indicator-progress d-none">
             Memproses... <span class="spinner-border spinner-border-sm align-middle ms-2" style="width: 0.75rem; height: 0.75rem;"></span>
           </span>
@@ -42,7 +42,7 @@
 <script>
 function handleVerifikasiClick(id) {
   const rowData = fetchedData[id];
-  
+
   // if (!rowData) {
   //     console.error('Data not found for ID:', id);
   //     alert('Data tidak ditemukan!');
@@ -62,14 +62,14 @@ function showVerifikasiModal(id, peristiwaRisiko, deskripsiRisiko) {
 
   // Set action form dengan ID risiko yang dipilih
   const form = document.getElementById('form-verifikasi');
-  form.action = '{{ url("project-risk") }}/' + id + '/verifikasi'; 
+  form.action = '{{ url("project-risk") }}/' + id + '/verifikasi';
 
   // Reset form
   form.reset();
   document.getElementById('status-verifikasi').value = '';
 
   const btnTerima = document.getElementById('btn-terima-risiko');
-  const btnKembalikan = document.getElementById('btn-kembalikan-risiko');
+  const btnKembalikan = document.getElementById('btn-tolak-risiko');
 
   // 1. Aktifkan kembali tombol
   btnTerima.disabled = false;
@@ -92,7 +92,7 @@ function showVerifikasiModal(id, peristiwaRisiko, deskripsiRisiko) {
     submitVerifikasi('terima');
   };
 
-  document.getElementById('btn-kembalikan-risiko').onclick = function() {
+  document.getElementById('btn-tolak-risiko').onclick = function() {
     submitVerifikasi('tolak');
   };
 }
@@ -102,7 +102,7 @@ function submitVerifikasi(status) {
   const form = document.getElementById('form-verifikasi');
   const statusInput = document.getElementById('status-verifikasi');
   const catatanInput = document.getElementById('catatan-verifikasi');
-  
+
   // Set status verifikasi
   statusInput.value = status;
 
@@ -131,7 +131,7 @@ function submitVerifikasi(status) {
   }).then((result) => {
     if (result.isConfirmed) {
       const btnTerima = document.getElementById('btn-terima-risiko');
-      const btnKembalikan = document.getElementById('btn-kembalikan-risiko');
+      const btnKembalikan = document.getElementById('btn-tolak-risiko');
 
       btnTerima.disabled = true;
       btnKembalikan.disabled = true;
@@ -145,7 +145,7 @@ function submitVerifikasi(status) {
 
       clickedButton.querySelector('.indicator-label').classList.add('d-none');
       clickedButton.querySelector('.indicator-progress').classList.remove('d-none');
-      
+
       form.submit();
     }
   });

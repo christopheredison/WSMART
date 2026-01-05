@@ -32,7 +32,13 @@ class ProjectRiskMonitoringController extends BasicCRUDController
     protected $editType = 'link';
 
     public function index() {
-        $this->baseRouteParams = ['project' => request()->route('project')];
+        $this->baseRouteParams = [
+            'project' => request()->route('project'),
+            'quarter' => request()->query('quarter', 1),
+            'tahun'   => request()->query('tahun', date('Y')),
+            'month'   => request()->query('month'),
+        ];
+
         $projectPeriode = ProjectPeriodeList::with('project', 'projectRisks.peristiwaRisiko')->findOrfail(request()->route('project'));
         $cb = fn ($fn) => $fn;
         $this->indexSubtitle = $projectPeriode->project->project_name;
@@ -44,23 +50,57 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         }
 
         $userLevel = Auth::user()->level_id;
-        $quarter = request()->input('quarter', request()->input('filters.quarter', 1));
-        $tahun = request()->input('tahun', request()->input('filters.tahun', date('Y')));
+        $quarter = request()->input('filters.quarter', request()->query('quarter', 1));
+        $tahun   = request()->input('filters.tahun', request()->query('tahun', date('Y')));
 
-        $defaultMonth = '1';
-        if ($quarter == 2) $defaultMonth = '4';
-        if ($quarter == 3) $defaultMonth = '7';
-        if ($quarter == 4) $defaultMonth = '10';
-        $month = request()->input('month', request()->input('filters.month', $defaultMonth));
+        $defaultMonth = match((int)$quarter) {
+            2 => '4', 3 => '7', 4 => '10', default => '1'
+        };
+
+        $validMonths = match((int)$quarter) {
+            1 => ['1','2','3'], 2 => ['4','5','6'], 3 => ['7','8','9'], 4 => ['10','11','12'], default => []
+        };
+
+
+        $filterMonth = request()->input('filters.month');
+        $queryMonth  = request()->query('month');
+        $monthRaw = $filterMonth ?: ($queryMonth ?: $defaultMonth);
+        $month = (string) $monthRaw;
+
+        if (!in_array($month, $validMonths)) {
+            $month = (string) ($validMonths[0] ?? '1');
+        }
+
+        request()->merge(['month' => $month, 'quarter' => $quarter, 'tahun' => $tahun]);
+
+        // if (request()->ajax()) {
+        //   // Cek apa yang sebenarnya dikirim oleh browser
+        //   return response()->json(request()->all());
+        // }
 
         $this->callbackQuery = function ($query) use ($projectPeriode, $quarter, $tahun, $month) {
           $query->where('project_periode_list_id', $projectPeriode->id)
-                ->with(['peristiwaRisiko', 'projectRiskAnalisa', 'projectRiskAnalisa.risiko', 'projectRiskAnalisa.skalaProbabilitas', 'projectRiskAnalisa.skalaProbabilitasResidual', 'projectRiskMonitoring.skalaProbabilitas', 'projectRiskMonitoring' => function ($q) use ($quarter, $tahun, $month) {
-                  $q->where('quarter', $quarter)
-                    ->where('tahun', $tahun)
-                    ->where('month', $month)
-                    ->orderBy('id', 'desc');
-              }]);
+                ->leftJoin('project_risk_analisas as pra', 'project_risks.id', '=', 'pra.risiko_id')
+                ->leftJoin('peristiwa_risikos as pr', 'project_risks.peristiwa_risiko_id', '=', 'pr.id')
+                ->with([
+                  'peristiwaRisiko',
+                  'projectRiskAnalisa',
+                  'projectRiskAnalisa.risiko',
+                  'projectRiskAnalisa.skalaProbabilitas',
+                  'projectRiskAnalisa.skalaProbabilitasResidual',
+                  'projectRiskAnalisa.skalaDampakObj',
+                  'projectRiskAnalisa.skalaDampakResidualObj',
+                  'projectRiskMonitoring.skalaProbabilitas',
+                  'projectRiskMonitoring' => function ($q) use ($quarter, $tahun, $month) {
+                      $q->where('quarter', $quarter)
+                        ->where('tahun', $tahun)
+                        ->where('month', $month)
+                        ->with(['skalaProbabilitas', 'skalaDampakObj'])
+                        ->orderBy('id', 'desc');
+              }])
+              ->orderBy('project_risks.is_closed', 'asc')
+              ->orderBy('pra.skala_risiko', 'desc')
+              ->select('project_risks.*');
         };
 
         // Mapping Level Verifikator
@@ -72,15 +112,22 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR => $levelNames[2] ?'Risk Owner Divisi MR' :  'Risk Owner Divisi MR', // 5
         ];
 
-
         $this->tableColumns = [
             'quarter' => [
                 'label' => 'Periode Monitoring',
                 'orderable' => false,
                 'searchable' => false,
                 'render' => <<<JS
-                    function (data) {
-                        return 'Quarter ' + $('#table-filter select[name="quarter"]').val();
+                    function (data, type, row) {
+                        const monthNames = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+                        const m = row.project_risk_monitoring;
+                        const monthIdx = m?.month || $('#table-filter select[name="month"]').val();
+                        const quarter = m?.quarter || $('#table-filter select[name="quarter"]').val();
+                        const tahun = m?.tahun || $('#table-filter select[name="tahun"]').val();
+
+                        const monthName = monthNames[parseInt(monthIdx)] || "";
+                        return `\${monthName} (Q\${quarter}) - \${tahun}`;
                     }
                 JS,
             ],
@@ -90,64 +137,145 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'render' => '(data, type, row) => {
                     return row.peristiwa_risiko?.title || row.rencana_kegiatan || "-";
                 }',
+                'class' => 'mw-10r',
             ],
             'deskripsi_peristiwa_risiko' => [
                 'label' => 'Deskripsi Peristiwa Risiko',
                 'data' => 'deskripsi_peristiwa_risiko',
                 'sortable' => false,
                 'searchable' => true,
+                'class' => 'mw-20r',
             ],
             'nilai_dampak' => [
+                'label' => 'Nilai Dampak Inheren',
+                'data' => 'projectRiskAnalisa.nilai_dampak',
+                'sortable' => true,
+                'searchable' => false,
+                'render' => '(data, type, row) => "Rp" + Intl.NumberFormat("id-ID").format(row.project_risk_analisa?.nilai_dampak) || "-"',
+            ],
+            'skala_dampak' => [
+                'label' => 'Skala Dampak Inheren',
+                'data' => 'projectRiskAnalisa.skala_dampak',
+                'sortable' => true,
+                'searchable' => false,
+                'render' => '(data, type, row) => {
+                    const analisa = row.project_risk_analisa;
+                    return analisa?.skala_dampak ? `(${analisa.skala_dampak}) ${analisa.skala_dampak_obj?.deskripsi || ""}` : "-";
+                }',
+            ],
+            'skala_probabilitas' => [
+                'label' => 'Skala Probabilitas',
+                'data' => 'projectRiskAnalisa.skalaProbabilitas.tingkat',
+                'sortable' => false,
+                'searchable' => false,
+                'render' => '(data, type, row) => {
+                    const prob = row.project_risk_analisa?.skala_probabilitas;
+                    return prob ? `(${prob.tingkat}) ${prob.skala || ""}` : "-";
+                }',
+            ],
+            'skala_risiko' => [
+                'label' => 'Level Risiko',
+                'data' => 'id',
+                'sortable' => false,
+                'searchable' => false,
+                'class' => 'text-center align-middle',
+                'render' => '(data, type, row) => {
+                    const analisa = row.project_risk_analisa;
+                    return analisa?.skala_risiko ? (analisa.skala_risiko + " - " + analisa.level_risiko) : "-";
+                }',
+                'createdCell' => 'function (td, cellData, rowData, row, col) {
+                    const level = rowData.project_risk_analisa?.level_risiko;
+                    if (level) {
+                        const colorClass = "bg-" + level.toLowerCase().replace(/to\s+/g, "").replace(/\s+/g, "-");
+                        $(td).addClass(colorClass).addClass("text-white");
+                    }
+                }'
+            ],
+            'nilai_dampak_residual' => [
                 'label' => 'Nilai Dampak Residual',
                 'data' => 'projectRiskAnalisa.nilai_dampak_residual',
                 'sortable' => true,
                 'searchable' => false,
                 'render' => '(data, type, row) => "Rp" + Intl.NumberFormat("id-ID").format(row.project_risk_analisa?.nilai_dampak_residual) || "-"',
             ],
-            'skala_dampak' => [
+            'skala_dampak_residual' => [
                 'label' => 'Skala Dampak Residual',
                 'data' => 'projectRiskAnalisa.skala_dampak_residual',
                 'sortable' => true,
                 'searchable' => false,
-                'render' => '(data, type, row) => row.project_risk_analisa?.skala_dampak_residual || "-"',
+                'render' => '(data, type, row) => {
+                    const analisa = row.project_risk_analisa;
+                    return analisa?.skala_dampak_residual ? `(${analisa.skala_dampak_residual}) ${analisa.skala_dampak_residual_obj?.deskripsi || ""}` : "-";
+                }',
             ],
-            'skala_probabilitas' => [
+            'skala_probabilitas_residual' => [
                 'label' => 'Skala Probabilitas Residual',
                 'data' => 'projectRiskAnalisa.skalaProbabilitasResidual.tingkat',
                 'sortable' => false,
                 'searchable' => false,
-                'render' => '(data, type, row) => row.project_risk_analisa?.skala_probabilitas_residual?.tingkat || "-"',
+                'render' => '(data, type, row) => {
+                    const prob = row.project_risk_analisa?.skala_probabilitas_residual;
+                    return prob ? `(${prob.tingkat}) ${prob.skala || ""}` : "-";
+                }',
             ],
-            'skala_risiko' => [
-                'label' => 'Skala Risiko Residual',
-                'data' => 'projectRiskAnalisa.skala_risiko_residual',
+            'skala_risiko_residual' => [
+                'label' => 'Level Risiko Residual',
+                'data' => 'id',
                 'sortable' => false,
                 'searchable' => false,
-                'render' => '(data, type, row) => row.project_risk_analisa?.skala_risiko_residual || "-"',
+                'class' => 'text-center align-middle',
+                'render' => '(data, type, row) => {
+                    const analisa = row.project_risk_analisa;
+                    return analisa?.skala_risiko_residual ? (analisa.skala_risiko_residual + " - " + analisa.level_risiko_residual) : "-";
+                }',
+                'createdCell' => 'function (td, cellData, rowData, row, col) {
+                    const level = rowData.project_risk_analisa?.level_risiko_residual;
+                    if (level) {
+                        const colorClass = "bg-" + level.toLowerCase().replace(/to\s+/g, "").replace(/\s+/g, "-");
+                        $(td).addClass(colorClass).addClass("text-white");
+                    }
+                }'
             ],
             'skala_dampak_monitoring' => [
-                'label' => 'Skala Dampak Monitoring',
+                'label' => 'Skala Dampak Realisasi',
                 'data' => 'projectRiskMonitoring.skala_dampak',
                 'sortable' => false,
                 'searchable' => false,
-                'render' => '(data, type, row) => row.project_risk_monitoring?.skala_dampak || "-"',
+                'render' => '(data, type, row) => {
+                    const monitoring = row.project_risk_monitoring;
+                    return monitoring?.skala_dampak ? `(${monitoring.skala_dampak}) ${monitoring.skala_dampak_obj?.deskripsi || ""}` : "-";
+                }',
             ],
             'skala_probabilitas_monitoring' => [
-                'label' => 'Skala Probabilitas Monitoring',
+                'label' => 'Skala Probabilitas Realisasi',
                 'data' => 'projectRiskMonitoring.skalaProbabilitas.tingkat',
                 'sortable' => false,
                 'searchable' => false,
-                'render' => '(data, type, row) => row.project_risk_monitoring?.skala_probabilitas?.tingkat || "-"',
+                'render' => '(data, type, row) => {
+                    const prob = row.project_risk_monitoring?.skala_probabilitas;
+                    return prob ? `(${prob.tingkat}) ${prob.skala || ""}` : "-";
+                }',
             ],
             'skala_risiko_monitoring' => [
-                'label' => 'Skala Risiko Monitoring',
-                'data' => 'projectRiskMonitoring.skala_risiko',
+                'label' => 'Level Risiko Realisasi',
+                'data' => 'id',
                 'sortable' => false,
                 'searchable' => false,
-                'render' => '(data, type, row) => row.project_risk_monitoring?.skala_risiko || "-"',
+                'class' => 'text-center align-middle',
+                'render' => '(data, type, row) => {
+                    const analisa = row.project_risk_monitoring;
+                    return analisa?.skala_risiko ? (analisa.skala_risiko + " - " + analisa.level_risiko) : "-";
+                }',
+                'createdCell' => 'function (td, cellData, rowData, row, col) {
+                    const level = rowData.project_risk_monitoring?.level_risiko;
+                    if (level) {
+                        const colorClass = "bg-" + level.toLowerCase().replace(/to\s+/g, "").replace(/\s+/g, "-");
+                        $(td).addClass(colorClass).addClass("text-white");
+                    }
+                }'
             ],
             'is_closed' => [
-                'label' => 'Status',
+                'label' => 'Status Risiko',
                 'data' => 'projectRiskAnalisa.risiko.is_closed',
                 'sortable' => false,
                 'searchable' => false,
@@ -158,30 +286,52 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 </div>`',
             ],
             'status_monitoring' => [
-                'label' => 'Status Monitoring',
+                'label' => 'Status',
                 'render' => '(data, type, row) => {
                     if (row.is_closed) return `<div class="badge text-danger bg-danger-subtle">Dihentikan</div>`;
-                    if (!row.project_risk_monitoring) return `<div class="badge bg-light text-dark">Belum Dimonitor</div>`;
+                    if (!row.project_risk_monitoring) return `<div class="badge bg-light text-dark border">Belum Dimonitor</div>`;
 
-                    const status = row.project_risk_monitoring.status;
+                    const status = parseInt(row.project_risk_monitoring.status);
                     const isRevision = row.project_risk_monitoring.is_revision;
                     const isApproved = row.project_risk_monitoring.is_approved;
-                    const verificatorMap = '.json_encode($verificatorMap).';
+                    const verificatorMap = ' . json_encode($verificatorMap) . ';
 
-                    if (status === '.ProjectRiskMonitoring::STATUS_DRAFT_REVISI.') {
-                        return isRevision ? `<div class="badge bg-danger">Revisi</div>` : `<div class="badge bg-warning">Draft</div>`;
+                    // 1. Logika Jika Status REVISI / DITOLAK (Status 1, 3, atau 4 dengan flag is_revision)
+                    if (isRevision && !isApproved) {
+                        let rejectSource = "";
+                        if (status === 1) rejectSource = "Risk Owner Project / Officer Divisi";
+                        if (status === 3) rejectSource = "Risk Officer MR";
+                        if (status === 4) rejectSource = "Risk Owner MR";
+
+                        return `<div class="badge bg-danger">
+                            <i class="bx bx-undo me-1"></i>Ditolak ${rejectSource}
+                        </div>`;
                     }
+
+                    // 2. Logika Jika sedang Draft Baru (Status 1 tanpa flag is_revision)
+                    if (status === 1) {
+                        return `<div class="badge bg-warning text-dark">Draft</div>`;
+                    }
+
+                    // 3. Logika Verifikasi Berjalan (Status 2-5)
                     if (verificatorMap[status]) {
                         const verificatorName = verificatorMap[status];
-                        if(isApproved){
-                            return `<div class="badge bg-info">Terverifikasi ${verificatorName}</div>`;
+                        if (isApproved) {
+                            return `<div class="badge bg-info">
+                                <i class="bx bx-check-circle me-1"></i>Terverifikasi ${verificatorName}
+                            </div>`;
                         } else {
-                            return `<div class="badge border border-info text-info">Menunggu Verifikasi ${verificatorName}</div>`;
+                            return `<div class="badge border border-info text-info bg-white">
+                                <i class="bx bx-time-five me-1"></i>Menunggu Verifikasi ${verificatorName}
+                            </div>`;
                         }
                     }
-                    if (status == '.ProjectRiskMonitoring::STATUS_PUBLISHED.') {
-                        return `<div class="badge bg-primary">Selesai</div>`;
+
+                    // 4. Selesai
+                    if (status === 100) {
+                        return `<div class="badge bg-success">Selesai</div>`;
                     }
+
                     return "-";
                 }',
             ],
@@ -211,14 +361,18 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'script' => <<<JS
                     window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Atahun', $('#table-filter select[name="tahun"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
-                'active_state' => '(data, type, row) => true',
+                'active_state' => '(data, type, row) => {
+                  return !row.is_closed && (!row.project_risk_monitoring || row.project_risk_monitoring.status == ' . ProjectRiskMonitoring::STATUS_DRAFT_REVISI . ');
+                }',
             ];
 
             $this->tableActions[] = [
                 'label' => 'Change to LED',
                 'btn_icon' => false,
                 'action' => 'change_to_led',
-                'active_state' => '(data, type, row) => row.is_closed != 1',
+                'active_state' => '(data, type, row) => {
+                    return !row.is_closed && (row.project_risk_monitoring?.status == ' . ProjectRiskMonitoring::STATUS_PUBLISHED . ');
+                }',
                 'extra_attrs' => [ 'style' => 'font-size: 14px; font-weight: 400;' ]
             ];
         }
@@ -263,8 +417,6 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'active_state' => '(data, type, row) => row.project_risk_monitoring !== null',
         ];
 
-        $this->cardFooter = $this->generateFooter($projectPeriode, $user, compact('quarter', 'tahun', 'month'));
-
         $this->extraViewData['isProjectMonitoringPage'] = true;
         $this->extraViewData['currentUserLevel'] = $userLevel;
         $this->extraViewData['showVerifikasiModal'] = in_array($userLevel, $verificatorLevels);
@@ -299,7 +451,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'parameters' => [
                     'tahun',
                     $optionTahuns,
-                    '',
+                    $tahun,
                     [
                         'class' => 'form-select select2',
                     ]
@@ -319,7 +471,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                         3 => 'Monitoring Quarter 3',
                         4 => 'Monitoring Quarter 4',
                     ],
-                    '',
+                    $quarter,
                     [
                         'class' => 'form-select select2 js-select-hide-search',
                     ]
@@ -334,7 +486,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'parameters' => [
                     'month',
                     [],
-                    '',
+                    $month,
                     [
                         'class' => 'form-select select2 js-select-hide-search',
                     ]
@@ -345,7 +497,166 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ],
         ];
 
-        $this->extraScripts[] = $this->getFilterScripts();
+        $this->extraScripts[] = $this->getFilterScripts($quarter, $month);
+
+        $workflow = ProjectRiskMonitoring::getWorkflow();
+
+        // 1. Filter Risiko: Hanya ambil yang aktif (is_closed = 0)
+        // Risiko yang sudah closed tidak perlu dimonitor lagi
+        $allRisks = ProjectRisk::where('project_periode_list_id', $projectPeriode->id)
+            ->where('is_closed', 0)
+            ->get();
+
+        $riskIds = $allRisks->pluck('id');
+
+        // 2. Ambil data Monitoring untuk risiko-risiko aktif tersebut
+        $latestMonitoringIds = ProjectRiskMonitoring::query()
+            ->select(DB::raw('MAX(id) as id'))
+            ->whereIn('risiko_id', $riskIds)
+            ->where('quarter', $quarter)
+            ->where('tahun', $tahun)
+            ->where('month', $month)
+            ->groupBy('risiko_id')
+            ->pluck('id');
+
+        $activeMonitorings = ProjectRiskMonitoring::whereIn('id', $latestMonitoringIds)
+            ->get()
+            ->keyBy('risiko_id');
+        // dd($activeMonitorings, $quarter, $tahun, $month);
+
+        $selectedStep = null;
+        $firstEligibleStep = null;
+
+        foreach ($workflow as $step => $info) {
+            if ($this->checkUserEligibility($user, $info, $projectPeriode->project)) {
+                if (!$firstEligibleStep) $firstEligibleStep = $step;
+
+                // Hitung data di step ini
+                $countInStep = $allRisks->filter(function($risk) use ($step, $activeMonitorings) {
+                    $m = $activeMonitorings[$risk->id] ?? null;
+                    if ($step == 1) return !$m || $m->status == 1;
+                    return $m && $m->status == $step;
+                })->count();
+
+                if ($countInStep > 0) {
+                    $selectedStep = $step;
+                    break;
+                }
+            }
+        }
+        if (!$selectedStep) $selectedStep = $firstEligibleStep;
+
+        // Generate Info & Config
+        $summaryInfo = null;
+        $escalationConfig = [
+            'show' => false,
+            'label' => 'Proses',
+            'disabled' => true,
+            'parameters' => [
+                'quarter' => $quarter,
+                'tahun' => $tahun,
+                'month' => $month
+            ]
+        ];
+
+        if ($selectedStep) {
+            $step = $selectedStep;
+
+            // Filter risiko yang BENAR-BENAR ada di step ini
+            $risksInMyStep = $allRisks->filter(function($risk) use ($step, $activeMonitorings) {
+                $m = $activeMonitorings[$risk->id] ?? null;
+                if ($step == 1) return !$m || $m->status == 1;
+                return $m && $m->status == $step;
+            });
+
+            // === GUARD CLAUSE (PERBAIKAN UTAMA) ===
+            // Jika tidak ada risiko di step ini (kosong karena sudah naik level semua),
+            // Langsung hentikan proses logic button.
+            if ($risksInMyStep->isEmpty()) {
+                $this->extraViewData['summaryInfo'] = null;
+                $this->extraViewData['escalationConfig'] = ['show' => false, 'label' => '', 'disabled' => true];
+                return parent::index();
+            }
+            // ======================================
+
+            $escalationConfig['route'] = route('projects.monitorings.send.all', ['project' => request()->route('project')]);
+
+            // --- STEP 1: INPUT / DRAFTER ---
+            if ($step == 1) {
+                $unstartedCount = $risksInMyStep->filter(fn($r) => !isset($activeMonitorings[$r->id]))->count();
+                $revisionCount = $risksInMyStep->filter(fn($r) => isset($activeMonitorings[$r->id]) && $activeMonitorings[$r->id]->status == 1 && $activeMonitorings[$r->id]->is_revision)->count();
+                $readyCount = $risksInMyStep->filter(fn($r) => isset($activeMonitorings[$r->id]) && $activeMonitorings[$r->id]->status == 1 && !$activeMonitorings[$r->id]->is_revision)->count();
+
+                $targetLabel = 'Kirim ke Risk Owner Project';
+
+                if ($revisionCount > 0) {
+                    $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$revisionCount}</strong> risiko yang <strong>dikembalikan (revisi)</strong>. Mohon perbaiki data."];
+                    $escalationConfig['show'] = true;
+                    $escalationConfig['disabled'] = true;
+                } elseif ($unstartedCount > 0) {
+                    $summaryInfo = ['type' => 'warning', 'icon' => 'bx-info-circle', 'message' => "Terdapat <strong>{$unstartedCount}</strong> risiko aktif belum di-input."];
+                    $escalationConfig['show'] = true;
+                    $escalationConfig['disabled'] = true;
+                } else {
+                    // Hanya tampil jika readyCount > 0 (Data sudah siap)
+                    $summaryInfo = [
+                        'type' => 'success',
+                        'icon' => 'bx-check-double',
+                        'message' => "Seluruh monitoring siap. Silahkan klik tombol <strong>{$targetLabel}</strong> untuk melanjutkan."
+                    ];
+                    $escalationConfig['show'] = true;
+                    $escalationConfig['disabled'] = false;
+                }
+                $escalationConfig['label'] = $targetLabel;
+            }
+            // --- STEP > 1: VERIFIKATOR ---
+            else {
+                // Tentukan Label Tombol
+                if (isset($workflow[$step + 1])) {
+                    $btnLabel = "Kirim ke " . $workflow[$step + 1]['label'];
+                } else {
+                    $btnLabel = "Tetapkan Monitoring";
+                }
+                $escalationConfig['label'] = $btnLabel;
+
+                $unapprovedCount = $risksInMyStep->filter(fn($r) => !$activeMonitorings[$r->id]->is_approved)->count();
+                $returnedCount = $risksInMyStep->filter(fn($r) => $activeMonitorings[$r->id]->is_revision == true)->count();
+
+                if ($unapprovedCount > 0) {
+                    $escalationConfig['show'] = true;
+                    $escalationConfig['disabled'] = true;
+
+                    if ($returnedCount > 0) {
+                        $rejectorLabel = $workflow[$step + 1]['label'] ?? 'Verifikator Selanjutnya';
+                        $summaryInfo = [
+                            'type' => 'danger',
+                            'icon' => 'bx-undo',
+                            'message' => "Terdapat <strong>{$returnedCount}</strong> risiko yang <strong>dikembalikan oleh {$rejectorLabel}</strong>. Mohon verifikasi ulang."
+                        ];
+                    } else {
+                        $senderLabel = $workflow[$step - 1]['label'] ?? 'Tahap Sebelumnya';
+                        $summaryInfo = [
+                            'type' => 'warning',
+                            'icon' => 'bxs-error-circle',
+                            'message' => "Terdapat <strong>{$unapprovedCount}</strong> risiko aktif dari <strong>{$senderLabel}</strong> menunggu verifikasi Anda."
+                        ];
+                    }
+                } else {
+                    // Semua sudah diapprove DAN risksInMyStep > 0 (karena Guard Clause di atas)
+                    // Artinya: user sudah selesai verifikasi semua tapi BELUM klik kirim.
+                    $summaryInfo = [
+                        'type' => 'success',
+                        'icon' => 'bx-check-double',
+                        'message' => "Seluruh risiko telah diverifikasi. Silahkan klik tombol <strong>{$btnLabel}</strong> untuk melanjutkan."
+                    ];
+                    $escalationConfig['show'] = true;
+                    $escalationConfig['disabled'] = false;
+                }
+            }
+        }
+
+        $this->extraViewData['summaryInfo'] = $summaryInfo;
+        $this->extraViewData['escalationConfig'] = $escalationConfig;
 
         return parent::index();
     }
@@ -932,129 +1243,17 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         ]);
     }
 
-    private function generateFooter($projectPeriode, $user, $filters)
+    private function getFilterScripts($quarter, $month)
     {
-        extract($filters);
-        $userLevel = $user->level_id;
-        $hasVerificationMr = Gate::allows('verification_mr');
-        $isUnitMr = (bool) $user->unit?->unit_mr;
+        $phpQuarter = $quarter;
+        $phpMonth   = $month;
 
-        $latestMonitorings = collect([]);
-        $riskIds = $projectPeriode->projectRisks()->pluck('id');
-        if($riskIds->isNotEmpty()){
-            $latestMonitoringIds = ProjectRiskMonitoring::select(DB::raw('MAX(id) as last_id'))
-                ->whereIn('risiko_id', $riskIds)
-                ->where('quarter', $quarter)
-                ->where('tahun', $tahun)
-                ->where('month', $month)
-                ->groupBy('risiko_id')
-                ->pluck('last_id');
-            if($latestMonitoringIds->isNotEmpty()){
-                $latestMonitorings = ProjectRiskMonitoring::whereIn('id', $latestMonitoringIds)->with('projectRisk')->get();
-            }
-        }
-
-        $buttonText = '';
-        $params = [];
-        $disabled = 'disabled';
-        $allApproved = $latestMonitorings->isNotEmpty() && $latestMonitorings->every(function ($monitoring) {
-            return $monitoring->is_approved || $monitoring->projectRisk?->is_closed;
-        });
-
-        switch ($userLevel) {
-            case 6:
-                $openRiskIds = $projectPeriode->projectRisks()->where('is_closed', false)->pluck('id');
-                $allRisksMonitored = $openRiskIds->isNotEmpty() && $openRiskIds->diff($latestMonitorings->pluck('risiko_id'))->isEmpty();
-                $hasItemsToSend = $latestMonitorings->where('status', ProjectRiskMonitoring::STATUS_DRAFT_REVISI)->isNotEmpty();
-                if ($allRisksMonitored && $hasItemsToSend) {
-                    $buttonText = 'Kirim ke Risk Owner Project';
-                    $params = ['status_dari' => ProjectRiskMonitoring::STATUS_DRAFT_REVISI, 'status_ke' => ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_PROJECT];
-                    $disabled = '';
-                }
-                break;
-
-            case 7:
-                $unitName = 'Divisi';
-                if($projectPeriode->project->cost_center_parent) {
-                    $unit = Unit::where('cost_center', $projectPeriode->project->cost_center_parent)->first();
-                    if($unit) $unitName = $unit->name;
-                }
-                $buttonText = "Kirim ke Risk Officer {$unitName}";
-                $params = ['status_dari' => ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_PROJECT, 'status_ke' => ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI];
-                $disabled = $allApproved ? '' : 'disabled';
-                break;
-
-            case 1:
-                if ($user->unit && $user->unit->cost_center == $projectPeriode->project->cost_center_parent) {
-                    $buttonText = 'Kirim ke Risk Officer Divisi MR';
-                    $params = ['status_dari' => ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI, 'status_ke' => ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR];
-                    $disabled = $allApproved ? '' : 'disabled';
-                }
-                elseif ($user->unit && $isUnitMr && $hasVerificationMr) {
-                    $buttonText = 'Kirim ke Risk Owner Divisi MR';
-                    $params = ['status_dari' => ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR, 'status_ke' => ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR];
-                    $disabled = $allApproved ? '' : 'disabled';
-                }
-                break;
-
-            case 2:
-                // Tombol aktif JIKA semua item yang menunggu verifikasi level ini (status 5) sudah di-approve
-                if ($isUnitMr && $hasVerificationMr) {
-                    $monitoringsForThisStep = $latestMonitorings->where('status', ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR);
-
-                    $allApproved = $monitoringsForThisStep->isNotEmpty() &&  $monitoringsForThisStep->every(function ($monitoring) {
-                        return $monitoring->is_approved || $monitoring->risiko?->is_closed;
-                    });
-
-                    $buttonText = 'Terima Semua Monitoring';
-                    $params = ['status_dari' => ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR, 'status_ke' => ProjectRiskMonitoring::STATUS_PUBLISHED, 'final' => true];
-                    $disabled = $allApproved ? '' : 'disabled';
-                }
-                break;
-        }
-
-        if ($buttonText) {
-            return "<div>" . $this->buildEskalasiForm($buttonText, 'projects.monitorings.send.all', $projectPeriode->id, $params, $disabled) . "</div>";
-        }
-
-        return null;
-    }
-
-    private function buildEskalasiForm($buttonText, $routeName, $projectId, $params, $disabled)
-    {
-        $route = route($routeName, ['project' => $projectId]);
-        $csrf = csrf_token();
-        $quarter = request()->input('filters.quarter', 1);
-        $tahun = request()->input('filters.tahun', date('Y'));
-        $month = request()->input('filters.month', '1');
-        $statusDari = $params['status_dari'];
-        $statusKe = $params['status_ke'];
-        $isFinal = $params['final'] ?? false;
-        $uniqueId = "form-eskalasi-{$statusDari}";
-
-        return <<<HTML
-            <form id="{$uniqueId}" action="{$route}" method="POST" class="d-inline-block">
-                <input type="hidden" name="_token" value="{$csrf}">
-                <input type="hidden" name="quarter" value="{$quarter}">
-                <input type="hidden" name="tahun" value="{$tahun}">
-                <input type="hidden" name="month" value="{$month}">
-                <input type="hidden" name="status_dari" value="{$statusDari}">
-                <input type="hidden" name="status_ke" value="{$statusKe}">
-                <input type="hidden" name="is_final" value="{$isFinal}">
-
-                <button type="button" class="btn btn-info btn-arrow-right" onclick="submitEskalasiForm('{$uniqueId}', '{$buttonText}')" {$disabled}>{$buttonText}</button>
-            </form>
-        HTML;
-    }
-
-    private function getFilterScripts()
-    {
-        return <<<'HTML'
+        return <<<JS
             <script>
             function submitEskalasiForm(formId, actionText) {
                 Swal.fire({
                     title: 'Konfirmasi',
-                    text: `Apakah Anda yakin ingin melakukan "${actionText}"?`,
+                    text: `Apakah Anda yakin ingin melakukan "\${actionText}"?`,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonText: 'Ya, Lanjutkan',
@@ -1100,28 +1299,69 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             }
 
             $(document).ready(function() {
-                $('#table-filter select[name="quarter"]').on('change', function() {
-                    const quarter = $(this).val();
-                    if (quarter) {
-                        const allMonths = {
-                            '1': {'1': 'Januari', '2': 'Februari', '3': 'Maret'},
-                            '2': {'4': 'April', '5': 'Mei', '6': 'Juni'},
-                            '3': {'7': 'Juli', '8': 'Agustus', '9': 'September'},
-                            '4': {'10': 'Oktober', '11': 'November', '12': 'Desember'},
-                        };
-                        $('#table-filter select[name="month"]').empty();
-                        const months = allMonths[quarter];
-                        $.each(months, function(key, value) {
-                            $('#table-filter select[name="month"]').append('<option value="' + key + '">' + value + '</option>');
+                const allMonths = {
+                    '1': {'1': 'Januari', '2': 'Februari', '3': 'Maret'},
+                    '2': {'4': 'April', '5': 'Mei', '6': 'Juni'},
+                    '3': {'7': 'Juli', '8': 'Agustus', '9': 'September'},
+                    '4': {'10': 'Oktober', '11': 'November', '12': 'Desember'},
+                };
+
+                function updateMonthDropdown(quarter, selectedMonth = null) {
+                    const monthSelect = $('select[name="month"]');
+                    monthSelect.empty();
+
+                    if (quarter && allMonths[quarter]) {
+                        $.each(allMonths[quarter], function(key, value) {
+                            const isSelected = (String(key) === String(selectedMonth)) ? 'selected' : '';
+                            monthSelect.append(`<option value="\${key}" \${isSelected}>\${value}</option>`);
                         });
                     } else {
-                        $('#table-filter select[name="month"]').empty();
-                        $('#table-filter select[name="month"]').append('<option value="">Semua Bulan</option>');
+                        monthSelect.append('<option value="">Pilih Quarter</option>');
                     }
-                }).change();
+
+                    if (monthSelect.hasClass('select2-hidden-accessible')) {
+                        monthSelect.trigger('change.select2');
+                    }
+                }
+
+                const activeQuarter = "{$phpQuarter}";
+                const activeMonth   = "{$phpMonth}";
+
+                $('select[name="quarter"]').val(activeQuarter).trigger('change.select2');
+
+                updateMonthDropdown(activeQuarter, activeMonth);
+
+                $('select[name="quarter"]').on('change', function() {
+                    const newQuarter = $(this).val();
+                    let firstMonthOfQuarter = null;
+                    if (allMonths[newQuarter]) {
+                        firstMonthOfQuarter = Object.keys(allMonths[newQuarter])[0];
+                    }
+                    updateMonthDropdown(newQuarter, firstMonthOfQuarter);
+                });
+                $('select[name="month"]').val(activeMonth).trigger('change');
+
+                $('select[name="tahun"], select[name="quarter"], select[name="month"]').on('change', function() {
+                    updateUrlParams();
+                });
+
+                function updateUrlParams() {
+                    const q = $('select[name="quarter"]').val();
+                    const t = $('select[name="tahun"]').val();
+                    const m = $('select[name="month"]').val();
+
+                    if (!q || !t || !m) return;
+
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('quarter', q);
+                    url.searchParams.set('tahun', t);
+                    url.searchParams.set('month', m);
+
+                    window.history.pushState({path: url.href}, '', url.href);
+                }
             });
             </script>
-        HTML;
+        JS;
     }
 
     public function sendAllMonitoring(Request $request, ProjectPeriodeList $project)
@@ -1130,37 +1370,70 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'quarter' => 'required|integer',
             'tahun' => 'required|integer',
             'month' => 'required|integer',
-            'status_dari' => 'required|integer',
-            'status_ke' => 'required|integer',
-            'is_final' => 'nullable|boolean',
         ]);
 
-        $riskIds = $project->projectRisks()->pluck('id');
+        $user = Auth::user();
+        $workflow = ProjectRiskMonitoring::getWorkflow();
+        $riskIds = $project->projectRisks()->where('is_closed', 0)->pluck('id');
 
-        $latestMonitoringIds = ProjectRiskMonitoring::select(DB::raw('MAX(id) as last_id'))
+        // 1. Cari Step mana yang menjadi hak user saat ini berdasarkan konfigurasi workflow
+        $currentStep = null;
+        foreach ($workflow as $step => $info) {
+            if ($this->checkUserEligibility($user, $info, $project->project)) {
+                $currentStep = $step;
+                break;
+            }
+        }
+
+        if (!$currentStep) {
+            return response()->json(['success' => false, 'message' => 'Anda tidak memiliki otoritas untuk mengirim data pada tahap ini.'], 403);
+        }
+
+        // 2. Ambil hanya ID terbaru (MAX ID) per risiko
+        $subQuery = ProjectRiskMonitoring::select(DB::raw('MAX(id) as last_id'))
             ->whereIn('risiko_id', $riskIds)
-            ->where('quarter', $validated['quarter'])->where('tahun', $validated['tahun'])->where('month', $validated['month'])
-            ->groupBy('risiko_id')->pluck('last_id');
+            ->where('quarter', $validated['quarter'])
+            ->where('tahun', $validated['tahun'])
+            ->where('month', $validated['month'])
+            ->groupBy('risiko_id');
 
-        $query = ProjectRiskMonitoring::whereIn('id', $latestMonitoringIds)->where('status', $validated['status_dari']);
+        // Ambil record monitoring lengkap berdasarkan ID terbaru yang statusnya sesuai
+        $latestMonitorings = ProjectRiskMonitoring::whereIn('id', $subQuery)
+            ->where('status', $currentStep)
+            ->get();
 
-        if ($validated['status_dari'] > ProjectRiskMonitoring::STATUS_DRAFT_REVISI) {
-            $query->where('is_approved', true);
+        if ($latestMonitorings->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'Tidak ada monitoring yang siap dikirim.'], 422);
         }
 
-        // Reset is_approved ke false untuk level verifikasi berikutnya
-        $updateData = [
-            'status' => $validated['status_ke'],
-            'is_approved' => $validated['is_final'] ?? false,
-        ];
-
-        $updated = $query->update($updateData);
-
-        if ($updated) {
-            return response()->json(['success' => true, 'message' => 'Monitoring berhasil dieskalasi.']);
+        // 3. Validasi approval untuk verifikator (Step > 1)
+        if ($currentStep > 1) {
+            $unapprovedCount = $latestMonitorings->where('is_approved', false)->count();
+            if ($unapprovedCount > 0) {
+                return response()->json(['success' => false, 'message' => "Terdapat {$unapprovedCount} risiko yang belum diverifikasi."], 422);
+            }
         }
 
-        return response()->json(['success' => false, 'message' => 'Tidak ada monitoring yang memenuhi syarat untuk dieskalasi.'], 422);
+        // 4. Tentukan target status selanjutnya
+        $nextStep = $currentStep + 1;
+        $isFinal = !isset($workflow[$nextStep]);
+        $targetStatus = $isFinal ? ProjectRiskMonitoring::STATUS_PUBLISHED : $nextStep;
+
+        DB::beginTransaction();
+        try {
+            // Update hanya record terbaru yang ditemukan
+            ProjectRiskMonitoring::whereIn('id', $latestMonitorings->pluck('id'))->update([
+                'status' => $targetStatus,
+                'is_approved' => $isFinal,
+                'is_revision' => false, // Reset flag revisi saat dikirim ke atas
+            ]);
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Berhasil mengirim monitoring.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Gagal sistem: ' . $e->getMessage()], 500);
+        }
     }
 
     public function verifyMonitoring(Request $request, ProjectPeriodeList $project, ProjectRiskMonitoring $monitoring)
@@ -1174,14 +1447,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             if ($validated['status_verifikasi'] == 'terima') {
                 $monitoring->update(['is_approved' => true]);
             } else {
-                // Jika ditolak, pada status 4 (Risk Officer MR) atau 5 (Risk Owner MR), kembalikan ke status 3 (Risk Officer Divisi)
-                $targetStatus = $monitoring->status;
-                if ($targetStatus == ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR || $targetStatus == ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR) {
-                    $targetStatus = ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI; // 3
-                } else {
-                    // Jika bukan, status kembali ke 1 (Draft/Revisi), dan is_revision ditandai true
-                    $targetStatus = ProjectRiskMonitoring::STATUS_DRAFT_REVISI;
-                }
+                $targetStatus = ProjectRiskMonitoring::getReturnStatus($monitoring->status);
 
                 $monitoring->update([
                     'status' => $targetStatus,
@@ -1191,10 +1457,14 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             }
 
             RiskMonitoringNote::create([
-                'risiko_id' => $monitoring->risiko_id, 'type' => 2, 'user_id' => Auth::id(),
+                'risiko_id' => $monitoring->risiko_id,
+                'type' => 2,
+                'user_id' => Auth::id(),
                 'status' => $validated['status_verifikasi'] == 'terima' ? 1 : 0,
                 'notes' => $validated['notes'],
-                'quarter' => $monitoring->quarter, 'month' => $monitoring->month, 'year' => $monitoring->tahun,
+                'quarter' => $monitoring->quarter,
+                'month' => $monitoring->month,
+                'year' => $monitoring->tahun,
             ]);
         });
 
@@ -1222,5 +1492,16 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
     private function cleanRupiah($value) {
         return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
+    }
+
+    private function checkUserEligibility($user, $stepInfo)
+    {
+        if ($stepInfo['level'] != $user->level_id) return false;
+        if (isset($stepInfo['permission']) && !Gate::check($stepInfo['permission'])) return false;
+        if (isset($stepInfo['unit_mr'])) {
+            $isUserUnitMR = (bool)($user->unit && $user->unit->unit_mr);
+            if ($stepInfo['unit_mr'] !== $isUserUnitMR) return false;
+        }
+        return true;
     }
 }

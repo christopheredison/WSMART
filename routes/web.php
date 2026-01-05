@@ -80,6 +80,7 @@ use App\Http\Controllers\CorporateLEDController;
 use App\Http\Controllers\RiskRegisterCorporateMonitoringController;
 use App\Http\Controllers\RMI\KuesionerPublikController;
 use App\Http\Controllers\RMI\KuesionerRespondenController;
+use App\Http\Controllers\TaskController;
 
 /*
 |--------------------------------------------------------------------------
@@ -861,4 +862,9 @@ Route::prefix('kuesioner-publik')->as('kuesioner-publik.')->group(function () {
     Route::get('{token}/verify', [KuesionerPublikController::class, 'verify'])->name('verify');
     Route::get('{token}/fill', [KuesionerPublikController::class, 'fill'])->name('fill');
     Route::put('{token}/fill', [KuesionerPublikController::class, 'update'])->name('update');
+});
+
+Route::prefix('my-tasks')->middleware(['auth'])->group(function () {
+    Route::get('/', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('/count', [TaskController::class, 'getCount'])->name('tasks.count');
 });

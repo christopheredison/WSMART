@@ -18,6 +18,8 @@ class DataBatch extends Model
     const STATUS_UTAMA = 6;
     const STATUS_VERIFIKASI_CORPORATE = 7;
     const STATUS_FINISH = 8;
+    const STATUS_REJECTED_FROM_MR = 9;
+    // const STATUS_REJECTED_FROM_OWNER_MR = 10;
 
     // Kolom lain dari tabel yang dapat diisi
     protected $fillable = [

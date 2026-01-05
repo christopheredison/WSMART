@@ -137,12 +137,14 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'label' => 'Peristiwa Risiko',
                 'data' => 'peristiwa_risiko',
                 'render' => '(data, type, row) => row.peristiwa_risiko || "-"',
+                'class' => 'mw-10r',
             ],
             'deskripsi_peristiwa_risiko' => [
                 'label' => 'Deskripsi Peristiwa Risiko',
                 'data' => 'deskripsi_peristiwa_risiko',
                 'sortable' => false,
                 'searchable' => true,
+                'class' => 'mw-10r',
             ],
             'nilai_dampak' => [
                 'label' => 'Nilai Dampak Residual',
@@ -173,28 +175,28 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'render' => '(data, type, row) => data || "-"',
             ],
             'skala_dampak_monitoring' => [
-                'label' => 'Skala Dampak Monitoring',
+                'label' => 'Skala Dampak Realisasi',
                 'data' => 'lastMonitoringRisiko.skala_dampak',
                 'sortable' => false,
                 'searchable' => false,
                 'render' => '(data, type, row) => row.last_monitoring_risiko?.skala_dampak || "-"',
             ],
             'skala_probabilitas_monitoring' => [
-                'label' => 'Skala Probabilitas Monitoring',
+                'label' => 'Skala Probabilitas Realisasi',
                 'data' => 'lastMonitoringRisiko.skalaProbabilitas.tingkat',
                 'sortable' => false,
                 'searchable' => false,
                 'render' => '(data, type, row) => row.last_monitoring_risiko?.skala_probabilitas?.tingkat || "-"',
             ],
             'skala_risiko_monitoring' => [
-                'label' => 'Skala Risiko Monitoring',
+                'label' => 'Skala Risiko Realisasi',
                 'data' => 'lastMonitoringRisiko.skala_risiko',
                 'sortable' => false,
                 'searchable' => false,
                 'render' => '(data, type, row) => row.last_monitoring_risiko?.skala_risiko || "-"',
             ],
             'is_closed' => [
-                'label' => 'Status',
+                'label' => 'Status Risiko',
                 'data' => 'is_closed',
                 'sortable' => false,
                 'searchable' => false,
@@ -205,7 +207,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 </div>`',
             ],
             'status_monitoring' => [
-                'label' => 'Status Monitoring',
+                'label' => 'Status',
                 'render' => '(data, type, row) => {
                     if (row.is_closed) return `<div class="badge text-danger bg-danger-subtle">Dihentikan</div>`;
                     if (!row.last_monitoring_risiko) return `<div class="badge bg-light text-dark">Belum Dimonitor</div>`;

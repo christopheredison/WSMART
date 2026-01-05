@@ -13,6 +13,17 @@
       </div>
       <div class="col-auto">
         <ul class="navbar-nav navbar-nav-icons ms-auto flex-row align-items-center">
+          <li class="nav-item me-3">
+            <a class="nav-link px-0 position-relative" href="{{ route('tasks.index') }}" title="Tugas Saya">
+              <span class="bx bx-task fs-4"></span>
+
+              <span id="navbar-task-count" class="position-absolute start-100 translate-middle badge rounded-pill bg-danger border border-light d-flex justify-content-center align-items-center" style="display: none; font-size: 0.6rem; height: 1rem; width: 1rem; top: 4px;">
+                0
+                <span class="visually-hidden">pending tasks</span>
+              </span>
+            </a>
+          </li>
+
           <!-- Notifikasi -->
           <li class="nav-item dropdown">
             <a class="nav-link notification-indicator notification-indicator-primary px-0 icon-indicator" id="navbarDropdownNotification" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -37,7 +48,7 @@
                 <div class="card-footer text-center border-top"><a class="card-link d-block" href="{{ route('notifications.index') }}">Lihat semua notifikasi</a></div>
               </div>
             </div>
-            
+
             <!-- Modal Detail Notifikasi -->
             <div class="modal fade" id="notificationDetailModal" tabindex="-1" role="dialog" aria-labelledby="notificationDetailModalLabel" aria-hidden="true">
               <div class="modal-dialog" role="document">
@@ -64,7 +75,7 @@
             </div>
           </li>
           <!-- End Notifikasi -->
-          
+
           <a class="tx-g700 font-base" href="{{ route('home') }}">
             <div class="d-flex align-items-center py-3">
               <div>{{ Auth::user()->name }}</div>

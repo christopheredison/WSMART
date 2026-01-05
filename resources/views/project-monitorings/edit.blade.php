@@ -733,7 +733,7 @@
         <div class="col-12 mt-5">
             <div class="row g-2">
                 <div class="col-auto">
-                    <a href="{{ route('projects.monitorings.index', ['project' => $projectPeriode->id]) }}" class="btn btn-outline-secondary">Batal</a>
+                    <a href="{{ route('projects.monitorings.index', ['project' => $projectPeriode->id, 'tahun' => $tahun, 'quarter' => $quarter, 'month' => $month]) }}" class="btn btn-outline-secondary">Batal</a>
                 </div>
                 <div class="col-auto">
                     <button type="button" data-action="save" class="btn btn-primary ms-auto btn-action">Simpan</button>
@@ -978,15 +978,15 @@ function submitForm(isClosed) {
                 icon: 'success',
                 confirmButtonText: 'OK',
             }).then(() => {
-                // let baseUrl = '{{ route('projects.monitorings.index', ['project' => request()->route('project')]) }}';
+                let baseUrl = '{{ route('projects.monitorings.index', ['project' => request()->route('project')]) }}';
 
-                // const currentQuarter = '{{ $quarter }}';
-                // const currentTahun = '{{ $tahun }}';
-                // const currentMonth = '{{ $month }}';
-                // const redirectUrl = `${baseUrl}?quarter=${currentQuarter}&tahun=${currentTahun}&month=${currentMonth}`;
+                const currentQuarter = '{{ $quarter }}';
+                const currentTahun = '{{ $tahun }}';
+                const currentMonth = '{{ $month }}';
+                const redirectUrl = `${baseUrl}?quarter=${currentQuarter}&tahun=${currentTahun}&month=${currentMonth}`;
 
-                // window.location.href = redirectUrl;
-                window.location.href = '{{ route('projects.monitorings.index', ['project' => request()->route('project')]) }}';
+                window.location.href = redirectUrl;
+                // window.location.href = '{{ route('projects.monitorings.index', ['project' => request()->route('project')]) }}';
             });
         },
         error: function(xhr) {

@@ -15,3 +15,26 @@
   @include('partials.footer')
 </div>
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    $.ajax({
+        url: "{{ route('tasks.count') }}",
+        type: 'GET',
+        success: function(response) {
+            if(response.count > 0) {
+                const badge = $('#navbar-task-count');
+                badge.text(response.count);
+                badge.show();
+
+                badge.addClass('animate-pulse');
+            }
+        },
+        error: function(err) {
+            console.log('Gagal memuat task count');
+        }
+    });
+});
+</script>
+@endpush

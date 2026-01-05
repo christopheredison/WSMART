@@ -175,6 +175,11 @@ class Project extends Model
         return $this->hasOne(ProjectPeriodeList::class)->whereNull('periode_id');
     }
 
+    public function dataBatches()
+    {
+        return $this->hasMany(DataBatch::class, 'project_id');
+    }
+
     protected function displayMasaPelaksanaanStart(): Attribute
     {
         return Attribute::make(
