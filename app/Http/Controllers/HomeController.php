@@ -1674,10 +1674,10 @@ class HomeController extends Controller
 
         if ($selectedProject) {
           // 1. Ambil semua risiko yang sudah ditutup (is_closed = true)
-          $closedRisks = $selectedProjectPeriode->projectRisks->where('is_closed', true);
+          // $closedRisks = $selectedProjectPeriode->projectRisks->where('is_closed', true);
 
           // 2. Pisahkan menjadi dua grup. Jika $closedRisks kosong, keduanya akan menjadi collection kosong.
-          list($efektifRisks, $tidakEfektifRisks) = $closedRisks->partition(function ($risk) {
+          list($efektifRisks, $tidakEfektifRisks) = $selectedProjectPeriode->projectRisks->partition(function ($risk) {
               return $risk->efektivitas_perlakuan_risiko > 0;
           });
 
@@ -1845,7 +1845,7 @@ class HomeController extends Controller
             $unitRisks->each(fn($risk) => $risk->append('currentRiskMapsMonth'));
 
             foreach ($unitRisks as $risk) {
-                $riskMapData = $risk->currentRiskMapsMonth; 
+                $riskMapData = $risk->currentRiskMapsMonth;
 
                 foreach ($riskMapData as $monthKey => $mapData) {
                     if ($monthKey === 'inherent' || !isset($mapData['month'])) continue;
@@ -1854,7 +1854,7 @@ class HomeController extends Controller
                     $mapData['nilai_probabilitas_formatted'] = $mapData['nilai_probabilitas'] ?? '-';
                     $mapData['nilai_risiko_formatted'] = $mapData['skala_risiko'] ?? '-';
                     $mapData['level_risiko_formatted'] = $mapData['level_risiko'] ?? '-';
-                    
+
                     $formattedCurrentRiskMaps[$risk->id][$currentYear][] = $mapData;
                 }
             }
@@ -1888,8 +1888,8 @@ class HomeController extends Controller
             // =========================================================
             // 3. EFEKTIVITAS PERLAKUAN RISIKO
             // =========================================================
-            $closedRisks = $unitRisks->where('is_closed', true);
-            list($efektifRisks, $tidakEfektifRisks) = $closedRisks->partition(fn ($risk) => $risk->efektivitas_perlakuan_risiko > 0);
+            // $closedRisks = $unitRisks->where('is_closed', true);
+            list($efektifRisks, $tidakEfektifRisks) = $unitRisks->partition(fn ($risk) => $risk->efektivitas_perlakuan_risiko > 0);
             $efektivitasPerlakuanData = [
                 ['label' => 'Efektif', 'value' => $efektifRisks->count(), 'color' => '#5470C6'],
                 ['label' => 'Tidak Efektif', 'value' => $tidakEfektifRisks->count(), 'color' => '#EE6666'],
@@ -2150,8 +2150,8 @@ class HomeController extends Controller
             // =========================================================
             // 3. EFEKTIVITAS PERLAKUAN RISIKO
             // =========================================================
-            $closedRisks = $unitRisks->where('is_closed', true);
-            list($efektifRisks, $tidakEfektifRisks) = $closedRisks->partition(fn ($risk) => $risk->efektivitas_perlakuan_risiko > 0);
+            // $closedRisks = $unitRisks->where('is_closed', true);
+            list($efektifRisks, $tidakEfektifRisks) = $unitRisks->partition(fn ($risk) => $risk->efektivitas_perlakuan_risiko > 0);
             $efektivitasPerlakuanData = [
                 ['label' => 'Efektif', 'value' => $efektifRisks->count(), 'color' => '#5470C6'],
                 ['label' => 'Tidak Efektif', 'value' => $tidakEfektifRisks->count(), 'color' => '#EE6666'],
@@ -2520,8 +2520,8 @@ class HomeController extends Controller
             // =========================================================================
             // 4. EFEKTIVITAS PERLAKUAN RISIKO (DARI UNIT TIPE 4)
             // =========================================================================
-            $closedRisks = $baseRisks->where('is_closed', true)->get();
-            list($efektifRisks, $tidakEfektifRisks) = $closedRisks->partition(fn ($risk) => $risk->efektivitas_perlakuan_risiko > 0);
+            // $closedRisks = $baseRisks->where('is_closed', true)->get();
+            list($efektifRisks, $tidakEfektifRisks) = $baseRisks->partition(fn ($risk) => $risk->efektivitas_perlakuan_risiko > 0);
             $efektivitasPerlakuanData = [
                 ['label' => 'Efektif', 'value' => $efektifRisks->count(), 'color' => '#5470C6'],
                 ['label' => 'Tidak Efektif', 'value' => $tidakEfektifRisks->count(), 'color' => '#EE6666'],

@@ -540,7 +540,7 @@
                                         @forelse($efektifRisks as $risk)
                                             <a href="{{ route('projects.risks.view', ['project' => $risk->project_id, 'risk' => $risk->id]) }}" target="_blank" class="list-group-item list-group-item-action">
                                                 <div class="d-flex justify-content-between align-items-center w-100">
-                                                    <span>{{ optional($risk->peristiwaRisiko)->title ?? 'Risiko ID: '.$risk->id }}</span>
+                                                    <span>{{ optional($risk->peristiwaRisiko)->title ?? $risk->rencana_kegiatan }} - {{$risk->deskripsi_peristiwa_risiko }}</span>
                                                     <span class="badge bg-light text-dark">Nilai: {{ $risk->efektivitas_perlakuan_risiko ?? 0 }}</span>
                                                 </div>
                                             </a>
