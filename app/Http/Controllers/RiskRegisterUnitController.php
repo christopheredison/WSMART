@@ -481,7 +481,7 @@ class RiskRegisterUnitController extends Controller
         $status = request()->query('status');
 
         $risikosQuery = IdentifikasiRisiko::where('periode_id', $period)
-        ->where('unit_id', auth()->user()->unit_id)
+        ->where('unit_id', $targetUnit->id)
         ->with('riskAnalysis');
 
         if ($status === 'open') {
@@ -617,6 +617,7 @@ class RiskRegisterUnitController extends Controller
             }
             $identifikasiRisiko->status = 1;
             $identifikasiRisiko->status_progress = 1;
+            $identifikasiRisiko->step_verification = 0;
             // $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
             // $identifikasiRisiko->threshold_risk_limit = $this->cleanRupiah($request->threshold_risk_limit ?? 0);
             // $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite ?? 0);
