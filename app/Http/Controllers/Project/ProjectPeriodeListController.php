@@ -31,14 +31,14 @@ class ProjectPeriodeListController extends BasicCRUDController
             'orderable' => false,
             'searchable' => true,
         ],
-        // 'const_center_parent' => [
-        //     'label' => 'Divisi',
-        //     'data' => 'project.cost_center_parent',
-        //     'name' => 'cost_center_parent',
-        //     'render' => '(data, type, row) => row.project?.divisi?.name || "-"',
-        //     'orderable' => false,
-        //     'searchable' => false,
-        // ],
+        'const_center_parent' => [
+            'label' => 'Divisi',
+            'data' => 'project.cost_center_parent',
+            'name' => 'cost_center_parent',
+            'render' => '(data, type, row) => row.project?.divisi?.name || "-"',
+            'orderable' => false,
+            'searchable' => false,
+        ],
         'project_id' => [
             'label' => 'Proyek',
             'data' => 'project.project_name',
