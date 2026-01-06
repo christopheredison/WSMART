@@ -226,10 +226,10 @@ class ProjectRiskController extends BasicCRUDController
         $this->indexSubtitle = $projectPeriodeList->project->project_name;
 
         // Cek Permission
-        if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList) ||
-            ($user->unit && $projectPeriodeList->project && $projectPeriodeList->project->cost_center_parent != $user->unit->cost_center))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList) ||
+        //     ($user->unit && $projectPeriodeList->project && $projectPeriodeList->project->cost_center_parent != $user->unit->cost_center))) {
+        //     abort(403);
+        // }
 
         $this->callbackQuery = function($query) use ($projectPeriodeListId) {
             $query->leftJoin('project_risk_analisas', 'project_risk_analisas.risiko_id', '=', 'project_risks.id')
@@ -814,9 +814,9 @@ class ProjectRiskController extends BasicCRUDController
 
         $user = request()->user();
 
-        if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
+        //     abort(403);
+        // }
 
         $project = $projectPeriodeList->project;
 
@@ -942,9 +942,9 @@ class ProjectRiskController extends BasicCRUDController
 
         $user = request()->user();
 
-        if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
+        //     abort(403);
+        // }
 
         $project = $projectPeriodeList->project;
 
@@ -1140,9 +1140,9 @@ class ProjectRiskController extends BasicCRUDController
 
         $user = request()->user();
 
-        if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
+        //     abort(403);
+        // }
 
         $project = $projectPeriodeList->project;
 
@@ -1179,9 +1179,9 @@ class ProjectRiskController extends BasicCRUDController
 
         $user = request()->user();
 
-        if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
+        //     abort(403);
+        // }
 
         $project = $projectPeriodeList->project;
         $periode = $projectPeriodeList->periode;
@@ -1523,9 +1523,9 @@ class ProjectRiskController extends BasicCRUDController
 
         $user = request()->user();
 
-        if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
+        //     abort(403);
+        // }
 
         $project = $projectPeriodeList->project;
         $periode = $projectPeriodeList->periode;
@@ -1602,9 +1602,9 @@ class ProjectRiskController extends BasicCRUDController
 
         $user = request()->user();
 
-        if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
+        //     abort(403);
+        // }
 
         $analisa = $projectRisk->projectRiskAnalisa;
         if (!$analisa) {
@@ -1818,9 +1818,9 @@ class ProjectRiskController extends BasicCRUDController
 
         $user = request()->user();
 
-        if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
+        //     abort(403);
+        // }
 
         $project = $projectPeriodeList->project;
         $periode = $projectPeriodeList->periode;
@@ -1835,9 +1835,9 @@ class ProjectRiskController extends BasicCRUDController
 
         $user = request()->user();
 
-        if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList))) {
+        //     abort(403);
+        // }
 
         $penyebabRisiko = $projectRisk->penyebabRisikoProjects()->where('id', $request->id)->firstOrFail();
 

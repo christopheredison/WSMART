@@ -45,9 +45,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $user = request()->user();
 
-        if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriode))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriode))) {
+        //     abort(403);
+        // }
 
         $userLevel = Auth::user()->level_id;
         $quarter = request()->input('filters.quarter', request()->query('quarter', 1));
@@ -897,9 +897,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $user = request()->user();
 
-        if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriode))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriode))) {
+        //     abort(403);
+        // }
 
         $quarter = request()->input('quarter') ?: 1;
         $tahun = request()->input('tahun') ?: date('Y');
@@ -997,9 +997,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $user = request()->user();
 
-        if (!(Gate::check('project_admin_access') || $user->hasProject($projectPeriode))) {
-            abort(403);
-        }
+        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriode))) {
+        //     abort(403);
+        // }
 
         $projectRisk = $projectPeriode->projectRisks()
             ->with('peristiwaRisiko', 'penyebabRisikoProjects', 'penyebabRisikoProjects.perlakuanPenyebabRisiko', 'kriProjects', 'projectRiskAnalisa')
