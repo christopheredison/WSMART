@@ -150,7 +150,7 @@
                                 @endphp
                                 <div class="text-center" style="width: 18%;">
                                     <div class="rounded-circle border border-2 d-flex align-items-center justify-content-center mx-auto mb-1 {{ $sClass }}"
-                                         style="width: 24px; height: 24px;" data-bs-toggle="tooltip" title="{{ $step['role'] }}">
+                                        style="width: 24px; height: 24px;" data-bs-toggle="tooltip" title="{{ $step['role'] }}">
                                         <i class="bx {{ $sIcon }}" style="font-size: 0.8rem;"></i>
                                     </div>
                                     <div class="d-none d-md-block" style="line-height: 1;">
@@ -168,7 +168,7 @@
                         <div class="col-md-5 border-end-md">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <small class="text-uppercase text-muted fw-bold x-small">Risk Register</small>
-                                <small class="text-muted">{{ $task['risk_stats']['total'] }} Total</small>
+                                <small class="text-muted">{{ $task['risk_stats']['total'] }} Total Risiko</small>
                             </div>
 
                             <div class="d-flex align-items-center gap-2 mb-2">
@@ -184,6 +184,9 @@
                                 @endif
                                 @if($task['risk_stats']['draft'] > 0)
                                     <span class="badge bg-info-subtle text-info" title="Draft">{{ $task['risk_stats']['draft'] }} Draft</span>
+                                @endif
+                                @if($task['risk_stats']['rejected_mr'] > 0)
+                                    <span class="badge bg-danger-subtle text-danger" title="Ditolak">{{ $task['risk_stats']['rejected_mr'] }} Ditolak</span>
                                 @endif
 
                                 @if($task['risk_stats']['total'] == 0)
@@ -220,17 +223,35 @@
                                         @if($mon['status'] !== 'empty')
                                             @php
                                                 $hasMonData = true;
-                                                $colorClass = 'bg-info-subtle text-muted';
-                                                if($mon['status'] == 'pending') $colorClass = 'bg-warning text-dark border border-warning';
-                                                if($mon['status'] == 'revision') $colorClass = 'bg-danger text-white animate-pulse';
-                                                if($mon['status'] == 'process') $colorClass = 'bg-info-subtle text-info';
-                                                if($mon['status'] == 'draft') $colorClass = 'bg-info text-white';
+                                                // Default Process (Biru Muda/Abu)
+                                                $colorClass = 'bg-info-subtle text-info-emphasis';
+
+                                                if($mon['status'] == 'pending') {
+                                                    // Menunggu Verifikasi (Kuning)
+                                                    $colorClass = 'bg-warning text-dark border border-warning';
+                                                }
+                                                elseif($mon['status'] == 'revision') {
+                                                    // Revisi (Merah)
+                                                    $colorClass = 'bg-danger text-white animate-pulse';
+                                                }
+                                                elseif($mon['status'] == 'draft') {
+                                                    // Draft / Belum Lengkap (Biru Tua / Primary) - Action Needed
+                                                    $colorClass = 'bg-primary text-white';
+                                                }
+                                                elseif($mon['status'] == 'process') {
+                                                    // Sudah dikirim / Draft Masa Depan (Info)
+                                                    $colorClass = 'bg-info-subtle text-info border border-info-subtle';
+                                                }
                                             @endphp
-                                            <a href="{{ $mon['link'] }}" class="text-decoration-none" data-bs-toggle="tooltip" title="Q{{$q}} - {{ $mon['month_name'] }}: {{ ucfirst($mon['status']) }}">
+                                            <a href="{{ $mon['link'] }}" class="text-decoration-none" data-bs-toggle="tooltip"
+                                              title="Q{{$q}} - {{ $mon['month_name'] }}: {{ ucfirst($mon['status']) }} ({{ $mon['count'] }} Item)">
                                                 <span class="badge {{ $colorClass }} p-2">
                                                     {{ $mon['month_name'] }}
                                                     @if($mon['status'] == 'pending' || $mon['status'] == 'revision')
                                                         <span class="bx bxs-circle text-danger ms-1" style="font-size: 6px; vertical-align: middle;"></span>
+                                                    @endif
+                                                    @if($mon['status'] == 'draft')
+                                                        <span class="bx bxs-circle text-warning ms-1" style="font-size: 6px; vertical-align: middle;"></span>
                                                     @endif
                                                 </span>
                                             </a>
@@ -246,7 +267,7 @@
                             @if($task['monitoring_action_count'] > 0)
                                 <div class="mt-2">
                                     <small class="text-danger fw-bold">
-                                        <i class="bx bx-error"></i> {{ $task['monitoring_action_count'] }} bulan perlu tindakan
+                                        <i class="bx bx-error"></i> {{ $task['monitoring_action_count'] }} monitoring perlu tindakan
                                     </small>
                                 </div>
                             @endif
@@ -408,41 +429,43 @@
         const monList = $('#monitoringList');
         monList.empty();
 
-        const summary = data.monitoring_summary; // Ini sekarang array of Quarters containing Months
+        const summary = data.monitoring_summary;
         let hasMonData = false;
 
-        // Loop Quarter
         Object.keys(summary).forEach(q => {
             const months = summary[q];
-
-            // Filter hanya bulan yang ada isinya (status != empty)
             const activeMonths = months.filter(m => m.status !== 'empty');
 
             if (activeMonths.length > 0) {
                 hasMonData = true;
-
-                // Header Quarter
                 monList.append(`<div class="list-group-item bg-light fw-bold py-1 text-uppercase small text-muted">Quarter ${q}</div>`);
 
-                // Loop Bulan di dalam Quarter
                 activeMonths.forEach(item => {
-                    let badgeClass = 'bg-primary';
-                    let badgeText = 'Draft';
+                    let badgeClass = 'bg-info-subtle text-info';
+                    let badgeText = 'Proses';
                     let btnClass = 'btn-outline-primary';
                     let btnText = 'Lihat';
 
-                    if(item.status == 'process') { badgeClass = 'bg-info'; badgeText = 'Proses'; }
-                    if(item.status == 'draft') { badgeClass = 'bg-primary'; badgeText = 'Draft'; btnClass = 'btn-primary'; btnText = 'Edit'; }
-                    if(item.status == 'pending') { badgeClass = 'bg-warning text-dark'; badgeText = 'Perlu Verifikasi'; btnClass = 'btn-warning'; btnText = 'Verifikasi'; }
-                    if(item.status == 'revision') { badgeClass = 'bg-danger'; badgeText = 'Revisi'; btnClass = 'btn-danger'; btnText = 'Perbaiki'; }
-                    if(item.status == 'approved') { badgeClass = 'bg-success'; badgeText = 'Selesai'; }
+                    if(item.status == 'process') { badgeClass = 'bg-info-subtle text-dark'; badgeText = 'Proses/Selesai'; }
+                    if(item.status == 'draft') {
+                        badgeClass = 'bg-primary'; badgeText = 'Perlu Input';
+                        btnClass = 'btn-primary'; btnText = 'Input';
+                    }
+                    if(item.status == 'pending') {
+                        badgeClass = 'bg-warning text-dark'; badgeText = 'Verifikasi';
+                        btnClass = 'btn-warning'; btnText = 'Verifikasi';
+                    }
+                    if(item.status == 'revision') {
+                        badgeClass = 'bg-danger'; badgeText = 'Revisi';
+                        btnClass = 'btn-danger'; btnText = 'Perbaiki';
+                    }
 
                     const html = `
                         <div class="list-group-item d-flex justify-content-between align-items-center ps-4">
                             <div>
                                 <span class="fw-bold text-dark">${item.month_name}</span>
                                 <span class="badge ${badgeClass} ms-2">${badgeText}</span>
-                                <div class="small text-muted mt-1">${item.count} risiko dimonitor</div>
+                                <div class="small text-muted mt-1">${item.count} risiko terkait</div>
                             </div>
                             <a href="${item.link}" class="btn btn-sm ${btnClass} rounded-pill px-3">${btnText}</a>
                         </div>

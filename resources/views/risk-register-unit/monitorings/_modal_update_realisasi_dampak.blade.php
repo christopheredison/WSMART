@@ -80,7 +80,7 @@
                             </div>
                         </div>
 
-                        <div class="col-12">
+                        <div class="col-12 d-none">
                             <table class="table mt-3">
                                 <thead>
                                     <tr>

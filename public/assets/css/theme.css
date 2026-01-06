@@ -1427,7 +1427,7 @@ progress {
   color: #748194;
 }
 .blockquote-footer:before {
-  content: "— ";
+  content: "— ";
 }
 .img-fluid,
 .img-thumbnail {
@@ -21577,8 +21577,10 @@ html[dir="rtl"] .img-dropdown {
 .notification-indicator:before {
   position: absolute;
   content: "";
-  right: 0.125rem;
-  top: 0.5rem;
+  right: -4px;
+  top: -4px;
+  /* right: 0.125rem;
+  top: 0.5rem; */
   height: 1rem;
   width: 1rem;
   border-radius: 50%;
@@ -21589,11 +21591,14 @@ html[dir="rtl"] .img-dropdown {
   align-items: center;
   justify-content: center;
   position: absolute;
-  right: 0.125rem;
-  top: 0.505rem;
+  /* right: 0.125rem;
+  top: 0.505rem; */
+  right: -4px;
+  top: -3px;
   height: 1rem;
   width: 1rem;
-  font-size: 0.67rem;
+  /* font-size: 0.67rem; */
+  font-size: 0.6rem;
   color: #fff;
   font-weight: 700;
 }

@@ -21,19 +21,28 @@ class ProjectController extends BasicCRUDController
     protected $apiPP;
 
     protected $tableColumns = [
+        'project_code' => [
+            'label' => 'Kode Project',
+            'data' => 'project_code_display',
+            'name' => 'meta->profit_center',
+            'class' => 'mw-10r'
+        ],
         'project_name' => [
             'label' => 'Nama Project',
             'data' => 'project_name',
+            'class' => 'mw-10r'
         ],
         'divisi_name' => [
             'label' => 'Divisi Project',
-            'data' => 'projectDivisi.divisi_name',
-            'render' => '(data, type, row) => row.project_divisi?.divisi_name || "-"',
+            'data' => 'divisi.name',
+            'render' => '(data, type, row) => row.divisi?.name || "-"',
+            'class' => 'mw-10r'
         ],
-        'sektor_name' => [
-            'label' => 'Konstruksi Spesifik',
-            'data' => 'projectSektor.sektor_name',
-            'render' => '(data, type, row) => row.project_sektor?.sektor_name || "-"',
+        'nilai_ok' => [
+            'label' => 'Nilai OK',
+            'data' => 'nilai_ok_display',
+            'name' => 'meta->omset',
+            'render' => '(data, type, row) => row.meta?.omset ? Intl.NumberFormat(\'id-ID\').format(row.meta.omset) : "-"',
         ],
     ];
 
@@ -46,7 +55,7 @@ class ProjectController extends BasicCRUDController
 
     public function index()
     {
-        request()->merge(['append' => ['projectDivisi', 'projectSektor']]);
+        request()->merge(['append' => ['projectDivisi', 'projectSektor', 'divisi']]);
         $this->editFields = [
             [
                 'name' => 'project_code',
@@ -79,6 +88,18 @@ class ProjectController extends BasicCRUDController
                 ],
             ],
         ];
+
+        $this->datatableCallback = function($datatable) {
+            $datatable->addColumn('project_code_display', function($row) {
+                return $row->meta['profit_center'] ?? '-';
+            });
+
+            $datatable->addColumn('nilai_ok_display', function($row) {
+                return $row->meta['omset'] ?? 0;
+            });
+
+            return $datatable;
+        };
 
         if (Gate::check('project_edit') && false) {
             $this->tableActions[] = [

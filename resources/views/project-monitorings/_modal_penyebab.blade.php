@@ -12,7 +12,7 @@
                     <div class="row g-2">
                         <!-- Hidden Input for penyebab_risiko_id -->
                         {{ Form::hidden('penyebab_risiko_id', '') }}
-                    
+
                         <div class="col-12">
                             <div class="form-floating">
                                 {{ Form::text('penyebab_risiko', null, ['class' => 'form-control', 'disabled' => 'disabled']) }}
@@ -22,13 +22,13 @@
                         <div class="col-md-6">
                             <div class="form-floating">
                                 <input type="text" class="form-control" id="perkiraan_waktu_terpapar_risiko_mulai" name="perkiraan_waktu_terpapar_risiko_mulai" required disabled>
-                                <label for="perkiraan_waktu_terpapar_risiko_mulai">Perkiraan Waktu Mulai Perlakuan Risiko</label>
+                                <label for="perkiraan_waktu_terpapar_risiko_mulai">Perkiraan Waktu Mulai Terpapar Risiko</label>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-floating">
                                 <input type="text" class="form-control" id="perkiraan_waktu_terpapar_risiko_akhir" name="perkiraan_waktu_terpapar_risiko_akhir" required disabled>
-                                <label for="perkiraan_waktu_terpapar_risiko_akhir">Perkiraan Waktu Selesai Perlakuan Risiko</label>
+                                <label for="perkiraan_waktu_terpapar_risiko_akhir">Perkiraan Waktu Selesai Terpapar Risiko</label>
                             </div>
                         </div>
                         <div class="col-12">
@@ -49,7 +49,7 @@
                                 <label>PIC</label>
                             </div>
                         </div>
-                        
+
                         <div class="col-md-6">
                             <div class="form-floating">
                                 <input type="text" class="form-control" id="timeline_perlakuan_risiko_start" name="timeline_perlakuan_risiko_start" required disabled>
@@ -100,7 +100,7 @@
                         </div>
                         <div class="col-md-3 col-auto text-end justify-content-end d-flex flex-column">
                             <div>
-                                
+
                             </div>
                         </div>
                         <div class="col-12">
@@ -146,10 +146,15 @@
             const newId = 'dokumen-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
 
             if (tableDokumen.find('tr').length >= 3) {
-                alert('Maksimal 3 dokumen yang dapat diunggah.');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal',
+                    text: 'Maksimal 3 dokumen yang dapat diunggah.',
+                });
+                // alert('Maksimal 3 dokumen yang dapat diunggah.');
                 return;
             }
-            
+
             uploadContainer.append('<input type="file" name="document_file_' + penyebabRisikoId + '[' + newId + ']" id="'+newId+'" required>');
 
             tableDokumen.append(`
@@ -180,7 +185,12 @@
                 });
 
                 if (totalSize > {{ config('filesystems.max_upload_size') }} * 1024 * 1024) {
-                    alert('Total ukuran file yang diunggah tidak boleh lebih dari {{ round(config('filesystems.max_upload_size')) }} MB.');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'File Terlalu Besar',
+                        text: 'Total ukuran file yang diunggah tidak boleh lebih dari {{ round(config('filesystems.max_upload_size')) }} MB.',
+                    });
+                    // alert('Total ukuran file yang diunggah tidak boleh lebih dari {{ round(config('filesystems.max_upload_size')) }} MB.');
                     $('#modalUpdateRealisasi .table-dokumen tr[data-id="'+newId+'"] .delete-btn').click();
                 }
             });

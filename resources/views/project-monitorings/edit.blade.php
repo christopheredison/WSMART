@@ -504,15 +504,18 @@
                                             <td class="display-timeline text-center">
                                                 {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}
                                             </td>
-                                            <td class="column-action-impact">
+                                            <td style="white-space:nowrap" class="column-action-impact">
                                                 <div class="d-none dom-saved-impact">
-                                                    <div class="upload-container-impact"></div>
-                                                    <input type="hidden" class="input-file-description-impact">
+                                                    <div class="upload-container">
+                                                    </div>
+                                                    <input type="textarea" class="input-file-description" name="document_description_{{ $perlakuan->id }}" id="deskripsi_perlakuan_risiko_{{ $perlakuan->id }}">
                                                 </div>
                                                 <div class="text-center">
                                                     <a href="javascript:void(0)"
                                                       class="btn-input-icon btn-action"
                                                       data-action="update-realisasi-dampak"
+                                                      data-bs-toggle="tooltip"
+                                                      title="Update Realisasi Dampak"
                                                       data-id="{{ $perlakuan->id }}"
                                                       data-dampak-text="{{ $dampak->dampak_risiko }}">
                                                         <span class="bx bx-edit-alt text-primary"></span>
@@ -580,7 +583,7 @@
                                                     class="btn-input-icon btn-action"
                                                     data-action="update-realisasi"
                                                     data-bs-toggle="tooltip"
-                                                    title="Update Realisasi"
+                                                    title="Update Penyebab Realisasi"
                                                     data-id="{{ $perlakuan->id }}">
                                                         <span class="bx bx-edit-alt text-primary"></span>
                                                     </a>
@@ -803,17 +806,15 @@ const quarter = {{ $quarter }};
 const namaRisiko = @json($projectRisk->peristiwa_risiko_id ? $peristiwaRisiko->title : $projectRisk->rencana_kegiatan);
 const month = @json($month);
 const year = @json($tahun);
-// const paddedMonth = String(month).padStart(2, '0');
-// const minDateString = dayjs(`${year}-${paddedMonth}-01`, 'YYYY-MM-DD').toDate();
 
 var flatpickrIns = flatpickr("#timelineInput", {
     mode: "single",
     altInput: true,
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
-    // minDate: minDateString,
     minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
-    maxDate: dayjs().toDate(),
+    // maxDate: dayjs().toDate(),
+    maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
     disableMobile: true
 });
 
@@ -859,7 +860,8 @@ var impactFlatpickr = flatpickr("#timelineImpactInput", {
     dateFormat: "d/m/Y",
     // minDate: minDateString,
     minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
-    maxDate: dayjs().toDate(),
+    // maxDate: dayjs().toDate(),
+    maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
     disableMobile: true
 });
 

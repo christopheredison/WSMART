@@ -79,7 +79,9 @@ class TaskController extends Controller
 
             // --- B. RISK REGISTER STATS & ACTION ---
             // Ambil Risiko Aktif (Is Closed = 0)
-            $risks = ProjectRisk::where('project_periode_list_id', $ppl->id)->where('is_closed', 0)->get();
+            $risks = ProjectRisk::where('project_periode_list_id', $ppl->id)
+              // ->where('is_closed', 0)
+              ->get();
             $totalActiveRisks = $risks->count();
 
             $riskStats = [
@@ -125,22 +127,31 @@ class TaskController extends Controller
                 }
             }
 
-            // --- C. MONITORING STATS (UPDATED LOGIC) ---
-            // Ambil SEMUA data monitoring tahun ini untuk project ini sekaligus (Eager Loading manual)
-            // Agar tidak query berulang di dalam loop bulan
-            $allMonitorings = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($ppl) {
-                    $q->where('project_periode_list_id', $ppl->id)
-                      ->where('is_closed', 0); // Hanya monitoring untuk risiko aktif
+            // --- C. MONITORING STATS (UPDATED LOGIC: LATEST DATA & TIME VALIDATION) ---
+            $allMonitorings = ProjectRiskMonitoring::with('projectRisk')
+                ->whereHas('projectRisk', function($q) use ($ppl) {
+                    $q->where('project_periode_list_id', $ppl->id);
+                    // Note: Kita tidak filter is_closed di query utama monitoring
+                    // agar data historis tetap bisa ditarik jika perlu,
+                    // TAPI kita filter ketat saat perhitungan di bawah.
                 })
                 ->where('tahun', $currentYear)
+                ->orderBy('id', 'desc')
                 ->get();
 
             $monitoringSummary = [];
             $monitoringActionCount = 0;
             $isMonUrgent = false;
+            $currentMonth = (int) date('n'); // Bulan saat ini (1-12)
 
-            // Logic Target Status Monitoring (Untuk Verifikator)
-            // Mapping: 2=RO Project, 3=RO Divisi, 4=RO MR, 5=ROW MR
+            // Hitung Total Risiko Aktif (Induk)
+            // Pastikan ini HANYA menghitung yang is_closed = 0
+            $activeRisksCollection = ProjectRisk::where('project_periode_list_id', $ppl->id)
+                ->where('is_closed', 0)
+                ->get();
+            $totalActiveRisks = $activeRisksCollection->count();
+
+            // Mapping Target Verifikator
             $targetMonStatus = 0;
             if ($levelId == 7) $targetMonStatus = 2;
             else if ($levelId == 1 && !$is_mr) $targetMonStatus = 3;
@@ -152,74 +163,95 @@ class TaskController extends Controller
             foreach ($quarterMap as $q => $months) {
                 $monthData = [];
                 foreach ($months as $m) {
-                    // Filter Koleksi (Bukan Query DB lagi) untuk performa
-                    $monsInMonth = $allMonitorings->where('month', $m);
+                    // --- STEP 1: PREPARE DATA BERSIH ---
+                    $rawMons = $allMonitorings->where('month', $m);
+
+                    // Filter Monitoring:
+                    // 1. Ambil unik berdasarkan risiko_id (handle duplikat)
+                    // 2. HANYA ambil monitoring yang risiko induknya AKTIF (is_closed = 0)
+                    $monsInMonth = $rawMons->unique('risiko_id')
+                        ->filter(function($mon) {
+                            return $mon->projectRisk && $mon->projectRisk->is_closed == 0;
+                        });
 
                     $statusM = 'empty';
                     $countPendingM = 0;
                     $monthName = date('M', mktime(0, 0, 0, $m, 10));
-
-                    // Hanya proses bulan yang sudah lewat atau bulan ini (Opsional, tapi disini kita proses semua sesuai data)
+                    $isFutureMonth = ($m > $currentMonth);
 
                     if ($levelId == 6) {
                         // --- LOGIC INPUTTER ---
+
+                        // Count Created HANYA dari monitoring yang valid (Active Risk)
                         $countCreated = $monsInMonth->count();
 
-                        // 1. Cek Revisi (Urgent)
-                        // Status 1 (Draft/Revisi) DAN flag is_revision = true
                         $revisiCount = $monsInMonth->where('status', 1)->where('is_revision', true)->count();
-
-                        // 2. Cek Draft (Pending)
-                        // a. Status 1 DAN is_revision = false
                         $draftCount = $monsInMonth->where('status', 1)->where('is_revision', false)->count();
 
-                        // b. Belum dibuat sama sekali (Total Risiko Aktif - Jumlah Monitoring Bulan ini)
-                        // Jika risiko ada 5, tapi monitoring baru dibuat 3, berarti 2 belum started.
+                        // Perhitungan Unstarted yang PASTI AKURAT
+                        // (Total Risiko Aktif) - (Monitoring Risiko Aktif yg sudah dibuat)
                         $unstartedCount = ($totalActiveRisks > 0) ? ($totalActiveRisks - $countCreated) : 0;
-                        if ($unstartedCount < 0) $unstartedCount = 0; // Jaga-jaga
+                        if ($unstartedCount < 0) $unstartedCount = 0;
 
                         if ($revisiCount > 0) {
                             $statusM = 'revision';
                             $countPendingM = $revisiCount;
                             $isMonUrgent = true;
-                        } elseif (($draftCount + $unstartedCount) > 0) {
+                        }
+                        elseif (($draftCount + $unstartedCount) > 0) {
                             $statusM = 'draft';
-                            $countPendingM = $draftCount + $unstartedCount;
-                        } elseif ($countCreated > 0 && $countCreated == $totalActiveRisks) {
-                             $statusM = 'process'; // Sudah dikirim semua
+
+                            if ($isFutureMonth) {
+                                // Masa Depan: Info (Biru) atau Empty
+                                if ($draftCount > 0) {
+                                    $statusM = 'process';
+                                    $countPendingM = 0;
+                                } else {
+                                    $statusM = 'empty';
+                                    $countPendingM = 0;
+                                }
+                            } else {
+                                // Bulan Ini/Lalu: Hitung "Hutang" Inputan
+                                $countPendingM = $draftCount + $unstartedCount;
+                            }
+                        }
+                        elseif ($countCreated > 0 && $countCreated >= $totalActiveRisks) {
+                             $statusM = 'process';
                         }
 
                     } else {
                         // --- LOGIC VERIFIKATOR ---
                         if ($targetMonStatus > 0) {
-                            // Hitung yang statusnya == Target Level User DAN belum approved
+                            // Hitung dari $monsInMonth yang sudah bersih dari risiko closed
                             $pendingVerify = $monsInMonth->where('status', $targetMonStatus)
                                 ->where('is_approved', false)
                                 ->count();
 
-                            // Cek jika ada pengembalian dari atas (Urgent)
-                            // Jika user level 7 (target 2), cek jika status 2 tapi is_revision=true (dikembalikan level 3)
                             $returnedCount = $monsInMonth->where('status', $targetMonStatus)
                                 ->where('is_revision', true)
                                 ->count();
 
                             if ($returnedCount > 0) {
-                                $statusM = 'revision'; // Merah (Dikembalikan dari atas)
+                                $statusM = 'revision';
                                 $countPendingM = $returnedCount;
                                 $isMonUrgent = true;
                             } elseif ($pendingVerify > 0) {
-                                $statusM = 'pending'; // Kuning (Menunggu Verifikasi)
+                                $statusM = 'pending';
                                 $countPendingM = $pendingVerify;
                             } elseif ($monsInMonth->count() > 0) {
-                                $statusM = 'process'; // Sudah lewat / belum sampai
+                                $statusM = 'process';
                             }
                         }
                     }
 
-                    // Hanya masukkan jika ada data atau jika Inputter (untuk memperlihatkan slot kosong)
-                    // Disini kita tampilkan semua bulan yang ada datanya
-                    if ($monsInMonth->count() > 0 || ($levelId == 6 && $statusM == 'draft' && $totalActiveRisks > 0)) {
-                        $monthData[] = [
+                    // Tampilkan slot
+                    $showItem = $monsInMonth->count() > 0;
+                    if ($levelId == 6 && !$isFutureMonth && $totalActiveRisks > 0) {
+                        $showItem = true;
+                    }
+
+                    if ($showItem && $statusM !== 'empty') {
+                         $monthData[] = [
                             'month_num' => $m,
                             'month_name' => $monthName,
                             'status' => $statusM,

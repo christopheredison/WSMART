@@ -478,6 +478,8 @@
                                                     <a href="javascript:void(0)"
                                                       class="btn-input-icon btn-action"
                                                       data-action="update-realisasi-dampak"
+                                                      data-bs-toggle="tooltip"
+                                                      title="Update Dampak Realisasi"
                                                       data-id="{{ $perlakuan->id }}"
                                                       data-dampak-text="{{ $dampak->dampak_risiko }}">
                                                         <span class="bx bx-edit-alt text-primary"></span>
@@ -556,7 +558,7 @@
                                                     class="btn-input-icon btn-action"
                                                     data-action="update-realisasi"
                                                     data-bs-toggle="tooltip"
-                                                    title="Update Realisasi"
+                                                    title="Update Penyebab Realisasi"
                                                     data-id="{{ $perlakuan->id }}">
                                                         <span class="bx bx-edit-alt text-primary"></span>
                                                     </a>

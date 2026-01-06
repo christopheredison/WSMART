@@ -25,7 +25,7 @@
           </li>
 
           <!-- Notifikasi -->
-          <li class="nav-item dropdown">
+          <li class="nav-item dropdown me-3">
             <a class="nav-link notification-indicator notification-indicator-primary px-0 icon-indicator" id="navbarDropdownNotification" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
               <span class="bx bx-bell fs-4" data-fa-transform="shrink-6"></span>
               <span class="notification-indicator-number">0</span>

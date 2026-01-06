@@ -594,7 +594,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     $escalationConfig['show'] = true;
                     $escalationConfig['disabled'] = true;
                 } elseif ($unstartedCount > 0) {
-                    $summaryInfo = ['type' => 'warning', 'icon' => 'bx-info-circle', 'message' => "Terdapat <strong>{$unstartedCount}</strong> risiko aktif belum di-input."];
+                    $summaryInfo = ['type' => 'warning', 'icon' => 'bx-info-circle', 'message' => "Terdapat <strong>{$unstartedCount}</strong> risiko aktif belum di-monitoring."];
                     $escalationConfig['show'] = true;
                     $escalationConfig['disabled'] = true;
                 } else {
@@ -1153,6 +1153,21 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     'timeline_perlakuan_risiko_start' => $start,
                     'timeline_perlakuan_risiko_end' => $start,
                 ]);
+
+                if ($documentFiles = $request->{'document_dampak_file_' . $id}) {
+                    $documentDescriptions = json_decode($request->input('document_description_' . $id, '[]'), true) ?: [];
+                    foreach ($documentFiles as $idx => $documentFile) {
+                        $storeFile = $documentFile->store('project-monitoring-documents');
+                        $projectMonitoring->perlakuanDampakRisikoDocuments()->create([
+                            'perlakuan_dampak_risiko_id' => $id,
+                            'user_id' => request()->user()->id,
+                            'file_name' => $documentFile->getClientOriginalName(),
+                            'file_path' => $storeFile,
+                            'mimetype' => $documentFile->getClientMimeType(),
+                            'description' => $documentDescriptions[$idx] ?? '',
+                        ]);
+                    }
+                }
             }
         }
 
