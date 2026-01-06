@@ -227,6 +227,9 @@ class ProjectLEDController extends Controller
                     'jenis_kontrol_eksisting_id' => 0,
                     'penilaian_efektifitas_kontrol' => 0,
                     'kontrol_eksisting' => '',
+                    'status_risiko' => '0',
+                    'status_progress'  => '0',
+                    'status' => 1
                 ]);
 
                 // Buat ProjectRiskAnalisa
@@ -468,6 +471,9 @@ class ProjectLEDController extends Controller
                     'jenis_kontrol_eksisting_id' => 0,
                     'penilaian_efektifitas_kontrol' => 0,
                     'kontrol_eksisting' => '',
+                    'status_risiko' => '0',
+                    'status_progress'  => '0',
+                    'status' => 1,
                 ]);
 
                 // Hubungkan Loss Event ke Project Risk yang baru dibuat
