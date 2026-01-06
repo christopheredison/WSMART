@@ -85,7 +85,7 @@
                                 @endif
                             </p>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        {{-- <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Kategori Risiko BUMN</label>
                             <p>
                                 @if($lossEvent->kategori_risiko_bumn == 1)
@@ -106,7 +106,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Jenis Risiko</label>
                             <p>{{ $lossEvent->jenisRisiko->title ?? '-' }}</p>
-                        </div>
+                        </div> --}}
                     </div>
 
                     <hr class="my-4">

@@ -619,7 +619,8 @@ $(document).ready(function() {
                       document.getElementById('is_closed_input').value = '0'; // Pastikan is_closed tidak diset
                       form.submit(); // Submit form untuk menyimpan LED terlebih dahulu
                   } else if (result2.isDenied) {
-                      // User chose "Tidak, Buat LED Saja" (by clicking outside or X)
+                    // User chose "Tidak, Buat LED Saja" (by clicking outside or X)
+                    document.getElementById('create_new_risk_input').value = '0';
                       document.getElementById('is_closed_input').value = '0';
                       form.submit();
                   }

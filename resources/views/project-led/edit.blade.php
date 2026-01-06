@@ -64,7 +64,7 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-6 mb-3">
+                            {{-- <div class="col-md-6 mb-3">
                                 <label class="form-label">Kategori Risiko BUMN <span class="text-danger">*</span></label>
                                 <select class="form-select" name="kategori_risiko_bumn" required>
                                     <option value="">Pilih Kategori Risiko BUMN</option>
@@ -72,20 +72,20 @@
                                     <option value="2" @if(old('kategori_risiko_bumn', $lossEvent->kategori_risiko_bumn) == 2) selected @endif>Operational</option>
                                     <option value="3" @if(old('kategori_risiko_bumn', $lossEvent->kategori_risiko_bumn) == 3) selected @endif>Public & Legal</option>
                                 </select>
-                            </div>
+                            </div> --}}
 
-                            <div class="col-md-6 mb-3">
+                            {{-- <div class="col-md-6 mb-3">
                                 <label class="form-label">Kategori Risiko T2 & T3 BUMN <span class="text-danger">*</span></label>
                                 <input type="hidden" name="kategori_risiko_id" id="kategori_risiko_id" value="{{ old('kategori_risiko_id', $lossEvent->kategori_risiko_id) }}">
                                 <select class="form-select" name="jenis_risiko_id" id="jenis_risiko_id" required>
-                                     <option value="">Pilih Jenis Risiko</option>
+                                    <option value="">Pilih Jenis Risiko</option>
                                     @foreach($jenisRisikos as $jenis)
                                         <option value="{{ $jenis->id }}" data-kategori="{{ $jenis->kategori_risiko_id }}" @if(old('jenis_risiko_id', $lossEvent->jenis_risiko_id) == $jenis->id) selected @endif>
                                             {{ $jenis->kategoriRisiko->title ?? '' }} – {{ $jenis->title }}
                                         </option>
                                     @endforeach
                                 </select>
-                            </div>
+                            </div> --}}
                         </div>
 
                         <input type="hidden" name="penyebab_data" id="penyebab_data_input">
@@ -172,7 +172,7 @@
             </div>
         </div>
     </div>
-    
+
     {{-- Modal untuk Tambah Penyebab --}}
     <div class="modal fade" id="modalPenyebab" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -256,7 +256,7 @@ $(document).ready(function() {
             const row = `<tr class="table">
                     <td style="place-content: center;">${counter++}</td>
                     <td class="">
-                      <div class="d-flex justify-content-between align-items-center"> 
+                      <div class="d-flex justify-content-between align-items-center">
                         ${penyebab.penyebab_risiko}
                         <span class="d-flex gap-2">
                             <button type="button" class="btn btn-link p-0 btn-tambah-rencana" data-penyebab-id="${penyebab.id}" title="Tambah Rencana"><i class="bx bx-plus-circle"></i></button>
@@ -271,10 +271,10 @@ $(document).ready(function() {
         });
         $('#penyebab_data_input').val(JSON.stringify(penyebabData));
     }
-    
+
     renderPenyebabTable();
-    flatpickr(".flatpickr-date", 
-      { 
+    flatpickr(".flatpickr-date",
+      {
         altInput: true,
         altFormat: "d/m/Y",
         dateFormat: "Y-m-d",
@@ -292,9 +292,9 @@ $(document).ready(function() {
 
     $('#btn-simpan-penyebab').on('click', function() {
         const penyebabText = $('#input-penyebab-risiko').val();
-        if (!penyebabText.trim()) { 
+        if (!penyebabText.trim()) {
             Swal.fire('Gagal', 'Nama penyebab tidak boleh kosong.', 'error');
-            return; 
+            return;
         }
         penyebabData.push({ id: `temp_${new Date().getTime()}`, penyebab_risiko: penyebabText, perlakuan: [] });
         renderPenyebabTable();
@@ -323,36 +323,36 @@ $(document).ready(function() {
 
     $('body').on('click', '.btn-tambah-rencana', function() {
         currentPenyebabId = $(this).data('penyebab-id');
-        currentPerlakuanId = null; 
+        currentPerlakuanId = null;
 
         const penyebab = penyebabData.find(p => p.id == currentPenyebabId);
-        
+
         $('#modalRencanaLabel').text('Tambah Penanganan Saat Kejadian');
-        
+
         const form = $('#formRencana');
         form[0].reset();
         form.find('select').val('').trigger('change');
         form.find('.is-invalid').removeClass('is-invalid');
         form.find('[name="penyebab_risiko_text"]').val(penyebab.penyebab_risiko);
-        
+
         flatpickrMulai.clear();
         flatpickrSelesai.clear();
-        
+
         $('#modalRencana').modal('show');
     });
 
     $('body').on('click', '.btn-edit-perlakuan', function() {
         currentPenyebabId = $(this).data('penyebab-id');
         currentPerlakuanId = $(this).data('perlakuan-id');
-        
+
         const penyebab = penyebabData.find(p => p.id == currentPenyebabId);
         const perlakuan = penyebab.perlakuan.find(pl => pl.id == currentPerlakuanId);
-        
+
         const form = $('#formRencana');
         form.find('.is-invalid').removeClass('is-invalid');
-        
+
         $('#modalRencanaLabel').text('Edit Penanganan Saat Kejadian');
-        
+
         form.find('[name="penyebab_risiko_text"]').val(penyebab.penyebab_risiko);
         form.find('[name="rencana_perlakuan_risiko"]').val(perlakuan.rencana_perlakuan_risiko);
         form.find('[name="output_perlakuan_risiko"]').val(perlakuan.output_perlakuan_risiko);
@@ -360,10 +360,10 @@ $(document).ready(function() {
         form.find('[name="pic"]').val(perlakuan.pic).trigger('change');
         form.find('[name="opsi_perlakuan_risiko"]').val(perlakuan.opsi_perlakuan_risiko);
         form.find('[name="jenis_rencana_perlakuan_risiko"]').val(perlakuan.jenis_rencana_perlakuan_risiko);
-        
+
         flatpickrMulai.setDate(perlakuan.timeline_mulai_perlakuan_risiko, true, 'd/m/Y');
         flatpickrSelesai.setDate(perlakuan.timeline_selesai_perlakuan_risiko, true, 'd/m/Y');
-        
+
         $('#modalRencana').modal('show');
     });
 
@@ -391,7 +391,7 @@ $(document).ready(function() {
             });
             return;
         }
-        
+
         const perlakuanData = {
             rencana_perlakuan_risiko: form.find('[name="rencana_perlakuan_risiko"]').val(),
             output_perlakuan_risiko: form.find('[name="output_perlakuan_risiko"]').val(),
@@ -403,9 +403,9 @@ $(document).ready(function() {
             opsi_perlakuan_risiko: form.find('[name="opsi_perlakuan_risiko"]').val(),
             jenis_rencana_perlakuan_risiko: form.find('[name="jenis_rencana_perlakuan_risiko"]').val(),
         };
-        
+
         const penyebab = penyebabData.find(p => p.id == currentPenyebabId);
-        
+
         if (currentPerlakuanId) {
             const perlakuanIndex = penyebab.perlakuan.findIndex(pl => pl.id == currentPerlakuanId);
             perlakuanData.id = currentPerlakuanId;
@@ -414,7 +414,7 @@ $(document).ready(function() {
             perlakuanData.id = `temp_p_${new Date().getTime()}`;
             penyebab.perlakuan.push(perlakuanData);
         }
-        
+
         renderPenyebabTable();
         $('#modalRencana').modal('hide');
     });
@@ -429,7 +429,7 @@ $(document).ready(function() {
     $('body').on('click', '.btn-hapus-perlakuan', function() {
         const penyebabId = $(this).data('penyebab-id');
         const perlakuanId = $(this).data('perlakuan-id');
-        
+
         Swal.fire({
             title: 'Apakah Anda yakin?',
             text: "Anda akan menghapus Penanganan Saat Kejadian ini.",
