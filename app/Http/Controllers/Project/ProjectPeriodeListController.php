@@ -420,7 +420,7 @@ class ProjectPeriodeListController extends BasicCRUDController
         }
 
         // Ambil data batch terakhir dari eager loading
-        $lastBatch = $row->project->dataBatches->first();
+        $lastBatch = $row->project->dataBatches->sortByDesc('id')->first();
 
         // 2. Cek Aktif (Published)
         if ($lastBatch && $lastBatch->finish) {
