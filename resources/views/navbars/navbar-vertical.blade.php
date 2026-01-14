@@ -187,10 +187,10 @@
         </li>
         @endcan
 
-        @can('unit_menu')
+        @can('corporate_risk_view')
         <li class="nav-item single-indicator">
-          <a class="nav-link {{ request()->routeIs('laporan.unit') ? 'active' : '' }}"
-            href="{{route('laporan.unit')}}" role="button" data-bs-toggle="" aria-expanded="false">
+          <a class="nav-link {{ request()->routeIs('laporan.korporat') ? 'active' : '' }}"
+            href="{{route('laporan.korporat')}}" role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
               <i class="menu-icon tf-icons bx bxs-report"></i>
               <span class="nav-link-text">Laporan Korporat</span>

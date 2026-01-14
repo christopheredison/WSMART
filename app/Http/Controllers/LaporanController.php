@@ -14,6 +14,46 @@ use Illuminate\Support\Facades\Log;
 
 class LaporanController extends Controller
 {
+    public function korporat()
+    {
+        $periodes = Periode::orderBy('tahun', 'desc')->get();
+        $units = Unit::where('unit_type_id', 4)->get();
+        $unitId = Unit::where('unit_type_id', 4)->first()->id;
+
+        return view('laporan.korporat', compact('periodes', 'units', 'unitId'));
+    }
+
+    public function korporatExport(Request $request)
+    {
+        $request->validate([
+            'periode_id' => 'required|exists:periodes,id',
+            'unit_id'    => 'required|exists:units,id',
+        ]);
+
+        try {
+            $periodeId = $request->input('periode_id');
+            $unitId    = $request->input('unit_id');
+
+            $periode = Periode::find($periodeId);
+            $unit    = Unit::find($unitId);
+
+            $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . '_' . $periode->tahun . '.xlsx';
+
+            $fileContents = Excel::raw(
+                new LaporanUnitExport($periodeId, $unitId),
+                \Maatwebsite\Excel\Excel::XLSX
+            );
+
+            return response($fileContents, 200, [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal export laporan unit: ' . $e->getMessage());
+            return back()->with('error', 'Gagal membuat laporan Excel. Silakan coba lagi.');
+        }
+    }
+
     public function unit()
     {
         $periodes = Periode::orderBy('tahun', 'desc')->get();
@@ -107,7 +147,7 @@ class LaporanController extends Controller
 
         try {
             $projectId    = $request->input('project_id');
-            
+
             $project    = Project::find($projectId);
 
             $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $project->project_name) . '.xlsx';
