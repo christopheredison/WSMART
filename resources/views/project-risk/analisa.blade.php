@@ -167,21 +167,27 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label>Skala Dampak</label>
-                        {{ Form::select('skala_dampak', \App\Models\SkalaDampak::get()->mapWithKeys(function($item) { return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi]; }), $analisa->skala_dampak, ['class' => 'form-select', 'placeholder' => 'Pilih Skala Dampak', 'required' => true, 'id' => 'skala_dampak']) }}
+                        {{ Form::select('skala_dampak', \App\Models\SkalaDampak::get()->mapWithKeys(function($item) { return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi]; }), $analisa->skala_dampak, [
+                            'class' => 'form-select',
+                            'placeholder' => 'Pilih Skala Dampak',
+                            'required' => true,
+                            'id' => 'skala_dampak'
+                          ]
+                        ) }}
                     </div>
                     <div class="col-md-4 d-none">
                         <label>Skala Probabilitas</label>
-                        {{ Form::text('skala_probabilitas', '', ['class' => 'form-control', 'disabled' => true, 'required' => true]) }}
+                        {{ Form::text('skala_probabilitas', '', ['class' => 'form-control', 'disabled' => false, 'required' => true]) }}
                     </div>
                     <div class="col-md-2">
                         <label for="skala_parameter_id">Skala Probabilitas</label>
-                        <select name="skala_parameter_id" id="skala_parameter_id" class="form-select" required disabled>
+                        <select name="skala_parameter_id" id="skala_parameter_id" class="form-select" required>
                             <option value="">Pilih Skala...</option>
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label>Nilai Probabilitas (%)</label>
-                        {{ Form::number('nilai_probabilitas', $analisa->nilai_probabilitas, ['class' => 'form-control', 'required' => true, 'step' => '0.01', 'min' => 0, 'max' => 100, 'disabled' => true]) }}
+                        {{ Form::number('nilai_probabilitas', $analisa->nilai_probabilitas, ['class' => 'form-control', 'required' => true, 'step' => '0.01', 'min' => 0, 'max' => 100, 'disabled' => false]) }}
                     </div>
                     <div class="col-md-2">
                         <label>Skala Risiko</label>
@@ -244,17 +250,17 @@
                     </div>
                     <div class="col-md-4 d-none">
                         <label>Skala Probabilitas</label>
-                        {{ Form::text('skala_probabilitas_residual', '', ['class' => 'form-control', 'disabled' => true, 'required' => true]) }}
+                        {{ Form::text('skala_probabilitas_residual', '', ['class' => 'form-control', 'disabled' => false, 'required' => true]) }}
                     </div>
                     <div class="col-md-2">
                         <label for="skala_parameter_residual_id">Skala Probabilitas</label>
-                        <select name="skala_parameter_residual_id" id="skala_parameter_residual_id" class="form-select" required disabled>
+                        <select name="skala_parameter_residual_id" id="skala_parameter_residual_id" class="form-select" required>
                             <option value="">Pilih Skala...</option>
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label>Nilai Probabilitas (%)</label>
-                        {{ Form::number('nilai_probabilitas_residual', $analisa->nilai_probabilitas_residual, ['class' => 'form-control', 'required' => true, 'step' => '0.01', 'min' => 0, 'max' => 100, 'disabled' => true]) }}
+                        {{ Form::number('nilai_probabilitas_residual', $analisa->nilai_probabilitas_residual, ['class' => 'form-control', 'required' => true, 'step' => '0.01', 'min' => 0, 'max' => 100, 'disabled' => false]) }}
                     </div>
                     <div class="col-md-2">
                         <label>Skala Risiko</label>
@@ -354,6 +360,11 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
+const savedSkalaRisiko = "{{ $analisa->skala_risiko ?? '' }}";
+const savedLevelRisiko = "{{ $analisa->level_risiko ?? '' }}";
+const savedSkalaRisikoResidual = "{{ $analisa->skala_risiko_residual ?? '' }}";
+const savedLevelRisikoResidual = "{{ $analisa->level_risiko_residual ?? '' }}";
+
 function getSkalaProbabilitasByValue(value) {
     const skalaProbabilitases = @json($skalaProbabilitas);
     for (const index in skalaProbabilitases) {
@@ -389,12 +400,25 @@ function refreshEksposureRisiko(residual = false) {
     }
 }
 
-function refreshSkalaAndLevelRisiko(residual = false) {
+function refreshSkalaAndLevelRisiko(residual = false, isInit = false) {
     const riskMaps = @json($riskMaps);
     const domSkalaRisiko = $('[name="skala_risiko' + (residual ? '_residual' : '') + '"]');
     const domLevelRisiko = $('[name="level_risiko' + (residual ? '_residual' : '') + '"]');
     const skalaDampak = $('[name="skala_dampak' + (residual ? '_residual' : '') + '"]').val();
     const skalaProbabilitas = $('[name="skala_probabilitas' + (residual ? '_residual' : '') + '"]').data('tingkat');
+
+    if (isInit) {
+        if (!residual && savedSkalaRisiko && savedLevelRisiko) {
+            domSkalaRisiko.val(savedSkalaRisiko);
+            domLevelRisiko.val(savedLevelRisiko);
+            return;
+        }
+        if (residual && savedSkalaRisikoResidual && savedLevelRisikoResidual) {
+            domSkalaRisiko.val(savedSkalaRisikoResidual);
+            domLevelRisiko.val(savedLevelRisikoResidual);
+            return;
+        }
+    }
 
     if (!skalaDampak || !skalaProbabilitas) {
         domSkalaRisiko.val('');
@@ -424,6 +448,20 @@ $(document).ready(function() {
     const $scaleResidual = $('#skala_parameter_residual_id');
     const $nilaiProbResidual = $('[name="nilai_probabilitas_residual"]');
 
+    const savedSkalaDampak = "{{ $analisa->skala_dampak ?? '' }}";
+    const savedSkalaDampakResidual = "{{ $analisa->skala_dampak_residual ?? '' }}";
+
+    // === FITUR 1: Auto Set Parameter Type jika opsi hanya 1 (selain placeholder) ===
+    if ($paramTypeInherent.find('option').length === 2) {
+        $paramTypeInherent.prop('selectedIndex', 1).trigger('change');
+        populateSkalaDropdown('Persentase Kemungkinan Terjadi', $scaleInherent);
+    }
+
+    if ($paramTypeResidual.find('option').length === 2) {
+        $paramTypeResidual.prop('selectedIndex', 1).trigger('change');
+        populateSkalaDropdown('Persentase Kemungkinan Terjadi', $scaleResidual);
+    }
+
     function populateSkalaDropdown(selectedType, $scaleSelect) {
         $scaleSelect.prop('disabled', true).html('<option value="">Pilih Skala...</option>');
         if (!selectedType) {
@@ -437,6 +475,40 @@ $(document).ready(function() {
         });
         $scaleSelect.html(options).prop('disabled', false);
     }
+
+    // === FITUR 2: Validasi Terbalik (Probabilitas -> Skala) ===
+    // Update Skala Dropdown otomatis ketika Nilai Probabilitas berubah
+    $nilaiProbInherent.on('input change', function() {
+        const value = parseFloat($(this).val());
+        if (isNaN(value)) return;
+
+        const matchedScale = getSkalaProbabilitasByValue(value);
+        if (matchedScale) {
+            const $option = $scaleInherent.find(`option[data-tingkat="${matchedScale.tingkat}"]`);
+            if ($option.length > 0) {
+                if ($scaleInherent.val() != $option.val()) {
+                    $scaleInherent.val($option.val()).trigger('change.selectOnly');
+                }
+            }
+        }
+        refreshEksposureRisiko();
+    });
+
+    $nilaiProbResidual.on('input change', function() {
+        const value = parseFloat($(this).val());
+        if (isNaN(value)) return;
+
+        const matchedScale = getSkalaProbabilitasByValue(value);
+        if (matchedScale) {
+            const $option = $scaleResidual.find(`option[data-tingkat="${matchedScale.tingkat}"]`);
+            if ($option.length > 0) {
+                if ($scaleResidual.val() != $option.val()) {
+                    $scaleResidual.val($option.val()).trigger('change.selectOnly');
+                }
+            }
+        }
+        refreshEksposureRisiko(true);
+    });
 
     function validateNilaiProbabilitas($input, $scaleSelect) {
         const $selectedOption = $scaleSelect.find('option:selected');
@@ -484,40 +556,76 @@ $(document).ready(function() {
         populateSkalaDropdown(selectedType, $scaleInherent);
         populateSkalaDropdown(selectedType, $scaleResidual);
 
-        $scaleInherent.val('').trigger('change');
+        // $scaleInherent.val('').trigger('change');
+
+        // Jika data lama ada, set ulang (agar tidak reset saat auto select)
+        const savedInherentId = '{{ $analisa->skala_parameter_id ?? '' }}';
+        if(savedInherentId && $scaleInherent.find(`option[value="${savedInherentId}"]`).length) {
+            $scaleInherent.val(savedInherentId);
+        } else {
+            $scaleInherent.val('').trigger('change');
+        }
+
+        const savedResidualId = '{{ $analisa->skala_parameter_residual_id ?? '' }}';
+        if(savedResidualId && $scaleResidual.find(`option[value="${savedResidualId}"]`).length) {
+            $scaleResidual.val(savedResidualId);
+        } else {
+            $scaleResidual.val('').trigger('change');
+        }
+    });
+
+    $paramTypeResidual.on('change', function() {
+        // Jika data lama ada, set ulang (agar tidak reset saat auto select)
+        const savedResidualId = '{{ $analisa->skala_parameter_residual_id ?? '' }}';
+        console.log(savedResidualId)
+        if(savedResidualId && $scaleResidual.find(`option[value="${savedResidualId}"]`).length) {
+            $scaleResidual.val(savedResidualId);
+        } else {
+            $scaleResidual.val('').trigger('change');
+        }
     });
 
     $scaleInherent.on('change', function() {
+        // Jika event ini dipicu otomatis oleh 'change.selectOnly' (dari input nilai), skip validasi nilai
+        // if (e.namespace === 'selectOnly') {
+        //     refreshSkalaAndLevelRisiko();
+        //     return;
+        // }
+
         const $selectedOption = $(this).find('option:selected');
-        const min = $selectedOption.data('min');
-        const max = $selectedOption.data('max');
+        // const min = $selectedOption.data('min');
+        // const max = $selectedOption.data('max');
         const tingkatInherent = parseInt($selectedOption.data('tingkat')) || 0;
 
-        if ($(this).val()) {
-            $nilaiProbInherent.prop('disabled', false).attr({ min, max }).val('');
-        } else {
-            $nilaiProbInherent.prop('disabled', true).val('').attr({ min: 0, max: 100 });
-        }
-        $nilaiProbInherent.trigger('change');
+        // if ($(this).val()) {
+        //     $nilaiProbInherent.prop('disabled', false).attr({ min, max }).val('');
+        // } else {
+        //     $nilaiProbInherent.prop('disabled', true).val('').attr({ min: 0, max: 100 });
+        // }
+        // $nilaiProbInherent.trigger('change');
 
-        $scaleResidual.val('').trigger('change');
+        // $scaleResidual.val('').trigger('change');
         $scaleResidual.find('option').each(function() {
             const tingkatOption = parseInt($(this).data('tingkat')) || 0;
             $(this).prop('disabled', tingkatOption > tingkatInherent);
         });
+
+        refreshSkalaAndLevelRisiko();
     });
 
     $scaleResidual.on('change', function() {
-        const $selectedOption = $(this).find('option:selected');
-        const min = $selectedOption.data('min');
-        const max = $selectedOption.data('max');
+        // const $selectedOption = $(this).find('option:selected');
+        // const min = $selectedOption.data('min');
+        // const max = $selectedOption.data('max');
 
-        if ($(this).val()) {
-            $nilaiProbResidual.prop('disabled', false).attr({ min, max }).val('');
-        } else {
-            $nilaiProbResidual.prop('disabled', true).val('').attr({ min: 0, max: 100 });
-        }
-        $nilaiProbResidual.trigger('change');
+        // if ($(this).val()) {
+        //     $nilaiProbResidual.prop('disabled', false).attr({ min, max }).val('');
+        // } else {
+        //     $nilaiProbResidual.prop('disabled', true).val('').attr({ min: 0, max: 100 });
+        // }
+        // $nilaiProbResidual.trigger('change');
+
+        refreshSkalaAndLevelRisiko(true);
     });
 
     $nilaiProbInherent.on('blur', function() {
@@ -600,17 +708,17 @@ $(document).ready(function() {
 
         if (savedInherentScaleId) {
             const $selectedInherent = $scaleInherent.find('option:selected');
-            $nilaiProbInherent.prop('disabled', false).attr({
-                min: $selectedInherent.data('min'),
-                max: $selectedInherent.data('max')
-            });
+            // $nilaiProbInherent.prop('disabled', false).attr({
+            //     min: $selectedInherent.data('min'),
+            //     max: $selectedInherent.data('max')
+            // });
         }
         if (savedResidualScaleId) {
             const $selectedResidual = $scaleResidual.find('option:selected');
-            $nilaiProbResidual.prop('disabled', false).attr({
-                min: $selectedResidual.data('min'),
-                max: $selectedResidual.data('max')
-            });
+            // $nilaiProbResidual.prop('disabled', false).attr({
+            //     min: $selectedResidual.data('min'),
+            //     max: $selectedResidual.data('max')
+            // });
         }
 
         const tingkatInherent = parseInt($scaleInherent.find('option:selected').data('tingkat')) || 0;
@@ -935,7 +1043,7 @@ $(document).ready(function() {
         $("#modalKualitatif").modal("hide");
     });
 
-    function updateSkalaDampak() {
+    function updateSkalaDampak(isInit = false) {
         const kategoriDampak = $('[name="kategori_dampak"]').val();
         const riskLimit = parseFloat($('#risk_limit').val()) || 0;
         const nilaiDampak = parseFloat($('[name="nilai_dampak"]').val().replace(/[^0-9.-]+/g, '')) || 0;
@@ -959,13 +1067,21 @@ $(document).ready(function() {
                 skalaResidual = calculateSkalaDampak(percentageResidual);
             }
 
-            // Set nilai skala dampak dan buat readonly
-            $skalaDampak.val(skala).prop('disabled', true);
-            $skalaDampakResidual.val(skalaResidual).prop('disabled', true);
+            if (isInit) {
+                if (savedSkalaDampak) skala = savedSkalaDampak;
+                if (savedSkalaDampakResidual) skalaResidual = savedSkalaDampakResidual;
+            }
+
+            // Old Code: Set nilai skala dampak dan buat readonly
+            // $skalaDampak.val(skala).prop('disabled', true);
+            // $skalaDampakResidual.val(skalaResidual).prop('disabled', true);
+
+            $skalaDampak.val(skala).prop('disabled', false);
+            $skalaDampakResidual.val(skalaResidual).prop('disabled', false);
         } else {
             // Jika kategori dampak Kualitatif, skala dampak bisa dipilih manual
-            $skalaDampak.prop('disabled', false);
-            $skalaDampakResidual.prop('disabled', false);
+            // $skalaDampak.prop('disabled', false);
+            // $skalaDampakResidual.prop('disabled', false);
         }
 
         // Pastikan nilai tetap dikirim ke server meskipun disabled
@@ -1172,6 +1288,19 @@ $(document).ready(function() {
             }
         });
     });
+
+    setTimeout(() => {
+        const savedParameterType = '{{ $selectedParameterType ?? '' }}';
+        if (savedParameterType) {
+             // Trigger change untuk populate
+            $paramTypeInherent.val(savedParameterType).trigger('change');
+             // Value skala_parameter_id akan diset di dalam event handler .on('change') via savedInherentId
+        }
+        updateSkalaDampak(true);
+
+        refreshSkalaAndLevelRisiko(false, true); // Inheren
+        refreshSkalaAndLevelRisiko(true, true);  // Residual
+    }, 500);
 });
 
 document.addEventListener('DOMContentLoaded', function() {

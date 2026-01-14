@@ -112,11 +112,26 @@
                                 <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</label>
                             </div>
                         </div>
-                        <div class="col-12">
+                        {{-- <div class="col-12">
                             <div class="form-group form-floating">
                                 <textarea class="form-control" id="wbs" name="wbs" rows="3"
                                     value="{{ old('wbs') }}" placeholder="Deskripsi Peristiwa Risiko" required></textarea>
                                 <label for="wbs">WBS</label>
+                            </div>
+                        </div> --}}
+                        <div class="col-12">
+                            <div class="form-group d-lg-flex">
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">WBS</label>
+                                <div class="w-100">
+                                    <select class="form-select select2" name="wbs_id" id="wbs_id" required>
+                                        <option value="" selected disabled>Pilih WBS</option>
+                                        @foreach ($wbs_data as $w)
+                                            <option value="{{ $w->id }}" {{ old('wbs_id') == $w->id ? 'selected' : '' }}>
+                                                {{ $w->code }} - {{ $w->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         {{-- <div class="col-12">

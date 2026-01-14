@@ -33,8 +33,8 @@ class PeristiwaRisikoController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'kategori_risiko_id' => 'required',
-            'jenis_risiko_id' => 'required',
+            // 'kategori_risiko_id' => 'required',
+            // 'jenis_risiko_id' => 'required',
             'title' => 'required|string|max:255',
             'deskripsi' => 'nullable|string|max:255',
         ]);
@@ -44,8 +44,8 @@ class PeristiwaRisikoController extends Controller
         }
 
         PeristiwaRisiko::create([
-            'kategori_risiko_id' => $request->kategori_risiko_id,
-            'jenis_risiko_id' => $request->jenis_risiko_id,
+            'kategori_risiko_id' => $request->kategori_risiko_id ?? null,
+            'jenis_risiko_id' => $request->jenis_risiko_id ?? null,
             'title' => $request->title,
             'deskripsi' => $request->deskripsi,
         ]);
@@ -63,8 +63,8 @@ class PeristiwaRisikoController extends Controller
     public function update(Request $request, PeristiwaRisiko $peristiwaRisiko)
     {
         $validator = Validator::make($request->all(), [
-            'kategori_risiko_id' => 'required',
-            'jenis_risiko_id' => 'required',
+            // 'kategori_risiko_id' => 'required',
+            // 'jenis_risiko_id' => 'required',
             'title' => 'required|string|max:255',
             'deskripsi' => 'nullable|string|max:255',
         ]);
@@ -74,8 +74,8 @@ class PeristiwaRisikoController extends Controller
         }
 
         $peristiwaRisiko->update([
-            'kategori_risiko_id' => $request->kategori_risiko_id,
-            'jenis_risiko_id' => $request->jenis_risiko_id,
+            'kategori_risiko_id' => $request->kategori_risiko_id ?? null,
+            'jenis_risiko_id' => $request->jenis_risiko_id ?? null,
             'title' => $request->title,
             'deskripsi' => $request->deskripsi,
         ]);

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Gate;
 use App\Supports\ApiWika;
 use App\Models\Unit;
 use App\Models\ProjectPeriodeList;
+use Carbon\Carbon;
 
 class ProjectController extends BasicCRUDController
 {
@@ -213,24 +214,52 @@ class ProjectController extends BasicCRUDController
     // Tambahkan: sinkronisasi proyek dari ApiWika tanpa penghapusan
     public function syncWika(Request $request)
     {
-        $projectDatas = (new ApiWika())->getProjects();
+        @set_time_limit(600);
 
-        if (!is_array($projectDatas) || empty($projectDatas)) {
-            throw new \Exception('Project List WIKA API return empty data.');
+        $apiWika = new ApiWika();
+
+        try {
+            $projectDatas = $apiWika->getProjects();
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Gagal mengambil data project: ' . $e->getMessage()], 500);
         }
 
+        if (empty($projectDatas)) {
+            return response()->json(['message' => 'Data Project dari API WIKA kosong.'], 200);
+        }
+
+        $currentPeriod = Carbon::now()->format('Ym');
+        $previousPeriod = Carbon::now()->subMonth()->format('Ym');
+
+        $countUpdated = 0;
+
         foreach ($projectDatas as $projectData) {
+            $profitCenter = $projectData['profit_center'] ?? null;
+            $nilaiKontrak = 0;
+
+            if ($profitCenter) {
+                $nilaiKontrak = $this->fetchNilaiKontrak($apiWika, $profitCenter, $currentPeriod);
+
+                if ($nilaiKontrak == 0) {
+                    $nilaiKontrak = $this->fetchNilaiKontrak($apiWika, $profitCenter, $previousPeriod);
+                }
+            }
+
             $project = Project::updateOrCreate([
                 'project_code' => $projectData['kode_spk'],
             ], [
-                'project_name' => $projectData['nama_spk_full'],
-                'type' => Project::TYPE_HAS_RKB_RKN,
+                'project_name'   => $projectData['nama_spk_full'] ?? $projectData['project_name'],
+                'type'           => Project::TYPE_HAS_RKB_RKN,
                 'project_status' => 1,
-                'nk' => 0,
-                'meta' => $projectData,
+                'profit_center'  => $profitCenter,
+                'nk'             => $nilaiKontrak,
+                'cost_center_parent' => $projectData['divisisap'] ?? null,
+                'masa_pelaksanaan_start' => $projectData['tgl_mulai'] ?? null,
+                'masa_pelaksanaan_end' => $projectData['tgl_selesai'] ?? null,
+                'tanggal_mulai' => $projectData['tanggal_mulai'] ?? null,
+                'meta'           => $projectData,
             ]);
 
-            // Cari Unit berdasarkan cost_center yang sama dengan divisisap
             $divisiUnit = null;
             if (!empty($projectData['divisisap'])) {
                 $divisiUnit = Unit::where('cost_center', $projectData['divisisap'])->first();
@@ -240,12 +269,32 @@ class ProjectController extends BasicCRUDController
                 'project_id' => $project->id,
                 'periode_id' => null,
             ], [
-                'unit_id' => $divisiUnit?->id, // boleh null jika unit tidak ditemukan
+                'unit_id' => $divisiUnit?->id,
             ]);
+
+            $countUpdated++;
         }
 
         return response()->json([
-            'message' => 'Sinkronisasi WIKA berhasil tanpa menghapus proyek yang tidak ada di API.',
+            'message' => "Sinkronisasi Berhasil. {$countUpdated} data project diperbarui. (NK menggunakan data bulan {$currentPeriod} atau fallback ke {$previousPeriod})",
         ]);
+    }
+
+    private function fetchNilaiKontrak($apiWika, $profitCenter, $period)
+    {
+        try {
+            $response = $apiWika->getHasilUsahaProject($period, $profitCenter);
+
+            if (isset($response['status']) &&
+                $response['status'] &&
+                isset($response['data']['hasil_usaha']['kontrak_review'])) {
+
+                return (float) $response['data']['hasil_usaha']['kontrak_review'];
+            }
+        } catch (\Exception $e) {
+            return 0;
+        }
+
+        return 0;
     }
 }

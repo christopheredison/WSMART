@@ -108,7 +108,7 @@
             @can('corporate_dashboard_menu')
             <li class="nav-item">
               <a class="nav-link {{ request()->is('executive-summary-corporate') ? 'active' : '' }}" href="/executive-summary-corporate">
-                <span class="nav-link-text">Corporate</span>
+                <span class="nav-link-text">Korporat</span>
               </a>
             </li>
 
@@ -117,6 +117,14 @@
                 <span class="nav-link-text">Corporate Population</span>
               </a>
             </li> --}}
+            @endcan
+
+            @can('ap_dashboard_menu')
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('executive-summary-anper') ? 'active' : '' }} " href="/executive-summary-anper">
+                <span class="nav-link-text">Anak Perusahaan</span>
+              </a>
+            </li>
             @endcan
 
             @can('unit_dashboard_menu')
@@ -131,19 +139,6 @@
             <li class="nav-item"><a class="nav-link {{ request()->is('executive-summary-project') ? 'active' : '' }}"
                 href="/executive-summary-project">
                 <span class="nav-link-text">Proyek</span>
-              </a>
-            </li>
-            @endcan
-
-            @can('ap_dashboard_menu')
-            {{-- <li class="nav-item">
-              <a class="nav-link {{ request()->is('dashboard-anper') ? 'active' : '' }} " href="/dashboard-anper">
-                <span class="nav-link-text">Anak Perusahaan</span>
-              </a>
-            </li> --}}
-            <li class="nav-item">
-              <a class="nav-link {{ request()->is('executive-summary-anper') ? 'active' : '' }} " href="/executive-summary-anper">
-                <span class="nav-link-text">Anak Perusahaan</span>
               </a>
             </li>
             @endcan
@@ -171,7 +166,7 @@
               aria-expanded="{{ $isActive ? 'true' : 'false' }}" aria-controls="risk-register-corporate">
                 <div class="d-flex align-items-center">
                     <i class="menu-icon tf-icons bx bx-buildings"></i>
-                    <span class="nav-link-text">Risk Register Corporate</span>
+                    <span class="nav-link-text">Risk Register Korporat</span>
                 </div>
             </a>
             <ul class="nav collapse {{ $isActive ? 'show' : '' }}"
@@ -179,7 +174,7 @@
 
                 <li class="nav-item">
                     <a class="nav-link {{ request()->is('corporate-risk/periods') ? 'active' : '' }}" href="/corporate-risk/periods">
-                        <span class="nav-link-text">Corporate Risk</span>
+                        <span class="nav-link-text">Korporat Risk</span>
                     </a>
                 </li>
 
@@ -194,11 +189,11 @@
 
         @can('unit_menu')
         <li class="nav-item single-indicator">
-          <a class="nav-link {{ request()->is('risk-register-unit') ? 'active' : '' }}" href="/risk-register-unit/periods"
-            role="button" data-bs-toggle="" aria-expanded="false">
-            <span class="nav-link-icon">
-              <i class="menu-icon tf-icons bx bx-sitemap"></i>
-              <span class="nav-link-text">Risk Register Divisi</span>
+          <a class="nav-link {{ request()->routeIs('laporan.unit') ? 'active' : '' }}"
+            href="{{route('laporan.unit')}}" role="button" data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon d-flex align-items-center w-100">
+              <i class="menu-icon tf-icons bx bxs-report"></i>
+              <span class="nav-link-text">Laporan Korporat</span>
             </span>
           </a>
         </li>
@@ -228,27 +223,6 @@
         </li>
         @endcan
 
-        {{-- <li class="nav-item single-indicator">
-          <a class="nav-link {{ request()->routeIs('unit-led.index') ? 'active' : '' }}"
-            href="{{route('unit-led.index')}}" role="button" data-bs-toggle="" aria-expanded="false">
-            <span class="nav-link-icon d-flex align-items-center w-100">
-              <i class="menu-icon tf-icons bx bx-dock-bottom"></i>
-              <span class="nav-link-text">Loss Event Divisi</span>
-            </span>
-          </a>
-        </li> --}}
-
-        @can('unit_menu')
-        <li class="nav-item single-indicator">
-          <a class="nav-link {{ request()->routeIs('laporan.unit') ? 'active' : '' }}"
-            href="{{route('laporan.unit')}}" role="button" data-bs-toggle="" aria-expanded="false">
-            <span class="nav-link-icon d-flex align-items-center w-100">
-              <i class="menu-icon tf-icons bx bxs-report"></i>
-              <span class="nav-link-text">Laporan Divisi</span>
-            </span>
-          </a>
-        </li>
-        @endcan
 
         @can('ap_menu')
         <li class="nav-item single-indicator">
@@ -262,6 +236,30 @@
         </li>
         @endcan
 
+        @can('unit_menu')
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->is('risk-register-unit') ? 'active' : '' }}" href="/risk-register-unit/periods"
+            role="button" data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon">
+              <i class="menu-icon tf-icons bx bx-sitemap"></i>
+              <span class="nav-link-text">Risk Register Divisi</span>
+            </span>
+          </a>
+        </li>
+        @endcan
+
+        @can('unit_menu')
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->routeIs('laporan.unit') ? 'active' : '' }}"
+            href="{{route('laporan.unit')}}" role="button" data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon d-flex align-items-center w-100">
+              <i class="menu-icon tf-icons bx bxs-report"></i>
+              <span class="nav-link-text">Laporan Divisi</span>
+            </span>
+          </a>
+        </li>
+        @endcan
+
         @can('proyek_menu')
         <!-- Ranking Risiko Menu Start -->
         @can('project_periode_list')
@@ -270,7 +268,7 @@
             href="{{route('project-periode-list.index')}}" role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
               <i class="menu-icon tf-icons bx bx-list-ul"></i>
-              <span class="nav-link-text">Project List</span>
+              <span class="nav-link-text">Risk Register Proyek</span>
             </span>
           </a>
         </li>
@@ -294,7 +292,7 @@
             href="{{route('laporan.project')}}" role="button" data-bs-toggle="" aria-expanded="false">
             <span class="nav-link-icon d-flex align-items-center w-100">
               <i class="menu-icon tf-icons bx bxs-report"></i>
-              <span class="nav-link-text">Laporan Project</span>
+              <span class="nav-link-text">Laporan Proyek</span>
             </span>
           </a>
         </li>
@@ -438,6 +436,13 @@
             </li>
             @endcan
 
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('peristiwa-risiko.index') ? 'active' : '' }}"
+                href="{{ route('peristiwa-risiko.index') }}">
+                <span class="nav-link-text">Peristiwa Risiko</span>
+              </a>
+            </li>
+
             @can('jenis_kontrol_eksisting_list')
             <li class="nav-item">
               <a class="nav-link {{ request()->routeIs('jenis-kontrol-eksisting.index') ? 'active' : '' }}"
@@ -562,6 +567,11 @@
               </a>
             </li>
             @endcan
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('wbs') ? 'active' : '' }}" href="/wbs">
+                <span class="nav-link-text">WBS</span>
+              </a>
+            </li>
             {{--
             <li class="nav-item">
               <a class="nav-link {{ request()->is('tck') ? 'active' : '' }}" href="/tck">

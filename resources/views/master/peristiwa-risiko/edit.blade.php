@@ -23,7 +23,7 @@
         <div class="row gx-0 gy-3">
           <div class="form-floating has-validation">
             <select class="form-select js-select-hide-search" name="kategori_risiko_id" id="kategori_risiko">
-              <option selected disabled>Kategori Risiko</option>
+              <option selected disabled>-</option>
               @foreach($kategoriRisiko as $id => $title)
               <option value="{{ $id }}" {{ $peristiwaRisiko->kategori_risiko_id == $id ? 'selected' : '' }}>
                 {{ $title }}</option>
@@ -34,8 +34,7 @@
           </div>
           <div class="form-floating has-validation">
             <select class="form-select js-select-hide-search" name="jenis_risiko_id" id="jenis_risiko">
-              <option selected disabled>---</option>
-              <!-- Options will be populated dynamically based on selected Kategori Risiko -->
+              <option selected disabled>-</option>
             </select>
             <label class="form-label">Jenis Risiko</label>
             <div class="invalid-feedback">Silakan pilih jenis risiko.</div>
@@ -62,7 +61,7 @@ $(document).ready(function() {
   // Handle change event on Kategori Risiko dropdown
   $('#kategori_risiko').change(function() {
     var kategoriRisikoId = $(this).val();
-    console.log('Selected Kategori Risiko ID:', kategoriRisikoId);
+    // console.log('Selected Kategori Risiko ID:', kategoriRisikoId);
     if (kategoriRisikoId) {
       // Fetch Jenis Risiko options based on selected Kategori Risiko
       $.ajax({

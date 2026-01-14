@@ -69,19 +69,40 @@ class ApiWika
 
     public function getProjects()
     {
+        $processData = function ($apiResult) {
+        $data = $apiResult['data'] ?? [];
+
+        return collect($data)
+                // 1. Pastikan kode_spk ada dan tidak null
+                ->whereNotNull('kode_spk')
+                // 2. Pastikan kode_spk adalah String atau Angka (bukan Array)
+                ->filter(function ($item) {
+                    return is_string($item['kode_spk']) || is_numeric($item['kode_spk']);
+                })
+                // 3. Baru lakukan keyBy
+                ->keyBy('kode_spk')
+                ->toArray();
+        };
+
+        // Ambil Data -2 Bulan
         $result2 = $this->apiRequest('GET', 'proyek', [
             'period' => date('Ym', strtotime('-2 month')),
         ]);
-        $result2 = collect($result2['data'] ?? [])->keyBy('kode_spk')->toArray();
+        $result2 = $processData($result2);
+
+        // Ambil Data -1 Bulan
         $result1 = $this->apiRequest('GET', 'proyek', [
             'period' => date('Ym', strtotime('-1 month')),
         ]);
-        $result1 = collect($result1['data'] ?? [])->keyBy('kode_spk')->toArray();
+        $result1 = $processData($result1);
+
+        // Ambil Data Bulan Ini
         $result0 = $this->apiRequest('GET', 'proyek', [
             'period' => date('Ym'),
         ]);
-        $result0 = collect($result0['data'] ?? [])->keyBy('kode_spk')->toArray();
+        $result0 = $processData($result0);
 
+        // Gabungkan
         $result = array_merge($result2, $result1, $result0);
 
         return array_values($result);

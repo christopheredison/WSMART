@@ -45,9 +45,9 @@
                 </div>
               </th>
               <th class="white-space-nowrap">#</th>
+              <th class="mw-10r">Peristiwa Risiko</th>
               <th class="mw-10r">Kategori Risiko</th>
               <th>Jenis Risiko</th>
-              <th class="mw-10r">Peristiwa Risiko</th>
               <th class="no-sort white-space-nowrap">Action</th>
             </tr>
           </thead>
@@ -61,9 +61,9 @@
                 </div>
               </td>
               <td class="index-number">{{ $index + 1 }}</td>
-              <td>{{ $item->kategoriRisiko->title }}</td>
-              <td>{{ $item->jenisRisiko->title }}</td>
               <td>{{ $item->title }}</td>
+              <td>{{ $item?->kategoriRisiko?->title ?? '-' }}</td>
+              <td>{{ $item?->jenisRisiko?->title ?? '-' }}</td>
               <td class="white-space-nowrap no-sort">
                 @if ($item->trashed())
                 <button type="submit" class="btn-input-icon ps-0" data-bs-toggle="modal"

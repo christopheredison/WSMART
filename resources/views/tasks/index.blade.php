@@ -29,13 +29,63 @@
         </div>
     </div>
 
-    {{-- 2. SECTION FILTER & PENCARIAN (INI YANG ANDA MINTA) --}}
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100 text-white"
+                style="background: linear-gradient(135deg, #d35400 0%, #e67e22 100%);">
+                <div class="card-body p-4 position-relative overflow-hidden">
+                    <h3 class="fw-bold mb-4">Project</h3>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex align-items-center">
+                            <span class="fw-bold me-2">{{ $stats['project']['total'] }}</span>
+                            <span class="opacity-75">Total Project</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="fw-bold me-2">{{ count($pendingItems) }}</span>
+                            <a href="#" class="text-white text-decoration-underline {{ count($pendingItems) > 0 ? '' : 'opacity-50 text-decoration-none pe-none' }}"
+                              @if(count($pendingItems) > 0) data-bs-toggle="modal" data-bs-target="#modalPendingItems" @endif>
+                              Menunggu Persetujuan
+                            </a>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="fw-bold me-2">{{ $stats['project']['approved'] }}</span>
+                            <span class="opacity-75">Disetujui</span>
+                        </div>
+                    </div>
+                    <i class="bx bx-briefcase-alt-2 position-absolute" style="bottom: -10px; right: 15px; font-size: 5rem; opacity: 0.15;"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100 text-white"
+                style="background: linear-gradient(135deg, #0f509e 0%, #136a8a 100%);">
+                <div class="card-body p-4 position-relative overflow-hidden">
+                    <h3 class="fw-bold mb-4">Divisi</h3>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex align-items-center">
+                            <span class="fw-bold me-2">{{ $divisiStats['total'] }}</span>
+                            <span class="opacity-75">Total Divisi</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="fw-bold me-2">{{ $divisiStats['pending'] }}</span>
+                            <span class="opacity-100">Menunggu Tindakan</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="fw-bold me-2">{{ $divisiStats['approved'] }}</span>
+                            <span class="opacity-75">Selesai</span>
+                        </div>
+                    </div>
+                    <i class="bx bx-buildings position-absolute" style="bottom: -10px; right: 15px; font-size: 5rem; opacity: 0.15;"></i>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body py-3">
-            {{-- Form Wrapper --}}
             <form action="{{ route('tasks.index') }}" method="GET">
-
-                {{-- Label Section --}}
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="text-uppercase text-muted fw-bold x-small mb-0">
                         <i class="bx bx-filter-alt"></i> Filter Data
@@ -358,6 +408,122 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="modalPendingItems" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow p-0">
+            <div class="modal-header bg-warning-subtle">
+                <h5 class="modal-title fw-bold text-dark">
+                    <i class="bx bx-time-five me-2"></i>Menunggu Persetujuan Anda
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" style="max-height: 70vh; overflow-y: auto;">
+                @if(count($pendingItems) > 0)
+                    @php
+                        $riskItems = collect($pendingItems)->where('type', 'Risk Register');
+                        $monitoringItems = collect($pendingItems)->filter(function($item) {
+                            return \Illuminate\Support\Str::contains($item['type'], 'Monitoring');
+                        });
+                    @endphp
+
+                    <div class="accordion accordion-flush" id="accordionPendingItems">
+                        {{-- 1. RISK REGISTER SECTION --}}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingRisk">
+                                <button class="accordion-button fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRisk" aria-expanded="true" aria-controls="collapseRisk">
+                                    <i class="bx bx-shield-quarter me-2 text-primary"></i> Risk Register
+                                    <span class="badge bg-danger ms-2">{{ $riskItems->count() }}</span>
+                                </button>
+                            </h2>
+                            <div id="collapseRisk" class="accordion-collapse collapse show" aria-labelledby="headingRisk" data-bs-parent="#accordionPendingItems">
+                                <div class="accordion-body p-0">
+                                    @if($riskItems->count() > 0)
+                                        <div class="list-group list-group-flush">
+                                            @foreach($riskItems as $item)
+                                                <a href="{{ $item['link'] }}" class="list-group-item list-group-item-action p-3">
+                                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="avatar-sm me-3 bg-light rounded-circle d-flex align-items-center justify-content-center text-primary" style="width: 40px; height: 40px;">
+                                                                <i class="bx bx-shield-quarter fs-4"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="mb-0 fw-bold text-black">{{ $item['project_name'] }}</h6>
+                                                                <small class="text-black d-block">
+                                                                    <i class="bx bx-building"></i> {{ $item['unit_name'] }}
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <span class="badge bg-warning text-dark mb-1">{{ $item['description'] }}</span>
+                                                            <small class="text-danger d-block fw-bold">{{ $item['count'] }}</small>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="p-3 text-center text-black small">Tidak ada item Risk Register yang menunggu.</div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- 2. MONITORING SECTION --}}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingMon">
+                                <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMon" aria-expanded="false" aria-controls="collapseMon">
+                                    <i class="bx bx-bar-chart-alt-2 me-2 text-info"></i> Monitoring
+                                    <span class="badge bg-danger ms-2">{{ $monitoringItems->count() }}</span>
+                                </button>
+                            </h2>
+                            <div id="collapseMon" class="accordion-collapse collapse" aria-labelledby="headingMon" data-bs-parent="#accordionPendingItems">
+                                <div class="accordion-body p-0">
+                                    @if($monitoringItems->count() > 0)
+                                        <div class="list-group list-group-flush">
+                                            @foreach($monitoringItems as $item)
+                                                <a href="{{ $item['link'] }}" class="list-group-item list-group-item-action p-3">
+                                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="avatar-sm me-3 bg-light rounded-circle d-flex align-items-center justify-content-center text-primary" style="width: 40px; height: 40px;">
+                                                                <i class="bx bx-bar-chart-alt-2 fs-4"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="mb-0 fw-bold text-black">{{ $item['project_name'] }}</h6>
+                                                                <small class="text-black d-block">
+                                                                    <i class="bx bx-building"></i> {{ $item['unit_name'] }} &bullet;
+                                                                    <span class="text-primary fw-semibold">{{ $item['type'] }}</span>
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <span class="badge bg-warning text-dark mb-1">{{ $item['description'] }}</span>
+                                                            <small class="text-danger d-block fw-bold">{{ $item['count'] }}</small>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="p-3 text-center text-black small">Tidak ada item Monitoring yang menunggu.</div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <div class="text-center py-5">
+                        <img src="{{ asset('images/illustrations/empty.svg') }}" alt="Empty" style="height: 100px; opacity: 0.5;" class="mb-3">
+                        <h6 class="text-black">Tidak ada item yang menunggu persetujuan Anda saat ini.</h6>
+                    </div>
+                @endif
+            </div>
+            <div class="modal-footer bg-light p-2">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('styles')
@@ -389,13 +555,11 @@
 
         // 1. Hitung Total Badge
         let totalUrgent = 0;
-        let totalPending = 0;
+        let totalPending = {{ count($pendingItems) }};
 
         @foreach($taskList as $t)
             @if($t['status_category'] == 'urgent')
                 totalUrgent++;
-            @elseif($t['status_category'] == 'pending')
-                totalPending++;
             @endif
         @endforeach
 

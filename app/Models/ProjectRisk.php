@@ -21,6 +21,7 @@ class ProjectRisk extends Model
         'jenis_risiko_id', //berelasi ke model JenisRisiko (table jenis_risikos)
         'peristiwa_risiko_id', //berelasi ke model PeristiwaRisiko (table peristiwa_risikos)
         'wbs',
+        'wbs_id',
         'project_periode_list_id', //berelasi ke model ProjectPeriodeList (table project_periode_lists)
         'target_capaian_kinerja', //berelasi ke model Tck (table tcks) -> sudah diupdate jadi text
         'rencana_kegiatan',
@@ -57,6 +58,12 @@ class ProjectRisk extends Model
     public const STATUS_PUBLISHED = 6;
     public const STATUS_REJECTED_FROM_OFFICER_MR = 7;
     public const STATUS_REJECTED_FROM_OWNER_MR = 8;
+
+    public const STEP_VERIFICATION_DRAFT = 0;
+    public const STEP_VERIFICATION_RISK_OWNER_PROJECT = 1;
+    public const STEP_VERIFICATION_RISK_OFFICER_DIVISI = 2;
+    public const STEP_VERIFICATION_RISK_OFFICER_MR = 3;
+    public const STEP_VERIFICATION_RISK_OWNER_MR = 4;
 
     public const LEVEL_RISIKO_LOW = 'Low';
     public const LEVEL_RISIKO_LOW_TO_MODERATE = 'Low To Moderate';
@@ -184,6 +191,11 @@ class ProjectRisk extends Model
     public function taksonomiRisiko()
     {
         return $this->belongsTo(TaksonomiRisiko::class, 'taksonomi_risiko_id');
+    }
+
+    public function wbsMaster()
+    {
+        return $this->belongsTo(WBS::class, 'wbs_id');
     }
 
     public function parameterRisikoProjects()
@@ -379,12 +391,12 @@ class ProjectRisk extends Model
         // Pisahkan risiko berdasarkan kategori dampak (kuantitatif dan kualitatif)
         $quantitativeRisks = $projectRisks->filter(function($risk) {
             return $risk->projectRiskAnalisa &&
-                   $risk->projectRiskAnalisa->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF;
+                  $risk->projectRiskAnalisa->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF;
         });
 
         $qualitativeRisks = $projectRisks->filter(function($risk) {
             return $risk->projectRiskAnalisa &&
-                   $risk->projectRiskAnalisa->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF;
+                  $risk->projectRiskAnalisa->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF;
         });
 
         // Untuk risiko kuantitatif, hitung rata-rata eksposur risiko

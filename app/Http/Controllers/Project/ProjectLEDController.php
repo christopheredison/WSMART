@@ -27,6 +27,7 @@ use App\Models\ProjectRiskAnalisa;
 use App\Models\PenyebabRisikoProject;
 use App\Models\PerlakuanPenyebabRisikoProject;
 use App\Models\KamusRisikoProject;
+use App\Models\DataBatch;
 use Illuminate\Support\Facades\DB;
 
 class ProjectLEDController extends Controller
@@ -205,6 +206,21 @@ class ProjectLEDController extends Controller
 
             // 2. JIKA USER MEMILIH "YA", BUAT PROJECT RISK BARU
             if ($request->input('create_risk_from_led') == '1') {
+                // Cek batch terakhir yang belum finish
+                $activeBatch = DataBatch::where('project_id', $request->project_id)
+                    ->where('type', 2)
+                    ->where('finish', false)
+                    ->orderBy('batch', 'desc')
+                    ->first();
+
+                // cek activeBatch sudah selesai atau belum
+                if ($activeBatch && $activeBatch->status != 1 && $activeBatch->status != 8) {
+                    DB::rollBack();
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('error', 'Gagal membuat risiko baru: Proyek sedang dalam proses validasi risiko. Harap tunggu hingga proses validasi selesai.');
+                }
+
                 $projectPeriodeList = ProjectPeriodeList::findOrFail($request->project_id);
                 $project = $projectPeriodeList->project;
                 $user = auth()->user();
@@ -449,6 +465,21 @@ class ProjectLEDController extends Controller
 
             // JIKA USER MEMILIH "YA", BUAT PROJECT RISK BARU
             if ($request->input('create_risk_from_led') == '1') {
+                // Cek batch terakhir yang belum finish
+                $activeBatch = DataBatch::where('project_id', $request->project_id)
+                    ->where('type', 2)
+                    ->where('finish', false)
+                    ->orderBy('batch', 'desc')
+                    ->first();
+
+                // cek activeBatch sudah selesai atau belum
+                if ($activeBatch && $activeBatch->status != 1 && $activeBatch->status != 8) {
+                    DB::rollBack();
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('error', 'Gagal membuat risiko baru: Proyek sedang dalam proses validasi risiko. Harap tunggu hingga proses validasi selesai.');
+                }
+
                 $projectPeriodeList = ProjectPeriodeList::with('project')->findOrFail($lossEvent->project_id);
                 $project = $projectPeriodeList->project;
                 $user = auth()->user();
@@ -643,6 +674,20 @@ class ProjectLEDController extends Controller
 
         DB::beginTransaction();
         try {
+            if ($request->input('create_new_risk') == '1') {
+                $activeBatch = DataBatch::where('project_id', $project->id)
+                    ->where('type', 2)
+                    ->where('finish', false)
+                    ->orderBy('batch', 'desc')
+                    ->first();
+
+                if ($activeBatch && $activeBatch->status != 1 && $activeBatch->status != 8) {
+                    DB::rollBack();
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('error', 'Gagal membuat risiko baru: Proyek sedang dalam proses validasi risiko. Harap tunggu hingga proses validasi selesai.');
+                }
+            }
             $led = LossEventProject::create([
                 'project_id' => $project->id,
                 'project_risk_id' => $risk->id,

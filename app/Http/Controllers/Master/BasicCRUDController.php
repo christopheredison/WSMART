@@ -64,14 +64,8 @@ abstract class BasicCRUDController extends Controller
                 call_user_func($this->callbackQuery, $query);
             }
 
-            // OLD CODE
-            // if (!empty($this->userProjectIdsx)) {
-            //     $query->orderByRaw("FIELD(project_id, " . implode(',', $this->userProjectIdsx) . ") DESC")
-            //           ->orderBy('id', 'ASC'); // Fallback jika tidak ada aturan default
-            // }
-
             // NEW SUPPORT MYSQL AND POSTGRESSQL
-            if (!empty($this->userProjectIdsx)) {
+            if (!empty($this->userProjectIdsx) && !request()->has('order')) {
                 // 1. Sanitasi input untuk memastikan semua ID adalah integer
                 $safeIds = array_map('intval', $this->userProjectIdsx);
                 $idList = implode(',', $safeIds);
@@ -106,7 +100,7 @@ abstract class BasicCRUDController extends Controller
             if (is_callable($this->datatableCallback)) {
                 call_user_func($this->datatableCallback, $datatable);
             }
-            
+
             //dd($query->toSql(), $query->getBindings());
             return $datatable->make(true);
         }

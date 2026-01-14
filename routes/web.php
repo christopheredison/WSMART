@@ -52,6 +52,7 @@ use App\Http\Controllers\Master\ProjectHasilUsahaController;
 use App\Http\Controllers\Master\UnitHasilUsahaController;
 use App\Http\Controllers\Master\QuestionController;
 use App\Http\Controllers\Master\RMIPeriodController;
+use App\Http\Controllers\Master\WBSController;
 use App\Http\Controllers\Project\ProjectPeriodeListController;
 use App\Http\Controllers\OpportunityController;
 use App\Http\Controllers\Project\ProjectRiskController;
@@ -458,6 +459,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('opsi-perlakuan-risiko', OpsiPerlakuanRisikoController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-type', ProjectTypeController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-location', ProjectLocationController::class)->except(['create', 'show', 'edit']);
+    Route::resource('wbs', WBSController::class)->except(['create', 'show']);
+    Route::get('wbs/data', [WBSController::class, 'data'])->name('wbs.data');
     Route::get('rmi-period/{id}/question', [RMIPeriodController::class, 'question'])->name('rmi-period.question');
     Route::post('rmi-period/{id}/question', [RMIPeriodController::class, 'updateQuestion'])->name('rmi-period.update-question');
     Route::resource('rmi-period', RMIPeriodController::class)->except(['create', 'edit']);

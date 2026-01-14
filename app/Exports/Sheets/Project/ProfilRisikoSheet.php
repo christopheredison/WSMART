@@ -83,7 +83,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                 foreach ($mergeColumns as $col) {
                     $sheet->mergeCells("{$col}1:{$col}2");
                 }
-                
+
                 // Merge header group KRI
                 $sheet->mergeCells('P1:R1');
 
@@ -134,7 +134,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                 $highestRow = $sheet->getHighestRow();
                 if ($highestRow > 2) {
                     $sheet->getStyle('A3:X' . $highestRow)->applyFromArray($dataStyle);
-                    
+
                     // Set format text untuk kolom Kode Penyebab Risiko
                     $sheet->getStyle('L3:L' . $highestRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
 
@@ -162,13 +162,13 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
             if ($amanValue && $amanValue !== '-') {
                 $sheet->getStyle('P' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('92D050');
             }
-            
+
             // Kolom Q (Waspada) - Kuning
             $waspadaValue = $sheet->getCell('Q' . $row)->getValue();
             if ($waspadaValue && $waspadaValue !== '-') {
                 $sheet->getStyle('Q' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFFF00');
             }
-            
+
             // Kolom R (Bahaya) - Merah
             $bahayaValue = $sheet->getCell('R' . $row)->getValue();
             if ($bahayaValue && $bahayaValue !== '-') {
@@ -183,6 +183,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
     public function collection()
     {
         $risikos = ProjectRisk::with([
+            'wbsMaster',
             'projectPeriodeList.project',
             'projectRiskAnalisa',
             'penyebabRisikoProjects',
@@ -240,7 +241,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
 
         return $exportData;
     }
-    
+
     /**
      * Create row data untuk setiap baris
      */
@@ -248,7 +249,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
     {
         $project = $risiko->projectPeriodeList->project;
         $analisa = $risiko->projectRiskAnalisa;
-        
+
         return [
             'no' => $isFirstRowOfGroup ? $nomorUrutRisiko : '',
             'nama_bumn' => $isFirstRowOfGroup ? 'PT Wijaya Karya (Persero) Tbk' : '',
@@ -259,9 +260,9 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
             'no_risiko' => $isFirstRowOfGroup ? $nomorUrutRisiko : '',
             'peristiwa_risiko' => $isFirstRowOfGroup ? ($risiko->peristiwaRisiko->title ?? $risiko->deskripsi_peristiwa_risiko ?? '-') : '',
             'deskripsi_peristiwa_risiko' => $isFirstRowOfGroup ? ($risiko->deskripsi_peristiwa_risiko ?? '-') : '',
-            
+
             // Tambahan Data WBS
-            'wbs' => $isFirstRowOfGroup ? ($risiko->wbs ?? '-') : '',
+            'wbs' => $isFirstRowOfGroup ? ($risiko->wbsMaster->name ?? '-') : '',
 
             'no_penyebab_risiko' => ($penyebab && $isFirstKRIOfPenyebab) ? $nomorUrutRisiko : '',
             'kode_penyebab_risiko' => ($penyebab && $isFirstKRIOfPenyebab) ? "'" . $nomorUrutRisiko . '.' . $nomorUrutPenyebab : '',
@@ -279,7 +280,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
             'perkiraan_waktu_terpapar' => $isFirstRowOfGroup ? $this->formatWaktuTerpapar($risiko) : '',
         ];
     }
-    
+
     /**
      * Get kontrol eksisting
      */
@@ -299,13 +300,13 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
     {
         $awal = $risiko->perkiraan_waktu_terpapar_risiko_mulai;
         $akhir = $risiko->perkiraan_waktu_terpapar_risiko_akhir;
-        
+
         if ($awal && $akhir) {
             $awalFormatted = Carbon::parse($awal)->format('j F Y');
             $akhirFormatted = Carbon::parse($akhir)->format('j F Y');
             return $awalFormatted . ' - ' . $akhirFormatted;
         }
-        
+
         return $awal ? Carbon::parse($awal)->format('j F Y') : ($akhir ? Carbon::parse($akhir)->format('j F Y') : '-');
     }
 }

@@ -15,6 +15,7 @@ use App\Models\ProjectRiskMonitoring;
 use App\Models\RiskMonitoringNote;
 use App\Models\Unit;
 use App\Models\SkalaParameter;
+use App\Models\ProjectRiskContext;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -48,6 +49,12 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriode))) {
         //     abort(403);
         // }
+
+        // Cek sudah ada Risk Context belum
+        $riskContext = ProjectRiskContext::where('project_id', $projectPeriode->project_id)->first();
+        if (!$riskContext || $riskContext->status != ProjectRiskContext::STATUS_VERIFIED) {
+            return redirect()->route('project-periode-list.index')->with('error', 'Silahkan buat Risk Context terlebih dahulu pada Project ' . $projectPeriode->project->project_name . '.');
+        }
 
         $userLevel = Auth::user()->level_id;
         $quarter = request()->input('filters.quarter', request()->query('quarter', 1));

@@ -31,58 +31,60 @@ class ProjectPeriodeListController extends BasicCRUDController
             'orderable' => false,
             'searchable' => true,
         ],
-        'const_center_parent' => [
+        'cost_center_parent' => [
             'label' => 'Divisi',
             'data' => 'project.cost_center_parent',
             'name' => 'cost_center_parent',
             'render' => '(data, type, row) => row.project?.divisi?.name || "-"',
             'orderable' => false,
-            'searchable' => false,
+            'searchable' => true,
         ],
         'project_id' => [
             'label' => 'Proyek',
             'data' => 'project.project_name',
             'name' => 'projects.project_name',
             'render' => '(data, type, row) => row.project?.project_name || "-"',
-            'orderable' => false,
+            'orderable' => true,
             'searchable' => true,
             'class' => 'fw-bold',
         ],
         'ok' => [
             'label' => 'Nilai OK',
-            'data' => 'project.meta.omset',
-            'name' => 'omset',
-            'render' => '(data, type, row) => row.project?.meta?.omset ? Intl.NumberFormat(\'id-ID\').format(row.project.meta.omset) : "-"',
-            'orderable' => false,
+            'data' => 'nk',
+            'name' => 'nk',
+            'render' => '(data, type, row) => row.nk ? Intl.NumberFormat(\'id-ID\').format(row.nk) : "-"',
+            'orderable' => true,
             'searchable' => true,
         ],
         'tanggal_mulai' => [
             'label' => 'Tanggal Mulai',
-            'data' => 'project.meta.tanggal_mulai',
+            'data' => 'tanggal_mulai',
             'name' => 'tanggal_mulai',
             'render' => '(data, type, row) => {
-                if (!row.project?.meta?.tanggal_mulai) return "-";
-                const date = new Date(row.project.meta.tanggal_mulai);
+                if (!row.tanggal_mulai) return "-";
+                const date = new Date(row.tanggal_mulai);
                 const options = { day: "numeric", month: "short", year: "numeric" };
                 return date.toLocaleDateString("id-ID", options);
             }',
-            'orderable' => false,
+            'orderable' => true,
             'searchable' => true,
             'class' => 'mw-10r',
         ],
         'skala_risiko' => [
             'label' => 'Nilai Risiko',
             'data' => 'skala_risiko',
+            'name' => 'skala_risiko',
             'render' => <<<JS
                 (data) => data ? Intl.NumberFormat('id-ID').format(data) : '-'
                 JS,
-            'orderable' => false,
+            'orderable' => true,
             'searchable' => true,
         ],
         'project_risks_count' => [
             'label' => 'Jumlah Risiko',
             'data' => 'project_risks_count',
-            'orderable' => false,
+            'name' => 'project_risks_count',
+            'orderable' => true,
             'searchable' => false,
         ],
         'status_risiko_html' => [
@@ -111,7 +113,6 @@ class ProjectPeriodeListController extends BasicCRUDController
                     $q->where('type', 2)->orderBy('batch', 'desc')->limit(1);
                 }
             ],
-            'withCount' => ['projectRisks'],
         ]);
 
         $user = request()->user();
@@ -133,10 +134,31 @@ class ProjectPeriodeListController extends BasicCRUDController
         $u_step = $verificationData['u_step'];
         $levelId = $user->level_id;
 
-        // --- CALLBACK QUERY ---
-        $this->callbackQuery = function ($query) use ($userProjectIds, $unitProjectIds, $allProjectIds, $user, $u_step, $levelId) {
+        $this->setupAvailableFilters();
+
+        // --- 2. CALLBACK QUERY UTAMA  ---
+        $this->callbackQuery = function ($query) use ($userProjectIds, $unitProjectIds, $allProjectIds, $user, $u_step, $levelId, $is_mr) {
             // Join tabel projects
             $query->join('projects', 'project_periode_lists.project_id', '=', 'projects.id');
+            // Join tabel units untuk Divisi
+            $query->leftJoin('units', 'projects.cost_center_parent', '=', 'units.cost_center');
+
+            $query->select([
+                'project_periode_lists.*',
+                'projects.project_name',
+                'projects.cost_center_parent',
+                'projects.nk',
+                'projects.tanggal_mulai',
+                'units.name as divisi_name', // Ambil nama divisi untuk sorting
+            ]);
+
+            // Subquery untuk Jumlah Risiko (agar bisa disort)
+            $query->selectSub(function ($q) {
+                $q->from('project_risks')
+                  ->whereColumn('project_periode_lists.id', 'project_risks.project_periode_list_id')
+                  ->whereNull('deleted_at')
+                  ->selectRaw('count(*)');
+            }, 'project_risks_count');
 
             // --- FILTERING HAK AKSES ---
             if (!Gate::check('project_periode_view')) {
@@ -148,116 +170,10 @@ class ProjectPeriodeListController extends BasicCRUDController
                     $query->whereIn('project_periode_lists.project_id', $userProjectIds);
                 }
             }
-
-            // --- SORTING ---
-            if (!request()->has('order')) {
-                $query->reorder();
-
-                // LOGIKA SORTING PRIORITAS:
-                // Cek apakah project ini sedang menunggu tindakan user ini?
-                // Logic: Ada data_batch aktif yang step_verification == u_step
-                // Atau kasus reject MR (step 2 & status 9)
-
-                $actionNeededSql = "0";
-
-                if ($levelId == 6) { // Inputter
-                    // Inputter butuh aksi jika Batch Revisi (5) atau Rejected MR (9) atau Draft (1)
-                    $actionNeededSql = "EXISTS (
-                        SELECT 1 FROM data_batches db
-                        WHERE db.project_id = project_periode_lists.project_id
-                        AND db.type = 2
-                        AND db.finish = 0
-                        AND (db.status = 5 OR db.status = 9 OR db.status = 1)
-                        ORDER BY db.batch DESC LIMIT 1
-                    )";
-                } elseif ($u_step > 0) { // Verifikator
-                    // Verifikator butuh aksi jika Step Batch == U_Step
-                    $rejectMrCondition = ($u_step == 2) ? "OR db.status = 9" : "";
-
-                    $actionNeededSql = "EXISTS (
-                        SELECT 1 FROM data_batches db
-                        WHERE db.project_id = project_periode_lists.project_id
-                        AND db.type = 2
-                        AND db.finish = 0
-                        AND (db.step_verification = {$u_step} {$rejectMrCondition})
-                        ORDER BY db.batch DESC LIMIT 1
-                    )";
-                }
-
-                $userIdList = $userProjectIds->isNotEmpty() ? $userProjectIds->join(',') : '0';
-                $allIdList = $allProjectIds->isNotEmpty() ? $allProjectIds->join(',') : '0';
-
-                // URUTAN PRIORITAS:
-                // 1. Project Saya & Butuh Action
-                // 2. Project Saya (Normal)
-                // 3. Project Unit/Divisi
-                // 4. Sisanya
-                $query->orderByRaw("
-                    CASE
-                        WHEN project_periode_lists.project_id IN ({$userIdList}) AND $actionNeededSql THEN 1
-                        WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 2
-                        WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 3
-                        ELSE 4
-                    END ASC
-                ");
-
-                $query->orderBy('project_periode_lists.updated_at', 'desc');
-            }
         };
 
-        // // --- CALLBACK QUERY ---
-        // $this->callbackQuery = function ($query) use ($userProjectIds, $unitProjectIds, $allProjectIds, $user) {
-        //     // Join tabel projects (Wajib untuk sorting/filtering)
-        //     $query->join('projects', 'project_periode_lists.project_id', '=', 'projects.id');
-
-        //     // PERBAIKAN SORTING:
-        //     // Logika custom order (Prioritas Project & Updated At) HANYA dijalankan
-        //     // jika User TIDAK sedang melakukan sorting lewat kolom tabel.
-        //     if (!request()->has('order')) {
-
-        //         $query->reorder(); // Reset default order model
-
-        //         if ($allProjectIds->isNotEmpty()) {
-        //             $userIdList = $userProjectIds->join(',');
-        //             $allIdList = $allProjectIds->join(',');
-
-        //             // Logika Sorting Custom (User Projects > Unit Projects > Others)
-        //             if ($userProjectIds->isNotEmpty() && $unitProjectIds->isNotEmpty()) {
-        //                 $query->orderByRaw("
-        //                     CASE
-        //                         WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 1
-        //                         WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 2
-        //                         ELSE 3
-        //                     END ASC
-        //                 ");
-        //             } elseif ($allProjectIds->isNotEmpty()) {
-        //                 $query->orderByRaw("
-        //                     CASE
-        //                         WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 1
-        //                         ELSE 2
-        //                     END ASC
-        //                 ");
-        //             }
-        //         }
-
-        //         // Default Secondary Sort
-        //         $query->orderBy('project_periode_lists.updated_at', 'desc');
-        //     }
-
-        //     // Filter permission tetap dijalankan (tidak di dalam if)
-        //     if (!Gate::check('project_periode_view')) {
-        //         if (in_array($user->level_id ?? 0, [6, 7])) {
-        //             $query->whereIn('project_periode_lists.project_id', $userProjectIds);
-        //         } else if ($user->unit) {
-        //             $query->whereIn('project_periode_lists.project_id', $allProjectIds);
-        //         } else {
-        //             $query->whereIn('project_periode_lists.project_id', $userProjectIds);
-        //         }
-        //     }
-        // };
-
         // --- DATATABLE CALLBACK ---
-        $this->datatableCallback = function ($dataTable) use ($user, $u_step, $levelId) {
+        $this->datatableCallback = function ($dataTable) use ($userProjectIds, $allProjectIds, $user, $u_step, $levelId, $is_mr) {
             // Render Status Risiko
             $dataTable->addColumn('status_risiko_html', function ($row) use ($user, $u_step, $levelId) {
                 return $this->generateRiskStatus($row, $user, $u_step, $levelId);
@@ -268,49 +184,91 @@ class ProjectPeriodeListController extends BasicCRUDController
                 return $this->generateMonitoringStatus($row, $user, $u_step, $levelId);
             });
 
-            // 1. Sorting & Filter untuk Kode Project (JSON)
-            // Gunakan alias 'profit_center' sesuai 'name' di tableColumns
+            // Format Nilai OK
+            $dataTable->editColumn('ok', function ($row) {
+                return $row->nk ? number_format($row->nk, 0, ',', '.') : "-";
+            });
+
+            // Format Tanggal Mulai
+            $dataTable->editColumn('tanggal_mulai', function ($row) {
+                if (!$row->tanggal_mulai) return "-";
+                return \Carbon\Carbon::parse($row->tanggal_mulai)->translatedFormat('d M Y');
+            });
+
+            // --- SORTING ---
+            // 1. Sort Proyek
+            $dataTable->orderColumn('projects.project_name', function ($query, $order) {
+                $query->orderByRaw("LOWER(projects.project_name) $order");
+            });
+
+            // 2. Sort Profit Center (Kode)
             $dataTable->orderColumn('profit_center', function ($query, $order) {
                 $query->orderByRaw("projects.meta->>'profit_center' $order");
             });
-            $dataTable->filterColumn('profit_center', function($query, $keyword) {
-                $query->whereRaw("projects.meta->>'profit_center' ILIKE ?", ["%{$keyword}%"]);
+
+            // 3. Sort Divisi (Nama Unit)
+            $dataTable->orderColumn('cost_center_parent', function ($query, $order) {
+                $query->orderBy('units.name', $order);
             });
 
-            // 2. Sorting & Filter untuk Nama Project
-            // Key ini bisa pakai 'project.project_name' (data) atau 'projects.project_name' (name)
-            $dataTable->orderColumn('project.project_name', function ($query, $order) {
-                $query->orderBy('projects.project_name', $order);
-            });
-            $dataTable->filterColumn('project.project_name', function($query, $keyword) {
-                $query->whereRaw("projects.project_name ILIKE ?", ["%{$keyword}%"]);
+            // 4. Sort Nilai OK (NK)
+            $dataTable->orderColumn('nk', function ($query, $order) {
+                $query->orderByRaw("CAST(NULLIF(projects.nk, '') AS NUMERIC) $order NULLS LAST");
             });
 
-            // 3. Sorting & Filter untuk Nilai OK / Omset
-            // Gunakan alias 'omset'
-            $dataTable->orderColumn('omset', function ($query, $order) {
-                $query->orderByRaw("CAST(COALESCE(projects.meta->>'omset', '0') AS NUMERIC) $order");
-            });
-            $dataTable->filterColumn('omset', function($query, $keyword) {
-                $query->whereRaw("projects.meta->>'omset' ILIKE ?", ["%{$keyword}%"]);
-            });
-
-            // 4. Sorting & Filter untuk Tanggal Mulai
-            // Gunakan alias 'tanggal_mulai'
+            // 3. Sort Tanggal Mulai
             $dataTable->orderColumn('tanggal_mulai', function ($query, $order) {
-                $query->orderByRaw("CAST(NULLIF(projects.meta->>'tanggal_mulai', '') AS DATE) $order NULLS LAST");
+                $query->orderByRaw("CAST(NULLIF(projects.tanggal_mulai, '') AS DATE) $order NULLS LAST");
             });
+
+            // 4. Sort Nilai Risiko (Pastikan merujuk ke tabel utama agar tidak ambigu)
+            $dataTable->orderColumn('skala_risiko', function ($query, $order) {
+                $query->orderByRaw("CAST(NULLIF(CAST(project_periode_lists.skala_risiko AS TEXT), '') AS NUMERIC) $order NULLS LAST");
+            });
+
+            // 5. Sort Jumlah Risiko (Subquery alias)
+            $dataTable->orderColumn('project_risks_count', function ($query, $order) {
+                $query->orderBy('project_risks_count', $order);
+            });
+
+            // --- Filtering Kolom Global/Spesifik ---
+            $dataTable->filterColumn('profit_center', function($query, $keyword) {
+                $query->whereRaw("projects.meta->>'profit_center' ilike ?", ["%{$keyword}%"]);
+            });
+
+            $dataTable->filterColumn('projects.project_name', function($query, $keyword) {
+                $query->where('projects.project_name', 'ilike', "%{$keyword}%");
+            });
+
+            // Definisikan filterColumn untuk 'divisi' jika search bar Datatable mengetik nama divisi
+            $dataTable->filterColumn('cost_center_parent', function($query, $keyword) { // Diperbaiki dari const_center_parent
+                $query->whereHas('project.divisi', function($q) use($keyword) {
+                    $q->where('name', 'ilike', "%{$keyword}%");
+                });
+            });
+
+            // Filter untuk Nilai OK (nk) - Cast to TEXT for Postgres
+            $dataTable->filterColumn('nk', function($query, $keyword) {
+                $query->whereRaw("CAST(projects.nk AS TEXT) ilike ?", ["%{$keyword}%"]);
+            });
+
+            // Filter untuk Nilai Risiko (skala_risiko) - Cast to TEXT for Postgres
+            $dataTable->filterColumn('skala_risiko', function($query, $keyword) {
+                $query->whereRaw("CAST(project_periode_lists.skala_risiko AS TEXT) ilike ?", ["%{$keyword}%"]);
+            });
+
+            // Filter untuk Tanggal Mulai - Cast to TEXT for Postgres
             $dataTable->filterColumn('tanggal_mulai', function($query, $keyword) {
-                $query->whereRaw("projects.meta->>'tanggal_mulai' ILIKE ?", ["%{$keyword}%"]);
+                $query->whereRaw("CAST(projects.tanggal_mulai AS TEXT) ilike ?", ["%{$keyword}%"]);
             });
 
-            // --- FILTERING ---
-            // Pencarian Kode Project (JSON)
-            $dataTable->filterColumn('project.meta.profit_center', function($query, $keyword) {
-                $query->whereRaw("projects.meta->>'profit_center' ILIKE ?", ["%{$keyword}%"]);
+            $dataTable->addColumn('action_needed', function ($row) use ($user, $u_step, $levelId) {
+                $riskStatus = $this->checkRiskActionNeeded($row, $user, $u_step, $levelId);
+                $monStatus = $this->checkMonitoringActionNeeded($row, $user, $u_step, $levelId);
+                return ($riskStatus || $monStatus);
             });
 
-            // Kolom Button Actions
+            // Kolom Button Actions Permissions
             $dataTable->addColumn('has_view', function ($data) use ($user) {
                 return Gate::check('project_periode_view') ||
                     $user->hasProject($data) ||
@@ -333,14 +291,56 @@ class ProjectPeriodeListController extends BasicCRUDController
             });
 
             $dataTable->rawColumns(['status_risiko_html', 'status_monitoring_html']);
+
+            // --- DEFAULT ORDERING (PRIORITAS) ---
+            $dataTable->order(function ($query) use ($user, $levelId, $u_step, $is_mr, $userProjectIds, $allProjectIds) {
+                if (!request()->has('order')) {
+                    $riskActionNeededSql = "0";
+                    $latestBatchIdSql = "(SELECT MAX(sub_db.id) FROM data_batches sub_db WHERE sub_db.project_id = project_periode_lists.project_id AND sub_db.type = 2)";
+
+                    if ($levelId == 6) { // Inputter
+                        $riskActionNeededSql = "EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchIdSql AND db.finish IS FALSE AND (db.status = 5 OR db.status = 1))";
+                    } elseif ($u_step > 0) { // Verifikator
+                        $rejectConditions = "";
+                        if ($u_step == 2) $rejectConditions = "OR db.status = 9";
+                        elseif ($u_step == 3) $rejectConditions = "OR db.status = 10";
+
+                        $riskActionNeededSql = "EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchIdSql AND db.finish IS FALSE AND (db.step_verification = {$u_step} {$rejectConditions}))";
+                    }
+
+                    $monActionNeededSql = "0";
+                    $monTargetStatus = 0;
+                    if ($levelId == 6) $monTargetStatus = 1;
+                    elseif ($levelId == 7) $monTargetStatus = 2;
+                    elseif ($levelId == 1 && !$is_mr) $monTargetStatus = 3;
+                    elseif ($levelId == 1 && $is_mr) $monTargetStatus = 4;
+                    elseif ($levelId == 2 && $is_mr) $monTargetStatus = 5;
+
+                    if ($monTargetStatus > 0) {
+                        $monActionNeededSql = "EXISTS (SELECT 1 FROM project_risk_monitorings prm JOIN project_risks pr ON pr.id = prm.risiko_id WHERE pr.project_periode_list_id = project_periode_lists.id AND prm.id = (SELECT MAX(sub_prm.id) FROM project_risk_monitorings sub_prm JOIN project_risks sub_pr ON sub_pr.id = sub_prm.risiko_id WHERE sub_pr.project_periode_list_id = project_periode_lists.id) AND prm.status = {$monTargetStatus} AND prm.is_approved IS FALSE)";
+                    }
+
+                    $userIdList = $userProjectIds->isNotEmpty() ? $userProjectIds->join(',') : '0';
+                    $allIdList = $allProjectIds->isNotEmpty() ? $allProjectIds->join(',') : '0';
+
+                    $query->orderByRaw("
+                        CASE
+                            WHEN project_periode_lists.project_id IN ({$userIdList}) AND ($riskActionNeededSql OR $monActionNeededSql) THEN 1
+                            WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 2
+                            WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 3
+                            ELSE 4
+                        END ASC
+                    ");
+
+                    $query->orderBy('project_periode_lists.updated_at', 'desc');
+                }
+            });
         };
 
         $projectOptions = Project::select('id', 'project_name')->orderBy('project_name');
-
         if (!Gate::check('project_admin_access')) {
             $projectOptions->whereIn('id', $userProjectIds);
         }
-
         $projectOptions = $projectOptions->get()->pluck('project_name', 'id')->toArray();
 
         $this->tableLegend= [];
@@ -412,6 +412,138 @@ class ProjectPeriodeListController extends BasicCRUDController
         return parent::index();
     }
 
+    private function setupAvailableFilters() {
+        $divisiOptions = \App\Models\Project::query()
+            ->join('units', 'projects.cost_center_parent', '=', 'units.cost_center')
+            ->select('units.name', 'units.cost_center')
+            ->distinct()
+            ->orderBy('units.name', 'asc')
+            ->pluck('units.name', 'units.cost_center')
+            ->toArray();
+
+        $this->availableFilters = [
+            'divisi' => [
+                'label' => 'Filter Divisi',
+                'type' => 'select',
+                'classWrapper' => 'col-4',
+                'parameters' => ['divisi', $divisiOptions, null, ['class' => 'form-select select2', 'placeholder' => 'Semua Divisi']],
+                'handler' => function($query, $key, $value) {
+                    if (!empty($value)) {
+                        $query->where('projects.cost_center_parent', $value);
+                    }
+                }
+            ],
+            'status_risiko' => [
+                'label' => 'Status Risiko',
+                'type' => 'select',
+                'parameters' => [
+                    'status_risiko',
+                    [
+                        'draft' => 'Draft / Revisi',
+                        'verification' => 'Sedang Verifikasi',
+                        'active' => 'Aktif / Final',
+                    ],
+                    null,
+                    [
+                        'class' => 'form-select',
+                        'placeholder' => 'Semua Status Risiko'
+                    ]
+                ],
+                'handler' => function($query, $key, $value) {
+                    if (empty($value)) return;
+                    $latestBatchSql = "(SELECT MAX(db2.id) FROM data_batches db2 WHERE db2.project_id = project_periode_lists.project_id AND db2.type = 2)";
+
+                    if ($value === 'active') {
+                        $query->whereRaw("EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchSql AND db.finish IS TRUE)");
+                    } elseif ($value === 'draft') {
+                        $query->whereRaw("EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchSql AND db.finish IS FALSE AND db.status IN (1, 5, 9, 10))");
+                    } elseif ($value === 'verification') {
+                        $query->whereRaw("EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchSql AND db.finish IS FALSE AND db.status IN (2, 3, 4))");
+                    }
+                }
+            ],
+            'status_monitoring' => [
+                'label' => 'Status Monitoring',
+                'type' => 'select',
+                'parameters' => [
+                    'status_monitoring',
+                    [
+                        'empty' => 'Belum Dimonitor',
+                        'draft' => 'Draft / Revisi',
+                        'verification' => 'Sedang Verifikasi',
+                        'active' => 'Aktif / Final',
+                    ],
+                    null,
+                    [
+                        'class' => 'form-select',
+                        'placeholder' => 'Semua Status Monitoring'
+                    ]
+                ],
+                'handler' => function($query, $key, $value) {
+                    if (empty($value)) return;
+                    $latestMonSql = "(SELECT MAX(prm2.id) FROM project_risk_monitorings prm2 JOIN project_risks pr2 ON pr2.id = prm2.risiko_id WHERE pr2.project_periode_list_id = project_periode_lists.id)";
+
+                    if ($value === 'empty') {
+                        $query->whereRaw("NOT EXISTS (SELECT 1 FROM project_risk_monitorings prm JOIN project_risks pr ON pr.id = prm.risiko_id WHERE pr.project_periode_list_id = project_periode_lists.id)");
+                    } elseif ($value === 'active') {
+                        $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status = 100)");
+                    } elseif ($value === 'draft') {
+                        $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status = 1 AND prm.status != 100)");
+                    } elseif ($value === 'verification') {
+                        $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status IN (2, 3, 4, 5))");
+                    }
+                }
+            ],
+        ];
+    }
+
+    private function checkRiskActionNeeded($row, $user, $u_step, $levelId)
+    {
+        $lastBatch = $row->project->dataBatches->sortByDesc('id')->first();
+        if ($lastBatch && $lastBatch->finish) return false;
+
+        $batchStep = $lastBatch ? $lastBatch->step_verification : 0;
+        $batchStatus = $lastBatch ? $lastBatch->status : 1;
+        $isMyTurn = false;
+
+        if ($levelId == 6) {
+            if (in_array($batchStatus, [1, 5])) $isMyTurn = true;
+        } else {
+            if (($u_step == $batchStep) ||
+                ($u_step == 2 && $batchStatus == 9) ||
+                ($u_step == 3 && $batchStatus == 10)) {
+                $isMyTurn = true;
+            }
+        }
+        return $isMyTurn && $user->hasProject($row);
+    }
+
+    private function checkMonitoringActionNeeded($row, $user, $u_step, $levelId)
+    {
+        // Query sederhana untuk kebutuhan flag
+        $latestMon = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($row) {
+            $q->where('project_periode_list_id', $row->id);
+        })->orderBy('id', 'desc')->first();
+
+        if (!$latestMon || $latestMon->status == 100) return false;
+
+        $isMyMonTurn = false;
+        if ($levelId == 6) {
+            if ($latestMon->status == 1) $isMyMonTurn = true;
+        } else {
+            $target = 0;
+            if ($levelId == 7) $target = 2;
+            elseif ($levelId == 1 && !$user->unit->unit_mr) $target = 3;
+            elseif ($levelId == 1 && $user->unit->unit_mr) $target = 4;
+            elseif ($levelId == 2 && $user->unit->unit_mr) $target = 5;
+
+            if ($latestMon->status == $target && !$latestMon->is_approved) {
+                $isMyMonTurn = true;
+            }
+        }
+        return $isMyMonTurn && $user->hasProject($row);
+    }
+
     private function generateRiskStatus($row, $user, $u_step, $levelId)
     {
         // 1. Cek Data Kosong
@@ -419,7 +551,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             return '<span class="badge bg-light text-muted border">Tidak Aktif</span>';
         }
 
-        // Ambil data batch terakhir dari eager loading
+        // Ambil data batch terakhir
         $lastBatch = $row->project->dataBatches->sortByDesc('id')->first();
 
         // 2. Cek Aktif (Published)
@@ -431,7 +563,7 @@ class ProjectPeriodeListController extends BasicCRUDController
         $batchStep = $lastBatch ? $lastBatch->step_verification : 0;
         $batchStatus = $lastBatch ? $lastBatch->status : 1;
 
-        // Label Mapping (Sesuaikan dengan workflow)
+        // Label Mapping
         $stepLabels = [
             0 => 'Input Draft',
             1 => 'Risk Owner Project',
@@ -441,34 +573,63 @@ class ProjectPeriodeListController extends BasicCRUDController
         ];
 
         $currentLabel = $stepLabels[$batchStep] ?? 'Verifikator';
-        if ($batchStatus == 9) $currentLabel = 'Dikembalikan MR (Ke Divisi)'; // Kasus khusus
+        if ($batchStatus == 9) $currentLabel = 'Dikembalikan Officer MR (Ke Divisi)';
+        if ($batchStatus == 10) $currentLabel = 'Dikembalikan Owner MR (Ke Officer MR)';
 
         // Cek Apakah Giliran Saya?
         $isMyTurn = false;
 
         if ($levelId == 6) { // Inputter
-            // Giliran inputter jika status Draft (1) atau Revisi (5/9)
-            if (in_array($batchStatus, [1, 5, 9])) $isMyTurn = true;
-        } else {
-            // Giliran verifikator jika step cocok ATAU kasus reject MR (user di step 2 status 9)
-            if (($u_step == $batchStep) || ($u_step == 2 && $batchStatus == 9)) {
+            if (in_array($batchStatus, [1, 5])) $isMyTurn = true;
+        } else { // Verifikator
+            if (($u_step == $batchStep) ||
+                ($u_step == 2 && $batchStatus == 9) ||
+                ($u_step == 3 && $batchStatus == 10)) {
                 $isMyTurn = true;
             }
         }
 
-        // TAMPILAN
+        // Variabel Dot Pulse (Merah)
+        $pulseDot = '
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
+
+        // --- LOGIKA TAMPILAN ---
+
+        // KONDISI 1: Giliran Saya (Action Needed)
         if ($isMyTurn && $user->hasProject($row)) {
-            // Highlight (Kuning + Animasi)
+            $redirectUrl = route('projects.risks.index', ['project' => $row->id]);
+
+            // A. Khusus Inputter (Level 6) -> Tampilan Solid Biru (Draft/Revisi)
+            if ($levelId == 6) {
+                return '
+                <a href="'.$redirectUrl.'" class="text-decoration-none">
+                    <span class="badge bg-info cursor-pointer border border-info text-white position-relative"
+                        data-bs-toggle="tooltip"
+                        title="Status: Draft/Revisi. Mohon lengkapi atau perbaiki data risiko.">
+                        Draft / Perlu Revisi
+                        '.$pulseDot.'
+                    </span>
+                </a>';
+            }
+
+            // B. Verifikator (Level Lain) -> Tampilan Solid Kuning (Verifikasi)
+            else {
+                return '
+                <a href="'.$redirectUrl.'" class="text-decoration-none">
+                    <span class="badge bg-warning text-dark border border-warning shadow-sm cursor-pointer position-relative"
+                        data-bs-toggle="tooltip" title="Klik untuk verifikasi: '.$currentLabel.'">
+                        <i class="bx bx-error-circle bx-flashing me-1"></i> Perlu Verifikasi
+                        '.$pulseDot.'
+                    </span>
+                </a>';
+            }
+        }
+
+        // KONDISI 2: Bukan Giliran Saya (Waiting) -> Tampilan Soft (Transparan)
+        else {
             return '
-            <div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="Posisi: '.$currentLabel.'">
-                <span class="badge bg-warning text-dark border border-warning shadow-sm">
-                    <i class="bx bx-error-circle bx-flashing me-1"></i> Perlu Verifikasi
-                </span>
-            </div>';
-        } else {
-            // Standard (Biru - Sedang Proses di orang lain)
-            return '
-            <div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="Menunggu: '.$currentLabel.'">
+            <div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="Posisi saat ini: '.$currentLabel.'">
                 <span class="badge bg-info bg-opacity-10 text-info border border-info">
                     <i class="bx bx-time-five me-1"></i> Proses Validasi
                 </span>
@@ -478,8 +639,7 @@ class ProjectPeriodeListController extends BasicCRUDController
 
     private function generateMonitoringStatus($row, $user, $u_step, $levelId)
     {
-        // Query manual monitoring terakhir (karena di eager load index sudah dilimit)
-        // Kita gunakan query sederhana agar performa tetap terjaga
+        // Query monitoring terakhir
         $latestMon = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($row) {
             $q->where('project_periode_list_id', $row->id);
         })
@@ -490,14 +650,11 @@ class ProjectPeriodeListController extends BasicCRUDController
             return '<span class="badge bg-light text-muted border">Belum Dimonitor</span>';
         }
 
-        // Logic Status Monitoring
-        // 100 = Published (Aktif)
         if ($latestMon->status == 100) {
             return '<span class="badge bg-success">Aktif</span>';
         }
 
-        // Label Mapping Monitoring
-        // 1=Draft, 2=ROWP, 3=RO Divisi, 4=RO MR, 5=ROW MR
+        // Label Mapping
         $monLabels = [
             1 => 'Drafting',
             2 => 'Risk Owner Project',
@@ -507,38 +664,64 @@ class ProjectPeriodeListController extends BasicCRUDController
         ];
         $posLabel = $monLabels[$latestMon->status] ?? 'Verifikasi';
 
-        // Cek Giliran Saya (Monitoring)
+        // Cek Giliran Saya
         $isMyMonTurn = false;
 
         if ($levelId == 6) {
-            // Inputter: Status 1 (Draft/Revisi)
             if ($latestMon->status == 1) $isMyMonTurn = true;
         } else {
-            // Verifikator: Mapping Target
             $target = 0;
             if ($levelId == 7) $target = 2;
             elseif ($levelId == 1 && !$user->unit->unit_mr) $target = 3;
             elseif ($levelId == 1 && $user->unit->unit_mr) $target = 4;
             elseif ($levelId == 2 && $user->unit->unit_mr) $target = 5;
 
-            // Giliran jika status == target DAN belum approved
             if ($latestMon->status == $target && !$latestMon->is_approved) {
                 $isMyMonTurn = true;
             }
         }
 
-        // TAMPILAN
+        // Variabel Dot Pulse (Merah)
+        $pulseDot = '
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
+
+        // --- LOGIKA TAMPILAN MONITORING ---
+
+        // KONDISI 1: Giliran Saya (Action Needed)
         if ($isMyMonTurn && $user->hasProject($row)) {
-            $msg = ($levelId == 6) ? "Input Monitoring" : "Verifikasi Mon.";
+            $redirectUrl = route('projects.monitorings.index', ['project' => $row->id]);
+
+            // A. Khusus Inputter (Level 6) -> Tampilan Solid Biru (Draft/Revisi)
+            if ($levelId == 6) {
+                return '
+                <a href="'.$redirectUrl.'" class="text-decoration-none">
+                    <span class="badge bg-info cursor-pointer border border-info text-white position-relative"
+                        data-bs-toggle="tooltip"
+                        title="Status: Draft Monitoring. Mohon lengkapi data.">
+                        Draft / Perlu Revisi
+                        '.$pulseDot.'
+                    </span>
+                </a>';
+            }
+
+            // B. Verifikator (Level Lain) -> Tampilan Solid Kuning (Verifikasi)
+            else {
+                return '
+                <a href="'.$redirectUrl.'" class="text-decoration-none">
+                    <span class="badge bg-warning text-dark border border-warning shadow-sm cursor-pointer position-relative"
+                        data-bs-toggle="tooltip" title="Klik untuk verifikasi monitoring: '.$posLabel.'">
+                        <i class="bx bx-radar bx-flashing me-1"></i> Verifikasi Mon.
+                        '.$pulseDot.'
+                    </span>
+                </a>';
+            }
+        }
+
+        // KONDISI 2: Bukan Giliran Saya (Waiting) -> Tampilan Soft (Transparan)
+        else {
             return '
-            <div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="Posisi: '.$posLabel.'">
-                <span class="badge bg-warning text-dark border border-warning shadow-sm">
-                    <i class="bx bx-radar bx-flashing me-1"></i> '.$msg.'
-                </span>
-            </div>';
-        } else {
-            return '
-            <div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="Posisi: '.$posLabel.'">
+            <div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="Posisi saat ini: '.$posLabel.'">
                 <span class="badge bg-info bg-opacity-10 text-info border border-info">
                     <i class="bx bx-radar me-1"></i> Proses Monitoring
                 </span>
@@ -558,7 +741,7 @@ class ProjectPeriodeListController extends BasicCRUDController
         else if($level_id == 1) { // RO Divisi
             if($is_mr) { // RO Divisi MR
                 $u_step = 3;
-                $user_verification = "Risk Officer Manajemen Risiko";
+                $user_verification = "Risk Officer MR";
             } else {
                 $u_step = 2;
                 $user_verification = "Risk Officer Divisi";

@@ -167,7 +167,7 @@
                     @if ($availableFilters)
                     <div class="row" id="table-filter">
                         @foreach ($availableFilters as $filterName => $filter)
-                            <div class="col-md-3 mb-3">
+                            <div class="{{ $filter['classWrapper'] ?? 'col-md-3' }} mb-3">
                                 <div class="form-group mb-0">
                                     {{ Form::{$filter['type']}(...$filter['parameters']) }}
                                 </div>
@@ -602,10 +602,14 @@ $(document).ready(function() {
                 const userStep = {{ $extraViewData['u_step'] ?? 0 }};
                 const batchStep = {{ $extraViewData['b_step'] ?? 0 }};
 
-                // Validasi: Risiko bisa dicentang jika status 2/3 dan step-nya cocok dengan user + batch
-                const canVerify = (row.status == 2 || row.status == 3) &&
-                                    row.step_verification == userStep &&
-                                    userStep == batchStep;
+                // Validasi: Risiko bisa dicentang jika status 2/3/5/7/8 dan step-nya cocok dengan user + batch
+                const canVerify = (row.status == 2 ||
+                    row.status == 3 ||
+                    row.status == 5 ||
+                    row.status == 7 ||
+                    row.status == 8) &&
+                    row.step_verification == userStep &&
+                    userStep == batchStep;
 
                 return `
                     <div class="form-check mb-0">
@@ -676,7 +680,16 @@ $(document).ready(function() {
                 }
             @endforeach
 
-            let html = '<div style="white-space:nowrap" class="d-flex align-items-center">' + buttons.join('') + '</div>';
+            let notificationDot = '';
+            // if (row?.action_needed) {
+            //     notificationDot = `
+            //     <div class="position-absolute top-0 start-100 translate-middle">
+            //         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
+            //         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
+            //     </div>`;
+            // }
+
+            let html = '<div style="white-space:nowrap" class="d-flex align-items-center position-relative">' + buttons.join('') + notificationDot + '</div>';
 
             return html
               .replaceAll(':project_id', (row?.project_id || (row?.project && row?.project?.id) || ''))
@@ -720,7 +733,8 @@ $(document).ready(function() {
         },
         autoWidth: false,
         columns: datatableColumns,
-        order: @json($defaultOrder ?? [[1, 'asc']]),
+        // order: @json($defaultOrder ?? []),
+        order: [],
         responsive: true,
         columnDefs: [
             {"width": "1%", "targets": 0},

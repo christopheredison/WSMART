@@ -68,8 +68,13 @@
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text"
-                                value="{{ $projectRiskAnalisa->skalaParameterObj ? $projectRiskAnalisa->skalaParameterObj->type_parameter . ' - ' . $projectRiskAnalisa->skalaParameterObj->skala : '-' }}">
+                                value="{{ $projectRiskAnalisa->skalaParameterObj ? $projectRiskAnalisa->skalaParameterObj->type_parameter : '-' }}">
                                 <label>Parameter Probabilitas Inherent</label>
+                            </div>
+                            <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text"
+                                value="{{ $projectRiskAnalisa->skalaParameterObj ? $projectRiskAnalisa->skalaParameterObj->tingkat . ' - ' . $projectRiskAnalisa->skalaParameterObj->skala : '-' }}">
+                                <label>Skala Probabilitas Inherent</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="nilai_probabilitas_inherent"
@@ -130,8 +135,13 @@
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text"
-                                value="{{ $projectRiskAnalisa->skalaParameterResidualObj ? $projectRiskAnalisa->skalaParameterResidualObj->type_parameter . ' - ' . $projectRiskAnalisa->skalaParameterResidualObj->skala : '-' }}">
+                                value="{{ $projectRiskAnalisa->skalaParameterResidualObj ? $projectRiskAnalisa->skalaParameterResidualObj->type_parameter : '-' }}">
                                 <label>Target Parameter Probabilitas</label>
+                            </div>
+                            <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text"
+                                value="{{ $projectRiskAnalisa->skalaParameterResidualObj ? $projectRiskAnalisa->skalaParameterResidualObj->tingkat . ' - ' . $projectRiskAnalisa->skalaParameterResidualObj->skala : '-' }}">
+                                <label>Target Skala Probabilitas</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" id="target_nilai_probabilitas"
@@ -224,8 +234,8 @@
                                     @if($selectedParameterType && isset($groupedSkalaParameters[$selectedParameterType]))
                                         @foreach($groupedSkalaParameters[$selectedParameterType] as $param)
                                             <option value="{{ $param->id }}"
-                                                data-min="{{ $param->min }}"
-                                                data-max="{{ $param->max }}"
+                                                {{-- data-min="{{ $param->min }}"
+                                                data-max="{{ $param->max }}" --}}
                                                 data-tingkat="{{ $param->tingkat }}"
                                                 {{ ($riskMonitoring?->skala_parameter_id == $param->id) ? 'selected' : '' }}>
                                                 {{ $param->tingkat }} - {{ $param->skala }}
