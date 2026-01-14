@@ -267,11 +267,19 @@
                   @break
                   @case(3)
                     @php
+                      $canVerify = false;
+                      if ($item->step_verification == $step_order && $dataBatch->step_verification == $step_order && ($item->status == 2 || $item->status == 3 )) {
+                        $canVerify = true;
+                      }
                       $acceptedText = 'Accepted';
                       if ($item->step_verification == 2) {
-                        $acceptedText = 'Accepted by Risk Owner Divisi';
+                        $acceptedText = $canVerify ?
+                          'Need Verification Risk Officer MR' :
+                          'Accepted by Risk Owner Divisi';
                       } elseif ($item->step_verification == 3) {
-                        $acceptedText = 'Accepted by Risk Officer MR';
+                        $acceptedText = $canVerify ?
+                          'Need Verification Risk Owner MR' :
+                          'Accepted by Risk Officer MR';
                       } elseif ($item->step_verification == 3) {
                         $acceptedText = 'Accepted by Risk Owner MR';
                       }
@@ -282,7 +290,19 @@
                   Accepted
                   @break
                   @case(5)
-                  Need Revision or Rejected
+                  @php
+                    $stepVerification = $item->step_verification;
+                    $rejectedText = 'Need Revision or Rejected';
+
+                    if ($stepVerification == 1) {
+                      $rejectedText = 'Rejected by Risk Owner Divisi';
+                    } else if ($stepVerification == 2) {
+                      $rejectedText = 'Rejected by Risk Officer MR';
+                    } else if ($stepVerification == 3) {
+                      $rejectedText = 'Rejected by Risk Owner MR';
+                    }
+                  @endphp
+                  {{ $rejectedText }}
                   @break
                   @case(6)
                   Published
@@ -377,7 +397,7 @@
 <!-- Modal Verifikasi Risiko (Single Modal) -->
 <div class="modal fade" id="modalVerifikasiRisiko" tabindex="-1" aria-labelledby="verifikasiRisikoLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content p-0">
+    <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="verifikasiRisikoLabel">Verifikasi Risiko</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

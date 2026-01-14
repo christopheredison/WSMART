@@ -10,7 +10,7 @@
         </div>
 
         {{-- Summary Badges --}}
-        <div class="bg-white p-2 rounded shadow-sm">
+        <div class="bg-white p-2 rounded shadow-sm d-none">
             {{-- URGENT TOOLTIP --}}
             <span class="badge bg-danger rounded-pill me-1" id="total-urgent-badge">0</span>
             <span class="text-danger fw-bold me-3" style="cursor: help;"
@@ -34,11 +34,11 @@
             <div class="card border-0 shadow-sm h-100 text-white"
                 style="background: linear-gradient(135deg, #d35400 0%, #e67e22 100%);">
                 <div class="card-body p-4 position-relative overflow-hidden">
-                    <h3 class="fw-bold mb-4">Project</h3>
+                    <h3 class="fw-bold mb-4">Proyek</h3>
                     <div class="d-flex flex-column gap-2">
                         <div class="d-flex align-items-center">
                             <span class="fw-bold me-2">{{ $stats['project']['total'] }}</span>
-                            <span class="opacity-75">Total Project</span>
+                            <span class="opacity-75">Total Proyek</span>
                         </div>
                         <div class="d-flex align-items-center">
                             <span class="fw-bold me-2">{{ count($pendingItems) }}</span>
@@ -104,7 +104,7 @@
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input cursor-pointer" type="radio" name="scope" id="scopeProject" value="project"
                                     {{ request('scope') == 'project' ? 'checked' : '' }} onchange="this.form.submit()">
-                                <label class="form-check-label small cursor-pointer" for="scopeProject">Project</label>
+                                <label class="form-check-label small cursor-pointer" for="scopeProject">Proyek</label>
                             </div>
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input cursor-pointer" type="radio" name="scope" id="scopeDivisi" value="divisi"
@@ -118,7 +118,7 @@
                         <label class="form-label small text-muted mb-1">Pencarian:</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0 text-muted"><i class="bx bx-search"></i></span>
-                            <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Cari nama project atau kode..." value="{{ request('q') }}">
+                            <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Cari nama proyek atau divisi..." value="{{ request('q') }}">
                             <button class="btn btn-primary px-4" type="submit">Cari</button>
 
                             @if(request('q') || request('scope', 'all') != 'all')
@@ -432,7 +432,8 @@
                         <div class="accordion-item">
                             <h2 class="accordion-header" id="headingRisk">
                                 <button class="accordion-button fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRisk" aria-expanded="true" aria-controls="collapseRisk">
-                                    <i class="bx bx-shield-quarter me-2 text-primary"></i> Risk Register
+                                    {{-- <i class="bx bx-shield-quarter me-2 text-primary"></i> --}}
+                                    Risk Register
                                     <span class="badge bg-danger ms-2">{{ $riskItems->count() }}</span>
                                 </button>
                             </h2>
@@ -463,7 +464,7 @@
                                             @endforeach
                                         </div>
                                     @else
-                                        <div class="p-3 text-center text-black small">Tidak ada item Risk Register yang menunggu.</div>
+                                        <div class="p-3 text-center text-black">Tidak ada item Risk Register yang menunggu.</div>
                                     @endif
                                 </div>
                             </div>
@@ -473,7 +474,8 @@
                         <div class="accordion-item">
                             <h2 class="accordion-header" id="headingMon">
                                 <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMon" aria-expanded="false" aria-controls="collapseMon">
-                                    <i class="bx bx-bar-chart-alt-2 me-2 text-info"></i> Monitoring
+                                    {{-- <i class="bx bx-bar-chart-alt-2 me-2 text-info"></i>  --}}
+                                    Monitoring
                                     <span class="badge bg-danger ms-2">{{ $monitoringItems->count() }}</span>
                                 </button>
                             </h2>
@@ -505,7 +507,7 @@
                                             @endforeach
                                         </div>
                                     @else
-                                        <div class="p-3 text-center text-black small">Tidak ada item Monitoring yang menunggu.</div>
+                                        <div class="p-3 text-center text-black">Tidak ada data Monitoring yang menunggu.</div>
                                     @endif
                                 </div>
                             </div>
