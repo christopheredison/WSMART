@@ -2521,7 +2521,8 @@ class HomeController extends Controller
             // 4. EFEKTIVITAS PERLAKUAN RISIKO (DARI UNIT TIPE 4)
             // =========================================================================
             // $closedRisks = $baseRisks->where('is_closed', true)->get();
-            list($efektifRisks, $tidakEfektifRisks) = $baseRisks->partition(fn ($risk) => $risk->efektivitas_perlakuan_risiko > 0);
+            $allRisksCollection = $baseRisks->get();
+            list($efektifRisks, $tidakEfektifRisks) = $allRisksCollection->partition(fn ($risk) => $risk->efektivitas_perlakuan_risiko > 0);
             $efektivitasPerlakuanData = [
                 ['label' => 'Efektif', 'value' => $efektifRisks->count(), 'color' => '#5470C6'],
                 ['label' => 'Tidak Efektif', 'value' => $tidakEfektifRisks->count(), 'color' => '#EE6666'],
