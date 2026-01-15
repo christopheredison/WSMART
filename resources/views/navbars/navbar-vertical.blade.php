@@ -629,7 +629,7 @@
       <!-- Master Data End -->
 
       @endcan
-      {{-- @can('risk_map_setting') --}}
+      @can('risk_map_setting')
       <li class="nav-item single-indicator">
         <a class="nav-link {{ request()->is('risk-map-setting') ? 'active' : '' }}" href="/risk-map-setting"
           role="button" data-bs-toggle="" aria-expanded="false">
@@ -639,7 +639,7 @@
           </span>
         </a>
       </li>
-      {{-- @endcan --}}
+      @endcan
 
 
       <div class="row navbar-vertical-label-wrapper">

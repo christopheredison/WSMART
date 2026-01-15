@@ -300,5 +300,6 @@ return [
         'project_risk_context',
 
         'kuesioner_responden',
+        'risk_map_setting',
     ],
 ];
