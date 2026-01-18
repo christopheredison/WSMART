@@ -58,23 +58,13 @@
         </div>
 
         <div class="col-md-6">
-            <div class="card border-0 shadow-sm h-100 text-white"
-                style="background: linear-gradient(135deg, #0f509e 0%, #136a8a 100%);">
+            <div class="card border-0 shadow-sm h-100 text-white" style="background: linear-gradient(135deg, #0f509e 0%, #136a8a 100%);">
                 <div class="card-body p-4 position-relative overflow-hidden">
                     <h3 class="fw-bold mb-4">Divisi</h3>
                     <div class="d-flex flex-column gap-2">
-                        <div class="d-flex align-items-center">
-                            <span class="fw-bold me-2">{{ $divisiStats['total'] }}</span>
-                            <span class="opacity-75">Total Divisi</span>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <span class="fw-bold me-2">{{ $divisiStats['pending'] }}</span>
-                            <span class="opacity-100">Menunggu Tindakan</span>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <span class="fw-bold me-2">{{ $divisiStats['approved'] }}</span>
-                            <span class="opacity-75">Selesai</span>
-                        </div>
+                        <div class="d-flex align-items-center"><span class="fw-bold me-2">{{ $divisiStats['total'] }}</span> <span class="opacity-75">Total Divisi</span></div>
+                        <div class="d-flex align-items-center"><span class="fw-bold me-2">{{ $divisiStats['pending'] }}</span> <span class="opacity-100">Menunggu Tindakan</span></div>
+                        <div class="d-flex align-items-center"><span class="fw-bold me-2">{{ $divisiStats['approved'] }}</span> <span class="opacity-75">Disetujui</span></div>
                     </div>
                     <i class="bx bx-buildings position-absolute" style="bottom: -10px; right: 15px; font-size: 5rem; opacity: 0.15;"></i>
                 </div>
@@ -133,13 +123,13 @@
         </div>
     </div>
 
-    {{-- LIST PROJECT --}}
+    {{-- LIST TASK --}}
     <div class="row">
         @forelse($taskList as $task)
             @php
                 $cardBorder = 'border-success';
                 $iconBg = 'bg-success-subtle text-success';
-                $mainIcon = 'bx-check-shield';
+                $mainIcon = ($task['type'] ?? 'project') == 'project' ? 'bx-check-shield' : 'bx-building-house';
                 $badgeHtml = '';
 
                 if($task['status_category'] == 'urgent') {
@@ -153,14 +143,23 @@
                     $mainIcon = 'bx-time-five';
                     $badgeHtml = '<span class="badge bg-warning text-dark shadow-sm"><i class="bx bx-time"></i> Pending</span>';
                 }
+                
+                // Jika Unit, beri warna border berbeda sedikit atau icon beda
+                if(($task['type'] ?? '') == 'unit') {
+                    // $mainIcon = 'bx-building';
+                }
             @endphp
 
         <div class="col-12 mb-4">
             <div class="card border-0 shadow-sm hover-shadow transition-all border-start border-4 {{ $cardBorder }}">
                 <div class="card-body p-4 position-relative">
-
                     <div class="position-absolute top-0 end-0 mt-3 me-3">
                         {!! $badgeHtml !!}
+                        @if(($task['type'] ?? '') == 'unit')
+                            <span class="badge bg-secondary ms-1">Divisi</span>
+                        @else
+                            <span class="badge bg-primary ms-1">Proyek</span>
+                        @endif
                     </div>
 
                     {{-- HEADER --}}
@@ -171,7 +170,13 @@
                             </div>
                             <div>
                                 <h5 class="fw-bold mb-0 text-dark">{{ $task['project_name'] }}</h5>
-                                <small class="text-muted"><i class="bx bx-building"></i> {{ $task['unit_name'] }}</small>
+                                <small class="text-muted">
+                                    @if(($task['type'] ?? '') == 'unit')
+                                        Unit Kerja Divisi
+                                    @else
+                                        <i class="bx bx-building"></i> {{ $task['unit_name'] }}
+                                    @endif
+                                </small>
                             </div>
                         </div>
                     </div>
@@ -182,9 +187,18 @@
                             <div class="progress-bar bg-light" role="progressbar" style="width: 100%;"></div>
                         </div>
                         @php
-                            $progressPercent = ($task['current_step_index'] - 1) * 25;
+                            $totalSteps = count($task['steps']);
+                            $stepWidth = 100 / max($totalSteps, 1);
+                            // Logic progress bar width dynamic berdasarkan jumlah step
+                            $progressPercent = 0;
+                            if($totalSteps > 1) {
+                                $progressPercent = ($task['current_step_index'] - 1) * (100 / ($totalSteps - 1));
+                            } else {
+                                $progressPercent = $task['current_step_index'] > 0 ? 100 : 0;
+                            }
+                            
                             if ($progressPercent > 100) $progressPercent = 100;
-                            if ($task['is_revision']) $progressPercent -= 25;
+                            if ($task['is_revision']) $progressPercent -= (100 / ($totalSteps > 1 ? $totalSteps - 1 : 1));
                             if ($progressPercent < 0) $progressPercent = 0;
                         @endphp
                         <div class="progress" style="height: 2px; position: absolute; top: 15px; left: 5%; right: 5%; z-index: 0; background: transparent;">
@@ -198,7 +212,7 @@
                                     elseif ($step['status'] == 'current') { $sIcon = 'bx-loader-alt bx-spin'; $sClass = 'bg-primary text-white border-primary shadow-sm'; }
                                     elseif ($step['status'] == 'rejected') { $sIcon = 'bx-x'; $sClass = 'bg-danger text-white border-danger shadow-sm'; }
                                 @endphp
-                                <div class="text-center" style="width: 18%;">
+                                <div class="text-center" style="width: {{ 100 / count($task['steps']) }}%;">
                                     <div class="rounded-circle border border-2 d-flex align-items-center justify-content-center mx-auto mb-1 {{ $sClass }}"
                                         style="width: 24px; height: 24px;" data-bs-toggle="tooltip" title="{{ $step['role'] }}">
                                         <i class="bx {{ $sIcon }}" style="font-size: 0.8rem;"></i>
@@ -211,48 +225,22 @@
                         </div>
                     </div>
 
-                    {{-- DETAIL STATS (DIKEMBALIKAN KE TAMPILAN AWAL) --}}
+                    {{-- DETAIL STATS --}}
+                    {{-- Kode di bawah ini sama persis dengan yang Anda kirim, karena struktur datanya ($task) sudah disamakan di Controller --}}
                     <div class="row align-items-start g-4">
-
                         {{-- 1. RISK REGISTER DETAIL --}}
                         <div class="col-md-5 border-end-md">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <small class="text-uppercase text-muted fw-bold x-small">Risk Register</small>
                                 <small class="text-muted">{{ $task['risk_stats']['total'] }} Total Risiko</small>
                             </div>
-
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                {{-- Status Badges --}}
-                                @if($task['risk_stats']['published'] > 0)
-                                    <span class="badge bg-success-subtle text-success" title="Published">{{ $task['risk_stats']['published'] }} Publish</span>
-                                @endif
-                                @if($task['risk_stats']['pending'] > 0)
-                                    <span class="badge bg-warning-subtle text-warning" title="Verifikasi">{{ $task['risk_stats']['pending'] }} Verifikasi</span>
-                                @endif
-                                @if($task['risk_stats']['revision'] > 0)
-                                    <span class="badge bg-danger-subtle text-danger" title="Revisi">{{ $task['risk_stats']['revision'] }} Revisi</span>
-                                @endif
-                                @if($task['risk_stats']['draft'] > 0)
-                                    <span class="badge bg-info-subtle text-info" title="Draft">{{ $task['risk_stats']['draft'] }} Draft</span>
-                                @endif
-                                @if($task['risk_stats']['rejected_mr'] > 0)
-                                    <span class="badge bg-danger-subtle text-danger" title="Ditolak">{{ $task['risk_stats']['rejected_mr'] }} Ditolak</span>
-                                @endif
-
-                                @if($task['risk_stats']['total'] == 0)
-                                    <span class="badge bg-light text-muted">Belum ada data</span>
-                                @endif
+                            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                                @if($task['risk_stats']['published'] > 0) <span class="badge bg-success-subtle text-success">{{ $task['risk_stats']['published'] }} Publish</span> @endif
+                                @if($task['risk_stats']['pending'] > 0) <span class="badge bg-warning-subtle text-warning">{{ $task['risk_stats']['pending'] }} Verifikasi</span> @endif
+                                @if($task['risk_stats']['revision'] > 0) <span class="badge bg-danger-subtle text-danger">{{ $task['risk_stats']['revision'] }} Revisi</span> @endif
+                                @if($task['risk_stats']['draft'] > 0) <span class="badge bg-info-subtle text-info">{{ $task['risk_stats']['draft'] }} Draft</span> @endif
+                                @if($task['risk_stats']['total'] == 0) <span class="badge bg-light text-muted">Belum ada data</span> @endif
                             </div>
-
-                            {{-- Progress Bar --}}
-                            <div class="progress" style="height: 6px;">
-                                @php
-                                    $total = $task['risk_stats']['total'] > 0 ? $task['risk_stats']['total'] : 1;
-                                    $percent = ($task['risk_stats']['published'] / $total) * 100;
-                                @endphp
-                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ $percent }}%"></div>
-                            </div>
-
                             @if($task['risk_action']['count'] > 0)
                                 <div class="mt-2 text-end">
                                     <small class="text-danger fw-bold animate-pulse">
@@ -262,76 +250,36 @@
                             @endif
                         </div>
 
-                        {{-- 2. MONITORING DETAIL (LIST SEMUA BULAN) --}}
+                        {{-- 2. MONITORING DETAIL --}}
                         <div class="col-md-7 ps-md-4">
                             <small class="text-uppercase text-muted fw-bold x-small mb-2 d-block">Monitoring ({{ date('Y') }})</small>
-
                             <div class="d-flex flex-wrap gap-2">
                                 @php $hasMonData = false; @endphp
                                 @foreach($task['monitoring_summary'] as $q => $months)
                                     @foreach($months as $mon)
                                         @if($mon['status'] !== 'empty')
-                                            @php
-                                                $hasMonData = true;
-                                                // Default Process (Biru Muda/Abu)
-                                                $colorClass = 'bg-info-subtle text-info-emphasis';
-
-                                                if($mon['status'] == 'pending') {
-                                                    // Menunggu Verifikasi (Kuning)
-                                                    $colorClass = 'bg-warning text-dark border border-warning';
-                                                }
-                                                elseif($mon['status'] == 'revision') {
-                                                    // Revisi (Merah)
-                                                    $colorClass = 'bg-danger text-white animate-pulse';
-                                                }
-                                                elseif($mon['status'] == 'draft') {
-                                                    // Draft / Belum Lengkap (Biru Tua / Primary) - Action Needed
-                                                    $colorClass = 'bg-primary text-white';
-                                                }
-                                                elseif($mon['status'] == 'process') {
-                                                    // Sudah dikirim / Draft Masa Depan (Info)
-                                                    $colorClass = 'bg-info-subtle text-info border border-info-subtle';
-                                                }
-                                            @endphp
-                                            <a href="{{ $mon['link'] }}" class="text-decoration-none" data-bs-toggle="tooltip"
-                                              title="Q{{$q}} - {{ $mon['month_name'] }}: {{ ucfirst($mon['status']) }} ({{ $mon['count'] }} Item)">
-                                                <span class="badge {{ $colorClass }} p-2">
-                                                    {{ $mon['month_name'] }}
-                                                    @if($mon['status'] == 'pending' || $mon['status'] == 'revision')
-                                                        <span class="bx bxs-circle text-danger ms-1" style="font-size: 6px; vertical-align: middle;"></span>
-                                                    @endif
-                                                    @if($mon['status'] == 'draft')
-                                                        <span class="bx bxs-circle text-warning ms-1" style="font-size: 6px; vertical-align: middle;"></span>
-                                                    @endif
+                                            @php $hasMonData = true; $colorClass = 'bg-info-subtle text-info-emphasis'; if($mon['status']=='pending') $colorClass='bg-warning text-dark'; if($mon['status']=='revision') $colorClass='bg-danger text-white'; if($mon['status']=='draft') $colorClass='bg-primary text-white'; @endphp
+                                            <a href="{{ $mon['link'] }}" class="text-decoration-none" title="Q{{$q}} - {{ $mon['month_name'] }}: {{ ucfirst($mon['status']) }}">
+                                                <span class="badge {{ $colorClass }} p-2">{{ $mon['month_name'] }}
+                                                    @if(in_array($mon['status'], ['pending','revision','draft'])) <span class="bx bxs-circle text-danger ms-1" style="font-size: 6px;"></span> @endif
                                                 </span>
                                             </a>
                                         @endif
                                     @endforeach
                                 @endforeach
-
-                                @if(!$hasMonData)
-                                    <div class="badge bg-light text-muted fw-normal border border-dashed p-2">Belum ada monitoring</div>
-                                @endif
+                                @if(!$hasMonData) <div class="badge bg-light text-muted fw-normal border border-dashed p-2">Belum ada monitoring</div> @endif
                             </div>
-
                             @if($task['monitoring_action_count'] > 0)
-                                <div class="mt-2">
-                                    <small class="text-danger fw-bold">
-                                        <i class="bx bx-error"></i> {{ $task['monitoring_action_count'] }} monitoring perlu tindakan
-                                    </small>
-                                </div>
+                                <div class="mt-2"><small class="text-danger fw-bold"><i class="bx bx-error"></i> {{ $task['monitoring_action_count'] }} monitoring perlu tindakan</small></div>
                             @endif
                         </div>
                     </div>
 
-                    {{-- TOMBOL ACTION DI BAWAH --}}
                     <div class="text-end mt-3 border-top pt-3">
-                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-4"
-                            onclick="showProjectDetail({{ json_encode($task) }})">
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-4" onclick="showProjectDetail({{ json_encode($task) }})">
                             Detail Lengkap <span class="bx bx-chevron-right"></span>
                         </button>
                     </div>
-
                 </div>
             </div>
         </div>

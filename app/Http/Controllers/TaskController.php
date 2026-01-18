@@ -6,6 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\ProjectPeriodeList;
 use App\Models\ProjectRisk;
 use App\Models\ProjectRiskMonitoring;
+use App\Models\IdentifikasiRisiko;
+use App\Models\UnitRiskMonitoring;
+use App\Models\Periode;
+use App\Models\Unit;
 use App\Models\DataBatch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -13,6 +17,9 @@ use Illuminate\Support\Facades\Auth;
 
 class TaskController extends Controller
 {
+    /**
+     * Menampilkan daftar Task Approval (Project & Divisi)
+     */
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -20,349 +27,546 @@ class TaskController extends Controller
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
 
         $search = $request->query('q');
-        $scope  = $request->query('scope', 'all');
+        $scope  = $request->query('scope', 'all'); // options: all, project, divisi
         $currentYear = date('Y');
-
-        // Approval Flow (Stepper UI)
-        $approvalFlow = [
-            1 => ['label' => 'Drafting',   'role' => 'Risk Officer Project'],
-            2 => ['label' => 'Review',     'role' => 'Risk Owner Project'],
-            3 => ['label' => 'Verifikasi', 'role' => 'Risk Officer Divisi'],
-            4 => ['label' => 'Validasi',   'role' => 'Risk Officer MR'],
-            5 => ['label' => 'Finalisasi', 'role' => 'Risk Owner MR']
-        ];
-
-        // 1. Query Project
-        $projects = ProjectPeriodeList::with(['project', 'periode'])
-            ->where(function ($q) use ($user) {
-                if (!Gate::check('project_admin_access')) {
-                    $q->whereHas('project', function($p) use ($user) {
-                        if ($user->unit) {
-                            $p->where('cost_center_parent', $user->unit->cost_center);
-                        }
-                    });
-                }
-            })
-            ->when($search, function($query) use ($search) {
-                return $query->whereHas('project', function($p) use ($search) {
-                    $p->where('project_name', 'LIKE', '%' . $search . '%')
-                      ->orWhere('project_code', 'LIKE', '%' . $search . '%');
-                });
-            })
-            ->get();
+        
+        // Ambil Periode Aktif untuk Data Divisi
+        $activePeriode = Periode::where('status', 'active')->first();
+        $activePeriodeId = $activePeriode ? $activePeriode->id : null;
 
         $taskList = [];
-
-        $stats = [
-            'project' => ['total' => 0, 'pending' => 0, 'approved' => 0],
-            'units'   => []
-        ];
-
         $pendingItems = [];
 
-        foreach ($projects as $ppl) {
-            $projectId = $ppl->project_id;
+        // Statistik Global untuk Header View
+        $stats = [
+            'project' => ['total' => 0, 'pending' => 0, 'approved' => 0],
+            'units'   => [] // Key: Nama Unit, Value: Status
+        ];
 
-            // --- A. ANALISA BATCH STATUS ---
-            $dataBatch = DataBatch::where('project_id', $projectId)->where('type', 2)->orderBy('batch', 'desc')->first();
-            $batchStatus = $dataBatch ? $dataBatch->status : DataBatch::STATUS_PROSES;
-            $batchStep = $dataBatch ? $dataBatch->step_verification : 0;
-
-            $isFinished = ($batchStatus == DataBatch::STATUS_FINISH);
-            $isRevision = in_array($batchStatus, [DataBatch::STATUS_REVISI, DataBatch::STATUS_REJECTED_FROM_OFFICER_MR]);
-
-            // UI Stepper Logic
-            $currentUiStep = 1;
-            if ($isFinished) $currentUiStep = 6;
-            elseif ($dataBatch) $currentUiStep = ($batchStep == 0) ? 1 : $batchStep + 1;
-
-            $stepsVisual = [];
-            foreach ($approvalFlow as $key => $info) {
-                $statusColor = 'pending';
-                if ($key < $currentUiStep) $statusColor = 'completed';
-                elseif ($key == $currentUiStep) $statusColor = $isRevision ? 'rejected' : 'current';
-                $stepsVisual[] = ['label' => $info['label'], 'role'  => $info['role'], 'status'=> $statusColor];
-            }
-
-            // --- B. RISK REGISTER STATS & ACTION ---
-            // Ambil Risiko Aktif (Is Closed = 0)
-            $risks = ProjectRisk::where('project_periode_list_id', $ppl->id)
-              // ->where('is_closed', 0)
-              ->get();
-            $totalActiveRisks = $risks->count();
-
-            $riskStats = [
-                'total' => $totalActiveRisks,
-                'draft' => $risks->where('status', 1)->count(),
-                'pending' => $risks->whereIn('status', [2, 3])->count(),
-                'revision' => $risks->where('status', 5)->count(),
-                'published' => $risks->where('status', 6)->count(),
-                'rejected_mr' => $risks->whereIn('status', [7, 8])->count(),
+        // ============================================================
+        // 1. LOGIC PROJECT (Jika scope all atau project)
+        // ============================================================
+        if ($scope == 'all' || $scope == 'project') {
+            // Approval Flow Project (Standard 5 Step)
+            $projectFlow = [
+                1 => ['label' => 'Drafting',   'role' => 'Risk Officer Project'],
+                2 => ['label' => 'Review',     'role' => 'Risk Owner Project'],
+                3 => ['label' => 'Verifikasi', 'role' => 'Risk Officer Divisi'],
+                4 => ['label' => 'Validasi',   'role' => 'Risk Officer MR'],
+                5 => ['label' => 'Finalisasi', 'role' => 'Risk Owner MR']
             ];
 
-            $riskActionCount = 0;
-            $riskActionLabel = '';
-            $riskLink = route('projects.risks.index', ['project' => $ppl->id]);
-            $isRiskUrgent = false;
-
-            // Logic Action Risk Register (Sesuai kode sebelumnya)
-            $u_step = 0;
-            if ($levelId == 7) $u_step = 1;
-            else if ($levelId == 1) $u_step = $is_mr ? 3 : 2;
-            else if ($levelId == 2 && $is_mr) $u_step = 4;
-
-            if ($levelId == 6) {
-                if ($batchStatus == DataBatch::STATUS_REVISI) {
-                    $riskActionCount = $risks->where('status', 5)->count();
-                    $riskActionLabel = 'Perlu Revisi';
-                    $isRiskUrgent = true;
-                    if ($riskActionCount == 0) { $riskActionCount = 1; $riskActionLabel = 'Siap Kirim Perbaikan'; $isRiskUrgent = false; }
-                } elseif ($batchStatus == DataBatch::STATUS_PROSES || !$dataBatch) {
-                    $riskActionCount = $risks->where('status', 1)->count();
-                    $riskActionLabel = 'Draft Belum Dikirim';
-                }
-            } else {
-                $isMyTurn = ($u_step == $batchStep) || ($u_step == 2 && $batchStatus == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR);
-                $isValidStatus = in_array($batchStatus, [DataBatch::STATUS_KIRIM, DataBatch::STATUS_VERIFIKASI, DataBatch::STATUS_REJECTED_FROM_OFFICER_MR]);
-
-                if ($isMyTurn && $isValidStatus && !$isFinished) {
-                    $riskActionCount = $risks->where('step_verification', $u_step)->whereIn('status', [2, 3, 7, 8])->count();
-                    if($riskActionCount > 0) {
-                        $riskActionLabel = ($batchStatus == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR) ? 'Dikembalikan MR' : 'Perlu Verifikasi';
-                        if ($batchStatus == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR) $isRiskUrgent = true;
-                    }
-                }
-            }
-
-            // --- C. MONITORING STATS (UPDATED LOGIC: LATEST DATA & TIME VALIDATION) ---
-            $allMonitorings = ProjectRiskMonitoring::with('projectRisk')
-                ->whereHas('projectRisk', function($q) use ($ppl) {
-                    $q->where('project_periode_list_id', $ppl->id);
-                    // Note: Kita tidak filter is_closed di query utama monitoring
-                    // agar data historis tetap bisa ditarik jika perlu,
-                    // TAPI kita filter ketat saat perhitungan di bawah.
-                })
-                ->where('tahun', $currentYear)
-                ->orderBy('id', 'desc')
-                ->get();
-
-            $monitoringSummary = [];
-            $monitoringActionCount = 0;
-            $isMonUrgent = false;
-            $currentMonth = (int) date('n'); // Bulan saat ini (1-12)
-
-            // Hitung Total Risiko Aktif (Induk)
-            // Pastikan ini HANYA menghitung yang is_closed = 0
-            $activeRisksCollection = ProjectRisk::where('project_periode_list_id', $ppl->id)
-                ->where('is_closed', 0)
-                ->get();
-            $totalActiveRisks = $activeRisksCollection->count();
-
-            // Mapping Target Verifikator
-            $targetMonStatus = 0;
-            if ($levelId == 7) $targetMonStatus = 2;
-            else if ($levelId == 1 && !$is_mr) $targetMonStatus = 3;
-            else if ($levelId == 1 && $is_mr) $targetMonStatus = 4;
-            else if ($levelId == 2 && $is_mr) $targetMonStatus = 5;
-
-            $quarterMap = [1 => [1, 2, 3], 2 => [4, 5, 6], 3 => [7, 8, 9], 4 => [10, 11, 12]];
-
-            foreach ($quarterMap as $q => $months) {
-                $monthData = [];
-                foreach ($months as $m) {
-                    // --- STEP 1: PREPARE DATA BERSIH ---
-                    $rawMons = $allMonitorings->where('month', $m);
-
-                    // Filter Monitoring:
-                    // 1. Ambil unik berdasarkan risiko_id (handle duplikat)
-                    // 2. HANYA ambil monitoring yang risiko induknya AKTIF (is_closed = 0)
-                    $monsInMonth = $rawMons->unique('risiko_id')
-                        ->filter(function($mon) {
-                            return $mon->projectRisk && $mon->projectRisk->is_closed == 0;
+            $projects = ProjectPeriodeList::with(['project', 'periode'])
+                ->where(function ($q) use ($user) {
+                    if (!Gate::check('project_admin_access')) {
+                        $q->whereHas('project', function($p) use ($user) {
+                            if ($user->unit) {
+                                // Filter proyek berdasarkan cost center parent unit user
+                                $p->where('cost_center_parent', $user->unit->cost_center);
+                            }
                         });
-
-                    $statusM = 'empty';
-                    $countPendingM = 0;
-                    $monthName = date('M', mktime(0, 0, 0, $m, 10));
-                    $isFutureMonth = ($m > $currentMonth);
-
-                    if ($levelId == 6) {
-                        // --- LOGIC INPUTTER ---
-
-                        // Count Created HANYA dari monitoring yang valid (Active Risk)
-                        $countCreated = $monsInMonth->count();
-
-                        $revisiCount = $monsInMonth->where('status', 1)->where('is_revision', true)->count();
-                        $draftCount = $monsInMonth->where('status', 1)->where('is_revision', false)->count();
-
-                        // Perhitungan Unstarted yang PASTI AKURAT
-                        // (Total Risiko Aktif) - (Monitoring Risiko Aktif yg sudah dibuat)
-                        $unstartedCount = ($totalActiveRisks > 0) ? ($totalActiveRisks - $countCreated) : 0;
-                        if ($unstartedCount < 0) $unstartedCount = 0;
-
-                        if ($revisiCount > 0) {
-                            $statusM = 'revision';
-                            $countPendingM = $revisiCount;
-                            $isMonUrgent = true;
-                        }
-                        elseif (($draftCount + $unstartedCount) > 0) {
-                            $statusM = 'draft';
-
-                            if ($isFutureMonth) {
-                                // Masa Depan: Info (Biru) atau Empty
-                                if ($draftCount > 0) {
-                                    $statusM = 'process';
-                                    $countPendingM = 0;
-                                } else {
-                                    $statusM = 'empty';
-                                    $countPendingM = 0;
-                                }
-                            } else {
-                                // Bulan Ini/Lalu: Hitung "Hutang" Inputan
-                                $countPendingM = $draftCount + $unstartedCount;
-                            }
-                        }
-                        elseif ($countCreated > 0 && $countCreated >= $totalActiveRisks) {
-                            $statusM = 'process';
-                        }
-
-                    } else {
-                        // --- LOGIC VERIFIKATOR ---
-                        if ($targetMonStatus > 0) {
-                            // Hitung dari $monsInMonth yang sudah bersih dari risiko closed
-                            $pendingVerify = $monsInMonth->where('status', $targetMonStatus)
-                                ->where('is_approved', false)
-                                ->count();
-
-                            $returnedCount = $monsInMonth->where('status', $targetMonStatus)
-                                ->where('is_revision', true)
-                                ->count();
-
-                            if ($returnedCount > 0) {
-                                $statusM = 'revision';
-                                $countPendingM = $returnedCount;
-                                $isMonUrgent = true;
-                            } elseif ($pendingVerify > 0) {
-                                $statusM = 'pending';
-                                $countPendingM = $pendingVerify;
-                            } elseif ($monsInMonth->count() > 0) {
-                                $statusM = 'process';
-                            }
-                        }
                     }
+                })
+                ->when($search, function($query) use ($search) {
+                    return $query->whereHas('project', function($p) use ($search) {
+                        $p->where('project_name', 'LIKE', '%' . $search . '%')
+                          ->orWhere('project_code', 'LIKE', '%' . $search . '%');
+                    });
+                })
+                ->get();
 
-                    // Tampilkan slot
-                    $showItem = $monsInMonth->count() > 0;
-                    if ($levelId == 6 && !$isFutureMonth && $totalActiveRisks > 0) {
-                        $showItem = true;
-                    }
-
-                    if ($showItem && $statusM !== 'empty') {
-                        $monthData[] = [
-                            'month_num' => $m,
-                            'month_name' => $monthName,
-                            'status' => $statusM,
-                            'count' => $countPendingM > 0 ? $countPendingM : $monsInMonth->count(),
-                            'link' => route('projects.monitorings.index', ['project' => $ppl->id, 'quarter' => $q, 'month' => $m, 'tahun' => $currentYear])
-                        ];
-                        $monitoringActionCount += $countPendingM;
-                    }
-                }
-                $monitoringSummary[$q] = $monthData;
+            foreach ($projects as $ppl) {
+                $taskList[] = $this->processProjectTask($ppl, $user, $levelId, $is_mr, $currentYear, $projectFlow, $stats, $pendingItems);
             }
-
-            // --- STATUS CATEGORY ---
-            $totalAction = $riskActionCount + $monitoringActionCount;
-            $statusCategory = 'safe';
-            if ($isRiskUrgent || $isMonUrgent) $statusCategory = 'urgent';
-            elseif ($totalAction > 0) $statusCategory = 'pending';
-
-            $stats['project']['total']++;
-
-            if ($isFinished) {
-                $stats['project']['approved']++;
-            } elseif ($riskActionCount > 0 || $monitoringActionCount > 0) {
-                $stats['project']['pending']++;
-            }
-
-            // 2. Statistik Divisi (Mengelompokkan berdasarkan Unit Name)
-            $unitName = $ppl->project->divisi->name ?? 'Unassigned';
-            if (!isset($stats['units'][$unitName])) {
-                $stats['units'][$unitName] = ['has_pending' => false, 'is_fully_approved' => true];
-            }
-
-            // Jika ada action di project ini, maka Unit ini dianggap memiliki pending
-            if ($riskActionCount > 0 || $monitoringActionCount > 0) {
-                $stats['units'][$unitName]['has_pending'] = true;
-                $stats['units'][$unitName]['is_fully_approved'] = false;
-            } elseif (!$isFinished) {
-                // Jika belum finish tapi tidak pending (misal: menunggu orang lain), maka belum approved fully
-                $stats['units'][$unitName]['is_fully_approved'] = false;
-            }
-
-            // 3. Populate Data untuk Modal (List Menunggu Persetujuan)
-            // A. Cek Risk Register
-            if ($riskActionCount > 0) {
-                $pendingItems[] = [
-                    'type' => 'Risk Register',
-                    'project_name' => $ppl->project->project_name,
-                    'unit_name' => $unitName,
-                    'description' => $riskActionLabel, // Contoh: "Perlu Verifikasi"
-                    'link' => $riskLink,
-                    'count' => $riskActionCount . ' Risiko'
-                ];
-            }
-
-            // B. Cek Monitoring
-            if ($monitoringActionCount > 0) {
-                // Kita ambil detail bulan apa saja yang pending dari data $monitoringSummary yang sudah dibuat sebelumnya
-                foreach ($monitoringSummary as $q => $months) {
-                    foreach ($months as $mon) {
-                        // Cek status yang memerlukan aksi user (Pending/Revisi/Draft)
-                        if (in_array($mon['status'], ['pending', 'revision', 'draft'])) {
-                            $pendingItems[] = [
-                                'type' => 'Monitoring Q' . $q,
-                                'project_name' => $ppl->project->project_name,
-                                'unit_name' => $unitName,
-                                'description' => $mon['month_name'] . ': ' . ucfirst($mon['status']),
-                                'link' => $mon['link'],
-                                'count' => $mon['count'] . ' Item'
-                            ];
-                        }
-                    }
-                }
-            }
-
-            $taskList[] = [
-                'id' => $ppl->id,
-                'project_name' => $ppl->project->project_name,
-                'unit_name' => $ppl->project->divisi->name ?? '-',
-                'steps' => $stepsVisual,
-                'current_step_index' => $currentUiStep,
-                'is_revision' => $isRevision,
-                'is_finished' => $isFinished,
-                'risk_stats' => $riskStats,
-                'risk_action' => ['count' => $riskActionCount, 'label' => $riskActionLabel, 'link' => $riskLink],
-                'monitoring_summary' => $monitoringSummary,
-                'monitoring_action_count' => $monitoringActionCount,
-                'total_action' => $totalAction,
-                'status_category' => $statusCategory
-            ];
         }
 
+        // ============================================================
+        // 2. LOGIC DIVISI (Jika scope all atau divisi)
+        // ============================================================
+        if (($scope == 'all' || $scope == 'divisi') && $activePeriodeId) {
+            
+            // Query Unit berdasarkan permission
+            $units = Unit::where('unit_type_id', 1)
+                ->when(!Gate::check('view_all_division'), function($q) use ($user) {
+                    // Jika user biasa, hanya unit sendiri
+                    $q->where('id', $user->unit_id);
+                })
+                ->when($search, function($q) use ($search) {
+                    $q->where('name', 'LIKE', '%' . $search . '%');
+                })
+                ->get();
+
+            foreach ($units as $unit) {
+                // Tentukan Flow Approval Divisi (Beda antara Unit MR dan Unit Biasa)
+                if ($unit->unit_mr) {
+                    // Flow Khusus Unit MR (2 Step)
+                    $divisiFlow = [
+                        1 => ['label' => 'Drafting',   'role' => 'Risk Officer MR'],
+                        2 => ['label' => 'Finalisasi', 'role' => 'Risk Owner MR']
+                    ];
+                } else {
+                    // Flow Standard (4 Step)
+                    $divisiFlow = [
+                        1 => ['label' => 'Drafting',   'role' => 'Risk Officer Divisi'],
+                        2 => ['label' => 'Review',     'role' => 'Risk Owner Divisi'],
+                        3 => ['label' => 'Verifikasi', 'role' => 'Risk Officer MR'],
+                        4 => ['label' => 'Validasi',   'role' => 'Risk Owner MR']
+                    ];
+                }
+
+                $taskList[] = $this->processUnitTask($unit, $activePeriodeId, $user, $levelId, $is_mr, $divisiFlow, $stats, $pendingItems);
+            }
+        }
+
+        // Sorting Global: Urgent > Pending > Safe
+        usort($taskList, function ($a, $b) {
+            $priority = ['urgent' => 3, 'pending' => 2, 'safe' => 1];
+            return $priority[$b['status_category']] <=> $priority[$a['status_category']];
+        });
+
+        // Hitung Summary Statistik Divisi
         $divisiStats = ['total' => count($stats['units']), 'pending' => 0, 'approved' => 0];
         foreach ($stats['units'] as $u) {
             if ($u['has_pending']) $divisiStats['pending']++;
             if ($u['is_fully_approved']) $divisiStats['approved']++;
         }
 
-        // Sorting
-        usort($taskList, function ($a, $b) {
-            $priority = ['urgent' => 3, 'pending' => 2, 'safe' => 1];
-            return $priority[$b['status_category']] <=> $priority[$a['status_category']];
-        });
-
         return view('tasks.index', compact('taskList', 'stats', 'divisiStats', 'pendingItems'));
+    }
+
+    /**
+     * Helper: Proses Logic Task untuk PROJECT
+     */
+    private function processProjectTask($ppl, $user, $levelId, $is_mr, $currentYear, $approvalFlow, &$stats, &$pendingItems) 
+    {
+        $projectId = $ppl->project_id;
+        
+        // 1. Data Batch (Type 2 = Project)
+        $dataBatch = DataBatch::where('project_id', $projectId)->where('type', 2)->orderBy('batch', 'desc')->first();
+        $batchStatus = $dataBatch ? $dataBatch->status : DataBatch::STATUS_PROSES;
+        $batchStep = $dataBatch ? $dataBatch->step_verification : 0;
+        
+        $isFinished = ($batchStatus == DataBatch::STATUS_FINISH);
+        $isRevision = in_array($batchStatus, [DataBatch::STATUS_REVISI, DataBatch::STATUS_REJECTED_FROM_OFFICER_MR]);
+
+        // 2. Visual Stepper
+        $currentUiStep = 1;
+        if ($isFinished) $currentUiStep = 6; // Selesai
+        elseif ($dataBatch) $currentUiStep = ($batchStep == 0) ? 1 : $batchStep + 1;
+
+        $stepsVisual = [];
+        foreach ($approvalFlow as $key => $info) {
+            $statusColor = 'pending';
+            if ($key < $currentUiStep) $statusColor = 'completed';
+            elseif ($key == $currentUiStep) $statusColor = $isRevision ? 'rejected' : 'current';
+            $stepsVisual[] = ['label' => $info['label'], 'role' => $info['role'], 'status'=> $statusColor];
+        }
+
+        // 3. Risk Register Stats
+        $risks = ProjectRisk::where('project_periode_list_id', $ppl->id)->get();
+        // $totalActiveRisks = $risks->where('is_closed', 0)->count(); // Opsi: hanya hitung yg aktif
+        $totalActiveRisks = $risks->count(); // Hitung semua agar konsisten
+
+        $riskStats = [
+            'total' => $totalActiveRisks,
+            'draft' => $risks->where('status', 1)->count(),
+            'pending' => $risks->whereIn('status', [2, 3])->count(),
+            'revision' => $risks->where('status', 5)->count(),
+            'published' => $risks->where('status', 6)->count(),
+            'rejected_mr' => $risks->whereIn('status', [7, 8])->count(),
+        ];
+
+        // 4. Action Logic (Menentukan apakah user perlu bertindak)
+        $riskActionCount = 0;
+        $riskActionLabel = '';
+        $riskLink = route('projects.risks.index', ['project' => $ppl->id]);
+        $isRiskUrgent = false;
+
+        // Tentukan Step Verifikasi User (u_step)
+        $u_step = 0;
+        if ($levelId == 7) $u_step = 1; // RO Project
+        else if ($levelId == 1) $u_step = $is_mr ? 3 : 2; // Officer MR / Officer Divisi
+        else if ($levelId == 2 && $is_mr) $u_step = 4; // Owner MR
+
+        if ($levelId == 6) { 
+            // Inputter (Risk Officer Project)
+            if ($batchStatus == DataBatch::STATUS_REVISI) {
+                $riskActionCount = $risks->where('status', 5)->count();
+                $riskActionLabel = 'Perlu Revisi';
+                $isRiskUrgent = true;
+                if ($riskActionCount == 0) { 
+                    $riskActionCount = 1; $riskActionLabel = 'Siap Kirim Perbaikan'; $isRiskUrgent = false; 
+                }
+            } elseif ($batchStatus == DataBatch::STATUS_PROSES || !$dataBatch) {
+                $riskActionCount = $risks->where('status', 1)->count();
+                $riskActionLabel = 'Draft Belum Dikirim';
+            }
+        } else {
+            // Verifikator
+            $isMyTurn = ($u_step == $batchStep) || ($u_step == 2 && $batchStatus == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR);
+            if ($isMyTurn && !$isFinished) {
+                $riskActionCount = $risks->where('step_verification', $u_step)->whereIn('status', [2, 3, 7, 8])->count();
+                if($riskActionCount > 0) {
+                    $riskActionLabel = ($batchStatus == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR) ? 'Dikembalikan MR' : 'Perlu Verifikasi';
+                    if ($batchStatus == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR) $isRiskUrgent = true;
+                }
+            }
+        }
+
+        // 5. Monitoring Stats
+        $allMonitorings = ProjectRiskMonitoring::with('projectRisk')
+            ->whereHas('projectRisk', function($q) use ($ppl) { $q->where('project_periode_list_id', $ppl->id); })
+            ->where('tahun', $currentYear)->orderBy('id', 'desc')->get();
+        
+        $monitoringSummary = [];
+        $monitoringActionCount = 0;
+        $isMonUrgent = false;
+        
+        $quarterMap = [1 => [1, 2, 3], 2 => [4, 5, 6], 3 => [7, 8, 9], 4 => [10, 11, 12]];
+
+        foreach ($quarterMap as $q => $months) {
+            $monthData = [];
+            foreach ($months as $m) {
+                // Filter monitoring di bulan ini
+                $rawMons = $allMonitorings->where('month', $m);
+                $monsInMonth = $rawMons->unique('risiko_id')
+                    ->filter(fn($mon) => $mon->projectRisk && $mon->projectRisk->is_closed == 0);
+
+                $statusM = 'empty';
+                $countPendingM = 0;
+                $monthName = date('M', mktime(0, 0, 0, $m, 10));
+                $isFutureMonth = ($m > date('n'));
+
+                // Logic Monitoring Action
+                if ($levelId == 6) { // Inputter
+                    $countCreated = $monsInMonth->count();
+                    $revisiCount = $monsInMonth->where('status', 1)->where('is_revision', true)->count();
+                    $draftCount = $monsInMonth->where('status', 1)->where('is_revision', false)->count();
+                    
+                    // Hitung total risiko aktif yang belum dibuat monitoringnya
+                    $activeRiskCount = ProjectRisk::where('project_periode_list_id', $ppl->id)->where('is_closed', 0)->count();
+                    $unstartedCount = max(0, $activeRiskCount - $countCreated);
+
+                    if ($revisiCount > 0) {
+                        $statusM = 'revision'; $countPendingM = $revisiCount; $isMonUrgent = true;
+                    } elseif (($draftCount + $unstartedCount) > 0 && !$isFutureMonth) {
+                        $statusM = 'draft'; $countPendingM = $draftCount + $unstartedCount;
+                    } elseif ($countCreated > 0) {
+                        $statusM = 'process';
+                    }
+                } else { // Verifikator
+                    // Target Status Monitoring
+                    $targetMonStatus = 0;
+                    if ($levelId == 7) $targetMonStatus = 2; // RO Proj
+                    else if ($levelId == 1 && !$is_mr) $targetMonStatus = 3; // Off Div
+                    else if ($levelId == 1 && $is_mr) $targetMonStatus = 4; // Off MR
+                    else if ($levelId == 2 && $is_mr) $targetMonStatus = 5; // Own MR
+
+                    if ($targetMonStatus > 0) {
+                        $pendingVerify = $monsInMonth->where('status', $targetMonStatus)->where('is_approved', false)->count();
+                        if ($pendingVerify > 0) {
+                            $statusM = 'pending'; $countPendingM = $pendingVerify;
+                        } elseif ($monsInMonth->count() > 0) {
+                            $statusM = 'process';
+                        }
+                    }
+                }
+
+                if (($monsInMonth->count() > 0 || ($levelId == 6 && !$isFutureMonth && $totalActiveRisks > 0)) && $statusM !== 'empty') {
+                    $monthData[] = [
+                        'month_num' => $m, 'month_name' => $monthName,
+                        'status' => $statusM, 'count' => $countPendingM ?: $monsInMonth->count(),
+                        'link' => route('projects.monitorings.index', ['project' => $ppl->id, 'quarter' => $q, 'tahun' => $currentYear, 'month' => $m])
+                    ];
+                    $monitoringActionCount += $countPendingM;
+                }
+            }
+            $monitoringSummary[$q] = $monthData;
+        }
+
+        // Stats Accumulation
+        $totalAction = $riskActionCount + $monitoringActionCount;
+        $statusCategory = ($isRiskUrgent || $isMonUrgent) ? 'urgent' : ($totalAction > 0 ? 'pending' : 'safe');
+
+        $stats['project']['total']++;
+        if ($isFinished) $stats['project']['approved']++;
+        elseif ($totalAction > 0) $stats['project']['pending']++;
+
+        if ($riskActionCount > 0) {
+            $pendingItems[] = ['type' => 'Risk Register', 'project_name' => $ppl->project->project_name, 'unit_name' => $ppl->project->divisi->name ?? '-', 'description' => $riskActionLabel, 'link' => $riskLink, 'count' => $riskActionCount . ' Risiko'];
+        }
+        if ($monitoringActionCount > 0) {
+            foreach ($monitoringSummary as $q => $months) {
+                foreach ($months as $mon) {
+                    if (in_array($mon['status'], ['pending', 'revision', 'draft'])) {
+                        $pendingItems[] = ['type' => 'Monitoring Q' . $q, 'project_name' => $ppl->project->project_name, 'unit_name' => $ppl->project->divisi->name ?? '-', 'description' => $mon['month_name'] . ': ' . ucfirst($mon['status']), 'link' => $mon['link'], 'count' => $mon['count'] . ' Item'];
+                    }
+                }
+            }
+        }
+        
+        return [
+            'id' => 'proj_' . $ppl->id,
+            'type' => 'project',
+            'project_name' => $ppl->project->project_name,
+            'unit_name' => $ppl->project->divisi->name ?? '-',
+            'steps' => $stepsVisual,
+            'current_step_index' => $currentUiStep,
+            'is_revision' => $isRevision,
+            'is_finished' => $isFinished,
+            'risk_stats' => $riskStats,
+            'risk_action' => ['count' => $riskActionCount, 'label' => $riskActionLabel, 'link' => $riskLink],
+            'monitoring_summary' => $monitoringSummary,
+            'monitoring_action_count' => $monitoringActionCount,
+            'total_action' => $totalAction,
+            'status_category' => $statusCategory
+        ];
+    }
+
+    /**
+     * Helper: Proses Logic Task untuk DIVISI/UNIT
+     */
+    private function processUnitTask($unit, $activePeriodeId, $user, $levelId, $is_mr, $divisiFlow, &$stats, &$pendingItems)
+    {
+        // 1. Data Batch (Type 1 = Unit)
+        $dataBatch = DataBatch::where('unit_id', $unit->id)
+            ->where('periode_id', $activePeriodeId)
+            ->where('type', 1)
+            ->orderBy('batch', 'desc')
+            ->first();
+
+        $batchStatus = $dataBatch ? $dataBatch->status : DataBatch::STATUS_PROSES;
+        $batchStep = $dataBatch ? $dataBatch->step_verification : 0;
+        $isFinished = ($batchStatus == DataBatch::STATUS_FINISH);
+        $isRevision = in_array($batchStatus, [DataBatch::STATUS_REVISI, DataBatch::STATUS_REJECTED_FROM_OFFICER_MR]);
+
+        // 2. Visual Stepper
+        // Karena jumlah step dinamis (2 atau 4), kita hitung max step
+        $maxStep = count($divisiFlow); 
+        $currentUiStep = 1;
+
+        if ($isFinished) {
+            $currentUiStep = $maxStep + 1; // Selesai
+        } elseif ($dataBatch) {
+            // Mapping Logic:
+            // Jika flow normal: step_verification DB 0 = UI Step 1 (Drafting)
+            // Jika flow MR: step_verification mungkin berbeda, kita asumsikan incremental
+            $currentUiStep = ($batchStep == 0) ? 1 : ($batchStep > $maxStep ? $maxStep : $batchStep + 1);
+        }
+
+        $stepsVisual = [];
+        foreach ($divisiFlow as $key => $info) {
+            $statusColor = 'pending';
+            if ($isFinished || $key < $currentUiStep) $statusColor = 'completed';
+            elseif ($key == $currentUiStep) $statusColor = $isRevision ? 'rejected' : 'current';
+            $stepsVisual[] = ['label' => $info['label'], 'role' => $info['role'], 'status' => $statusColor];
+        }
+
+        // 3. Risk Register Stats
+        $risks = IdentifikasiRisiko::where('unit_id', $unit->id)
+            ->where('periode_id', $activePeriodeId)
+            ->get();
+        
+        // $totalActiveRisks = $risks->where('is_closed', 0)->count();
+        $totalActiveRisks = $risks->count();
+
+        $riskStats = [
+            'total' => $totalActiveRisks,
+            'draft' => $risks->where('status', 1)->count(), // Input
+            'pending' => $risks->whereIn('status', [2, 3])->count(), // Dikirim / Tunggu
+            'revision' => $risks->where('status', 5)->count(), // Rejected
+            'published' => $risks->where('status', 6)->count(), // Published
+            'rejected_mr' => 0 // Unit biasanya pakai status 5 utk semua reject
+        ];
+
+        // 4. Action Logic
+        $riskActionCount = 0;
+        $riskActionLabel = '';
+        $riskLink = route('risk-register-unit.index', ['unit_id' => $unit->id, 'pid' => $activePeriodeId]);
+        $isRiskUrgent = false;
+
+        // Tentukan Step Verifikasi User (u_step) khusus Divisi
+        // Lihat method getUserVerificationStep di RiskRegisterUnitController untuk referensi
+        $u_step = 0;
+        if ($unit->unit_mr) {
+            // Unit MR Flow (2 Steps)
+            if ($levelId == 1 && $is_mr) $u_step = 0; // Input (Officer MR) - Di DB step 0
+            elseif ($levelId == 2 && $is_mr) $u_step = 2; // Final (Owner MR) - Di DB step 2, tapi step kirim awal di-set 3. 
+            // Note: Pada Unit MR, inputter langsung kirim ke step 3 (berdasarkan logic controller unit).
+            // Jadi $u_step 2 tidak pernah terjadi di Unit MR flow controller Anda yg sebelumnya.
+            // Di controller sebelumnya: Officer MR input -> Kirim (set step 3) -> Owner MR verify (step 3).
+            // Jadi untuk MR: Inputter = 0, Verifikator = 3.
+            if ($levelId == 2 && $is_mr) $u_step = 3; 
+        } else {
+            // Standard Flow (4 Steps)
+            if ($levelId == 1 && !$is_mr) $u_step = 0; // Input (Officer Divisi)
+            elseif ($levelId == 2 && !$is_mr) $u_step = 1; // Owner Divisi
+            elseif ($levelId == 1 && $is_mr) $u_step = 2; // Officer MR
+            elseif ($levelId == 2 && $is_mr) $u_step = 3; // Owner MR
+        }
+
+        // Cek Action berdasarkan Role
+        if ($u_step == 0) {
+            // Inputter (Officer)
+            if ($batchStatus == DataBatch::STATUS_REVISI) {
+                $riskActionCount = $risks->where('status_progress', IdentifikasiRisiko::PROGRESS_ON_REVISION_DELETED)->count();
+                if ($riskActionCount > 0) {
+                    $riskActionLabel = 'Perlu Revisi';
+                    $isRiskUrgent = true;
+                }
+            } elseif ($batchStatus == DataBatch::STATUS_PROSES) {
+                $riskActionCount = $risks->where('status', 1)->count();
+                if ($riskActionCount > 0) $riskActionLabel = 'Draft Belum Dikirim';
+            }
+        } else {
+            // Verifikator
+            // Cek apakah step di batch == step user
+            if ($dataBatch && $dataBatch->step_verification == $u_step && !$isFinished && !$isRevision) {
+                $riskActionCount = $risks->where('step_verification', $u_step)
+                    ->whereIn('status', [IdentifikasiRisiko::STATUS_DIKIRIM, IdentifikasiRisiko::STATUS_TUNGGU_VERIFIKASI])
+                    ->count();
+                
+                if ($riskActionCount > 0) {
+                    $riskActionLabel = 'Perlu Verifikasi';
+                }
+            }
+        }
+
+        // 5. Monitoring Stats (Divisi)
+        // UnitRiskMonitoring tidak punya kolom tahun, ambil via periode_id
+        $allMonitorings = UnitRiskMonitoring::with('identifikasiRisiko')
+            ->whereHas('identifikasiRisiko', function($q) use ($unit, $activePeriodeId) {
+                $q->where('unit_id', $unit->id)->where('periode_id', $activePeriodeId);
+            })
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $monitoringSummary = [];
+        $monitoringActionCount = 0;
+        $isMonUrgent = false;
+        
+        $quarterMap = [1 => [1, 2, 3], 2 => [4, 5, 6], 3 => [7, 8, 9], 4 => [10, 11, 12]];
+
+        foreach ($quarterMap as $q => $months) {
+            $monthData = [];
+            foreach ($months as $m) {
+                $rawMons = $allMonitorings->where('month', $m);
+                $monsInMonth = $rawMons->unique('identifikasi_risiko_id')
+                    ->filter(fn($mon) => $mon->identifikasiRisiko && $mon->identifikasiRisiko->is_closed == 0);
+
+                $statusM = 'empty';
+                $countPendingM = 0;
+                $monthName = date('M', mktime(0, 0, 0, $m, 10));
+                $isFutureMonth = ($m > date('n'));
+
+                // Logic Monitoring Action (Simplifikasi)
+                if ($u_step == 0) { // Inputter
+                    $countCreated = $monsInMonth->count();
+                    $revisiCount = $monsInMonth->where('is_revision', true)->count();
+                    $activeRisksCount = IdentifikasiRisiko::where('unit_id', $unit->id)->where('periode_id', $activePeriodeId)->where('is_closed', 0)->count();
+                    $unstarted = max(0, $activeRisksCount - $countCreated);
+
+                    if ($revisiCount > 0) {
+                        $statusM = 'revision'; $countPendingM = $revisiCount; $isMonUrgent = true;
+                    } elseif ($unstarted > 0 && !$isFutureMonth) {
+                        $statusM = 'draft'; $countPendingM = $unstarted;
+                    } elseif ($countCreated > 0) {
+                        $statusM = 'process';
+                    }
+                } else { // Verifikator
+                    // Mapping target status monitoring berdasarkan u_step
+                    $targetStatus = 0;
+                    if ($unit->unit_mr) {
+                        // MR Unit Flow: Off MR Input -> Owner MR Verify (Status 4)
+                        if ($u_step == 3) $targetStatus = 4; 
+                    } else {
+                        // Std Unit Flow: 2=OwnerDiv, 3=OffMR, 4=OwnMR
+                        if ($u_step == 1) $targetStatus = 2; // Owner Div
+                        if ($u_step == 2) $targetStatus = 3; // Off MR
+                        if ($u_step == 3) $targetStatus = 4; // Own MR
+                    }
+
+                    if ($targetStatus > 0) {
+                        $pendingVerify = $monsInMonth->where('status', $targetStatus)->where('is_approved', false)->count();
+                        if ($pendingVerify > 0) {
+                            $statusM = 'pending'; $countPendingM = $pendingVerify;
+                        } elseif ($monsInMonth->count() > 0) {
+                            $statusM = 'process';
+                        }
+                    }
+                }
+
+                if (($monsInMonth->count() > 0 || ($u_step == 0 && !$isFutureMonth && $totalActiveRisks > 0)) && $statusM !== 'empty') {
+                    $monthData[] = [
+                        'month_num' => $m, 'month_name' => $monthName,
+                        'status' => $statusM, 'count' => $countPendingM ?: $monsInMonth->count(),
+                        'link' => route('risk-register-unit.monitorings.index', ['unit_id' => $unit->id, 'period' => $activePeriodeId, 'quarter' => $q, 'month' => $m])
+                    ];
+                    $monitoringActionCount += $countPendingM;
+                }
+            }
+            $monitoringSummary[$q] = $monthData;
+        }
+
+        // Summary Stats
+        $totalAction = $riskActionCount + $monitoringActionCount;
+        $statusCategory = ($isRiskUrgent || $isMonUrgent) ? 'urgent' : ($totalAction > 0 ? 'pending' : 'safe');
+
+        // Populate Stats Array for View
+        if (!isset($stats['units'][$unit->name])) {
+            $stats['units'][$unit->name] = ['has_pending' => false, 'is_fully_approved' => true];
+        }
+        if ($totalAction > 0) {
+            $stats['units'][$unit->name]['has_pending'] = true;
+            $stats['units'][$unit->name]['is_fully_approved'] = false;
+        } elseif (!$isFinished) {
+            $stats['units'][$unit->name]['is_fully_approved'] = false;
+        }
+
+        // Add to Pending Items Modal
+        if ($riskActionCount > 0) {
+            $pendingItems[] = [
+                'type' => 'Risk Register Divisi',
+                'project_name' => $unit->name,
+                'unit_name' => 'Divisi',
+                'description' => $riskActionLabel,
+                'link' => $riskLink,
+                'count' => $riskActionCount . ' Risiko'
+            ];
+        }
+        if ($monitoringActionCount > 0) {
+            foreach ($monitoringSummary as $q => $months) {
+                foreach ($months as $mon) {
+                    if (in_array($mon['status'], ['pending', 'revision', 'draft'])) {
+                        $pendingItems[] = [
+                            'type' => 'Monitoring Divisi Q' . $q,
+                            'project_name' => $unit->name,
+                            'unit_name' => 'Divisi',
+                            'description' => $mon['month_name'] . ': ' . ucfirst($mon['status']),
+                            'link' => $mon['link'],
+                            'count' => $mon['count'] . ' Item'
+                        ];
+                    }
+                }
+            }
+        }
+
+        return [
+            'id' => 'unit_' . $unit->id,
+            'type' => 'unit',
+            'project_name' => $unit->name,
+            'unit_name' => 'Divisi',
+            'steps' => $stepsVisual,
+            'current_step_index' => $currentUiStep,
+            'is_revision' => $isRevision,
+            'is_finished' => $isFinished,
+            'risk_stats' => $riskStats,
+            'risk_action' => ['count' => $riskActionCount, 'label' => $riskActionLabel, 'link' => $riskLink],
+            'monitoring_summary' => $monitoringSummary,
+            'monitoring_action_count' => $monitoringActionCount,
+            'total_action' => $totalAction,
+            'status_category' => $statusCategory
+        ];
     }
 
     public function getCount()

@@ -4,20 +4,53 @@
 <div class="row g-5 mb-5">
   <div class="col-12">
     <div class="card btn-reveal-trigger">
-      <div class="card-header d-flex align-items-center gap-3">
-        <div class="bg-info-subtle p-2 rounded-4">
-          <div class="lead__icon">
-            <div class="svg-icon svg-icon-2x svg-icon-info">
-              @include('partials.icon-pyramid')
+      <div class="card-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-info-subtle p-2 rounded-4">
+            <div class="lead__icon">
+              <div class="svg-icon svg-icon-2x svg-icon-info">
+                @include('partials.icon-pyramid')
+              </div>
             </div>
           </div>
-        </div>
-        <div class="d-block">
-          <div class="ff-preheading">Input Data</div>
-          <h2>Risk Register Divisi</h2>
-          @if(isset($selectedPeriode))
-          <div class="ff-preheading">Periode: {{ $selectedPeriode->tahun }}</div>
-          @endif
+          <div>
+            <div class="ff-preheading">Input Data</div>
+            <h2>Risk Register Divisi</h2>
+            @if(isset($selectedPeriode))
+            <div class="ff-preheading">Periode: {{ $selectedPeriode->tahun }}</div>
+            @endif
+          </div>
+          <div class="ms-auto d-flex align-items-center gap-3">
+            <div class="col-auto">
+              @if(!$unitExpired)
+              <a href="{{ route('kamus-risiko-unit.index') }}" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Kamus Risiko">
+                <span class="bx bx-book-bookmark"></span>
+                <span class="ms-1">Kamus Risiko</span>
+              </a>
+              @endif
+            </div>
+            <div class="col-auto">
+              @php
+                  // diasumsikan di view Anda ada $selectedPeriode
+                  $pid = $selectedPeriode->id;
+              @endphp
+              @can('risk_register_create')
+                @if(
+                  !$unitExpired &&
+                  ($status == null || $status == 1 || $status == 5) &&
+                  $levelId == 1 &&
+                  ($unitId == auth()->user()->unit_id)
+                )
+                <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $pid]) }}" type="button"
+                  class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
+                  data-bs-title="Tambah Risiko">
+                  <span class="bx bx-plus"></span>
+                  <span class="ms-1">Tambah Risiko</span>
+                </a>
+                @endif
+              @endcan
+            </div>
+          </div>
         </div>
       </div>
       <div class="card-header border-bottom">
@@ -33,18 +66,52 @@
               </div>
           </div>
       </div>
-      <div class="card-body dt-header-true">
-        @if(!empty($summaryInfo))
-        <div class="alert alert-{{ $summaryInfo['type'] }} alert-dismissible fade show d-flex align-items-center mt-0 mb-3" role="alert">
-            <div class="bg-{{ $summaryInfo['type'] }} text-white rounded-circle p-0 me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
-                <i class="bx {{ $summaryInfo['icon'] }} text-white fs-4"></i>
-            </div>
-            <div class="flex-grow-1 pe-4">
-                {!! $summaryInfo['message'] !!}
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-end gap-3">
+          @if(!empty($summaryInfo))
+          <div class="alert alert-{{ $summaryInfo['type'] }} alert-dismissible fade show d-flex align-items-center mt-0 mb-3" role="alert">
+              <div class="bg-{{ $summaryInfo['type'] }} text-white rounded-circle p-0 me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                  <i class="bx {{ $summaryInfo['icon'] }} text-white fs-4"></i>
+              </div>
+              <div class="flex-grow-1 pe-4">
+                  {!! $summaryInfo['message'] !!}
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          @endif
+
+          <div class="col-auto ms-auto d-flex gap-2 align-items-center">
+              @if(isset($escalationConfig) && $escalationConfig['show'])
+                <form id="form-eskalasi-action" action="{{ $escalationConfig['route'] }}" method="POST" class="d-inline-block">
+                  @csrf
+                  @if(isset($escalationConfig['parameters']) && is_array($escalationConfig['parameters']))
+                    @foreach($escalationConfig['parameters'] as $name => $value)
+                      <input type="hidden" name="{{ $name }}" value="{{ $value }}">
+                    @endforeach
+                  @endif
+
+                  {{-- Jika Status Revisi, trigger Modal Catatan --}}
+                  @if(($escalationConfig['parameters']['send_type'] ?? '') == 'rev')
+                    <button type="button"
+                      class="btn btn-sm btn-warning btn-arrow-right"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalKirimPerbaikanRisiko"
+                      {{ ($escalationConfig['disabled'] ?? false) ? 'disabled' : '' }}>
+                      {{ $escalationConfig['label'] }}
+                    </button>
+                  @else
+                    {{-- Jika Kirim Normal / Publish --}}
+                    <button type="button"
+                      class="btn btn-sm {{ str_contains(strtolower($escalationConfig['label']), 'publish') ? 'btn-success' : 'btn-info' }} btn-arrow-right"
+                      onclick="submitEskalasiForm('form-eskalasi-action', '{{ $escalationConfig['label'] }}')"
+                      {{ ($escalationConfig['disabled'] ?? false) ? 'disabled' : '' }}>
+                      {{ $escalationConfig['label'] }}
+                    </button>
+                  @endif
+                </form>
+              @endif
+          </div>
         </div>
-        @endif
 
         @if(isset($batchNotes) && $batchNotes)
         <div class="alert alert-warning mb-3">
@@ -70,37 +137,6 @@
             </div>
             @endcan
 
-            <div class="col-auto ms-auto d-flex gap-2 align-items-center">
-                @if(isset($escalationConfig) && $escalationConfig['show'])
-                    <form id="form-eskalasi-action" action="{{ $escalationConfig['route'] }}" method="POST" class="d-inline-block">
-                        @csrf
-                        @if(isset($escalationConfig['parameters']) && is_array($escalationConfig['parameters']))
-                            @foreach($escalationConfig['parameters'] as $name => $value)
-                                <input type="hidden" name="{{ $name }}" value="{{ $value }}">
-                            @endforeach
-                        @endif
-
-                        {{-- Jika Status Revisi, trigger Modal Catatan --}}
-                        @if(($escalationConfig['parameters']['send_type'] ?? '') == 'rev')
-                            <button type="button"
-                                class="btn btn-sm btn-warning btn-arrow-right"
-                                data-bs-toggle="modal"
-                                data-bs-target="#modalKirimPerbaikanRisiko"
-                                {{ ($escalationConfig['disabled'] ?? false) ? 'disabled' : '' }}>
-                                {{ $escalationConfig['label'] }}
-                            </button>
-                        @else
-                            {{-- Jika Kirim Normal / Publish --}}
-                            <button type="button"
-                                class="btn btn-sm {{ str_contains(strtolower($escalationConfig['label']), 'publish') ? 'btn-success' : 'btn-info' }} btn-arrow-right"
-                                onclick="submitEskalasiForm('form-eskalasi-action', '{{ $escalationConfig['label'] }}')"
-                                {{ ($escalationConfig['disabled'] ?? false) ? 'disabled' : '' }}>
-                                {{ $escalationConfig['label'] }}
-                            </button>
-                        @endif
-                    </form>
-                @endif
-            </div>
             <div class="col-12 col-sm-4" style="display:none;">
               <label for="filter-risk-event" class="form-label d-none">Peristiwa Risiko</label>
               <select id="filter-risk-event" class="form-select select2">
@@ -137,37 +173,6 @@
                 <option value="Low To Moderate">Low To Moderate</option>
                 <option value="Low">Low</option>
               </select>
-            </div>
-              <div class="col-auto ms-auto d-flex gap-2 align-items-center">
-              <div class="col-auto ms-auto">
-                @if(!$unitExpired)
-                <a href="{{ route('kamus-risiko-unit.index') }}" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Kamus Risiko">
-                  <span class="bx bx-book-bookmark"></span>
-                  <span class="ms-1">Kamus Risiko</span>
-                </a>
-                @endif
-              </div>
-              <div class="col-auto ms-auto">
-              @php
-                  // diasumsikan di view Anda ada $selectedPeriode
-                  $pid = $selectedPeriode->id;
-              @endphp
-              @can('risk_register_create')
-                @if(
-                  !$unitExpired &&
-                  ($status == null || $status == 1 || $status == 5) &&
-                  $levelId == 1 &&
-                  ($unitId == auth()->user()->unit_id)
-                )
-                <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $pid]) }}" type="button"
-                  class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
-                  data-bs-title="Tambah Risiko">
-                  <span class="bx bx-plus"></span>
-                  <span class="ms-1">Tambah Risiko</span>
-                </a>
-                @endif
-              @endcan
-              </div>
             </div>
           </div>
           <table class="table dataTable" id="example" data-paging="true" data-info="true" data-filter="true">
@@ -370,7 +375,7 @@
         </div>
 
         {{-- Tampilkan data batch notes jika ada --}}
-        @if(isset($batchNotes) && $batchNotes)
+        <!-- @if(isset($batchNotes) && $batchNotes)
         <div class="alert alert-warning mb-3">
           <strong>Catatan Perbaikan:</strong> {{ $batchNotes->notes }}
         </div>
@@ -380,7 +385,7 @@
         <div class="alert alert-info mb-3">
           <strong>Informasi:</strong> Terdapat {{ $pending_risk }} risiko yang menunggu verifikasi/revisi.
         </div>
-        @endif
+        @endif -->
 
         {{-- Informasi Average Eksposure Risiko Unit --}}
         @if(isset($avgQuantitativeExposure))
@@ -389,7 +394,7 @@
         </div>
         @endif
 
-        @if(!$unitExpired)
+        <!-- @if(!$unitExpired)
         @can('risk_register_send')
         <form id="send-form" action="{{ route('risk-register-unit.send') }}" method="POST" class="d-inline-block">
           @csrf
@@ -428,7 +433,7 @@
           @endif
         </form>
         @endcan
-        @endif
+        @endif -->
       </div>
     </div>
   </div>

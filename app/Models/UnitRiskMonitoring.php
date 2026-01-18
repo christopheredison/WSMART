@@ -16,7 +16,6 @@ class UnitRiskMonitoring extends Model
         'identifikasi_risiko_id',
         'quarter',
         'month',
-        'tahun',
         'nilai_dampak',
         'skala_dampak',
         'nilai_probabilitas',
@@ -41,6 +40,11 @@ class UnitRiskMonitoring extends Model
     public function identifikasiRisiko()
     {
         return $this->belongsTo(IdentifikasiRisiko::class, 'identifikasi_risiko_id');
+    }
+
+    public function getTahunPeriodeAttribute()
+    {
+        return $this->identifikasiRisiko->periode->tahun ?? null;
     }
 
     public function perlakuanPenyebabRisikos()
