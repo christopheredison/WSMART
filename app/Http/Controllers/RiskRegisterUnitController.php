@@ -48,24 +48,21 @@ class RiskRegisterUnitController extends Controller
     public function index(Request $request)
     {
         $unitId = null;
-        // Ambil periode_id dari parameter URL
         $periodeId = $request->query('pid');
         $batchNotes = null;
-        // Jika tidak ada parameter periode, gunakan periode aktif
+
+        // 1. Setup Periode
         if (!$periodeId) {
             $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
             $periodeId = $activePeriode ? $activePeriode->id : null;
         }
-
-        // Ambil data periode yang dipilih
         $selectedPeriode = Periode::find($periodeId);
-        $user = auth()->user();
-        $unitTypeId = $user->unit_type_id;//not use
-        //$unitId = $user->unit_id;
-        $levelId = $user->level_id;
 
-        // Securely determine unitId based on permission
+        // 2. Setup User & Unit Permissions
+        $user = auth()->user();
+        $levelId = $user->level_id;
         $viewAllDivision = Gate::check('view_all_division');
+
         if ($viewAllDivision) {
             $allowedUnitIds = Unit::where('unit_type_id', 1)->pluck('id');
             $requestedUnitId = (int) $request->query('unit_id');
@@ -75,7 +72,6 @@ class RiskRegisterUnitController extends Controller
                 $unitId = $allowedUnitIds->contains($user->unit_id) ? $user->unit_id : $allowedUnitIds->first();
             }
         } else {
-            // Non-admin: honor unit_id from URL if it is allowed (own unit or related expired unit)
             $requestedUnitId = (int) $request->query('unit_id');
             $allowedUnitIds = collect([$user->unit_id]);
             $relatedIds = \App\Models\UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id');
@@ -87,18 +83,10 @@ class RiskRegisterUnitController extends Controller
             }
         }
 
-        // Cari ApprovalFlow untuk unit ini
-        // $approvalFlow = ApprovalFlow::where('unit_id', $unitId)
-        //     ->whereNull('project_id')
-        //     ->first();
-        // $min_verification = 3;
-        // if ($approvalFlow) {
-        //     $min_verification = $approvalFlow->min_verification;
-        // }
-
-        $min_verification = 3;
-        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        // 3. Setup Data Batch
         $selectedUnit = Unit::find($unitId);
+        $min_verification = 3; // Default 3 step (RO Unit -> Owner Unit -> RO MR -> Owner MR [Publish])
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
 
         $dataBatch = DataBatch::where('unit_id', $unitId)
                       ->where('periode_id', $periodeId)
@@ -120,30 +108,16 @@ class RiskRegisterUnitController extends Controller
             ]);
         }
         $status = $dataBatch->status;
-        // Query dasar untuk identifikasi risiko
+
+        // 4. Query Data Risiko
         $risikoQuery = IdentifikasiRisiko::with([
-            'unit',
-            'user',
-            'periode',
-            'kategoriRisiko',
-            'jenisRisiko',
-            'peristiwaRisiko',
-            //'tck',
-            'riskAnalysis',
+            'unit', 'user', 'periode', 'kategoriRisiko',
+            'jenisRisiko', 'peristiwaRisiko', 'riskAnalysis',
         ])->where('unit_type_id', 1);
 
-        // Filter berdasarkan periode jika ada
-        if ($periodeId) {
-            $risikoQuery->where('periode_id', $periodeId);
-        }
+        if ($periodeId) $risikoQuery->where('periode_id', $periodeId);
+        if ($unitId) $risikoQuery->where('unit_id', $unitId);
 
-        if ($unitId) {
-            $risikoQuery->where('unit_id', $unitId);
-        }
-
-        // Ambil data risiko
-        //$risiko = $risikoQuery->get();
-        // Ambil data risiko dan urutkan berdasarkan skala risiko dan eksposur risiko
         $risiko = $risikoQuery
             ->join('risk_analyses', 'identifikasi_risikos.id', '=', 'risk_analyses.risiko_id')
             ->orderBy('risk_analyses.skala_risiko', 'desc')
@@ -151,82 +125,161 @@ class RiskRegisterUnitController extends Controller
             ->select('identifikasi_risikos.*')
             ->get();
 
-        // Data untuk filter
+        // 5. Data Filter View
         $unit = Unit::where('unit_type_id', 1)->pluck('name', 'id');
-        $unitChild = Unit::where('parent_id', '!=', null)->pluck('name', 'id');
         $peristiwaRisiko = PeristiwaRisiko::pluck('title', 'id');
         $jenisRisiko = JenisRisiko::pluck('title','id');
 
-        //hitung pending risk berdasarkan level id dan flow
-        $pending_risk = 0;
-        $step_order = 0;
-
-        //get detail
+        // 6. Logic Verification Steps
         $verificationData = $this->getUserVerificationStep($levelId, $is_mr, $selectedUnit->unit_mr);
         $u_step = $verificationData['u_step'];
         $user_verification = $verificationData['user_verification'];
+        $step_order = $u_step; // Alias
 
-        $step_order = $u_step;
-
-        //if($levelId!=1 && $levelId!=null){//risk owner
+        // 7. Hitung Pending Risk & Draft
+        $pending_risk = 0;
         $draft_risk = IdentifikasiRisiko::where('unit_id', $unitId)
             ->where('periode_id', $periodeId)
             ->where(function ($query) {
-                $query->whereIn('status', [
-                      IdentifikasiRisiko::STATUS_INPUT_DATA,
-                      IdentifikasiRisiko::STATUS_REJECTED
-                  ])
+                $query->whereIn('status', [IdentifikasiRisiko::STATUS_INPUT_DATA, IdentifikasiRisiko::STATUS_REJECTED])
                   ->orWhereNull('status');
-            })
-            ->count();
+            })->count();
 
-        if($step_order>0){
-            $pending_risk = IdentifikasiRisiko::where(function($query) use ($step_order) {
-                $query->where('step_verification', '<=', $step_order)
-                    ->orWhereNull('step_verification');
-                })
-                ->where(function($query) {
-                    $query->where('status_progress', '!=', IdentifikasiRisiko::PROGRESS_ON_ACCEPTED)
-                        ->where('status_progress', '!=', IdentifikasiRisiko::PROGRESS_ON_FINAL);
-                })
-                ->where('unit_id', $unitId)
+        // Cek Batch Notes
+        if ($dataBatch) {
+            $batchNotes = DataBatchNotes::where('data_batch_id', $dataBatch->id)
+                ->where('step_order', $step_order)
+                ->where('unread', 1)
+                ->first();
+        }
+
+        // Logic hitung pending risk (yang belum diverifikasi oleh user saat ini)
+        if ($step_order > 0) {
+            // Untuk Verifikator
+            $pending_risk = IdentifikasiRisiko::where('unit_id', $unitId)
                 ->where('periode_id', $periodeId)
+                ->where('step_verification', $step_order) // Risiko ada di meja user ini
+                ->whereNotIn('status', [
+                    IdentifikasiRisiko::STATUS_TERVERIFIKASI,
+                    IdentifikasiRisiko::STATUS_PUBLISHED
+                ])
                 ->count();
-            //cek batch notes
-            $batchNotes = null;
-            if ($dataBatch) {
-                $batchNotes = DataBatchNotes::where('data_batch_id', $dataBatch->id)
-                    ->where('step_order', $step_order)
-                    ->where('unread', 1)
-                    ->first();
-            }
-        }
-        else {
-            // Untuk levelId = 1 atau levelId = null (risk owner)
-            if ($dataBatch && $dataBatch->status == DataBatch::STATUS_REVISI) { // status 5
-                // Jika status dataBatch adalah 5 (STATUS_REVISI), hitung risiko dengan status_progress = 2
-                $pending_risk = IdentifikasiRisiko::where('status_progress', IdentifikasiRisiko::PROGRESS_ON_REVISION_DELETED) // status_progress = 2
-                        ->where('unit_id', $unitId)
+        } else {
+            // Untuk Risk Owner/Inputter (Level 1 / Step 0)
+            if ($dataBatch && $dataBatch->status == DataBatch::STATUS_REVISI) {
+                $pending_risk = IdentifikasiRisiko::where('unit_id', $unitId)
                         ->where('periode_id', $periodeId)
+                        ->where('status_progress', IdentifikasiRisiko::PROGRESS_ON_REVISION_DELETED)
                         ->count();
-            } else {
-                // Jika status dataBatch bukan 5, maka pending_risk = 0
-                $pending_risk = 0;
             }
         }
 
+        // 8. Hitung Rata-rata Eksposur
         $avgQuantitativeExposure = null;
-        //if ($status == DataBatch::STATUS_RANKING) {
-            $quantitativeRisks = $risiko->filter(function($risk) {
-                return $risk->riskAnalysis && $risk->riskAnalysis->kategori_dampak === 'Kuantitatif';
+        $quantitativeRisks = $risiko->filter(function($risk) {
+            return $risk->riskAnalysis && $risk->riskAnalysis->kategori_dampak === 'Kuantitatif';
+        });
+        if ($quantitativeRisks->count() > 0) {
+            $avgQuantitativeExposure = $quantitativeRisks->avg(function($risk) {
+                return $risk->riskAnalysis->eksposur_risiko ?? 0;
             });
+        }
 
-            if ($quantitativeRisks->count() > 0) {
-                $avgQuantitativeExposure = $quantitativeRisks->avg(function($risk) {
-                    return $risk->riskAnalysis->eksposur_risiko ?? 0;
-                });
+        // 9. Logic Summary & Escalation (NEW)
+        $summaryInfo = null;
+        $escalationConfig = [
+            'show' => false,
+            'label' => 'Kirim Risiko',
+            'disabled' => true,
+            'route' => route('risk-register-unit.send'),
+            'parameters' => [
+                'unit_id' => $unitId,
+                'periode_id' => $periodeId,
+                'send_type' => 'send'
+            ]
+        ];
+
+        // Status Unit Expired
+        $today = Carbon::today();
+        $isStillValid = !$selectedUnit?->valid_to || ($selectedUnit?->valid_to && ($selectedUnit->valid_to->isSameDay($today) || $selectedUnit->valid_to->isAfter($today)));
+        $unitExpired = !$isStillValid;
+
+        if (!$unitExpired && ($unitId == auth()->user()->unit_id || $viewAllDivision)) { // Batasi hanya user unit yg bisa aksi (atau admin)
+
+            // A. TAHAP INPUT (Risk Officer Unit / Level 1 biasa / Step 0)
+            if ($step_order == 0) {
+                $escalationConfig['show'] = true;
+
+                if ($status == DataBatch::STATUS_REVISI) {
+                    // Mode Revisi
+                    $escalationConfig['label'] = 'Kirim Perbaikan';
+                    $escalationConfig['parameters']['send_type'] = 'rev'; // Revisi
+
+                    if ($pending_risk > 0) {
+                        $summaryInfo = [
+                            'type' => 'danger', 'icon' => 'bx-undo',
+                            'message' => "Terdapat <strong>{$pending_risk}</strong> risiko yang <strong>dikembalikan (revisi)</strong>. Mohon perbaiki data."
+                        ];
+                        // Enable button jika user ingin kirim sebagian? Biasanya harus fix semua.
+                        // Sesuai logic Project, enable jika revision count is handled, tp disini kita cek pending_risk revisi.
+                        // Jika masih ada yang status revisi, harus diperbaiki dulu.
+                        $escalationConfig['disabled'] = false;
+                    } else {
+                        $summaryInfo = [
+                            'type' => 'success', 'icon' => 'bx-check-double',
+                            'message' => "Seluruh perbaikan telah selesai. Silahkan klik tombol <strong>Kirim Perbaikan</strong> untuk melanjutkan."
+                        ];
+                        $escalationConfig['disabled'] = false;
+                    }
+                } elseif ($status == DataBatch::STATUS_PROSES) {
+                    // Mode Awal
+                    if ($draft_risk > 0) {
+                        $summaryInfo = [
+                            'type' => 'success', 'icon' => 'bx-check-double',
+                            'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan verifikasi."
+                        ];
+                        $escalationConfig['disabled'] = false;
+                    } else {
+                        $summaryInfo = [
+                            'type' => 'info', 'icon' => 'bx-info-circle',
+                            'message' => "Belum ada data risiko. Silahkan tambah risiko baru."
+                        ];
+                        $escalationConfig['disabled'] = true;
+                    }
+                } else {
+                    $escalationConfig['show'] = false; // Sudah dikirim
+                }
             }
-        //}
+            // B. TAHAP VERIFIKASI
+            elseif ($step_order > 0) {
+                // Cek apakah giliran user ini (Step User == Step Batch)
+                if ($step_order == $dataBatch->step_verification) {
+                    $escalationConfig['show'] = true;
+
+                    // Label Tombol
+                    if ($step_order >= $min_verification) {
+                        $escalationConfig['label'] = 'Publish Risiko';
+                        $escalationConfig['parameters']['send_type'] = 'mainrisk';
+                    } else {
+                        $escalationConfig['label'] = 'Kirim Verifikasi';
+                    }
+
+                    if ($pending_risk > 0) {
+                        $summaryInfo = [
+                            'type' => 'warning', 'icon' => 'bxs-error-circle',
+                            'message' => "Terdapat <strong>{$pending_risk}</strong> risiko menunggu verifikasi Anda (Terima/Tolak)."
+                        ];
+                        $escalationConfig['disabled'] = true; // Harus verifikasi semua item dulu
+                    } else {
+                        $summaryInfo = [
+                            'type' => 'success', 'icon' => 'bx-check-double',
+                            'message' => "Seluruh risiko telah diverifikasi. Silahkan klik tombol <strong>{$escalationConfig['label']}</strong> untuk melanjutkan."
+                        ];
+                        $escalationConfig['disabled'] = false;
+                    }
+                }
+            }
+        }
 
         $tableLegend = [
             [
@@ -289,6 +342,8 @@ class RiskRegisterUnitController extends Controller
             'unitExpired',
             'levelId',
             'draft_risk',
+            'summaryInfo',
+            'escalationConfig',
         ));
     }
 

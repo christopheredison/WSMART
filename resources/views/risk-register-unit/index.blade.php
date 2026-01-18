@@ -34,6 +34,24 @@
           </div>
       </div>
       <div class="card-body dt-header-true">
+        @if(!empty($summaryInfo))
+        <div class="alert alert-{{ $summaryInfo['type'] }} alert-dismissible fade show d-flex align-items-center mt-0 mb-3" role="alert">
+            <div class="bg-{{ $summaryInfo['type'] }} text-white rounded-circle p-0 me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                <i class="bx {{ $summaryInfo['icon'] }} text-white fs-4"></i>
+            </div>
+            <div class="flex-grow-1 pe-4">
+                {!! $summaryInfo['message'] !!}
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        @endif
+
+        @if(isset($batchNotes) && $batchNotes)
+        <div class="alert alert-warning mb-3">
+          <strong>Catatan Perbaikan:</strong> {{ $batchNotes->notes }}
+        </div>
+        @endif
+
         <div id="tableExample3">
           <div class="row g-2 mb-1">
             <div class="col-auto d-none" id="bulk-verify-container">
@@ -50,19 +68,39 @@
                 @endforeach
               </select>
             </div>
-            {{-- @else
-            <div class="col-4 col-sm-2">
-              <label for="filter-unit" class="form-label d-none">Unit</label>
-              <select id="filter-unit" class="form-select select2" disabled>
-                @php
-                // Tampilkan nama unit sesuai konteks halaman: gunakan unit_id dari URL jika diizinkan
-                $displayUnitId = isset($unitId) ? $unitId : (auth()->user()->unit_id ?? null);
-                $displayUnitName = $displayUnitId && isset($unit[$displayUnitId]) ? $unit[$displayUnitId] : 'Unit Tidak Ditemukan';
-                @endphp
-                <option value="{{ $displayUnitName }}" selected>{{ $displayUnitName }}</option>
-              </select>
-            </div> --}}
             @endcan
+
+            <div class="col-auto ms-auto d-flex gap-2 align-items-center">
+                @if(isset($escalationConfig) && $escalationConfig['show'])
+                    <form id="form-eskalasi-action" action="{{ $escalationConfig['route'] }}" method="POST" class="d-inline-block">
+                        @csrf
+                        @if(isset($escalationConfig['parameters']) && is_array($escalationConfig['parameters']))
+                            @foreach($escalationConfig['parameters'] as $name => $value)
+                                <input type="hidden" name="{{ $name }}" value="{{ $value }}">
+                            @endforeach
+                        @endif
+
+                        {{-- Jika Status Revisi, trigger Modal Catatan --}}
+                        @if(($escalationConfig['parameters']['send_type'] ?? '') == 'rev')
+                            <button type="button"
+                                class="btn btn-sm btn-warning btn-arrow-right"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalKirimPerbaikanRisiko"
+                                {{ ($escalationConfig['disabled'] ?? false) ? 'disabled' : '' }}>
+                                {{ $escalationConfig['label'] }}
+                            </button>
+                        @else
+                            {{-- Jika Kirim Normal / Publish --}}
+                            <button type="button"
+                                class="btn btn-sm {{ str_contains(strtolower($escalationConfig['label']), 'publish') ? 'btn-success' : 'btn-info' }} btn-arrow-right"
+                                onclick="submitEskalasiForm('form-eskalasi-action', '{{ $escalationConfig['label'] }}')"
+                                {{ ($escalationConfig['disabled'] ?? false) ? 'disabled' : '' }}>
+                                {{ $escalationConfig['label'] }}
+                            </button>
+                        @endif
+                    </form>
+                @endif
+            </div>
             <div class="col-12 col-sm-4" style="display:none;">
               <label for="filter-risk-event" class="form-label d-none">Peristiwa Risiko</label>
               <select id="filter-risk-event" class="form-select select2">
@@ -343,6 +381,7 @@
           <strong>Informasi:</strong> Terdapat {{ $pending_risk }} risiko yang menunggu verifikasi/revisi.
         </div>
         @endif
+
         {{-- Informasi Average Eksposure Risiko Unit --}}
         @if(isset($avgQuantitativeExposure))
         <div class="alert alert-primary mb-3">
@@ -455,6 +494,29 @@
 @endsection
 @section('scripts')
 <script>
+function submitEskalasiForm(formId, actionText) {
+    Swal.fire({
+        title: 'Konfirmasi',
+        text: 'Apakah Anda yakin ingin melakukan "' + actionText + '"?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Lanjutkan',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Tampilkan loading
+            Swal.fire({
+                title: 'Memproses...',
+                text: 'Mohon tunggu sebentar.',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            $('#' + formId).submit();
+        }
+    });
+}
+
 // Fungsi untuk menampilkan modal verifikasi dengan data risiko yang sesuai
 function showVerifikasiModal(id, peristiwaRisiko, deskripsiRisiko) {
   // Set data risiko ke dalam modal
