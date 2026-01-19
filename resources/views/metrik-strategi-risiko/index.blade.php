@@ -114,10 +114,10 @@
                    class="btn-input-icon" title="Kelola Parameter">
                   <span class="bx bx-list-check text-info"></span>
                 </a>
-                <!-- <a href="{{ route('metrik-strategi-risiko.edit', $metrik->id) }}" 
+                <a href="{{ route('metrik-strategi-risiko.edit', $metrik->id) }}" 
                    class="btn-input-icon" data-bs-toggle="tooltip" title="Edit">
                   <span class="bx bx-edit"></span>
-                </a> -->
+                </a>
                 <button type="button" class="btn-input-icon" data-bs-toggle="modal"
                   data-bs-target="#modalDelete{{ $metrik->id }}">
                   <span class="bx bx-trash text-danger" data-bs-toggle="tooltip" title="Delete"></span>
