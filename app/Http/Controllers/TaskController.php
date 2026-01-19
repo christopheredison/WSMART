@@ -29,7 +29,7 @@ class TaskController extends Controller
         $search = $request->query('q');
         $scope  = $request->query('scope', 'all'); // options: all, project, divisi
         $currentYear = date('Y');
-        
+
         // Ambil Periode Aktif untuk Data Divisi
         $activePeriode = Periode::where('status', 'active')->first();
         $activePeriodeId = $activePeriode ? $activePeriode->id : null;
@@ -84,7 +84,7 @@ class TaskController extends Controller
         // 2. LOGIC DIVISI (Jika scope all atau divisi)
         // ============================================================
         if (($scope == 'all' || $scope == 'divisi') && $activePeriodeId) {
-            
+
             // Query Unit berdasarkan permission
             $units = Unit::where('unit_type_id', 1)
                 ->when(!Gate::check('view_all_division'), function($q) use ($user) {
@@ -137,15 +137,15 @@ class TaskController extends Controller
     /**
      * Helper: Proses Logic Task untuk PROJECT
      */
-    private function processProjectTask($ppl, $user, $levelId, $is_mr, $currentYear, $approvalFlow, &$stats, &$pendingItems) 
+    private function processProjectTask($ppl, $user, $levelId, $is_mr, $currentYear, $approvalFlow, &$stats, &$pendingItems)
     {
         $projectId = $ppl->project_id;
-        
+
         // 1. Data Batch (Type 2 = Project)
         $dataBatch = DataBatch::where('project_id', $projectId)->where('type', 2)->orderBy('batch', 'desc')->first();
         $batchStatus = $dataBatch ? $dataBatch->status : DataBatch::STATUS_PROSES;
         $batchStep = $dataBatch ? $dataBatch->step_verification : 0;
-        
+
         $isFinished = ($batchStatus == DataBatch::STATUS_FINISH);
         $isRevision = in_array($batchStatus, [DataBatch::STATUS_REVISI, DataBatch::STATUS_REJECTED_FROM_OFFICER_MR]);
 
@@ -188,14 +188,14 @@ class TaskController extends Controller
         else if ($levelId == 1) $u_step = $is_mr ? 3 : 2; // Officer MR / Officer Divisi
         else if ($levelId == 2 && $is_mr) $u_step = 4; // Owner MR
 
-        if ($levelId == 6) { 
+        if ($levelId == 6) {
             // Inputter (Risk Officer Project)
             if ($batchStatus == DataBatch::STATUS_REVISI) {
                 $riskActionCount = $risks->where('status', 5)->count();
                 $riskActionLabel = 'Perlu Revisi';
                 $isRiskUrgent = true;
-                if ($riskActionCount == 0) { 
-                    $riskActionCount = 1; $riskActionLabel = 'Siap Kirim Perbaikan'; $isRiskUrgent = false; 
+                if ($riskActionCount == 0) {
+                    $riskActionCount = 1; $riskActionLabel = 'Siap Kirim Perbaikan'; $isRiskUrgent = false;
                 }
             } elseif ($batchStatus == DataBatch::STATUS_PROSES || !$dataBatch) {
                 $riskActionCount = $risks->where('status', 1)->count();
@@ -217,11 +217,11 @@ class TaskController extends Controller
         $allMonitorings = ProjectRiskMonitoring::with('projectRisk')
             ->whereHas('projectRisk', function($q) use ($ppl) { $q->where('project_periode_list_id', $ppl->id); })
             ->where('tahun', $currentYear)->orderBy('id', 'desc')->get();
-        
+
         $monitoringSummary = [];
         $monitoringActionCount = 0;
         $isMonUrgent = false;
-        
+
         $quarterMap = [1 => [1, 2, 3], 2 => [4, 5, 6], 3 => [7, 8, 9], 4 => [10, 11, 12]];
 
         foreach ($quarterMap as $q => $months) {
@@ -242,7 +242,7 @@ class TaskController extends Controller
                     $countCreated = $monsInMonth->count();
                     $revisiCount = $monsInMonth->where('status', 1)->where('is_revision', true)->count();
                     $draftCount = $monsInMonth->where('status', 1)->where('is_revision', false)->count();
-                    
+
                     // Hitung total risiko aktif yang belum dibuat monitoringnya
                     $activeRiskCount = ProjectRisk::where('project_periode_list_id', $ppl->id)->where('is_closed', 0)->count();
                     $unstartedCount = max(0, $activeRiskCount - $countCreated);
@@ -304,7 +304,7 @@ class TaskController extends Controller
                 }
             }
         }
-        
+
         return [
             'id' => 'proj_' . $ppl->id,
             'type' => 'project',
@@ -342,7 +342,7 @@ class TaskController extends Controller
 
         // 2. Visual Stepper
         // Karena jumlah step dinamis (2 atau 4), kita hitung max step
-        $maxStep = count($divisiFlow); 
+        $maxStep = count($divisiFlow);
         $currentUiStep = 1;
 
         if ($isFinished) {
@@ -366,7 +366,7 @@ class TaskController extends Controller
         $risks = IdentifikasiRisiko::where('unit_id', $unit->id)
             ->where('periode_id', $activePeriodeId)
             ->get();
-        
+
         // $totalActiveRisks = $risks->where('is_closed', 0)->count();
         $totalActiveRisks = $risks->count();
 
@@ -391,12 +391,12 @@ class TaskController extends Controller
         if ($unit->unit_mr) {
             // Unit MR Flow (2 Steps)
             if ($levelId == 1 && $is_mr) $u_step = 0; // Input (Officer MR) - Di DB step 0
-            elseif ($levelId == 2 && $is_mr) $u_step = 2; // Final (Owner MR) - Di DB step 2, tapi step kirim awal di-set 3. 
+            elseif ($levelId == 2 && $is_mr) $u_step = 2; // Final (Owner MR) - Di DB step 2, tapi step kirim awal di-set 3.
             // Note: Pada Unit MR, inputter langsung kirim ke step 3 (berdasarkan logic controller unit).
             // Jadi $u_step 2 tidak pernah terjadi di Unit MR flow controller Anda yg sebelumnya.
             // Di controller sebelumnya: Officer MR input -> Kirim (set step 3) -> Owner MR verify (step 3).
             // Jadi untuk MR: Inputter = 0, Verifikator = 3.
-            if ($levelId == 2 && $is_mr) $u_step = 3; 
+            if ($levelId == 2 && $is_mr) $u_step = 3;
         } else {
             // Standard Flow (4 Steps)
             if ($levelId == 1 && !$is_mr) $u_step = 0; // Input (Officer Divisi)
@@ -425,7 +425,7 @@ class TaskController extends Controller
                 $riskActionCount = $risks->where('step_verification', $u_step)
                     ->whereIn('status', [IdentifikasiRisiko::STATUS_DIKIRIM, IdentifikasiRisiko::STATUS_TUNGGU_VERIFIKASI])
                     ->count();
-                
+
                 if ($riskActionCount > 0) {
                     $riskActionLabel = 'Perlu Verifikasi';
                 }
@@ -444,7 +444,7 @@ class TaskController extends Controller
         $monitoringSummary = [];
         $monitoringActionCount = 0;
         $isMonUrgent = false;
-        
+
         $quarterMap = [1 => [1, 2, 3], 2 => [4, 5, 6], 3 => [7, 8, 9], 4 => [10, 11, 12]];
 
         foreach ($quarterMap as $q => $months) {
@@ -478,7 +478,7 @@ class TaskController extends Controller
                     $targetStatus = 0;
                     if ($unit->unit_mr) {
                         // MR Unit Flow: Off MR Input -> Owner MR Verify (Status 4)
-                        if ($u_step == 3) $targetStatus = 4; 
+                        if ($u_step == 3) $targetStatus = 4;
                     } else {
                         // Std Unit Flow: 2=OwnerDiv, 3=OffMR, 4=OwnMR
                         if ($u_step == 1) $targetStatus = 2; // Owner Div
