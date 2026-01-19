@@ -96,18 +96,26 @@ class MetrikStrategiRisikoController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'periode_id' => 'required|exists:periodes,id',
-            'kategori_risiko_id' => 'required|exists:kategori_risikos,id',
             'jenis_risiko_id' => 'required|exists:jenis_risikos,id',
-            'risk_appetite_statement' => 'nullable|string',
+            'risk_appetite_statement' => 'required|string',
             'sikap_risiko_id' => 'required|exists:sikap_risikos,id',
-            'peristiwa_risiko_id' => 'required|exists:peristiwa_risikos,id'
         ]);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
 
-        $metrikStrategiRisiko->update($request->all());
+        // Ambil data jenis risiko untuk update kategori
+        $jenisRisiko = JenisRisiko::findOrFail($request->jenis_risiko_id);
+
+        $metrikStrategiRisiko->update([
+            'periode_id' => $request->periode_id,
+            'kategori_risiko_id' => $jenisRisiko->kategori_risiko_id,
+            'jenis_risiko_id' => $request->jenis_risiko_id,
+            'risk_appetite_statement' => $request->risk_appetite_statement,
+            'sikap_risiko_id' => $request->sikap_risiko_id,
+        ]);
+        
         return redirect()->route('metrik-strategi-risiko.index')->with('success', 'Metrik Strategi Risiko berhasil diperbarui!');
     }
 
