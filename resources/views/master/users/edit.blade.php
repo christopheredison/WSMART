@@ -1,5 +1,6 @@
 @extends('layouts.default')
 @section('dashboard')
+@include('partials.success-message')
 <div class="row g-3">
   <!--===================== Roles and Permissions =====================-->
   <div class="col-12">

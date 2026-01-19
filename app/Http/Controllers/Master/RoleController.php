@@ -48,7 +48,12 @@ class RoleController extends Controller
     public function update(Request $request, Role $role)
     {
         $request->validate([
+            'name' => 'required|string|max:255|unique:roles,name,' . $role->id,
             'permissions' => 'required|array',
+        ]);
+
+        $role->update([
+            'name' => $request->name
         ]);
 
         // Update permissions if any permissions are sent

@@ -10,7 +10,8 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Unit;
 use App\Supports\ApiHC;
-use Spatie\Permission\Models\Role;
+// use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 
@@ -27,8 +28,8 @@ class UserController extends Controller
 
     public function create()
     {
-        $roles = Role::pluck('name', 'id'); // Get roles for select dropdown
-        $roless = Role::with('permissions')->get();
+        $roles = Role::orderBy('name', 'asc')->pluck('name', 'id'); // Get roles for select dropdown
+        $roless = Role::with('permissions')->orderBy('name', 'asc')->get();
         $unit = Unit::pluck('name','id');
 
         $projects = Project::pluck('project_name','id');
@@ -95,9 +96,9 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        $roles = Role::pluck('name', 'id'); // Get roles for select dropdown
+        $roles = Role::orderBy('name', 'asc')->pluck('name', 'id'); // Get roles for select dropdown
         $userRoles = $user->roles->pluck('id')->toArray(); // Get user's current roles
-        $roless = Role::with('permissions')->get();
+        $roless = Role::with('permissions')->orderBy('name', 'asc')->get();
         $unit = Unit::pluck('name','id');
         // dd($unit);
         $projects = Project::pluck('project_name','id');
@@ -224,8 +225,8 @@ class UserController extends Controller
         }
 
         return response()->json([
-            'data' => $dataUser, 
-            'jabatan' => $jabatan, 
+            'data' => $dataUser,
+            'jabatan' => $jabatan,
             'resolved_unit' => $resolvedUnit,
             'debug' => [
                 'cost_center_parent' => $ccParent,

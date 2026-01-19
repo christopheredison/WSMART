@@ -1,5 +1,6 @@
 @extends('layouts.default')
 @section('dashboard')
+@include('partials.success-message')
 <div class="row">
   <div class="col-12">
     <form class="card" method="POST" action="{{ route('roles.update', $role) }}">

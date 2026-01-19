@@ -1,5 +1,6 @@
 @extends('layouts.default')
 @section('dashboard')
+@include('partials.success-message')
 <div class="row g-3">
   <!--===================== Roles and Permissions =====================-->
   <div class="col-12">
@@ -238,7 +239,7 @@
           $('#email').val('');
           $('#email').prop('readonly', false);
         }
-        
+
         $('select[name="unit_id"] option').each(function() {
           if (this.value && isNaN(this.value)) {
             $(this).remove();
