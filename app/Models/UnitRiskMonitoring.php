@@ -10,7 +10,7 @@ class UnitRiskMonitoring extends Model
     public const STATUS_VERIFIKASI_ROW_DIVISI = 2;       // Menunggu Level 2 (Owner Divisi)
     public const STATUS_VERIFIKASI_RO_DIVISI_MR = 3;     // Menunggu Level 1 (Officer MR)
     public const STATUS_VERIFIKASI_ROW_DIVISI_MR = 4;    // Menunggu Level 2 (Owner MR)
-    public const STATUS_PUBLISHED = 5;                   // Selesai
+    public const STATUS_PUBLISHED = 100;                 // Selesai
 
     protected $fillable = [
         'identifikasi_risiko_id',
@@ -40,6 +40,11 @@ class UnitRiskMonitoring extends Model
     public function identifikasiRisiko()
     {
         return $this->belongsTo(IdentifikasiRisiko::class, 'identifikasi_risiko_id');
+    }
+
+    public function getTahunPeriodeAttribute()
+    {
+        return $this->identifikasiRisiko->periode->tahun ?? null;
     }
 
     public function perlakuanPenyebabRisikos()
@@ -85,5 +90,31 @@ class UnitRiskMonitoring extends Model
     public function pengendalians()
     {
         return $this->hasMany(UnitRiskPengendalian::class, 'monitoring_id');
+    }
+
+    /**
+     * Definisi Workflow untuk Monitoring Divisi
+     */
+    public static function getWorkflow()
+    {
+        return [
+            1 => ['level' => 1, 'label' => 'Risk Officer Divisi', 'unit_mr' => false], // Input
+            2 => ['level' => 2, 'label' => 'Risk Owner Divisi', 'unit_mr' => false],   // Verifikasi 1
+            3 => ['level' => 1, 'label' => 'Risk Officer MR', 'permission' => 'verification_mr', 'unit_mr' => true], // Verifikasi 2
+            4 => ['level' => 2, 'label' => 'Risk Owner MR', 'permission' => 'verification_mr', 'unit_mr' => true],   // Verifikasi Final
+        ];
+    }
+
+    /**
+     * Logic Pengembalian Status (Rejection)
+     */
+    public static function getReturnStatus($currentStatus)
+    {
+        return match ((int)$currentStatus) {
+            2 => 1, // Risk Owner Divisi Reject -> Balik ke Officer Divisi
+            3 => 2, // Risk Officer MR Reject -> Balik ke Risk Owner Divisi
+            4 => 3, // Risk Owner MR Reject -> Balik ke Risk Officer MR
+            default => 1,
+        };
     }
 }

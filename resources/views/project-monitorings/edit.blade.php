@@ -72,11 +72,6 @@
                                 <label>Parameter Probabilitas Inherent</label>
                             </div>
                             <div class="form-floating">
-                                <input disabled="disabled" class="form-control" type="text"
-                                value="{{ $projectRiskAnalisa->skalaParameterObj ? $projectRiskAnalisa->skalaParameterObj->tingkat . ' - ' . $projectRiskAnalisa->skalaParameterObj->skala : '-' }}">
-                                <label>Skala Probabilitas Inherent</label>
-                            </div>
-                            <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="nilai_probabilitas_inherent"
                                 value="{{ $projectRiskAnalisa->nilai_probabilitas }}">
                                 <label for="">Nilai Probabilitas Inherent (%)</label>
@@ -139,17 +134,12 @@
                                 <label>Target Parameter Probabilitas</label>
                             </div>
                             <div class="form-floating">
-                                <input disabled="disabled" class="form-control" type="text"
-                                value="{{ $projectRiskAnalisa->skalaParameterResidualObj ? $projectRiskAnalisa->skalaParameterResidualObj->tingkat . ' - ' . $projectRiskAnalisa->skalaParameterResidualObj->skala : '-' }}">
-                                <label>Target Skala Probabilitas</label>
-                            </div>
-                            <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" id="target_nilai_probabilitas"
                                 name="target_nilai_probabilitas" value="{{ $projectRiskAnalisa->nilai_probabilitas_residual }}">
                                 <label for="">Target Nilai Probabilitas (%)</label>
                             </div>
                             <div class="form-floating">
-                                <input disabled="disabled" class="form-control" type="text" name="skala_probabilitas_inherent"
+                                <input disabled="disabled" class="form-control" type="text" name="skala_probabilitas_residual"
                                 value="{{ $projectRiskAnalisa->skalaProbabilitasResidual?->tingkat." - " .$projectRiskAnalisa->skalaProbabilitasResidual?->skala }}">
                                 <label for="">Target Skala Probabilitas</label>
                             </div>
@@ -229,23 +219,6 @@
                                 <label>Realisasi Parameter Probabilitas</label>
                             </div>
                             <div class="form-floating">
-                                <select class="form-select update-trigger" name="realisasi_skala_parameter_id" id="realisasi_skala_parameter_id" required>
-                                    <option value="" selected disabled>Pilih Parameter</option>
-                                    @if($selectedParameterType && isset($groupedSkalaParameters[$selectedParameterType]))
-                                        @foreach($groupedSkalaParameters[$selectedParameterType] as $param)
-                                            <option value="{{ $param->id }}"
-                                                {{-- data-min="{{ $param->min }}"
-                                                data-max="{{ $param->max }}" --}}
-                                                data-tingkat="{{ $param->tingkat }}"
-                                                {{ ($riskMonitoring?->skala_parameter_id == $param->id) ? 'selected' : '' }}>
-                                                {{ $param->tingkat }} - {{ $param->skala }}
-                                            </option>
-                                        @endforeach
-                                    @endif
-                                </select>
-                                <label for="">Realisasi Skala Probabilitas</label>
-                            </div>
-                            <div class="form-floating">
                                 <input
                                   class="form-control update-trigger"
                                   type="number"
@@ -264,11 +237,21 @@
                                 <label for="">Realisasi Nilai Probabilitas (%)</label>
                             </div>
                             <div class="form-floating">
-                                <input class="form-control" name="realisasi_skala_probabilitas" type="text" placeholder=""
-                                value="{{ $riskMonitoring?->skala_probabilitas }}" id="realisasi_skala_probabilitas"
-                                readonly />
-                                <input type="hidden" name="realisasi_skala_probabilitas_hidden" id="realisasi_skala_probabilitas_hidden">
+                                <select class="form-select update-trigger" name="realisasi_skala_probabilitas" id="realisasi_skala_probabilitas" required>
+                                    <option value="" selected disabled>Pilih Skala Probabilitas</option>
+                                    @if($selectedParameterType && isset($groupedSkalaParameters[$selectedParameterType]))
+                                        @foreach($groupedSkalaParameters[$selectedParameterType] as $param)
+                                            <option value="{{ $param->tingkat }}"
+                                                {{-- data-min="{{ $param->min }}"
+                                                data-max="{{ $param->max }}" --}}
+                                                {{ ($riskMonitoring?->skala_probabilitas?->tingkat == $param->tingkat) ? 'selected' : '' }}>
+                                                {{ $param->tingkat }} - {{ $param->skala }}
+                                            </option>
+                                        @endforeach
+                                    @endif
+                                </select>
                                 <label for="">Realisasi Skala Probabilitas</label>
+                                <input type="hidden" name="realisasi_skala_probabilitas_hidden" id="realisasi_skala_probabilitas_hidden">
                             </div>
                             <div class="form-floating">
                                 <input class="form-control" type="text" name="realisasi_skala_risiko" id="realisasi_skala_risiko" placeholder="" readonly>
@@ -892,17 +875,20 @@ function refreshSkalaAndLevelRisiko() {
     const skalaDampak = parseFloat($('#realisasi_skala_dampak').val());
     const skalaProbabilitas = getSkalaProbabilitasByValue(nilaiProbabilitas);
 
-    const domSkalaProbabilitas = $('#realisasi_skala_probabilitas');
+    // const domSkalaProbabilitas = $('#realisasi_skala_probabilitas');
+    const tingkatProbabilitas = $('#realisasi_skala_probabilitas').val();
     const domSkalaRisiko = $('#realisasi_skala_risiko');
     const domLevelRisiko = $('#realisasi_level_risiko');
 
-    if (skalaProbabilitas) {
-        domSkalaProbabilitas.val(skalaProbabilitas.tingkat + ' - ' + skalaProbabilitas.skala);
-        $('#realisasi_skala_probabilitas_hidden').val(skalaProbabilitas.tingkat);
-    } else {
-        domSkalaProbabilitas.val('');
-        $('#realisasi_skala_probabilitas_hidden').val('');
-    }
+    // if (skalaProbabilitas) {
+    //     domSkalaProbabilitas.val(skalaProbabilitas.tingkat + ' - ' + skalaProbabilitas.skala);
+    //     $('#realisasi_skala_probabilitas_hidden').val(skalaProbabilitas.tingkat);
+    // } else {
+    //     domSkalaProbabilitas.val('');
+    //     $('#realisasi_skala_probabilitas_hidden').val('');
+    // }
+
+    $('#realisasi_skala_probabilitas_hidden').val(tingkatProbabilitas);
 
     const riskMap = riskMaps[skalaDampak + '-' + (skalaProbabilitas?.tingkat)];
     if  (riskMap) {
@@ -1092,7 +1078,7 @@ $(document).ready(function() {
     //     }
     // });
 
-    $('#realisasi_skala_parameter_id').on('change', function() {
+    $('#realisasi_skala_probabilitas').on('change', function() {
         const $selectedOption = $(this).find('option:selected');
         const min = parseFloat($selectedOption.data('min'));
         const max = parseFloat($selectedOption.data('max'));
@@ -1116,7 +1102,7 @@ $(document).ready(function() {
         let currentValue = parseFloat($input.val());
         if (isNaN(currentValue)) return;
 
-        const $scaleSelect = $('#realisasi_skala_parameter_id');
+        const $scaleSelect = $('#realisasi_skala_probabilitas');
         const $selectedOption = $scaleSelect.find('option:selected');
 
         // Jika belum pilih parameter, skip validasi range spesifik (atau paksa user pilih dulu)

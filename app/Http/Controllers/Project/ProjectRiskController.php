@@ -148,6 +148,7 @@ class ProjectRiskController extends BasicCRUDController
                 if (data === 0 || data === 1) return "Draft";
                 if (data === 2) return "On Review";
                 if (data === 3) {
+                    let canVerify = false;
                     if (row.step_verification === 2) return "Accepted by Risk Owner Project";
                     if (row.step_verification === 3) return "Accepted by Risk Officer Divisi";
                     if (row.step_verification === 4) return "Accepted by Risk Officer MR";
@@ -157,7 +158,19 @@ class ProjectRiskController extends BasicCRUDController
                     return "Accepted by Risk Owner MR";
                 }
                 if (data === 5) {
-                    return "Need Revision or Rejected";
+                    const stepVerification = row.step_verification;
+                    let rejectedText = "Need Revision or Rejected";
+
+                    if (stepVerification == 1) {
+                      rejectedText = "Rejected by Risk Owner Proyek";
+                    } else if (stepVerification == 2) {
+                      rejectedText = "Rejected by Risk Officer Divisi";
+                    } else if (stepVerification == 3) {
+                      rejectedText = "Rejected by Risk Officer MR";
+                    } else if (stepVerification == 4) {
+                      rejectedText = "Rejected by Risk Owner MR";
+                    }
+                    return rejectedText;
                 }
                 if (data === 6) {
                     return "Published";

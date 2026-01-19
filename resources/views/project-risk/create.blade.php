@@ -105,13 +105,6 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="col-12">
-                            <div class="form-group form-floating">
-                                <textarea class="form-control" id="deskripsi_peristiwa_risiko" name="deskripsi_peristiwa_risiko" rows="3"
-                                    value="{{ old('deskripsi_peristiwa_risiko') }}" placeholder="Deskripsi Peristiwa Risiko" required></textarea>
-                                <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</label>
-                            </div>
-                        </div>
                         {{-- <div class="col-12">
                             <div class="form-group form-floating">
                                 <textarea class="form-control" id="wbs" name="wbs" rows="3"
@@ -141,6 +134,13 @@
                                 <label for="deskripsi_dampak">Deskripsi Dampak Risiko</label>
                             </div>
                         </div> --}}
+                        <div class="col-12">
+                            <div class="form-group form-floating">
+                                <textarea class="form-control" id="deskripsi_peristiwa_risiko" name="deskripsi_peristiwa_risiko" rows="3"
+                                    value="{{ old('deskripsi_peristiwa_risiko') }}" placeholder="Deskripsi Peristiwa Risiko" required></textarea>
+                                <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
