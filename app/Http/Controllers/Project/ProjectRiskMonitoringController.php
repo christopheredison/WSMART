@@ -727,7 +727,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     $query->where('quarter', $quarter)
                         ->where('tahun', $tahun)
                         ->where('month', $month)
-                        ->with('pengendalians');
+                        ->with(['pengendalians', 'skalaProbabilitas']);
                 },
                 'perlakuanDampakRisikos' => function ($query) use ($quarter, $tahun, $month) {
                     $query->with(['lastMonitoring' => function ($q) use ($quarter, $tahun, $month) {
@@ -871,6 +871,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         //$risk_limit = $projectPeriode->risk_limit;
         $risk_limit = ($projectPeriode->project->meta['omset'] ?? 0) * 0.03;
+        // dd($projectRisk->projectRiskMonitoring);
 
         return view('project-monitorings.edit', [
             'projectPeriode' => $projectPeriode,
@@ -1011,15 +1012,56 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $projectRisk = $projectPeriode->projectRisks()
             ->with('peristiwaRisiko', 'penyebabRisikoProjects', 'penyebabRisikoProjects.perlakuanPenyebabRisiko', 'kriProjects', 'projectRiskAnalisa')
             ->findOrFail(request()->route('monitoring'));
+
+        // 1. Ambil Skala Dampak (Prioritaskan Input Manual Dropdown)
+        $skalaDampak = $request->realisasi_skala_dampak ?? $request->realisasi_skala_dampak_hidden;
+
+        // 2. Ambil Nilai Probabilitas & Skala Probabilitas
+        $nilaiProbabilitas = $request->realisasi_nilai_probabilitas;
+        // Prioritaskan input dropdown ('realisasi_skala_probabilitas') dari form
+        $skalaProbabilitasId = $request->realisasi_skala_probabilitas ?? $request->realisasi_skala_probabilitas_hidden;
+
+        // Logic Kalkulasi Otomatis hanya jika Dropdown Kosong tapi Nilai Ada
+        if (empty($skalaProbabilitasId) && !is_null($nilaiProbabilitas)) {
+            $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($nilaiProbabilitas);
+            if ($tingkatSkalaProbabilitas) {
+                $skalaProbabilitasId = $tingkatSkalaProbabilitas->id; // Sesuaikan column ID atau Tingkat
+            }
+        }
+
+        // 3. Cari Risk Map berdasarkan Skala Dampak & Skala Probabilitas (Manual/Auto)
+        $skalaRisiko = null;
+        $levelRisiko = null;
+
+        if ($skalaDampak && $skalaProbabilitasId) {
+            // Ambil ID tingkat (asumsi value dropdown adalah tingkat/level, misal 1,2,3,4,5)
+            // Jika value dropdown adalah ID tabel, sesuaikan querynya.
+            // Di blade Anda value="{{ $param->tingkat }}", jadi kita pakai tingkat.
+
+            $riskMap = RiskMap::where('skala_dampak', $skalaDampak)
+                ->where('skala_probabilitas', $skalaProbabilitasId) // Asumsi $skalaProbabilitasId ini adalah 'tingkat' (1-5)
+                ->first();
+
+            if ($riskMap) {
+                $skalaRisiko = $riskMap->nilai_risiko;
+                $levelRisiko = $riskMap->level_risiko;
+            }
+        }
+
+        // Jika User Override Skala Risiko/Level secara manual (hidden input mungkin terisi via JS)
+        // Gunakan input manual jika risk map tidak ditemukan atau user memaksa
+        $skalaRisiko = $request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden ?? $skalaRisiko;
+        $levelRisiko = $request->realisasi_level_risiko ?? $request->realisasi_level_risiko_hidden ?? $levelRisiko;
+
         $toCreate = [
             'quarter' => $quarter,
             'tahun' => $tahun,
             'nilai_dampak' => str_replace(['Rp', '.', ' '], '', ($request->realisasi_nilai_dampak ?: 0)),
-            'skala_dampak' => $request->realisasi_skala_dampak ?? $request->realisasi_skala_dampak_hidden,
-            'nilai_probabilitas' => $request->realisasi_nilai_probabilitas,
-            'skala_probabilitas_id' => null,
-            'skala_risiko' => $request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden,
-            'level_risiko' => $request->realisasi_level_risiko ?? $request->realisasi_level_risiko_hidden,
+            'skala_dampak' => $skalaDampak,
+            'nilai_probabilitas' => $nilaiProbabilitas,
+            'skala_probabilitas_id' => $skalaProbabilitasId,
+            'skala_risiko' => $skalaRisiko,
+            'level_risiko' => $levelRisiko,
             'skala_parameter_id' => $request->realisasi_skala_parameter_id,
             'eksposure_risiko' => null,
             'month' => $month,
@@ -1028,34 +1070,6 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             // 'aktual_month_2' => $this->cleanRupiah($request->aktual_month_2),
             // 'aktual_status' => $request->aktual_status,
         ];
-
-        if ($request->realisasi_nilai_probabilitas) {
-            $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($request->realisasi_nilai_probabilitas);
-
-            if (!$tingkatSkalaProbabilitas) {
-                return response()->json([
-                    'message' => 'Tidak ada data skala probabilitas yang sesuai',
-                ], 422);
-            }
-            $toCreate['skala_probabilitas_id'] = $tingkatSkalaProbabilitas->id;
-            $riskMaps = RiskMap::get()->keyBy(function($item) {
-                return $item->skala_dampak . '-' . $item->skala_probabilitas;
-            });
-
-            $riskMap = $riskMaps[$toCreate['skala_dampak'] . '-' . $tingkatSkalaProbabilitas->tingkat] ?? null;
-            if (!$riskMap) {
-                return response()->json([
-                    'message' => 'Tidak ada data risk map untuk skala dampak dan probabilitas yang dipilih',
-                ], 422);
-            }
-
-            $toCreate['skala_risiko'] = $riskMap->nilai_risiko;
-            $toCreate['level_risiko'] = $riskMap->level_risiko;
-        } else {
-            $toCreate['skala_probabilitas_id'] = null;
-            $toCreate['skala_risiko'] = null;
-            $toCreate['level_risiko'] = null;
-        }
 
         //perhitungan eksposur risiko
         if ($projectRisk->projectRiskAnalisa?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF) {

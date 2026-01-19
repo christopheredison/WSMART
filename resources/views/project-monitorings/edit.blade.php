@@ -204,8 +204,10 @@
                                   <option selected disabled>Skala Dampak</option>
                                   @foreach($skalaDampaks as $tingkat => $deskripsi)
                                   <option value="{{ $tingkat }}"
-                                      {{ $riskMonitoring?->skala_dampak == $tingkat ? 'selected' : '' }}
-                                      {{ $tingkat > $projectRiskAnalisa->skalaDampakObj?->tingkat ? 'disabled' : '' }}>
+                                      {{ (old('realisasi_skala_dampak') == $tingkat) ? 'selected' : (
+                                        ($riskMonitoring?->skala_dampak == $tingkat) ? 'selected' : ''
+                                        )
+                                      }}>
                                       {{ $tingkat }} - {{ $deskripsi }}
                                       {{ $tingkat > $projectRiskAnalisa->skalaDampakObj?->tingkat ? '(Melebihi Skala Inherent)' : '' }}
                                   </option>
@@ -244,7 +246,10 @@
                                             <option value="{{ $param->tingkat }}"
                                                 {{-- data-min="{{ $param->min }}"
                                                 data-max="{{ $param->max }}" --}}
-                                                {{ ($riskMonitoring?->skala_probabilitas?->tingkat == $param->tingkat) ? 'selected' : '' }}>
+                                                {{ (old('realisasi_skala_probabilitas') == $param->tingkat) ? 'selected' : (
+                                                    ($riskMonitoring?->skala_probabilitas_id == $param->tingkat) ? 'selected' : ''
+                                                  )
+                                                }}>
                                                 {{ $param->tingkat }} - {{ $param->skala }}
                                             </option>
                                         @endforeach
@@ -1096,35 +1101,49 @@ $(document).ready(function() {
         }
     });
 
+    $('#realisasi_skala_dampak, #realisasi_skala_probabilitas').on('change', function() {
+        refreshSkalaAndLevelRisiko();
+    });
+
     // 2. Validasi Nilai Probabilitas saat diketik/blur
-    $('#realisasi_nilai_probabilitas').on('blur', function() {
-        const $input = $(this);
-        let currentValue = parseFloat($input.val());
-        if (isNaN(currentValue)) return;
+    $('#realisasi_nilai_probabilitas').on('keyup change', function() {
+        const val = parseFloat($(this).val());
+        const skalaProbabilitas = getSkalaProbabilitasByValue(val);
 
-        const $scaleSelect = $('#realisasi_skala_probabilitas');
-        const $selectedOption = $scaleSelect.find('option:selected');
-
-        // Jika belum pilih parameter, skip validasi range spesifik (atau paksa user pilih dulu)
-        if (!$selectedOption.val()) return;
-
-        const min = parseFloat($selectedOption.data('min'));
-        const max = parseFloat($selectedOption.data('max'));
-
-        let correctedValue = null;
-
-        if (!isNaN(min) && currentValue < min) correctedValue = min;
-        if (!isNaN(max) && currentValue > max) correctedValue = max;
-
-        if (correctedValue !== null) {
-            Swal.fire({
-                title: 'Peringatan!',
-                text: `Nilai probabilitas untuk parameter ini harus berada di antara ${min}% dan ${max}%. Nilai otomatis disesuaikan.`,
-                icon: 'warning',
-                confirmButtonText: 'OK'
-            });
-            $input.val(correctedValue).trigger('change');
+        if (skalaProbabilitas) {
+            // Set value dropdown
+            $('#realisasi_skala_probabilitas').val(skalaProbabilitas.tingkat).trigger('change');
+            // Isi hidden input
+            $('#realisasi_skala_probabilitas_hidden').val(skalaProbabilitas.tingkat);
         }
+
+        // const $input = $(this);
+        // let currentValue = parseFloat($input.val());
+        // if (isNaN(currentValue)) return;
+
+        // const $scaleSelect = $('#realisasi_skala_probabilitas');
+        // const $selectedOption = $scaleSelect.find('option:selected');
+
+        // // Jika belum pilih parameter, skip validasi range spesifik (atau paksa user pilih dulu)
+        // if (!$selectedOption.val()) return;
+
+        // const min = parseFloat($selectedOption.data('min'));
+        // const max = parseFloat($selectedOption.data('max'));
+
+        // let correctedValue = null;
+
+        // if (!isNaN(min) && currentValue < min) correctedValue = min;
+        // if (!isNaN(max) && currentValue > max) correctedValue = max;
+
+        // if (correctedValue !== null) {
+        //     Swal.fire({
+        //         title: 'Peringatan!',
+        //         text: `Nilai probabilitas untuk parameter ini harus berada di antara ${min}% dan ${max}%. Nilai otomatis disesuaikan.`,
+        //         icon: 'warning',
+        //         confirmButtonText: 'OK'
+        //     });
+        //     $input.val(correctedValue).trigger('change');
+        // }
     });
 
     $('#section-realisasi').on('change', '.update-trigger', function() {
@@ -1598,7 +1617,15 @@ $(document).ready(function() {
     // Fungsi untuk menghitung dan mengatur realisasi_skala_dampak
     function hitungRealisasiSkalaDampak() {
         const kategoriDampak = '{{ $projectRiskAnalisa->kategori_dampak }}';
-        const nilaiDampak = parseFloat($('#realisasi_nilai_dampak').val()) || 0;
+
+        // const nilaiDampak = parseFloat($('#realisasi_nilai_dampak').val()) || 0;
+        let rawValue = $('#realisasi_nilai_dampak').inputmask('unmaskedvalue');
+        // Fallback jika inputmask belum init atau kosong, replace karakter non-digit manual
+        if (!rawValue && rawValue !== 0) {
+            rawValue = $('#realisasi_nilai_dampak').val().replace(/[^0-9,-]+/g,"").replace(",",".");
+        }
+        const nilaiDampak = parseFloat(rawValue) || 0;
+
         const riskLimit = parseFloat('{{ $risk_limit }}') || 0;
         const skalaDampakSelect = $('#realisasi_skala_dampak');
         const skalaDampakHidden = $('#realisasi_skala_dampak_hidden');
@@ -1621,7 +1648,8 @@ $(document).ready(function() {
             // Set nilai skala dampak dan trigger change event
             skalaDampakSelect.val(skala).trigger('change');
             // Disable select dan pindahkan nilai ke hidden input
-            skalaDampakSelect.prop('disabled', true);
+            // skalaDampakSelect.prop('disabled', true);
+            skalaDampakSelect.prop('disabled', false);
             skalaDampakHidden.val(skala);
         } else {
             // Enable select jika bukan Kuantitatif
@@ -1632,7 +1660,7 @@ $(document).ready(function() {
     }
 
     // Event listener untuk perubahan nilai dampak
-    $('#realisasi_nilai_dampak').on('change', function() {
+    $('#realisasi_nilai_dampak').on('keyup change', function() {
         console.log("hitung skala dampak");
         hitungRealisasiSkalaDampak();
         refreshSkalaAndLevelRisiko();
@@ -1713,7 +1741,7 @@ $(document).ready(function() {
     });
 
     // Panggil fungsi saat halaman dimuat
-    hitungRealisasiSkalaDampak();
+    // hitungRealisasiSkalaDampak();
     refreshSkalaAndLevelRisiko();
 });
 </script>
