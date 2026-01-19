@@ -93,7 +93,7 @@
                   {{-- Jika Status Revisi, trigger Modal Catatan --}}
                   @if(($escalationConfig['parameters']['send_type'] ?? '') == 'rev')
                     <button type="button"
-                      class="btn btn-sm btn-warning btn-arrow-right"
+                      class="btn btn-sm btn-info btn-arrow-right"
                       data-bs-toggle="modal"
                       data-bs-target="#modalKirimPerbaikanRisiko"
                       {{ ($escalationConfig['disabled'] ?? false) ? 'disabled' : '' }}>
@@ -120,14 +120,14 @@
         @endif
 
         <div id="tableExample3">
-          <div class="row g-2 mb-1">
+          <div class="row g-2 mb-3">
             <div class="col-auto d-none" id="bulk-verify-container">
                 <button type="button" class="btn btn-success btn-sm align-self-center" onclick="handleBulkVerifikasiClick()">
                     <span class="bx bx-check-shield"></span> Verifikasi Risiko (<span id="count-checked">0</span>)
                 </button>
             </div>
             @can('risk_register_all_unit')
-            <div class="col-4 col-sm-2">
+            <div class="col-12 col-sm-4">
               <label for="filter-unit" class="form-label d-none">Unit</label>
               <select id="filter-unit" class="form-select select2">
                 @foreach($unit as $id => $name)
@@ -194,7 +194,7 @@
                 {{-- <th class="sort mw-20r" data-sort="kategori_jenis_risiko">T2 & T3 KBUMN</th> --}}
                 <th class="sort mw-10r" data-sort="peristiwa_risiko">Peristiwa Risiko</th>
                 <th class="sort mw-10r" data-sort="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</th>
-                <th class="sort mw-10r" data-sort="kontrol_eksisting">Jenis Kontrol Eksisting</th>
+                {{-- <th class="sort mw-10r" data-sort="kontrol_eksisting">Jenis Kontrol Eksisting</th> --}}
                 <th class="sort mw-10r" data-sort="kategori dampak">Kategori Dampak</th>
                 <th class="sort mw-10r" data-sort="nilai_risiko_inherent">Nilai Risiko</th>
                 <th class="sort mw-10r" data-sort="eksposure_risiko_inherent">Eksposure Risiko</th>
@@ -256,7 +256,7 @@
                   {!! $add !!}{{ $item->peristiwa_risiko ?? '-' }}
                 </td>
                 <td class="deskripsi_peristiwa_risiko">{{ $item->deskripsi_peristiwa_risiko }}</td>
-                <td class="kontrol_eksisting">{{ $item->jenisKontrolEksisting->jenis_kontrol ?? '-' }}</td>
+                {{-- <td class="kontrol_eksisting">{{ $item->jenisKontrolEksisting->jenis_kontrol ?? '-' }}</td> --}}
                 <td class="kategori_dampak">{{ $item->riskAnalysis->kategori_dampak ?? '-' }}</td>
                 <td class="nilai_risiko" @if($item->riskAnalysis && $item->riskAnalysis->level_risiko)
                     style="background-color:

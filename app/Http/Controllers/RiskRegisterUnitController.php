@@ -204,6 +204,13 @@ class RiskRegisterUnitController extends Controller
         $isStillValid = !$selectedUnit?->valid_to || ($selectedUnit?->valid_to && ($selectedUnit->valid_to->isSameDay($today) || $selectedUnit->valid_to->isAfter($today)));
         $unitExpired = !$isStillValid;
 
+        $stepLabels = [
+            // 1 => 'Risk Officer Divisi',
+            1 => 'Risk Owner Divisi',
+            2 => 'Risk Officer MR',
+            3 => 'Risk Owner MR',
+        ];
+
         if (!$unitExpired && ($unitId == auth()->user()->unit_id || $viewAllDivision)) { // Batasi hanya user unit yg bisa aksi (atau admin)
 
             // A. TAHAP INPUT (Risk Officer Unit / Level 1 biasa / Step 0)
@@ -236,7 +243,7 @@ class RiskRegisterUnitController extends Controller
                     if ($draft_risk > 0) {
                         $summaryInfo = [
                             'type' => 'success', 'icon' => 'bx-check-double',
-                            'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan verifikasi."
+                            'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan ke Risk Owner Divisi."
                         ];
                         $escalationConfig['disabled'] = false;
                     } else {
@@ -261,13 +268,15 @@ class RiskRegisterUnitController extends Controller
                         $escalationConfig['label'] = 'Publish Risiko';
                         $escalationConfig['parameters']['send_type'] = 'mainrisk';
                     } else {
-                        $escalationConfig['label'] = 'Kirim Verifikasi';
+                        $nextLabel = $stepLabels[$step_order + 1] ?? 'Selesai';
+                        $escalationConfig['label'] = "Kirim ke {$nextLabel}";
                     }
 
                     if ($pending_risk > 0) {
+                        // $senderLabel = $stepLabel[$step_order - 1];
                         $summaryInfo = [
                             'type' => 'warning', 'icon' => 'bxs-error-circle',
-                            'message' => "Terdapat <strong>{$pending_risk}</strong> risiko menunggu verifikasi Anda (Terima/Tolak)."
+                            'message' => "Terdapat <strong>{$pending_risk}</strong> risiko aktif menunggu verifikasi Anda."
                         ];
                         $escalationConfig['disabled'] = true; // Harus verifikasi semua item dulu
                     } else {
@@ -277,6 +286,12 @@ class RiskRegisterUnitController extends Controller
                         ];
                         $escalationConfig['disabled'] = false;
                     }
+                }
+
+                // Jika ternyata masih revisi maka hide alert dan tombol nya
+                if ($status === DataBatch::STATUS_REVISI) {
+                    $escalationConfig['show'] = false;
+                    $summaryInfo = null;
                 }
             }
         }
@@ -1769,7 +1784,6 @@ class RiskRegisterUnitController extends Controller
         // 2. VALIDASI KELENGKAPAN DATA (Mirip Project)
         // Hanya validasi jika bukan 'mainrisk' (Publish) atau bisa juga divalidasi saat publish tergantung kebutuhan
         if ($send_type !== 'mainrisk') {
-            
             // Ambil risiko yang aktif (bukan closed) dan belum published
             $risikos = IdentifikasiRisiko::with([
                 'riskAnalysis',
@@ -1798,11 +1812,11 @@ class RiskRegisterUnitController extends Controller
 
             foreach ($risikos as $risiko) {
                 // Ambil deskripsi untuk pesan error
-                $deskripsi = $risiko->peristiwa_risiko; 
+                $deskripsi = $risiko->peristiwa_risiko;
                 if ($risiko->peristiwaRisiko) {
                     $deskripsi = $risiko->peristiwaRisiko->title;
                 }
-                
+
                 // A. Cek Analisa Risiko
                 if (!$risiko->riskAnalysis) {
                     $errBelumAnalisa[] = $deskripsi;
@@ -1814,7 +1828,7 @@ class RiskRegisterUnitController extends Controller
                     foreach ($risiko->penyebabRisikos as $penyebab) {
                         if ($penyebab->perlakuanPenyebabRisikoUnit->isEmpty()) {
                             $errBelumAdaPerlakuanPenyebab[] = $deskripsi;
-                            break; 
+                            break;
                         }
                     }
                 }
@@ -1826,10 +1840,10 @@ class RiskRegisterUnitController extends Controller
                     // D. Cek Perlakuan Dampak
                     // Logika: Setiap ID Dampak harus punya ID Perlakuan yang sesuai
                     // Di model Unit, PerlakuanDampak ada di IdentifikasiRisiko (hasMany) dengan foreign key dampak_risiko_id
-                    
+
                     $impactIds = $risiko->dampakRisikos->pluck('id')->toArray();
                     $treatedImpactIds = $risiko->perlakuanDampakRisikos->pluck('dampak_risiko_id')->toArray();
-                    
+
                     // Cek apakah ada Impact ID yang tidak ada di Treated Impact IDs
                     $untreatedImpacts = array_diff($impactIds, $treatedImpactIds);
 
@@ -1880,7 +1894,7 @@ class RiskRegisterUnitController extends Controller
         $unit = Unit::find($unit_id);
         $min_verification = 3;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
-        
+
         $verificationData = $this->getUserVerificationStep($level_id, $is_mr, $unit->unit_mr);
         $u_step = $verificationData['u_step'];
         $step_order = $u_step;
@@ -1928,7 +1942,7 @@ class RiskRegisterUnitController extends Controller
                 'unit_id' => $unit_id
             ])->with('success', 'Risiko berhasil dipublish');
         }
-        
+
         // --- SKENARIO 2: KIRIM BIASA / REVISI ---
         else {
             // Cek Batch
@@ -1961,7 +1975,7 @@ class RiskRegisterUnitController extends Controller
                 IdentifikasiRisiko::where('unit_id', $unit_id)
                     ->where('periode_id', $periode_id)
                     ->whereIn('status', [
-                        IdentifikasiRisiko::STATUS_INPUT_DATA, 
+                        IdentifikasiRisiko::STATUS_INPUT_DATA,
                         IdentifikasiRisiko::STATUS_REJECTED
                     ])
                     ->update([
@@ -1984,7 +1998,7 @@ class RiskRegisterUnitController extends Controller
                     'unit_id' => $unit_id
                 ])->with('success', 'Perbaikan risiko berhasil dilakukan. Risiko telah dikirim untuk diverifikasi.');
             }
-            
+
             // B. LOGIC KIRIM BARU / LANJUT STEP
             else {
                 // Buat Batch Baru jika belum ada
@@ -1999,7 +2013,7 @@ class RiskRegisterUnitController extends Controller
                         'step_verification' => 1,
                         'finish' => false
                     ]);
-                } 
+                }
                 else if (!$dataBatch->finish) {
                     // Jika batch ada dan belum finish
                     if ($dataBatch->step_verification == null || $dataBatch->step_verification < 1) {
@@ -2007,7 +2021,7 @@ class RiskRegisterUnitController extends Controller
                         if ($dataBatch->status != DataBatch::STATUS_PROSES) {
                             return redirect()->route('risk-register-unit.index', ['pid' => $periode_id, 'unit_id' => $unit_id])
                                 ->with('error', 'Masih ada data batch risiko yang sedang berproses.');
-                        } 
+                        }
                         else {
                             if ($unit->unit_mr) {
                                 // Khusus Divisi MR: Langsung ke Step 3 (Officer MR -> Owner MR)
@@ -2016,7 +2030,7 @@ class RiskRegisterUnitController extends Controller
                                     'step_verification' => 3,
                                     'finish' => false
                                 ]);
-                                
+
                                 // Update Risiko
                                 IdentifikasiRisiko::where('unit_id', $unit_id)
                                     ->where('periode_id', $periode_id)
@@ -2037,7 +2051,7 @@ class RiskRegisterUnitController extends Controller
                             }
                             $dataBatch->refresh();
                         }
-                    } 
+                    }
                     else {
                         // Lanjut ke Step Berikutnya (Verifikasi Berjenjang)
                         if ($step_order >= $min_verification) {
@@ -2100,7 +2114,7 @@ class RiskRegisterUnitController extends Controller
                                     }
                                 }
                             }
-                        } 
+                        }
                         else {
                             // Naik Step
                             $dataBatch->update([
@@ -2111,7 +2125,7 @@ class RiskRegisterUnitController extends Controller
                             $dataBatch->refresh();
                         }
                     }
-                } 
+                }
                 else {
                     // Jika Batch sebelumnya sudah finish, buat batch baru
                     if ($dataBatch->finish) {
