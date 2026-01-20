@@ -636,7 +636,7 @@
                                                 title="Detail Mitigasi"
                                                 data-perlakuan-id="{{ $perlakuanPenyebab->id }}"
                                                 data-id="{{ $perlakuanMonitoring->id }}">
-                                                 <span class="bx bx-show text-primary"></span>
+                                                <span class="bx bx-show text-primary"></span>
                                         </button>
                                         </td>
                                     </tr>
@@ -653,7 +653,7 @@
     <div class="col-12 mt-5">
         <div class="row g-2">
             <div class="col-auto order-1">
-                <a href="{{ route('risk-register-unit.monitorings.index', ['period' => request()->route('period')]) }}" class="btn btn-outline-secondary">Batal</a>
+                <a href="{{ route('risk-register-unit.monitorings.index', ['unit_id' => $risk->unit_id, 'period' => request()->route('period'), 'quarter' => $quarter, 'month' => $month]) }}" class="btn btn-outline-secondary">Batal</a>
             </div>
         </div>
     </div>

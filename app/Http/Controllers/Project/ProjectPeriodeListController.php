@@ -295,7 +295,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             // --- DEFAULT ORDERING (PRIORITAS) ---
             $dataTable->order(function ($query) use ($user, $levelId, $u_step, $is_mr, $userProjectIds, $allProjectIds) {
                 if (!request()->has('order')) {
-                    $riskActionNeededSql = "0";
+                    $riskActionNeededSql = "FALSE";
                     $latestBatchIdSql = "(SELECT MAX(sub_db.id) FROM data_batches sub_db WHERE sub_db.project_id = project_periode_lists.project_id AND sub_db.type = 2)";
 
                     if ($levelId == 6) { // Inputter
@@ -308,7 +308,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                         $riskActionNeededSql = "EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchIdSql AND db.finish IS FALSE AND (db.step_verification = {$u_step} {$rejectConditions}))";
                     }
 
-                    $monActionNeededSql = "0";
+                    $monActionNeededSql = "FALSE";
                     $monTargetStatus = 0;
                     if ($levelId == 6) $monTargetStatus = 1;
                     elseif ($levelId == 7) $monTargetStatus = 2;
@@ -548,15 +548,20 @@ class ProjectPeriodeListController extends BasicCRUDController
     {
         // 1. Cek Data Kosong
         if ($row->project_risks_count == 0) {
-            return '<span class="badge bg-light text-muted border">Tidak Aktif</span>';
+            return '<span class="badge bg-light text-dark border border-dark">Tidak Aktif</span>';
         }
 
         // Ambil data batch terakhir
         $lastBatch = $row->project->dataBatches->sortByDesc('id')->first();
 
+        // Kita ambil status dari relasi projectRisks yang sudah di-load di index()
+        $allRisks = $row->projectRisks;
+        $totalRisk = $allRisks->count();
+        $publishedCount = $allRisks->where('status', ProjectRisk::STATUS_PUBLISHED)->count();
+
         // 2. Cek Aktif (Published)
-        if ($lastBatch && $lastBatch->finish) {
-            return '<span class="badge bg-success">Aktif</span>';
+        if (($lastBatch && $lastBatch->finish) || ($totalRisk > 0 && $totalRisk === $publishedCount)) {
+            return '<span class="badge bg-success">Published</span>';
         }
 
         // 3. Logic Proses (Eskalasi)
@@ -647,7 +652,7 @@ class ProjectPeriodeListController extends BasicCRUDController
         ->first();
 
         if (!$latestMon) {
-            return '<span class="badge bg-light text-muted border">Belum Dimonitor</span>';
+            return '<span class="badge bg-light text-dark border border-dark">Belum Dimonitor</span>';
         }
 
         if ($latestMon->status == 100) {

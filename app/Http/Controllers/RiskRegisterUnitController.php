@@ -40,6 +40,7 @@ use App\Models\Project;
 use App\Models\ProjectRisk;
 use App\Models\RiskDivisiProject;
 use App\Models\TaksonomiRisiko;
+use App\Models\UnitRiskMonitoring;
 use Illuminate\Support\Facades\DB;
 use App\Models\PerlakuanDampakRisikoUnit;
 
@@ -60,33 +61,28 @@ class RiskRegisterUnitController extends Controller
 
         // 2. Setup User & Unit Permissions
         $user = auth()->user();
+        $is_mr = $user->unit->unit_mr == 1;
         $levelId = $user->level_id;
         $viewAllDivision = Gate::check('view_all_division');
 
         if ($viewAllDivision) {
             $allowedUnitIds = Unit::where('unit_type_id', 1)->pluck('id');
             $requestedUnitId = (int) $request->query('unit_id');
-            if ($requestedUnitId && $allowedUnitIds->contains($requestedUnitId)) {
-                $unitId = $requestedUnitId;
-            } else {
-                $unitId = $allowedUnitIds->contains($user->unit_id) ? $user->unit_id : $allowedUnitIds->first();
-            }
+            $unitId = ($requestedUnitId && $allowedUnitIds->contains($requestedUnitId))
+                        ? $requestedUnitId
+                        : ($allowedUnitIds->contains($user->unit_id) ? $user->unit_id : $allowedUnitIds->first());
         } else {
-            $requestedUnitId = (int) $request->query('unit_id');
-            $allowedUnitIds = collect([$user->unit_id]);
-            $relatedIds = \App\Models\UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id');
-            $allowedUnitIds = $allowedUnitIds->merge($relatedIds)->unique();
-            if ($requestedUnitId && $allowedUnitIds->contains($requestedUnitId)) {
-                $unitId = $requestedUnitId;
-            } else {
-                $unitId = $user->unit_id;
-            }
+            $unitId = $user->unit_id;
         }
 
-        // 3. Setup Data Batch
+        // 3. Setup Data Batch & Logic Unit MR
         $selectedUnit = Unit::find($unitId);
-        $min_verification = 3; // Default 3 step (RO Unit -> Owner Unit -> RO MR -> Owner MR [Publish])
-        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        $is_unit_mr = $selectedUnit->unit_mr == 1;
+
+        // --- LOGIC: Tentukan Min Verification ---
+        // Unit MR = 1 (Karena Step 0 Drafter -> Step 1 Owner MR [Final])
+        // Unit Biasa = 3 (Step 0 -> Step 1 -> Step 2 -> Step 3 Owner MR [Final])
+        $min_verification = $is_unit_mr ? 1 : 3;
 
         $dataBatch = DataBatch::where('unit_id', $unitId)
                       ->where('periode_id', $periodeId)
@@ -96,14 +92,19 @@ class RiskRegisterUnitController extends Controller
                       ->first();
 
         if(!$dataBatch){
-            $lastBatch = DataBatch::where('unit_id', $unitId)->where('periode_id', $periodeId)->where('type', 1)->orderBy('batch', 'desc')->first();
+            $lastBatch = DataBatch::where('unit_id', $unitId)
+                            ->where('periode_id', $periodeId)
+                            ->where('type', 1)
+                            ->orderBy('batch', 'desc')
+                            ->first();
+
             $dataBatch = DataBatch::create([
                 'unit_id' => $unitId,
                 'periode_id' => $periodeId,
                 'type' => 1,
                 'status' => DataBatch::STATUS_PROSES,
                 'batch' => $lastBatch ? $lastBatch->batch + 1 : 1,
-                'step_verification' => 0,
+                'step_verification' => 0, // Selalu mulai dari 0 (Drafter)
                 'finish' => false
             ]);
         }
@@ -134,7 +135,7 @@ class RiskRegisterUnitController extends Controller
         $verificationData = $this->getUserVerificationStep($levelId, $is_mr, $selectedUnit->unit_mr);
         $u_step = $verificationData['u_step'];
         $user_verification = $verificationData['user_verification'];
-        $step_order = $u_step; // Alias
+        $step_order = $u_step;
 
         // 7. Hitung Pending Risk & Draft
         $pending_risk = 0;
@@ -153,19 +154,23 @@ class RiskRegisterUnitController extends Controller
                 ->first();
         }
 
-        // Logic hitung pending risk (yang belum diverifikasi oleh user saat ini)
-        if ($step_order > 0) {
-            // Untuk Verifikator
-            $pending_risk = IdentifikasiRisiko::where('unit_id', $unitId)
-                ->where('periode_id', $periodeId)
-                ->where('step_verification', $step_order) // Risiko ada di meja user ini
-                ->whereNotIn('status', [
-                    IdentifikasiRisiko::STATUS_TERVERIFIKASI,
-                    IdentifikasiRisiko::STATUS_PUBLISHED
-                ])
-                ->count();
-        } else {
-            // Untuk Risk Owner/Inputter (Level 1 / Step 0)
+        // Logic hitung pending risk (Verifikator)
+        // Unit MR: Verifikator di step 1. Unit Biasa: di step > 0
+        if (($is_unit_mr && $step_order > 0) || (!$is_unit_mr && $step_order > 0)) {
+            // Cek apakah batch juga ada di step yang sama dengan user
+            if ($dataBatch->step_verification == $step_order) {
+                $pending_risk = IdentifikasiRisiko::where('unit_id', $unitId)
+                    ->where('periode_id', $periodeId)
+                    ->where('step_verification', $step_order)
+                    ->whereNotIn('status', [
+                        IdentifikasiRisiko::STATUS_TERVERIFIKASI,
+                        IdentifikasiRisiko::STATUS_PUBLISHED
+                    ])
+                    ->count();
+            }
+        }
+        // Logic untuk Risk Officer/Inputter (Drafter - Step 0)
+        else {
             if ($dataBatch && $dataBatch->status == DataBatch::STATUS_REVISI) {
                 $pending_risk = IdentifikasiRisiko::where('unit_id', $unitId)
                         ->where('periode_id', $periodeId)
@@ -185,113 +190,116 @@ class RiskRegisterUnitController extends Controller
             });
         }
 
-        // 9. Logic Summary & Escalation (NEW)
+        // 9. Logic Summary & Escalation
         $summaryInfo = null;
         $escalationConfig = [
-            'show' => false,
-            'label' => 'Kirim Risiko',
-            'disabled' => true,
+            'show' => false, 'label' => 'Kirim Risiko', 'disabled' => true,
             'route' => route('risk-register-unit.send'),
-            'parameters' => [
-                'unit_id' => $unitId,
-                'periode_id' => $periodeId,
-                'send_type' => 'send'
-            ]
+            'parameters' => ['unit_id' => $unitId, 'periode_id' => $periodeId, 'send_type' => 'send']
         ];
 
-        // Status Unit Expired
         $today = Carbon::today();
         $isStillValid = !$selectedUnit?->valid_to || ($selectedUnit?->valid_to && ($selectedUnit->valid_to->isSameDay($today) || $selectedUnit->valid_to->isAfter($today)));
         $unitExpired = !$isStillValid;
 
-        $stepLabels = [
-            // 1 => 'Risk Officer Divisi',
-            1 => 'Risk Owner Divisi',
-            2 => 'Risk Officer MR',
-            3 => 'Risk Owner MR',
-        ];
+        if (!$unitExpired && ($unitId == auth()->user()->unit_id || $viewAllDivision)) {
 
-        if (!$unitExpired && ($unitId == auth()->user()->unit_id || $viewAllDivision)) { // Batasi hanya user unit yg bisa aksi (atau admin)
+            // --- LOGIC KHUSUS UNIT MR ---
+            if ($is_unit_mr) {
+                // A. RISK OFFICER MR (Level 1 / Step 0) -> DRAFTER
+                if ($levelId == 1) {
+                    if (in_array($status, [DataBatch::STATUS_PROSES, DataBatch::STATUS_REVISI])) {
+                        $escalationConfig['show'] = true;
 
-            // A. TAHAP INPUT (Risk Officer Unit / Level 1 biasa / Step 0)
-            if ($step_order == 0) {
-                $escalationConfig['show'] = true;
+                        if ($status == DataBatch::STATUS_REVISI) {
+                            $escalationConfig['label'] = 'Kirim Perbaikan';
+                            $escalationConfig['parameters']['send_type'] = 'rev';
 
-                if ($status == DataBatch::STATUS_REVISI) {
-                    // Mode Revisi
-                    $escalationConfig['label'] = 'Kirim Perbaikan';
-                    $escalationConfig['parameters']['send_type'] = 'rev'; // Revisi
-
-                    if ($pending_risk > 0) {
-                        $summaryInfo = [
-                            'type' => 'danger', 'icon' => 'bx-undo',
-                            'message' => "Terdapat <strong>{$pending_risk}</strong> risiko yang <strong>dikembalikan (revisi)</strong>. Mohon perbaiki data."
-                        ];
-                        // Enable button jika user ingin kirim sebagian? Biasanya harus fix semua.
-                        // Sesuai logic Project, enable jika revision count is handled, tp disini kita cek pending_risk revisi.
-                        // Jika masih ada yang status revisi, harus diperbaiki dulu.
-                        $escalationConfig['disabled'] = false;
-                    } else {
-                        $summaryInfo = [
-                            'type' => 'success', 'icon' => 'bx-check-double',
-                            'message' => "Seluruh perbaikan telah selesai. Silahkan klik tombol <strong>Kirim Perbaikan</strong> untuk melanjutkan."
-                        ];
-                        $escalationConfig['disabled'] = false;
+                            if ($pending_risk > 0) {
+                                $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Ada <strong>{$pending_risk}</strong> risiko revisi. Silahkan edit."];
+                                $escalationConfig['disabled'] = false;
+                            } else {
+                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Perbaikan selesai. Klik tombol di kanan atas."];
+                                $escalationConfig['disabled'] = false;
+                            }
+                        } else {
+                            if ($draft_risk > 0) {
+                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data siap dikirim."];
+                                $escalationConfig['disabled'] = false;
+                            } else {
+                                $summaryInfo = ['type' => 'info', 'icon' => 'bx-info-circle', 'message' => "Belum ada data risiko."];
+                                $escalationConfig['disabled'] = true;
+                            }
+                        }
                     }
-                } elseif ($status == DataBatch::STATUS_PROSES) {
-                    // Mode Awal
-                    if ($draft_risk > 0) {
-                        $summaryInfo = [
-                            'type' => 'success', 'icon' => 'bx-check-double',
-                            'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan ke Risk Owner Divisi."
-                        ];
-                        $escalationConfig['disabled'] = false;
-                    } else {
-                        $summaryInfo = [
-                            'type' => 'info', 'icon' => 'bx-info-circle',
-                            'message' => "Belum ada data risiko. Silahkan tambah risiko baru."
-                        ];
-                        $escalationConfig['disabled'] = true;
-                    }
-                } else {
-                    $escalationConfig['show'] = false; // Sudah dikirim
                 }
-            }
-            // B. TAHAP VERIFIKASI
-            elseif ($step_order > 0) {
-                // Cek apakah giliran user ini (Step User == Step Batch)
-                if ($step_order == $dataBatch->step_verification) {
-                    $escalationConfig['show'] = true;
-
-                    // Label Tombol
-                    if ($step_order >= $min_verification) {
+                // B. RISK OWNER MR (Level 2 / Step 1) -> VERIFIKATOR & PUBLISHER
+                elseif ($levelId == 2) {
+                    if ($dataBatch->step_verification == 3 && $status != DataBatch::STATUS_REVISI && !$dataBatch->finish) {
+                        $escalationConfig['show'] = true;
                         $escalationConfig['label'] = 'Publish Risiko';
                         $escalationConfig['parameters']['send_type'] = 'mainrisk';
-                    } else {
-                        $nextLabel = $stepLabels[$step_order + 1] ?? 'Selesai';
-                        $escalationConfig['label'] = "Kirim ke {$nextLabel}";
-                    }
 
-                    if ($pending_risk > 0) {
-                        // $senderLabel = $stepLabel[$step_order - 1];
-                        $summaryInfo = [
-                            'type' => 'warning', 'icon' => 'bxs-error-circle',
-                            'message' => "Terdapat <strong>{$pending_risk}</strong> risiko aktif menunggu verifikasi Anda."
-                        ];
-                        $escalationConfig['disabled'] = true; // Harus verifikasi semua item dulu
-                    } else {
-                        $summaryInfo = [
-                            'type' => 'success', 'icon' => 'bx-check-double',
-                            'message' => "Seluruh risiko telah diverifikasi. Silahkan klik tombol <strong>{$escalationConfig['label']}</strong> untuk melanjutkan."
-                        ];
-                        $escalationConfig['disabled'] = false;
+                        if ($pending_risk > 0) {
+                            $summaryInfo = ['type' => 'warning', 'icon' => 'bxs-error-circle', 'message' => "Terdapat <strong>{$pending_risk}</strong> risiko belum diverifikasi."];
+                            $escalationConfig['disabled'] = true;
+                        } else {
+                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Semua terverifikasi. Siap Publish."];
+                            $escalationConfig['disabled'] = false;
+                        }
                     }
                 }
+            }
+            // --- LOGIC UNIT BIASA (3 STEP) ---
+            else {
+                // A. TAHAP INPUT (Step 0)
+                if ($step_order == 0) {
+                    $escalationConfig['show'] = true;
+                    if ($status == DataBatch::STATUS_REVISI) {
+                        $escalationConfig['label'] = 'Kirim Perbaikan';
+                        $escalationConfig['parameters']['send_type'] = 'rev';
+                        if ($pending_risk > 0) {
+                            $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Perbaiki <strong>{$pending_risk}</strong> risiko revisi."];
+                            $escalationConfig['disabled'] = false;
+                        } else {
+                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Perbaikan selesai."];
+                            $escalationConfig['disabled'] = false;
+                        }
+                    } elseif ($status == DataBatch::STATUS_PROSES) {
+                        if ($draft_risk > 0) {
+                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data siap dikirim."];
+                            $escalationConfig['disabled'] = false;
+                        } else {
+                            $escalationConfig['disabled'] = true;
+                        }
+                    } else {
+                        $escalationConfig['show'] = false;
+                    }
+                }
+                // B. TAHAP VERIFIKASI
+                elseif ($step_order > 0) {
+                    if ($step_order == $dataBatch->step_verification) {
+                        $escalationConfig['show'] = true;
+                        if ($step_order >= $min_verification) {
+                            $escalationConfig['label'] = 'Publish Risiko';
+                            $escalationConfig['parameters']['send_type'] = 'mainrisk';
+                        } else {
+                            // Label next step manual mapping, bisa diperbagus
+                            $escalationConfig['label'] = "Kirim Lanjut";
+                        }
 
-                // Jika ternyata masih revisi maka hide alert dan tombol nya
-                if ($status === DataBatch::STATUS_REVISI) {
-                    $escalationConfig['show'] = false;
-                    $summaryInfo = null;
+                        if ($pending_risk > 0) {
+                            $summaryInfo = ['type' => 'warning', 'icon' => 'bxs-error-circle', 'message' => "Verifikasi <strong>{$pending_risk}</strong> risiko tersisa."];
+                            $escalationConfig['disabled'] = true;
+                        } else {
+                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Siap dilanjutkan."];
+                            $escalationConfig['disabled'] = false;
+                        }
+                    }
+                    if ($status === DataBatch::STATUS_REVISI) {
+                        $escalationConfig['show'] = false;
+                        $summaryInfo = null;
+                    }
                 }
             }
         }
@@ -358,6 +366,7 @@ class RiskRegisterUnitController extends Controller
             'draft_risk',
             'summaryInfo',
             'escalationConfig',
+            'is_unit_mr',
         ));
     }
 
@@ -450,70 +459,74 @@ class RiskRegisterUnitController extends Controller
         $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
         $selectedPeriodeId = $request->query('pid') ?? ($activePeriode?->id);
         $selectedPeriode = $selectedPeriodeId ? Periode::find($selectedPeriodeId) : null;
-        $userUnit = auth()->user()->unit;
-        $units = [];
+        $user = auth()->user();
+        $levelId = $user->level_id;
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+
+        // Ambil data verifikasi user saat ini
+        $verificationData = $this->getUserVerificationStep($levelId, $is_mr);
+        $u_step = $verificationData['u_step'];
 
         $viewAllDivision = Gate::check('view_all_division');
         $dataToDisplay = collect();
 
-        if ($viewAllDivision) {
-            $units = Unit::where('unit_type_id', 1)->pluck('name', 'id');
-            $displayUnits = Unit::where('unit_type_id', 1)->get();
-
-            foreach ($displayUnits as $unit) {
-                if ($selectedPeriode) {
-                    $today = \Carbon\Carbon::today();
-                    $isValid = ((is_null($unit->valid_to)) || $unit->valid_to->isSameDay($today) || $unit->valid_to->isAfter($today))
-                        && ((is_null($unit->valid_from)) || $unit->valid_from->isBefore($today) || $unit->valid_from->isSameDay($today));
-                    $unitStatus = $isValid ? 'valid' : 'expired';
-                    $riskCount = IdentifikasiRisiko::where('unit_id', $unit->id)
-                        ->where('periode_id', $selectedPeriode->id)
-                        ->count();
-                    $dataToDisplay->push([
-                        'unit' => $unit,
-                        'periode' => $selectedPeriode,
-                        'unit_status' => $unitStatus,
-                        'risk_count' => $riskCount,
-                    ]);
-                }
-            }
+        // Query dasar untuk unit
+        $unitQuery = Unit::where('unit_type_id', 1);
+        $units = [];
+        if (!$viewAllDivision) {
+            $unitQuery->where('id', $user->unit_id);
+            $units = Unit::where('unit_type_id', 1)->where('id', $user->unit_id)->pluck('name', 'id');
         } else {
-            $units = Unit::where('unit_type_id', 1)->where('id', $userUnit->id)->pluck('name', 'id');
-            if ($userUnit && $selectedPeriode) {
+            $units = Unit::where('unit_type_id', 1)->pluck('name', 'id');
+        }
+        $displayUnits = $unitQuery->get();
+
+        foreach ($displayUnits as $unit) {
+            if ($selectedPeriode) {
                 $today = \Carbon\Carbon::today();
-                $isValid = ((is_null($userUnit->valid_to)) || $userUnit->valid_to->isSameDay($today) || $userUnit->valid_to->isAfter($today))
-                    && ((is_null($userUnit->valid_from)) || $userUnit->valid_from->isBefore($today) || $userUnit->valid_from->isSameDay($today));
+
+                // 1. Status Kelayakan Unit (Valid/Expired)
+                $isValid = ((is_null($unit->valid_to)) || $unit->valid_to->isAfter($today) || $unit->valid_to->isSameDay($today));
                 $unitStatus = $isValid ? 'valid' : 'expired';
-                $riskCount = IdentifikasiRisiko::where('unit_id', $userUnit->id)
+
+                // 2. Hitung Total Risiko
+                $riskCount = IdentifikasiRisiko::where('unit_id', $unit->id)
                     ->where('periode_id', $selectedPeriode->id)
                     ->count();
+
+                // 3. Ambil Batch Risiko Terakhir
+                $lastBatch = DataBatch::where('unit_id', $unit->id)
+                    ->where('periode_id', $selectedPeriode->id)
+                    ->where('type', 1)
+                    ->orderBy('batch', 'desc')
+                    ->first();
+
+                // 4. Ambil Monitoring Terakhir
+                $latestMon = UnitRiskMonitoring::whereHas('identifikasiRisiko', function($q) use ($unit, $selectedPeriode) {
+                        $q->where('unit_id', $unit->id)->where('periode_id', $selectedPeriode->id);
+                    })
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                $tmpData = [
+                    'unit' => $unit,
+                    'periode' => $selectedPeriode,
+                    'risk_count' => $riskCount,
+                    'last_batch' => $lastBatch,
+                    'latest_mon' => $latestMon,
+                ];
+
+                $tmpData['is_my_turn_risk'] = $this->checkIsMyTurnRisk($lastBatch, $u_step, $levelId);
+                $tmpData['is_my_turn_mon'] = $this->checkIsMyTurnMon($latestMon, $levelId, $is_mr);
+
                 $dataToDisplay->push([
-                    'unit' => $userUnit,
+                    'unit' => $unit,
                     'periode' => $selectedPeriode,
                     'unit_status' => $unitStatus,
                     'risk_count' => $riskCount,
+                    'risk_status_html' => $this->generateRiskStatusHtml($tmpData, $u_step, $levelId),
+                    'mon_status_html' => $this->generateMonitoringStatusHtml($tmpData, $levelId, $is_mr)
                 ]);
-
-                // Tambahkan unit expired terkait via UnitRelation untuk user tanpa view_all_division
-                $relations = \App\Models\UnitRelation::with('relatedUnit')
-                    ->where('unit_id', $userUnit->id)
-                    ->get();
-                foreach ($relations as $rel) {
-                    $related = $rel->relatedUnit;
-                    if (!$related) { continue; }
-                    $relatedIsValid = ((is_null($related->valid_to)) || $related->valid_to->isSameDay($today) || $related->valid_to->isAfter($today))
-                        && ((is_null($related->valid_from)) || $related->valid_from->isBefore($today) || $related->valid_from->isSameDay($today));
-                    if ($relatedIsValid) { continue; } // hanya expired
-                    $riskCountRelated = IdentifikasiRisiko::where('unit_id', $related->id)
-                        ->where('periode_id', $selectedPeriode->id)
-                        ->count();
-                    $dataToDisplay->push([
-                        'unit' => $related,
-                        'periode' => $selectedPeriode,
-                        'unit_status' => 'expired',
-                        'risk_count' => $riskCountRelated,
-                    ]);
-                }
             }
         }
 
@@ -1801,7 +1814,7 @@ class RiskRegisterUnitController extends Controller
                  // Jika tidak ada data sama sekali tapi mau kirim (kasus jarang, biasanya draft 0)
                  // Biarkan lewat atau return error tergantung logic, disini kita return error jika kosong
                  // Kecuali jika memang batch sudah jalan.
-                 // return redirect()->back()->with('error', 'Tidak ada risiko yang dapat dikirim.');
+                return redirect()->back()->with('error', 'Tidak ada risiko yang dapat dikirim.');
             }
 
             // Array Penampung Error
@@ -1894,6 +1907,7 @@ class RiskRegisterUnitController extends Controller
         $unit = Unit::find($unit_id);
         $min_verification = 3;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        $is_unit_mr = $unit->unit_mr == 1;
 
         $verificationData = $this->getUserVerificationStep($level_id, $is_mr, $unit->unit_mr);
         $u_step = $verificationData['u_step'];
@@ -2055,8 +2069,8 @@ class RiskRegisterUnitController extends Controller
                     else {
                         // Lanjut ke Step Berikutnya (Verifikasi Berjenjang)
                         if ($step_order >= $min_verification) {
-                             // Jika sudah di level akhir verifikasi sebelum publish
-                             $dataBatch->update([
+                            // Jika sudah di level akhir verifikasi sebelum publish
+                            $dataBatch->update([
                                 'status' => DataBatch::STATUS_RANKING,
                                 'finish' => false
                             ]);
@@ -2495,7 +2509,6 @@ class RiskRegisterUnitController extends Controller
                 'finish' => false,
             ]);
         }
-
         // Update is_proyek menjadi 1 untuk risiko dengan status_risiko corporate
         IdentifikasiRisiko::where('periode_id', $periodeId)
             ->where('status_risiko', IdentifikasiRisiko::STATUS_RISIKO_CORPORATE)
@@ -2580,40 +2593,42 @@ class RiskRegisterUnitController extends Controller
 
     private function processVerificationLogic($risk, $status, $catatan, $user)
     {
-        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
         $unit = Unit::find($risk->unit_id);
-        $verificationData = $this->getUserVerificationStep($user->level_id, $is_mr, $unit->unit_mr);
+        $is_unit_mr = $unit->unit_mr == 1;
+
+        $verificationData = $this->getUserVerificationStep($user->level_id, $is_unit_mr);
         $u_step = $verificationData['u_step'];
-        $min_verification = 3;
+
+        // Min Verification: Unit MR = 1, Biasa = 3
+        $min_verification = $is_unit_mr ? 1 : 3;
 
         $dataBatch = DataBatch::where('unit_id', $risk->unit_id)
             ->where('periode_id', $risk->periode_id)
-            ->where('type', 1)
-            ->where('finish', false)
-            ->orderBy('batch', 'desc')
-            ->first();
+            ->where('type', 1)->orderBy('batch', 'desc')->first();
 
         if ($status === 'terima') {
+            // Jika user di step terakhir (siap publish)
             if($u_step >= $min_verification){
                 $risk->update([
-                    'status' => IdentifikasiRisiko::STATUS_TERVERIFIKASI,
+                    'status' => IdentifikasiRisiko::STATUS_TERVERIFIKASI, // Status 4 (Verified/Ready to Publish)
                     'status_progress' => IdentifikasiRisiko::PROGRESS_ON_ACCEPTED,
-                    'status_risiko' => 1,
                     'step_verification' => $u_step
                 ]);
             } else {
+                // Lanjut ke verifikator berikutnya (Unit Biasa)
                 $risk->update([
                     'status' => IdentifikasiRisiko::STATUS_TUNGGU_VERIFIKASI,
-                    'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW,
                     'step_verification' => $u_step + 1
                 ]);
             }
             $noteStatus = 1;
         } else {
+            // DITOLAK -> REVISI
             $risk->update([
                 'status' => IdentifikasiRisiko::STATUS_REJECTED,
                 'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVISION_DELETED
             ]);
+
             if($dataBatch) $dataBatch->update(['status' => DataBatch::STATUS_REVISI]);
             $noteStatus = 2;
         }
@@ -2625,5 +2640,166 @@ class RiskRegisterUnitController extends Controller
             'notes' => $catatan,
             'user_id' => $user->id,
         ]);
+    }
+
+    private function checkIsMyTurnRisk($batch, $u_step, $levelId) {
+        if (!$batch || $batch->finish) return false;
+        if ($levelId == 1 && !$u_step) return in_array($batch->status, [DataBatch::STATUS_PROSES, DataBatch::STATUS_REVISI]);
+        return ($batch->step_verification == $u_step);
+    }
+
+    // Helper untuk cek giliran verifikasi Monitoring
+    private function checkIsMyTurnMon($mon, $levelId, $is_mr) {
+        if (!$mon || $mon->status == 100) return false;
+        $target = match (true) {
+            $levelId == 1 && !$is_mr => 1, // Officer Divisi
+            $levelId == 2 && !$is_mr => 2, // Owner Divisi
+            $levelId == 1 && $is_mr  => 3, // Officer MR
+            $levelId == 2 && $is_mr  => 4, // Owner MR
+            default => 0
+        };
+        return ($mon->status == $target);
+    }
+
+    private function generateRiskStatusHtml($item, $u_step, $levelId)
+    {
+        $lastBatch = $item['last_batch'];
+        $unitId = $item['unit']->id;
+        $periodeId = $item['periode']->id;
+
+        if ($item['risk_count'] == 0) {
+            return '<span class="badge bg-light text-dark border border-dark">Tidak Aktif</span>';
+        }
+
+        // 2. Logika Cek Published (Batch Finish ATAU Semua Item berstatus 6)
+        // Ambil status semua risiko untuk unit & periode ini
+        $allRisksStatus = IdentifikasiRisiko::where('unit_id', $unitId)
+            ->where('periode_id', $periodeId)
+            ->pluck('status')
+            ->toArray();
+
+        $totalRisk = count($allRisksStatus);
+        $publishedCount = count(array_filter($allRisksStatus, fn($s) => $s == IdentifikasiRisiko::STATUS_PUBLISHED));
+
+        // Jika batch sudah finish ATAU (risiko ada dan semuanya sudah published)
+        if (($lastBatch && $lastBatch->finish) || ($totalRisk > 0 && $totalRisk === $publishedCount)) {
+            return '<span class="badge bg-success">Published</span>';
+        }
+
+        $batchStep = $lastBatch ? $lastBatch->step_verification : 0;
+        $batchStatus = $lastBatch ? $lastBatch->status : 1;
+
+        $stepLabels = [
+            0 => 'Risk Officer Divisi (Draft)',
+            1 => 'Risk Owner Divisi',
+            2 => 'Risk Officer MR',
+            3 => 'Risk Owner MR',
+        ];
+
+        $currentPos = $stepLabels[$batchStep] ?? 'Verifikator';
+        if ($batchStatus == DataBatch::STATUS_REVISI) $currentPos = "Revisi: Kembali ke " . ($stepLabels[0]);
+
+        $pulse = '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
+                  <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
+
+        $redirectUrl = route('risk-register-unit.index', ['pid' => $item['periode']->id, 'unit_id' => $item['unit']->id]);
+
+        // LOGIKA TAMPILAN JIKA GILIRAN USER INI
+        if ($item['is_my_turn_risk']) {
+            // A. Jika User adalah Officer Divisi (Drafter/Level 1) dan batch di step 0
+            if ($levelId == 1 && $batchStep == 0) {
+                return '<a href="'.$redirectUrl.'" class="text-decoration-none">
+                            <span class="badge bg-info text-white position-relative" data-bs-toggle="tooltip"
+                                  title="Status: Draft/Revisi. Mohon lengkapi atau perbaiki data risiko.">
+                                Draft / Perlu Revisi '.$pulse.'
+                            </span>
+                        </a>';
+            }
+            // B. Jika User adalah Verifikator (Owner Divisi / MR)
+            else {
+                return '<a href="'.$redirectUrl.'" class="text-decoration-none">
+                            <span class="badge bg-warning text-dark position-relative" data-bs-toggle="tooltip"
+                                  title="Klik untuk verifikasi: '.$currentPos.'">
+                                <i class="bx bx-error-circle bx-flashing me-1"></i> Perlu Verifikasi '.$pulse.'
+                            </span>
+                        </a>';
+            }
+        }
+
+        // KONDISI 2: BUKAN GILIRAN SAYA (Tapi saya punya peran dalam alur ini)
+        // Cek apakah levelId user termasuk dalam alur (Level 1 atau 2)
+        if (in_array($levelId, [1, 2])) {
+            return '<div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="Posisi saat ini: '.$currentPos.'">
+                        <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                            <i class="bx bx-time-five me-1"></i> Proses Validasi
+                        </span>
+                    </div>';
+        }
+
+        // TAMPILAN MENUNGGU (Waiting)
+        return '<span class="badge bg-info bg-opacity-10 text-info border border-info position-relative" data-bs-toggle="tooltip" title="Posisi saat ini: '.$currentPos.'">
+                <i class="bx bx-info-circle me-1"></i> Sedang Diproses
+            </span>';
+    }
+
+    private function generateMonitoringStatusHtml($item, $levelId, $is_mr)
+    {
+        $latestMon = $item['latest_mon'];
+
+        if (!$latestMon) {
+            return '<span class="badge bg-light text-dark border border-dark">Belum Dimonitor</span>';
+        }
+
+        if ($latestMon->status == 100) {
+            return '<span class="badge bg-success">Selesai</span>';
+        }
+
+        $monLabels = [
+            1 => 'Risk Officer Divisi (Drafting)',
+            2 => 'Risk Owner Divisi',
+            3 => 'Risk Officer MR',
+            4 => 'Risk Owner MR'
+        ];
+        $currentPos = $monLabels[$latestMon->status] ?? 'Verifikasi';
+
+        $pulse = '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
+                  <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
+
+        $redirectUrl = route('risk-register-unit.monitorings.index', ['period' => $item['periode']->id, 'unit_id' => $item['unit']->id]);
+
+        if ($item['is_my_turn_mon']) {
+            // A. Jika User adalah Officer Divisi (Drafter Monitoring)
+            if ($levelId == 1 && !$is_mr) {
+                return '<a href="'.$redirectUrl.'" class="text-decoration-none">
+                            <span class="badge bg-info text-white position-relative" data-bs-toggle="tooltip"
+                                  title="Status: Draft Monitoring. Mohon lengkapi atau perbaiki data.">
+                                Draft / Perlu Revisi '.$pulse.'
+                            </span>
+                        </a>';
+            }
+            // B. Jika User adalah Verifikator Monitoring
+            else {
+                return '<a href="'.$redirectUrl.'" class="text-decoration-none">
+                            <span class="badge bg-warning text-dark position-relative" data-bs-toggle="tooltip"
+                                  title="Klik untuk verifikasi monitoring: '.$currentPos.'">
+                                <i class="bx bx-radar bx-flashing me-1"></i> Verifikasi Mon. '.$pulse.'
+                            </span>
+                        </a>';
+            }
+        }
+
+        // KONDISI 2: BUKAN GILIRAN SAYA (Tapi masuk alur verifikasi)
+        if (in_array($levelId, [1, 2])) {
+            return '<div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="Posisi saat ini: '.$currentPos.'">
+                        <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                            <i class="bx bx-radar me-1"></i> Proses Monitoring
+                        </span>
+                    </div>';
+        }
+
+        // KONDISI 3: USER LUAR / HANYA VIEW
+        return '<span class="badge bg-info bg-opacity-10 text-info border border-info position-relative" data-bs-toggle="tooltip" title="Posisi saat ini: '.$currentPos.'">
+                    <i class="bx bx-radar me-1"></i> Sedang Diproses
+                </span>';
     }
 }

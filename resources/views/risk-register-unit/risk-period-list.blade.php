@@ -70,13 +70,14 @@
                 <th class="sort" data-sort="tahun">Tahun</th>
                 <th class="sort text-center" data-sort="risk_count">Total Risiko</th>
                 <th class="sort text-center" data-sort="unit_status">Status Divisi</th>
+                <th class="sort text-center">Status Risiko</th>
+                <th class="sort text-center">Status Monitoring</th>
                 <th class="no-sort white-space-nowrap" data-sort="action">Action</th>
               </tr>
             </thead>
             <tbody class="list" id="bulk-select-body">
               @forelse ($dataToDisplay as $index => $item)
               @php
-
                     $unit = $item['unit'];
                     $periode = $item['periode'];
                     $unitStatus = $item['unit_status'] ?? 'active';
@@ -91,6 +92,13 @@
                   <figure class="badge {{ $unitStatus === 'expired' ? 'bg-danger' : 'bg-success' }}">
                     {{ $unitStatusLabel }}
                   </figure>
+                </td>
+                <td class="text-center">
+                    {!! $item['risk_status_html'] !!}
+                </td>
+
+                <td class="text-center">
+                    {!! $item['mon_status_html'] !!}
                 </td>
                 <td class="white-space-nowrap">
                   @if ($viewAllDivision)
@@ -149,6 +157,8 @@
 @push('scripts')
 <script>
   $(document).ready(function() {
+    $("body").tooltip({ selector: '[data-bs-toggle=tooltip]' });
+
     let table = $('#example').DataTable({
       "paging": true,
       "info": true,

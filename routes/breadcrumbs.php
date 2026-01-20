@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\IdentifikasiRisiko;
 use App\Models\ProjectRisk;
 use Diglactic\Breadcrumbs\Breadcrumbs;
 use Diglactic\Breadcrumbs\Generator as BreadcrumbTrail;
@@ -59,18 +60,22 @@ Breadcrumbs::for('risk-register-unit.view', function (BreadcrumbTrail $trail, $r
 // Periode Divisi > Data Monitoring
 Breadcrumbs::for('risk-register-unit.monitorings.index', function (BreadcrumbTrail $trail, $period) {
     $trail->parent('risk-register-unit.periods');
-    $trail->push('Data Monitoring', route('risk-register-unit.monitorings.index', [$period]));
+    $trail->push('Data Monitoring', route('risk-register-unit.monitorings.index', $period));
 });
 
 // Periode Divisi > Data Monitoring > View Data Monitoring
 Breadcrumbs::for('risk-register-unit.monitorings.show', function (BreadcrumbTrail $trail, $period, $monitoring) {
-    $trail->parent('risk-register-unit.monitorings.index', $period);
+    $riskRegisterData = IdentifikasiRisiko::find($monitoring);
+
+    $trail->parent('risk-register-unit.monitorings.index', [$period, 'unit_id' => $riskRegisterData?->unit_id, 'quarter' => request()->query('quarter'), 'month' => request()->query('month')]);
     $trail->push('View Data Monitoring', route('risk-register-unit.monitorings.show', [$period, $monitoring]));
 });
 
 // Periode Divisi > Data Monitoring > Edit Data Monitoring
 Breadcrumbs::for('risk-register-unit.monitorings.edit', function (BreadcrumbTrail $trail, $period, $monitoring) {
-    $trail->parent('risk-register-unit.monitorings.index', $period);
+    $riskRegisterData = IdentifikasiRisiko::find($monitoring);
+
+    $trail->parent('risk-register-unit.monitorings.index', [$period, 'unit_id' => $riskRegisterData?->unit_id, 'quarter' => request()->query('quarter'), 'month' => request()->query('month')]);
     $trail->push('Edit Data Monitoring', route('risk-register-unit.monitorings.edit', [$period, $monitoring]));
 });
 
@@ -168,18 +173,22 @@ Breadcrumbs::for('risk-register-ap.view', function (BreadcrumbTrail $trail, $ris
 // Periode Anak Perusahaan > Data Monitoring
 Breadcrumbs::for('risk-register-ap.monitorings.index', function (BreadcrumbTrail $trail, $period) {
     $trail->parent('risk-register-ap.periods');
-    $trail->push('Data Monitoring', route('risk-register-ap.monitorings.index', [$period]));
+    $trail->push('Data Monitoring', route('risk-register-ap.monitorings.index', $period));
 });
 
 // Periode Anak Perusahaan > Data Monitoring > View Data Monitoring
 Breadcrumbs::for('risk-register-ap.monitorings.show', function (BreadcrumbTrail $trail, $period, $monitoring) {
-    $trail->parent('risk-register-ap.monitorings.index', $period);
+    $riskRegisterData = IdentifikasiRisiko::find($monitoring);
+
+    $trail->parent('risk-register-ap.monitorings.index', [$period, 'unit_id' => $riskRegisterData?->unit_id, 'quarter' => request()->query('quarter'), 'month' => request()->query('month')]);
     $trail->push('View Data Monitoring', route('risk-register-ap.monitorings.show', [$period, $monitoring]));
 });
 
 // Periode Anak Perusahaan > Data Monitoring > Edit Data Monitoring
 Breadcrumbs::for('risk-register-ap.monitorings.edit', function (BreadcrumbTrail $trail, $period, $monitoring) {
-    $trail->parent('risk-register-ap.monitorings.index', $period);
+    $riskRegisterData = IdentifikasiRisiko::find($monitoring);
+
+    $trail->parent('risk-register-ap.monitorings.index', [$period, 'unit_id' => $riskRegisterData?->unit_id, 'quarter' => request()->query('quarter'), 'month' => request()->query('month')]);
     $trail->push('Edit Data Monitoring', route('risk-register-ap.monitorings.edit', [$period, $monitoring]));
 });
 

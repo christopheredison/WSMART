@@ -526,7 +526,7 @@
     <div class="col-12 mt-5">
         <div class="row g-2">
             <div class="col-auto order-1">
-                <a href="{{ route('risk-register-ap.monitorings.index', ['period' => request()->route('period')]) }}" class="btn btn-outline-secondary">Batal</a>
+                <a href="{{ route('risk-register-ap.monitorings.index', ['unit_id' => $risk->unit_id, 'period' => request()->route('period'), 'quarter' => $quarter, 'month' => $month]) }}" class="btn btn-outline-secondary">Batal</a>
             </div>
         </div>
     </div>

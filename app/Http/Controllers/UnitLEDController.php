@@ -224,6 +224,9 @@ class UnitLEDController extends Controller
                     'kategori_risiko_id' => 0,
                     'perkiraan_waktu_terpapar_risiko_mulai' => $request->tanggal_kejadian,
                     'perkiraan_waktu_terpapar_risiko_akhir' => $request->tanggal_kejadian,
+                    'status' => 1,
+                    'status_progress' => 1,
+                    'step_verification' => 0,
                 ]);
 
                 // Buat riskAnalysis
@@ -453,6 +456,9 @@ class UnitLEDController extends Controller
                     'kategori_risiko_id' => 0,
                     'perkiraan_waktu_terpapar_risiko_mulai' => $request->tanggal_kejadian,
                     'perkiraan_waktu_terpapar_risiko_akhir' => $request->tanggal_kejadian,
+                    'status' => 1,
+                    'status_progress' => 1,
+                    'step_verification' => 0,
                 ]);
 
                 // Buat riskAnalysis

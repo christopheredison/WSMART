@@ -668,7 +668,7 @@ class ProjectRiskController extends BasicCRUDController
                     type: 'GET',
                     success: function(notes) {
                         if (notes.length === 0) {
-                            contentDiv.html('<div class="text-center my-4"><i class="fas fa-comment-slash fa-2x text-muted mb-2"></i><p>Belum ada catatan untuk risiko ini.</p></div>');
+                            contentDiv.html('<div class="text-center my-4"><i class="fas fa-comment-slash fa-2x text-black mb-2"></i><p>Belum ada catatan untuk risiko ini.</p></div>');
                         } else {
                             let html = '';
                             notes.forEach(note => {
@@ -688,7 +688,7 @@ class ProjectRiskController extends BasicCRUDController
                                             \${note.user ? note.user.name : 'User Tidak Ditemukan'}
                                         </div>
                                         <div class="d-flex align-items-center">
-                                            <small class="text-muted me-3">\${formattedDate}</small>
+                                            <small class="text-black me-3">\${formattedDate}</small>
                                             \${statusBadge}
                                         </div>
                                     </div>

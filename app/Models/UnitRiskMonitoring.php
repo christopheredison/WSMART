@@ -108,12 +108,16 @@ class UnitRiskMonitoring extends Model
     /**
      * Logic Pengembalian Status (Rejection)
      */
-    public static function getReturnStatus($currentStatus)
+    public static function getReturnStatus($currentStatus, $isUnitMr = false)
     {
+        if ($isUnitMr) {
+            return 1; // Kembali ke Draft (Officer Divisi MR)
+        }
+
         return match ((int)$currentStatus) {
             2 => 1, // Risk Owner Divisi Reject -> Balik ke Officer Divisi
-            3 => 2, // Risk Officer MR Reject -> Balik ke Risk Owner Divisi
-            4 => 3, // Risk Owner MR Reject -> Balik ke Risk Officer MR
+            3 => 1, // Risk Officer MR Reject -> Balik ke Officer  Divisi
+            4 => 1, // Risk Owner MR Reject -> Balik ke Officer Divisi
             default => 1,
         };
     }

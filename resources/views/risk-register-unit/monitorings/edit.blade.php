@@ -715,7 +715,7 @@
         <div class="col-12 mt-5">
             <div class="row g-2">
                 <div class="col-auto">
-                    <a href="{{ route('risk-register-unit.monitorings.index', ['period' => request()->route('period'), 'quarter' => $quarter, 'month' => $month]) }}" class="btn btn-outline-secondary">Batal</a>
+                    <a href="{{ route('risk-register-unit.monitorings.index', ['unit_id' => $risk->unit_id, 'period' => request()->route('period'), 'quarter' => $quarter, 'month' => $month]) }}" class="btn btn-outline-secondary">Batal</a>
                 </div>
                 <div class="col-auto">
                     <button type="button" data-action="save" class="btn btn-primary ms-auto btn-action">Simpan</button>
@@ -978,16 +978,7 @@ function submitForm(isClosed) {
                 icon: 'success',
                 confirmButtonText: 'OK',
             }).then(() => {
-                let baseUrl = '{{ route('risk-register-unit.monitorings.index', ['period' => request()->route('period')]) }}';
-
-                const currentQuarter = '{{ $quarter }}';
-                const currentMonth = '{{ $month }}';
-                const redirectUrl = `${baseUrl}?quarter=${currentQuarter}&month=${currentMonth}`;
-
-                window.location.href = redirectUrl;
-                //   const unitId = risk?.unit_id || '';
-                //   const separator = baseUrl.includes('?') ? '&' : '?';
-                //   window.location.href = baseUrl + (unitId ? separator + 'unit_id=' + encodeURIComponent(unitId) : '');
+                window.location.href = '{!! route('risk-register-unit.monitorings.index', ['period' => request()->route('period'), 'unit_id' => $risk?->unit_id, 'quarter' => $quarter, 'month' => $month]) !!}';
             });
         },
         error: function(xhr) {

@@ -31,17 +31,22 @@
             </div>
             <div class="col-auto">
               @php
-                  // diasumsikan di view Anda ada $selectedPeriode
-                  $pid = $selectedPeriode->id;
+                  // Logic untuk menampilkan tombol tambah
+                  // Unit MR: Level 1 boleh nambah.
+                  // Unit Biasa: Level 1 (Step 0) boleh nambah.
+                  $canAdd = false;
+
+                  if ($is_unit_mr) {
+                      if ($levelId == 1) $canAdd = true;
+                  } else {
+                      if ($levelId == 1) $canAdd = true;
+                  }
               @endphp
               @can('risk_register_create')
                 @if(
-                  !$unitExpired &&
-                  ($status == null || $status == 1 || $status == 5) &&
-                  $levelId == 1 &&
-                  ($unitId == auth()->user()->unit_id)
+                    !$unitExpired && ($status == null || $status == 1 || $status == 5) && $canAdd && ($unitId == auth()->user()->unit_id)
                 )
-                <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $pid]) }}" type="button"
+                <a id="add-risk-button" href="{{ route('risk-register-unit.create', ['pid' => $selectedPeriode->id]) }}" type="button"
                   class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
                   data-bs-title="Tambah Risiko">
                   <span class="bx bx-plus"></span>
@@ -69,7 +74,7 @@
       <div class="card-body">
         <div class="d-flex align-items-center justify-content-end gap-3">
           @if(!empty($summaryInfo))
-          <div class="alert alert-{{ $summaryInfo['type'] }} alert-dismissible fade show d-flex align-items-center mt-0 mb-3" role="alert">
+          <div class="alert alert-{{ $summaryInfo['type'] }} alert-dismissible fade show d-flex align-items-center mt-0 mb-3 flex-grow-1" role="alert">
               <div class="bg-{{ $summaryInfo['type'] }} text-white rounded-circle p-0 me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
                   <i class="bx {{ $summaryInfo['icon'] }} text-white fs-4"></i>
               </div>
@@ -93,7 +98,7 @@
                   {{-- Jika Status Revisi, trigger Modal Catatan --}}
                   @if(($escalationConfig['parameters']['send_type'] ?? '') == 'rev')
                     <button type="button"
-                      class="btn btn-sm btn-info btn-arrow-right"
+                      class="btn btn-info btn-arrow-right"
                       data-bs-toggle="modal"
                       data-bs-target="#modalKirimPerbaikanRisiko"
                       {{ ($escalationConfig['disabled'] ?? false) ? 'disabled' : '' }}>
@@ -102,7 +107,7 @@
                   @else
                     {{-- Jika Kirim Normal / Publish --}}
                     <button type="button"
-                      class="btn btn-sm {{ str_contains(strtolower($escalationConfig['label']), 'publish') ? 'btn-success' : 'btn-info' }} btn-arrow-right"
+                      class="btn {{ str_contains(strtolower($escalationConfig['label']), 'publish') ? 'btn-success' : 'btn-info' }} btn-arrow-right"
                       onclick="submitEskalasiForm('form-eskalasi-action', '{{ $escalationConfig['label'] }}')"
                       {{ ($escalationConfig['disabled'] ?? false) ? 'disabled' : '' }}>
                       {{ $escalationConfig['label'] }}
@@ -320,7 +325,7 @@
                           'Need Verification Risk Officer MR' :
                           'Accepted by Risk Owner Divisi';
                       } elseif ($item->step_verification == 3) {
-                        $acceptedText = $canVerify ?
+                        $acceptedText = ($canVerify || $is_unit_mr) ?
                           'Need Verification Risk Owner MR' :
                           'Accepted by Risk Officer MR';
                       } elseif ($item->step_verification == 3) {
@@ -330,7 +335,17 @@
                     {{ $acceptedText }}
                   @break
                   @case(4)
-                  Accepted
+                      @php
+                        $text = 'Accepted';
+                        if ($item->step_verification == 1) {
+                          $text = 'Accepted by Risk Owner Divisi';
+                        } elseif ($item->step_verification == 2) {
+                          $text = 'Accepted by Risk Officer MR';
+                        } elseif ($item->step_verification == 3) {
+                          $text = 'Accepted by Risk Owner MR';
+                        }
+                      @endphp
+                      {{ $text }}
                   @break
                   @case(5)
                   @php

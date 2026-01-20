@@ -43,6 +43,8 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $this->baseRouteParams = [
           'period' => request()->route('period'),
           'unit_id' => request()->query('unit_id'),
+          'quarter' => request()->query('quarter', 1),
+          'month' => request()->query('month'),
         ];
 
         $period = Periode::findOrfail(request()->route('period'));
@@ -70,9 +72,6 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             $month = (string) ($validMonths[0] ?? '1');
         }
 
-        // Merge request (tanpa tahun, karena tahun fix dari periode)
-        request()->merge(['month' => $month, 'quarter' => $quarter]);
-
         $targetUnitId = null;
         $viewAllDivision = Gate::check('view_all_division');
 
@@ -92,17 +91,17 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $this->baseRouteParams['unit_id'] = $targetUnitId;
 
         $unit = Unit::find($targetUnitId);
-        // if ($unit) {
-        //   $this->indexSubtitle = $unit->name;
-        // }
         if ($unit) {
           $this->indexSubtitle = $unit->name . ' - Periode ' . $tahunPeriode;
         }
-        $isUnitMr = $unit->unit_mr;
+        $isUnitMr = $unit->unit_mr == 1;
 
-        // if (!(Gate::check('risk_monitoring_list') || $user->hasProject($period))) {
-        //     abort(403);
-        // }
+        // Merge request
+        request()->merge(['month' => $month, 'quarter' => $quarter, 'unit_id' => $targetUnitId]);
+
+        if (!(Gate::check('risk_monitoring_list'))) {
+            abort(403);
+        }
 
         $this->callbackQuery = function ($query) use ($period, $quarter, $month, $targetUnitId) {
             $query->where('periode_id', $period->id)
@@ -288,10 +287,10 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     function (data, type, row) {
                         const monthNames = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
                         const m = row.last_monitoring_risiko;
-                        
+
                         const monthIdx = m?.month || $('#table-filter select[name="month"]').val();
                         const quarter = m?.quarter || $('#table-filter select[name="quarter"]').val();
-                        const tahun = '$tahunPeriode'; 
+                        const tahun = '$tahunPeriode';
 
                         const monthName = monthNames[parseInt(monthIdx)] || "";
                         return `\${monthName} (Q\${quarter}) - \${tahun}`;
@@ -312,7 +311,6 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ],
             'nilai_dampak_residual' => [
                 'label' => 'Nilai Dampak Residual',
-                'data' => 'id',
                 'sortable' => false,
                 'searchable' => false,
                 'render' => '(data, type, row) => {
@@ -344,6 +342,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'label' => 'Level Risiko Realisasi',
                 'data' => 'id',
                 'sortable' => false,
+                'searchable' => false,
                 'class' => 'text-center align-middle',
                 'render' => '(data, type, row) => {
                     const m = row.last_monitoring_risiko;
@@ -380,7 +379,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                         if (status === 1) source = "Risk Owner Divisi";
                         if (status === 2) source = "Risk Officer MR";
                         if (status === 3) source = "Risk Owner MR";
-                        return `<div class="badge bg-danger"><i class="bx bx-undo me-1"></i>Ditolak ${source}</div>`;
+                        return `<div class="badge bg-danger"><i class="bx bx-undo me-1"></i>Ditolak perlu revisi </div>`;
                     }
 
                     // 2. Draft
@@ -390,9 +389,9 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     if (map[status]) {
                         const name = map[status];
                         if (isApproved) {
-                             return `<div class="badge bg-info"><i class="bx bx-check-circle me-1"></i>Terverifikasi ${name}</div>`;
+                            return `<div class="badge bg-info"><i class="bx bx-check-circle me-1"></i>Terverifikasi ${name}</div>`;
                         } else {
-                             return `<div class="badge border border-info text-info bg-white"><i class="bx bx-time-five me-1"></i>Menunggu Verifikasi ${name}</div>`;
+                            return `<div class="badge border border-info text-info bg-white"><i class="bx bx-time-five me-1"></i>Menunggu Verifikasi ${name}</div>`;
                         }
                     }
 
@@ -519,7 +518,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     $targetUnitId,
                     $unitFilterAttributes,
                 ],
-                'handler' => function() {}, 
+                'handler' => function() {},
             ],
             'quarter' => [
                 'label' => 'Quarter',
@@ -567,7 +566,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ->where('unit_id', $targetUnitId)
             ->where('is_closed', 0)
             ->get();
-        
+
         $riskIds = $allRisks->pluck('id');
 
         // Ambil monitoring terbaru (tanpa filter tahun karena tabel tidak punya kolom tahun)
@@ -587,36 +586,72 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $selectedStep = null;
         $firstEligibleStep = null;
 
-        foreach ($workflow as $step => $info) {
-            $isTargetUnit = ($user->unit_id == $targetUnitId);
-            $isMR = ($user->unit?->unit_mr == 1);
+        // 1. Tentukan Step User berdasarkan Level & Unit
+        if ($isUnitMr) {
+            // ALUR UNIT MR (Simple)
+            if ($userLevel == 1) $selectedStep = 1; // Officer MR (Inputter)
+            if ($userLevel == 2) $selectedStep = 4; // Owner MR (Final Verifier - Step 4 di workflow global)
+        } else {
+            // ALUR UNIT BIASA (Standard)
+            // Cek eligibility berdasarkan workflow standard
+            foreach ($workflow as $step => $info) {
+                $eligible = false;
+                $isTargetUnit = ($user->unit_id == $targetUnitId);
+                $isUserMr = ($user->unit?->unit_mr == 1); // User login dari MR?
 
-            $eligible = false;
-            // Step 1: Officer Unit (Input)
-            if ($step == 1 && $userLevel == 1 && $isTargetUnit) $eligible = true;
-            // Step 2: Owner Unit
-            if ($step == 2 && $userLevel == 2 && $isTargetUnit) $eligible = true;
-            // Step 3: Officer MR
-            if ($step == 3 && $userLevel == 1 && $isMR && Gate::check('verification_mr')) $eligible = true;
-            // Step 4: Owner MR
-            if ($step == 4 && $userLevel == 2 && $isMR && Gate::check('verification_mr')) $eligible = true;
+                if ($step == 1 && $userLevel == 1 && $isTargetUnit) $eligible = true;
+                if ($step == 2 && $userLevel == 2 && $isTargetUnit) $eligible = true;
+                if ($step == 3 && $userLevel == 1 && $isUserMr && Gate::check('verification_mr')) $eligible = true;
+                if ($step == 4 && $userLevel == 2 && $isUserMr && Gate::check('verification_mr')) $eligible = true;
 
-            if ($eligible) {
-                if (!$firstEligibleStep) $firstEligibleStep = $step;
-                
-                // Cek data di step ini
-                $countInStep = $allRisks->filter(function($risk) use ($step, $activeMonitorings) {
-                    $m = $activeMonitorings[$risk->id] ?? null;
-                    if ($step == 1) return !$m || $m->status == 1; 
-                    return $m && $m->status == $step;
-                })->count();
+                if ($eligible) {
+                    // Prioritaskan step dimana ada data yang "menunggu" user ini
+                    $countInStep = $allRisks->filter(function($risk) use ($step, $activeMonitorings) {
+                        $m = $activeMonitorings[$risk->id] ?? null;
+                        if ($step == 1) return !$m || $m->status == 1;
+                        return $m && $m->status == $step;
+                    })->count();
 
-                if ($countInStep > 0) {
-                    $selectedStep = $step;
-                    break;
+                    if ($countInStep > 0) {
+                        $selectedStep = $step;
+                        break;
+                    }
+                    // Fallback jika tidak ada data waiting, set step sesuai role
+                    if (!$selectedStep) $selectedStep = $step;
+                }
+            }
+            foreach ($workflow as $step => $info) {
+                $isTargetUnit = ($user->unit_id == $targetUnitId);
+                $isMR = ($user->unit?->unit_mr == 1);
+
+                $eligible = false;
+                // Step 1: Officer Unit (Input)
+                if ($step == 1 && $userLevel == 1 && $isTargetUnit) $eligible = true;
+                // Step 2: Owner Unit
+                if ($step == 2 && $userLevel == 2 && $isTargetUnit) $eligible = true;
+                // Step 3: Officer MR
+                if ($step == 3 && $userLevel == 1 && $isMR && Gate::check('verification_mr')) $eligible = true;
+                // Step 4: Owner MR
+                if ($step == 4 && $userLevel == 2 && $isMR && Gate::check('verification_mr')) $eligible = true;
+
+                if ($eligible) {
+                    if (!$firstEligibleStep) $firstEligibleStep = $step;
+
+                    // Cek data di step ini
+                    $countInStep = $allRisks->filter(function($risk) use ($step, $activeMonitorings) {
+                        $m = $activeMonitorings[$risk->id] ?? null;
+                        if ($step == 1) return !$m || $m->status == 1;
+                        return $m && $m->status == $step;
+                    })->count();
+
+                    if ($countInStep > 0) {
+                        $selectedStep = $step;
+                        break;
+                    }
                 }
             }
         }
+
         if (!$selectedStep) $selectedStep = $firstEligibleStep;
 
         $summaryInfo = null;
@@ -627,42 +662,58 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         if ($selectedStep) {
             $step = $selectedStep;
-            
+
+            // Filter risiko yang relevan dengan step user
             $risksInMyStep = $allRisks->filter(function($risk) use ($step, $activeMonitorings) {
                 $m = $activeMonitorings[$risk->id] ?? null;
+                // Step 1 menangani Draft (1) atau Belum Ada (null)
                 if ($step == 1) return !$m || $m->status == 1;
+                // Step lain menangani status yang sama dengan step
                 return $m && $m->status == $step;
             });
 
             if ($risksInMyStep->isNotEmpty()) {
                 $escalationConfig['route'] = route('risk-register-unit.monitorings.send.all', ['period' => $period->id]);
 
-                // --- STEP 1: DRAFTER (Risk Officer Unit) ---
+                // --- LOGIC TOMBOL ---
+
+                // KASUS 1: DRAFTER (Unit Biasa Step 1 atau Unit MR Officer)
                 if ($step == 1) {
                     $unstartedCount = $risksInMyStep->filter(fn($r) => !isset($activeMonitorings[$r->id]))->count();
                     $revisionCount = $risksInMyStep->filter(fn($r) => isset($activeMonitorings[$r->id]) && $activeMonitorings[$r->id]->status == 1 && $activeMonitorings[$r->id]->is_revision)->count();
-                    
-                    $targetLabel = 'Kirim ke Risk Owner Divisi';
+
+                    // Label Target Dinamis
+                    $targetLabel = $isUnitMr ? 'Kirim ke Risk Owner MR' : 'Kirim ke Risk Owner Divisi';
 
                     if ($revisionCount > 0) {
-                        $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$revisionCount}</strong> risiko yang <strong>dikembalikan (revisi)</strong>."];
-                        $escalationConfig['show'] = true; 
-                        $escalationConfig['disabled'] = true; 
+                        $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$revisionCount}</strong> monitoring dikembalikan (revisi)."];
+                        $escalationConfig['show'] = true;
+                        $escalationConfig['disabled'] = false;
+                        $escalationConfig['label'] = 'Kirim Perbaikan';
                     } elseif ($unstartedCount > 0) {
-                        $summaryInfo = ['type' => 'warning', 'icon' => 'bx-info-circle', 'message' => "Terdapat <strong>{$unstartedCount}</strong> risiko aktif belum di-monitoring."];
+                        $summaryInfo = ['type' => 'warning', 'icon' => 'bx-info-circle', 'message' => "Terdapat <strong>{$unstartedCount}</strong> risiko belum di-monitoring."];
                         $escalationConfig['show'] = true;
                         $escalationConfig['disabled'] = true;
+                        $escalationConfig['label'] = $targetLabel;
                     } else {
                         $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Monitoring siap dikirim."];
                         $escalationConfig['show'] = true;
                         $escalationConfig['disabled'] = false;
+                        $escalationConfig['label'] = $targetLabel;
                     }
-                    $escalationConfig['label'] = $targetLabel;
-                } 
-                // --- STEP > 1: VERIFIKATOR ---
+                }
+                // KASUS 2: VERIFIKATOR
                 else {
-                    $workflowConfig = UnitRiskMonitoring::getWorkflow();
-                    $nextLabel = isset($workflowConfig[$step + 1]) ? "Kirim ke " . $workflowConfig[$step + 1]['label'] : "Verifikasi Final";
+                    $nextLabel = "Tetapkan Monitoring";
+                    if (!$isUnitMr) {
+                        // Logic Label Unit Biasa
+                        $workflowConfig = UnitRiskMonitoring::getWorkflow();
+                        $nextLabel = isset($workflowConfig[$step + 1]) ? "Kirim ke " . $workflowConfig[$step + 1]['label'] : "Tetapkan Monitoring";
+                    } else {
+                        // Logic Label Unit MR (Langsung Final)
+                        $nextLabel = "Tetapkan Monitoring";
+                    }
+
                     $escalationConfig['label'] = $nextLabel;
 
                     $unapprovedCount = $risksInMyStep->filter(fn($r) => !$activeMonitorings[$r->id]->is_approved)->count();
@@ -673,12 +724,12 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                         $escalationConfig['disabled'] = true;
 
                         if ($returnedCount > 0) {
-                            $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$returnedCount}</strong> risiko yang dikembalikan."];
+                            $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$returnedCount}</strong> monitoring dikembalikan."];
                         } else {
-                            $summaryInfo = ['type' => 'warning', 'icon' => 'bxs-error-circle', 'message' => "Terdapat <strong>{$unapprovedCount}</strong> risiko menunggu verifikasi."];
+                            $summaryInfo = ['type' => 'warning', 'icon' => 'bxs-error-circle', 'message' => "Terdapat <strong>{$unapprovedCount}</strong> monitoring menunggu verifikasi."];
                         }
                     } else {
-                        $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Seluruh risiko telah diverifikasi. Siap dikirim."];
+                        $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Seluruh monitoring terverifikasi. Siap dikirim."];
                         $escalationConfig['show'] = true;
                         $escalationConfig['disabled'] = false;
                     }
@@ -912,7 +963,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $user = request()->user();
         $month = request()->input('month') ?: '';
 
-        if (!(Gate::check('risk_monitoring_view') || $user->hasProject($period))) {
+        if (!(Gate::check('risk_monitoring_view'))) {
             abort(403);
         }
 
@@ -985,7 +1036,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $user = request()->user();
 
-        if (!(Gate::check('risk_monitoring_edit') || $user->hasProject($period))) {
+        if (!(Gate::check('risk_monitoring_edit'))) {
             abort(403);
         }
 
@@ -1010,7 +1061,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             // 'aktual_status' => $request->aktual_status,
         ];
 
-        if ($request->realisasi_nilai_probabilitas) {
+        if ($request->realisasi_nilai_probabilitas >= 0) {
             $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($request->realisasi_nilai_probabilitas);
 
             if (!$tingkatSkalaProbabilitas) {
@@ -1301,34 +1352,52 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         ]);
 
         $user = Auth::user();
+        $unit = Unit::find($validated['unit_id']);
+        $isUnitMr = $unit->unit_mr == 1;
         $workflow = UnitRiskMonitoring::getWorkflow();
+
+        $currentStep = null;
+        $nextStep = null;
+        $isFinal = false;
+
+        if ($isUnitMr) {
+            // ALUR UNIT MR
+            if ($user->level_id == 1) {
+                $currentStep = 1;
+                $nextStep = 4; // Loncat langsung ke Owner MR
+            }
+            if ($user->level_id == 2) {
+                $currentStep = 4;
+                $isFinal = true;
+            }
+        } else {
+            // ALUR UNIT BIASA
+            foreach ($workflow as $step => $info) {
+                $isTargetUnit = ($user->unit_id == $validated['unit_id']);
+                $isMR = ($user->unit?->unit_mr == 1);
+                $userLevel = $user->level_id;
+
+                $eligible = false;
+                if ($step == 1 && $userLevel == 1 && $isTargetUnit) $eligible = true;
+                if ($step == 2 && $userLevel == 2 && $isTargetUnit) $eligible = true;
+                if ($step == 3 && $userLevel == 1 && $isMR && Gate::check('verification_mr')) $eligible = true;
+                if ($step == 4 && $userLevel == 2 && $isMR && Gate::check('verification_mr')) $eligible = true;
+
+                if ($eligible) {
+                    $currentStep = $step;
+                    break;
+                }
+            }
+
+            if (!$currentStep) {
+                return response()->json(['success' => false, 'message' => 'Anda tidak memiliki otoritas.'], 403);
+            }
+        }
+
         $riskIds = IdentifikasiRisiko::where('periode_id', $period->id)
             ->where('unit_id', $validated['unit_id'])
             ->where('is_closed', 0)
             ->pluck('id');
-
-        // Cari Current Step User
-        $currentStep = null;
-        foreach ($workflow as $step => $info) {
-            $isTargetUnit = ($user->unit_id == $validated['unit_id']);
-            $isMR = ($user->unit?->unit_mr == 1);
-            $userLevel = $user->level_id;
-
-            $eligible = false;
-            if ($step == 1 && $userLevel == 1 && $isTargetUnit) $eligible = true;
-            if ($step == 2 && $userLevel == 2 && $isTargetUnit) $eligible = true;
-            if ($step == 3 && $userLevel == 1 && $isMR && Gate::check('verification_mr')) $eligible = true;
-            if ($step == 4 && $userLevel == 2 && $isMR && Gate::check('verification_mr')) $eligible = true;
-
-            if ($eligible) {
-                $currentStep = $step;
-                break;
-            }
-        }
-
-        if (!$currentStep) {
-            return response()->json(['success' => false, 'message' => 'Anda tidak memiliki otoritas.'], 403);
-        }
 
         // Ambil ID Monitoring Terbaru
         $subQuery = UnitRiskMonitoring::select(DB::raw('MAX(id) as last_id'))
@@ -1345,6 +1414,21 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             return response()->json(['success' => false, 'message' => 'Tidak ada monitoring yang siap dikirim.'], 422);
         }
 
+        // Ambil status mayoritas dari data yang ada
+        // Asumsi data seragam statusnya dalam satu batch view
+        $currentDataStatus = $latestMonitorings->first()->status;
+
+        // Tentukan Target Status berdasarkan Current Data Status
+        if ($isUnitMr) {
+            if ($currentDataStatus == 1) { $targetStatus = 4; } // Officer -> Owner MR
+            elseif ($currentDataStatus == 4) { $targetStatus = UnitRiskMonitoring::STATUS_PUBLISHED; $isFinal = true; }
+        } else {
+            if ($currentDataStatus == 1) $targetStatus = 2;
+            elseif ($currentDataStatus == 2) $targetStatus = 3;
+            elseif ($currentDataStatus == 3) $targetStatus = 4;
+            elseif ($currentDataStatus == 4) { $targetStatus = UnitRiskMonitoring::STATUS_PUBLISHED; $isFinal = true; }
+        }
+
         // Validasi Approval untuk Verifikator
         if ($currentStep > 1) {
             $unapprovedCount = $latestMonitorings->where('is_approved', false)->count();
@@ -1353,11 +1437,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             }
         }
 
-        // Tentukan Target Status
-        $nextStep = $currentStep + 1;
-        $isFinal = !isset($workflow[$nextStep]);
-        $targetStatus = $isFinal ? UnitRiskMonitoring::STATUS_PUBLISHED : $nextStep;
-
+        // Update DB
         DB::beginTransaction();
         try {
             UnitRiskMonitoring::whereIn('id', $latestMonitorings->pluck('id'))->update([
@@ -1381,11 +1461,14 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'notes' => 'required_if:status_verifikasi,tolak|nullable|string|max:2000',
         ]);
 
-        DB::transaction(function () use ($validated, $monitoring) {
+        $unit = $monitoring->identifikasiRisiko->unit;
+        $isUnitMr = $unit->unit_mr == 1;
+
+        DB::transaction(function () use ($validated, $monitoring, $isUnitMr) {
             if ($validated['status_verifikasi'] == 'terima') {
                 $monitoring->update(['is_approved' => true]);
             } else {
-                $targetStatus = UnitRiskMonitoring::getReturnStatus($monitoring->status);
+                $targetStatus = UnitRiskMonitoring::getReturnStatus($monitoring->status, $isUnitMr);
                 $monitoring->update([
                     'status' => $targetStatus,
                     'is_approved' => false,
@@ -1401,7 +1484,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'notes' => $validated['notes'],
                 'quarter' => $monitoring->quarter,
                 'month' => $monitoring->month,
-                'year' => $period->tahun,
+                'year' => null,
             ]);
         });
 
@@ -1410,8 +1493,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
     public function getNotes(Request $request, $period, $riskId)
     {
-        $periodModel = Periode::find($period); 
-        $tahun = $periodModel ? $periodModel->tahun : date('Y');
+        $periodModel = Periode::find($period);
 
         $risk = IdentifikasiRisiko::find($riskId);
         if (!$risk) return response()->json(['message' => 'Risk not found'], 404);
@@ -1420,7 +1502,6 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ->where('type', 1)
             ->where('quarter', $request->query('quarter'))
             ->where('month', $request->query('month'))
-            ->where('year', $tahun)
             ->with('user:id,name')
             ->latest()
             ->get();
@@ -1502,19 +1583,19 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     if (allMonths[newQuarter]) firstMonth = Object.keys(allMonths[newQuarter])[0];
                     updateMonthDropdown(newQuarter, firstMonth);
                 });
-                
+
                 $('select[name="month"]').val(activeMonth).trigger('change');
 
                 $('select[name="quarter"], select[name="month"]').on('change', function() {
                     const q = $('select[name="quarter"]').val();
                     const m = $('select[name="month"]').val();
                     if (!q || !m) return;
-                    
+
                     const url = new URL(window.location.href);
                     url.searchParams.set('quarter', q);
                     url.searchParams.set('month', m);
                     window.history.pushState({path: url.href}, '', url.href);
-                    
+
                     if (typeof window.LaravelDataTables !== 'undefined') {
                          $('.ajax-datatable').DataTable().ajax.reload();
                     }
