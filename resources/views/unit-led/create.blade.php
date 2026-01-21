@@ -184,7 +184,7 @@
                         <div class="col-12 mt-4">
                             <div class="row g-2">
                                 <div class="col-auto">
-                                    <a href="{{ route('unit-led.index-by-periode', ['periode' => $lossEvent->periode_id]) }}" class="btn btn-secondary">Batal</a>
+                                    <a href="{{ route('unit-led.index-by-periode', ['periode' => $periode->id]) }}" class="btn btn-secondary">Batal</a>
                                 </div>
                                 <div class="col-auto">
                                     <button type="submit" class="btn btn-primary" id="save-led-button">Simpan</button>
