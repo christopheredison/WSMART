@@ -28,7 +28,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             'data' => 'project.meta.profit_center',
             'name' => 'profit_center',
             'render' => '(data, type, row) => row.project?.meta?.profit_center || "-"',
-            'orderable' => false,
+            'orderable' => true,
             'searchable' => true,
         ],
         'cost_center_parent' => [
@@ -36,7 +36,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             'data' => 'project.cost_center_parent',
             'name' => 'cost_center_parent',
             'render' => '(data, type, row) => row.project?.divisi?.name || "-"',
-            'orderable' => false,
+            'orderable' => true,
             'searchable' => true,
         ],
         'project_id' => [
@@ -51,7 +51,7 @@ class ProjectPeriodeListController extends BasicCRUDController
         'ok' => [
             'label' => 'Nilai OK',
             'data' => 'nk',
-            'name' => 'nk',
+            'name' => 'projects.nk',
             'render' => '(data, type, row) => row.nk ? Intl.NumberFormat(\'id-ID\').format(row.nk) : "-"',
             'orderable' => true,
             'searchable' => true,
@@ -59,12 +59,11 @@ class ProjectPeriodeListController extends BasicCRUDController
         'tanggal_mulai' => [
             'label' => 'Tanggal Mulai',
             'data' => 'tanggal_mulai',
-            'name' => 'tanggal_mulai',
+            'name' => 'projects.tanggal_mulai',
             'render' => '(data, type, row) => {
                 if (!row.tanggal_mulai) return "-";
-                const date = new Date(row.tanggal_mulai);
-                const options = { day: "numeric", month: "short", year: "numeric" };
-                return date.toLocaleDateString("id-ID", options);
+                const date = new Date(row.tanggal_mulai + "T00:00:00");
+                return date.toLocaleDateString("id-ID", { day:"numeric", month:"short", year:"numeric" });
             }',
             'orderable' => true,
             'searchable' => true,
@@ -170,6 +169,58 @@ class ProjectPeriodeListController extends BasicCRUDController
                     $query->whereIn('project_periode_lists.project_id', $userProjectIds);
                 }
             }
+
+            // DEFAULT ORDERING hanya saat tidak ada sorting dari user
+            if (!request()->has('order')) {
+                $riskActionNeededSql = "FALSE";
+                $latestBatchIdSql = "(SELECT MAX(sub_db.id) FROM data_batches sub_db WHERE sub_db.project_id = project_periode_lists.project_id AND sub_db.type = 2)";
+
+                if ($levelId == 6) {
+                    $riskActionNeededSql = "EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchIdSql AND db.finish IS FALSE AND (db.status = 5 OR db.status = 1))";
+                } elseif ($u_step > 0) {
+                    $rejectConditions = "";
+                    if ($u_step == 2) $rejectConditions = "OR db.status = 9";
+                    elseif ($u_step == 3) $rejectConditions = "OR db.status = 10";
+
+                    $riskActionNeededSql = "EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchIdSql AND db.finish IS FALSE AND (db.step_verification = {$u_step} {$rejectConditions}))";
+                }
+
+                $monActionNeededSql = "FALSE";
+                $monTargetStatus = 0;
+                if ($levelId == 6) $monTargetStatus = 1;
+                elseif ($levelId == 7) $monTargetStatus = 2;
+                elseif ($levelId == 1 && !$is_mr) $monTargetStatus = 3;
+                elseif ($levelId == 1 && $is_mr) $monTargetStatus = 4;
+                elseif ($levelId == 2 && $is_mr) $monTargetStatus = 5;
+
+                if ($monTargetStatus > 0) {
+                    $monActionNeededSql = "EXISTS (
+                        SELECT 1
+                        FROM project_risk_monitorings prm
+                        JOIN project_risks pr ON pr.id = prm.risiko_id
+                        WHERE pr.project_periode_list_id = project_periode_lists.id
+                          AND prm.id = (SELECT MAX(sub_prm.id)
+                                      FROM project_risk_monitorings sub_prm
+                                      JOIN project_risks sub_pr ON sub_pr.id = sub_prm.risiko_id
+                                      WHERE sub_pr.project_periode_list_id = project_periode_lists.id)
+                          AND prm.status = {$monTargetStatus}
+                          AND prm.is_approved IS FALSE
+                    )";
+                }
+
+                $userIdList = $userProjectIds->isNotEmpty() ? $userProjectIds->join(',') : '0';
+                $allIdList  = $allProjectIds->isNotEmpty() ? $allProjectIds->join(',') : '0';
+
+                $query->orderByRaw("
+                    CASE
+                        WHEN project_periode_lists.project_id IN ({$userIdList}) AND ($riskActionNeededSql OR $monActionNeededSql) THEN 1
+                        WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 2
+                        WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 3
+                        ELSE 4
+                    END ASC
+                ");
+                $query->orderBy('project_periode_lists.updated_at', 'desc');
+            }
         };
 
         // --- DATATABLE CALLBACK ---
@@ -191,8 +242,7 @@ class ProjectPeriodeListController extends BasicCRUDController
 
             // Format Tanggal Mulai
             $dataTable->editColumn('tanggal_mulai', function ($row) {
-                if (!$row->tanggal_mulai) return "-";
-                return \Carbon\Carbon::parse($row->tanggal_mulai)->translatedFormat('d M Y');
+                return $row->tanggal_mulai ? \Carbon\Carbon::parse($row->tanggal_mulai)->toDateString() : null;
             });
 
             // --- SORTING ---
@@ -212,13 +262,13 @@ class ProjectPeriodeListController extends BasicCRUDController
             });
 
             // 4. Sort Nilai OK (NK)
-            $dataTable->orderColumn('nk', function ($query, $order) {
-                $query->orderByRaw("CAST(NULLIF(projects.nk, '') AS NUMERIC) $order NULLS LAST");
+            $dataTable->orderColumn('projects.nk', function ($query, $order) {
+                $query->orderByRaw("projects.nk::numeric {$order} NULLS LAST");
             });
 
             // 3. Sort Tanggal Mulai
-            $dataTable->orderColumn('tanggal_mulai', function ($query, $order) {
-                $query->orderByRaw("CAST(NULLIF(projects.tanggal_mulai, '') AS DATE) $order NULLS LAST");
+            $dataTable->orderColumn('projects.tanggal_mulai', function ($query, $order) {
+                $query->orderByRaw("projects.tanggal_mulai::date {$order} NULLS LAST");
             });
 
             // 4. Sort Nilai Risiko (Pastikan merujuk ke tabel utama agar tidak ambigu)
@@ -248,8 +298,8 @@ class ProjectPeriodeListController extends BasicCRUDController
             });
 
             // Filter untuk Nilai OK (nk) - Cast to TEXT for Postgres
-            $dataTable->filterColumn('nk', function($query, $keyword) {
-                $query->whereRaw("CAST(projects.nk AS TEXT) ilike ?", ["%{$keyword}%"]);
+            $dataTable->filterColumn('projects.nk', function ($query, $keyword) {
+                $query->whereRaw("projects.nk::text ILIKE ?", ["%{$keyword}%"]);
             });
 
             // Filter untuk Nilai Risiko (skala_risiko) - Cast to TEXT for Postgres
@@ -258,8 +308,8 @@ class ProjectPeriodeListController extends BasicCRUDController
             });
 
             // Filter untuk Tanggal Mulai - Cast to TEXT for Postgres
-            $dataTable->filterColumn('tanggal_mulai', function($query, $keyword) {
-                $query->whereRaw("CAST(projects.tanggal_mulai AS TEXT) ilike ?", ["%{$keyword}%"]);
+            $dataTable->filterColumn('projects.tanggal_mulai', function ($query, $keyword) {
+                $query->whereRaw("projects.tanggal_mulai::text ILIKE ?", ["%{$keyword}%"]);
             });
 
             $dataTable->addColumn('action_needed', function ($row) use ($user, $u_step, $levelId) {
@@ -293,48 +343,48 @@ class ProjectPeriodeListController extends BasicCRUDController
             $dataTable->rawColumns(['status_risiko_html', 'status_monitoring_html']);
 
             // --- DEFAULT ORDERING (PRIORITAS) ---
-            $dataTable->order(function ($query) use ($user, $levelId, $u_step, $is_mr, $userProjectIds, $allProjectIds) {
-                if (!request()->has('order')) {
-                    $riskActionNeededSql = "FALSE";
-                    $latestBatchIdSql = "(SELECT MAX(sub_db.id) FROM data_batches sub_db WHERE sub_db.project_id = project_periode_lists.project_id AND sub_db.type = 2)";
+            // $dataTable->order(function ($query) use ($user, $levelId, $u_step, $is_mr, $userProjectIds, $allProjectIds) {
+            //     if (!request()->has('order')) {
+            //         $riskActionNeededSql = "FALSE";
+            //         $latestBatchIdSql = "(SELECT MAX(sub_db.id) FROM data_batches sub_db WHERE sub_db.project_id = project_periode_lists.project_id AND sub_db.type = 2)";
 
-                    if ($levelId == 6) { // Inputter
-                        $riskActionNeededSql = "EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchIdSql AND db.finish IS FALSE AND (db.status = 5 OR db.status = 1))";
-                    } elseif ($u_step > 0) { // Verifikator
-                        $rejectConditions = "";
-                        if ($u_step == 2) $rejectConditions = "OR db.status = 9";
-                        elseif ($u_step == 3) $rejectConditions = "OR db.status = 10";
+            //         if ($levelId == 6) { // Inputter
+            //             $riskActionNeededSql = "EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchIdSql AND db.finish IS FALSE AND (db.status = 5 OR db.status = 1))";
+            //         } elseif ($u_step > 0) { // Verifikator
+            //             $rejectConditions = "";
+            //             if ($u_step == 2) $rejectConditions = "OR db.status = 9";
+            //             elseif ($u_step == 3) $rejectConditions = "OR db.status = 10";
 
-                        $riskActionNeededSql = "EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchIdSql AND db.finish IS FALSE AND (db.step_verification = {$u_step} {$rejectConditions}))";
-                    }
+            //             $riskActionNeededSql = "EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchIdSql AND db.finish IS FALSE AND (db.step_verification = {$u_step} {$rejectConditions}))";
+            //         }
 
-                    $monActionNeededSql = "FALSE";
-                    $monTargetStatus = 0;
-                    if ($levelId == 6) $monTargetStatus = 1;
-                    elseif ($levelId == 7) $monTargetStatus = 2;
-                    elseif ($levelId == 1 && !$is_mr) $monTargetStatus = 3;
-                    elseif ($levelId == 1 && $is_mr) $monTargetStatus = 4;
-                    elseif ($levelId == 2 && $is_mr) $monTargetStatus = 5;
+            //         $monActionNeededSql = "FALSE";
+            //         $monTargetStatus = 0;
+            //         if ($levelId == 6) $monTargetStatus = 1;
+            //         elseif ($levelId == 7) $monTargetStatus = 2;
+            //         elseif ($levelId == 1 && !$is_mr) $monTargetStatus = 3;
+            //         elseif ($levelId == 1 && $is_mr) $monTargetStatus = 4;
+            //         elseif ($levelId == 2 && $is_mr) $monTargetStatus = 5;
 
-                    if ($monTargetStatus > 0) {
-                        $monActionNeededSql = "EXISTS (SELECT 1 FROM project_risk_monitorings prm JOIN project_risks pr ON pr.id = prm.risiko_id WHERE pr.project_periode_list_id = project_periode_lists.id AND prm.id = (SELECT MAX(sub_prm.id) FROM project_risk_monitorings sub_prm JOIN project_risks sub_pr ON sub_pr.id = sub_prm.risiko_id WHERE sub_pr.project_periode_list_id = project_periode_lists.id) AND prm.status = {$monTargetStatus} AND prm.is_approved IS FALSE)";
-                    }
+            //         if ($monTargetStatus > 0) {
+            //             $monActionNeededSql = "EXISTS (SELECT 1 FROM project_risk_monitorings prm JOIN project_risks pr ON pr.id = prm.risiko_id WHERE pr.project_periode_list_id = project_periode_lists.id AND prm.id = (SELECT MAX(sub_prm.id) FROM project_risk_monitorings sub_prm JOIN project_risks sub_pr ON sub_pr.id = sub_prm.risiko_id WHERE sub_pr.project_periode_list_id = project_periode_lists.id) AND prm.status = {$monTargetStatus} AND prm.is_approved IS FALSE)";
+            //         }
 
-                    $userIdList = $userProjectIds->isNotEmpty() ? $userProjectIds->join(',') : '0';
-                    $allIdList = $allProjectIds->isNotEmpty() ? $allProjectIds->join(',') : '0';
+            //         $userIdList = $userProjectIds->isNotEmpty() ? $userProjectIds->join(',') : '0';
+            //         $allIdList = $allProjectIds->isNotEmpty() ? $allProjectIds->join(',') : '0';
 
-                    $query->orderByRaw("
-                        CASE
-                            WHEN project_periode_lists.project_id IN ({$userIdList}) AND ($riskActionNeededSql OR $monActionNeededSql) THEN 1
-                            WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 2
-                            WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 3
-                            ELSE 4
-                        END ASC
-                    ");
+            //         $query->orderByRaw("
+            //             CASE
+            //                 WHEN project_periode_lists.project_id IN ({$userIdList}) AND ($riskActionNeededSql OR $monActionNeededSql) THEN 1
+            //                 WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 2
+            //                 WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 3
+            //                 ELSE 4
+            //             END ASC
+            //         ");
 
-                    $query->orderBy('project_periode_lists.updated_at', 'desc');
-                }
-            });
+            //         $query->orderBy('project_periode_lists.updated_at', 'desc');
+            //     }
+            // });
         };
 
         $projectOptions = Project::select('id', 'project_name')->orderBy('project_name');

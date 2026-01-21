@@ -44,7 +44,7 @@
                             <span class="fw-bold me-2">{{ count($pendingItems) }}</span>
                             <a href="#" class="text-white text-decoration-underline {{ count($pendingItems) > 0 ? '' : 'opacity-50 text-decoration-none pe-none' }}"
                               @if(count($pendingItems) > 0) data-bs-toggle="modal" data-bs-target="#modalPendingItems" @endif>
-                              Menunggu Persetujuan
+                              Menunggu Tindakan Anda
                             </a>
                         </div>
                         <div class="d-flex align-items-center">
@@ -62,9 +62,21 @@
                 <div class="card-body p-4 position-relative overflow-hidden">
                     <h3 class="fw-bold mb-4">Divisi</h3>
                     <div class="d-flex flex-column gap-2">
-                        <div class="d-flex align-items-center"><span class="fw-bold me-2">{{ $divisiStats['total'] }}</span> <span class="opacity-75">Total Divisi</span></div>
-                        <div class="d-flex align-items-center"><span class="fw-bold me-2">{{ $divisiStats['pending'] }}</span> <span class="opacity-100">Menunggu Tindakan</span></div>
-                        <div class="d-flex align-items-center"><span class="fw-bold me-2">{{ $divisiStats['approved'] }}</span> <span class="opacity-75">Disetujui</span></div>
+                        <div class="d-flex align-items-center">
+                            <span class="fw-bold me-2">{{ $divisiStats['total'] }}</span>
+                            <span class="opacity-75">Total Divisi</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="fw-bold me-2">{{ $divisiStats['pending'] }}</span>
+                            <a href="#" class="text-white text-decoration-underline {{ $divisiStats['pending'] > 0 ? '' : 'opacity-50 text-decoration-none pe-none' }}"
+                              @if($divisiStats['pending'] > 0) data-bs-toggle="modal" data-bs-target="#modalPendingDivisi" @endif>
+                                Menunggu Tindakan Anda
+                            </a>
+                        </div>
+                        <div class="d-flex align-items-center">
+                          <span class="fw-bold me-2">{{ $divisiStats['approved'] }}</span>
+                          <span class="opacity-75">Disetujui</span>
+                        </div>
                     </div>
                     <i class="bx bx-buildings position-absolute" style="bottom: -10px; right: 15px; font-size: 5rem; opacity: 0.15;"></i>
                 </div>
@@ -357,21 +369,29 @@
     </div>
 </div>
 
+{{-- Modal Project --}}
 <div class="modal fade" id="modalPendingItems" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow p-0">
             <div class="modal-header bg-warning-subtle">
-                <h5 class="modal-title fw-bold text-dark">
-                    <i class="bx bx-time-five me-2"></i>Menunggu Persetujuan Anda
-                </h5>
+                <h4 class="modal-title fw-bold text-dark">
+                    Tindakan Diperlukan (Proyek)
+                </h4>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-0" style="max-height: 70vh; overflow-y: auto;">
                 @if(count($pendingItems) > 0)
                     @php
-                        $riskItems = collect($pendingItems)->where('type', 'Risk Register');
-                        $monitoringItems = collect($pendingItems)->filter(function($item) {
-                            return \Illuminate\Support\Str::contains($item['type'], 'Monitoring');
+                        // FILTER: HANYA PROJECT (exclude yang ada kata 'Divisi')
+                        $projectOnlyItems = collect($pendingItems)->filter(function($item) {
+                            return !\Illuminate\Support\Str::contains($item['type'], 'Divisi');
+                        });
+
+                        // Gunakan $projectOnlyItems, bukan $pendingItems langsung
+                        $riskItems = $projectOnlyItems->where('type', 'Risk Register');
+                        $monitoringItems = $projectOnlyItems->filter(function($item) {
+                            return \Illuminate\Support\Str::contains($item['type'], 'Monitoring')
+                                && !\Illuminate\Support\Str::contains($item['type'], 'Divisi');
                         });
                     @endphp
 
@@ -465,6 +485,134 @@
                     <div class="text-center py-5">
                         <img src="{{ asset('images/illustrations/empty.svg') }}" alt="Empty" style="height: 100px; opacity: 0.5;" class="mb-3">
                         <h6 class="text-black">Tidak ada item yang menunggu persetujuan Anda saat ini.</h6>
+                    </div>
+                @endif
+            </div>
+            <div class="modal-footer bg-light p-2">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal Divisi --}}
+<div class="modal fade" id="modalPendingDivisi" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow p-0">
+            <div class="modal-header bg-info-subtle">
+                <h4 class="modal-title fw-bold text-dark">
+                    Tindakan Diperlukan (Divisi)
+                </h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" style="max-height: 70vh; overflow-y: auto;">
+                @php
+                    // FILTER KHUSUS DIVISI
+                    // Ambil item yang type-nya mengandung kata "Divisi"
+                    $divisiItems = collect($pendingItems)->filter(function($item) {
+                        return \Illuminate\Support\Str::contains($item['type'], 'Divisi');
+                    });
+
+                    $riskDivisi = $divisiItems->filter(function($item) {
+                        return $item['type'] === 'Risk Register Divisi';
+                    });
+
+                    $monDivisi = $divisiItems->filter(function($item) {
+                        return \Illuminate\Support\Str::contains($item['type'], 'Monitoring');
+                    });
+                @endphp
+
+                @if($divisiItems->count() > 0)
+                    <div class="accordion accordion-flush" id="accordionPendingDivisi">
+
+                        {{-- 1. RISK REGISTER SECTION --}}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingRiskDiv">
+                                <button class="accordion-button fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRiskDiv" aria-expanded="true" aria-controls="collapseRiskDiv">
+                                    Risk Register Divisi
+                                    <span class="badge bg-danger ms-2">{{ $riskDivisi->count() }}</span>
+                                </button>
+                            </h2>
+                            <div id="collapseRiskDiv" class="accordion-collapse collapse show" aria-labelledby="headingRiskDiv" data-bs-parent="#accordionPendingDivisi">
+                                <div class="accordion-body p-0">
+                                    @if($riskDivisi->count() > 0)
+                                        <div class="list-group list-group-flush">
+                                            @foreach($riskDivisi as $item)
+                                                <a href="{{ $item['link'] }}" class="list-group-item list-group-item-action p-3">
+                                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="avatar-sm me-3 bg-light rounded-circle d-flex align-items-center justify-content-center text-info" style="width: 40px; height: 40px;">
+                                                                <i class="bx bx-shield-quarter fs-4"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="mb-0 fw-bold text-black">{{ $item['project_name'] }}</h6>
+                                                                <small class="text-dark d-block">
+                                                                    {{ $item['unit_name'] }}
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <span class="badge bg-warning text-dark mb-1">{{ $item['description'] }}</span>
+                                                            <small class="text-danger d-block fw-bold">{{ $item['count'] }}</small>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="p-3 text-center text-dark small">Tidak ada item Risk Register Divisi yang menunggu.</div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- 2. MONITORING SECTION --}}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingMonDiv">
+                                <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMonDiv" aria-expanded="false" aria-controls="collapseMonDiv">
+                                    Monitoring Divisi
+                                    <span class="badge bg-danger ms-2">{{ $monDivisi->count() }}</span>
+                                </button>
+                            </h2>
+                            <div id="collapseMonDiv" class="accordion-collapse collapse" aria-labelledby="headingMonDiv" data-bs-parent="#accordionPendingDivisi">
+                                <div class="accordion-body p-0">
+                                    @if($monDivisi->count() > 0)
+                                        <div class="list-group list-group-flush">
+                                            @foreach($monDivisi as $item)
+                                                <a href="{{ $item['link'] }}" class="list-group-item list-group-item-action p-3">
+                                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="avatar-sm me-3 bg-light rounded-circle d-flex align-items-center justify-content-center text-info" style="width: 40px; height: 40px;">
+                                                                <i class="bx bx-bar-chart-alt-2 fs-4"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="mb-0 fw-bold text-black">{{ $item['project_name'] }}</h6>
+                                                                <small class="text-dark d-block">
+                                                                    {{ $item['unit_name'] }} &bullet;
+                                                                    {{-- Hapus kata "Divisi" agar tidak redundan di tampilan --}}
+                                                                    <span class="text-info fw-semibold">{{ str_replace('Divisi ', '', $item['type']) }}</span>
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <span class="badge bg-warning text-dark mb-1">{{ $item['description'] }}</span>
+                                                            <small class="text-danger d-block fw-bold">{{ $item['count'] }}</small>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="p-3 text-center text-dark">Tidak ada data Monitoring Divisi yang menunggu.</div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <div class="text-center py-5">
+                        <img src="{{ asset('images/illustrations/empty.svg') }}" alt="Empty" style="height: 100px; opacity: 0.5;" class="mb-3">
+                        <h6 class="text-dark">Tidak ada item divisi yang menunggu tindakan Anda.</h6>
                     </div>
                 @endif
             </div>
