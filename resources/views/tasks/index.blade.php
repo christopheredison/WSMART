@@ -156,7 +156,7 @@
                     <div class="position-absolute top-0 end-0 mt-3 me-3">
                         {!! $badgeHtml !!}
                         @if(($task['type'] ?? '') == 'unit')
-                            <span class="badge bg-secondary ms-1">Divisi</span>
+                            <span class="badge bg-info ms-1">Divisi</span>
                         @else
                             <span class="badge bg-primary ms-1">Proyek</span>
                         @endif

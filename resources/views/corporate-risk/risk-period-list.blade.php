@@ -53,7 +53,7 @@
                   <td class="unit">{{ $unit }}</td>
                   <td class="tahun">{{ $periode->tahun }}</td>
                   <td class="status text-center">
-                    <figure class="badge {{ $periode->status == 'active' ? 'bg-success' : 'bg-secondary' }}">
+                    <figure class="badge {{ $periode->status == 'active' ? 'bg-success' : 'bg-danger' }}">
                       {{ $periode->status == 'active' ? 'Aktif' : 'Tidak Aktif' }}
                     </figure>
                   </td>
