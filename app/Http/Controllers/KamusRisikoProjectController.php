@@ -215,6 +215,8 @@ class KamusRisikoProjectController extends Controller
                 'user_id' => auth()->id(),
                 'is_closed' => 0,
                 'status_progress' => ProjectRisk::STATUS_INPUT_DATA,
+                'status' => ProjectRisk::STATUS_INPUT_DATA,
+                'step_verification' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

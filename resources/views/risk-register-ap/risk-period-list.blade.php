@@ -70,6 +70,10 @@
                 <th class="sort" data-sort="tahun">Tahun</th>
                 <th class="sort text-center" data-sort="risk_count">Total Risiko</th>
                 <th class="sort text-center" data-sort="unit_status">Status Anak Perusahaan</th>
+                {{-- NEW COLUMNS --}}
+                <th class="sort text-center">Status Risiko</th>
+                <th class="sort text-center">Status Monitoring</th>
+                {{-- END NEW COLUMNS --}}
                 <th class="no-sort white-space-nowrap" data-sort="action">Action</th>
               </tr>
             </thead>
@@ -91,6 +95,16 @@
                     {{ $unitStatusLabel }}
                   </figure>
                 </td>
+
+                {{-- NEW DATA --}}
+                <td class="text-center">
+                    {!! $item['risk_status_html'] !!}
+                </td>
+                <td class="text-center">
+                    {!! $item['mon_status_html'] !!}
+                </td>
+                {{-- END NEW DATA --}}
+
                 <td class="white-space-nowrap">
                   @if ($apAdmin)
                     <a href="{{ route('risk-register-ap.periods.show', ['period' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
@@ -144,6 +158,8 @@
 @push('scripts')
 <script>
   $(document).ready(function() {
+    $("body").tooltip({ selector: '[data-bs-toggle=tooltip]' }); // Added tooltips init
+
     let table = $('#example').DataTable({
       "paging": true,
       "info": true,
@@ -157,7 +173,7 @@
       }
     });
 
-    // Build units with status mapping for dynamic division options
+    // Build units with status mapping
     @php
       $unitsWithStatus = [];
       foreach($dataToDisplay as $item) {
@@ -173,7 +189,6 @@
       @if($apAdmin)
         const $select = $('#unit_id_filter');
         const current = $select.val();
-        // Preserve placeholder
         const placeholder = '<option value="">Semua Anak Perusahaan</option>';
         $select.empty();
         $select.append(placeholder);
@@ -187,16 +202,17 @@
             $select.append(`<option value="${u.name}">${u.name}</option>`);
           }
         });
-        // reset selection to placeholder
         $select.val('');
         $select.trigger('change');
       @endif
     }
 
-    // Initialize division options based on current status selection
+    // Initialize division options
     const initialStatus = $('#unit_status_filter').val();
     updateDivisionOptions(initialStatus);
-    // Apply initial table filter to show only current status (default: Valid)
+
+    // NOTE: Column 4 is "Status Anak Perusahaan",
+    // New columns (5 & 6) are inserted AFTER column 4, so filter index 4 is still valid.
     table.column(4).search(initialStatus || '', false, false).draw();
 
     @if($apAdmin)
@@ -215,9 +231,7 @@
 
     $('#unit_status_filter').on('change', function() {
       const searchTerm = $(this).val();
-      // Use non-regex search to avoid whitespace/newline mismatch
       table.column(4).search(searchTerm || '', false, false).draw();
-      // Update division options to reflect selected status
       updateDivisionOptions(searchTerm);
     });
   });

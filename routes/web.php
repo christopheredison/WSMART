@@ -744,6 +744,7 @@ Route::prefix('risk-register-ap')->group(function () {
     Route::post('/{riskRegister}/analisa', [RiskRegisterApController::class, 'doAnalisa'])->name('risk-register-ap.do-analisa');
 
     Route::post('/{riskRegister}/verifikasi', [RiskRegisterApController::class, 'verifikasi'])->name('risk-register-ap.verifikasi');
+    Route::post('/bulk-verifikasi', [RiskRegisterApController::class, 'bulkVerifikasi'])->name('risk-register-ap.bulk-verifikasi');
 
     Route::get('/{riskRegister}/loss-events/create', [ApLEDController::class, 'riskChangeToLed'])->name('risk-register-ap.loss-events.create')->middleware('can:risk_register_list');
     Route::post('/{riskRegister}/loss-events', [ApLEDController::class, 'riskChangeToLedStore'])->name('risk-register-ap.loss-events.store')->middleware('can:risk_register_list');

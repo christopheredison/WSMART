@@ -39,7 +39,7 @@ class KamusRisikoApController extends Controller
                 $q->when($request->filled('jenis_risiko_id'), function ($subQ) use ($request) {
                     $subQ->where('jenis_risiko_id', $request->jenis_risiko_id);
                 });
-                
+
                 $q->when($request->filled('level_risiko'), function ($subQ) use ($request) {
                     $subQ->where('level_risiko', $request->level_risiko);
                 });
@@ -47,7 +47,7 @@ class KamusRisikoApController extends Controller
                 $q->when($request->filled('deskripsi_risiko'), function ($subQ) use ($request) {
                     $subQ->where('deskripsi_peristiwa_risiko', 'like', '%' . $request->deskripsi_risiko . '%');
                 });
-                
+
                 $q->when($request->filled('efektivitas'), function ($subQ) use ($request) {
                     if ($request->efektivitas == 'efektif') {
                         $subQ->where('efektivitas_perlakuan_risiko', '>', 0);
@@ -71,7 +71,7 @@ class KamusRisikoApController extends Controller
                                       <span class="bx bx-plus me-1"></span>
                                       <span>Ambil Risiko</span>
                                   </button>';
-                      
+
                       return '<div class="d-flex flex-column gap-1">' . $btn_view . $btn_ambil . '</div>';
                 })
                 ->addColumn('divisi', function ($row) {
@@ -167,7 +167,7 @@ class KamusRisikoApController extends Controller
                     }
 
                     $class = $efektivitas > 0 ? 'text-success' : ($efektivitas < 0 ? 'text-danger' : 'text-warning');
-                    
+
                     return '<span class="fw-bold ' . $class . '">' . $efektivitas . '%</span>';
                 })
                 ->rawColumns(['action', 'level_risiko_inheren', 'level_risiko_residual', 'realisasi_level_risiko', 'efektivitas'])
@@ -200,7 +200,7 @@ class KamusRisikoApController extends Controller
             DB::beginTransaction();
 
             $originalRisk = IdentifikasiRisiko::with([
-                'penyebabRisiko.perlakuanPenyebabRisikoUnit', 
+                'penyebabRisiko.perlakuanPenyebabRisikoUnit',
                 'kris',
                 'riskAnalysis'
             ])->findOrFail($request->original_risk_id);
@@ -240,6 +240,8 @@ class KamusRisikoApController extends Controller
                 'user_id' => auth()->id(),
                 'is_closed' => 0,
                 'status_progress' => IdentifikasiRisiko::STATUS_INPUT_DATA,
+                'status' => IdentifikasiRisiko::STATUS_INPUT_DATA,
+                'step_verification' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -273,7 +275,7 @@ class KamusRisikoApController extends Controller
                 ]);
                 $newKri->save();
             }
-            
+
             DB::commit();
 
             $redirectUrl = route('risk-register-ap.index', ['pid' => $newRisk->period_id]);
@@ -301,19 +303,19 @@ class KamusRisikoApController extends Controller
                 'deskripsi_risiko',
                 'efektivitas',
             ]);
-    
+
             $fileName = 'Kamus_Risiko_AP_' . date('d-m-Y_H-i-s') . '.xlsx';
-    
+
             $fileContents = Excel::raw(
                 new KamusRisikoApExport($filters),
                 \Maatwebsite\Excel\Excel::XLSX
             );
-    
+
             return response($fileContents, 200, [
                 'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Gagal export Kamus Risiko Divisi Anak Perusahaan: ' . $e->getMessage());
             return response()->json(['message' => 'Terjadi kesalahan saat membuat file Excel.'], 500);

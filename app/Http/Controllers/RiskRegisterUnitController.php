@@ -326,7 +326,7 @@ class RiskRegisterUnitController extends Controller
               'label' => 'Hapus'
             ],
             [
-              'icon' => '<span class="bx-comment-dots"></span>',
+              'icon' => '<span class="bx bx-comment-dots"></span>',
               'label' => 'Catatan'
             ],
             [
@@ -1806,7 +1806,10 @@ class RiskRegisterUnitController extends Controller
             ])
             ->where('unit_id', $unit_id)
             ->where('periode_id', $periode_id)
-            ->where('status', '!=', 6) // Bukan Published
+            ->where(function ($query) {
+                $query->where('status', '!=', 6)
+                      ->orWhereNull('status');
+            })
             ->where('is_closed', 0)
             ->get();
 
@@ -2048,7 +2051,10 @@ class RiskRegisterUnitController extends Controller
                                 // Update Risiko
                                 IdentifikasiRisiko::where('unit_id', $unit_id)
                                     ->where('periode_id', $periode_id)
-                                    ->where('status', IdentifikasiRisiko::STATUS_INPUT_DATA)
+                                    ->where(function ($query) {
+                                        $query->where('status', IdentifikasiRisiko::STATUS_INPUT_DATA)
+                                              ->orWhereNull('status');
+                                    })
                                     ->update([
                                         'status' => IdentifikasiRisiko::STATUS_DIKIRIM,
                                         'status_risiko' => 1,
@@ -2160,7 +2166,10 @@ class RiskRegisterUnitController extends Controller
                 if ($dataBatch->status <= DataBatch::STATUS_KIRIM) {
                     IdentifikasiRisiko::where('unit_id', $unit_id)
                         ->where('periode_id', $periode_id)
-                        ->where('status', IdentifikasiRisiko::STATUS_INPUT_DATA)
+                        ->where(function ($query) {
+                            $query->where('status', IdentifikasiRisiko::STATUS_INPUT_DATA)
+                                  ->orWhereNull('status');
+                        })
                         ->update([
                             'status' => IdentifikasiRisiko::STATUS_DIKIRIM,
                             'status_risiko' => 1,

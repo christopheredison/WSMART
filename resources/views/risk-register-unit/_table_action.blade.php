@@ -1,6 +1,13 @@
 
 @if(!$unitExpired)
-  @if(($item->status == 1 || $item->status == null || $item->status == 5) && (auth()->user()->level_id == 1 && auth()->user()->unit_id == $item->unit_id))
+  @if((
+    $item->status == 1
+    || $item->status == null
+    || $item->status == 5
+  ) && (
+    auth()->user()->level_id == 1
+    // && auth()->user()->unit_id == $item->unit_id
+  ))
     @can('risk_register_edit')
       <a href="{{ route('risk-register-unit.edit', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
         title="Edit"><span class="bx bx-message-square-edit"></span></a>
@@ -40,7 +47,14 @@
 </a>
 
 @if(!$unitExpired)
-  @if(($item->status == 1 || $item->status == null || $item->status == 5) && (auth()->user()->level_id == 1 && auth()->user()->unit_id == $item->unit_id))
+  @if((
+    $item->status == 1
+    || $item->status == null
+    || $item->status == 5
+  ) && (
+    auth()->user()->level_id == 1
+    // && auth()->user()->unit_id == $item->unit_id
+  ))
   @can('risk_register_delete')
     <button type="button" class="btn-input-icon" data-bs-toggle="modal"
       data-bs-target="#modalDelete{{ $item->id }}">
