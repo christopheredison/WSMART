@@ -38,9 +38,9 @@
 
           <!-- Key Controls -->
           @foreach($ictPlan->planControls as $index => $planControl)
-          
-          @php 
-            $do = $planControl->latestDo; 
+
+          @php
+            $do = $planControl->latestDo;
           @endphp
 
           <div class="key-control-section mb-4" data-index="{{ $index }}">
@@ -50,13 +50,13 @@
               </div>
               <div class="card-body">
                 <input type="hidden" name="plan_control_id[]" value="{{ $planControl->id }}">
-                
+
                 <!-- Key Control Info -->
                 <div class="mb-4">
                   <label class="form-label fw-bold">Key Control</label>
                   <input type="text" class="form-control" value="{{ $planControl->key_control }}" readonly>
                 </div>
-                
+
                 <!-- Jenis, Bentuk, Level Kontrol -->
                 <div class="row mb-4">
                   <div class="col-md-4">
@@ -87,7 +87,7 @@
                     </select>
                   </div>
                 </div>
-                
+
                 <!-- Kecukupan Desain Pengendalian -->
                 <div class="mb-4">
                   <h6 class="mb-3 border-bottom pb-2">Kecukupan Desain Pengendalian</h6>
@@ -138,7 +138,7 @@
                     </div>
                   </div>
                 </div>
-                
+
                 <!-- Efektivitas Desain Pengendalian -->
                 <div class="mb-4">
                   <h6 class="mb-3 border-bottom pb-2">Efektivitas Desain Pengendalian</h6>
@@ -185,7 +185,7 @@
                     </div>
                   </div>
                 </div>
-                
+
                 <!-- Kesimpulan dan Tindak Lanjut -->
                 <div class="mb-4">
                   <h6 class="mb-3 border-bottom pb-2">Kesimpulan dan Tindak Lanjut</h6>
@@ -210,7 +210,7 @@
                   <div class="row">
                     <div class="col-md-6">
                       <label class="form-label">Batas Waktu Penyelesaian Tindak Lanjut <span class="text-danger">*</span></label>
-                      <input 
+                      <input
                         type="text"
                         class="form-control flatpickr-date"
                         name="batas_waktu_penyelesaian[]"
@@ -269,39 +269,39 @@
     function generateKesimpulanAkhir(index) {
       // Dapatkan section berdasarkan index
       const section = $('.key-control-section').eq(index);
-      
+
       // Dapatkan nilai dari dropdown di dalam section yang spesifik
       // Gunakan selector yang sesuai dengan struktur HTML
       const kecukupanSelect = section.find('select[name="kecukupan_desain_pengendalian_akhir[]"]');
       const efektivitasSelect = section.find('select[name="efektivitas_desain_pengendalian_akhir[]"]');
       const kesimpulanInput = section.find('.kesimpulan-akhir-' + index);
-      
+
       // Ambil nilai terlebih dahulu
       const kecukupanVal = kecukupanSelect.val();
       const efektivitasVal = efektivitasSelect.val();
-      
+
       // Tambahkan debugging
       console.log('Generating kesimpulan for index:', index);
       console.log('Kecukupan value:', kecukupanVal);
       console.log('Efektivitas value:', efektivitasVal);
-      
+
       let kecukupanText = '';
       let efektivitasText = '';
-      
+
       if (kecukupanVal === '1') kecukupanText = 'cukup';
       else if (kecukupanVal === '2') kecukupanText = 'tidak cukup';
-      
+
       if (efektivitasVal === '1') efektivitasText = 'efektif';
       else if (efektivitasVal === '2') efektivitasText = 'efektif sebagian';
       else if (efektivitasVal === '3') efektivitasText = 'tidak efektif';
-      
+
       if (kecukupanText && efektivitasText) {
         kesimpulanInput.val(kecukupanText + ' dan ' + efektivitasText);
       } else {
         kesimpulanInput.val('');
       }
     }
-    
+
     // Gunakan event delegation untuk menangani perubahan pada dropdown
     $(document).on('change', 'select[name="kecukupan_desain_pengendalian_akhir[]"]', function() {
       const index = $(this).closest('.key-control-section').data('index');
@@ -309,20 +309,20 @@
       generateKesimpulanAkhir(index);
     });
 
-    
-    
+
+
     // Gunakan event delegation untuk menangani perubahan pada dropdown efektivitas
     $(document).on('change', 'select[name="efektivitas_desain_pengendalian_akhir[]"]', function() {
       const index = $(this).closest('.key-control-section').data('index');
       console.log('Efektivitas changed, index:', index);
       generateKesimpulanAkhir(index);
     });
-    
+
     // Inisialisasi kesimpulan akhir untuk semua key control saat halaman dimuat
     $('.key-control-section').each(function(index) {
       const kecukupanVal = $(this).find('select[name="kecukupan_desain_pengendalian_akhir[]"]').val();
       const efektivitasVal = $(this).find('select[name="efektivitas_desain_pengendalian_akhir[]"]').val();
-      
+
       if (kecukupanVal && efektivitasVal) {
         generateKesimpulanAkhir(index);
       }
@@ -333,7 +333,7 @@
         width: '100%',
         placeholder: 'Pilih Opsi'
     });
-    
+
     let clickedButtonValue = '';
 
     $('button[type="submit"]').on('click', function(e) {

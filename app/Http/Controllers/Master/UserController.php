@@ -14,6 +14,7 @@ use App\Supports\ApiHC;
 use App\Models\Role;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -41,14 +42,21 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $isRemoteUser = !empty($request->search) && empty($request->password);
+
+        $rules = [
             'search' => 'nullable|sometimes|string|max:255',
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|unique:users',
-            'password' => 'required|string|min:8|confirmed',
             'roles' => 'required|array|min:1',
             'unit_id' => 'required',
-        ]);
+        ];
+
+        if (!$isRemoteUser) {
+            $rules['password'] = 'required|string|min:8|confirmed';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         $dataUser = null;
         if ($request->search) {
@@ -69,15 +77,15 @@ class UserController extends Controller
         }
 
         $unit = Unit::findOrFail($unitId);
-
         $jabatan = Jabatan::find($request->jabatan_id);
+        $finalPassword = $isRemoteUser ? Str::random(32) : $request->password;
 
         $user = User::create([
             'name' => $dataUser['nm_peg'] ?? $request->name,
             'email' => ($dataUser['email'] ?? null) ? $dataUser['email'] : $request->email,
             'nip' => ($dataUser['nip'] ?? null) ? $dataUser['nip'] : $request->nip,
             'nik' => ($dataUser['nik'] ?? null) ? $dataUser['nik'] : $request->nik,
-            'password' => Hash::make($request->password),
+            'password' => Hash::make($finalPassword),
             'unit_id' => $unitId,
             'unit_type_id' => $unit->unitType->id,
             'parent_id' => $unit->parent_id,

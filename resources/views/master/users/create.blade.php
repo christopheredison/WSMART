@@ -240,6 +240,16 @@
           $('#email').prop('readonly', false);
         }
 
+        // $('#div-password').hide();
+        // $('#div-password-confirm').hide();
+
+        // $('#password').removeAttr('required');
+        // $('#password_confirmation').removeAttr('required');
+
+        // $('#password').val('');
+        // $('#password_confirmation').val('');
+
+
         $('select[name="unit_id"] option').each(function() {
           if (this.value && isNaN(this.value)) {
             $(this).remove();
@@ -272,6 +282,12 @@
         $('#name').prop('readonly', false);
         $('#nip').prop('readonly', false);
         $('#email').prop('readonly', false);
+
+        // $('#div-password').show();
+        // $('#div-password-confirm').show();
+
+        // $('#password').attr('required', true);
+        // $('#password_confirmation').attr('required', true);
         Swal.close();
         Swal.fire({
           title: 'Error',

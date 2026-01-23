@@ -66,11 +66,11 @@
                     {{-- <div class="badge bg-danger" data-bs-toggle="tooltip" title="Alasan: {{ $item['rejection_reason'] }}">
                       Rejected
                     </div> --}}
-                    <button 
-                      type="button" 
-                      class="badge bg-danger btn-sm border-0" 
-                      data-bs-toggle="modal" 
-                      data-bs-target="#rejectionReasonModal" 
+                    <button
+                      type="button"
+                      class="badge bg-danger btn-sm border-0"
+                      data-bs-toggle="modal"
+                      data-bs-target="#rejectionReasonModal"
                       data-reason="{{ $item['rejection_reason'] }}"
                     >
                       Rejected
