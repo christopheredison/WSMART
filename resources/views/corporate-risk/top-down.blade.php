@@ -143,7 +143,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">2</span>
+                            <span class="nav-item-circle">3</span>
                         </span>
                         <span class="h3 mb-0">Dampak Risiko</span>
                     </div>
