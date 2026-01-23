@@ -243,11 +243,11 @@
         // $('#div-password').hide();
         // $('#div-password-confirm').hide();
 
-        // $('#password').removeAttr('required');
-        // $('#password_confirmation').removeAttr('required');
+        $('#password').removeAttr('required');
+        $('#password_confirmation').removeAttr('required');
 
-        // $('#password').val('');
-        // $('#password_confirmation').val('');
+        $('#password').val('');
+        $('#password_confirmation').val('');
 
 
         $('select[name="unit_id"] option').each(function() {
@@ -283,11 +283,11 @@
         $('#nip').prop('readonly', false);
         $('#email').prop('readonly', false);
 
-        // $('#div-password').show();
-        // $('#div-password-confirm').show();
+        $('#div-password').show();
+        $('#div-password-confirm').show();
 
-        // $('#password').attr('required', true);
-        // $('#password_confirmation').attr('required', true);
+        $('#password').attr('required', true);
+        $('#password_confirmation').attr('required', true);
         Swal.close();
         Swal.fire({
           title: 'Error',
