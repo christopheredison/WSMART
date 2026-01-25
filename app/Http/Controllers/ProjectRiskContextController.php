@@ -37,12 +37,13 @@ class ProjectRiskContextController extends Controller
     {
         $projectPeriodeList = ProjectPeriodeList::findOrFail($projectPeriodeId);
         $project = $projectPeriodeList->project;
+        // dd($project->id);
 
         $riskContexts = ProjectRiskContext::where('project_id', $project->id)
             ->with([
-                'pimpinanTertinggi', 
-                'members.jabatan', 
-                'stakeholderInternals', 
+                'pimpinanTertinggi',
+                'members.jabatan',
+                'stakeholderInternals',
                 'stakeholderExternals',
                 'verifier'
             ])
@@ -222,10 +223,10 @@ class ProjectRiskContextController extends Controller
                 }
             }
 
-            $projectPeriodeList = ProjectPeriodeList::findOrFail($request->project_id);
+            $projectPeriodeList = ProjectPeriodeList::where('project_id', $request->project_id)->first();
 
             DB::commit();
-            return redirect()->route('project-risk-context.index-by-project-periode', $projectPeriodeList->project_id)
+            return redirect()->route('project-risk-context.index-by-project-periode', $projectPeriodeList->id)
                 ->with('success', $message);
 
         } catch (\Exception $e) {
@@ -262,7 +263,7 @@ class ProjectRiskContextController extends Controller
     public function submit($id)
     {
         $user = auth()->user();
-        
+
         // Cek Hak Akses Risk Officer
         if (!($user->level_id == 6 || is_null($user->level_id))) {
             return back()->with('error', 'Akses Ditolak. Hanya Risk Officer yang dapat mengajukan verifikasi.');
@@ -294,7 +295,7 @@ class ProjectRiskContextController extends Controller
         }
 
         $context = ProjectRiskContext::findOrFail($id);
-        
+
         if ($context->status !== ProjectRiskContext::STATUS_SUBMITTED) {
             return back()->with('error', 'Dokumen belum diajukan.');
         }
