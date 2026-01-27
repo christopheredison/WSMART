@@ -744,10 +744,10 @@ class TaskController extends Controller
         } else {
             // Verifikator
             $targetStatus = 0;
-            if ($levelId == 7) $targetStatus = 2;
-            else if ($levelId == 1 && !$is_mr) $targetStatus = 3;
-            else if ($levelId == 1 && $is_mr) $targetStatus = 4;
-            else if ($levelId == 2 && $is_mr) $targetStatus = 5;
+            if ($levelId == 7) $targetStatus = ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_PROJECT; // 2
+            else if ($levelId == 1 && !$is_mr) $targetStatus = ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI; // 3
+            else if ($levelId == 1 && $is_mr) $targetStatus = ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR; // 4
+            else if ($levelId == 2 && $is_mr) $targetStatus = ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR; // 5
 
             if ($targetStatus > 0) {
                 $monitoringCount = $monQuery
