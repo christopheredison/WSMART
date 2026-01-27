@@ -21,7 +21,7 @@ class ResetDatabaseSeeder extends Seeder
             'k_r_i_projects',
             'k_r_i_unit_monitorings',
             'kamus_risiko_aps',
-            'kamus_risikos_projects',
+            'kamus_risiko_projects',
             'kamus_risiko_units',
             'key_risk_indicators',
             'kontrol_eksistings',
