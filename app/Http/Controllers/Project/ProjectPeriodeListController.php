@@ -121,7 +121,11 @@ class ProjectPeriodeListController extends BasicCRUDController
         $this->userProjectIdsx = $user->projects->pluck('id')->toArray();
 
         $unitProjectIds = collect([]);
-        if ($user->unit && !in_array($user->level_id ?? 0, [6, 7])) {
+        // if ($user->unit && !in_array($user->level_id ?? 0, [6, 7])) {
+        //     $unitProjectIds = $user->unit->projects()->pluck('id');
+        // }
+
+        if ($user->unit && Gate::check('can_access_project_under_division')) {
             $unitProjectIds = $user->unit->projects()->pluck('id');
         }
 
@@ -159,16 +163,24 @@ class ProjectPeriodeListController extends BasicCRUDController
                   ->selectRaw('count(*)');
             }, 'project_risks_count');
 
-            // --- FILTERING HAK AKSES ---
-            if (!Gate::check('project_periode_view')) {
-                if (in_array($user->level_id ?? 0, [6, 7])) {
-                    $query->whereIn('project_periode_lists.project_id', $userProjectIds);
-                } else if ($user->unit) {
+            if (!Gate::check('project_admin_access')) {
+                if (Gate::check('can_access_project_under_division')) {
                     $query->whereIn('project_periode_lists.project_id', $allProjectIds);
                 } else {
                     $query->whereIn('project_periode_lists.project_id', $userProjectIds);
                 }
             }
+
+            // --- FILTERING HAK AKSES ---
+            // if (!Gate::check('project_periode_view')) {
+            //     if (in_array($user->level_id ?? 0, [6, 7])) {
+            //         $query->whereIn('project_periode_lists.project_id', $userProjectIds);
+            //     } else if ($user->unit) {
+            //         $query->whereIn('project_periode_lists.project_id', $allProjectIds);
+            //     } else {
+            //         $query->whereIn('project_periode_lists.project_id', $userProjectIds);
+            //     }
+            // }
 
             // DEFAULT ORDERING hanya saat tidak ada sorting dari user
             if (!request()->has('order')) {

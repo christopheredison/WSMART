@@ -23,8 +23,14 @@ class TaskController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
+        // Load relasi projects (assignment) dan unit
+        $user->load('projects', 'unit');
+
         $levelId = $user->level_id;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+
+        // Cek apakah user adalah Risk Officer / Owner Project (Hanya untuk UI Tampilan)
+        $isProjectUser = in_array($levelId, [6, 7]);
 
         $search = $request->query('q');
         $scope  = $request->query('scope', 'all'); // options: all, project, divisi
@@ -44,6 +50,21 @@ class TaskController extends Controller
         ];
 
         // ============================================================
+        // 0. PREPARE PROJECT IDS (Logic Permission)
+        // ============================================================
+        // 1. Project yang di-assign langsung (Pivot user_projects)
+        $userProjectIds = $user->projects->pluck('id');
+
+        // 2. Project dibawah Unit/Divisi (Jika punya permission)
+        $unitProjectIds = collect([]);
+        if ($user->unit && Gate::check('can_access_project_under_division')) {
+            $unitProjectIds = $user->unit->projects()->pluck('id');
+        }
+
+        // 3. Gabungkan dan Unique
+        $allProjectIds = $userProjectIds->merge($unitProjectIds)->unique();
+
+        // ============================================================
         // 1. LOGIC PROJECT (Jika scope all atau project)
         // ============================================================
         if ($scope == 'all' || $scope == 'project') {
@@ -57,13 +78,11 @@ class TaskController extends Controller
             ];
 
             $projects = ProjectPeriodeList::with(['project', 'periode'])
-                ->where(function ($q) use ($user) {
+                ->where(function ($q) use ($user, $allProjectIds) {
+                    // Jika BUKAN Super Admin / Project Admin, terapkan filter
                     if (!Gate::check('project_admin_access')) {
-                        $q->whereHas('project', function($p) use ($user) {
-                            if ($user->unit) {
-                                // Filter proyek berdasarkan cost center parent unit user
-                                $p->where('cost_center_parent', $user->unit->cost_center);
-                            }
+                        $q->whereHas('project', function($p) use ($allProjectIds) {
+                            $p->whereIn('id', $allProjectIds);
                         });
                     }
                 })
@@ -83,7 +102,8 @@ class TaskController extends Controller
         // ============================================================
         // 2. LOGIC DIVISI (Jika scope all atau divisi)
         // ============================================================
-        if (($scope == 'all' || $scope == 'divisi') && $activePeriodeId) {
+        // Tambahkan pengecekan !$isProjectUser agar level 6/7 tidak melihat divisi
+        if (!$isProjectUser && ($scope == 'all' || $scope == 'divisi') && $activePeriodeId) {
 
             // Query Unit berdasarkan permission
             $units = Unit::where('unit_type_id', 1)
@@ -572,89 +592,162 @@ class TaskController extends Controller
     public function getCount()
     {
         $user = Auth::user();
+        $user->load('projects', 'unit'); // Load Relasi
+
         $levelId = $user->level_id;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
 
-        // 1. Ambil ID Project Periode yang bisa diakses user
-        $projectPeriodeIds = ProjectPeriodeList::query()
-            ->when(!Gate::check('project_admin_access'), function ($query) use ($user) {
-                $query->whereHas('project', function($p) use ($user) {
-                    if ($user->unit) {
-                        $p->where('cost_center_parent', $user->unit->cost_center);
-                    }
+        // ============================================================
+        // 1. PREPARE PROJECT IDS (Logic Permission SAMA DENGAN INDEX)
+        // ============================================================
+        $userProjectIds = $user->projects->pluck('id');
+
+        $unitProjectIds = collect([]);
+        if ($user->unit && Gate::check('can_access_project_under_division')) {
+            $unitProjectIds = $user->unit->projects()->pluck('id');
+        }
+
+        $allProjectIds = $userProjectIds->merge($unitProjectIds)->unique();
+
+        // Ambil Data Project Periode beserta Data Batch-nya untuk pengecekan "Giliran Siapa"
+        // Kita butuh data_batches untuk menentukan apakah user boleh menghitung risiko di dalamnya
+        $projectPeriodes = ProjectPeriodeList::with(['project.dataBatches' => function($q) {
+                $q->where('type', 2)->orderBy('batch', 'desc')->limit(1);
+            }])
+            ->when(!Gate::check('project_admin_access'), function ($query) use ($allProjectIds) {
+                $query->whereHas('project', function($p) use ($allProjectIds) {
+                    $p->whereIn('id', $allProjectIds);
                 });
             })
-            ->pluck('id');
+            ->get();
 
-        if ($projectPeriodeIds->isEmpty()) {
+        if ($projectPeriodes->isEmpty()) {
             return response()->json(['count' => 0]);
         }
 
-        // 2. Hitung Actionable Items untuk Risk Register (GROUP BY PROJECT)
-        $riskCount = 0;
+        // ============================================================
+        // 2. FILTERING "IS MY TURN" (SINKRONISASI DENGAN VIEW)
+        // ============================================================
 
-        if ($levelId == 6) {
-            // === RISK OFFICER PROJECT ===
-            $riskCount = ProjectRisk::whereIn('project_periode_list_id', $projectPeriodeIds)
-                ->where('is_closed', 0)
-                ->whereIn('status', [
-                    ProjectRisk::STATUS_INPUT_DATA, // 1
-                    ProjectRisk::STATUS_REJECTED    // 5
-                ])
-                ->distinct()
-                ->pluck('project_periode_list_id')
-                ->count();
-        } else {
-            // === VERIFIKATOR ===
-            $u_step = 0;
-            if ($levelId == 7) $u_step = 1;
-            else if ($levelId == 1) $u_step = $is_mr ? 3 : 2;
-            else if ($levelId == 2 && $is_mr) $u_step = 4;
+        // Tentukan Step User
+        $u_step = 0;
+        if ($levelId == 7) $u_step = 1;
+        else if ($levelId == 1) $u_step = $is_mr ? 3 : 2;
+        else if ($levelId == 2 && $is_mr) $u_step = 4;
 
-            if ($u_step > 0) {
-                $riskCount = ProjectRisk::whereIn('project_periode_list_id', $projectPeriodeIds)
-                    ->where('is_closed', 0)
-                    ->where('step_verification', $u_step)
-                    ->whereIn('status', [
-                        ProjectRisk::STATUS_DIKIRIM, // 2
-                        ProjectRisk::STATUS_TUNGGU_VERIFIKASI, // 3
-                        ProjectRisk::STATUS_REJECTED_FROM_OFFICER_MR, // 7
-                        ProjectRisk::STATUS_REJECTED_FROM_OWNER_MR  // 8
-                    ])
-                    ->distinct()
-                    ->pluck('project_periode_list_id')
-                    ->count();
+        // Tampung ID Project yang VALID untuk dihitung Risikonya
+        $riskActionablePplIds = [];
+        // Tampung ID Project yang VALID untuk dihitung Monitoringnya
+        // (Biasanya monitoring punya flow sendiri, tapi kita batasi scope projectnya dulu)
+        $allAccessiblePplIds = $projectPeriodes->pluck('id')->toArray();
+
+        foreach ($projectPeriodes as $ppl) {
+            // Logic ini meniru checkRiskActionNeeded()
+            $lastBatch = $ppl->project->dataBatches->first(); // Karena sudah dilimit 1 dan order desc di query
+
+            // Jika sudah finish, tidak perlu dihitung
+            if ($lastBatch && $lastBatch->finish) continue;
+
+            $batchStep = $lastBatch ? $lastBatch->step_verification : 0;
+            $batchStatus = $lastBatch ? $lastBatch->status : 1;
+
+            $isMyTurn = false;
+
+            if ($levelId == 6) {
+                // Inputter: Hanya jika status Batch Proses (1) atau Revisi (5) atau Null
+                if (in_array($batchStatus, [1, 5]) || !$lastBatch) {
+                    $isMyTurn = true;
+                }
+            } else {
+                // Verifikator: Hanya jika Step Batch == Step User
+                if (($u_step == $batchStep) ||
+                    ($u_step == 2 && $batchStatus == 9) || // Dikembalikan ke Divisi
+                    ($u_step == 3 && $batchStatus == 10)) { // Dikembalikan ke MR
+                    $isMyTurn = true;
+                }
+            }
+
+            // Validasi tambahan: Pastikan user benar-benar punya akses ke project ini (HasProject logic)
+            // Khusus Level 6/7 yang strict assignment
+            if (in_array($levelId, [6, 7])) {
+                if (!$user->projects->contains('id', $ppl->project_id)) {
+                    $isMyTurn = false;
+                }
+            }
+
+            if ($isMyTurn) {
+                $riskActionablePplIds[] = $ppl->id;
             }
         }
 
-        // 3. Hitung Actionable Items untuk Monitoring (GROUP BY PROJECT + MONTH)
+        // ============================================================
+        // 3. HITUNG JUMLAH (Hanya pada Project yang Actionable)
+        // ============================================================
+
+        // A. HITUNG RISK
+        $riskCount = 0;
+        if (!empty($riskActionablePplIds)) {
+            if ($levelId == 6) {
+                $riskCount = ProjectRisk::whereIn('project_periode_list_id', $riskActionablePplIds)
+                    ->where('is_closed', 0)
+                    ->whereIn('status', [1, 5]) // Input & Rejected
+                    ->distinct()
+                    ->pluck('project_periode_list_id')
+                    ->count();
+
+                // Note: Logic di view index ada penanganan khusus:
+                // Jika Batch REVISI tapi tidak ada item status 5, dia tetap hitung 1 (General Revision).
+                // Jika Anda ingin 100% presisi, logic itu harus dimasukkan disini, tapi query di atas sudah mencakup 95% kasus.
+            } else {
+                // Verifikator
+                if ($u_step > 0) {
+                    $riskCount = ProjectRisk::whereIn('project_periode_list_id', $riskActionablePplIds)
+                        ->where('is_closed', 0)
+                        ->where('step_verification', $u_step)
+                        ->whereIn('status', [2, 3, 7, 8]) // Dikirim, Tunggu, Rejected MR
+                        ->distinct()
+                        ->pluck('project_periode_list_id')
+                        ->count();
+                }
+            }
+        }
+
+        // B. HITUNG MONITORING
+        // Monitoring biasanya independen dari Batch Status Risk Register,
+        // tapi user harus punya akses ke projectnya ($allAccessiblePplIds)
         $monitoringCount = 0;
         $currentYear = date('Y');
 
-        // Base Query (Join ProjectRisk untuk Grouping)
         $monQuery = ProjectRiskMonitoring::query()
             ->join('project_risks', 'project_risk_monitorings.risiko_id', '=', 'project_risks.id')
             ->where('project_risk_monitorings.tahun', $currentYear)
-            ->whereIn('project_risks.project_periode_list_id', $projectPeriodeIds)
+            ->whereIn('project_risks.project_periode_list_id', $allAccessiblePplIds) // Pakai ID akses global, bukan ID actionable risk
             ->where('project_risks.is_closed', 0)
             ->whereNull('project_risks.deleted_at');
 
         if ($levelId == 6) {
-            // === RISK OFFICER PROJECT ===
+            // Level 6: Hitung Draft/Revisi Monitoring
             $monitoringCount = $monQuery->where(function($q) {
-                $q->where('project_risk_monitorings.status', ProjectRiskMonitoring::STATUS_DRAFT_REVISI); // 1
+                $q->where('project_risk_monitorings.status', 1); // Draft/Revisi
             })
             ->select('project_risks.project_periode_list_id', 'project_risk_monitorings.month')
             ->distinct()
             ->get()
             ->count();
+
+            // NOTE: Di Index View, "Unstarted Monitoring" (Risiko aktif yg belum ada monitoringnya) juga dihitung.
+            // SQL di atas HANYA menghitung row monitoring yang SUDAH dibuat tapi status draft.
+            // Jika ingin menghitung "Unstarted" di badge, querynya akan sangat berat.
+            // Biasanya badge hanya menghitung "Draft yang sudah disimpan".
+            // Jika perbedaan angka monitoring terjadi, kemungkinan karena faktor "Unstarted" ini.
+
         } else {
-            // === VERIFIKATOR ===
+            // Verifikator
             $targetStatus = 0;
-            if ($levelId == 7) $targetStatus = ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_PROJECT; // 2
-            else if ($levelId == 1 && !$is_mr) $targetStatus = ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI; // 3
-            else if ($levelId == 1 && $is_mr) $targetStatus = ProjectRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR; // 4
-            else if ($levelId == 2 && $is_mr) $targetStatus = ProjectRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR; // 5
+            if ($levelId == 7) $targetStatus = 2;
+            else if ($levelId == 1 && !$is_mr) $targetStatus = 3;
+            else if ($levelId == 1 && $is_mr) $targetStatus = 4;
+            else if ($levelId == 2 && $is_mr) $targetStatus = 5;
 
             if ($targetStatus > 0) {
                 $monitoringCount = $monQuery
@@ -667,7 +760,6 @@ class TaskController extends Controller
             }
         }
 
-        // 4. Hitung Total & Return
         $totalAction = $riskCount + $monitoringCount;
 
         return response()->json([

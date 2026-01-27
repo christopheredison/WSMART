@@ -126,13 +126,13 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="modal-risk-id" value="">
-                
+
                 <p>Pilih proyek di mana Anda ingin menambahkan risiko ini.</p>
                 <div class="form-group">
                     <label for="modal-project-select" class="form-label">Proyek Tujuan</label>
                     <select id="modal-project-select" class="form-select select2" style="width: 100%;">
                         <option value="" selected disabled>Pilih proyek...</option>
-                        @foreach($projects as $project)
+                        @foreach($projectUser as $project)
                             <option value="{{ $project->id }}">{{ $project->project_name }}</option>
                         @endforeach
                     </select>
@@ -203,7 +203,7 @@ $(document).ready(function() {
             { data: 'nilai_probabilitas_inheren', name: 'projectRisk.projectRiskAnalisa.nilai_probabilitas' },
             { data: 'eksposur_risiko_inheren', name: 'projectRisk.projectRiskAnalisa.eksposur_risiko' },
             { data: 'level_risiko_inheren', name: 'projectRisk.projectRiskAnalisa.level_risiko' },
-            
+
             // Residual
             { data: 'nilai_dampak_residual', name: 'projectRisk.projectRiskAnalisa.nilai_dampak_residual' },
             { data: 'skala_dampak_residual', name: 'projectRisk.projectRiskAnalisa.skala_dampak_residual' },
@@ -216,7 +216,7 @@ $(document).ready(function() {
             { data: 'realisasi_skala_dampak', name: 'projectRisk.projectRiskMonitoring.skala_dampak' },
             { data: 'realisasi_skala_probabilitas', name: 'projectRisk.projectRiskMonitoring.skala_probabilitas' },
             { data: 'realisasi_level_risiko', name: 'projectRisk.projectRiskMonitoring.level_risiko' },
-            
+
             { data: 'efektivitas', name: 'projectRisk.efektivitas_perlakuan_risiko' },
         ],
         order: [[2, 'asc']]
@@ -272,7 +272,7 @@ $(document).ready(function() {
         $('#export-excel-btn').prop('disabled', true);
         $('#export-text').text('Generating...');
     }
-    
+
     function hideExportLoading() {
         $('#export-excel-btn').prop('disabled', false);
         $('#export-text').text('Export to Excel');
@@ -283,7 +283,7 @@ $(document).ready(function() {
     $('body').on('click', '.btn-ambil-risiko', function () {
         const riskId = $(this).data('id');
         const rowData = table.row($(this).closest('tr')).data();
-        
+
         // Safety check jika rowData undefined (misal view mobile/responsive child row)
         if(!rowData) return;
 
@@ -312,7 +312,7 @@ $(document).ready(function() {
         modal.hide();
 
         const targetProject = allProjects.find(p => p.id == targetProjectId);
-        
+
         Swal.fire({
             title: 'Konfirmasi',
             html: `Salin risiko <b>"${riskDescription}"</b> ke <b>"${targetProject?.project_name}"</b>?`,
@@ -323,7 +323,7 @@ $(document).ready(function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 Swal.fire({title: 'Memproses...', didOpen: () => Swal.showLoading()});
-                
+
                 $.ajax({
                     url: "{{ route('kamus-risiko-project.add-risk') }}",
                     type: 'POST',

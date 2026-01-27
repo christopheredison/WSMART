@@ -13,12 +13,29 @@ use App\Exports\KamusRisikoProjectExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Gate;
 use Yajra\DataTables\Facades\DataTables;
 
 class KamusRisikoProjectController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $user->load('projects', 'unit'); // Eager load relasi
+
+        // A. Ambil Project yang di-assign langsung ke User
+        $userProjectIds = $user->projects->pluck('id');
+
+        // B. Ambil Project dibawah Unit/Divisi (Cek Permission)
+        $unitProjectIds = collect([]);
+        if ($user->unit && Gate::check('can_access_project_under_division')) {
+            // Asumsi relasi unit->projects() mengambil project berdasarkan cost_center_parent
+            $unitProjectIds = $user->unit->projects()->pluck('id');
+        }
+
+        // C. Gabungkan ID (Assign + Unit)
+        $allAllowedIds = $userProjectIds->merge($unitProjectIds)->unique();
+
         if ($request->ajax()) {
             $query = KamusRisikoProject::with([
                 'project',
@@ -58,7 +75,9 @@ class KamusRisikoProjectController extends Controller
             return DataTables::of($query)
                 ->addIndexColumn()
                 ->addColumn('action', function ($row) {
-                    $detailUrl = route('projects.risks.view', ['project' => $row->project_id, 'risk' => $row->project_risk_id]);
+                    $projectPeriodeId = $row->projectRisk->project_periode_list_id ?? $row->project_id;
+
+                    $detailUrl = route('projects.risks.view', ['project' => $projectPeriodeId, 'risk' => $row->project_risk_id]);
 
                     $btn_view = '<a href="' . $detailUrl . '" target="_blank" class="btn btn-sm btn-info d-flex align-items-center justify-content-center" title="View Detail">
                                     <span class="bx bx-show me-1"></span>
@@ -161,6 +180,14 @@ class KamusRisikoProjectController extends Controller
                 ->make(true);
         }
 
+        $projectsQuery = Project::orderBy('project_name');
+
+        if (!Gate::check('project_admin_access')) {
+            $projectsQuery->whereIn('id', $allAllowedIds);
+        }
+
+        $projectUser = $projectsQuery->get(['id', 'project_name']);
+
         // Data untuk filter
         $projects = Project::orderBy('project_name')->get(['id', 'project_name']);
         $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->orderBy('title')->get(['id', 'title']);
@@ -173,7 +200,7 @@ class KamusRisikoProjectController extends Controller
             ProjectRisk::LEVEL_RISIKO_HIGH => 'High',
         ];
 
-        return view('kamus-risiko-project.index', compact('projects', 'peristiwaRisikos', 'jenisRisikos', 'levelRisikos'));
+        return view('kamus-risiko-project.index', compact('projects', 'projectUser', 'peristiwaRisikos', 'jenisRisikos', 'levelRisikos'));
     }
 
     public function addRisk(Request $request)
@@ -188,6 +215,7 @@ class KamusRisikoProjectController extends Controller
 
             $originalRisk = ProjectRisk::with([
                 'penyebabRisikoProjects.perlakuanPenyebabRisiko',
+                'dampakRisikoProjects.perlakuanDampakRisiko',
                 'kriProjects',
                 'projectRiskAnalisa'
             ])->findOrFail($request->original_risk_id);
@@ -243,6 +271,26 @@ class KamusRisikoProjectController extends Controller
                 }
             }
 
+            // 4. Duplikasi Dampak Risiko
+            foreach ($originalRisk->dampakRisikoProjects as $originalDampak) {
+                $newDampak = $originalDampak->replicate();
+                $newDampak->risiko_id = $newRisk->id;
+                $newDampak->save();
+
+                // 2. Duplikasi Perlakuan Dampak (Jika ada)
+                foreach ($originalDampak->perlakuanDampakRisiko as $originalPerlakuanDampak) {
+                    $newPerlakuanDampak = $originalPerlakuanDampak->replicate();
+
+                    $newPerlakuanDampak->risiko_id = $newRisk->id;
+                    $newPerlakuanDampak->dampak_risiko_id = $newDampak->id;
+
+                    // Opsional: Reset tanggal jika diperlukan (tergantung kebutuhan bisnis)
+                    // $newPerlakuanDampak->timeline_perlakuan_risiko_start = now();
+
+                    $newPerlakuanDampak->save();
+                }
+            }
+
             // 4. Duplikasi KRI
             foreach ($originalRisk->kriProjects as $originalKri) {
                 $newKri = $originalKri->replicate()->fill([
@@ -253,7 +301,11 @@ class KamusRisikoProjectController extends Controller
 
             DB::commit();
 
-            return response()->json(['message' => 'Risiko berhasil ditambahkan ke proyek yang dipilih.']);
+            return response()->json([
+              'message' => 'Risiko berhasil ditambahkan ke proyek yang dipilih.',
+              'redirect_project_id' => $targetPeriodeList->id,
+              'risk_id' => $newRisk->id
+            ]);
         } catch (\Throwable $th) {
             DB::rollBack();
             Log::error('Gagal mengambil risiko dari kamus: ' . $th->getMessage());

@@ -301,5 +301,7 @@ return [
 
         'kuesioner_responden',
         'risk_map_setting',
+
+        'can_access_project_under_division',
     ],
 ];

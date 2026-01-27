@@ -29,6 +29,11 @@
         </div>
     </div>
 
+    @php
+        $userLevel = auth()->user()->level_id;
+        $isProjectOnly = in_array($userLevel, [6, 7]);
+        $colClass = $isProjectOnly ? 'col-12' : 'col-md-6';
+    @endphp
     <div class="row g-4 mb-4">
         <div class="col-md-6">
             <div class="card border-0 shadow-sm h-100 text-white"
@@ -57,6 +62,7 @@
             </div>
         </div>
 
+        @if(!$isProjectOnly)
         <div class="col-md-6">
             <div class="card border-0 shadow-sm h-100 text-white" style="background: linear-gradient(135deg, #0f509e 0%, #136a8a 100%);">
                 <div class="card-body p-4 position-relative overflow-hidden">
@@ -82,7 +88,7 @@
                 </div>
             </div>
         </div>
-
+        @endif
     </div>
 
     <div class="card border-0 shadow-sm mb-4">
