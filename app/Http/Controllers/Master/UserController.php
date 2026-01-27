@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Master;
 
+use Yajra\DataTables\Facades\DataTables;
 use App\Http\Controllers\Controller;
 use App\Models\Jabatan;
 use App\Models\Level;
@@ -18,13 +19,47 @@ use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with('roles','unit')->withTrashed()->get();
-        $roless = Role::with('permissions')->get();
-        $roles = Role::pluck('name', 'id'); // Get roles for select dropdown
+        if ($request->ajax()) {
+            $users = User::with(['roles', 'unit'])->withTrashed()->select('users.*');
 
-        return view('master.users.index', compact('users', 'roles', 'roless'));
+            return DataTables::of($users)
+                ->addIndexColumn()
+                ->addColumn('checkbox', function($row) {
+                    return '<div class="form-check mb-0">
+                              <input class="form-check-input" type="checkbox" data-bulk-select-row="data-bulk-select-row" value="'.$row->id.'" />
+                            </div>';
+                })
+                ->addColumn('role_names', function($row) {
+                    // Map roles to a string
+                    return $row->roles->map(function($role) {
+                        return ucwords(str_replace('_', ' ', $role->name));
+                    })->implode(', ');
+                })
+                ->addColumn('action', function($row) {
+                    $btn = '';
+                    if ($row->trashed()) {
+                        $btn .= '<button type="button" class="btn-input-icon ps-0" onclick="restoreUser('.$row->id.')">
+                                    <span class="bx bx-undo" title="Undo"></span>
+                                </button>';
+                    } else {
+                        $editUrl = route('users.edit', $row->id);
+                        $btn .= '<a href="'.$editUrl.'" class="btn-input-icon" title="Edit"><span class="bx bx-edit"></span></a>';
+                        $btn .= '<button type="button" class="btn-input-icon" onclick="deleteUser('.$row->id.')">
+                                    <span class="bx bx-trash text-danger" title="Delete"></span>
+                                </button>';
+                    }
+                    return $btn;
+                })
+                ->rawColumns(['checkbox', 'action'])
+                ->make(true);
+        }
+
+        $roless = Role::with('permissions')->get();
+        $roles = Role::pluck('name', 'id');
+
+        return view('master.users.index', compact('roles', 'roless'));
     }
 
     public function create()

@@ -79,77 +79,22 @@
               </div>
             </div>
           </div>
-          <table class="table table-bulk-select table-hover dataTable" data-paging="true" data-info="true"
-            data-filter="true" data-select="true">
+          <table id="userTable" class="table table-hover" style="width:100%">
             <thead>
-              <tr>
-                <th class="no-sort white-space-nowrap">
-                  <div class="form-check mb-0">
-                    <input class="form-check-input" type="checkbox"
-                      data-bulk-select='{"body":"bulk-select-body","actions":"bulk-select-actions","replacedElement":"bulk-select-replace-element"}' />
-                  </div>
-                </th>
-                <th class="sort" data-sort="no">#</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>NIP</th>
-                <th>Roles</th>
-                <th class="no-sort">Action</th>
-              </tr>
+                <tr>
+                    <th class="no-sort white-space-nowrap">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="bulk-select-all" />
+                        </div>
+                    </th>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>NIP</th>
+                    <th>Roles</th>
+                    <th class="no-sort">Action</th>
+                </tr>
             </thead>
-            <tbody class="list" id="bulk-select-body">
-              @foreach ($users as $index => $item)
-              <tr>
-                <td class="white-space-nowrap">
-                  <div class="form-check mb-0">
-                    <input class="form-check-input" type="checkbox" id="checkbox-1"
-                      data-bulk-select-row="data-bulk-select-row" />
-                  </div>
-                </td>
-                <td class="index-number">{{ $index + 1 }}</td>
-                <td>{{ $item->name }}</td>
-                <td>{{ $item->email }}</td>
-                <td>{{ $item->nip ?? '-' }}</td>
-                <td>
-                  @foreach ($item->roles as $role)
-                  {{ ucwords(str_replace('_', ' ', $role->name)) }}
-                  @if (!$loop->last)
-                  ,
-                  @endif
-                  @endforeach
-                </td>
-                <td class="white-space-nowrap">
-                  @if ($item->trashed())
-                  <button type="submit" class="btn-input-icon ps-0" data-bs-toggle="modal"
-                    data-bs-target="#modalRestore{{ $item->id }}">
-                    <span class="bx bx-undo" data-bs-toggle="tooltip" title="Undo"></span>
-                  </button>
-                  @php
-                  $itemId = $item->id;
-                  $innerItemText = $item->name;
-                  $formAction = route('users.restore', $item->id);
-                  @endphp
-                  @include('partials.modal-restore-alert')
-                  @else
-                  <a href="{{ route('users.edit', $item) }}" class="btn-input-icon" data-bs-toggle="tooltip"
-                    title="Edit">
-                    <span class="bx bx-edit"></span>
-                  </a>
-                  <button type="button" class="btn-input-icon" data-bs-toggle="modal"
-                    data-bs-target="#modalDelete{{ $item->id }}">
-                    <span class="bx bx-trash text-danger" data-bs-toggle="tooltip" title="Delete"></span>
-                  </button>
-                  @php
-                  $itemId = $item->id;
-                  $innerItemText = $item->name;
-                  $formAction = route('users.destroy', $item->id);
-                  @endphp
-                  @include('partials.modal-delete-alert')
-                  @endif
-                </td>
-              </tr>
-              @endforeach
-            </tbody>
           </table>
         </div>
       </div>
@@ -159,30 +104,47 @@
 @endsection
 @section('scripts')
 <script>
-const table = new DataTable('#example');
+    $(document).ready(function() {
+        $('#userTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: "{{ route('users.index') }}",
+            columns: [
+                { data: 'checkbox', name: 'checkbox', orderable: false, searchable: false },
+                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                { data: 'name', name: 'name' },
+                { data: 'email', name: 'email' },
+                { data: 'nip', name: 'nip', defaultContent: '-' },
+                { data: 'role_names', name: 'roles.name', orderable: false },
+                { data: 'action', name: 'action', orderable: false, searchable: false }
+            ],
+            autoWidth: false
+        });
+    });
 
-table.on('mouseenter', 'td', function() {
-  let colIdx = table.cell(this).index().column;
+    // You'll need to adapt your delete/restore functions to handle AJAX or form submission dynamically
+    function deleteUser(id) {
+        if(confirm('Are you sure?')) {
+            // Create a temporary form to submit the DELETE request
+            let form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/users/' + id; // Adjust route as needed
+            form.innerHTML = '@csrf @method("DELETE")';
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
 
-  table
-    .cells()
-    .nodes()
-    .each((el) => el.classList.remove('highlight'));
-
-  table
-    .column(colIdx)
-    .nodes()
-    .each((el) => el.classList.add('highlight'));
-});
-
-function deleteItem(element) {
-  if (confirm('Are you sure you want to delete?')) {
-    // Ambil form yang berisi tombol hapus
-    const form = element.parentNode;
-    // Submit form untuk menghapus item
-    form.submit();
-  }
-}
+    function restoreUser(id) {
+        // Similar logic for restore
+        if(confirm('Restore this user?')) {
+            let form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/users/' + id + '/restore';
+            form.innerHTML = '@csrf'; // POST method is usually enough for restore
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
 </script>
-
 @endsection
