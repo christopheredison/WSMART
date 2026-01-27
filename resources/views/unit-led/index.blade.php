@@ -14,12 +14,12 @@
                           </div>
                         </div>
                         <div class="d-block">
-                          <h2 class="h3">Data Loss Event Unit</h2>
+                          <h2 class="h3">Data Loss Event Divisi</h2>
                           @if(isset($periode))
                           <div class="ff-preheading">Periode: {{ $periode->tahun }}</div>
                           @endif
                         </div>
-                        
+
                         <div class="col-auto ms-auto">
                             @php
                                 $createRouteParams = ['periode' => $periode->id ?? null];
@@ -271,7 +271,7 @@ $(document).ready(function() {
     // 2. Fungsi Load List File
     function loadFiles(id) {
         $('#list-files-body').html('<tr><td colspan="4" class="text-center">Memuat data...</td></tr>');
-        
+
         $.ajax({
             url: '/unit-led/files/' + id,
             type: 'GET',
@@ -282,15 +282,15 @@ $(document).ready(function() {
                         html += `
                             <tr>
                                 <td class="text-center align-middle">${i+1}</td>
-                                
+
                                 <td class="text-break align-middle">
                                     <a href="${file.file_url}" target="_blank" class="text-decoration-none fw-bold" data-bs-toggle="tooltip" title="Klik untuk melihat file">
                                         ${file.file_name}
                                     </a>
                                 </td>
-                                
+
                                 <td class="align-middle">${file.created_at}</td>
-                                
+
                                 <td class="text-center align-middle">
                                     <button class="btn btn-sm btn-outline-danger btn-delete-file" type="button" data-id="${file.id}" data-bs-toggle="tooltip" title="Hapus File">
                                         <span class="bx bx-trash"></span> Hapus

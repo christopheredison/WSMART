@@ -35,7 +35,7 @@
       }
   @endphp
   @if($canVerify)
-  <button type="button" class="btn-input-icon" onclick="showVerifikasiModal({{ $item->id }}, '{{ json_encode($item->peristiwa_risiko) }}', '{{ json_encode($item->deskripsi_peristiwa_risiko) }}')">
+  <button type="button" class="btn-input-icon" onclick="showVerifikasiModal({{ $item->id }}, {{ json_encode($item->peristiwa_risiko) }}, {{ json_encode($item->deskripsi_peristiwa_risiko) }})">
     <span class="bx bx-check-shield text-success" data-bs-toggle="tooltip" title="Verifikasi Risiko"></span>
   </button>
   @endif

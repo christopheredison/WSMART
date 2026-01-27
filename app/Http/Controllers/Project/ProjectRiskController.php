@@ -1626,6 +1626,7 @@ class ProjectRiskController extends BasicCRUDController
 
         //$risk_limit = $projectPeriodeList->risk_limit;
         $risk_limit = ($projectPeriodeList->project->meta['omset'] ?? 0) * 0.03;
+
         return view('project-risk.analisa', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'skalaProbabilitas', 'riskMaps', 'analisa', 'areas', 'groupedAreas', 'risk_tolerance', 'risk_limit', 'parameterTypes', 'groupedSkalaParameters', 'selectedParameterType'));
     }
 
