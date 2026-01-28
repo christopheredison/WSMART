@@ -309,6 +309,7 @@ class KamusRisikoProjectController extends Controller
         } catch (\Throwable $th) {
             DB::rollBack();
             Log::error('Gagal mengambil risiko dari kamus: ' . $th->getMessage());
+            dd($th->getMessage());
             return response()->json(['message' => 'Terjadi kesalahan pada server saat mencoba mengambil risiko.'], 500);
         }
     }
