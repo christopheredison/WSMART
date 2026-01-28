@@ -293,9 +293,9 @@ class ProjectRiskController extends BasicCRUDController
             // Default Action: View
             $this->tableLegend = [['icon' => '<span class="bx bx-show-alt"></span>', 'label' => 'View']];
             $this->tableActions[] = ['label' => '<span class="bx bx-show-alt" title="View"></span>', 'btn_icon' => true, 'action' => 'link', 'url' => route('projects.risks.view', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'View Risiko'];
-            $this->tableActions[] = ['label' => '<span class="bx bx-analyse text-warning"></span>', 'btn_icon' => true, 'action' => 'link', 'url' => route('projects.risks.analisa', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Analisa Risiko'];
-            $this->tableActions[] = ['label' => '<span class="bx bx-task text-primary"></span>', 'btn_icon' => true, 'action' => 'link', 'url' => route('projects.risks.rencana', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Rencana Perlakuan Risiko'];
-            $this->tableActions[] = ['label' => '<span class="bx bx-edit"></span>', 'btn_icon' => true, 'action' => 'edit', 'permissions' => ['project_risk_edit']];
+            // $this->tableActions[] = ['label' => '<span class="bx bx-analyse text-warning"></span>', 'btn_icon' => true, 'action' => 'link', 'url' => route('projects.risks.analisa', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Analisa Risiko'];
+            // $this->tableActions[] = ['label' => '<span class="bx bx-task text-primary"></span>', 'btn_icon' => true, 'action' => 'link', 'url' => route('projects.risks.rencana', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Rencana Perlakuan Risiko'];
+            // $this->tableActions[] = ['label' => '<span class="bx bx-edit"></span>', 'btn_icon' => true, 'action' => 'edit', 'permissions' => ['project_risk_edit']];
 
             // CASE 1: RISK OFFICER PROJECT (Draft/Revisi)
             if (($status == DataBatch::STATUS_PROSES || $status == DataBatch::STATUS_REVISI) && $levelId == 6) {

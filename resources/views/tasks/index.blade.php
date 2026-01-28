@@ -721,7 +721,7 @@
                     }
                     if(item.status == 'pending') {
                         badgeClass = 'bg-warning text-dark'; badgeText = 'Verifikasi';
-                        btnClass = 'btn-warning'; btnText = 'Verifikasi';
+                        btnClass = 'bg-warning text-dark'; btnText = 'Verifikasi';
                     }
                     if(item.status == 'revision') {
                         badgeClass = 'bg-danger'; badgeText = 'Revisi';
