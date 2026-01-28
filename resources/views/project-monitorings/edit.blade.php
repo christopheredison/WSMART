@@ -490,7 +490,7 @@
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
                                             <td>
                                                 <span class="inputmask-fixed">
-                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                                 </span>
                                             </td>
                                             <td class="display-progress inputmask-fixed text-center">
@@ -500,7 +500,7 @@
                                                 {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
                                             </td>
                                             <td class="display-timeline text-center">
-                                                {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}
+                                                {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: 'Rp 0' }}
                                             </td>
                                             <td style="white-space:nowrap" class="column-action-impact">
                                                 <div class="d-none dom-saved-impact">
@@ -562,12 +562,12 @@
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
                                             <td>
                                               <span class="inputmask-fixed">
-                                                {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                               </span>
                                             </td>
                                             <td class="display-progress inputmask-fixed text-center">{{ $perlakuan->progress_rencana_perlakuan_risiko ?? '-' }}</td>
                                             <td class="display-biaya inputmask-fixed">
-                                              {{  $perlakuan->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                              {{  $perlakuan->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                             </td>
                                             <td class="display-timeline text-center">{{ $perlakuan?->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
                                             <td style="white-space:nowrap" class="column-action">
