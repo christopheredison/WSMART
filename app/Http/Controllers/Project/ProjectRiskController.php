@@ -2045,6 +2045,7 @@ class ProjectRiskController extends BasicCRUDController
                 // 'jenis_rencana_perlakuan_risiko' => $validated['xjenis_rencana_perlakuan_risiko'],
                 'biaya_perlakuan_risiko' => $validated['xbiaya_perlakuan_risiko'],
                 'pic' => $jabatan_name,
+                'pic_jabatan_id' => $validated['xpic'],
                 'divisi_terkait' => $request->input('xdivisi_terkait', []),
                 'pic_jabatan_id' => $validated['xpic'],
                 'timeline_perlakuan_risiko_start' => $startDate->format('Y-m-d'),
