@@ -215,7 +215,7 @@ class KamusRisikoProjectController extends Controller
 
             $originalRisk = ProjectRisk::with([
                 'penyebabRisikoProjects.perlakuanPenyebabRisiko',
-                'dampakRisikoProjects.perlakuanDampakRisiko',
+                'dampakRisikoProjects.perlakuanDampakRisikos',
                 'kriProjects',
                 'projectRiskAnalisa'
             ])->findOrFail($request->original_risk_id);
@@ -278,7 +278,7 @@ class KamusRisikoProjectController extends Controller
                 $newDampak->save();
 
                 // 2. Duplikasi Perlakuan Dampak (Jika ada)
-                foreach ($originalDampak->perlakuanDampakRisiko as $originalPerlakuanDampak) {
+                foreach ($originalDampak->perlakuanDampakRisikos as $originalPerlakuanDampak) {
                     $newPerlakuanDampak = $originalPerlakuanDampak->replicate();
 
                     $newPerlakuanDampak->risiko_id = $newRisk->id;
@@ -309,7 +309,6 @@ class KamusRisikoProjectController extends Controller
         } catch (\Throwable $th) {
             DB::rollBack();
             Log::error('Gagal mengambil risiko dari kamus: ' . $th->getMessage());
-            dd($th->getMessage());
             return response()->json(['message' => 'Terjadi kesalahan pada server saat mencoba mengambil risiko.'], 500);
         }
     }
