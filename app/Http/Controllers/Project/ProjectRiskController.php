@@ -2540,28 +2540,28 @@ class ProjectRiskController extends BasicCRUDController
                 $errBelumAnalisa[] = $deskripsi;
             }
 
-            // B. Cek Perlakuan Penyebab (Jika penyebab ada, perlakuan harus ada)
-            if ($risiko->penyebabRisikoProjects->isNotEmpty()) {
-                foreach ($risiko->penyebabRisikoProjects as $penyebab) {
-                    if ($penyebab->perlakuanPenyebabRisiko->isEmpty()) {
-                        $errBelumAdaPerlakuanPenyebab[] = $deskripsi;
-                        break;
-                    }
-                }
-            }
+            // // B. Cek Perlakuan Penyebab (Jika penyebab ada, perlakuan harus ada)
+            // if ($risiko->penyebabRisikoProjects->isNotEmpty()) {
+            //     foreach ($risiko->penyebabRisikoProjects as $penyebab) {
+            //         if ($penyebab->perlakuanPenyebabRisiko->isEmpty()) {
+            //             $errBelumAdaPerlakuanPenyebab[] = $deskripsi;
+            //             break;
+            //         }
+            //     }
+            // }
 
-            // C. Cek Dampak Risiko (Harus ada)
-            if ($risiko->dampakRisikoProjects->isEmpty()) {
-                $errBelumAdaDampak[] = $deskripsi;
-            } else {
-                // D. Cek Perlakuan Dampak (Jika dampak ada, perlakuan harus ada)
-                foreach ($risiko->dampakRisikoProjects as $dampak) {
-                    if ($dampak->perlakuanDampakRisikos->isEmpty()) {
-                        $errBelumAdaPerlakuanDampak[] = $deskripsi;
-                        break;
-                    }
-                }
-            }
+            // // C. Cek Dampak Risiko (Harus ada)
+            // if ($risiko->dampakRisikoProjects->isEmpty()) {
+            //     $errBelumAdaDampak[] = $deskripsi;
+            // } else {
+            //     // D. Cek Perlakuan Dampak (Jika dampak ada, perlakuan harus ada)
+            //     foreach ($risiko->dampakRisikoProjects as $dampak) {
+            //         if ($dampak->perlakuanDampakRisikos->isEmpty()) {
+            //             $errBelumAdaPerlakuanDampak[] = $deskripsi;
+            //             break;
+            //         }
+            //     }
+            // }
         }
 
         // Susun Pesan Error jika ada temuan
