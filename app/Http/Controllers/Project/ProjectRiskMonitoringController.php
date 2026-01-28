@@ -1080,9 +1080,9 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         if ($request->is_closed == '1') {
             // Gabungkan data untuk validasi
-            $validationData = $toCreate;
-            $validationData['perlakuan_penyebab'] = $perlakuanPenyebabRequests;
-            $validationData['kri_projects'] = $kriProjectRequests;
+            // $validationData = $toCreate;
+            // $validationData['perlakuan_penyebab'] = $perlakuanPenyebabRequests;
+            // $validationData['kri_projects'] = $kriProjectRequests;
 
             // $validator = Validator::make($validationData, [
             //     // Validasi data monitoring utama
