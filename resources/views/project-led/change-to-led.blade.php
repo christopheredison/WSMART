@@ -63,7 +63,8 @@
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Kategori Kejadian <span class="text-danger">*</span></label>
-                                <select class="form-select select2" name="kategori_kejadian_id" required>
+                                <select class="form-select select2 @error('kategori_kejadian_id') is-invalid @enderror"
+                                        name="kategori_kejadian_id" required>
                                     <option value="">Pilih Kategori Kejadian</option>
                                     @foreach($kategoriKejadians as $kategori)
                                         <option value="{{ $kategori->id }}" {{ old('kategori_kejadian_id') == $kategori->id ? 'selected' : '' }}>
@@ -71,15 +72,28 @@
                                         </option>
                                     @endforeach
                                 </select>
+
+                                @error('kategori_kejadian_id')
+                                    <div class="invalid-feedback">
+                                        {{ $message }}
+                                    </div>
+                                @enderror
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Sumber Penyebab Kejadian <span class="text-danger">*</span></label>
-                                <select class="form-select select2" name="sumber_penyebab_kejadian" required>
+                                <select class="form-select select2 @error('sumber_penyebab_kejadian') is-invalid @enderror"
+                                        name="sumber_penyebab_kejadian" required>
                                     <option value="">Pilih Sumber Penyebab</option>
                                     <option value="1" {{ old('sumber_penyebab_kejadian') == '1' ? 'selected' : '' }}>Internal</option>
                                     <option value="2" {{ old('sumber_penyebab_kejadian') == '2' ? 'selected' : '' }}>Eksternal</option>
                                 </select>
+
+                                @error('sumber_penyebab_kejadian')
+                                    <div class="invalid-feedback">
+                                        {{ $message }}
+                                    </div>
+                                @enderror
                             </div>
 
                             {{-- <div class="col-md-6 mb-3">
