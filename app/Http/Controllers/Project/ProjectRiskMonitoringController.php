@@ -790,29 +790,29 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         }
 
         // Validasi Rencana Perlakuan Risiko
-        $penyebabRisikos = $projectRisk->penyebabRisikoProjects;
+        // $penyebabRisikos = $projectRisk->penyebabRisikoProjects;
 
-        if ($penyebabRisikos->isEmpty()) {
-            return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
-                ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum memiliki data penyebab dan rencana perlakuan.');
-        }
+        // if ($penyebabRisikos->isEmpty()) {
+        //     return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
+        //         ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum memiliki data penyebab dan rencana perlakuan.');
+        // }
 
-        $hasValidPerlakuan = false;
-        foreach ($penyebabRisikos as $penyebab) {
-            if (!empty($penyebab->penyebab_risiko) && $penyebab->perlakuanPenyebabRisiko->isNotEmpty()) {
-                foreach ($penyebab->perlakuanPenyebabRisiko as $perlakuan) {
-                    if (!empty($perlakuan->rencana_perlakuan_risiko)) {
-                        $hasValidPerlakuan = true;
-                        break 2;
-                    }
-                }
-            }
-        }
+        // $hasValidPerlakuan = false;
+        // foreach ($penyebabRisikos as $penyebab) {
+        //     if (!empty($penyebab->penyebab_risiko) && $penyebab->perlakuanPenyebabRisiko->isNotEmpty()) {
+        //         foreach ($penyebab->perlakuanPenyebabRisiko as $perlakuan) {
+        //             if (!empty($perlakuan->rencana_perlakuan_risiko)) {
+        //                 $hasValidPerlakuan = true;
+        //                 break 2;
+        //             }
+        //         }
+        //     }
+        // }
 
-        if (!$hasValidPerlakuan) {
-            return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
-                ->with('error', 'Risiko "' . $namaRisikoLengkap . '" harus memiliki minimal satu penyebab dengan rencana perlakuan yang sudah diisi.');
-        }
+        // if (!$hasValidPerlakuan) {
+        //     return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
+        //         ->with('error', 'Risiko "' . $namaRisikoLengkap . '" harus memiliki minimal satu penyebab dengan rencana perlakuan yang sudah diisi.');
+        // }
 
         $peristiwaRisiko = $projectRisk->peristiwaRisiko;
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
