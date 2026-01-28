@@ -429,7 +429,7 @@
                 <div class="card-body">
                     <div class="row gy-3 gx-xxl-6 mb-3">
                         <div class="col-md-6 col-lg-5 col-xxl-6">
-                            <select name="jenis_kontrol_eksisting_id" class="form-select">
+                            <select name="jenis_kontrol_eksisting_id" class="form-select select2">
                                 <option value="">Jenis Kontrol Eksisting</option>
                                 @foreach ($jenisKontrolEksistings as $jenisKontrolEksisting)
                                     <option value="{{ $jenisKontrolEksisting->id }}">

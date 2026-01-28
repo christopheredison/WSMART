@@ -2,148 +2,21 @@
 
 @section('title', 'Semua Notifikasi')
 
-@push('scripts')
-<script>
-    $(document).ready(function() {
-        // Ambil token dari form yang ada di halaman
-        var token = $('input[name="_token"]').val();
-        
-        // Fungsi untuk menandai notifikasi sebagai dibaca
-        $('.mark-as-read').on('click', function() {
-            var id = $(this).data('id');
-            var row = $(this).closest('tr');
-            
-            $.ajax({
-                url: '/notifications/' + id + '/read',
-                type: 'POST',
-                data: {
-                    _token: token
-                },
-                success: function(response) {
-                    if (response.success) {
-                        // Perbarui tampilan
-                        row.removeClass('fw-bold');
-                        row.find('td:first-child .badge').removeClass('bg-primary').addClass('bg-secondary').text('Dibaca');
-                        
-                        // Ganti tombol
-                        var markAsReadBtn = row.find('.mark-as-read');
-                        markAsReadBtn.removeClass('btn-falcon-success mark-as-read').addClass('btn-falcon-warning mark-as-unread');
-                        markAsReadBtn.html('<span class="fas fa-undo"></span>');
-                        
-                        // Tambahkan event listener baru
-                        markAsReadBtn.off('click').on('click', function() {
-                            var id = $(this).data('id');
-                            // Panggil fungsi langsung
-                            var row = $(this).closest('tr');
-                            
-                            $.ajax({
-                                url: '/notifications/' + id + '/unread',
-                                type: 'POST',
-                                data: {
-                                    _token: token
-                                },
-                                success: function(response) {
-                                    if (response.success) {
-                                        // Reload halaman untuk menampilkan perubahan
-                                        location.reload();
-                                    }
-                                },
-                                error: function(xhr) {
-                                    console.error('Error marking notification as unread:', xhr.responseText);
-                                }
-                            });
-                        });
-                    }
-                },
-                error: function(xhr) {
-                    console.error('Error marking notification as read:', xhr.responseText);
-                    alert('Terjadi kesalahan saat menandai notifikasi sebagai dibaca.');
-                }
-            });
-        });
-        
-        // Fungsi untuk menandai notifikasi sebagai belum dibaca
-        $('.mark-as-unread').on('click', function() {
-            var id = $(this).data('id');
-            var row = $(this).closest('tr');
-            
-            $.ajax({
-                url: '/notifications/' + id + '/unread',
-                type: 'POST',
-                data: {
-                    _token: token
-                },
-                success: function(response) {
-                    if (response.success) {
-                        // Perbarui tampilan
-                        row.addClass('fw-bold');
-                        row.find('td:first-child .badge').removeClass('bg-secondary').addClass('bg-primary').text('Baru');
-                        
-                        // Ganti tombol
-                        var markAsUnreadBtn = row.find('.mark-as-unread');
-                        markAsUnreadBtn.removeClass('btn-falcon-warning mark-as-unread').addClass('btn-falcon-success mark-as-read');
-                        markAsUnreadBtn.html('<span class="fas fa-check"></span>');
-                        
-                        // Tambahkan event listener baru
-                        markAsUnreadBtn.off('click').on('click', function() {
-                            var id = $(this).data('id');
-                            // Panggil fungsi langsung
-                            var row = $(this).closest('tr');
-                            
-                            $.ajax({
-                                url: '/notifications/' + id + '/read',
-                                type: 'POST',
-                                data: {
-                                    _token: token
-                                },
-                                success: function(response) {
-                                    if (response.success) {
-                                        // Reload halaman untuk menampilkan perubahan
-                                        location.reload();
-                                    }
-                                },
-                                error: function(xhr) {
-                                    console.error('Error marking notification as read:', xhr.responseText);
-                                }
-                            });
-                        });
-                    }
-                },
-                error: function(xhr) {
-                    console.error('Error marking notification as unread:', xhr.responseText);
-                    alert('Terjadi kesalahan saat menandai notifikasi sebagai belum dibaca.');
-                }
-            });
-        });
-        
-        // Fungsi untuk menandai semua notifikasi sebagai dibaca
-        $('#markAllAsRead').on('click', function(e) {
-            e.preventDefault();
-            
-            $.ajax({
-                url: '/notifications/read-all',
-                type: 'POST',
-                data: {
-                    _token: token
-                },
-                success: function(response) {
-                    if (response.success) {
-                        // Reload halaman untuk menampilkan perubahan
-                        location.reload();
-                    }
-                },
-                error: function(xhr) {
-                    console.error('Error marking all notifications as read:', xhr.responseText);
-                    alert('Terjadi kesalahan saat menandai semua notifikasi sebagai dibaca.');
-                }
-            });
-        });
-    });
-</script>
+@push('styles')
+<style>
+    /* Custom CSS untuk truncate 3 baris */
+    .message-truncate-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        white-space: normal;
+        max-width: 600px; /* Atur lebar maksimal agar wrap bekerja */
+    }
+</style>
 @endpush
 
 @section('dashboard')
-<!-- Hidden CSRF token field -->
 <input type="hidden" name="_token" value="{{ csrf_token() }}">
 
 <div class="card mb-3">
@@ -153,7 +26,7 @@
                 <h5 class="mb-0">Semua Notifikasi</h5>
             </div>
             <div class="col-auto d-flex">
-                <button class="btn btn-falcon-default btn-sm me-1" id="markAllAsRead">
+                <button class="btn btn-sm btn-outline-primary" id="markAllAsRead">
                     <span class="fas fa-check me-1"></span>Tandai Semua Dibaca
                 </button>
             </div>
@@ -171,51 +44,56 @@
                         </th>
                         <th class="text-center">Status</th>
                         <th>Notifikasi</th>
-                        <th>Tanggal</th>
+                        <th style="min-width: 150px;">Tanggal</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="table-notifikasi-body">
-                @forelse($notifications as $notification)
-                <tr class="{{ is_null($notification->read_at) ? 'fw-bold' : '' }}" data-id="{{ $notification->id }}">
-                        <td class="white-space-nowrap">
+                @if(isset($notifications) && $notifications->count() > 0)
+                    @foreach($notifications as $notification)
+                    <tr class="{{ is_null($notification->read_at) ? 'fw-bold' : '' }}" data-id="{{ $notification->id }}">
+                        <td class="white-space-nowrap align-middle">
                             <div class="form-check mb-0">
                                 <input class="form-check-input" type="checkbox" id="checkbox-{{ $notification->id }}"
                                     data-bulk-select-row="data-bulk-select-row" />
                             </div>
                         </td>
-                        <td class="status text-center">
+                        <td class="status text-center align-middle">
                             @if(is_null($notification->read_at))
-                                <span class="badge rounded-pill bg-primary">Baru</span>
+                                <span class="badge rounded-pill bg-info">Baru</span>
                             @else
-                                <span class="badge rounded-pill bg-secondary">Dibaca</span>
+                                <span class="badge rounded-pill bg-success">Dibaca</span>
                             @endif
                         </td>
-                        <td class="notifikasi">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar avatar-xl me-2">
+                        <td class="notifikasi align-middle py-3">
+                            <div class="d-flex align-items-start">
+                                <div class="avatar avatar-xl me-3 mt-1">
                                     <div class="avatar-name rounded-circle bg-soft-primary text-primary">
-                                        <span class="{{ $notification->icon ?? 'bx bx-bell' }}"></span>
+                                        <span class="{{ $notification->icon ?? 'bx bx-bell' }} fs-1"></span>
                                     </div>
                                 </div>
                                 <div>
-                                    <h6 class="mb-0">{{ $notification->title }}</h6>
-                                    <p class="mb-0 text-truncate" style="max-width: 500px;">{{ $notification->message }}</p>
+                                    <h6 class="mb-1">{{ $notification->title }}</h6>
+                                    {{-- Truncate 3 baris --}}
+                                    <p class="mb-0 text-800 message-truncate-3">
+                                        {{ $notification->message }}
+                                    </p>
                                 </div>
                             </div>
                         </td>
-                        <td class="tanggal">{{ $notification->created_at->diffForHumans() }}</td>
-                        <td class="white-space-nowrap">
-                            <button class="btn-input-icon view-notification" 
-                                    data-id="{{ $notification->id }}"
-                                    data-title="{{ $notification->title }}"
-                                    data-message="{{ $notification->message }}"
-                                    data-time="{{ $notification->created_at->diffForHumans() }}"
-                                    data-read="{{ !is_null($notification->read_at) }}"
-                                    data-link="{{ $notification->link ?? '#' }}">
-                                <span class="bx bx-show" data-bs-toggle="tooltip" title="Lihat"></span>
-                            </button>
-                            
+                        {{-- Format Tanggal DD MMM YYYY HH:mm --}}
+                        <td class="tanggal align-middle">
+                            {{ \Carbon\Carbon::parse($notification->created_at)->setTimezone('Asia/Jakarta')->translatedFormat('d M Y H:i') }} WIB
+                        </td>
+                        <td class="white-space-nowrap align-middle">
+                            {{-- Tombol Lihat Langsung Redirect --}}
+                            <a href="{{ $notification->link ?? '#' }}"
+                              class="btn-input-icon view-notification-link"
+                              data-id="{{ $notification->id }}"
+                              data-read="{{ !is_null($notification->read_at) }}">
+                                <span class="bx bx-link-external" data-bs-toggle="tooltip" title="Buka Tautan"></span>
+                            </a>
+
                             @if(is_null($notification->read_at))
                                 <button class="btn-input-icon mark-as-read" data-id="{{ $notification->id }}">
                                     <span class="bx bx-check text-success" data-bs-toggle="tooltip" title="Tandai Dibaca"></span>
@@ -227,7 +105,8 @@
                             @endif
                         </td>
                     </tr>
-                    @empty
+                    @endforeach
+                @else
                     <tr>
                         <td colspan="5" class="text-center py-4">
                             <div class="d-flex flex-column align-items-center">
@@ -237,7 +116,7 @@
                             </div>
                         </td>
                     </tr>
-                    @endforelse
+                @endif
                 </tbody>
             </table>
         </div>
@@ -254,297 +133,113 @@
                     <button class="btn btn-falcon-default btn-sm ms-2" type="button">Terapkan</button>
                 </div>
             </div>
-            <div id="table-notifikasi-replace-element">{{ $notifications->links() }}</div>
+            {{-- Menggunakan null coalescing operator agar tidak error jika variable links tidak ada --}}
+            <div id="table-notifikasi-replace-element">
+                {!! $notifications->links() ?? '' !!}
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Detail Notifikasi -->
-<div class="modal fade" id="notificationDetailModal" tabindex="-1" role="dialog" aria-labelledby="notificationDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="notificationDetailModalLabel">Detail Notifikasi</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="notification-detail">
-                    <h6 id="notification-title"></h6>
-                    <p id="notification-message"></p>
-                    <div class="notification-meta">
-                        <small id="notification-time"></small>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                <button type="button" id="toggleReadStatus" class="btn btn-outline-primary">Tandai Belum Dibaca</button>
-            </div>
-        </div>
-    </div>
-</div>
+{{-- MODAL DIHAPUS SESUAI REQUEST --}}
+
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
     $(document).ready(function() {
-        // Initialize DataTable
-        var table = $('#table-notifikasi').DataTable({
-            dom: "<'row mx-1'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                 "<'table-responsive'tr>" +
-                 "<'row mx-1 align-items-center justify-content-center'<'col-sm-12 col-md-6'i><'col-sm-12 col-md-6'p>>",
-            language: {
-                paginate: {
-                    previous: '<span class="fas fa-chevron-left"></span>',
-                    next: '<span class="fas fa-chevron-right"></span>'
-                },
-                search: "Cari:",
-                lengthMenu: "Tampilkan _MENU_ entri",
-                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
-                infoEmpty: "Menampilkan 0 sampai 0 dari 0 entri",
-                infoFiltered: "(disaring dari _MAX_ total entri)",
-                zeroRecords: "Tidak ada data yang cocok",
-                emptyTable: "Tidak ada data di tabel"
-            },
-            pageLength: 10,
-            lengthMenu: [5, 10, 25, 50, 100],
-            order: [[3, 'desc']]
-        });
-        
-        // Tampilkan modal detail notifikasi
-        $('.view-notification').on('click', function() {
+        var token = $('input[name="_token"]').val();
+
+        // 1. Handle Klik Tombol Link (Mata/Link)
+        $('.view-notification-link').on('click', function(e) {
+            const link = $(this).attr('href');
             const id = $(this).data('id');
-            const title = $(this).data('title');
-            const message = $(this).data('message');
-            const time = $(this).data('time');
-            const read = $(this).data('read');
-            const link = $(this).data('link');
-            
-            $('#notification-title').text(title);
-            $('#notification-message').text(message);
-            $('#notification-time').text(time);
-            $('#notification-link').attr('href', link);
-            
-            // Sesuaikan tombol toggle read status
-            if (read) {
-                $('#toggleReadStatus').text('Tandai Belum Dibaca');
-                $('#toggleReadStatus').data('action', 'unread');
-            } else {
-                $('#toggleReadStatus').text('Tandai Sudah Dibaca');
-                $('#toggleReadStatus').data('action', 'read');
+            const isRead = $(this).data('read');
+
+            // Jika link valid dan belum dibaca
+            if (link && link !== '#' && !isRead) {
+                e.preventDefault(); // Cegah redirect default dulu
+
+                // Mark as read via AJAX
+                $.ajax({
+                    url: '/notifications/' + id + '/read',
+                    type: 'POST',
+                    data: { _token: token },
+                    success: function() {
+                        // Setelah sukses mark read, baru redirect
+                        window.location.href = link;
+                    },
+                    error: function() {
+                        // Fallback jika error, tetap redirect
+                        window.location.href = link;
+                    }
+                });
             }
-            
-            $('#toggleReadStatus').data('id', id);
-            // Gunakan Bootstrap 5 API dengan backdrop non-locking agar tidak mengunci layar
-            const modalElement = document.getElementById('notificationDetailModal');
-            const modalOptions = { backdrop: false, keyboard: true };
-            const detailModal = new bootstrap.Modal(modalElement, modalOptions);
-            detailModal.show();
-            
-            // Jika notifikasi belum dibaca, tandai sebagai dibaca
-            if (!read) {
-                markAsRead(id);
-            }
+            // Jika sudah dibaca, biarkan href default bekerja
         });
-        
-        // Toggle status baca notifikasi
-        $('#toggleReadStatus').on('click', function() {
-            const id = $(this).data('id');
-            const action = $(this).data('action');
-            
-            if (action === 'read') {
-                markAsRead(id);
-                $(this).text('Tandai Belum Dibaca');
-                $(this).data('action', 'unread');
-            } else {
-                markAsUnread(id);
-                $(this).text('Tandai Sudah Dibaca');
-                $(this).data('action', 'read');
-            }
-        });
-        
-        // Tandai notifikasi sebagai dibaca
+
+        // 2. Mark Single Read
         $('.mark-as-read').on('click', function() {
-            const id = $(this).data('id');
-            markAsRead(id);
+            var id = $(this).data('id');
+            // Logic AJAX sama seperti sebelumnya, reload page
+            $.ajax({
+                url: '/notifications/' + id + '/read',
+                type: 'POST',
+                data: { _token: token },
+                success: function(response) {
+                    if (response.success) location.reload();
+                }
+            });
         });
-        
-        // Tandai notifikasi sebagai belum dibaca
+
+        // 3. Mark Single Unread
         $('.mark-as-unread').on('click', function() {
-            const id = $(this).data('id');
-            markAsUnread(id);
+            var id = $(this).data('id');
+            $.ajax({
+                url: '/notifications/' + id + '/unread',
+                type: 'POST',
+                data: { _token: token },
+                success: function(response) {
+                    if (response.success) location.reload();
+                }
+            });
         });
-        
-        // Tandai semua notifikasi sebagai dibaca
+
+        // 4. Mark All Read
         $('#markAllAsRead').on('click', function(e) {
             e.preventDefault();
-            markAllAsRead();
+            $.ajax({
+                url: '/notifications/read-all',
+                type: 'POST',
+                data: { _token: token },
+                success: function(response) {
+                    if (response.success) location.reload();
+                }
+            });
         });
-        
-        // Fungsi untuk menandai notifikasi sebagai dibaca
-        function markAsRead(id) {
-            $.ajax({
-                url: "{{ route('notifications.read', ':id') }}".replace(':id', id),
-                type: 'POST',
-                data: {
-                    _token: "{{ csrf_token() }}"
-                },
-                success: function(response) {
-                    if (response.success) {
-                        const row = $('tr[data-id="' + id + '"]');
-                        row.removeClass('fw-bold');
-                        row.find('td.status .badge').removeClass('bg-primary').addClass('bg-secondary').text('Dibaca');
-                        
-                        // Ubah tombol mark-as-read menjadi mark-as-unread
-                        const markButton = row.find('.mark-as-read');
-                        markButton.removeClass('mark-as-read').addClass('mark-as-unread');
-                        markButton.html('<span class="bx bx-undo text-warning" data-bs-toggle="tooltip" title="Tandai Belum Dibaca"></span>');
-                        
-                        // Update event handler
-                        markButton.off('click').on('click', function() {
-                            markAsUnread(id);
-                        });
-                        
-                        // Update jumlah notifikasi di navbar
-                        updateNotificationCount();
-                        
-                        // Reinitialize tooltips
-                        $('[data-bs-toggle="tooltip"]').tooltip();
-                    }
-                }
-            });
-        }
-        
-        // Fungsi untuk menandai notifikasi sebagai belum dibaca
-        function markAsUnread(id) {
-            $.ajax({
-                url: "{{ route('notifications.unread', ':id') }}".replace(':id', id),
-                type: 'POST',
-                data: {
-                    _token: "{{ csrf_token() }}"
-                },
-                success: function(response) {
-                    if (response.success) {
-                        const row = $('tr[data-id="' + id + '"]');
-                        row.addClass('fw-bold');
-                        row.find('td.status .badge').removeClass('bg-secondary').addClass('bg-primary').text('Baru');
-                        
-                        // Ubah tombol mark-as-unread menjadi mark-as-read
-                        const markButton = row.find('.mark-as-unread');
-                        markButton.removeClass('mark-as-unread').addClass('mark-as-read');
-                        markButton.html('<span class="bx bx-check text-success" data-bs-toggle="tooltip" title="Tandai Dibaca"></span>');
-                        
-                        // Update event handler
-                        markButton.off('click').on('click', function() {
-                            markAsRead(id);
-                        });
-                        
-                        // Update jumlah notifikasi di navbar
-                        updateNotificationCount();
-                        
-                        // Reinitialize tooltips
-                        $('[data-bs-toggle="tooltip"]').tooltip();
-                    }
-                }
-            });
-        }
-        
-        // Fungsi untuk menandai semua notifikasi sebagai dibaca
-        function markAllAsRead() {
-            $.ajax({
-                url: "{{ route('notifications.readAll') }}",
-                type: 'POST',
-                data: {
-                    _token: "{{ csrf_token() }}"
-                },
-                success: function(response) {
-                    if (response.success) {
-                        // Refresh halaman untuk menampilkan perubahan
-                        location.reload();
-                    }
-                }
-            });
-        }
-        
-        // Fungsi untuk memperbarui jumlah notifikasi di navbar
-        function updateNotificationCount() {
-            $.ajax({
-                url: "{{ route('notifications.unread_count') }}",
-                type: 'GET',
-                success: function(response) {
-                    const count = response.count;
-                    const badge = $('.notification-indicator-number');
-                    
-                    if (count > 0) {
-                        badge.text(count).show();
-                    } else {
-                        badge.text('0').hide();
-                    }
-                }
-            });
-        }
-        
-        // Initialize tooltips
+
+        // Init Tooltip
         $('[data-bs-toggle="tooltip"]').tooltip();
-        
-        // Bulk select functionality
-        $('[data-bulk-select-row]').click(function (e) {
-            e.stopPropagation();
-        });
-        
-        // Handle bulk actions
+
+        // Handle Bulk Actions (sama seperti sebelumnya)
         $('#table-notifikasi-actions button').click(function() {
             var action = $('#table-notifikasi-actions select').val();
             var selectedIds = [];
-            
             $('input[data-bulk-select-row]:checked').each(function() {
-                var id = $(this).closest('tr').data('id');
-                selectedIds.push(id);
+                selectedIds.push($(this).closest('tr').data('id'));
             });
-            
-            if (selectedIds.length === 0) {
-                alert('Silakan pilih notifikasi terlebih dahulu');
-                return;
-            }
-            
-            if (action === 'mark-as-read') {
-                markMultipleAsRead(selectedIds);
-            } else if (action === 'mark-as-unread') {
-                markMultipleAsUnread(selectedIds);
-            }
+
+            if (selectedIds.length === 0) return alert('Pilih notifikasi dulu');
+
+            var url = action === 'mark-as-read' ? "{{ route('notifications.markMultipleAsRead') }}" : "{{ route('notifications.markMultipleAsUnread') }}";
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: { _token: token, ids: selectedIds },
+                success: function(res) { if(res.success) location.reload(); }
+            });
         });
-        
-        function markMultipleAsRead(ids) {
-            $.ajax({
-                url: "{{ route('notifications.markMultipleAsRead') }}",
-                type: 'POST',
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    ids: ids
-                },
-                success: function(response) {
-                    if (response.success) {
-                        location.reload();
-                    }
-                }
-            });
-        }
-        
-        function markMultipleAsUnread(ids) {
-            $.ajax({
-                url: "{{ route('notifications.markMultipleAsUnread') }}",
-                type: 'POST',
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    ids: ids
-                },
-                success: function(response) {
-                    if (response.success) {
-                        location.reload();
-                    }
-                }
-            });
-        }
     });
 </script>
-@endsection
+@endpush

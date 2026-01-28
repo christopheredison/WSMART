@@ -5,7 +5,7 @@
     @php
         $context = $riskContexts->first();
         $status = $context ? $context->status : 'Draft';
-        
+
         $user = auth()->user();
         $isRiskOfficer = ($user->level_id == 6 || is_null($user->level_id));
         $isRiskOwner = ($user->level_id == 7);
@@ -14,7 +14,7 @@
     <div class="row g-5 mb-5">
         <div class="col-12">
             <div class="card shadow-sm">
-                
+
                 <div class="card-header d-flex align-items-center gap-3 py-4">
                     <div class="bg-info-subtle p-2 rounded-4">
                         <div class="lead__icon">
@@ -23,7 +23,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="d-block">
                         <h3 class="m-0">Proyek Risk Context</h3>
                         <div class="ff-preheading mb-0 mt-1 text-muted">
@@ -50,7 +50,7 @@
                                     <a href="{{ route('project-risk-context.update-or-create', ['project_id' => $project->id]) }}" class="btn btn-sm d-flex justify-content-center align-items-center gap-2 btn-primary">
                                         <i class="bx bx-edit"></i> {{ $context ? 'Edit Data' : 'Isi Data' }}
                                     </a>
-                                    
+
                                     @if($context)
                                     <form id="form-submit-context" action="{{ route('project-risk-context.submit', $context->id) }}" method="POST" class="d-inline">
                                         @csrf
@@ -72,7 +72,7 @@
                                         <i class="bx bx-x"></i> Revisi
                                     </button>
                                 @endif
-                                
+
                                 @if($status == 'Submitted')
                                     <form id="form-verify-context" action="{{ route('project-risk-context.verify', $context->id) }}" method="POST" class="d-inline">
                                         @csrf
@@ -88,7 +88,7 @@
 
                 <div class="card-body p-lg-4">
                     {{-- ALERT REVISI --}}
-                    @if($context && $status == 'Revision' && $context->catatan_perbaikan)
+                    @if($context && ($status == 'Revision' || $status == 'Draft') && $context->catatan_perbaikan)
                     <div class="alert alert-danger d-flex align-items-center mt-0 mb-4" role="alert">
                         <div class="svg-icon svg-icon-danger me-3">
                             @include('partials.icon-alert')
@@ -104,8 +104,8 @@
                         <div class="alert alert-success d-flex align-items-center mt-0 mb-4 border-success border-dashed bg-light-success" role="alert">
                             <i class="bx bx-check-circle fs-3 text-success me-3"></i>
                             <div class="flex-1">
-                                <strong>Dokumen Terverifikasi</strong><br> oleh <span class="fw-bold">{{ $context->verifier->name ?? 'Risk Owner' }}</span> pada 
-                                {{ \Carbon\Carbon::parse($context->verified_at)->translatedFormat('d F Y, H:i') }}
+                                <strong>Dokumen Terverifikasi</strong><br> oleh <span class="fw-bold">{{ $context->verifier->name ?? 'Risk Owner' }}</span> pada
+                                {{ \Carbon\Carbon::parse($context->verified_at)->setTimezone('Asia/Jakarta')->translatedFormat('d F Y, H:i') }}
                             </div>
                         </div>
                     @endif
@@ -119,10 +119,10 @@
                             @endif
                         </div>
                     @else
-                        
+
                         @php
                             $thClass = "bg-light text-dark fw-bold align-middle";
-                            $tdClass = "align-middle";
+                            $tdClass = "align-middle text-pre-wrap";
                         @endphp
 
                         {{-- SECTION I --}}
@@ -149,12 +149,12 @@
                                         <tr>
                                             <td class="{{ $thClass }}" style="text-align:center;">4</td>
                                             <td class="{{ $thClass }}">Anggota Proyek</td>
-                                            <td class="{{ $tdClass }}">
+                                            <td class="">
                                                 @if($context->members->count() > 0)
                                                     <ul class="mb-0 ps-3 text-gray-700">
                                                         @foreach($context->members as $member)
                                                             <li>
-                                                                {{ $member->nama }} 
+                                                                {{ $member->nama }}
                                                                 <span class="text-muted fst-italic small">({{ $member->jabatan->name ?? '-' }})</span>
                                                             </li>
                                                         @endforeach
@@ -318,7 +318,7 @@
                             <i class="bx bx-error-circle fs-3 text-warning me-3"></i>
                             <div class="text-dark">Status dokumen akan berubah menjadi <strong>Perlu Perbaikan</strong>.</div>
                         </div>
-                        
+
                         <div class="mb-3">
                             <label class="form-label fw-bold required">Catatan Perbaikan</label>
                             <textarea name="catatan_perbaikan" class="form-control" rows="4" required placeholder="Tuliskan instruksi perbaikan secara jelas..."></textarea>
@@ -345,7 +345,7 @@
         $('#form-submit-context').on('submit', function(e) {
             e.preventDefault();
             let form = this;
-            
+
             Swal.fire({
                 title: 'Ajukan Verifikasi?',
                 text: "Data akan dikirim ke Risk Owner untuk ditinjau.",
@@ -364,7 +364,7 @@
         $('#form-verify-context').on('submit', function(e) {
             e.preventDefault();
             let form = this;
-            
+
             Swal.fire({
                 title: 'Verifikasi Dokumen?',
                 text: "Dokumen yang sudah disetujui akan berstatus Verified.",
@@ -387,7 +387,7 @@
 
             btn.prop('disabled', true);
             btn.html('<span class="spinner-border spinner-border-sm me-2" style="width: 0.75rem; height: 0.75rem;"" role="status" aria-hidden="true"></span> Mengirim...');
-            
+
             return true;
         });
     });

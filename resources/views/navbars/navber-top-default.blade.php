@@ -68,7 +68,7 @@
                   </div>
                   <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                    <button type="button" id="toggleReadStatus" class="btn btn-outline-primary">Tandai Belum Dibaca</button>
+                    <button type="button" id="toggleReadStatus" class="btn btn-outline-secondary">Tandai Belum Dibaca</button>
                   </div>
                 </div>
               </div>

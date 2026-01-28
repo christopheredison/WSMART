@@ -9,8 +9,10 @@ use App\Models\ProjectRiskContextStakeholderExternal;
 use App\Models\Project;
 use App\Models\ProjectPeriodeList;
 use App\Models\Jabatan;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Notification;
 // Hapus Auth jika tidak perlukan scoping by unit
 
 class ProjectRiskContextController extends Controller
@@ -269,7 +271,7 @@ class ProjectRiskContextController extends Controller
             return back()->with('error', 'Akses Ditolak. Hanya Risk Officer yang dapat mengajukan verifikasi.');
         }
 
-        $context = ProjectRiskContext::findOrFail($id);
+        $context = ProjectRiskContext::with('project')->findOrFail($id);
 
         // Cek Status Dokumen (Hanya boleh Draft atau Revision)
         if ($context->status !== ProjectRiskContext::STATUS_DRAFT && $context->status !== ProjectRiskContext::STATUS_REVISION) {
@@ -280,6 +282,37 @@ class ProjectRiskContextController extends Controller
             'status' => ProjectRiskContext::STATUS_SUBMITTED,
             'catatan_perbaikan' => null
         ]);
+
+        // 1. Siapkan Link
+        $projectPeriode = ProjectPeriodeList::where('project_id', $context->project_id)->first();
+        $targetLink = $projectPeriode ? route('project-risk-context.index-by-project-periode', $projectPeriode->id) : '#';
+
+        // 2. Ambil User Level 7 (Risk Owner) beserta relasi Unit dan Projects agar query ringan
+        $riskOwners = User::where('level_id', 7)
+            ->with(['unit', 'projects'])
+            ->get();
+
+        $project = $context->project;
+
+        foreach ($riskOwners as $riskOwner) {
+            // LOGIKA AKSES (Sama dengan Index):
+            // 1. Punya Project secara langsung (via pivot user_projects)
+            // 2. ATAU User berada di Unit yang sama dengan Cost Center Project (Divisi) [Not Implemented Yet]
+
+            $hasAccess = $riskOwner->hasProject($project);
+            // || ($riskOwner->unit && $project->cost_center_parent == $riskOwner->unit->cost_center);
+
+            if ($hasAccess) {
+                Notification::create([
+                    'user_id' => $riskOwner->id,
+                    'title'   => 'Verifikasi Risk Context',
+                    'message' => 'Risk Context proyek ' . $project->project_name . ' menunggu verifikasi Anda.',
+                    'icon'    => 'bx bx-check-circle',
+                    'link'    => $targetLink,
+                    'read_at' => null,
+                ]);
+            }
+        }
 
         return back()->with('success', 'Risk Context berhasil diajukan ke Risk Owner.');
     }
@@ -306,6 +339,32 @@ class ProjectRiskContextController extends Controller
             'verified_at' => now(),
             'catatan_perbaikan' => null
         ]);
+
+        // 1. Siapkan Link
+        $projectPeriode = ProjectPeriodeList::where('project_id', $context->project_id)->first();
+        $targetLink = $projectPeriode ? route('project-risk-context.index-by-project-periode', $projectPeriode->id) : '#';
+
+        // 2. Ambil User Level 6 (Risk Officer)
+        $riskOfficers = User::where('level_id', 6)
+            ->with(['unit', 'projects'])
+            ->get();
+
+        $project = $context->project;
+
+        foreach ($riskOfficers as $officer) {
+            $hasAccess = $officer->hasProject($project);
+
+            if ($hasAccess) {
+                Notification::create([
+                    'user_id' => $officer->id,
+                    'title'   => 'Risk Context Disetujui',
+                    'message' => 'Risk Context proyek ' . $project->project_name . ' telah diverifikasi.',
+                    'icon'    => 'bx bx-check-double',
+                    'link'    => $targetLink,
+                    'read_at' => null,
+                ]);
+            }
+        }
 
         return back()->with('success', 'Risk Context berhasil diverifikasi.');
     }
@@ -336,6 +395,32 @@ class ProjectRiskContextController extends Controller
             'verified_by' => null,
             'verified_at' => null
         ]);
+
+        // 1. Siapkan Link
+        $projectPeriode = ProjectPeriodeList::where('project_id', $context->project_id)->first();
+        $targetLink = $projectPeriode ? route('project-risk-context.index-by-project-periode', $projectPeriode->id) : '#';
+
+        // 2. Ambil User Level 6 (Risk Officer)
+        $riskOfficers = User::where('level_id', 6)
+            ->with(['unit', 'projects'])
+            ->get();
+
+        $project = $context->project;
+
+        foreach ($riskOfficers as $officer) {
+            $hasAccess = $officer->hasProject($project);
+
+            if ($hasAccess) {
+                Notification::create([
+                    'user_id' => $officer->id,
+                    'title'   => 'Revisi Risk Context',
+                    'message' => 'Perbaikan diperlukan pada proyek ' . $project->project_name . '.',
+                    'icon'    => 'bx bx-revision',
+                    'link'    => $targetLink,
+                    'read_at' => null,
+                ]);
+            }
+        }
 
         return back()->with('success', 'Risk Context dikembalikan untuk perbaikan.');
     }

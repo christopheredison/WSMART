@@ -84,7 +84,7 @@
                                     <tr>
                                         <td class="fw-bold">7</td>
                                         <td class="fw-bold">Tujuan</td>
-                                        <td>{{ $riskContexts->first()->tujuan ?? '-' }}</td>
+                                        <td class="text-pre-wrap">{{ $riskContexts->first()->tujuan ?? '-' }}</td>
                                     </tr>
                                     <tr>
                                         <td class="fw-bold">8</td>
@@ -134,7 +134,7 @@
                 <div class="row mb-4">
                     <div class="col-12">
                         <h6 class="fw-bold mb-3">IV. Stakeholder</h6>
-                        
+
                         <!-- Stakeholder Internal -->
                         <div class="mb-3">
                             <h6 class="fw-bold">Stakeholder Internal</h6>

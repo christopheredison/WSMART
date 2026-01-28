@@ -13,10 +13,10 @@
                 </div>
                 <div class="card-body">
                     @include('partials.success-message')
-                    
+
                     <form action="{{ route('project-risk-context.store-or-update') }}" method="POST">
                         @csrf
-                        
+
                         <!-- Informasi Project -->
                         <div class="row mb-3">
                             <div class="col-md-12">
@@ -35,7 +35,7 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Nilai</label>
-                                        <input type="text" name="nilai" class="form-control" 
+                                        <input type="text" name="nilai" class="form-control"
                                               value="{{ old('nilai', $projectRiskContext->nilai ?? '') }}">
                                         <small class="form-text text-muted">
                                             <strong>Proyek:</strong> Diisikan besaran nilai omzet kontrak yang akan dikerjakan.<br>
@@ -47,7 +47,7 @@
                                         <select name="pimpinan_tertinggi_jabatan_id" class="form-control select2">
                                             <option value="">Pilih Jabatan</option>
                                             @foreach($jabatans as $jabatan)
-                                                <option value="{{ $jabatan->id }}" 
+                                                <option value="{{ $jabatan->id }}"
                                                     {{ (old('pimpinan_tertinggi_jabatan_id') == $jabatan->id) || ($projectRiskContext && $projectRiskContext->pimpinan_tertinggi_jabatan_id == $jabatan->id) ? 'selected' : '' }}>
                                                     {{ $jabatan->name }}
                                                 </option>
@@ -61,7 +61,7 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Sponsor</label>
-                                        <input type="text" name="sponsor" class="form-control" 
+                                        <input type="text" name="sponsor" class="form-control"
                                               value="{{ old('sponsor', $projectRiskContext->sponsor ?? '') }}">
                                         <small class="form-text text-muted">
                                             Adalah pihak yang memiliki proyek, individu atau entitas yang menyediakan sumber daya keuangan dalam bentuk tunai atau yang setara untuk proyek.
@@ -75,12 +75,12 @@
                                         </small>
                                     </div>
                                 </div>
-                                <div class="mb-3">
+                                {{-- <div class="mb-3">
                                     <label class="form-label">Anggota Proyek</label>
                                     <small class="form-text text-muted d-block mb-2">
                                         Keseluruhan anggota tim inti (nama dan jabatan) yang terlibat dalam proyek yang bersangkutan.
                                     </small>
-                                </div>
+                                </div> --}}
                             </div>
                         </div>
 
