@@ -978,25 +978,106 @@ class ProjectRiskController extends BasicCRUDController
         $project = $projectPeriodeList->project;
 
         if ($request->action === 'save' || $request->action === 'savenext') {
-            $request->validate([
+            // 1. Definisikan Rules
+            $rules = [
+                'sasaran_proyek_id' => 'nullable',
                 'peristiwa_risiko_id' => 'required',
                 'rencana_kegiatan' => $request->peristiwa_risiko_id === 'other' ? 'required' : 'nullable',
-                'kategori_risiko_id' => 'required',
+
+                'kategori_risiko_id' => 'nullable',
                 'jenis_risiko_id' => 'required',
                 'deskripsi_peristiwa_risiko' => 'required',
-                // 'deskripsi_dampak' => 'required',
-                // 'wbs' => 'required',
                 'wbs_id' => 'required|exists:w_b_s,id',
-                //'target_capaian_kinerja' => 'required',
+
                 'jenis_kontrol_eksisting_id' => 'required',
-                // 'penilaian_efektifitas_kontrol' => 'required',
                 'perkiraan_waktu_mulai_terpapar_risiko' => 'required',
                 'perkiraan_waktu_selesai_terpapar_risiko' => 'required',
+
                 'penyebab_risiko' => 'required|array|min:1',
                 'penyebab_risiko.*' => 'required|string',
+
                 'dampak_risiko' => 'required|array|min:1',
                 'dampak_risiko.*' => 'required|string',
-            ]);
+
+                'key_risk_indicator' => 'required|array|min:1',
+                'key_risk_indicator.*' => 'required|string',
+                'satuan_kri.*' => 'required|string',
+                'batas_aman.*' => 'required',
+                'batas_waspada.*' => 'required',
+                'batas_bahaya.*' => 'required',
+
+                'kontrol_eksisting' => 'required|array|min:1',
+                'kontrol_eksisting.*' => 'required|string',
+            ];
+
+            // Tambahan Logic: Pastikan Sasaran Risiko terisi
+            // Jika dropdown kosong DAN input manual kosong, maka error
+            if (empty($request->sasaran_proyek_id) && empty($request->target_capaian_kinerja)) {
+                $rules['sasaran_proyek_id'] = 'required';
+            }
+            // Jika pilih "Lainnya" tapi textarea kosong
+            if ($request->sasaran_proyek_id === 'other' && empty($request->target_capaian_kinerja)) {
+                $rules['target_capaian_kinerja'] = 'required';
+            }
+
+            // 2. Custom Error Messages (Lebih Manusiawi)
+            $messages = [
+                'sasaran_proyek_id.required' => 'Mohon pilih Sasaran Risiko terlebih dahulu.',
+                'target_capaian_kinerja.required' => 'Karena Anda memilih "Sasaran Lainnya", mohon deskripsikan sasaran tersebut.',
+
+                'peristiwa_risiko_id.required' => 'Silakan pilih Peristiwa Risiko dari daftar.',
+                'rencana_kegiatan.required' => 'Mohon tuliskan nama Peristiwa Risiko (karena Anda memilih "Lainnya").',
+
+                'kategori_risiko_id.required' => 'Kategori Risiko belum terdeteksi (pilih Jenis Risiko dulu).',
+                'jenis_risiko_id.required' => 'Mohon pilih Jenis Risiko T2 & T3 KBUMN.',
+                'deskripsi_peristiwa_risiko.required' => 'Deskripsi detail peristiwa risiko wajib diisi agar lebih jelas.',
+                'wbs_id.required' => 'Mohon tentukan WBS (Work Breakdown Structure).',
+                'wbs_id.exists' => 'Data WBS yang dipilih tidak valid.',
+
+                'jenis_kontrol_eksisting_id.required' => 'Silakan pilih Jenis Kontrol Eksisting.',
+                'perkiraan_waktu_mulai_terpapar_risiko.required' => 'Tanggal mulai terpapar risiko wajib diisi.',
+                'perkiraan_waktu_selesai_terpapar_risiko.required' => 'Tanggal selesai terpapar risiko wajib diisi.',
+
+                // Array Messages
+                'penyebab_risiko.required' => 'Minimal harus ada satu Penyebab Risiko.',
+                'penyebab_risiko.*.required' => 'Penyebab risiko tidak boleh ada yang kosong.',
+
+                'dampak_risiko.required' => 'Minimal harus ada satu Dampak Risiko.',
+                'dampak_risiko.*.required' => 'Dampak risiko tidak boleh ada yang kosong.',
+
+                'key_risk_indicator.required' => 'Mohon masukkan minimal satu KRI.',
+                'key_risk_indicator.*.required' => 'Nama KRI wajib diisi.',
+                'satuan_kri.*.required' => 'Satuan KRI wajib diisi.',
+                'batas_aman.*.required' => 'Batas Aman wajib diisi.',
+                'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
+                'batas_bahaya.*.required' => 'Batas Bahaya wajib diisi.',
+
+                'kontrol_eksisting.required' => 'Mohon masukkan minimal satu Kontrol Eksisting.',
+                'kontrol_eksisting.*.required' => 'Deskripsi kontrol eksisting tidak boleh kosong.',
+            ];
+
+            $request->validate($rules, $messages);
+
+            // $request->validate([
+            //     'peristiwa_risiko_id' => 'required',
+            //     'peristiwa_risiko_id' => 'required',
+            //     'rencana_kegiatan' => $request->peristiwa_risiko_id === 'other' ? 'required' : 'nullable',
+            //     // 'kategori_risiko_id' => 'required',
+            //     'jenis_risiko_id' => 'required',
+            //     'deskripsi_peristiwa_risiko' => 'required',
+            //     // 'deskripsi_dampak' => 'required',
+            //     // 'wbs' => 'required',
+            //     'wbs_id' => 'required|exists:w_b_s,id',
+            //     //'target_capaian_kinerja' => 'required',
+            //     'jenis_kontrol_eksisting_id' => 'required',
+            //     // 'penilaian_efektifitas_kontrol' => 'required',
+            //     'perkiraan_waktu_mulai_terpapar_risiko' => 'required',
+            //     'perkiraan_waktu_selesai_terpapar_risiko' => 'required',
+            //     'penyebab_risiko' => 'required|array|min:1',
+            //     'penyebab_risiko.*' => 'required|string',
+            //     'dampak_risiko' => 'required|array|min:1',
+            //     'dampak_risiko.*' => 'required|string',
+            // ]);
 
             $user = $request->user();
 
@@ -1220,23 +1301,99 @@ class ProjectRiskController extends BasicCRUDController
         $periode = $projectPeriodeList->periode;
 
         if ($request->action === 'save' || $request->action === 'savenext') {
-            $request->validate([
+              $rules = [
                 'peristiwa_risiko_id' => 'required',
-                'kategori_risiko_id' => 'required',
+                // Jika pilih "Lainnya", rencana_kegiatan wajib diisi
+                'rencana_kegiatan' => $request->peristiwa_risiko_id === 'other' ? 'required' : 'nullable',
+
+                'kategori_risiko_id' => 'nullable',
                 'jenis_risiko_id' => 'required',
                 'deskripsi_peristiwa_risiko' => 'required',
-                // 'deskripsi_dampak' => 'required',
-                // 'wbs' => 'required',
                 'wbs_id' => 'required|exists:w_b_s,id',
                 'jenis_kontrol_eksisting_id' => 'required',
-                // 'penilaian_efektifitas_kontrol' => 'required',
+
                 'perkiraan_waktu_terpapar_risiko_mulai' => 'required',
                 'perkiraan_waktu_terpapar_risiko_akhir' => 'required',
+
+                // Validasi Array
                 'penyebab_risiko' => 'required|array|min:1',
                 'penyebab_risiko.*' => 'required|string',
+
                 'dampak_risiko' => 'required|array|min:1',
                 'dampak_risiko.*' => 'required|string',
-            ]);
+
+                'key_risk_indicator' => 'required|array|min:1',
+                'key_risk_indicator.*' => 'required|string',
+                'satuan_kri.*' => 'required|string',
+                'batas_aman.*' => 'required',
+                'batas_waspada.*' => 'required',
+                'batas_bahaya.*' => 'required',
+
+                'kontrol_eksisting' => 'required|array|min:1',
+                'kontrol_eksisting.*' => 'required|string',
+            ];
+
+            // Validasi Sasaran (Logic Khusus)
+            if (empty($request->sasaran_proyek_id) && empty($request->target_capaian_kinerja)) {
+                $rules['sasaran_proyek_id'] = 'required';
+            }
+            if ($request->sasaran_proyek_id === 'other' && empty($request->target_capaian_kinerja)) {
+                $rules['target_capaian_kinerja'] = 'required';
+            }
+
+            // --- 2. PESAN ERROR CUSTOM ---
+            $messages = [
+                'sasaran_proyek_id.required' => 'Mohon pilih Sasaran Risiko.',
+                'target_capaian_kinerja.required' => 'Mohon deskripsikan sasaran risiko lainnya.',
+
+                'peristiwa_risiko_id.required' => 'Peristiwa Risiko wajib dipilih.',
+                'rencana_kegiatan.required' => 'Nama Peristiwa Risiko (Lainnya) wajib diisi.',
+
+                'jenis_risiko_id.required' => 'Jenis Risiko T2 & T3 wajib dipilih.',
+                'deskripsi_peristiwa_risiko.required' => 'Deskripsi peristiwa risiko wajib diisi.',
+                'wbs_id.required' => 'WBS wajib dipilih.',
+                'jenis_kontrol_eksisting_id.required' => 'Jenis kontrol eksisting wajib dipilih.',
+
+                'perkiraan_waktu_terpapar_risiko_mulai.required' => 'Tanggal mulai terpapar wajib diisi.',
+                'perkiraan_waktu_terpapar_risiko_akhir.required' => 'Tanggal selesai terpapar wajib diisi.',
+
+                'penyebab_risiko.required' => 'Minimal satu penyebab risiko harus diisi.',
+                'penyebab_risiko.*.required' => 'Penyebab risiko tidak boleh kosong.',
+
+                'dampak_risiko.required' => 'Minimal satu dampak risiko harus diisi.',
+                'dampak_risiko.*.required' => 'Dampak risiko tidak boleh kosong.',
+
+                'key_risk_indicator.required' => 'Minimal satu KRI harus diisi.',
+                'key_risk_indicator.*.required' => 'KRI tidak boleh kosong.',
+                'satuan_kri.*.required' => 'Satuan KRI wajib diisi.',
+                'batas_aman.*.required' => 'Batas Aman wajib diisi.',
+                'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
+                'batas_bahaya.*.required' => 'Batas Bahaya wajib diisi.',
+
+                'kontrol_eksisting.required' => 'Minimal satu kontrol eksisting harus diisi.',
+                'kontrol_eksisting.*.required' => 'Kontrol eksisting tidak boleh kosong.',
+            ];
+
+            // Jalankan Validasi
+            $request->validate($rules, $messages);
+
+            // $request->validate([
+            //     'peristiwa_risiko_id' => 'required',
+            //     'kategori_risiko_id' => 'required',
+            //     'jenis_risiko_id' => 'required',
+            //     'deskripsi_peristiwa_risiko' => 'required',
+            //     // 'deskripsi_dampak' => 'required',
+            //     // 'wbs' => 'required',
+            //     'wbs_id' => 'required|exists:w_b_s,id',
+            //     'jenis_kontrol_eksisting_id' => 'required',
+            //     // 'penilaian_efektifitas_kontrol' => 'required',
+            //     'perkiraan_waktu_terpapar_risiko_mulai' => 'required',
+            //     'perkiraan_waktu_terpapar_risiko_akhir' => 'required',
+            //     'penyebab_risiko' => 'required|array|min:1',
+            //     'penyebab_risiko.*' => 'required|string',
+            //     'dampak_risiko' => 'required|array|min:1',
+            //     'dampak_risiko.*' => 'required|string',
+            // ]);
 
             $user = $request->user();
 

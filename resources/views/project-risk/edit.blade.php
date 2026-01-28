@@ -127,16 +127,18 @@
                             <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Jenis Risiko T2 & T3 KBUMN</label>
                                 <input type="hidden" name="kategori_risiko_id" value="{{ old('kategori_risiko_id', $projectRisk->kategori_risiko_id) }}" id="kategori_risiko_id">
-                                <select class="form-select select2 @error('jenis_risiko_id') is-invalid @enderror" name="jenis_risiko_id" id="jenis_risiko_id" required>
-                                    <option value="">Pilih Jenis Risiko</option>
-                                    @foreach($jenisRisikos as $jenis)
-                                        <option value="{{ $jenis->id }}"
-                                            data-kategori="{{ $jenis->kategori_risiko_id }}"
-                                            {{ old('jenis_risiko_id', $projectRisk->jenis_risiko_id) == $jenis->id ? 'selected' : '' }}>
-                                            {{ $jenis->kategoriRisiko->title ?? '' }} – {{ $jenis->title }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                                <div class="w-100">
+                                    <select class="form-select select2 @error('jenis_risiko_id') is-invalid @enderror" name="jenis_risiko_id" id="jenis_risiko_id" required>
+                                        <option value="">Pilih Jenis Risiko</option>
+                                        @foreach($jenisRisikos as $jenis)
+                                            <option value="{{ $jenis->id }}"
+                                                data-kategori="{{ $jenis->kategori_risiko_id }}"
+                                                {{ old('jenis_risiko_id', $projectRisk->jenis_risiko_id) == $jenis->id ? 'selected' : '' }}>
+                                                {{ $jenis->kategoriRisiko->title ?? '' }} – {{ $jenis->title }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         {{-- <div class="col-12">
@@ -480,16 +482,20 @@
 
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker2">Perkiraan Waktu Mulai Terpapar Risiko</label>
-                                <input class="form-control datetimepicker" name="perkiraan_waktu_terpapar_risiko_mulai"
-                                    id="timepicker2" type="text" placeholder="d/m/y"
-                                    value="{{ old('perkiraan_waktu_terpapar_risiko_mulai') }}" />
+                                <div class="w-100">
+                                    <input class="form-control datetimepicker" name="perkiraan_waktu_terpapar_risiko_mulai"
+                                      id="timepicker2" type="text" placeholder="d/m/y"
+                                      value="{{ old('perkiraan_waktu_terpapar_risiko_mulai') }}" />
+                                </div>
                             </div>
 
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker3">Perkiraan Waktu Selesai Terpapar Risiko</label>
-                                <input class="form-control datetimepicker" name="perkiraan_waktu_terpapar_risiko_akhir"
-                                    id="timepicker3" type="text" placeholder="d/m/y"
-                                    value="{{ old('perkiraan_waktu_terpapar_risiko_akhir') }}" />
+                                <div class="w-100">
+                                    <input class="form-control datetimepicker" name="perkiraan_waktu_terpapar_risiko_akhir"
+                                        id="timepicker3" type="text" placeholder="d/m/y"
+                                        value="{{ old('perkiraan_waktu_terpapar_risiko_akhir') }}" />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -892,59 +898,213 @@
             const action = $(this).data('action');
             const form = $('#main-form');
             const url = form.attr('action');
-            const data = new FormData(form[0]);
 
+            const data = new FormData(form[0]);
             data.append('action', action);
 
-            $.ajax({
-                url: url,
-                type: 'POST',
-                data: data,
-                contentType: false,
-                processData: false,
-                success: function(response) {
-                    if (response.redirect) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil',
-                            text: response.message || 'Data berhasil disimpan',
-                            showConfirmButton: false,
-                            timer: 1500
-                        }).then(() => {
-                            window.location.href = response.redirect;
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil',
-                            text: response.message || 'Data berhasil disimpan',
-                            showConfirmButton: false,
-                            timer: 1500
-                        });
-                    }
-                },
-                error: function(xhr) {
-                    const errors = xhr.responseJSON.errors;
-                    if (errors) {
-                        let message = '<ul>';
-                        for (const key in errors) {
-                            message += `<li>${errors[key]}</li>`;
+            $('.is-invalid').removeClass('is-invalid');
+            $('.invalid-feedback').remove();
+            $('.select2-selection').removeClass('border-danger');
+
+            Swal.fire({
+                title: 'Simpan Perubahan?',
+                text: "Pastikan data yang diubah sudah sesuai.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, Simpan!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+                    // Show Loading
+                    // Swal.fire({
+                    //     title: 'Menyimpan...',
+                    //     allowOutsideClick: false,
+                    //     didOpen: () => {
+                    //         Swal.showLoading();
+                    //     }
+                    // });
+
+                    $.ajax({
+                        url: url,
+                        type: 'POST',
+                        data: data,
+                        contentType: false,
+                        processData: false,
+                        success: function(response) {
+                            Swal.close();
+                            if (response.redirect) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Berhasil',
+                                    text: response.message || 'Data berhasil diperbarui',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                }).then(() => {
+                                    window.location.href = response.redirect;
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            Swal.close();
+
+                            if (xhr.status === 422) {
+                                const errors = xhr.responseJSON.errors;
+                                let firstErrorElement = null;
+
+                                // --- AMBIL 1 PESAN ERROR PERTAMA UNTUK SWEETALERT ---
+                                // Kita ambil key pertama, lalu ambil pesan pertamanya
+                                const firstKey = Object.keys(errors)[0];
+                                const specificErrorMessage = errors[firstKey][0];
+
+                                // --- LOOPING UNTUK MEMBERI WARNA MERAH ---
+                                $.each(errors, function(key, messages) {
+                                    let message = messages[0];
+                                    let inputElement = null;
+
+                                    // Cek apakah error dari Array (dampak_risiko.0, penyebab_risiko.15, dll)
+                                    if (key.includes('.')) {
+                                        let parts = key.split('.');
+                                        let fieldName = parts[0];
+                                        let keyIndex = parts[1]; // Bisa berupa ID (125) atau Index Array (0, 1)
+
+                                        // PRIORITAS 1: Cari berdasarkan ID Database (Format: name="field[ID]")
+                                        // Ini untuk data yang sudah ada sebelumnya (edit)
+                                        let selectorById = `[name="${fieldName}[${keyIndex}]"]`;
+                                        inputElement = $(selectorById);
+
+                                        // PRIORITAS 2: Cari berdasarkan Index Array (Format: name="field[]")
+                                        // Ini untuk data BARU yang ditambah via tombol (+)
+                                        if (inputElement.length === 0) {
+                                            // Kita ambil semua elemen yang namanya "field[]"
+                                            // Lalu ambil berdasarkan urutan (eq)
+                                            inputElement = $(`[name="${fieldName}[]"]:eq(${keyIndex})`);
+
+                                            // Fallback Ekstra: Jika Laravel mengembalikan index angka (misal .0)
+                                            // tapi di HTML cuma ada satu input baru, ambil yang terakhir
+                                            if(inputElement.length === 0) {
+                                                inputElement = $(`[name="${fieldName}[]"]`).last();
+                                            }
+                                        }
+
+                                    } else {
+                                        // Input Biasa (Bukan Array)
+                                        inputElement = $(`[name="${key}"]`);
+                                        if (inputElement.length === 0) inputElement = $(`#${key}`);
+                                    }
+
+                                    // --- EKSEKUSI TAMPILAN ERROR ---
+                                    if (inputElement && inputElement.length > 0) {
+
+                                        // A. Handle Select2
+                                        if (inputElement.hasClass('select2-hidden-accessible')) {
+                                            inputElement.next('.select2-container').find('.select2-selection').addClass('border-danger');
+                                            // Tambah pesan error di bawahnya
+                                            if(inputElement.next('.select2-container').next('.invalid-feedback').length === 0){
+                                                inputElement.next('.select2-container').after(`<div class="invalid-feedback d-block text-danger mt-1"><small>${message}</small></div>`);
+                                            }
+                                        }
+                                        // B. Handle Input Biasa / Textarea
+                                        else {
+                                            inputElement.addClass('is-invalid');
+
+                                            // Cek agar tidak double pesan error
+                                            if(inputElement.next('.invalid-feedback').length === 0 && !inputElement.parent().next('.invalid-feedback').length) {
+                                                if(inputElement.parent('.input-group').length) {
+                                                    inputElement.parent().after(`<div class="invalid-feedback d-block">${message}</div>`);
+                                                } else {
+                                                    inputElement.after(`<div class="invalid-feedback d-block">${message}</div>`);
+                                                }
+                                            }
+                                        }
+
+                                        // Set elemen pertama untuk fokus scroll
+                                        if (!firstErrorElement) {
+                                            firstErrorElement = inputElement;
+                                        }
+                                    }
+                                });
+
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Data belum lengkap',
+                                    html: 'Mohon periksa kembali form inputan.',
+                                }).then(() => {
+                                    if (firstErrorElement) {
+                                        let targetScroll = firstErrorElement.hasClass('select2-hidden-accessible')
+                                            ? firstErrorElement.next('.select2-container')
+                                            : firstErrorElement;
+
+                                        $('html, body').animate({
+                                            scrollTop: targetScroll.offset().top - 150
+                                        }, 500);
+                                    }
+                                });
+
+                            } else {
+                                // Error Server Lain
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Gagal',
+                                    text: xhr.responseJSON.message || 'Terjadi kesalahan saat menyimpan data'
+                                });
+                            }
                         }
-                        message += '</ul>';
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal',
-                            html: message
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal',
-                            text: xhr.responseJSON.message || 'Terjadi kesalahan saat menyimpan data'
-                        });
-                    }
+                    });
                 }
             });
+
+            // $.ajax({
+            //     url: url,
+            //     type: 'POST',
+            //     data: data,
+            //     contentType: false,
+            //     processData: false,
+            //     success: function(response) {
+            //         if (response.redirect) {
+            //             Swal.fire({
+            //                 icon: 'success',
+            //                 title: 'Berhasil',
+            //                 text: response.message || 'Data berhasil disimpan',
+            //                 showConfirmButton: false,
+            //                 timer: 1500
+            //             }).then(() => {
+            //                 window.location.href = response.redirect;
+            //             });
+            //         } else {
+            //             Swal.fire({
+            //                 icon: 'success',
+            //                 title: 'Berhasil',
+            //                 text: response.message || 'Data berhasil disimpan',
+            //                 showConfirmButton: false,
+            //                 timer: 1500
+            //             });
+            //         }
+            //     },
+            //     error: function(xhr) {
+            //         const errors = xhr.responseJSON.errors;
+            //         if (errors) {
+            //             let message = '<ul>';
+            //             for (const key in errors) {
+            //                 message += `<li>${errors[key]}</li>`;
+            //             }
+            //             message += '</ul>';
+            //             Swal.fire({
+            //                 icon: 'error',
+            //                 title: 'Gagal',
+            //                 html: message
+            //             });
+            //         } else {
+            //             Swal.fire({
+            //                 icon: 'error',
+            //                 title: 'Gagal',
+            //                 text: xhr.responseJSON.message || 'Terjadi kesalahan saat menyimpan data'
+            //             });
+            //         }
+            //     }
+            // });
         });
 
         const preloadedData = @json($projectRisk);
