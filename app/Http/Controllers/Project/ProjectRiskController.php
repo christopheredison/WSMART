@@ -2526,77 +2526,77 @@ class ProjectRiskController extends BasicCRUDController
         }
 
         // Cek Kelengkapan (Analisa & Perlakuan)
-        // $errBelumAnalisa = [];
-        // $errBelumAdaPerlakuanPenyebab = [];
-        // $errBelumAdaDampak = [];
-        // $errBelumAdaPerlakuanDampak = [];
+        $errBelumAnalisa = [];
+        $errBelumAdaPerlakuanPenyebab = [];
+        $errBelumAdaDampak = [];
+        $errBelumAdaPerlakuanDampak = [];
 
-        // foreach ($risikos as $risiko) {
-        //     // Ambil deskripsi risiko untuk pesan error
-        //     $deskripsi = $risiko->deskripsi_peristiwa_risiko ?: ($risiko->peristiwaRisiko ? $risiko->peristiwaRisiko->title : 'Risiko #' . $risiko->id);
+        foreach ($risikos as $risiko) {
+            // Ambil deskripsi risiko untuk pesan error
+            $deskripsi = $risiko->deskripsi_peristiwa_risiko ?: ($risiko->peristiwaRisiko ? $risiko->peristiwaRisiko->title : 'Risiko #' . $risiko->id);
 
-        //     // A. Cek Analisa
-        //     if (!$risiko->projectRiskAnalisa) {
-        //         $errBelumAnalisa[] = $deskripsi;
-        //     }
+            // A. Cek Analisa
+            if (!$risiko->projectRiskAnalisa) {
+                $errBelumAnalisa[] = $deskripsi;
+            }
 
-        //     // B. Cek Perlakuan Penyebab (Jika penyebab ada, perlakuan harus ada)
-        //     if ($risiko->penyebabRisikoProjects->isNotEmpty()) {
-        //         foreach ($risiko->penyebabRisikoProjects as $penyebab) {
-        //             if ($penyebab->perlakuanPenyebabRisiko->isEmpty()) {
-        //                 $errBelumAdaPerlakuanPenyebab[] = $deskripsi;
-        //                 break;
-        //             }
-        //         }
-        //     }
+            // B. Cek Perlakuan Penyebab (Jika penyebab ada, perlakuan harus ada)
+            if ($risiko->penyebabRisikoProjects->isNotEmpty()) {
+                foreach ($risiko->penyebabRisikoProjects as $penyebab) {
+                    if ($penyebab->perlakuanPenyebabRisiko->isEmpty()) {
+                        $errBelumAdaPerlakuanPenyebab[] = $deskripsi;
+                        break;
+                    }
+                }
+            }
 
-        //     // C. Cek Dampak Risiko (Harus ada)
-        //     if ($risiko->dampakRisikoProjects->isEmpty()) {
-        //         $errBelumAdaDampak[] = $deskripsi;
-        //     } else {
-        //         // D. Cek Perlakuan Dampak (Jika dampak ada, perlakuan harus ada)
-        //         foreach ($risiko->dampakRisikoProjects as $dampak) {
-        //             if ($dampak->perlakuanDampakRisikos->isEmpty()) {
-        //                 $errBelumAdaPerlakuanDampak[] = $deskripsi;
-        //                 break;
-        //             }
-        //         }
-        //     }
-        // }
+            // C. Cek Dampak Risiko (Harus ada)
+            if ($risiko->dampakRisikoProjects->isEmpty()) {
+                $errBelumAdaDampak[] = $deskripsi;
+            } else {
+                // D. Cek Perlakuan Dampak (Jika dampak ada, perlakuan harus ada)
+                foreach ($risiko->dampakRisikoProjects as $dampak) {
+                    if ($dampak->perlakuanDampakRisikos->isEmpty()) {
+                        $errBelumAdaPerlakuanDampak[] = $deskripsi;
+                        break;
+                    }
+                }
+            }
+        }
 
-        // // Susun Pesan Error jika ada temuan
-        // $pesanError = '';
+        // Susun Pesan Error jika ada temuan
+        $pesanError = '';
 
-        // if (!empty($errBelumAnalisa)) {
-        //     $pesanError .= '<strong>Risiko berikut belum dianalisa:</strong><ul>';
-        //     foreach ($errBelumAnalisa as $d) { $pesanError .= "<li>$d</li>"; }
-        //     $pesanError .= '</ul>';
-        // }
+        if (!empty($errBelumAnalisa)) {
+            $pesanError .= '<strong>Risiko berikut belum dianalisa:</strong><ul>';
+            foreach ($errBelumAnalisa as $d) { $pesanError .= "<li>$d</li>"; }
+            $pesanError .= '</ul>';
+        }
 
-        // if (!empty($errBelumAdaPerlakuanPenyebab)) {
-        //     $pesanError .= '<strong>Risiko berikut belum memiliki rencana perlakuan penyebab:</strong><ul>';
-        //     foreach ($errBelumAdaPerlakuanPenyebab as $d) { $pesanError .= "<li>$d</li>"; }
-        //     $pesanError .= '</ul>';
-        // }
+        if (!empty($errBelumAdaPerlakuanPenyebab)) {
+            $pesanError .= '<strong>Risiko berikut belum memiliki rencana perlakuan penyebab:</strong><ul>';
+            foreach ($errBelumAdaPerlakuanPenyebab as $d) { $pesanError .= "<li>$d</li>"; }
+            $pesanError .= '</ul>';
+        }
 
-        // if (!empty($errBelumAdaDampak)) {
-        //     $pesanError .= '<strong>Risiko berikut belum memiliki daftar dampak:</strong><ul>';
-        //     foreach ($errBelumAdaDampak as $d) { $pesanError .= "<li>$d</li>"; }
-        //     $pesanError .= '</ul>';
-        // }
+        if (!empty($errBelumAdaDampak)) {
+            $pesanError .= '<strong>Risiko berikut belum memiliki daftar dampak:</strong><ul>';
+            foreach ($errBelumAdaDampak as $d) { $pesanError .= "<li>$d</li>"; }
+            $pesanError .= '</ul>';
+        }
 
-        // if (!empty($errBelumAdaPerlakuanDampak)) {
-        //     $pesanError .= '<strong>Risiko berikut belum memiliki rencana perlakuan dampak:</strong><ul>';
-        //     foreach ($errBelumAdaPerlakuanDampak as $d) { $pesanError .= "<li>$d</li>"; }
-        //     $pesanError .= '</ul>';
-        // }
+        if (!empty($errBelumAdaPerlakuanDampak)) {
+            $pesanError .= '<strong>Risiko berikut belum memiliki rencana perlakuan dampak:</strong><ul>';
+            foreach ($errBelumAdaPerlakuanDampak as $d) { $pesanError .= "<li>$d</li>"; }
+            $pesanError .= '</ul>';
+        }
 
-        // // Jika pesan error tidak kosong, kembalikan dengan pesan error
-        // if (!empty($pesanError)) {
-        //     $pesanError .= 'Silahkan lengkapi data tersebut terlebih dahulu.';
-        //     return redirect()->route('projects.risks.index', ['project' => $projectPeriodeListId])
-        //         ->with('error', $pesanError);
-        // }
+        // Jika pesan error tidak kosong, kembalikan dengan pesan error
+        if (!empty($pesanError)) {
+            $pesanError .= 'Silahkan lengkapi data tersebut terlebih dahulu.';
+            return redirect()->route('projects.risks.index', ['project' => $projectPeriodeListId])
+                ->with('error', $pesanError);
+        }
 
         // 2. Kelola Data Batch
         $dataBatch = DataBatch::where('project_id', $project_id)
