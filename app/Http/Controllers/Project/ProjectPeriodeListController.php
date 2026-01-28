@@ -100,6 +100,29 @@ class ProjectPeriodeListController extends BasicCRUDController
         ],
     ];
 
+    private function userHasAccessToProject($user, $row)
+    {
+        // 1. Cek assignment langsung (logic lama)
+        if ($user->hasProject($row)) {
+            return true;
+        }
+
+        // 2. Cek permission Admin
+        if (Gate::check('project_admin_access')) {
+            return true;
+        }
+
+        // 3. Cek permission Divisi & Kesamaan Cost Center
+        if (Gate::check('can_access_project_under_division')) {
+            // Pastikan user punya unit, project ada, dan cost center sama
+            if ($user->unit && $row->project && $row->project->cost_center_parent == $user->unit->cost_center) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function index() {
         request()->merge([
             'append' => ['project.divisi', 'project.projectSektor'],
@@ -577,7 +600,8 @@ class ProjectPeriodeListController extends BasicCRUDController
                 $isMyTurn = true;
             }
         }
-        return $isMyTurn && $user->hasProject($row);
+        // return $isMyTurn && $user->hasProject($row);
+        return $isMyTurn && $this->userHasAccessToProject($user, $row);
     }
 
     private function checkMonitoringActionNeeded($row, $user, $u_step, $levelId)
@@ -603,7 +627,8 @@ class ProjectPeriodeListController extends BasicCRUDController
                 $isMyMonTurn = true;
             }
         }
-        return $isMyMonTurn && $user->hasProject($row);
+        // return $isMyMonTurn && $user->hasProject($row);
+        return $isMyMonTurn && $this->userHasAccessToProject($user, $row);
     }
 
     private function generateRiskStatus($row, $user, $u_step, $levelId)
@@ -664,7 +689,8 @@ class ProjectPeriodeListController extends BasicCRUDController
         // --- LOGIKA TAMPILAN ---
 
         // KONDISI 1: Giliran Saya (Action Needed)
-        if ($isMyTurn && $user->hasProject($row)) {
+        // if ($isMyTurn && $user->hasProject($row)) {
+        if ($isMyTurn && $this->userHasAccessToProject($user, $row)) {
             $redirectUrl = route('projects.risks.index', ['project' => $row->id]);
 
             // A. Khusus Inputter (Level 6) -> Tampilan Solid Biru (Draft/Revisi)
@@ -756,7 +782,8 @@ class ProjectPeriodeListController extends BasicCRUDController
         // --- LOGIKA TAMPILAN MONITORING ---
 
         // KONDISI 1: Giliran Saya (Action Needed)
-        if ($isMyMonTurn && $user->hasProject($row)) {
+        // if ($isMyMonTurn && $user->hasProject($row)) {
+        if ($isMyMonTurn && $this->userHasAccessToProject($user, $row)) {
             $redirectUrl = route('projects.monitorings.index', ['project' => $row->id]);
 
             // A. Khusus Inputter (Level 6) -> Tampilan Solid Biru (Draft/Revisi)
