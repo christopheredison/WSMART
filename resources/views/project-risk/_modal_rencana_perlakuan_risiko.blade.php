@@ -1,5 +1,4 @@
-<div class="modal fade" id="modalPerencanaan" tabindex="-1" role="dialog" aria-labelledby="modalPerencanaan"
-    aria-hidden="true">
+<div class="modal fade" id="modalPerencanaan" tabindex="-1" role="dialog" aria-labelledby="modalPerencanaan" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-lg " role="document">
         <div class="modal-content">
             <form method="POST" id="formPerencanaan">
@@ -96,7 +95,7 @@
     }
 
     .general-checkbox .form-check input {
-        pointer-events: auto !important; 
+        pointer-events: auto !important;
     }
 </style>
 @endpush

@@ -1,4 +1,4 @@
-<div class="modal fade" id="modalMitigasi" tabindex="-1" role="dialog" aria-labelledby="modalMitigasi" aria-hidden="true">
+<div class="modal fade" id="modalMitigasi" tabindex="-1" role="dialog" aria-labelledby="modalMitigasi" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content">
             <form method="POST" id="formMitigasi">
@@ -12,7 +12,7 @@
                     <div class="row g-2">
                         <!-- Hidden Input for penyebab_risiko_id -->
                         {{ Form::hidden('penyebab_risiko_id', '') }}
-                    
+
                         <div class="col-12">
                             <div class="form-floating">
                                 {{ Form::text('penyebab_risiko', null, ['class' => 'form-control', 'disabled' => 'disabled']) }}
@@ -75,7 +75,7 @@
                         </div>
                         <div class="col-md-3 col-auto text-end justify-content-end d-flex flex-column">
                             <div>
-                                
+
                             </div>
                         </div>
                         <div class="col-12">

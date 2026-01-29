@@ -1,4 +1,4 @@
-<div class="modal fade" id="modalEditRencana" role="dialog" aria-labelledby="modalEditRencana" aria-hidden="true">
+<div class="modal fade" id="modalEditRencana" role="dialog" aria-labelledby="modalEditRencana" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content">
             <form method="POST" id="formEditRencana">
@@ -27,10 +27,10 @@ $(document).ready(function() {
         event.preventDefault(); // Cegah submit default
         return false; // Paksa tidak melakukan submit
     });
-    
+
     $('#btnSimpanEditRencana').on('click', function(event) {
         event.preventDefault();
-        
+
         const formData = $('#formEditRencana').serialize(); // Ambil semua data form
         const penyebabRisikoId = $('#formEditRencana #xpenyebabRisikoId').val(); // Ambil ID
         const perlakuanId = $('#formEditRencana #xperlakuanId').val(); // Ambil ID
