@@ -1809,7 +1809,7 @@ class ProjectRiskController extends BasicCRUDController
             'kategori_dampak' => 'required|in:' . ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF . ',' . ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF,
             'nilai_probabilitas' => 'required|numeric',
             'skala_parameter_id' => 'required|exists:skala_parameters,id',
-            'skala_parameter_residual_id' => 'required|exists:skala_parameters,id',
+            // 'skala_parameter_residual_id' => 'required|exists:skala_parameters,id',
             'nilai_probabilitas_residual' => 'required|numeric|lte:nilai_probabilitas',
             'skala_dampak' => 'required',
             'skala_dampak_residual' => 'required',
@@ -1851,7 +1851,7 @@ class ProjectRiskController extends BasicCRUDController
             //'level_risiko_residual' => null, // calculated [Done]
             //'eksposur_risiko_residual' => null, // calculated
             'skala_parameter_id' => $request->skala_parameter_id,
-            'skala_parameter_residual_id' => $request->skala_parameter_residual_id,
+            'skala_parameter_residual_id' => $request->skala_parameter_id,
         ];
 
         $analisa->update($toUpdate);
