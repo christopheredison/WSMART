@@ -611,7 +611,8 @@ class ProjectPeriodeListController extends BasicCRUDController
             $q->where('project_periode_list_id', $row->id);
         })->orderBy('id', 'desc')->first();
 
-        if (!$latestMon || $latestMon->status == 100) return false;
+        // if (!$latestMon || $latestMon->status == 100) return false;
+        if (!$latestMon || $latestMon->status == 100 || $latestMon->is_approved) return false;
 
         $isMyMonTurn = false;
         if ($levelId == 6) {
@@ -743,7 +744,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             return '<span class="badge bg-light text-dark border border-dark">Belum Dimonitor</span>';
         }
 
-        if ($latestMon->status == 100) {
+        if ($latestMon->status == 100 || $latestMon->is_approved) {
             return '<span class="badge bg-success">Aktif</span>';
         }
 
