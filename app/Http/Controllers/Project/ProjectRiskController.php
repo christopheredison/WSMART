@@ -1851,7 +1851,7 @@ class ProjectRiskController extends BasicCRUDController
             //'level_risiko_residual' => null, // calculated [Done]
             //'eksposur_risiko_residual' => null, // calculated
             'skala_parameter_id' => $request->skala_parameter_id,
-            'skala_parameter_residual_id' => $request->skala_parameter_id,
+            'skala_parameter_residual_id' => $request->skala_parameter_residual_id,
         ];
 
         $analisa->update($toUpdate);
