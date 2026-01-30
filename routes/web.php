@@ -440,6 +440,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('projects-monitorings/{monitoring}/q-{quarter}/documents', ProjectRiskMonitoringDocumentController::class)->names('projects.monitorings.documents')->only(['index', 'show', 'store', 'destroy']);
     Route::prefix('projects/{project}/monitorings')->name('projects.monitorings.')->group(function () {
         Route::post('send-all', [ProjectRiskMonitoringController::class, 'sendAllMonitoring'])->name('send.all');
+        Route::post('bulk-verify', [ProjectRiskMonitoringController::class, 'bulkVerifyMonitoring'])->name('bulk-verify');
         Route::post('{monitoring}/verify', [ProjectRiskMonitoringController::class, 'verifyMonitoring'])->name('verify');
         Route::get('{riskId}/notes', [ProjectRiskMonitoringController::class, 'getNotes'])->name('notes');
     });

@@ -3,7 +3,7 @@
         <div class="modal-content">
             <form method="POST" id="formUpdateKri">
                 <div class="modal-header d-flex flex-between-center">
-                    <h3 class="modal-title h4" id="modalUpdateKriLabel">Edit Rencana Perlakuan Risiko</h3>
+                    <h3 class="modal-title h4" id="modalUpdateKriLabel">Edit Rencana Terhadap KRI</h3>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 {{ Form::hidden('kri_project_id', '') }}

@@ -598,6 +598,7 @@ $(document).ready(function() {
             orderable: false,
             searchable: false,
             render: function(data, type, row, meta) {
+              @if (request()->route()->getName() === 'projects.risks.index' || request()->route()->getName() === 'risk-register-ap.index')
                 // Ambil data step dari PHP extraViewData
                 const userStep = {{ $extraViewData['u_step'] ?? 0 }};
                 const batchStep = {{ $extraViewData['b_step'] ?? 0 }};
@@ -615,6 +616,70 @@ $(document).ready(function() {
                     <div class="form-check mb-0">
                         <input class="form-check-input row-checkbox" type="checkbox" value="${data}" ${canVerify ? '' : 'disabled'}>
                     </div>`;
+              @elseif (request()->route()->getName() === 'projects.monitorings.index')
+                // 1. Cek Dasar: Jika Risiko Closed, Disable
+                if (row.is_closed) {
+                    return '<div class="form-check mb-0"><input class="form-check-input row-checkbox" type="checkbox" disabled></div>';
+                }
+
+                // 2. Ambil Data Monitoring
+                const monitoring = row.project_risk_monitoring;
+
+                // Jika belum ada monitoring atau sudah diapprove, Disable
+                if (!monitoring || monitoring.is_approved == 1) {
+                    return '<div class="form-check mb-0"><input class="form-check-input row-checkbox" type="checkbox" disabled></div>';
+                }
+
+                // --- PERBAIKAN UTAMA DISINI ---
+                // Kita gunakan monitoring.id sebagai value checkbox, BUKAN data (risk id)
+                // Agar controller bisa langsung whereIn('id', $ids) ke tabel monitoring
+                const monitoringId = monitoring.id;
+                // ------------------------------
+
+                // 3. Ambil Data User & Project dari Controller (extraViewData)
+                const userLevel = {{ $extraViewData['currentUserLevel'] ?? 0 }};
+                const hasVerificationMr = {{ $extraViewData['hasVerificationMr'] ? 'true' : 'false' }};
+                const userCostCenter = "{{ $extraViewData['userUnitCostCenter'] ?? '' }}";
+                const isUserUnitMr = {{ $extraViewData['isUserUnitMr'] ?? 0 }};
+
+                const status = parseInt(monitoring.status);
+                const projectCostCenter = row.project ? row.project.cost_center_parent : '';
+
+                let canVerify = false;
+
+                // --- LOGIKA VERIFIKASI (SAMA DENGAN CONTROLLER) ---
+
+                // A. RO Project (Level 7) - Verifikasi Status 2
+                if (userLevel == 7 && status == 2) {
+                    canVerify = true;
+                }
+
+                // B. RO Divisi (Level 1) - Verifikasi Status 3
+                // Syarat: Cost Center User == Cost Center Project
+                else if (userLevel == 1 && status == 3 && userCostCenter == projectCostCenter) {
+                    canVerify = true;
+                }
+
+                // C. RO Divisi MR (Level 1) - Verifikasi Status 4
+                // Syarat: User adalah Unit MR & Punya Permission MR
+                else if (userLevel == 1 && status == 4 && isUserUnitMr == 1 && hasVerificationMr) {
+                    canVerify = true;
+                }
+
+                // D. ROW Divisi MR (Level 2) - Verifikasi Status 5
+                // Syarat: Punya Permission MR
+                else if (userLevel == 2 && status == 5 && hasVerificationMr) {
+                    canVerify = true;
+                }
+
+                // Render Checkbox dengan Value Monitoring ID
+                return `
+                    <div class="form-check mb-0">
+                        <input class="form-check-input row-checkbox" type="checkbox" value="${monitoringId}" ${canVerify ? '' : 'disabled'}>
+                    </div>`;
+              @else
+                  return '<div class="form-check mb-0"><input class="form-check-input row-checkbox" type="checkbox" value="' + data + '"></div>';
+              @endif
             }
         },
         @endif

@@ -504,7 +504,293 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ],
         ];
 
-        $this->extraScripts[] = $this->getFilterScripts($quarter, $month);
+        $bulkRoute = route("projects.monitorings.bulk-verify", ["project" => request()->route('project')]);
+
+        // Pastikan nama route ini sesuai dengan route yang Anda definisikan di web.php
+        $catatanRoute = route('projects.monitorings.notes', ['project' => request()->route('project'), 'riskId' => ':id']);
+
+        $csrfToken = csrf_token();
+        $phpQuarter = request()->query('quarter', 1);
+        $phpMonth = request()->query('month', '');
+
+        // --- 2. EXTRASCRIPTS (GABUNGAN LAMA & BARU) ---
+        $this->extraScripts[] = <<<SCRIPT
+            <script>
+            // --- BAGIAN 1: LOGIKA ESKALASI (Script Lama) ---
+            function submitEskalasiForm(formId, actionText) {
+                Swal.fire({
+                    title: 'Konfirmasi',
+                    text: `Apakah Anda yakin ingin melakukan "\${actionText}"?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Lanjutkan',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const form = $('#' + formId);
+                        const url = form.attr('action');
+                        const data = form.serialize();
+
+                        Swal.fire({
+                            title: 'Memproses...',
+                            text: 'Mohon tunggu sebentar.',
+                            allowOutsideClick: false,
+                            didOpen: () => { Swal.showLoading(); }
+                        });
+
+                        $.ajax({
+                            url: url,
+                            type: 'POST',
+                            data: data,
+                            success: function(response) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Berhasil!',
+                                    text: response.message,
+                                }).then(() => {
+                                    $('.ajax-datatable').DataTable().ajax.reload();
+                                    form.find('button').prop('disabled', true);
+                                    location.reload(); // Reload untuk refresh status
+                                });
+                            },
+                            error: function(xhr) {
+                                const errorMsg = xhr.responseJSON?.message || 'Terjadi kesalahan.';
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Gagal!',
+                                    text: errorMsg,
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+
+            // --- BAGIAN 2: LOGIKA BULK VERIFY (Script Baru) ---
+            let currentIds = [];
+
+            // Handler Checkbox Select All
+            $(document).on('change', '#check-all-risiko', function() {
+                $('.row-checkbox:not(:disabled)').prop('checked', this.checked);
+                toggleBulkButton();
+            });
+
+            // Handler Checkbox per Row
+            $(document).on('change', '.row-checkbox', function() {
+                toggleBulkButton();
+                if(!this.checked) {
+                    $('#check-all-risiko').prop('checked', false);
+                }
+            });
+
+            function toggleBulkButton() {
+                const checkedCount = $('.row-checkbox:checked').length;
+                if (checkedCount > 0) {
+                    $('#bulk-verify-container').removeClass('d-none');
+                    $('#count-checked').text(checkedCount);
+                } else {
+                    $('#bulk-verify-container').addClass('d-none');
+                }
+            }
+
+            // Handler Tombol "Verifikasi Risiko" (Membuka Modal)
+            function handleBulkVerifikasiClick() {
+                currentIds = [];
+                $('.row-checkbox:checked').each(function() {
+                    currentIds.push($(this).val());
+                });
+
+                if (currentIds.length === 0) return;
+
+                // Reset Form
+                $('#catatan-verifikasi').val('');
+
+                // Update Info Jumlah Data di Modal
+                if($('#modal-bulk-info').length == 0) {
+                    $('.modal-body').prepend(`
+                        <div id="modal-bulk-info" class="alert alert-info mt-0 mb-3">
+                            <i class="bx bx-info-circle"></i> Memverifikasi <strong>\${currentIds.length}</strong> data terpilih.
+                        </div>
+                    `);
+                } else {
+                    $('#modal-bulk-info strong').text(currentIds.length);
+                }
+
+                const modalEl = document.getElementById('modalVerifikasiRisiko');
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+
+                // Override tombol Modal untuk memanggil fungsi submitBulk
+                $('#btn-terima-risiko').off('click').on('click', function() { submitBulk('terima'); });
+                $('#btn-tolak-risiko').off('click').on('click', function() { submitBulk('tolak'); });
+            }
+
+            // Fungsi Submit AJAX Bulk Verify
+            function submitBulk(status) {
+                const catatan = $('#catatan-verifikasi').val().trim();
+
+                if (status === 'tolak' && !catatan) {
+                    Swal.fire('Peringatan', 'Catatan verifikasi wajib diisi jika menolak.', 'warning');
+                    return;
+                }
+
+                Swal.fire({
+                    title: status === 'terima' ? 'Terima Monitoring Terpilih?' : 'Kembalikan Monitoring Terpilih?',
+                    text: `Anda akan memproses \${currentIds.length} data.`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Lanjutkan',
+                    confirmButtonColor: status === 'terima' ? '#198754' : '#dc3545'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '{$bulkRoute}',
+                            type: 'POST',
+                            data: {
+                                _token: '{$csrfToken}',
+                                ids: currentIds,
+                                status_verifikasi: status,
+                                catatan_verifikasi: catatan
+                            },
+                            beforeSend: function() {
+                                Swal.fire({ title: 'Sedang memproses...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+                            },
+                            success: function(res) {
+                                Swal.fire('Berhasil', res.message, 'success').then(() => {
+                                    location.reload();
+                                });
+                            },
+                            error: function(xhr) {
+                                const msg = xhr.responseJSON?.message || 'Terjadi kesalahan sistem';
+                                Swal.fire('Gagal', msg, 'error');
+                            }
+                        });
+                    }
+                });
+            }
+
+            // --- BAGIAN 3: LOGIKA CATATAN (Notes) ---
+            function showCatatanRisiko(riskId) {
+                const modalElement = document.getElementById('modalCatatan');
+                const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+                const contentDiv = $('#catatan-content');
+
+                contentDiv.html('<div class="d-flex justify-content-center my-4"><div class="spinner-border" role="status"></div></div>');
+
+                // Gunakan route monitoring notes
+                const url = "{$catatanRoute}".replace(':id', riskId);
+
+                // Tambahkan parameter query untuk filter catatan spesifik tahun/bulan/quarter monitoring
+                const quarter = $('select[name="quarter"]').val();
+                const tahun = $('select[name="tahun"]').val();
+                const month = $('select[name="month"]').val();
+                const fullUrl = `\${url}?quarter=\${quarter}&tahun=\${tahun}&month=\${month}`;
+
+                $.ajax({
+                    url: fullUrl,
+                    type: 'GET',
+                    success: function(notes) {
+                        if (notes.length === 0) {
+                            contentDiv.html('<div class="text-center my-4"><p>Belum ada catatan.</p></div>');
+                        } else {
+                            let html = '';
+                            notes.forEach(note => {
+                                const statusBadge = note.status == 1
+                                    ? '<span class="badge bg-success-subtle text-success">Diterima</span>'
+                                    : '<span class="badge bg-danger-subtle text-danger">Ditolak</span>';
+
+                                const date = new Date(note.created_at).toLocaleDateString('id-ID');
+
+                                html += `
+                                <div class="card mb-2 shadow-sm">
+                                    <div class="card-header bg-light d-flex justify-content-between p-2">
+                                        <strong>\${note.user ? note.user.name : 'System'}</strong>
+                                        <small>\${date} \${statusBadge}</small>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        \${note.notes || '-'}
+                                    </div>
+                                </div>`;
+                            });
+                            contentDiv.html(html);
+                        }
+                        modal.show();
+                    },
+                    error: function() {
+                        contentDiv.html('<div class="text-center text-danger">Gagal memuat catatan.</div>');
+                        modal.show();
+                    }
+                });
+            }
+
+            // --- BAGIAN 4: DROPDOWN & URL UPDATE (Script Lama) ---
+            $(document).ready(function() {
+                const allMonths = {
+                    '1': {'1': 'Januari', '2': 'Februari', '3': 'Maret'},
+                    '2': {'4': 'April', '5': 'Mei', '6': 'Juni'},
+                    '3': {'7': 'Juli', '8': 'Agustus', '9': 'September'},
+                    '4': {'10': 'Oktober', '11': 'November', '12': 'Desember'},
+                };
+
+                function updateMonthDropdown(quarter, selectedMonth = null) {
+                    const monthSelect = $('select[name="month"]');
+                    monthSelect.empty();
+
+                    if (quarter && allMonths[quarter]) {
+                        $.each(allMonths[quarter], function(key, value) {
+                            const isSelected = (String(key) === String(selectedMonth)) ? 'selected' : '';
+                            monthSelect.append(`<option value="\${key}" \${isSelected}>\${value}</option>`);
+                        });
+                    } else {
+                        monthSelect.append('<option value="">Pilih Quarter</option>');
+                    }
+
+                    if (monthSelect.hasClass('select2-hidden-accessible')) {
+                        monthSelect.trigger('change.select2');
+                    }
+                }
+
+                const activeQuarter = "{$phpQuarter}";
+                const activeMonth   = "{$phpMonth}";
+
+                // Init Dropdown saat halaman load
+                $('select[name="quarter"]').val(activeQuarter).trigger('change.select2');
+                updateMonthDropdown(activeQuarter, activeMonth);
+
+                // Handler Change Quarter
+                $('select[name="quarter"]').on('change', function() {
+                    const newQuarter = $(this).val();
+                    let firstMonthOfQuarter = null;
+                    if (allMonths[newQuarter]) {
+                        firstMonthOfQuarter = Object.keys(allMonths[newQuarter])[0];
+                    }
+                    updateMonthDropdown(newQuarter, firstMonthOfQuarter);
+                });
+
+                // Handler Update URL
+                $('select[name="tahun"], select[name="quarter"], select[name="month"]').on('change', function() {
+                    updateUrlParams();
+                });
+
+                function updateUrlParams() {
+                    const q = $('select[name="quarter"]').val();
+                    const t = $('select[name="tahun"]').val();
+                    const m = $('select[name="month"]').val();
+
+                    if (!q || !t || !m) return;
+
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('quarter', q);
+                    url.searchParams.set('tahun', t);
+                    url.searchParams.set('month', m);
+
+                    window.history.pushState({path: url.href}, '', url.href);
+                }
+            });
+            </script>
+        SCRIPT;
+
+        // $this->extraScripts[] = $this->getFilterScripts($quarter, $month);
 
         $workflow = ProjectRiskMonitoring::getWorkflow();
 
@@ -664,6 +950,12 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $this->extraViewData['summaryInfo'] = $summaryInfo;
         $this->extraViewData['escalationConfig'] = $escalationConfig;
+
+        $this->extraViewData['hasVerificationMr'] = Gate::allows('verification_mr');
+        $this->extraViewData['userUnitCostCenter'] = $user->unit ? $user->unit->cost_center : null;
+        $this->extraViewData['isUserUnitMr'] = $user->unit ? $user->unit->unit_mr : 0;
+        $this->extraViewData['currentUserLevel'] = $userLevel;
+        $this->extraViewData['showBulkCheckbox'] = true;
 
         return parent::index();
     }
@@ -1469,6 +1761,67 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => 'Gagal sistem: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function bulkVerifyMonitoring(Request $request, ProjectPeriodeList $project)
+    {
+        // 1. Validasi Input
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:project_risk_monitorings,id',
+            'status_verifikasi' => 'required|in:terima,tolak',
+            'catatan_verifikasi' => 'required_if:status_verifikasi,tolak|nullable|string|max:2000',
+        ]);
+
+        $user = Auth::user();
+        $count = 0;
+
+        DB::beginTransaction();
+        try {
+            $monitorings = ProjectRiskMonitoring::whereIn('id', $validated['ids'])->get();
+
+            foreach ($monitorings as $monitoring) {
+                if ($validated['status_verifikasi'] == 'terima') {
+                    // Jika Diterima
+                    $monitoring->update(['is_approved' => true]);
+                } else {
+                    $targetStatus = ProjectRiskMonitoring::getReturnStatus($monitoring->status);
+
+                    $monitoring->update([
+                        'status' => $targetStatus,
+                        'is_approved' => false,
+                        'is_revision' => true,
+                    ]);
+                }
+
+                RiskMonitoringNote::create([
+                    'risiko_id' => $monitoring->risiko_id,
+                    'type' => 2,
+                    'user_id' => $user->id,
+                    'status' => $validated['status_verifikasi'] == 'terima' ? 1 : 0,
+                    'notes' => $validated['catatan_verifikasi'],
+                    'quarter' => $monitoring->quarter,
+                    'month' => $monitoring->month,
+                    'year' => $monitoring->tahun,
+                ]);
+
+                $count++;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil memverifikasi ' . $count . ' data monitoring.'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses data: ' . $e->getMessage()
+            ], 500);
         }
     }
 
