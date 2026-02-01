@@ -295,7 +295,7 @@ class ProjectRiskController extends BasicCRUDController
             $this->tableActions[] = ['label' => '<span class="bx bx-show-alt" title="View"></span>', 'btn_icon' => true, 'action' => 'link', 'url' => route('projects.risks.view', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'View Risiko'];
 
             $this->tableLegend[] = ['icon' => '<span class="bx bx-trash text-danger"></span>', 'label' => 'Hapus'];
-            $this->tableActions[] = ['label' => '<span class="bx bx-trash text-danger"></span>', 'btn_icon' => true, 'action' => 'delete', 'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Hapus', 'permissions' => ['project_risk_delete'], 'active_state' => $active_state];
+            $this->tableActions[] = ['label' => '<span class="bx bx-trash text-danger"></span>', 'btn_icon' => true, 'action' => 'delete', 'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Hapus', 'permissions' => ['project_risk_delete']];
 
             // CASE 1: RISK OFFICER PROJECT (Draft/Revisi)
             if (($status == DataBatch::STATUS_PROSES || $status == DataBatch::STATUS_REVISI) && $levelId == 6) {
