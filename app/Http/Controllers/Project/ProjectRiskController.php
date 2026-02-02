@@ -306,11 +306,6 @@ class ProjectRiskController extends BasicCRUDController
                 $this->tableActions[] = ['label' => '<span class="bx bx-analyse text-warning"></span>', 'btn_icon' => true, 'action' => 'link', 'url' => route('projects.risks.analisa', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Analisa Risiko', 'active_state' => $active_state];
                 $this->tableActions[] = ['label' => '<span class="bx bx-task text-primary"></span>', 'btn_icon' => true, 'action' => 'link', 'url' => route('projects.risks.rencana', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Rencana Perlakuan Risiko', 'active_state' => $active_state];
                 $this->tableActions[] = ['label' => '<span class="bx bx-edit"></span>', 'btn_icon' => true, 'action' => 'edit', 'permissions' => ['project_risk_edit'], 'active_state' => $active_state];
-
-                if (Gate::check('project_risk_delete')) {
-                    $this->tableLegend[] = ['icon' => '<span class="bx bx-trash text-danger"></span>', 'label' => 'Hapus'];
-                    $this->tableActions[] = ['label' => '<span class="bx bx-trash text-danger"></span>', 'btn_icon' => true, 'action' => 'delete', 'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Hapus', 'permissions' => ['project_risk_delete'], 'active_state' => $active_state];
-                }
             }
             // CASE 2: VERIFIKATOR (Termasuk Pengembalian MR)
             else if (
@@ -335,6 +330,14 @@ class ProjectRiskController extends BasicCRUDController
                 ];
                 $this->tableLegend[] = ['icon' => '<span class="bx bx-check-shield text-success"></span>', 'label' => 'Verifikasi Risiko'];
             }
+
+            $isInputter = ($status == DataBatch::STATUS_PROSES || $status == DataBatch::STATUS_REVISI) && $levelId == 6;
+            $hasDeletePermission = Gate::check('project_risk_delete_admin');
+            $deleteJsLogic = $hasDeletePermission ? 'true' : ($isInputter && Gate::check('project_risk_delete') ? 'row.status == 0 || row.status == 1 || row.status == 5' : 'false');
+
+            // dd($deleteJsLogic, $status);
+            $this->tableLegend[] = ['icon' => '<span class="bx bx-trash text-danger"></span>', 'label' => 'Hapus'];
+            $this->tableActions[] = ['label' => '<span class="bx bx-trash text-danger"></span>', 'btn_icon' => true, 'action' => 'delete', 'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Hapus', 'active_state' => "(data, type, row) => $deleteJsLogic"];
         }
 
         $this->tableActions[] = [
@@ -1680,6 +1683,7 @@ class ProjectRiskController extends BasicCRUDController
     }
 
     public function destroy($resource) {
+        DB::beginTransaction();
         try {
             $projectRisk = ProjectRisk::findOrFail(request()->route('risk'));
 
@@ -1689,20 +1693,24 @@ class ProjectRiskController extends BasicCRUDController
                 ], 403);
             }
 
-            // $projectRisk->projectRiskAnalisas()->delete();
-            // $projectRisk->penyebabRisikoProjects()->delete();
-            // $projectRisk->kriProjects()->delete();
-            // $projectRisk->projectRiskRencanaPerlakuans()->delete();
-            // $projectRisk->projectRiskMonitorings()->delete();
-            // $projectRisk->projectKontrolEksistings()->delete();
+            $projectRisk->projectRiskMonitorings()->delete();
+            $projectRisk->projectRiskRencanaPerlakuans()->delete();
+            $projectRisk->perlakuanDampakRisikos()->delete();
+            $projectRisk->penyebabRisikoProjects()->delete();
+            $projectRisk->dampakRisikoProjects()->delete();
+            $projectRisk->kriProjects()->delete();
+            $projectRisk->projectRiskAnalisas()->delete();
+            $projectRisk->projectKontrolEksistings()->delete();
             $projectRisk->delete();
+            DB::commit();
 
             return response()->json([
                 'message' => 'Data risiko proyek berhasil dihapus.'
             ], 200);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
-                'message' => 'Terjadi kesalahan saat menghapus data.'
+                'message' => 'Terjadi kesalahan: ' + $e->getMessage()
             ], 500);
         }
     }
