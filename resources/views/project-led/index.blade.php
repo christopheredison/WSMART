@@ -28,12 +28,12 @@
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Tahun</label>
                             <select class="form-select select2" id="filter-tahun">
-                                <option value="">Semua</option>
+                                <option value="" selected>Semua</option>
                                 @php
                                     $currentYear = date('Y');
                                     for($i = 0; $i <= 10; $i++) {
                                         $year = $currentYear - $i;
-                                        echo "<option value='$year'" . ($i === 0 ? " selected" : "") . ">$year</option>";
+                                        echo "<option value='$year'>$year</option>";
                                     }
                                 @endphp
                             </select>
@@ -69,7 +69,7 @@
                                 <th class="sort" data-sort="nama_kejadian">Nama Kejadian</th>
                                 <th class="sort" data-sort="peristiwa_risiko">Identifikasi Kejadian</th>
                                 <th class="sort" data-sort="kategori_kejadian">Kategori Kejadian</th>
-                                <th class="sort" data-sort="nilai_kerugian">Nilai Kerugian</th>
+                                <th class="sort white-space-nowrap" data-sort="nilai_kerugian">Nilai Kerugian</th>
                                 {{-- <th class="sort" data-sort="unit_penanggung_jawab">Pihak Terkait</th> --}}
                                 <th class="white-space-nowrap" data-sort="action">Action</th>
                             </tr>

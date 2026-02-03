@@ -11,7 +11,7 @@
     <div class="col-12">
         <div class="form-floating">
             {{ Form::textarea('rencana_perlakuan_risiko', null, ['class' => 'form-control', 'rows' => 3, 'required']) }}
-            <label for="rencana_perlakuan_risiko">Rencana Penanganan Saat Kejadian <span class="text-danger">*</span></label>
+            <label for="rencana_perlakuan_risiko">Penanganan Saat Kejadian <span class="text-danger">*</span></label>
         </div>
     </div>
     <div class="col-12">
@@ -20,12 +20,12 @@
             <label for="output_perlakuan_risiko">Output Penanganan Saat Kejadian <span class="text-danger">*</span></label>
         </div>
     </div>
-    <div class="col-12">
+    {{-- <div class="col-12">
         <div class="form-floating">
             {{ Form::select('opsi_perlakuan_risiko', \App\Models\OpsiPerlakuanRisiko::pluck('opsi_perlakuan_risiko', 'id'), '', ['class' => 'form-select', 'required', 'id' => 'opsi_perlakuan_risiko']) }}
             <label for="opsi_perlakuan_risiko">Opsi Penanganan Saat Kejadian <span class="text-danger">*</span></label>
         </div>
-    </div>
+    </div> --}}
     {{-- <div class="col-12">
         <div class="form-floating">
             {{ Form::select('jenis_rencana_perlakuan_risiko', \App\Models\JenisRencanaPerlakuanRisiko::pluck('jenis_rencana_perlakuan_risiko', 'id'), '', ['class' => 'form-select', 'required', 'id' => 'jenis_rencana_perlakuan_risiko']) }}

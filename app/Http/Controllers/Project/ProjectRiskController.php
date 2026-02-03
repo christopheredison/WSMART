@@ -140,7 +140,7 @@ class ProjectRiskController extends BasicCRUDController
             }'
         ],
         'status_risiko' => [
-            'label' => 'Status',
+            'label' => 'Status Approval',
             'data' => 'status',
             'sortable' => false,
             'searchable' => false,
@@ -1121,6 +1121,11 @@ class ProjectRiskController extends BasicCRUDController
                 $rencanaKegiatan = $request->rencana_kegiatan;
             }
 
+            $cleanRencanaKegiatan = $this->cleanInput($rencanaKegiatan);
+            $cleanTargetCapaian = $this->cleanInput($targetCapaianKinerja);
+            $cleanDeskripsiPeristiwa = $this->cleanInput($request->deskripsi_peristiwa_risiko);
+            $cleanDeskripsiDampak = $this->cleanInput($request->deskripsi_dampak);
+
             $toStore = [
                 'unit_type_id' => $user->unit_type_id,
                 'unit_id' => $user->unit_id,
@@ -1128,12 +1133,12 @@ class ProjectRiskController extends BasicCRUDController
                 'user_id' => $user->id,
                 'project_id' => $project->id,
                 'peristiwa_risiko_id' => $peristiwaRisikoId,
-                'rencana_kegiatan' => $rencanaKegiatan,
-                'target_capaian_kinerja' => $targetCapaianKinerja,
+                'rencana_kegiatan' => $cleanRencanaKegiatan,
+                'target_capaian_kinerja' => $cleanTargetCapaian,
                 'sasaran_proyek_id' => $sasaranProyekId,
                 'project_periode_list_id' => $projectPeriodeList->id,
-                'deskripsi_peristiwa_risiko' => $request->deskripsi_peristiwa_risiko,
-                'deskripsi_dampak' => $request->deskripsi_dampak,
+                'deskripsi_peristiwa_risiko' => $cleanDeskripsiPeristiwa,
+                'deskripsi_dampak' => $cleanDeskripsiDampak,
                 'jenis_kontrol_eksisting_id' => $request->jenis_kontrol_eksisting_id,
                 'penilaian_efektifitas_kontrol' => 0,
                 'perkiraan_waktu_terpapar_risiko_mulai' => $perkiraanWaktuTerpaparRisikoMulai,
@@ -1172,23 +1177,23 @@ class ProjectRiskController extends BasicCRUDController
 
             foreach ($request->dampak_risiko as $textDampak) {
                 $projectRisk->dampakRisikoProjects()->create([
-                    'dampak_risiko' => $textDampak
+                    'dampak_risiko' => $this->cleanInput($textDampak),
                 ]);
             }
 
             foreach ($request->penyebab_risiko as $penyebabRisiko) {
                 $projectRisk->penyebabRisikoProjects()->create([
-                    'penyebab_risiko' => $penyebabRisiko,
+                    'penyebab_risiko' => $this->cleanInput($penyebabRisiko),
                 ]);
             }
 
             foreach ($request->key_risk_indicator as $idx => $kri) {
                 $kriData = [
-                    'kri' => $kri,
-                    'satuan_kri' => $request->satuan_kri[$idx] ?? '',
-                    'batas_aman' => $request->batas_aman[$idx] ?? '',
-                    'batas_waspada' => $request->batas_waspada[$idx] ?? '',
-                    'batas_bahaya' => $request->batas_bahaya[$idx] ?? '',
+                    'kri' => $this->cleanInput($kri),
+                    'satuan_kri' => $this->cleanInput($request->satuan_kri[$idx]) ?? '',
+                    'batas_aman' => $this->cleanInput($request->batas_aman[$idx]) ?? '',
+                    'batas_waspada' => $this->cleanInput($request->batas_waspada[$idx]) ?? '',
+                    'batas_bahaya' => $this->cleanInput($request->batas_bahaya[$idx]) ?? '',
                 ];
 
                 $projectRisk->kriProjects()->create($kriData);
@@ -1196,7 +1201,7 @@ class ProjectRiskController extends BasicCRUDController
 
             foreach ($request->kontrol_eksisting as $kontrolEksisting) {
                 $projectRisk->projectKontrolEksistings()->create([
-                    'kontrol_eksisting_desc' => $kontrolEksisting,
+                    'kontrol_eksisting_desc' => $this->cleanInput($kontrolEksisting),
                 ]);
             }
 
@@ -1425,6 +1430,11 @@ class ProjectRiskController extends BasicCRUDController
                 $rencanaKegiatan = $request->rencana_kegiatan;
             }
 
+            $cleanRencanaKegiatan = $this->cleanInput($rencanaKegiatan);
+            $cleanTargetCapaian = $this->cleanInput($targetCapaianKinerja);
+            $cleanDeskripsiPeristiwa = $this->cleanInput($request->deskripsi_peristiwa_risiko);
+            $cleanDeskripsiDampak = $this->cleanInput($request->deskripsi_dampak);
+
             $toUpdate = [
                 'unit_type_id' => $user->unit_type_id,
                 'unit_id' => $user->unit_id,
@@ -1434,17 +1444,17 @@ class ProjectRiskController extends BasicCRUDController
                 'kategori_risiko_id' => $request->kategori_risiko_id,
                 'jenis_risiko_id' => $request->jenis_risiko_id,
                 'peristiwa_risiko_id' => $peristiwaRisikoId,
-                'rencana_kegiatan' => $rencanaKegiatan,
+                'rencana_kegiatan' => $cleanRencanaKegiatan,
                 'project_periode_list_id' => $projectPeriodeList->id,
-                'deskripsi_peristiwa_risiko' => $request->deskripsi_peristiwa_risiko,
-                'deskripsi_dampak' => $request->deskripsi_dampak,
+                'deskripsi_peristiwa_risiko' => $cleanDeskripsiPeristiwa,
+                'deskripsi_dampak' => $cleanDeskripsiDampak,
                 'jenis_kontrol_eksisting_id' => $request->jenis_kontrol_eksisting_id,
                 'penilaian_efektifitas_kontrol' => 0,
                 'perkiraan_waktu_terpapar_risiko_mulai' => $perkiraanWaktuTerpaparRisikoMulai,
                 'perkiraan_waktu_terpapar_risiko_akhir' => $perkiraanWaktuTerpaparRisikoAkhir,
                 'wbs' => null,
                 'wbs_id' => $request->wbs_id,
-                'target_capaian_kinerja' => $targetCapaianKinerja,
+                'target_capaian_kinerja' => $cleanTargetCapaian,
                 'sasaran_proyek_id' => $sasaranProyekId,
                 // 'taksonomi_risiko_id' => $request->taksonomi_risiko_id,
                 // 'threshold_risk_limit' => $this->cleanRupiah($request->threshold_risk_limit),
@@ -1483,11 +1493,11 @@ class ProjectRiskController extends BasicCRUDController
 
                 if ($exist) {
                     $exist->update([
-                        'dampak_risiko' => $dampakRisiko,
+                        'dampak_risiko' => $this->cleanInput($dampakRisiko),
                     ]);
                 } else {
                     $exist = $projectRisk->dampakRisikoProjects()->create([
-                        'dampak_risiko' => $dampakRisiko
+                        'dampak_risiko' => $this->cleanInput($dampakRisiko)
                     ]);
                 }
                 $dampakRisikoIds[] = $exist->id;
@@ -1499,11 +1509,11 @@ class ProjectRiskController extends BasicCRUDController
                 $exist = $projectRisk->penyebabRisikoProjects()->where('id', $penyebabRisikoId)->first();
                 if ($exist) {
                     $exist->update([
-                        'penyebab_risiko' => $penyebabRisiko,
+                        'penyebab_risiko' => $this->cleanInput($penyebabRisiko),
                     ]);
                 } else {
                     $exist = $projectRisk->penyebabRisikoProjects()->create([
-                        'penyebab_risiko' => $penyebabRisiko,
+                        'penyebab_risiko' => $this->cleanInput($penyebabRisiko),
                     ]);
                 }
                 $penyebabRisikoIds[] = $exist->id;
@@ -1513,11 +1523,11 @@ class ProjectRiskController extends BasicCRUDController
             $savedKriIds = [];
             foreach ($request->key_risk_indicator as $key => $kri) {
                 $kriData = [
-                    'kri' => $kri,
-                    'satuan_kri' => $request->satuan_kri[$key] ?? '',
-                    'batas_aman' => $request->batas_aman[$key] ?? '',
-                    'batas_waspada' => $request->batas_waspada[$key] ?? '',
-                    'batas_bahaya' => $request->batas_bahaya[$key] ?? '',
+                    'kri' => $this->cleanInput($kri),
+                    'satuan_kri' => $this->cleanInput($request->satuan_kri[$key]) ?? '',
+                    'batas_aman' => $this->cleanInput($request->batas_aman[$key]) ?? '',
+                    'batas_waspada' => $this->cleanInput($request->batas_waspada[$key]) ?? '',
+                    'batas_bahaya' => $this->cleanInput($request->batas_bahaya[$key]) ?? '',
                 ];
 
                 $existKri = $projectRisk->kriProjects()->find($key);
@@ -1537,11 +1547,11 @@ class ProjectRiskController extends BasicCRUDController
                 $existKontrol = $projectRisk->projectKontrolEksistings()->find($key);
 
                 if ($existKontrol) {
-                    $existKontrol->update(['kontrol_eksisting_desc' => $kontrolEksistingDesc]);
+                    $existKontrol->update(['kontrol_eksisting_desc' => $this->cleanInput($kontrolEksistingDesc)]);
                     $savedKontrolIds[] = $existKontrol->id;
                 } else {
                     $newKontrol = $projectRisk->projectKontrolEksistings()->create([
-                        'kontrol_eksisting_desc' => $kontrolEksistingDesc
+                        'kontrol_eksisting_desc' => $this->cleanInput($kontrolEksistingDesc),
                     ]);
                     $savedKontrolIds[] = $newKontrol->id;
                 }
@@ -2706,28 +2716,28 @@ class ProjectRiskController extends BasicCRUDController
                 $errBelumAnalisa[] = $deskripsi;
             }
 
-            // // B. Cek Perlakuan Penyebab (Jika penyebab ada, perlakuan harus ada)
-            // if ($risiko->penyebabRisikoProjects->isNotEmpty()) {
-            //     foreach ($risiko->penyebabRisikoProjects as $penyebab) {
-            //         if ($penyebab->perlakuanPenyebabRisiko->isEmpty()) {
-            //             $errBelumAdaPerlakuanPenyebab[] = $deskripsi;
-            //             break;
-            //         }
-            //     }
-            // }
+            // B. Cek Perlakuan Penyebab (Jika penyebab ada, perlakuan harus ada)
+            if ($risiko->penyebabRisikoProjects->isNotEmpty()) {
+                foreach ($risiko->penyebabRisikoProjects as $penyebab) {
+                    if ($penyebab->perlakuanPenyebabRisiko->isEmpty()) {
+                        $errBelumAdaPerlakuanPenyebab[] = $deskripsi;
+                        break;
+                    }
+                }
+            }
 
-            // // C. Cek Dampak Risiko (Harus ada)
-            // if ($risiko->dampakRisikoProjects->isEmpty()) {
-            //     $errBelumAdaDampak[] = $deskripsi;
-            // } else {
-            //     // D. Cek Perlakuan Dampak (Jika dampak ada, perlakuan harus ada)
-            //     foreach ($risiko->dampakRisikoProjects as $dampak) {
-            //         if ($dampak->perlakuanDampakRisikos->isEmpty()) {
-            //             $errBelumAdaPerlakuanDampak[] = $deskripsi;
-            //             break;
-            //         }
-            //     }
-            // }
+            // C. Cek Dampak Risiko (Harus ada)
+            if ($risiko->dampakRisikoProjects->isEmpty()) {
+                $errBelumAdaDampak[] = $deskripsi;
+            } else {
+                // D. Cek Perlakuan Dampak (Jika dampak ada, perlakuan harus ada)
+                foreach ($risiko->dampakRisikoProjects as $dampak) {
+                    if ($dampak->perlakuanDampakRisikos->isEmpty()) {
+                        $errBelumAdaPerlakuanDampak[] = $deskripsi;
+                        break;
+                    }
+                }
+            }
         }
 
         // Susun Pesan Error jika ada temuan
@@ -3284,5 +3294,14 @@ class ProjectRiskController extends BasicCRUDController
         } catch (\Exception $e) {
             return response()->json(['error' => 'Gagal mengambil data catatan.'], 500);
         }
+    }
+
+    private function cleanInput($value)
+    {
+        if (empty($value)) return $value;
+
+        // Regex ini berarti: GANTI semua karakter YANG BUKAN (^) a-z, A-Z, 0-9, spasi, dan simbol2 standar DENGAN string kosong.
+        // Simbol yang dibolehkan: . , - _ ( ) / %
+        return preg_replace('/[^a-zA-Z0-9\s\.\,\-\_\(\)\/\%]/', '', $value);
     }
 }

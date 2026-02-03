@@ -49,7 +49,7 @@ function handleVerifikasiClick(id) {
   //     return;
   // }
 
-  const peristiwaRisiko = rowData.peristiwa_risiko?.title || rowData.peristiwa_risiko || 'Tidak Ada Judul';
+  const peristiwaRisiko = rowData.peristiwa_risiko?.title || rowData.rencana_kegiatan || 'Tidak Ada Judul';
   const deskripsiRisiko = rowData.deskripsi_peristiwa_risiko || 'Tidak Ada Deskripsi';
   showVerifikasiModal(id, peristiwaRisiko, deskripsiRisiko);
 }

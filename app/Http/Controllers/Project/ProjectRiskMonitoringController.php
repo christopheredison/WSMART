@@ -293,7 +293,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 </div>`',
             ],
             'status_monitoring' => [
-                'label' => 'Status',
+                'label' => 'Status Approval',
                 'render' => '(data, type, row) => {
                     if (row.is_closed) return `<div class="badge text-danger bg-danger-subtle">Dihentikan</div>`;
                     if (!row.project_risk_monitoring) return `<div class="badge bg-light text-dark border">Belum Dimonitor</div>`;

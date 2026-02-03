@@ -812,7 +812,7 @@ var flatpickrIns = flatpickr("#timelineInput", {
     dateFormat: "d/m/Y",
     minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
     // maxDate: dayjs().toDate(),
-    maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
+    // maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
     disableMobile: true
 });
 
@@ -859,7 +859,7 @@ var impactFlatpickr = flatpickr("#timelineImpactInput", {
     // minDate: minDateString,
     minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
     // maxDate: dayjs().toDate(),
-    maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
+    // maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
     disableMobile: true
 });
 
