@@ -1162,7 +1162,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         }
 
         //$risk_limit = $projectPeriode->risk_limit;
-        $risk_limit = ($projectPeriode->project->meta['omset'] ?? 0) * 0.03;
+        $risk_limit = ($projectPeriode->project->nk ?? 0) * 0.03;
         // dd($projectRisk->projectRiskMonitoring);
 
         return view('project-monitorings.edit', [

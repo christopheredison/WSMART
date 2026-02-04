@@ -1693,7 +1693,7 @@ class ProjectRiskController extends BasicCRUDController
         }
 
         if($projectRisk->projectRiskAnalisa->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF){
-            $risk_limit = ($project->meta['omset'] ?? 0) * 0.03;
+            $risk_limit = ($project->nk ?? 0) * 0.03;
         } else{
             $risk_limit = 1/100*$risk_tolerance;
         }
@@ -1817,7 +1817,7 @@ class ProjectRiskController extends BasicCRUDController
         }
 
         //$risk_limit = $projectPeriodeList->risk_limit;
-        $risk_limit = ($projectPeriodeList->project->meta['omset'] ?? 0) * 0.03;
+        $risk_limit = ($projectPeriodeList->project->nk ?? 0) * 0.03;
 
         return view('project-risk.analisa', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'skalaProbabilitas', 'riskMaps', 'analisa', 'areas', 'groupedAreas', 'risk_tolerance', 'risk_limit', 'parameterTypes', 'groupedSkalaParameters', 'selectedParameterType'));
     }
@@ -1937,7 +1937,7 @@ class ProjectRiskController extends BasicCRUDController
             $sum_risk = $sum_risk + 1;
 
             //$risk_limit = $projectPeriodeList->risk_limit;
-            $risk_limit = ($projectPeriodeList->project->meta['omset'] ?? 0) * 0.03;
+            $risk_limit = ($projectPeriodeList->project->nk ?? 0) * 0.03;
 
             // Old Code (Calculated)
             // $skala_dampak = $this->hitungSkalaDampak($nilai_dampak, $risk_limit);

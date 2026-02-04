@@ -42,8 +42,8 @@ class ProjectController extends BasicCRUDController
         'nilai_ok' => [
             'label' => 'Nilai OK',
             'data' => 'nilai_ok_display',
-            'name' => 'meta->omset',
-            'render' => '(data, type, row) => row.meta?.omset ? Intl.NumberFormat(\'id-ID\').format(row.meta.omset) : "-"',
+            'name' => 'nk',
+            'render' => '(data, type, row) => row.nk ? Intl.NumberFormat(\'id-ID\').format(row.nk) : "-"',
         ],
     ];
 
@@ -96,7 +96,7 @@ class ProjectController extends BasicCRUDController
             });
 
             $datatable->addColumn('nilai_ok_display', function($row) {
-                return $row->meta['omset'] ?? 0;
+                return $row->nk ?? 0;
             });
 
             return $datatable;

@@ -104,8 +104,10 @@
                 <a href="{{ route('unit.edit', $item) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Edit">
                   <span class="bx bx-edit"></span>
                 </a>
-                <button type="button" class="btn-input-icon btn-manage-relation" data-unit-id="{{ $item->id }}" data-unit-name="{{ $item->name }}" data-bs-toggle="modal" data-bs-target="#modalManageRelation" title="Manage relation">
-                  <span class="bx bx-link-alt"></span>
+                <button type="button" class="btn-input-icon btn-manage-relation" data-unit-id="{{ $item->id }}" data-unit-name="{{ $item->name }}" data-bs-toggle="modal" data-bs-target="#modalManageRelation">
+                  <div data-bs-toggle="tooltip" title="Manage relation">
+                    <span class="bx bx-link-alt"></span>
+                  </div>
                 </button>
                 <button type="button" class="btn-input-icon" data-bs-toggle="modal"
                   data-bs-target="#modalDelete{{ $item->id }}">

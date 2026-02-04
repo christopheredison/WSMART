@@ -35,7 +35,7 @@
                     <div class="row d-flex align-items-center mt-3 mt-md-0">
                         <label class="col-md-3">Risk Limit</label>
                         <div class="col-md-9">
-                            {{ Form::text('risk_limit', ($projectPeriode->project->meta['omset'] ?? 0) * 0.03, ['class' => 'form-control inputmask-general', 'readonly']) }}
+                            {{ Form::text('risk_limit', ($projectPeriode->project->nk ?? 0) * 0.03, ['class' => 'form-control inputmask-general', 'readonly']) }}
                         </div>
                     </div>
                     <div class="row d-flex align-items-center mt-3">
@@ -56,7 +56,7 @@
             @endif
         </div>
     </div>
-    
+
     <div class="card mt-5">
         <div class="card-header stepper border-0 pb-0">
             <div class="nav-link active d-flex align-items-center p-0">
@@ -122,7 +122,7 @@
                                 </tr>
                             </tbody>
                         </table>
-                        
+
                         <!-- begin::Legend -->
                         <div class="risk-map-legend d-flex flex-center gap-3">
                             <div class="d-flex align-items-center gap-1">
@@ -201,7 +201,7 @@
                                 </tr>
                             </tbody>
                         </table>
-                        
+
                         <!-- begin::Legend -->
                         <div class="risk-map-legend d-flex flex-center gap-3">
                             <div class="d-flex align-items-center gap-1">
@@ -267,28 +267,28 @@
                                 <td>{{ $projectRisk->deskripsi_peristiwa_risiko ?? '-' }}</td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak, 0, ',', '.') : '-' }}</td>
                                 <td>
-                                    {{ $projectRisk->projectRiskAnalisa?->skalaDampakObj?->tingkat 
-                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaDampakObj?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaDampakObj?->deskripsi 
+                                    {{ $projectRisk->projectRiskAnalisa?->skalaDampakObj?->tingkat
+                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaDampakObj?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaDampakObj?->deskripsi
                                         : '-' }}
                                 </td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->nilai_probabilitas ?? '-' }}</td>
                                 <td>
-                                    {{ $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->tingkat 
-                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->skala 
+                                    {{ $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->tingkat
+                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->skala
                                         : '-' }}
                                 </td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->skala_risiko ?? '-' }}</td>
                                 <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko ?? '-' }}</td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak_residual ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak_residual, 0, ',', '.') : '-' }}</td>
                                 <td>
-                                    {{ $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat 
-                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->deskripsi 
+                                    {{ $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat
+                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->deskripsi
                                         : '-' }}
                                 </td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->nilai_probabilitas_residual ?? '-' }}</td>
                                 <td>
-                                    {{ $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat 
-                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->skala 
+                                    {{ $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat
+                                        ? '(' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->skala
                                         : '-' }}
                                 </td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->skala_risiko_residual ?? '-' }}</td>
@@ -432,7 +432,7 @@ $(document).ready(function () {
             // Jika memilih "Semua", hapus query parameter 'status'
             currentUrl.searchParams.delete('status');
         }
-        
+
         // Arahkan browser ke URL yang baru
         window.location.href = currentUrl.toString();
     });
@@ -447,12 +447,12 @@ $(document).ready(function () {
         const cellR = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixR}"]`);
 
         const code = (idx + 1).toString();
-        
+
         if (cellI.length) {
             if (!cellI.data('kode-peristiwa-inherent')) {
                 cellI.data('kode-peristiwa-inherent', []);
             }
-            
+
             cellI.data('kode-peristiwa-inherent').push(code);
             cellI.data('has-inherent', true);
         }
@@ -461,7 +461,7 @@ $(document).ready(function () {
             if (!cellR.data('kode-peristiwa-residual')) {
                 cellR.data('kode-peristiwa-residual', []);
             }
-            
+
             cellR.data('kode-peristiwa-residual').push(code);
             cellR.data('has-residual', true);
         }
@@ -477,7 +477,7 @@ $(document).ready(function () {
                     if (!cellC.data('kode-peristiwa-current-' + tahun + '-m' + currentRiskMap.month)) {
                         cellC.data('kode-peristiwa-current-' + tahun + '-m' + currentRiskMap.month, []);
                     }
-                    
+
                     cellC.data('kode-peristiwa-current-' + tahun + '-m' + currentRiskMap.month).push(code);
                     cellC.data('has-current', true);
                 }
@@ -529,7 +529,7 @@ $(document).ready(function () {
         $('#currentMap').prop('class', 'table-risk-map');
         $('#currentMap').addClass('show-' + tahun + '-m' + month);
     }).change();
-    
+
     flatpickr('.flatpickr-range', {
         mode: 'range',
         dateFormat: 'd/m/Y',

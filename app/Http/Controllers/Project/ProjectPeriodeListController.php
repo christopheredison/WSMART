@@ -1079,7 +1079,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'label' => 'Risk Limit',
                 'parameters' => [
                     'risk_limit',
-                    ($projectPeriode->project->meta['omset'] ?? 0) * 0.03,
+                    ($projectPeriode->project->nk ?? 0) * 0.03,
                     [
                         'class' => 'form-control inputmask-general',
                         'placeholder' => 'Masukkan Risk Limit',
