@@ -151,7 +151,7 @@
                           </button>
                         </div>
                         <select name="skala_parameter_type" id="skala_parameter_type" class="form-select" required>
-                            <option value="">Pilih Parameter...</option>
+                            {{-- <option value="">Pilih Parameter...</option> --}}
                             @foreach($parameterTypes as $type)
                                 <option value="{{ $type }}" {{ ($selectedParameterType ?? null) == $type ? 'selected' : '' }}>
                                     {{ $type }}
@@ -232,7 +232,7 @@
                     <div class="col-md-4">
                         <label for="skala_parameter_type_residual">Parameter Probabilitas</label>
                         <select name="skala_parameter_type_residual" id="skala_parameter_type_residual" class="form-select" required disabled>
-                            <option value="">Pilih Parameter...</option>
+                            {{-- <option value="">Pilih Parameter...</option> --}}
                             @foreach($parameterTypes as $type)
                                 <option value="{{ $type }}">{{ $type }}</option>
                             @endforeach
@@ -452,13 +452,13 @@ $(document).ready(function() {
     const savedSkalaDampakResidual = "{{ $analisa->skala_dampak_residual ?? '' }}";
 
     // === FITUR 1: Auto Set Parameter Type jika opsi hanya 1 (selain placeholder) ===
-    if ($paramTypeInherent.find('option').length === 2) {
-        $paramTypeInherent.prop('selectedIndex', 1).trigger('change');
+    if ($paramTypeInherent.find('option').length === 1) {
+        $paramTypeInherent.prop('selectedIndex', 0).trigger('change');
         populateSkalaDropdown('Persentase Kemungkinan Terjadi', $scaleInherent);
     }
 
-    if ($paramTypeResidual.find('option').length === 2) {
-        $paramTypeResidual.prop('selectedIndex', 1).trigger('change');
+    if ($paramTypeResidual.find('option').length === 1) {
+        $paramTypeResidual.prop('selectedIndex', 0).trigger('change');
         populateSkalaDropdown('Persentase Kemungkinan Terjadi', $scaleResidual);
     }
 
