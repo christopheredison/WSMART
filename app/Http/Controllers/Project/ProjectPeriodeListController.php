@@ -207,21 +207,46 @@ class ProjectPeriodeListController extends BasicCRUDController
 
             // DEFAULT ORDERING hanya saat tidak ada sorting dari user
             if (!request()->has('order')) {
-                $riskActionNeededSql = "FALSE";
+                // Subquery Batch Terakhir
                 $latestBatchIdSql = "(SELECT MAX(sub_db.id) FROM data_batches sub_db WHERE sub_db.project_id = project_periode_lists.project_id AND sub_db.type = 2)";
 
-                if ($levelId == 6) {
-                    $riskActionNeededSql = "EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchIdSql AND db.finish IS FALSE AND (db.status = 5 OR db.status = 1))";
-                } elseif ($u_step > 0) {
-                    $rejectConditions = "";
-                    if ($u_step == 2) $rejectConditions = "OR db.status = 9";
-                    elseif ($u_step == 3) $rejectConditions = "OR db.status = 10";
+                // 1. Logic SQL: Apakah Risiko Butuh Aksi?
+                $riskActionNeededSql = "FALSE";
 
-                    $riskActionNeededSql = "EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchIdSql AND db.finish IS FALSE AND (db.step_verification = {$u_step} {$rejectConditions}))";
+                if ($levelId == 6) {
+                    // INPUTTER (Level 6):
+                    // Action Needed jika: Batch Draft (1) ATAU Revisi (5)
+                    $riskActionNeededSql = "EXISTS (
+                        SELECT 1 FROM data_batches db
+                        WHERE db.id = $latestBatchIdSql
+                        AND db.finish IS FALSE
+                        AND db.status IN (1, 5)
+                    )";
+                } elseif ($u_step > 0) {
+                    // VERIFIKATOR:
+                    // Action Needed jika:
+                    // A. Step batch SAMA dengan step user (u_step)
+                    // B. ATAU Kasus Reject Khusus (Step 2 urus status 9, Step 3 urus status 10)
+
+                    $orCondition = "FALSE";
+                    if ($u_step == 2) $orCondition = "db.status = 9";  // Reject dr MR ke Divisi
+                    if ($u_step == 3) $orCondition = "db.status = 10"; // Reject dr Owner MR ke Officer MR
+
+                    $riskActionNeededSql = "EXISTS (
+                        SELECT 1 FROM data_batches db
+                        WHERE db.id = $latestBatchIdSql
+                        AND db.finish IS FALSE
+                        AND (
+                            db.step_verification = {$u_step}
+                            OR ($orCondition)
+                        )
+                    )";
                 }
 
+                // 2. Logic SQL: Apakah Monitoring Butuh Aksi?
                 $monActionNeededSql = "FALSE";
                 $monTargetStatus = 0;
+
                 if ($levelId == 6) $monTargetStatus = 1;
                 elseif ($levelId == 7) $monTargetStatus = 2;
                 elseif ($levelId == 1 && !$is_mr) $monTargetStatus = 3;
@@ -244,16 +269,25 @@ class ProjectPeriodeListController extends BasicCRUDController
                 }
 
                 $userIdList = $userProjectIds->isNotEmpty() ? $userProjectIds->join(',') : '0';
-                $allIdList  = $allProjectIds->isNotEmpty() ? $allProjectIds->join(',') : '0';
+
+                // 3. APPLY ORDERING
+                // Perubahan: Menghapus pengecekan 'IN userIdList' pada Prioritas 1
+                // Agar semua yang butuh verifikasi (baik project sendiri atau project bawahan) naik ke atas.
 
                 $query->orderByRaw("
                     CASE
-                        WHEN project_periode_lists.project_id IN ({$userIdList}) AND ($riskActionNeededSql OR $monActionNeededSql) THEN 1
+                        -- PRIORITAS 1: 'Perlu Verifikasi' / 'Perlu Revisi' / 'Draft' (My Turn)
+                        WHEN ($riskActionNeededSql OR $monActionNeededSql) THEN 1
+
+                        -- PRIORITAS 2: 'Proses Validasi' (Project Saya tapi menunggu orang lain)
                         WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 2
-                        WHEN project_periode_lists.project_id IN ({$allIdList}) THEN 3
-                        ELSE 4
+
+                        -- PRIORITAS 3: Project Lainnya (View Only / Divisi)
+                        ELSE 3
                     END ASC
                 ");
+
+                // Secondary Sort: Yang baru diupdate di atas
                 $query->orderBy('project_periode_lists.updated_at', 'desc');
             }
         };
@@ -518,15 +552,17 @@ class ProjectPeriodeListController extends BasicCRUDController
                     }
                 }
             ],
+            // --- UPDATE FILTER STATUS RISIKO ---
             'status_risiko' => [
                 'label' => 'Status Risiko',
                 'type' => 'select',
                 'parameters' => [
                     'status_risiko',
                     [
-                        'draft' => 'Draft / Revisi',
-                        'verification' => 'Sedang Verifikasi',
-                        'active' => 'Aktif / Final',
+                        'draft' => 'Draft / Input Risiko', // Status 1
+                        'revisi' => 'Perlu Revisi / Dikembalikan', // Status 5, 9, 10 (Merah)
+                        'verification' => 'Proses Verifikasi',     // Status 2, 3, 4
+                        'active' => 'Selesai',             // Finish = true
                     ],
                     null,
                     [
@@ -536,17 +572,47 @@ class ProjectPeriodeListController extends BasicCRUDController
                 ],
                 'handler' => function($query, $key, $value) {
                     if (empty($value)) return;
+
+                    // Subquery Batch Terakhir (Untuk Draft, Revisi, Verifikasi)
                     $latestBatchSql = "(SELECT MAX(db2.id) FROM data_batches db2 WHERE db2.project_id = project_periode_lists.project_id AND db2.type = 2)";
 
                     if ($value === 'active') {
-                        $query->whereRaw("EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchSql AND db.finish IS TRUE)");
+                        // LOGIKA BARU: Selesai jika punya risiko DAN tidak ada satupun risiko yang statusnya BUKAN 6
+                        $query->whereRaw("
+                            (SELECT COUNT(*) FROM project_risks pr WHERE pr.project_periode_list_id = project_periode_lists.id AND pr.deleted_at IS NULL) > 0
+                            AND
+                            (SELECT COUNT(*) FROM project_risks pr WHERE pr.project_periode_list_id = project_periode_lists.id AND pr.status != 6 AND pr.deleted_at IS NULL) = 0
+                        ");
                     } elseif ($value === 'draft') {
-                        $query->whereRaw("EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchSql AND db.finish IS FALSE AND db.status IN (1, 5, 9, 10))");
+                        // LOGIKA BARU: Batch Status 1 ATAU 0, TAPI Kecualikan yang sudah 'Selesai' (semua status 6)
+                        // Menggunakan kondisi: Masih ada minimal 1 risiko yang statusnya BUKAN 6
+                        $query->whereRaw("EXISTS (
+                            SELECT 1 FROM data_batches db
+                            WHERE db.id = $latestBatchSql
+                            AND db.finish IS FALSE
+                            AND db.status IN (0, 1)
+                        )")
+                        ->whereRaw("(SELECT COUNT(*) FROM project_risks pr WHERE pr.project_periode_list_id = project_periode_lists.id AND pr.status != 6 AND pr.deleted_at IS NULL) > 0");
+                    } elseif ($value === 'revisi') {
+                        // Logic Batch: Status 5, 9, 10
+                        $query->whereRaw("EXISTS (
+                            SELECT 1 FROM data_batches db
+                            WHERE db.id = $latestBatchSql
+                            AND db.finish IS FALSE
+                            AND db.status IN (5, 9, 10)
+                        )");
                     } elseif ($value === 'verification') {
-                        $query->whereRaw("EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchSql AND db.finish IS FALSE AND db.status IN (2, 3, 4))");
+                        // Logic Batch: Status 2, 3, 4, 7, 8
+                        $query->whereRaw("EXISTS (
+                            SELECT 1 FROM data_batches db
+                            WHERE db.id = $latestBatchSql
+                            AND db.finish IS FALSE
+                            AND db.status IN (2, 3, 4, 7, 8)
+                        )");
                     }
                 }
             ],
+            // --- UPDATE FILTER STATUS MONITORING ---
             'status_monitoring' => [
                 'label' => 'Status Monitoring',
                 'type' => 'select',
@@ -554,9 +620,9 @@ class ProjectPeriodeListController extends BasicCRUDController
                     'status_monitoring',
                     [
                         'empty' => 'Belum Dimonitor',
-                        'draft' => 'Draft / Revisi',
-                        'verification' => 'Sedang Verifikasi',
-                        'active' => 'Aktif / Final',
+                        'draft' => 'Draft / Input Monitoring', // Status 1
+                        'verification' => 'Proses Verifikasi',     // Status 2, 3, 4, 5
+                        'active' => 'Disetujui',           // Status 100 atau is_approved
                     ],
                     null,
                     [
@@ -569,13 +635,17 @@ class ProjectPeriodeListController extends BasicCRUDController
                     $latestMonSql = "(SELECT MAX(prm2.id) FROM project_risk_monitorings prm2 JOIN project_risks pr2 ON pr2.id = prm2.risiko_id WHERE pr2.project_periode_list_id = project_periode_lists.id)";
 
                     if ($value === 'empty') {
+                        // Tidak ada data monitoring
                         $query->whereRaw("NOT EXISTS (SELECT 1 FROM project_risk_monitorings prm JOIN project_risks pr ON pr.id = prm.risiko_id WHERE pr.project_periode_list_id = project_periode_lists.id)");
                     } elseif ($value === 'active') {
-                        $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status = 100)");
+                        // Status 100 ATAU is_approved = true
+                        $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND (prm.status = 100 OR prm.is_approved IS TRUE))");
                     } elseif ($value === 'draft') {
-                        $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status = 1 AND prm.status != 100)");
+                        // Status 1 (Drafting) dan belum approved
+                        $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status = 1 AND prm.is_approved IS FALSE)");
                     } elseif ($value === 'verification') {
-                        $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status IN (2, 3, 4, 5))");
+                        // Status 2, 3, 4, 5 dan belum approved
+                        $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status IN (2, 3, 4, 5) AND prm.is_approved IS FALSE)");
                     }
                 }
             ],
@@ -641,116 +711,150 @@ class ProjectPeriodeListController extends BasicCRUDController
 
         // Ambil data batch terakhir
         $lastBatch = $row->project->dataBatches->sortByDesc('id')->first();
-
-        // Kita ambil status dari relasi projectRisks yang sudah di-load di index()
         $allRisks = $row->projectRisks;
         $totalRisk = $allRisks->count();
         $publishedCount = $allRisks->where('status', ProjectRisk::STATUS_PUBLISHED)->count();
 
         // 2. Cek Aktif (Published)
         if (($lastBatch && $lastBatch->finish) || ($totalRisk > 0 && $totalRisk === $publishedCount)) {
-            return '<span class="badge bg-success">Published</span>';
+            $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Selesai</div>';
+
+            return '<div class="d-flex flex-column align-items-start">
+                        <span class="badge bg-success" data-bs-toggle="tooltip" title="Status: Published / Selesai">Published</span>
+                        '.$positionHtml.'
+                    </div>';
         }
 
-        // 3. Logic Proses (Eskalasi)
+        // 3. Logic Proses
         $batchStep = $lastBatch ? $lastBatch->step_verification : 0;
         $batchStatus = $lastBatch ? $lastBatch->status : 1;
 
-        // Label Mapping
+        // Label Posisi
         $stepLabels = [
-            0 => 'Input Draft',
+            0 => 'Risk Officer Proyek',
             1 => 'Risk Owner Project',
             2 => 'Risk Officer Divisi',
             3 => 'Risk Officer MR',
             4 => 'Risk Owner MR',
         ];
-
         $currentLabel = $stepLabels[$batchStep] ?? 'Verifikator';
-        if ($batchStatus == 9) $currentLabel = 'Dikembalikan Officer MR (Ke Divisi)';
-        if ($batchStatus == 10) $currentLabel = 'Dikembalikan Owner MR (Ke Officer MR)';
+        if ($batchStatus == 5) $currentLabel = 'Dikembalikan ke Officer Proyek';
+        if ($batchStatus == 9) $currentLabel = 'Dikembalikan ke Officer Divisi';
+        if ($batchStatus == 10) $currentLabel = 'Dikembalikan ke Officer MR';
 
-        // Cek Apakah Giliran Saya?
+        // Subtitle Posisi
+        $positionHtml = '
+        <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">
+            Posisi: ' . $currentLabel . '
+        </div>';
+
+        // Cek Giliran
         $isMyTurn = false;
-
         if ($levelId == 6) { // Inputter
             if (in_array($batchStatus, [1, 5])) $isMyTurn = true;
         } else { // Verifikator
-            if (($u_step == $batchStep) ||
-                ($u_step == 2 && $batchStatus == 9) ||
-                ($u_step == 3 && $batchStatus == 10)) {
+            if (($u_step == $batchStep) || ($u_step == 2 && $batchStatus == 9) || ($u_step == 3 && $batchStatus == 10)) {
                 $isMyTurn = true;
             }
         }
 
-        // Variabel Dot Pulse (Merah)
         $pulseDot = '
         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
 
-        // --- LOGIKA TAMPILAN ---
+        // --- RENDER ---
 
-        // KONDISI 1: Giliran Saya (Action Needed)
-        // if ($isMyTurn && $user->hasProject($row)) {
         if ($isMyTurn && $this->userHasAccessToProject($user, $row)) {
             $redirectUrl = route('projects.risks.index', ['project' => $row->id]);
 
-            // A. Khusus Inputter (Level 6) -> Tampilan Solid Biru (Draft/Revisi)
+            // --- KONDISI KHUSUS INPUTTER (LEVEL 6) ---
             if ($levelId == 6) {
-                return '
-                <a href="'.$redirectUrl.'" class="text-decoration-none">
-                    <span class="badge bg-info cursor-pointer border border-info text-white position-relative"
-                        data-bs-toggle="tooltip"
-                        title="Status: Draft/Revisi. Mohon lengkapi atau perbaiki data risiko.">
-                        Draft / Perlu Revisi
-                        '.$pulseDot.'
-                    </span>
-                </a>';
-            }
 
-            // B. Verifikator (Level Lain) -> Tampilan Solid Kuning (Verifikasi)
-            else {
-                return '
-                <a href="'.$redirectUrl.'" class="text-decoration-none">
-                    <span class="badge bg-warning text-dark border border-warning shadow-sm cursor-pointer position-relative"
-                        data-bs-toggle="tooltip" title="Klik untuk verifikasi: '.$currentLabel.'">
-                        <i class="bx bx-error-circle bx-flashing me-1"></i> Perlu Verifikasi
-                        '.$pulseDot.'
-                    </span>
-                </a>';
-            }
-        }
+                // 1. KASUS REVISI (Status 5) -> MERAH (DANGER)
+                if ($batchStatus == 5) {
+                    return '
+                    <div class="d-flex flex-column align-items-start">
+                        <a href="'.$redirectUrl.'" class="text-decoration-none">
+                            <span class="badge bg-danger cursor-pointer border border-danger text-white position-relative"
+                                  data-bs-toggle="tooltip"
+                                  title="Status: Dikembalikan. Mohon perbaiki data risiko sesuai catatan.">
+                                Perlu Revisi
+                                '.$pulseDot.'
+                            </span>
+                        </a>
+                        '.$positionHtml.'
+                    </div>';
+                }
 
-        // KONDISI 2: Bukan Giliran Saya (Waiting) -> Tampilan Soft (Transparan)
-        else {
+                // 2. KASUS DRAFT (Status 1) -> BIRU (INFO)
+                else {
+                    return '
+                    <div class="d-flex flex-column align-items-start">
+                        <a href="'.$redirectUrl.'" class="text-decoration-none">
+                            <span class="badge bg-info cursor-pointer border border-info text-white position-relative"
+                                  data-bs-toggle="tooltip"
+                                  title="Status: Draft. Silakan lengkapi dan ajukan.">
+                                Draft / Input Risiko
+                                '.$pulseDot.'
+                            </span>
+                        </a>
+                        '.$positionHtml.'
+                    </div>';
+                }
+
+            } else {
+                // --- KONDISI VERIFIKATOR (LEVEL LAIN) ---
+                return '
+                <div class="d-flex flex-column align-items-start">
+                    <a href="'.$redirectUrl.'" class="text-decoration-none">
+                        <span class="badge bg-warning text-dark border border-warning shadow-sm cursor-pointer position-relative"
+                              data-bs-toggle="tooltip"
+                              title="Klik untuk verifikasi: '.$currentLabel.'">
+                            <i class="bx bx-error-circle bx-flashing me-1"></i> Perlu Verifikasi
+                            '.$pulseDot.'
+                        </span>
+                    </a>
+                    '.$positionHtml.'
+                </div>';
+            }
+        } else {
+            // --- MENUNGGU ---
             return '
-            <div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="Posisi saat ini: '.$currentLabel.'">
-                <span class="badge bg-info bg-opacity-10 text-info border border-info">
-                    <i class="bx bx-time-five me-1"></i> Proses Validasi
-                </span>
+            <div class="d-flex flex-column align-items-start">
+                <div class="d-inline-block position-relative"
+                    data-bs-toggle="tooltip"
+                    title="Posisi saat ini: '.$currentLabel.'">
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                        <i class="bx bx-time-five me-1"></i> Proses Validasi
+                    </span>
+                </div>
+                '.$positionHtml.'
             </div>';
         }
     }
 
     private function generateMonitoringStatus($row, $user, $u_step, $levelId)
     {
-        // Query monitoring terakhir
         $latestMon = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($row) {
             $q->where('project_periode_list_id', $row->id);
-        })
-        ->orderBy('id', 'desc')
-        ->first();
+        })->orderBy('id', 'desc')->first();
 
         if (!$latestMon) {
             return '<span class="badge bg-light text-dark border border-dark">Belum Dimonitor</span>';
         }
 
         if ($latestMon->status == 100 || $latestMon->is_approved) {
-            return '<span class="badge bg-success">Aktif</span>';
+            $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Disetujui</div>';
+
+            return '<div class="d-flex flex-column align-items-start">
+                        <span class="badge bg-success" data-bs-toggle="tooltip" title="Status: Monitoring Disetujui">Aktif</span>
+                        '.$positionHtml.'
+                    </div>';
         }
 
-        // Label Mapping
+        // Label Posisi
         $monLabels = [
-            1 => 'Drafting',
+            1 => 'Risk Officer Proyek',
             2 => 'Risk Owner Project',
             3 => 'Risk Officer Divisi',
             4 => 'Risk Officer MR',
@@ -758,9 +862,13 @@ class ProjectPeriodeListController extends BasicCRUDController
         ];
         $posLabel = $monLabels[$latestMon->status] ?? 'Verifikasi';
 
-        // Cek Giliran Saya
-        $isMyMonTurn = false;
+        $positionHtml = '
+        <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">
+            Posisi: ' . $posLabel . '
+        </div>';
 
+        // Logic Giliran
+        $isMyMonTurn = false;
         if ($levelId == 6) {
             if ($latestMon->status == 1) $isMyMonTurn = true;
         } else {
@@ -775,51 +883,56 @@ class ProjectPeriodeListController extends BasicCRUDController
             }
         }
 
-        // Variabel Dot Pulse (Merah)
         $pulseDot = '
         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
 
-        // --- LOGIKA TAMPILAN MONITORING ---
+        // --- RENDER ---
 
-        // KONDISI 1: Giliran Saya (Action Needed)
-        // if ($isMyMonTurn && $user->hasProject($row)) {
         if ($isMyMonTurn && $this->userHasAccessToProject($user, $row)) {
             $redirectUrl = route('projects.monitorings.index', ['project' => $row->id]);
 
-            // A. Khusus Inputter (Level 6) -> Tampilan Solid Biru (Draft/Revisi)
             if ($levelId == 6) {
+                // Inputter (Draft Monitoring)
+                // Hanya status "Draft" (Biru), tulisan revisi dihilangkan
                 return '
-                <a href="'.$redirectUrl.'" class="text-decoration-none">
-                    <span class="badge bg-info cursor-pointer border border-info text-white position-relative"
-                        data-bs-toggle="tooltip"
-                        title="Status: Draft Monitoring. Mohon lengkapi data.">
-                        Draft / Perlu Revisi
-                        '.$pulseDot.'
-                    </span>
-                </a>';
-            }
-
-            // B. Verifikator (Level Lain) -> Tampilan Solid Kuning (Verifikasi)
-            else {
+                <div class="d-flex flex-column align-items-start">
+                    <a href="'.$redirectUrl.'" class="text-decoration-none">
+                        <span class="badge bg-info cursor-pointer border border-info text-white position-relative"
+                              data-bs-toggle="tooltip"
+                              title="Status: Draft Monitoring. Mohon lengkapi data.">
+                            Draft / Input Monitoring
+                            '.$pulseDot.'
+                        </span>
+                    </a>
+                    '.$positionHtml.'
+                </div>';
+            } else {
+                // Verifikator
                 return '
-                <a href="'.$redirectUrl.'" class="text-decoration-none">
-                    <span class="badge bg-warning text-dark border border-warning shadow-sm cursor-pointer position-relative"
-                        data-bs-toggle="tooltip" title="Klik untuk verifikasi monitoring: '.$posLabel.'">
-                        <i class="bx bx-radar bx-flashing me-1"></i> Verifikasi Mon.
-                        '.$pulseDot.'
-                    </span>
-                </a>';
+                <div class="d-flex flex-column align-items-start">
+                    <a href="'.$redirectUrl.'" class="text-decoration-none">
+                        <span class="badge bg-warning text-dark border border-warning shadow-sm cursor-pointer position-relative"
+                              data-bs-toggle="tooltip"
+                              title="Klik untuk verifikasi monitoring: '.$posLabel.'">
+                            <i class="bx bx-radar bx-flashing me-1"></i> Verifikasi Mon.
+                            '.$pulseDot.'
+                        </span>
+                    </a>
+                    '.$positionHtml.'
+                </div>';
             }
-        }
-
-        // KONDISI 2: Bukan Giliran Saya (Waiting) -> Tampilan Soft (Transparan)
-        else {
+        } else {
             return '
-            <div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="Posisi saat ini: '.$posLabel.'">
-                <span class="badge bg-info bg-opacity-10 text-info border border-info">
-                    <i class="bx bx-radar me-1"></i> Proses Monitoring
-                </span>
+            <div class="d-flex flex-column align-items-start">
+                <div class="d-inline-block position-relative"
+                    data-bs-toggle="tooltip"
+                    title="Posisi saat ini: '.$posLabel.'">
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                        <i class="bx bx-radar me-1"></i> Proses Monitoring
+                    </span>
+                </div>
+                '.$positionHtml.'
             </div>';
         }
     }

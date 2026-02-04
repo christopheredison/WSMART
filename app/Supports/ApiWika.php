@@ -97,16 +97,16 @@ class ApiWika
         $result1 = $processData($result1);
 
         // // Ambil Data Bulan Ini
-        // $result0 = $this->apiRequest('GET', 'proyek', [
-        //     'period' => date('Ym'),
-        // ]);
-        // $result0 = $processData($result0);
+        $result0 = $this->apiRequest('GET', 'proyek', [
+            'period' => date('Ym'),
+        ]);
+        $result0 = $processData($result0);
 
         // Gabungkan
         $result = array_merge(
           $result2,
           $result1,
-          // $result0
+          $result0
         );
 
         return array_values($result);

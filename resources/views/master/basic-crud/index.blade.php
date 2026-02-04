@@ -207,7 +207,7 @@
                                 @if(!empty($extraViewData['showBulkCheckbox']))
                                 <th class="white-space-nowrap">
                                     <div class="form-check mb-0">
-                                        <input class="form-check-input" type="checkbox" id="check-all-risiko" />
+                                        <input class="form-check-input" type="checkbox" id="check-all-risiko" autocomplete="off" />
                                     </div>
                                 </th>
                                 @endif

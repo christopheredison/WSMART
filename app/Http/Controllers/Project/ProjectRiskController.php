@@ -184,7 +184,23 @@ class ProjectRiskController extends BasicCRUDController
                 return "-";
             }',
         ],
-
+        'is_closed' => [
+            'label' => 'Status Risiko',
+            'data' => 'is_closed',
+            'sortable' => false,
+            'searchable' => false,
+            'class' => 'text-center align-start',
+            'render' => '(data, type, row) => {
+                // Cek nilai is_closed (biasanya 1 untuk closed, 0 untuk open)
+                return (row.is_closed == 1)
+                    ? `<div class="badge bg-danger rounded-pill px-2 mt-auto">
+                        Closed
+                      </div>`
+                    : `<div class="badge bg-success rounded-pill px-2 mt-auto">
+                        Open
+                      </div>`;
+            }',
+        ],
     ];
 
     public function index() {
@@ -309,8 +325,9 @@ class ProjectRiskController extends BasicCRUDController
             }
             // CASE 2: VERIFIKATOR (Termasuk Pengembalian MR)
             else if (
-                ($u_step == $b_step) || // Kondisi Normal: Step User == Step Batch
-                ($u_step == 2 && $status == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR) // Kondisi Rejection: Divisi menerima tolakan MR
+                // ($u_step == $b_step) || // Kondisi Normal: Step User == Step Batch
+                // ($u_step == 2 && $status == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR) // Kondisi Rejection: Divisi menerima tolakan MR
+                true
             ) {
                 // Active State: Status Risiko harus relevan (Dikirim, Tunggu Verif, Ditolak MR)
                 // DAN Step Verifikasi Risiko == u_step
@@ -2320,7 +2337,7 @@ class ProjectRiskController extends BasicCRUDController
         ]);
 
         $perlakuan = PerlakuanDampakRisiko::findOrFail($id);
-        $jabatan = Jabatan::find($request->xpic);
+        $jabatan = Jabatan::find($request->xd_pic);
 
         $perlakuan->update([
             'rencana_perlakuan_risiko' => $validated['xd_output_perlakuan_risiko'],
