@@ -424,6 +424,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('project-hasil-usaha/sync-all', [ProjectHasilUsahaController::class, 'syncAll'])->name('project-hasil-usaha.sync-all');
     Route::resource('hasil-usaha-divisi', UnitHasilUsahaController::class)->except(['create', 'show']);
     Route::get('hasil-usaha-divisi/data', [UnitHasilUsahaController::class, 'data'])->name('hasil-usaha-divisi.data');
+    Route::get('projects/{project}/detail', [ProjectController::class, 'detail'])->name('projects.detail');
     Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit', 'destroy']);
     Route::resource('projects/{project}/risks', ProjectRiskController::class)->names('projects.risks');
     Route::get('projects/{project}/risks/{risk}/view', [ProjectRiskController::class, 'view'])->name('projects.risks.view');

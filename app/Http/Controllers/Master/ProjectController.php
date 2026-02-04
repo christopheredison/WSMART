@@ -90,6 +90,17 @@ class ProjectController extends BasicCRUDController
             ],
         ];
 
+        if (Gate::check('project_list')) {
+            $this->tableActions[] = [
+                'label' => '<span class="bx bx-show"></span>',
+                'btn_icon' => true,
+                'action' => 'link',
+                'url' => route('projects.detail', ':id'),
+                'title' => 'Lihat Detail',
+                'class' => 'btn-outline-primary btn-sm'
+            ];
+        }
+
         $this->datatableCallback = function($datatable) {
             $datatable->addColumn('project_code_display', function($row) {
                 return $row->meta['profit_center'] ?? '-';
@@ -209,6 +220,17 @@ class ProjectController extends BasicCRUDController
         $data->update($toUpdate);
 
         return $data;
+    }
+
+    public function detail($id)
+    {
+        // Load relasi jika diperlukan (divisi, sektor, tipe)
+        $project = Project::with(['divisi', 'projectSektor', 'projectType'])->findOrFail($id);
+
+        // Data dari API WIKA tersimpan di kolom 'meta'
+        $meta = $project->meta ?? [];
+
+        return view('master.project.detail', compact('project', 'meta'));
     }
 
     // Tambahkan: sinkronisasi proyek dari ApiWika tanpa penghapusan
