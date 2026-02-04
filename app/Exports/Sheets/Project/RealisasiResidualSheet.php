@@ -18,11 +18,11 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
-    private $projectId;
+    private $projectIds;
 
-    public function __construct(int $projectId)
+    public function __construct(array $projectIds)
     {
-        $this->projectId = $projectId;
+        $this->projectIds = $projectIds;
     }
 
     /**
@@ -145,14 +145,14 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 if ($lastRow > 2) {
                     $dataRange = 'A3:O' . $lastRow;
                     $sheet->getStyle($dataRange)->applyFromArray($dataStyle);
-                    
+
                     // Set rata tengah horizontal untuk kolom-kolom tertentu
                     // (Kolom M: Level Risiko, N: Nilai Efektivitas, O: Efektifitas)
                     $centerCols = ['A', 'B', 'D', 'H', 'I', 'J', 'L', 'M', 'N', 'O'];
                     foreach ($centerCols as $col) {
                         $sheet->getStyle("{$col}3:{$col}{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     }
-                    
+
                     // Gunakan $lastRow
                     $this->applyLevelRisikoColoring($sheet, $lastRow);
                 }
@@ -171,12 +171,12 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
     {
         // Kolom Level Risiko Residual (M)
         $column = 'M';
-        
+
         // Mulai dari row 3 (setelah header)
         for ($row = 3; $row <= $maxRow; $row++) {
             $cellValue = $sheet->getCell($column . $row)->getValue();
             $backgroundColor = $this->getLevelRisikoBackgroundColor($cellValue);
-            
+
             if ($backgroundColor) {
                 $sheet->getStyle($column . $row)->applyFromArray([
                     'fill' => [
@@ -202,9 +202,9 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
         if (!$levelRisiko || $levelRisiko === '-') {
             return null;
         }
-        
+
         $levelRisiko = strtolower(trim($levelRisiko));
-        
+
         switch ($levelRisiko) {
             case 'low':
                 return '92D050'; // Hijau Tua
@@ -232,7 +232,8 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
             'projectRiskAnalisa.skalaProbabilitasResidual',
             'projectRiskAnalisa.skalaDampakResidualObj',
         ])
-            ->where('project_id', $this->projectId)
+            // ->where('project_id', $this->projectId)
+            ->whereIn('project_id', $this->projectIds)
             ->get()
             ->sortByDesc('projectRiskAnalisa.skala_risiko');
 
@@ -242,7 +243,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
         foreach ($risikos as $risiko) {
             $project = $risiko->projectPeriodeList->project;
             $analisa = $risiko->projectRiskAnalisa;
-            
+
             if (!$analisa) {
                 $rowData = [
                     'jenis_data' => '-',
@@ -261,7 +262,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                     'nilai_efektivitas' => '-',
                     'efektifitas_perlakuan' => '-',
                 ];
-                
+
                 $exportData->push($rowData);
                 $nomorUrut++;
                 continue;
@@ -269,7 +270,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
 
             // Tentukan jenis data berdasarkan kategori dampak
             $jenisData = ucfirst(strtolower($analisa->kategori_dampak ?? 'Kuantitatif'));
-            
+
             $rowData = [
                 'jenis_data' => $jenisData,
                 'no' => $nomorUrut,
@@ -312,13 +313,13 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
     private function formatSkalaDampak($analisa)
     {
         if (!$analisa->skala_dampak_residual) return '-';
-        
+
         $deskripsi = optional($analisa->skalaDampakResidualObj)->deskripsi ?? '';
-        
+
         if ($deskripsi) {
             return $analisa->skala_dampak_residual . ' - ' . $deskripsi;
         }
-        
+
         return $analisa->skala_dampak_residual;
     }
 
@@ -328,14 +329,14 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
     private function formatSkalaProbabilitas($analisa)
     {
         if (!$analisa->skalaProbabilitasResidual) return '-';
-        
+
         $tingkat = $analisa->skalaProbabilitasResidual->tingkat ?? '-';
         $skala = $analisa->skalaProbabilitasResidual->skala ?? '';
-        
+
         if ($tingkat !== '-' && $skala) {
             return $tingkat . ' - ' . $skala;
         }
-        
+
         return $tingkat;
     }
 
@@ -351,7 +352,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
 
         // 2. Jika sudah ditutup, cek nilai efektivitas dari tabel ProjectRisk ($risiko)
         $nilaiEfektivitas = (float) $risiko->efektivitas_perlakuan_risiko;
-        
+
         if ($nilaiEfektivitas > 0) {
             return 'Efektif';
         } else {

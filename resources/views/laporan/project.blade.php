@@ -22,9 +22,9 @@
           @csrf
           <div class="row g-3">
             <div class="col-md-5">
-              <label for="project_id" class="form-label">Project</label>
-              <select name="project_id" id="project_id" class="form-select select2" required>
-                <option value="">Pilih Project...</option>
+              <label for="project_ids" class="form-label">Project</label>
+              <select name="project_ids[]" id="project_ids" class="form-select select2" multiple="multiple" data-placeholder="Pilih Project..." required>
+                <option value="all">Pilih Semua Project</option>
                 @if (is_iterable($projects))
                   @foreach ($projects as $project)
                     <option value="{{ $project->id }}">{{ $project->project_name }}</option>
@@ -32,7 +32,16 @@
                 @endif
               </select>
             </div>
-            <div class="col-md-2 d-flex align-items-end">
+
+            <div class="col-md-4">
+                <label for="report_type" class="form-label">Jenis Laporan</label>
+                <select name="report_type" id="report_type" class="form-select" required>
+                    <option value="risk_register">Risk Register Project</option>
+                    <option value="loss_event">Loss Event Project (LED)</option>
+                </select>
+            </div>
+
+            <div class="col-md-3 d-flex align-items-end">
               <button type="submit" id="exportBtn" class="btn btn-primary w-100 gap-1 d-flex flex-center">
                 <span id="btnIcon">
                   <i class="bx bx-spreadsheet"></i>
@@ -53,38 +62,53 @@
 @section('scripts')
 <script type="text/javascript">
 $(document).ready(function() {
+    // Inisialisasi Select2 agar support placeholder multiple
+    $('.select2').select2({
+        width: '100%',
+        closeOnSelect: false, // Opsional: agar dropdown tidak nutup pas pilih banyak
+        placeholder: "Pilih Project..."
+    });
+
     $('#exportForm').on('submit', function(e) {
         e.preventDefault();
-        
-        // Validasi form
-        const projectId = $('#project_id').val();
-        
-        if (!projectId) {
-            alert('Harap pilih project terlebih dahulu.');
+
+        // 1. Ambil value sebagai Array
+        const projectIds = $('#project_ids').val();
+        const reportType = $('#report_type').val();
+
+        // Validasi: pastikan array tidak kosong
+        if (!projectIds || projectIds.length === 0) {
+            Swal.fire('Perhatian', 'Harap pilih minimal satu project.', 'warning');
             return;
         }
-        
+
         showLoading();
-        
+
+        let targetUrl = '{{ route("laporan.project.export") }}';
+        if (reportType === 'loss_event') {
+            targetUrl = '{{ route("laporan.project.export_led") }}';
+        }
+
         $.ajax({
-            url: '{{ route("laporan.project.export") }}',
+            url: targetUrl,
             type: 'POST',
             data: {
                 _token: $('input[name="_token"]').val(),
-                project_id: projectId
+                // Kirim array ID project
+                project_ids: projectIds
             },
             xhrFields: {
                 responseType: 'blob'
             },
             success: function(data, status, xhr) {
                 hideLoading();
-                const blob = new Blob([data], { 
-                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+                const blob = new Blob([data], {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 });
-                
+
                 const disposition = xhr.getResponseHeader('Content-Disposition');
-                let filename = 'Laporan_Risk_Register.xlsx';
-                
+                let filename = 'Laporan.xlsx';
+
                 if (disposition && disposition.indexOf('filename=') !== -1) {
                     const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
                     const matches = filenameRegex.exec(disposition);
@@ -92,7 +116,7 @@ $(document).ready(function() {
                         filename = matches[1].replace(/['"]/g, '');
                     }
                 }
-                
+
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.style.display = 'none';
@@ -105,29 +129,44 @@ $(document).ready(function() {
             },
             error: function(xhr, status, error) {
                 hideLoading();
-                
                 let errorMsg = 'Gagal membuat laporan Excel. Silakan coba lagi.';
-                
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
+
+                // Handle response blob error (perlu reader karena responseType='blob')
+                if (xhr.response instanceof Blob) {
+                    const reader = new FileReader();
+                    reader.onload = function() {
+                        try {
+                            const errorJson = JSON.parse(this.result);
+                            if(errorJson.message) errorMsg = errorJson.message;
+                        } catch(e) {}
+                        showError(errorMsg);
+                    };
+                    reader.readAsText(xhr.response);
+                } else {
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    showError(errorMsg);
                 }
-                
-                Swal.fire({
-                    title: 'Error',
-                    text: errorMsg,
-                    icon: 'error',
-                    confirmButtonText: 'OK',
-                });
             }
         });
     });
-    
+
+    function showError(msg) {
+        Swal.fire({
+            title: 'Error',
+            text: msg,
+            icon: 'error',
+            confirmButtonText: 'OK',
+        });
+    }
+
     function showLoading() {
         $('#exportBtn').prop('disabled', true);
         $('#btnIcon').html('<div class="spinner-border spinner-border-sm me-1" role="status"></div>');
         $('#btnText').text('Generating...');
     }
-    
+
     function hideLoading() {
         $('#exportBtn').prop('disabled', false);
         $('#btnIcon').html('<i class="bx bx-spreadsheet"></i>');

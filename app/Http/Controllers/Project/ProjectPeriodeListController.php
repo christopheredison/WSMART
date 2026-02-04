@@ -878,7 +878,10 @@ class ProjectPeriodeListController extends BasicCRUDController
             elseif ($levelId == 1 && $user->unit->unit_mr) $target = 4;
             elseif ($levelId == 2 && $user->unit->unit_mr) $target = 5;
 
-            if ($latestMon->status == $target && !$latestMon->is_approved) {
+            if (
+                $latestMon->status == $target
+                && !$latestMon->is_approved
+              ) {
                 $isMyMonTurn = true;
             }
         }

@@ -22,15 +22,15 @@ use Carbon\CarbonPeriod;
 
 class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
-    private $projectId;
-    private $timelineData = []; 
+    private $projectIds;
+    private $timelineData = [];
     private $totalRows = 0;
     private $opsiPerlakuan = [];
     private $jenisRencana = [];
 
-    public function __construct(int $projectId)
+    public function __construct(array $projectIds)
     {
-        $this->projectId = $projectId;
+        $this->projectIds = $projectIds;
 
         $this->loadOpsiPerlakuan();
         $this->loadJenisRencana();
@@ -180,13 +180,13 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 // Terapkan border ke seluruh data jika ada baris (baris > 2)
                 if ($lastRow > 2) {
                     $maxDataRow = $lastRow; // Ini adalah baris data terakhir yang sebenarnya
-                    
+
                     // Terapkan border dan style alignment ke semua sel data
                     $sheet->getStyle('A3:X' . $maxDataRow)->applyFromArray($dataStyle);
-                    
+
                     // Format teks untuk kolom Kode Penyebab Risiko (Kolom D)
                     $sheet->getStyle('D3:D' . $maxDataRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
-                    
+
                     // Terapkan pewarnaan timeline
                     $this->applyTimelineColoring($sheet, $maxDataRow);
 
@@ -244,7 +244,8 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
             'penyebabRisikoProjects.jenisRencanaPerlakuanRisiko',
             'penyebabRisikoProjects.perlakuanPenyebabRisiko.lastMonitoring'
         ])
-            ->where('project_id', $this->projectId)
+            // ->where('project_id', $this->projectId)
+            ->whereIn('project_id', $this->projectIds)
             ->get()
             ->sortByDesc('projectRiskAnalisa.skala_risiko');
 
@@ -274,7 +275,7 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                     'jenis_program_rkap' => '-',
                     'pic' => '-',
                 ];
-                
+
                 $finalRow = array_merge($rowData, $timelineMonths);
                 $exportData->push($finalRow);
                 $this->timelineData[$currentRowIndex] = $timelineBooleans;
@@ -285,10 +286,10 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
 
                 foreach ($penyebabRisikos as $penyebab) {
                     $perlakuanRisikos = $penyebab->perlakuanPenyebabRisiko;
-                    
+
                     if (!$perlakuanRisikos->isEmpty()) {
                         $isFirstPerlakuan = true;
-                        
+
                         foreach ($perlakuanRisikos as $perlakuan) {
                             $timelineMonths = array_fill(0, 12, '');
                             $timelineBooleans = array_fill(0, 12, false);
@@ -296,14 +297,14 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                             // Proses rentang timeline dari perlakuan
                             $start = $perlakuan->timeline_perlakuan_risiko_start;
                             $end = $perlakuan->timeline_perlakuan_risiko_end;
-                            
+
                             if ($start && $end) {
                                 try {
                                     $startDate = Carbon::parse($start);
                                     $endDate = Carbon::parse($end);
-                                    
+
                                     $period = CarbonPeriod::create($startDate, '1 month', $endDate);
-                                    
+
                                     foreach ($period as $date) {
                                         $monthIndex = (int)$date->format('n') - 1; // Jan=0, Des=11
                                         if ($monthIndex >= 0 && $monthIndex < 12) {
@@ -335,16 +336,16 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                             $exportData->push($finalRow);
                             $this->timelineData[$currentRowIndex] = $timelineBooleans;
                             $currentRowIndex++;
-                            
+
                             $isFirstPerlakuan = false;
                         }
                     }
-                    
+
                     $isFirstRowOfGroup = false;
                     $nomorUrutPenyebab++;
                 }
             }
-            
+
             $nomorUrutRisiko++;
         }
 

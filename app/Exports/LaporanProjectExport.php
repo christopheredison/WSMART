@@ -13,11 +13,11 @@ use App\Exports\Sheets\Project\RealisasiResidualSheet;
 
 class LaporanProjectExport implements WithMultipleSheets
 {
-    protected $projectId;
+    protected $projectIds;
 
-    public function __construct(int $projectId)
+    public function __construct(array $projectIds)
     {
-        $this->projectId = $projectId;
+        $this->projectIds = $projectIds;
     }
 
     /**
@@ -26,13 +26,13 @@ class LaporanProjectExport implements WithMultipleSheets
     public function sheets(): array
     {
         $sheets = [
-            new ProfilRisikoSheet($this->projectId),
-            new RisikoInherentKuantitatifSheet($this->projectId),
-            new RisikoInherentKualitatifSheet($this->projectId),
-            new RisikoResidualKuantitatifSheet($this->projectId),
-            new RisikoResidualKualitatifSheet($this->projectId),
-            new RencanaPerlakuanRisikoSheet($this->projectId),
-            new RealisasiResidualSheet($this->projectId),
+            new ProfilRisikoSheet($this->projectIds),
+            new RisikoInherentKuantitatifSheet($this->projectIds),
+            new RisikoInherentKualitatifSheet($this->projectIds),
+            new RisikoResidualKuantitatifSheet($this->projectIds),
+            new RisikoResidualKualitatifSheet($this->projectIds),
+            new RencanaPerlakuanRisikoSheet($this->projectIds),
+            new RealisasiResidualSheet($this->projectIds),
         ];
 
         return $sheets;

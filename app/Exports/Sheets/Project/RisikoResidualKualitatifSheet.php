@@ -16,11 +16,11 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
-    private $projectId;
+    private $projectIds;
 
-    public function __construct(int $projectId)
+    public function __construct(array $projectIds)
     {
-        $this->projectId = $projectId;
+        $this->projectIds = $projectIds;
     }
 
     /**
@@ -131,7 +131,7 @@ class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, Wit
                 if ($highestRow > 2) { // Cek jika ada data di bawah header
                     // Terapkan border ke semua sel data
                     $sheet->getStyle('A3:L' . $highestRow)->applyFromArray($dataStyle);
-                    
+
                     // Panggil fungsi pewarnaan background
                     $this->applyLevelRisikoColoring($sheet, $highestRow);
                 }
@@ -150,12 +150,12 @@ class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, Wit
     {
         // Kolom Level Risiko BUMN (L)
         $levelRisikoColumn = 'L';
-        
+
         // Mulai dari row 3 (setelah header)
         for ($row = 3; $row <= $maxRow; $row++) {
             $cellValue = $sheet->getCell($levelRisikoColumn . $row)->getValue();
             $backgroundColor = $this->getLevelRisikoBackgroundColor($cellValue);
-            
+
             if ($backgroundColor) {
                 $sheet->getStyle($levelRisikoColumn . $row)->applyFromArray([
                     'fill' => [
@@ -175,9 +175,9 @@ class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, Wit
         if (!$levelRisiko || $levelRisiko === '-') {
             return null;
         }
-        
+
         $levelRisiko = strtolower(trim($levelRisiko));
-        
+
         switch ($levelRisiko) {
             case 'low':
                 return '92D050'; // Hijau Tua
@@ -206,7 +206,8 @@ class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, Wit
             'projectRiskAnalisa.areaDampakObj',
             'peristiwaRisiko'
         ])
-            ->where('project_id', $this->projectId)
+            // ->where('project_id', $this->projectId)
+            ->whereIn('project_id', $this->projectIds)
             ->whereHas('projectRiskAnalisa', function ($query) {
                 $query->where('kategori_dampak', 'Kualitatif');
             })
@@ -267,12 +268,12 @@ class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, Wit
         if (!$analisa->skala_dampak_residual) {
             return '-';
         }
-        
+
         $deskripsi = optional($analisa->skalaDampakResidualObj)->deskripsi;
         if ($deskripsi) {
             return  $analisa->skala_dampak_residual . ' - ' . $deskripsi;
         }
-        
+
         return $analisa->skala_dampak_residual;
     }
 
@@ -282,14 +283,14 @@ class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, Wit
     private function formatSkalaProbabilitasResidual($analisa)
     {
         if (!$analisa->skalaProbabilitasResidual) return '-';
-        
+
         $tingkat = $analisa->skalaProbabilitasResidual->tingkat ?? '-';
         $skala = $analisa->skalaProbabilitasResidual->skala ?? '-';
-        
+
         if ($tingkat !== '-' && $skala) {
             return $tingkat . ' - ' . $skala;
         }
-        
+
         return $tingkat;
     }
 }

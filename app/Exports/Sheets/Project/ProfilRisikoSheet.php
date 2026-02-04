@@ -15,11 +15,11 @@ use Carbon\Carbon;
 
 class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, ShouldAutoSize, WithEvents
 {
-    private $projectId;
+    private $projectIds;
 
-    public function __construct(int $projectId)
+    public function __construct(array $projectIds)
     {
-        $this->projectId = $projectId;
+        $this->projectIds = $projectIds;
     }
 
     /**
@@ -71,6 +71,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                 $sheet->setCellValue('V1', 'Kategori Dampak');
                 $sheet->setCellValue('W1', 'Deskripsi Dampak');
                 $sheet->setCellValue('X1', 'Perkiraan Waktu Terpapar Risiko');
+                $sheet->setCellValue('Y1', 'Status Risiko');
 
                 // Row 2: Sub-header untuk Kategori Treshold KRI
                 $sheet->setCellValue('P2', 'Aman');
@@ -79,7 +80,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
 
                 // Merge sel header
                 // Tambahkan 'J' ke dalam array, dan sesuaikan sisa kolom
-                $mergeColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'S', 'T', 'U', 'V', 'W', 'X'];
+                $mergeColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
                 foreach ($mergeColumns as $col) {
                     $sheet->mergeCells("{$col}1:{$col}2");
                 }
@@ -87,7 +88,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                 // Merge header group KRI
                 $sheet->mergeCells('P1:R1');
 
-                // Style utama untuk seluruh header (A1:X2) - Biru Muda
+                // Style utama untuk seluruh header (A1:Y2) - Biru Muda
                 $headerStyle = [
                     'alignment' => [
                         'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
@@ -105,7 +106,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                         ]
                     ]
                 ];
-                $sheet->getStyle('A1:X2')->applyFromArray($headerStyle);
+                $sheet->getStyle('A1:Y2')->applyFromArray($headerStyle);
 
                 // Style khusus untuk sub-header KRI (menimpa warna background)
                 // Aman (P2) - Hijau
@@ -133,7 +134,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                 // Terapkan border ke semua baris data
                 $highestRow = $sheet->getHighestRow();
                 if ($highestRow > 2) {
-                    $sheet->getStyle('A3:X' . $highestRow)->applyFromArray($dataStyle);
+                    $sheet->getStyle('A3:Y' . $highestRow)->applyFromArray($dataStyle);
 
                     // Set format text untuk kolom Kode Penyebab Risiko
                     $sheet->getStyle('L3:L' . $highestRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
@@ -142,8 +143,8 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                     $this->applyThresholdColoring($sheet, $highestRow);
                 }
 
-                // Auto size semua kolom (A sampai X)
-                foreach (range('A', 'X') as $column) {
+                // Auto size semua kolom (A sampai Y)
+                foreach (range('A', 'Y') as $column) {
                     $sheet->getColumnDimension($column)->setAutoSize(true);
                 }
             },
@@ -192,7 +193,8 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
             'projectKontrolEksistings',
             'penilaianEfektivitasKontrolObj',
         ])
-        ->where('project_id', $this->projectId)
+        // ->where('project_id', $this->projectId)
+        ->whereIn('project_id', $this->projectIds)
         ->get()
         ->sortByDesc('projectRiskAnalisa.skala_risiko');
 
@@ -250,6 +252,11 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
         $project = $risiko->projectPeriodeList->project;
         $analisa = $risiko->projectRiskAnalisa;
 
+        $statusRisiko = '';
+        if ($isFirstRowOfGroup) {
+            $statusRisiko = $risiko->is_closed ? 'Closed' : 'Open';
+        }
+
         return [
             'no' => $isFirstRowOfGroup ? $nomorUrutRisiko : '',
             'nama_bumn' => $isFirstRowOfGroup ? 'PT Wijaya Karya (Persero) Tbk' : '',
@@ -278,6 +285,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
             'kategori_dampak' => $isFirstRowOfGroup ? ($analisa->kategori_dampak ?? '-') : '',
             'deskripsi_dampak' => $isFirstRowOfGroup ? ($analisa->deskripsi_dampak ?? '-') : '',
             'perkiraan_waktu_terpapar' => $isFirstRowOfGroup ? $this->formatWaktuTerpapar($risiko) : '',
+            'status_risiko' => $statusRisiko,
         ];
     }
 
