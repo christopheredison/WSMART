@@ -237,14 +237,12 @@ class ProjectController extends BasicCRUDController
             $profitCenter = $projectData['profit_center'] ?? null;
             $nilaiKontrak = 0;
 
+            // Logic baru: Mencari nilai kontrak dengan mundur ke belakang jika status OPEN
             if ($profitCenter) {
-                $nilaiKontrak = $this->fetchNilaiKontrak($apiWika, $profitCenter, $currentPeriod);
-
-                if ($nilaiKontrak == 0) {
-                    $nilaiKontrak = $this->fetchNilaiKontrak($apiWika, $profitCenter, $previousPeriod);
-                }
+                $nilaiKontrak = $this->fetchNilaiKontrakRecursive($apiWik, $profitCenter);
             }
 
+            // Simpan / Update Project
             $project = Project::updateOrCreate([
                 'project_code' => $projectData['kode_spk'],
             ], [
@@ -260,11 +258,13 @@ class ProjectController extends BasicCRUDController
                 'meta'           => $projectData,
             ]);
 
+            // Cek Unit / Divisi
             $divisiUnit = null;
             if (!empty($projectData['divisisap'])) {
                 $divisiUnit = Unit::where('cost_center', $projectData['divisisap'])->first();
             }
 
+            // Update Periode List
             ProjectPeriodeList::updateOrCreate([
                 'project_id' => $project->id,
                 'periode_id' => null,
@@ -295,6 +295,57 @@ class ProjectController extends BasicCRUDController
             return 0;
         }
 
+        return 0;
+    }
+
+
+    private function fetchNilaiKontrakRecursive($apiWika, $profitCenter)
+    {
+        // Mulai dari bulan ini
+        $dateCheck = Carbon::now();
+
+        // Batas mundur: Bulan ini + 3 bulan ke belakang = 4 kali pengecekan total
+        // Iterasi 0: Bulan Ini
+        // Iterasi 1: -1 Bulan
+        // Iterasi 2: -2 Bulan
+        // Iterasi 3: -3 Bulan
+        $maxRetries = 4;
+
+        for ($i = 0; $i < $maxRetries; $i++) {
+            $currentPeriod = $dateCheck->format('Ym');
+
+            try {
+                $response = $apiWika->getHasilUsahaProject($currentPeriod, $profitCenter);
+
+                // Cek apakah response valid dan ada datanya
+                if (isset($response['status']) && $response['status'] && isset($response['data'])) {
+
+                    $data = $response['data'];
+                    $statusAutorisasi = $data['status_autorisasi'] ?? 'OPEN'; // Default OPEN jika null
+
+                    // LOGIC UTAMA:
+                    // Jika AUTORISASI -> Ambil nilainya, return immediately.
+                    if ($statusAutorisasi === 'AUTORISASI') {
+                        $nilai = $data['hasil_usaha']['kontrak_review'] ?? 0;
+                        return (float) $nilai;
+                    }
+
+                    // Jika OPEN -> Biarkan loop berlanjut (akan mundur 1 bulan di bawah)
+                    // Jika CLOSE -> Tergantung bisnis proses, biasanya dianggap final (bisa diambil),
+                    // tapi sesuai request Anda fokus di AUTORISASI vs OPEN.
+                }
+
+            } catch (\Exception $e) {
+                // Jika error API (misal timeout/not found), anggap tidak ada data di bulan ini
+                // Lanjut cek bulan sebelumnya
+                // Log::warning("Gagal fetch NK {$profitCenter} periode {$currentPeriod}: " . $e->getMessage());
+            }
+
+            // Mundur 1 bulan untuk iterasi berikutnya
+            $dateCheck->subMonth();
+        }
+
+        // Jika sudah mundur 3 kali (total 4 attempt) dan tidak ketemu 'AUTORISASI', return 0
         return 0;
     }
 }
