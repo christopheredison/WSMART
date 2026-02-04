@@ -261,7 +261,7 @@ class ProjectController extends BasicCRUDController
 
             // Logic baru: Mencari nilai kontrak dengan mundur ke belakang jika status OPEN
             if ($profitCenter) {
-                $nilaiKontrak = $this->fetchNilaiKontrakRecursive($apiWik, $profitCenter);
+                $nilaiKontrak = $this->fetchNilaiKontrakRecursive($apiWika, $profitCenter);
             }
 
             // Simpan / Update Project
