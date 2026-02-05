@@ -135,30 +135,31 @@ class LaporanController extends Controller
 
     public function project()
     {
-        $user = request()->user();
-        // 1. Cek Permission Admin: Ambil Semua Data
-        if (Gate::check('project_admin_access')) {
-            $projects = Project::all();
+        $user = auth()->user();
+        $user->load('projects', 'unit');
+
+        // 1. Ambil ID project yang di-assign langsung (Many-to-Many)
+        $userProjectIds = $user->projects->pluck('id');
+
+        // 2. Jika punya akses divisi, ambil project berdasarkan kesamaan Cost Center
+        $unitProjectIds = collect([]);
+        if ($user->unit && Gate::check('can_access_project_under_division')) {
+            $unitProjectIds = \App\Models\Project::where('cost_center_parent', $user->unit->cost_center)
+                                ->pluck('id');
         }
-        // 2. Jika bukan admin, filter berdasarkan akses
-        else {
-            $projects = Project::where(function ($query) use ($user) {
 
-                // A. Logika "hasProject": Ambil project yang di-assign ke user ini
-                // Pastikan di Model 'Project' ada relasi public function users()
-                $query->whereHas('users', function ($q) use ($user) {
-                    $q->where('users.id', $user->id);
-                });
+        // 3. Gabungkan ID unik yang boleh diakses
+        $allAccessibleIds = $userProjectIds->merge($unitProjectIds)->unique();
 
-                // B. Logika "can_access_project_under_division"
-                // Jika punya permission DAN user punya unit
-                if (Gate::check('can_access_project_under_division') && $user->unit) {
-                    // Gunakan orWhere karena ini opsi tambahan (User Assigned ATAU Satu Cost Center)
-                    $query->orWhere('cost_center_parent', $user->unit->cost_center);
-                }
-
-            })->get();
-        }
+        // 4. Query untuk dropdown Blade
+        $projects = \App\Models\Project::query()
+            // Jika punya permission admin, tampilkan SEMUA.
+            // Jika TIDAK, filter hanya ID yang boleh diakses.
+            ->when(!Gate::check('project_admin_access'), function ($query) use ($allAccessibleIds) {
+                return $query->whereIn('id', $allAccessibleIds);
+            })
+            ->orderBy('project_name', 'asc')
+            ->get();
 
         return view('laporan.project', compact('projects'));
     }
@@ -171,33 +172,50 @@ class LaporanController extends Controller
         ]);
 
         try {
+            $user = auth()->user();
             $inputIds = $request->input('project_ids');
             $finalProjectIds = [];
             $fileNameProject = '';
 
-            // LOGIKA: Cek apakah user memilih "Pilih Semua Project" ('all')
-            if (in_array('all', $inputIds)) {
-                // Ambil semua ID project dari database
-                $finalProjectIds = Project::pluck('id')->toArray();
-                $fileNameProject = 'All_Projects';
-            } else {
-                // Gunakan ID yang dipilih saja
-                $finalProjectIds = $inputIds;
+            // --- LOGIKA FILTER AKSES (SAMA DENGAN INDEX) ---
+            $userProjectIds = $user->projects->pluck('id');
+            $unitProjectIds = collect([]);
+            if ($user->unit && Gate::check('can_access_project_under_division')) {
+                $unitProjectIds = Project::where('cost_center_parent', $user->unit->cost_center)->pluck('id');
+            }
+            $allAccessibleIds = $userProjectIds->merge($unitProjectIds)->unique()->toArray();
 
-                // Logika Penamaan File
+            if (in_array('all', $inputIds)) {
+                // Jika pilih 'all', gunakan hanya ID yang boleh diakses user (atau semua jika Admin)
+                if (Gate::check('project_admin_access')) {
+                    $finalProjectIds = Project::pluck('id')->toArray();
+                    $fileNameProject = 'All_Projects';
+                } else {
+                    $finalProjectIds = $allAccessibleIds;
+                    $fileNameProject = 'My_Projects';
+                }
+            } else {
+                // Jika user memilih ID spesifik, validasi ID tersebut apakah memang boleh diakses (Security Check)
+                if (!Gate::check('project_admin_access')) {
+                    $finalProjectIds = array_intersect($inputIds, $allAccessibleIds);
+                } else {
+                    $finalProjectIds = $inputIds;
+                }
+
                 if (count($finalProjectIds) === 1) {
-                    // Jika cuma 1 project, pakai nama projectnya
-                    $project = Project::find($finalProjectIds[0]);
+                    $project = Project::find($finalProjectIds[array_key_first($finalProjectIds)]);
                     $fileNameProject = $project ? str_replace(' ', '_', $project->project_name) : 'Project';
                 } else {
-                    // Jika banyak project
-                    $fileNameProject = 'Multiple_Projects_(' . count($finalProjectIds) . ')';
+                    $fileNameProject = 'Selected_Projects_(' . count($finalProjectIds) . ')';
                 }
+            }
+
+            if (empty($finalProjectIds)) {
+                return response()->json(['message' => 'Tidak ada project yang dapat diakses untuk di-export.'], 403);
             }
 
             $fileName = 'Laporan_Risk_Register_' . $fileNameProject . '.xlsx';
 
-            // Pastikan class LaporanProjectExport sudah support constructor array (sesuai jawaban sebelumnya)
             $fileContents = Excel::raw(
                 new LaporanProjectExport($finalProjectIds),
                 \Maatwebsite\Excel\Excel::XLSX
@@ -209,50 +227,62 @@ class LaporanController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            // dd($e->getMessage()); // Debugging only
             Log::error('Gagal export laporan project: ' . $e->getMessage());
-
-            // Karena request via AJAX dan response blob, return JSON error code 500
             return response()->json(['message' => 'Gagal generate laporan: ' . $e->getMessage()], 500);
         }
     }
 
     public function projectLedExport(Request $request)
     {
-        // 1. Validasi array project_ids (bukan project_id singular)
         $request->validate([
             'project_ids'   => 'required|array',
-            'project_ids.*' => 'string', // Bisa 'all' atau ID numeric
+            'project_ids.*' => 'string',
         ]);
 
         try {
+            $user = auth()->user();
             $inputIds = $request->input('project_ids');
             $finalProjectIds = [];
             $fileNameProject = '';
 
-            // 2. LOGIKA PILIH PROJECT (Sama persis dengan projectExport)
-            if (in_array('all', $inputIds)) {
-                // Ambil semua ID project dari database
-                $finalProjectIds = Project::pluck('id')->toArray();
-                $fileNameProject = 'All_Projects';
-            } else {
-                // Gunakan ID yang dipilih saja
-                $finalProjectIds = $inputIds;
+            // --- LOGIKA FILTER AKSES (SAMA DENGAN INDEX) ---
+            $userProjectIds = $user->projects->pluck('id');
+            $unitProjectIds = collect([]);
+            if ($user->unit && Gate::check('can_access_project_under_division')) {
+                $unitProjectIds = Project::where('cost_center_parent', $user->unit->cost_center)->pluck('id');
+            }
+            $allAccessibleIds = $userProjectIds->merge($unitProjectIds)->unique()->toArray();
 
-                // Logika Penamaan File
+            if (in_array('all', $inputIds)) {
+                if (Gate::check('project_admin_access')) {
+                    $finalProjectIds = Project::pluck('id')->toArray();
+                    $fileNameProject = 'All_Database_LED';
+                } else {
+                    $finalProjectIds = $allAccessibleIds;
+                    $fileNameProject = 'My_Database_LED';
+                }
+            } else {
+                // Security Check: Hanya izinkan ID yang memang punya akses
+                if (!Gate::check('project_admin_access')) {
+                    $finalProjectIds = array_intersect($inputIds, $allAccessibleIds);
+                } else {
+                    $finalProjectIds = $inputIds;
+                }
+
                 if (count($finalProjectIds) === 1) {
-                    // Jika cuma 1 project, pakai nama projectnya
-                    $project = Project::find($finalProjectIds[0]);
+                    $project = Project::find($finalProjectIds[array_key_first($finalProjectIds)]);
                     $fileNameProject = $project ? str_replace(' ', '_', $project->project_name) : 'Project';
                 } else {
-                    // Jika banyak project
-                    $fileNameProject = 'Multiple_Projects_(' . count($finalProjectIds) . ')';
+                    $fileNameProject = 'Selected_LED_(' . count($finalProjectIds) . ')';
                 }
+            }
+
+            if (empty($finalProjectIds)) {
+                return response()->json(['message' => 'Tidak ada project yang dapat diakses.'], 403);
             }
 
             $fileName = 'Laporan_Loss_Event_' . $fileNameProject . '.xlsx';
 
-            // 3. Generate Excel dengan Array ID
             $fileContents = Excel::raw(
                 new LaporanLossEventProjectExport($finalProjectIds),
                 \Maatwebsite\Excel\Excel::XLSX
@@ -265,7 +295,6 @@ class LaporanController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Gagal export laporan LED: ' . $e->getMessage());
-            // Return JSON error agar ditangkap oleh AJAX di frontend
             return response()->json(['message' => 'Gagal generate laporan LED: ' . $e->getMessage()], 500);
         }
     }
