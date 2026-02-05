@@ -1886,6 +1886,16 @@ class ProjectRiskController extends BasicCRUDController
             'skala_parameter_residual_id' => $request->skala_parameter_residual_id,
         ];
 
+        $skalaInherent = SkalaParameter::find($request->skala_parameter_id);
+        $skalaResidual = SkalaParameter::find($request->skala_parameter_residual_id);
+
+        // CEK NULL SEBELUM AKSES ->tingkat
+        if (!$skalaInherent || !$skalaResidual) {
+            return response()->json([
+                'message' => 'Gagal memproses data: Parameter skala tidak lengkap. Silakan pilih ulang Skala Probabilitas.'
+            ], 422);
+        }
+
         $analisa->update($toUpdate);
 
         $toUpdate = [

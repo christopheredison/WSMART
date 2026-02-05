@@ -464,15 +464,14 @@ $(document).ready(function() {
 
     function populateSkalaDropdown(selectedType, $scaleSelect) {
         $scaleSelect.prop('disabled', true).html('<option value="">Pilih Skala...</option>');
-        if (!selectedType) {
-            $scaleSelect.html('<option value="">Pilih Parameter Dahulu</option>');
-            return;
-        }
+        if (!selectedType) return;
+
         const scales = groupedSkalaParameters[selectedType] || [];
         let options = '<option value="">Pilih Skala...</option>';
         scales.forEach(function(scale) {
             options += `<option value="${scale.id}" data-min="${scale.min}" data-max="${scale.max}" data-tingkat="${scale.tingkat}">${scale.tingkat} - ${scale.skala}</option>`;
         });
+
         $scaleSelect.html(options).prop('disabled', false);
     }
 
@@ -553,25 +552,34 @@ $(document).ready(function() {
         const selectedType = $(this).val();
         $paramTypeResidual.val(selectedType);
 
-        populateSkalaDropdown(selectedType, $scaleInherent);
-        populateSkalaDropdown(selectedType, $scaleResidual);
-
-        // $scaleInherent.val('').trigger('change');
-
-        // Jika data lama ada, set ulang (agar tidak reset saat auto select)
         const savedInherentId = '{{ $analisa->skala_parameter_id ?? '' }}';
-        if(savedInherentId && $scaleInherent.find(`option[value="${savedInherentId}"]`).length) {
-            $scaleInherent.val(savedInherentId);
-        } else {
-            $scaleInherent.val('').trigger('change');
-        }
-
         const savedResidualId = '{{ $analisa->skala_parameter_residual_id ?? '' }}';
-        if(savedResidualId && $scaleResidual.find(`option[value="${savedResidualId}"]`).length) {
-            $scaleResidual.val(savedResidualId);
-        } else {
-            $scaleResidual.val('').trigger('change');
-        }
+
+        populateSkalaDropdown(selectedType, $scaleInherent, savedInherentId);
+        populateSkalaDropdown(selectedType, $scaleResidual, savedResidualId);
+
+        // Trigger perubahan skala residual untuk disable tingkat yang tidak valid
+        $scaleInherent.trigger('change');
+
+        // populateSkalaDropdown(selectedType, $scaleInherent);
+        // populateSkalaDropdown(selectedType, $scaleResidual);
+
+        // // $scaleInherent.val('').trigger('change');
+
+        // // Jika data lama ada, set ulang (agar tidak reset saat auto select)
+        // const savedInherentId = '{{ $analisa->skala_parameter_id ?? '' }}';
+        // if(savedInherentId && $scaleInherent.find(`option[value="${savedInherentId}"]`).length) {
+        //     $scaleInherent.val(savedInherentId);
+        // } else {
+        //     $scaleInherent.val('').trigger('change');
+        // }
+
+        // const savedResidualId = '{{ $analisa->skala_parameter_residual_id ?? '' }}';
+        // if(savedResidualId && $scaleResidual.find(`option[value="${savedResidualId}"]`).length) {
+        //     $scaleResidual.val(savedResidualId);
+        // } else {
+        //     $scaleResidual.val('').trigger('change');
+        // }
     });
 
     $paramTypeResidual.on('change', function() {
@@ -586,29 +594,30 @@ $(document).ready(function() {
     });
 
     $scaleInherent.on('change', function() {
-        // Jika event ini dipicu otomatis oleh 'change.selectOnly' (dari input nilai), skip validasi nilai
-        // if (e.namespace === 'selectOnly') {
-        //     refreshSkalaAndLevelRisiko();
-        //     return;
-        // }
-
         const $selectedOption = $(this).find('option:selected');
-        // const min = $selectedOption.data('min');
-        // const max = $selectedOption.data('max');
         const tingkatInherent = parseInt($selectedOption.data('tingkat')) || 0;
+        const currentResidualValue = $scaleResidual.val();
+        const $selectedResidualOption = $scaleResidual.find('option:selected');
+        const tingkatResidualsaatIni = parseInt($selectedResidualOption.data('tingkat')) || 0;
 
-        // if ($(this).val()) {
-        //     $nilaiProbInherent.prop('disabled', false).attr({ min, max }).val('');
-        // } else {
-        //     $nilaiProbInherent.prop('disabled', true).val('').attr({ min: 0, max: 100 });
-        // }
-        // $nilaiProbInherent.trigger('change');
-
-        // $scaleResidual.val('').trigger('change');
+        // 1. Update status disabled pada opsi Residual
         $scaleResidual.find('option').each(function() {
             const tingkatOption = parseInt($(this).data('tingkat')) || 0;
-            $(this).prop('disabled', tingkatOption > tingkatInherent);
+            if (tingkatOption > 0) {
+                // Disable jika tingkat residual > tingkat inherent
+                $(this).prop('disabled', tingkatOption > tingkatInherent);
+            }
         });
+
+        // 2. LOGIKA KRUSIAL: Jika nilai residual saat ini tidak valid (lebih tinggi dari inherent)
+        // atau jika belum dipilih, maka paksa samakan dengan Inherent agar tidak NULL
+        if (tingkatResidualsaatIni > tingkatInherent || currentResidualValue === "") {
+            // Cari ID di dropdown residual yang punya tingkat yang sama dengan Inherent
+            const fallbackId = $scaleResidual.find(`option[data-tingkat="${tingkatInherent}"]`).val();
+            if (fallbackId) {
+                $scaleResidual.val(fallbackId).trigger('change');
+            }
+        }
 
         refreshSkalaAndLevelRisiko();
     });
