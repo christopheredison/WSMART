@@ -261,7 +261,7 @@
                                 <td>{{ $loop->iteration }}</td>
                                 <td>
                                   <a href="{{ route('projects.risks.view', ['project' => $projectRisk->project_periode_list_id, 'risk' => $projectRisk->id]) }}">
-                                    {{ $projectRisk->peristiwaRisiko?->title ?? '-' }}
+                                    {{ $projectRisk->peristiwa_risiko_id == 0 ? $projectRisk->rencana_kegiatan : ($projectRisk->peristiwaRisiko?->title ?? '-') }}
                                   </a>
                                 </td>
                                 <td>{{ $projectRisk->deskripsi_peristiwa_risiko ?? '-' }}</td>
