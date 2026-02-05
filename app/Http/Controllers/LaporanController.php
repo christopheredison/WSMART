@@ -135,6 +135,7 @@ class LaporanController extends Controller
 
     public function project()
     {
+        $user = request()->user();
         // 1. Cek Permission Admin: Ambil Semua Data
         if (Gate::check('project_admin_access')) {
             $projects = Project::all();

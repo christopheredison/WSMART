@@ -196,4 +196,9 @@ class Project extends Model
             get: fn () => $this->masa_pelaksanaan_end?->format('d/m/Y')
         );
     }
+
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'user_projects', 'project_id', 'user_id');
+    }
 }
