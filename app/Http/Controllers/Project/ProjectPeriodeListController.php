@@ -247,22 +247,47 @@ class ProjectPeriodeListController extends BasicCRUDController
                 $monActionNeededSql = "FALSE";
                 $monTargetStatus = 0;
 
-                if ($levelId == 6) $monTargetStatus = 1;
-                elseif ($levelId == 7) $monTargetStatus = 2;
-                elseif ($levelId == 1 && !$is_mr) $monTargetStatus = 3;
-                elseif ($levelId == 1 && $is_mr) $monTargetStatus = 4;
-                elseif ($levelId == 2 && $is_mr) $monTargetStatus = 5;
+                // Tentukan Target Status berdasarkan Level User
+                if ($levelId == 6) $monTargetStatus = 1; // Inputter
+                elseif ($levelId == 7) $monTargetStatus = 2; // ROP
+                elseif ($levelId == 1 && !$is_mr) $monTargetStatus = 3; // ROD
+                elseif ($levelId == 1 && $is_mr) $monTargetStatus = 4; // RO MR
+                elseif ($levelId == 2 && $is_mr) $monTargetStatus = 5; // ROW MR
 
                 if ($monTargetStatus > 0) {
+                    // Subquery ID monitoring terakhir (Global Reference)
+                    $latestMonIdSql = "
+                        SELECT MAX(sub_prm.id)
+                        FROM project_risk_monitorings sub_prm
+                        JOIN project_risks sub_pr ON sub_pr.id = sub_prm.risiko_id
+                        WHERE sub_pr.project_periode_list_id = project_periode_lists.id
+                    ";
+
+                    // Subquery untuk Referensi Tahun & Bulan
+                    $refYearSql = "(SELECT ref_prm.tahun FROM project_risk_monitorings ref_prm WHERE ref_prm.id = ($latestMonIdSql))";
+                    $refMonthSql = "(SELECT ref_prm.month FROM project_risk_monitorings ref_prm WHERE ref_prm.id = ($latestMonIdSql))";
+
                     $monActionNeededSql = "EXISTS (
                         SELECT 1
                         FROM project_risk_monitorings prm
                         JOIN project_risks pr ON pr.id = prm.risiko_id
                         WHERE pr.project_periode_list_id = project_periode_lists.id
-                          AND prm.id = (SELECT MAX(sub_prm.id)
-                                      FROM project_risk_monitorings sub_prm
-                                      JOIN project_risks sub_pr ON sub_pr.id = sub_prm.risiko_id
-                                      WHERE sub_pr.project_periode_list_id = project_periode_lists.id)
+                          AND pr.is_closed IS FALSE
+
+                          -- Pastikan Waktu (Bulan/Tahun) Sesuai Referensi Terakhir
+                          AND prm.tahun = $refYearSql
+                          AND prm.month = $refMonthSql
+
+                          -- --- PERBAIKAN PENTING: FILTER HANYA ID TERAKHIR PER RISIKO ---
+                          AND prm.id = (
+                              SELECT MAX(sub_prm.id)
+                              FROM project_risk_monitorings sub_prm
+                              WHERE sub_prm.risiko_id = pr.id
+                              AND sub_prm.tahun = prm.tahun
+                              AND sub_prm.month = prm.month
+                          )
+                          -- -----------------------------------------------------------
+
                           AND prm.status = {$monTargetStatus}
                           AND prm.is_approved IS FALSE
                     )";
@@ -274,16 +299,32 @@ class ProjectPeriodeListController extends BasicCRUDController
                 // Perubahan: Menghapus pengecekan 'IN userIdList' pada Prioritas 1
                 // Agar semua yang butuh verifikasi (baik project sendiri atau project bawahan) naik ke atas.
 
+                // $query->orderByRaw("
+                //     CASE
+                //         -- PRIORITAS 1: 'Perlu Verifikasi' / 'Perlu Revisi' / 'Draft' (My Turn)
+                //         WHEN ($riskActionNeededSql OR $monActionNeededSql) THEN 1
+
+                //         -- PRIORITAS 2: 'Proses Validasi' (Project Saya tapi menunggu orang lain)
+                //         WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 2
+
+                //         -- PRIORITAS 3: Project Lainnya (View Only / Divisi)
+                //         ELSE 3
+                //     END ASC
+                // ");
+
                 $query->orderByRaw("
                     CASE
-                        -- PRIORITAS 1: 'Perlu Verifikasi' / 'Perlu Revisi' / 'Draft' (My Turn)
-                        WHEN ($riskActionNeededSql OR $monActionNeededSql) THEN 1
+                        -- PRIORITAS 1: Action Needed (Risk Register)
+                        WHEN ($riskActionNeededSql) THEN 1
 
-                        -- PRIORITAS 2: 'Proses Validasi' (Project Saya tapi menunggu orang lain)
-                        WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 2
+                        -- PRIORITAS 2: Action Needed (Monitoring)
+                        WHEN ($monActionNeededSql) THEN 2
 
-                        -- PRIORITAS 3: Project Lainnya (View Only / Divisi)
-                        ELSE 3
+                        -- PRIORITAS 3: Project Saya (Proses Validasi / Menunggu)
+                        WHEN project_periode_lists.project_id IN ({$userIdList}) THEN 3
+
+                        -- PRIORITAS 4: Project Lainnya
+                        ELSE 4
                     END ASC
                 ");
 
@@ -674,32 +715,78 @@ class ProjectPeriodeListController extends BasicCRUDController
         return $isMyTurn && $this->userHasAccessToProject($user, $row);
     }
 
+    // private function checkMonitoringActionNeeded($row, $user, $u_step, $levelId)
+    // {
+    //     // Query sederhana untuk kebutuhan flag
+    //     $latestMon = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($row) {
+    //         $q->where('project_periode_list_id', $row->id);
+    //     })->orderBy('id', 'desc')->first();
+
+    //     // if (!$latestMon || $latestMon->status == 100) return false;
+    //     if (!$latestMon || $latestMon->status == 100 || $latestMon->is_approved) return false;
+
+    //     $isMyMonTurn = false;
+    //     if ($levelId == 6) {
+    //         if ($latestMon->status == 1) $isMyMonTurn = true;
+    //     } else {
+    //         $target = 0;
+    //         if ($levelId == 7) $target = 2;
+    //         elseif ($levelId == 1 && !$user->unit->unit_mr) $target = 3;
+    //         elseif ($levelId == 1 && $user->unit->unit_mr) $target = 4;
+    //         elseif ($levelId == 2 && $user->unit->unit_mr) $target = 5;
+
+    //         if ($latestMon->status == $target && !$latestMon->is_approved) {
+    //             $isMyMonTurn = true;
+    //         }
+    //     }
+    //     // return $isMyMonTurn && $user->hasProject($row);
+    //     return $isMyMonTurn && $this->userHasAccessToProject($user, $row);
+    // }
+
     private function checkMonitoringActionNeeded($row, $user, $u_step, $levelId)
     {
-        // Query sederhana untuk kebutuhan flag
-        $latestMon = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($row) {
+        // 1. Ambil Acuan Waktu (Bulan/Tahun) dari data paling akhir di project ini
+        $referenceMon = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($row) {
             $q->where('project_periode_list_id', $row->id);
         })->orderBy('id', 'desc')->first();
 
-        // if (!$latestMon || $latestMon->status == 100) return false;
-        if (!$latestMon || $latestMon->status == 100 || $latestMon->is_approved) return false;
+        if (!$referenceMon) return false;
 
-        $isMyMonTurn = false;
-        if ($levelId == 6) {
-            if ($latestMon->status == 1) $isMyMonTurn = true;
-        } else {
-            $target = 0;
-            if ($levelId == 7) $target = 2;
-            elseif ($levelId == 1 && !$user->unit->unit_mr) $target = 3;
-            elseif ($levelId == 1 && $user->unit->unit_mr) $target = 4;
-            elseif ($levelId == 2 && $user->unit->unit_mr) $target = 5;
+        // 2. Tentukan Target Status
+        $targetStatus = 0;
+        if ($levelId == 6) $targetStatus = 1;      // Inputter
+        elseif ($levelId == 7) $targetStatus = 2;  // ROP
+        elseif ($levelId == 1 && !$user->unit->unit_mr) $targetStatus = 3; // ROD
+        elseif ($levelId == 1 && $user->unit->unit_mr) $targetStatus = 4;  // RO MR
+        elseif ($levelId == 2 && $user->unit->unit_mr) $targetStatus = 5;  // ROW MR
 
-            if ($latestMon->status == $target && !$latestMon->is_approved) {
-                $isMyMonTurn = true;
-            }
-        }
-        // return $isMyMonTurn && $user->hasProject($row);
-        return $isMyMonTurn && $this->userHasAccessToProject($user, $row);
+        if ($targetStatus === 0) return false;
+
+        // 3. Cek Action Needed
+        // Logic: Cari Risiko Aktif -> Ambil Monitoring Terakhirnya di Bulan Itu -> Cek Statusnya
+        $hasAction = ProjectRisk::where('project_periode_list_id', $row->id)
+            ->where('is_closed', false) // Risiko Masih Open
+            ->whereHas('projectRiskMonitorings', function($q) use ($referenceMon, $targetStatus) {
+                $q->where('tahun', $referenceMon->tahun)
+                  ->where('month', $referenceMon->month)
+
+                  // --- PERBAIKAN PENTING DI SINI ---
+                  // Pastikan hanya mengecek Monitoring dengan ID Terakhir (Latest) untuk risiko ini
+                  ->whereRaw('id = (
+                      SELECT MAX(sub.id)
+                      FROM project_risk_monitorings as sub
+                      WHERE sub.risiko_id = project_risk_monitorings.risiko_id
+                      AND sub.tahun = ?
+                      AND sub.month = ?
+                  )', [$referenceMon->tahun, $referenceMon->month])
+                  // ---------------------------------
+
+                  ->where('status', $targetStatus)
+                  ->where('is_approved', false);
+            })
+            ->exists();
+
+        return $hasAction && $this->userHasAccessToProject($user, $row);
     }
 
     private function generateRiskStatus($row, $user, $u_step, $levelId)
@@ -732,7 +819,7 @@ class ProjectPeriodeListController extends BasicCRUDController
         // Label Posisi
         $stepLabels = [
             0 => 'Risk Officer Proyek',
-            1 => 'Risk Owner Project',
+            1 => 'Risk Owner Proyek',
             2 => 'Risk Officer Divisi',
             3 => 'Risk Officer MR',
             4 => 'Risk Owner MR',
@@ -833,110 +920,265 @@ class ProjectPeriodeListController extends BasicCRUDController
         }
     }
 
+    // private function generateMonitoringStatus($row, $user, $u_step, $levelId)
+    // {
+    //     $latestMon = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($row) {
+    //         $q->where('project_periode_list_id', $row->id);
+    //     })->orderBy('id', 'desc')->first();
+
+    //     if (!$latestMon) {
+    //         return '<span class="badge bg-light text-dark border border-dark">Belum Dimonitor</span>';
+    //     }
+
+    //     if ($latestMon->status == 100 || $latestMon->is_approved) {
+    //         $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Disetujui</div>';
+
+    //         return '<div class="d-flex flex-column align-items-start">
+    //                     <span class="badge bg-success" data-bs-toggle="tooltip" title="Status: Monitoring Disetujui">Aktif</span>
+    //                     '.$positionHtml.'
+    //                 </div>';
+    //     }
+
+    //     // Label Posisi
+    //     $monLabels = [
+    //         1 => 'Risk Officer Proyek',
+    //         2 => 'Risk Owner Project',
+    //         3 => 'Risk Officer Divisi',
+    //         4 => 'Risk Officer MR',
+    //         5 => 'Risk Owner MR'
+    //     ];
+    //     $posLabel = $monLabels[$latestMon->status] ?? 'Verifikasi';
+
+    //     $positionHtml = '
+    //     <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">
+    //         Posisi: ' . $posLabel . '
+    //     </div>';
+
+    //     // Logic Giliran
+    //     $isMyMonTurn = false;
+    //     if ($levelId == 6) {
+    //         if ($latestMon->status == 1) $isMyMonTurn = true;
+    //     } else {
+    //         $target = 0;
+    //         if ($levelId == 7) $target = 2;
+    //         elseif ($levelId == 1 && !$user->unit->unit_mr) $target = 3;
+    //         elseif ($levelId == 1 && $user->unit->unit_mr) $target = 4;
+    //         elseif ($levelId == 2 && $user->unit->unit_mr) $target = 5;
+
+    //         if (
+    //             $latestMon->status == $target
+    //             && !$latestMon->is_approved
+    //           ) {
+    //             $isMyMonTurn = true;
+    //         }
+    //     }
+
+    //     $pulseDot = '
+    //     <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
+    //     <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
+
+    //     // --- RENDER ---
+
+    //     if ($isMyMonTurn && $this->userHasAccessToProject($user, $row)) {
+    //         $redirectUrl = route('projects.monitorings.index', ['project' => $row->id]);
+
+    //         if ($levelId == 6) {
+    //             // Inputter (Draft Monitoring)
+    //             // Hanya status "Draft" (Biru), tulisan revisi dihilangkan
+    //             return '
+    //             <div class="d-flex flex-column align-items-start">
+    //                 <a href="'.$redirectUrl.'" class="text-decoration-none">
+    //                     <span class="badge bg-info cursor-pointer border border-info text-white position-relative"
+    //                           data-bs-toggle="tooltip"
+    //                           title="Status: Draft Monitoring. Mohon lengkapi data.">
+    //                         Draft / Input Monitoring
+    //                         '.$pulseDot.'
+    //                     </span>
+    //                 </a>
+    //                 '.$positionHtml.'
+    //             </div>';
+    //         } else {
+    //             // Verifikator
+    //             return '
+    //             <div class="d-flex flex-column align-items-start">
+    //                 <a href="'.$redirectUrl.'" class="text-decoration-none">
+    //                     <span class="badge bg-warning text-dark border border-warning shadow-sm cursor-pointer position-relative"
+    //                           data-bs-toggle="tooltip"
+    //                           title="Klik untuk verifikasi monitoring: '.$posLabel.'">
+    //                         <i class="bx bx-radar bx-flashing me-1"></i> Verifikasi Mon.
+    //                         '.$pulseDot.'
+    //                     </span>
+    //                 </a>
+    //                 '.$positionHtml.'
+    //             </div>';
+    //         }
+    //     } else {
+    //         return '
+    //         <div class="d-flex flex-column align-items-start">
+    //             <div class="d-inline-block position-relative"
+    //                 data-bs-toggle="tooltip"
+    //                 title="Posisi saat ini: '.$posLabel.'">
+    //                 <span class="badge bg-info bg-opacity-10 text-info border border-info">
+    //                     <i class="bx bx-radar me-1"></i> Proses Monitoring
+    //                 </span>
+    //             </div>
+    //             '.$positionHtml.'
+    //         </div>';
+    //     }
+    // }
+
     private function generateMonitoringStatus($row, $user, $u_step, $levelId)
     {
-        $latestMon = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($row) {
+        // 1. Cari Acuan Periode dari Monitoring Terakhir (Global Last ID)
+        $referenceMon = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($row) {
             $q->where('project_periode_list_id', $row->id);
         })->orderBy('id', 'desc')->first();
 
-        if (!$latestMon) {
+        if (!$referenceMon) {
             return '<span class="badge bg-light text-dark border border-dark">Belum Dimonitor</span>';
         }
 
-        if ($latestMon->status == 100 || $latestMon->is_approved) {
-            $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Disetujui</div>';
+        // 2. Ambil Raw History pada Bulan Tersebut (Untuk Risiko Aktif Saja)
+        $rawMonitorings = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($row) {
+                $q->where('project_periode_list_id', $row->id)
+                  ->where('is_closed', false); // Hanya risiko yang masih Open
+            })
+            ->where('tahun', $referenceMon->tahun)
+            ->where('month', $referenceMon->month)
+            ->get();
 
-            return '<div class="d-flex flex-column align-items-start">
-                        <span class="badge bg-success" data-bs-toggle="tooltip" title="Status: Monitoring Disetujui">Aktif</span>
-                        '.$positionHtml.'
-                    </div>';
-        }
+        // 3. FILTER: Ambil Hanya Data TERBARU per Risiko (PENTING AGAR TIDAK STUCK)
+        $currentMonitorings = $rawMonitorings
+            ->groupBy('risiko_id')
+            ->map(function ($items) {
+                return $items->sortByDesc('id')->first();
+            });
 
-        // Label Posisi
-        $monLabels = [
-            1 => 'Risk Officer Proyek',
-            2 => 'Risk Owner Project',
-            3 => 'Risk Officer Divisi',
-            4 => 'Risk Officer MR',
-            5 => 'Risk Owner MR'
-        ];
-        $posLabel = $monLabels[$latestMon->status] ?? 'Verifikasi';
+        // --- LOGIC PENENTUAN STATUS ---
+        $countTotal = $currentMonitorings->count();
+        $countApproved = $currentMonitorings->where('status', 100)->count();
 
-        $positionHtml = '
-        <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">
-            Posisi: ' . $posLabel . '
-        </div>';
+        // Cek Flag Status
+        $hasDraft = $currentMonitorings->where('status', 1)->isNotEmpty();
+        // Asumsi Revisi: Status 1 DAN flag is_revision true
+        $hasRevision = $currentMonitorings->where('status', 1)->where('is_revision', true)->isNotEmpty();
 
-        // Logic Giliran
-        $isMyMonTurn = false;
-        if ($levelId == 6) {
-            if ($latestMon->status == 1) $isMyMonTurn = true;
-        } else {
-            $target = 0;
-            if ($levelId == 7) $target = 2;
-            elseif ($levelId == 1 && !$user->unit->unit_mr) $target = 3;
-            elseif ($levelId == 1 && $user->unit->unit_mr) $target = 4;
-            elseif ($levelId == 2 && $user->unit->unit_mr) $target = 5;
+        $hasVerifROP = $currentMonitorings->where('status', 2)->isNotEmpty();
+        $hasVerifROD = $currentMonitorings->where('status', 3)->isNotEmpty();
+        $hasVerifROMR = $currentMonitorings->where('status', 4)->isNotEmpty();
+        $hasVerifROWMR = $currentMonitorings->where('status', 5)->isNotEmpty();
 
-            if (
-                $latestMon->status == $target
-                && !$latestMon->is_approved
-              ) {
-                $isMyMonTurn = true;
-            }
-        }
+        $redirectUrl = route('projects.monitorings.index', ['project' => $row->id]);
 
         $pulseDot = '
         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
 
-        // --- RENDER ---
+        $isMyMonTurn = false;
+        $statusLabel = '';
+        $badgeColor = 'bg-info';
+        $labelPosisi = 'Verifikasi';
+        $tooltipText = '';
 
-        if ($isMyMonTurn && $this->userHasAccessToProject($user, $row)) {
-            $redirectUrl = route('projects.monitorings.index', ['project' => $row->id]);
+        // --- SKENARIO 1: SELESAI ---
+        if ($countTotal > 0 && $countTotal === $countApproved) {
+            $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Disetujui</div>';
+            return '<div class="d-flex flex-column align-items-start">
+                        <span class="badge bg-success" data-bs-toggle="tooltip" title="Status: Monitoring Bulan '.$referenceMon->month.' Disetujui">Selesai</span>
+                        '.$positionHtml.'
+                    </div>';
+        }
 
-            if ($levelId == 6) {
-                // Inputter (Draft Monitoring)
-                // Hanya status "Draft" (Biru), tulisan revisi dihilangkan
-                return '
-                <div class="d-flex flex-column align-items-start">
-                    <a href="'.$redirectUrl.'" class="text-decoration-none">
-                        <span class="badge bg-info cursor-pointer border border-info text-white position-relative"
-                              data-bs-toggle="tooltip"
-                              title="Status: Draft Monitoring. Mohon lengkapi data.">
-                            Draft / Input Monitoring
-                            '.$pulseDot.'
-                        </span>
-                    </a>
-                    '.$positionHtml.'
-                </div>';
+        // --- SKENARIO 2: INPUTTER (LEVEL 6) ---
+        if ($levelId == 6 && $hasDraft) {
+            $isMyMonTurn = true;
+            if ($hasRevision) {
+                $statusLabel = 'Perlu Revisi';
+                $badgeColor = 'bg-danger';
+                $labelPosisi = 'Dikembalikan ke Risk Officer Proyek';
+                $tooltipText = 'Status: Dikembalikan. Mohon perbaiki data risiko sesuai catatan.';
             } else {
-                // Verifikator
-                return '
+                $statusLabel = 'Draft / Input Monitoring';
+                $badgeColor = 'bg-info';
+                $labelPosisi = 'Risk Officer Proyek';
+                $tooltipText = 'Status: Draft Monitoring. Mohon lengkapi data.';
+            }
+        }
+
+        // --- SKENARIO 3: VERIFIKATOR ---
+        elseif ($levelId == 7 && $hasVerifROP) {
+            $isMyMonTurn = true;
+            $statusLabel = 'Perlu Verifikasi';
+            $badgeColor = 'bg-warning text-dark';
+            $labelPosisi = 'Risk Owner Proyek';
+        }
+        elseif ($levelId == 1 && !$user->unit->unit_mr && $hasVerifROD) {
+            $isMyMonTurn = true;
+            $statusLabel = 'Perlu Verifikasi';
+            $badgeColor = 'bg-warning text-dark';
+            $labelPosisi = 'Risk Officer Divisi';
+        }
+        elseif ($levelId == 1 && $user->unit->unit_mr && $hasVerifROMR) {
+            $isMyMonTurn = true;
+            $statusLabel = 'Perlu Verifikasi';
+            $badgeColor = 'bg-warning text-dark';
+            $labelPosisi = 'Risk Officer MR';
+        }
+        elseif ($levelId == 2 && $user->unit->unit_mr && $hasVerifROWMR) {
+            $isMyMonTurn = true;
+            $statusLabel = 'Perlu Verifikasi';
+            $badgeColor = 'bg-warning text-dark';
+            $labelPosisi = 'Risk Owner MR';
+        }
+
+        // Set Tooltip default untuk Verifikator jika belum di-set di Inputter
+        if ($isMyMonTurn && empty($tooltipText)) {
+            $tooltipText = 'Klik untuk verifikasi monitoring: ' . $labelPosisi;
+        }
+
+        // --- RENDER HTML ---
+        // 1. Tentukan Label Posisi (Jika View Only / Menunggu)
+        if (!$isMyMonTurn) {
+            if ($hasDraft) $labelPosisi = ($hasRevision) ? 'Dikembalikan ke Risk Officer Proyek' : 'Risk Officer Proyek';
+            elseif ($hasVerifROP) $labelPosisi = 'Risk Owner Proyek';
+            elseif ($hasVerifROD) $labelPosisi = 'Risk Officer Divisi';
+            elseif ($hasVerifROMR) $labelPosisi = 'Risk Officer MR';
+            elseif ($hasVerifROWMR) $labelPosisi = 'Risk Owner MR';
+
+            $tooltipText = 'Posisi saat ini: ' . $labelPosisi;
+        }
+
+        $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: ' . $labelPosisi . '</div>';
+
+        // 2. Jika Giliran User & Punya Akses (Tombol Aktif)
+        if ($isMyMonTurn && $this->userHasAccessToProject($user, $row)) {
+            return '
                 <div class="d-flex flex-column align-items-start">
                     <a href="'.$redirectUrl.'" class="text-decoration-none">
-                        <span class="badge bg-warning text-dark border border-warning shadow-sm cursor-pointer position-relative"
+                        <span class="badge '.$badgeColor.' cursor-pointer border shadow-sm position-relative"
                               data-bs-toggle="tooltip"
-                              title="Klik untuk verifikasi monitoring: '.$posLabel.'">
-                            <i class="bx bx-radar bx-flashing me-1"></i> Verifikasi Mon.
+                              title="'.$tooltipText.'">
+                            <i class="bx bx-radar bx-flashing me-1"></i> '.$statusLabel.'
                             '.$pulseDot.'
                         </span>
                     </a>
                     '.$positionHtml.'
                 </div>';
-            }
-        } else {
+        }
+
+        // 3. Jika Menunggu / View Only (Tombol Pasif)
+        else {
             return '
-            <div class="d-flex flex-column align-items-start">
-                <div class="d-inline-block position-relative"
-                    data-bs-toggle="tooltip"
-                    title="Posisi saat ini: '.$posLabel.'">
-                    <span class="badge bg-info bg-opacity-10 text-info border border-info">
-                        <i class="bx bx-radar me-1"></i> Proses Monitoring
-                    </span>
-                </div>
-                '.$positionHtml.'
-            </div>';
+                <div class="d-flex flex-column align-items-start">
+                    <div class="d-inline-block position-relative"
+                        data-bs-toggle="tooltip"
+                        title="'.$tooltipText.'">
+                        <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                            <i class="bx bx-radar me-1"></i> Proses Monitoring
+                        </span>
+                    </div>
+                    '.$positionHtml.'
+                </div>';
         }
     }
 
@@ -947,7 +1189,7 @@ class ProjectPeriodeListController extends BasicCRUDController
 
         if($level_id == 7) { // ROWP
             $u_step = 1;
-            $user_verification = "Risk Owner Project";
+            $user_verification = "Risk Owner Proyek";
         }
         else if($level_id == 1) { // RO Divisi
             if($is_mr) { // RO Divisi MR
@@ -1000,9 +1242,9 @@ class ProjectPeriodeListController extends BasicCRUDController
         $risks = $projectPeriode->projectRisks;
 
         if ($status === 'open') {
-            $risks = $risks->where('is_closed', 0);
+            $risks = $risks->where('is_closed', false);
         } elseif ($status === 'closed') {
-            $risks = $risks->where('is_closed', 1);
+            $risks = $risks->where('is_closed', true);
         }
 
         $sortedRisks = $risks->sortByDesc(function ($risk) {
