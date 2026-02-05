@@ -22,25 +22,16 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
         $this->projectIds = $projectIds;
     }
 
-    /**
-     * @return string
-     */
     public function title(): string
     {
         return 'Profil Risiko';
     }
 
-    /**
-     * @return array
-     */
     public function headings(): array
     {
-        return []; // Headings di-generate melalui event
+        return [];
     }
 
-    /**
-     * Mendaftarkan event untuk memanipulasi sheet.
-     */
     public function registerEvents(): array
     {
         return [
@@ -69,26 +60,29 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                 $sheet->setCellValue('T1', 'Kontrol Eksisting');
                 $sheet->setCellValue('U1', 'Penilaian Efektivitas Kontrol');
                 $sheet->setCellValue('V1', 'Kategori Dampak');
-                $sheet->setCellValue('W1', 'Deskripsi Dampak');
-                $sheet->setCellValue('X1', 'Perkiraan Waktu Terpapar Risiko');
-                $sheet->setCellValue('Y1', 'Status Risiko');
+
+                // --- KOLOM BARU DAMPAK ---
+                $sheet->setCellValue('W1', 'No Dampak Risiko');
+                $sheet->setCellValue('X1', 'Kode Dampak Risiko');
+                $sheet->setCellValue('Y1', 'Dampak Risiko');
+
+                $sheet->setCellValue('Z1', 'Perkiraan Waktu Terpapar Risiko');
+                $sheet->setCellValue('AA1', 'Status Risiko');
 
                 // Row 2: Sub-header untuk Kategori Treshold KRI
                 $sheet->setCellValue('P2', 'Aman');
                 $sheet->setCellValue('Q2', 'Waspada');
                 $sheet->setCellValue('R2', 'Bahaya');
 
-                // Merge sel header
-                // Tambahkan 'J' ke dalam array, dan sesuaikan sisa kolom
-                $mergeColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
+                // Merge sel header (Sampai AA)
+                $mergeColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA'];
                 foreach ($mergeColumns as $col) {
                     $sheet->mergeCells("{$col}1:{$col}2");
                 }
 
-                // Merge header group KRI
                 $sheet->mergeCells('P1:R1');
 
-                // Style utama untuk seluruh header (A1:Y2) - Biru Muda
+                // Style Header (Update range ke AA)
                 $headerStyle = [
                     'alignment' => [
                         'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
@@ -106,215 +100,115 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                         ]
                     ]
                 ];
-                $sheet->getStyle('A1:Y2')->applyFromArray($headerStyle);
+                $sheet->getStyle('A1:AA2')->applyFromArray($headerStyle);
 
-                // Style khusus untuk sub-header KRI (menimpa warna background)
-                // Aman (P2) - Hijau
+                // Warna Treshold
                 $sheet->getStyle('P2')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('92D050');
-
-                // Waspada (Q2) - Kuning
                 $sheet->getStyle('Q2')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFFF00');
-
-                // Bahaya (R2) - Merah
                 $sheet->getStyle('R2')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF0000');
 
-                $dataStyle = [
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000']
-                        ]
-                    ],
-                    'alignment' => [
-                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP,
-                        'wrapText' => true,
-                    ],
-                ];
-
-                // Terapkan border ke semua baris data
                 $highestRow = $sheet->getHighestRow();
                 if ($highestRow > 2) {
-                    $sheet->getStyle('A3:Y' . $highestRow)->applyFromArray($dataStyle);
-
-                    // Set format text untuk kolom Kode Penyebab Risiko
+                    $sheet->getStyle('A3:AA' . $highestRow)->applyFromArray([
+                        'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
+                        'alignment' => ['vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP, 'wrapText' => true],
+                    ]);
                     $sheet->getStyle('L3:L' . $highestRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
-
-                    // Terapkan pewarnaan KRI pada data
+                    $sheet->getStyle('X3:X' . $highestRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
                     $this->applyThresholdColoring($sheet, $highestRow);
                 }
 
-                // Auto size semua kolom (A sampai Y)
-                foreach (range('A', 'Y') as $column) {
-                    $sheet->getColumnDimension($column)->setAutoSize(true);
-                }
+                foreach (range('A', 'Z') as $column) { $sheet->getColumnDimension($column)->setAutoSize(true); }
+                $sheet->getColumnDimension('AA')->setAutoSize(true);
             },
         ];
     }
 
-    /**
-     * Apply coloring untuk Kategori Threshold KRI pada data
-     */
-    private function applyThresholdColoring($sheet, $maxRow)
-    {
-        // Mulai dari row 3 (setelah header)
+    private function applyThresholdColoring($sheet, $maxRow) {
         for ($row = 3; $row <= $maxRow; $row++) {
-            // Kolom P (Aman) - Hijau
-            $amanValue = $sheet->getCell('P' . $row)->getValue();
-            if ($amanValue && $amanValue !== '-') {
-                $sheet->getStyle('P' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('92D050');
-            }
-
-            // Kolom Q (Waspada) - Kuning
-            $waspadaValue = $sheet->getCell('Q' . $row)->getValue();
-            if ($waspadaValue && $waspadaValue !== '-') {
-                $sheet->getStyle('Q' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFFF00');
-            }
-
-            // Kolom R (Bahaya) - Merah
-            $bahayaValue = $sheet->getCell('R' . $row)->getValue();
-            if ($bahayaValue && $bahayaValue !== '-') {
-                $sheet->getStyle('R' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF0000');
+            foreach (['P' => '92D050', 'Q' => 'FFFF00', 'R' => 'FF0000'] as $col => $color) {
+                $val = $sheet->getCell($col . $row)->getValue();
+                if ($val && $val !== '-') {
+                    $sheet->getStyle($col . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB($color);
+                }
             }
         }
     }
 
-    /**
-     * @return Collection
-     */
     public function collection()
     {
         $risikos = ProjectRisk::with([
-            'wbsMaster',
-            'projectPeriodeList.project',
-            'projectRiskAnalisa',
-            'penyebabRisikoProjects',
-            'kriProjects',
-            'jenisKontrolEksisting',
-            'projectKontrolEksistings',
-            'penilaianEfektivitasKontrolObj',
-        ])
-        // ->where('project_id', $this->projectId)
-        ->whereIn('project_id', $this->projectIds)
-        ->get()
-        ->sortByDesc('projectRiskAnalisa.skala_risiko');
+            'wbsMaster', 'projectPeriodeList.project', 'projectRiskAnalisa',
+            'penyebabRisikoProjects', 'kriProjects', 'dampakRisikoProjects',
+            'jenisKontrolEksisting', 'projectKontrolEksistings', 'penilaianEfektivitasKontrolObj',
+        ])->whereIn('project_id', $this->projectIds)->get()->sortByDesc('projectRiskAnalisa.skala_risiko');
 
         $exportData = new Collection();
-        $nomorUrutRisiko = 1;
+        $noRisiko = 1;
 
         foreach ($risikos as $risiko) {
-            $penyebabRisikos = $risiko->penyebabRisikoProjects;
-            $kriProjects = $risiko->kriProjects;
+            $penyebab = $risiko->penyebabRisikoProjects;
+            $kris = $risiko->kriProjects;
+            $dampaks = $risiko->dampakRisikoProjects;
 
-            if ($penyebabRisikos->isEmpty() && $kriProjects->isEmpty()) {
-                $rowData = $this->createRowData($risiko, null, null, true, $nomorUrutRisiko, 0);
-                $exportData->push($rowData);
-            } else {
-                $isFirstRowOfGroup = true;
-                $nomorUrutPenyebab = 1;
+            $maxRows = max($penyebab->count(), $kris->count(), $dampaks->count(), 1);
 
-                if ($penyebabRisikos->isEmpty()) {
-                    foreach ($kriProjects as $kri) {
-                        $rowData = $this->createRowData($risiko, null, $kri, $isFirstRowOfGroup, $nomorUrutRisiko, 0);
-                        $exportData->push($rowData);
-                        $isFirstRowOfGroup = false;
-                    }
-                } elseif ($kriProjects->isEmpty()) {
-                    foreach ($penyebabRisikos as $penyebab) {
-                        $rowData = $this->createRowData($risiko, $penyebab, null, $isFirstRowOfGroup, $nomorUrutRisiko, $nomorUrutPenyebab);
-                        $exportData->push($rowData);
-                        $isFirstRowOfGroup = false;
-                        $nomorUrutPenyebab++;
-                    }
-                } else {
-                    foreach ($penyebabRisikos as $penyebab) {
-                        $isFirstKRIOfPenyebab = true;
-                        foreach ($kriProjects as $kri) {
-                            $rowData = $this->createRowData($risiko, $penyebab, $kri, $isFirstRowOfGroup, $nomorUrutRisiko, $nomorUrutPenyebab, $isFirstKRIOfPenyebab);
-                            $exportData->push($rowData);
-                            $isFirstRowOfGroup = false;
-                            $isFirstKRIOfPenyebab = false;
-                        }
-                        $nomorUrutPenyebab++;
-                    }
-                }
+            for ($i = 0; $i < $maxRows; $i++) {
+                $p = $penyebab->get($i);
+                $k = $kris->get($i);
+                $d = $dampaks->get($i);
+
+                $exportData->push($this->createRowData($risiko, $p, $k, $d, $i == 0, $noRisiko, $i + 1));
             }
-            $nomorUrutRisiko++;
+            $noRisiko++;
         }
-
         return $exportData;
     }
 
-    /**
-     * Create row data untuk setiap baris
-     */
-    private function createRowData($risiko, $penyebab, $kri, $isFirstRowOfGroup, $nomorUrutRisiko, $nomorUrutPenyebab, $isFirstKRIOfPenyebab = true)
+    private function createRowData($risiko, $p, $k, $d, $isFirst, $noRisiko, $subNo)
     {
-        $project = $risiko->projectPeriodeList->project;
-        $analisa = $risiko->projectRiskAnalisa;
-
-        $statusRisiko = '';
-        if ($isFirstRowOfGroup) {
-            $statusRisiko = $risiko->is_closed ? 'Closed' : 'Open';
-        }
-
         return [
-            'no' => $isFirstRowOfGroup ? $nomorUrutRisiko : '',
-            'nama_bumn' => $isFirstRowOfGroup ? 'PT Wijaya Karya (Persero) Tbk' : '',
-            'kode_bumn' => $isFirstRowOfGroup ? '-' : '',
-            'sasaran_kbumn' => $isFirstRowOfGroup ? '-' : '',
-            'nama_project' => $isFirstRowOfGroup ? ($project->project_name ?? '-') : '',
-            'sasaran_risiko' => $isFirstRowOfGroup ? ($risiko->target_capaian_kinerja ?? '-') : '',
-            'no_risiko' => $isFirstRowOfGroup ? $nomorUrutRisiko : '',
-            'peristiwa_risiko' => $isFirstRowOfGroup ? ($risiko->peristiwaRisiko->title ?? $risiko->deskripsi_peristiwa_risiko ?? '-') : '',
-            'deskripsi_peristiwa_risiko' => $isFirstRowOfGroup ? ($risiko->deskripsi_peristiwa_risiko ?? '-') : '',
+            'no' => $isFirst ? $noRisiko : '',
+            'nama_bumn' => $isFirst ? 'PT Wijaya Karya (Persero) Tbk' : '',
+            'kode_bumn' => $isFirst ? '-' : '',
+            'sasaran_kbumn' => $isFirst ? '-' : '',
+            'nama_project' => $isFirst ? ($risiko->projectPeriodeList->project->project_name ?? '-') : '',
+            'sasaran_risiko' => $isFirst ? ($risiko->target_capaian_kinerja ?? '-') : '',
+            'no_risiko' => $isFirst ? $noRisiko : '',
+            'peristiwa' => $isFirst ? ($risiko->peristiwaRisiko->title ?? $risiko->deskripsi_peristiwa_risiko ?? '-') : '',
+            'desc_peristiwa' => $isFirst ? ($risiko->deskripsi_peristiwa_risiko ?? '-') : '',
+            'wbs' => $isFirst ? ($risiko->wbsMaster->name ?? '-') : '',
+            'no_penyebab' => $p ? $noRisiko : '',
+            'kode_penyebab' => $p ? "'" . $noRisiko . '.' . $subNo : '',
+            'penyebab' => $p->penyebab_risiko ?? '',
+            'kri' => $k->kri ?? '',
+            'satuan_kri' => $k->satuan_kri ?? '',
+            'aman' => $k->batas_aman ?? '',
+            'waspada' => $k->batas_waspada ?? '',
+            'bahaya' => $k->batas_bahaya ?? '',
+            'jenis_kontrol' => $isFirst ? (optional($risiko->jenisKontrolEksisting)->jenis_kontrol ?? '-') : '',
+            'kontrol' => $isFirst ? $this->getKontrolEksisting($risiko) : '',
+            'efektivitas' => $isFirst ? (optional($risiko->penilaianEfektivitasKontrolObj)->efektivitas_kontrol ?? '-') : '',
+            'kat_dampak' => $isFirst ? ($risiko->projectRiskAnalisa->kategori_dampak ?? '-') : '',
 
-            // Tambahan Data WBS
-            'wbs' => $isFirstRowOfGroup ? ($risiko->wbsMaster->name ?? '-') : '',
+            // --- DATA DAMPAK ---
+            'no_dampak' => $d ? $noRisiko : '',
+            'kode_dampak' => $d ? "'" . $noRisiko . '.' . $subNo : '',
+            'dampak' => $d->dampak_risiko ?? '',
 
-            'no_penyebab_risiko' => ($penyebab && $isFirstKRIOfPenyebab) ? $nomorUrutRisiko : '',
-            'kode_penyebab_risiko' => ($penyebab && $isFirstKRIOfPenyebab) ? "'" . $nomorUrutRisiko . '.' . $nomorUrutPenyebab : '',
-            'penyebab_risiko' => ($penyebab && $isFirstKRIOfPenyebab) ? ($penyebab->penyebab_risiko ?? '-') : '',
-            'key_risk_indicator' => $kri ? ($kri->kri ?? '-') : '-',
-            'unit_satuan_kri' => $kri ? ($kri->satuan_kri ?? '-') : '-',
-            'kategori_treshold_aman' => $kri ? ($kri->batas_aman ?? '-') : '-',
-            'kategori_treshold_waspada' => $kri ? ($kri->batas_waspada ?? '-') : '-',
-            'kategori_treshold_bahaya' => $kri ? ($kri->batas_bahaya ?? '-') : '-',
-            'jenis_eksisting_kontrol' => ($penyebab && $isFirstKRIOfPenyebab) ? (optional($risiko->jenisKontrolEksisting)->jenis_kontrol ?? '-') : '',
-            'kontrol_eksisting' => ($penyebab && $isFirstKRIOfPenyebab) ? ($this->getKontrolEksisting($risiko) ?? '-') : '',
-            'penilaian_efektivitas_kontrol' => ($penyebab && $isFirstKRIOfPenyebab) ? (optional($risiko->penilaianEfektivitasKontrolObj)->efektivitas_kontrol ?? '-') : '',
-            'kategori_dampak' => $isFirstRowOfGroup ? ($analisa->kategori_dampak ?? '-') : '',
-            'deskripsi_dampak' => $isFirstRowOfGroup ? ($analisa->deskripsi_dampak ?? '-') : '',
-            'perkiraan_waktu_terpapar' => $isFirstRowOfGroup ? $this->formatWaktuTerpapar($risiko) : '',
-            'status_risiko' => $statusRisiko,
+            'waktu' => $isFirst ? $this->formatWaktuTerpapar($risiko) : '',
+            'status' => $isFirst ? ($risiko->is_closed ? 'Closed' : 'Open') : '',
         ];
     }
 
-    /**
-     * Get kontrol eksisting
-     */
-    private function getKontrolEksisting($risiko)
-    {
-        $kontrolEksistings = $risiko->projectKontrolEksistings;
-        if ($kontrolEksistings->isNotEmpty()) {
-            return $kontrolEksistings->pluck('kontrol_eksisting_desc')->implode('; ');
-        }
-        return '-';
+    private function getKontrolEksisting($risiko) {
+        return $risiko->projectKontrolEksistings->isNotEmpty() ? $risiko->projectKontrolEksistings->pluck('kontrol_eksisting_desc')->implode('; ') : '-';
     }
 
-    /**
-     * Format waktu terpapar risiko
-     */
-    private function formatWaktuTerpapar($risiko)
-    {
+    private function formatWaktuTerpapar($risiko) {
         $awal = $risiko->perkiraan_waktu_terpapar_risiko_mulai;
         $akhir = $risiko->perkiraan_waktu_terpapar_risiko_akhir;
-
-        if ($awal && $akhir) {
-            $awalFormatted = Carbon::parse($awal)->format('j F Y');
-            $akhirFormatted = Carbon::parse($akhir)->format('j F Y');
-            return $awalFormatted . ' - ' . $akhirFormatted;
-        }
-
+        if ($awal && $akhir) return Carbon::parse($awal)->format('j F Y') . ' - ' . Carbon::parse($akhir)->format('j F Y');
         return $awal ? Carbon::parse($awal)->format('j F Y') : ($akhir ? Carbon::parse($akhir)->format('j F Y') : '-');
     }
 }

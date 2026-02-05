@@ -3,9 +3,6 @@
 namespace App\Exports\Sheets\Project;
 
 use App\Models\ProjectRisk;
-use App\Models\PenyebabRisikoProject;
-use App\Models\OpsiPerlakuanRisiko;
-use App\Models\JenisRencanaPerlakuanRisiko;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -16,67 +13,60 @@ use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 
 class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
     private $projectIds;
     private $timelineData = [];
-    private $totalRows = 0;
     private $opsiPerlakuan = [];
-    private $jenisRencana = [];
+    private $startYear;
+    private $endYear;
+    private $totalMonths;
 
     public function __construct(array $projectIds)
     {
         $this->projectIds = $projectIds;
+        $this->opsiPerlakuan = \App\Models\OpsiPerlakuanRisiko::pluck('opsi_perlakuan_risiko', 'id')->toArray();
 
-        $this->loadOpsiPerlakuan();
-        $this->loadJenisRencana();
+        // Tentukan Range Tahun di Constructor
+        $this->calculateYearRange();
     }
 
-    /**
-     * Load opsi perlakuan risiko dari database
-     */
-    private function loadOpsiPerlakuan()
+    private function calculateYearRange()
     {
-        $opsiPerlakuanData = OpsiPerlakuanRisiko::all();
-        foreach ($opsiPerlakuanData as $opsi) {
-            $this->opsiPerlakuan[$opsi->id] = $opsi->opsi_perlakuan_risiko ?? '-';
+        $query = ProjectRisk::whereIn('project_id', $this->projectIds);
+
+        // Ambil semua tanggal dari perlakuan penyebab dan perlakuan dampak
+        $dates = collect();
+
+        $risks = $query->with([
+            'penyebabRisikoProjects.perlakuanPenyebabRisiko',
+            'perlakuanDampakRisikos'
+        ])->get();
+
+        foreach ($risks as $risk) {
+            foreach ($risk->penyebabRisikoProjects as $p) {
+                foreach ($p->perlakuanPenyebabRisiko as $per) {
+                    if ($per->timeline_perlakuan_risiko_start) $dates->push(Carbon::parse($per->timeline_perlakuan_risiko_start)->year);
+                    if ($per->timeline_perlakuan_risiko_end) $dates->push(Carbon::parse($per->timeline_perlakuan_risiko_end)->year);
+                }
+            }
+            foreach ($risk->perlakuanDampakRisikos as $perD) {
+                if ($perD->timeline_perlakuan_risiko_start) $dates->push(Carbon::parse($perD->timeline_perlakuan_risiko_start)->year);
+                if ($perD->timeline_perlakuan_risiko_end) $dates->push(Carbon::parse($perD->timeline_perlakuan_risiko_end)->year);
+            }
         }
+
+        $this->startYear = $dates->min() ?? date('Y');
+        $this->endYear = $dates->max() ?? date('Y');
+        $this->totalMonths = (($this->endYear - $this->startYear) + 1) * 12;
     }
 
-    /**
-     * Load jenis rencana perlakuan risiko dari database
-     */
-    private function loadJenisRencana()
-    {
-        $jenisRencanaData = JenisRencanaPerlakuanRisiko::all();
-        foreach ($jenisRencanaData as $jenis) {
-            $this->jenisRencana[$jenis->id] = $jenis->jenis_rencana_perlakuan_risiko ?? '-';
-        }
-    }
+    public function title(): string { return 'Rencana Perlakuan Risiko'; }
 
-    /**
-     * @return string
-     */
-    public function title(): string
-    {
-        return 'Rencana Perlakuan Risiko';
-    }
+    public function headings(): array { return []; }
 
-    /**
-     * @return array
-     */
-    public function headings(): array
-    {
-        return [];
-    }
-
-    /**
-     * Mendaftarkan event untuk memanipulasi sheet.
-     */
     public function registerEvents(): array
     {
         return [
@@ -84,284 +74,147 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 $sheet = $event->sheet->getDelegate();
                 $sheet->insertNewRowBefore(1, 2);
 
-                // Header utama
-                $sheet->setCellValue('A1', 'No');
-                $sheet->setCellValue('B1', 'Nama Project');
-                $sheet->setCellValue('C1', 'No Risiko');
-                $sheet->setCellValue('D1', 'Kode Penyebab Risiko');
-                $sheet->setCellValue('E1', 'Penyebab Risiko');
-                $sheet->setCellValue('F1', 'Opsi Perlakuan Risiko');
-                $sheet->setCellValue('G1', 'Jenis Rencana Perlakuan Risiko');
-                $sheet->setCellValue('H1', 'Rencana Perlakuan Risiko');
-                $sheet->setCellValue('I1', 'Output Perlakuan Risiko');
-                $sheet->setCellValue('J1', 'Biaya Perlakuan Risiko');
-                $sheet->setCellValue('K1', 'Jenis Program Dalam RKAP');
-                $sheet->setCellValue('L1', 'PIC');
-                $sheet->setCellValue('M1', 'Timeline');
+                // Kolom Statis A - K
+                $headers = [
+                    'A' => 'No', 'B' => 'Nama Project', 'C' => 'No Risiko', 'D' => 'Tipe Perlakuan',
+                    'E' => 'Objek Perlakuan', 'F' => 'Opsi Perlakuan Risiko',
+                    'G' => 'Rencana Perlakuan Risiko', 'H' => 'Output Perlakuan Risiko',
+                    'I' => 'Biaya Perlakuan Risiko', 'J' => 'Progress Perlakuan Risiko', 'K' => 'PIC'
+                ];
 
-                // Sub-header bulan
-                $sheet->setCellValue('M2', '1');
-                $sheet->setCellValue('N2', '2');
-                $sheet->setCellValue('O2', '3');
-                $sheet->setCellValue('P2', '4');
-                $sheet->setCellValue('Q2', '5');
-                $sheet->setCellValue('R2', '6');
-                $sheet->setCellValue('S2', '7');
-                $sheet->setCellValue('T2', '8');
-                $sheet->setCellValue('U2', '9');
-                $sheet->setCellValue('V2', '10');
-                $sheet->setCellValue('W2', '11');
-                $sheet->setCellValue('X2', '12');
-
-                // Merge sel vertikal untuk kolom A-L
-                for ($col = 'A'; $col <= 'L'; $col++) {
+                foreach ($headers as $col => $val) {
+                    $sheet->setCellValue($col . '1', $val);
                     $sheet->mergeCells("{$col}1:{$col}2");
                 }
 
-                // Merge header Timeline
-                $sheet->mergeCells('M1:X1');
+                // Header Dinamis Tahun & Bulan mulai dari kolom L (index 12)
+                $currentColNum = 12;
+                for ($y = $this->startYear; $y <= $this->endYear; $y++) {
+                    $startColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($currentColNum);
+                    $endColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($currentColNum + 11);
 
-                // Style untuk header utama
-                $headerStyle = [
-                    'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_CENTER,
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                    ],
-                    'font' => ['bold' => true],
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => '9BC2E6']
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000']
-                        ]
-                    ]
-                ];
-                $sheet->getStyle('A1:X2')->applyFromArray($headerStyle);
+                    // Set Tahun
+                    $sheet->setCellValue($startColLetter . '1', 'Tahun ' . $y);
+                    $sheet->mergeCells($startColLetter . '1:' . $endColLetter . '1');
 
-                // Style untuk sub-header bulan
-                $monthHeaderStyle = [
-                    'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_CENTER,
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                    ],
-                    'font' => ['bold' => true],
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => 'DBDBDB']
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000']
-                        ]
-                    ]
-                ];
-                $sheet->getStyle('M2:X2')->applyFromArray($monthHeaderStyle);
-
-                $dataStyle = [
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000']
-                        ]
-                    ],
-                    'alignment' => [
-                        'vertical' => Alignment::VERTICAL_TOP,
-                        'wrapText' => true,
-                    ],
-                ];
-
-                // Dapatkan baris terakhir SETELAH data collection ditulis
-                $lastRow = $sheet->getHighestRow();
-
-                // Terapkan border ke seluruh data jika ada baris (baris > 2)
-                if ($lastRow > 2) {
-                    $maxDataRow = $lastRow; // Ini adalah baris data terakhir yang sebenarnya
-
-                    // Terapkan border dan style alignment ke semua sel data
-                    $sheet->getStyle('A3:X' . $maxDataRow)->applyFromArray($dataStyle);
-
-                    // Format teks untuk kolom Kode Penyebab Risiko (Kolom D)
-                    $sheet->getStyle('D3:D' . $maxDataRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
-
-                    // Terapkan pewarnaan timeline
-                    $this->applyTimelineColoring($sheet, $maxDataRow);
-
-                    // (Tambahan) Atur perataan tengah untuk kolom tertentu
-                    $centerCols = ['A', 'C', 'D', 'J', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'];
-                    foreach ($centerCols as $col) {
-                        $sheet->getStyle("{$col}3:{$col}{$maxDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    // Set Bulan 1-12
+                    for ($m = 1; $m <= 12; $m++) {
+                        $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($currentColNum);
+                        $sheet->setCellValue($colLetter . '2', $m);
+                        $currentColNum++;
                     }
                 }
 
-                foreach (range('A', 'X') as $column) {
-                    $sheet->getColumnDimension($column)->setAutoSize(true);
+                $lastColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($currentColNum - 1);
+
+                // Styling
+                $style = [
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+                    'font' => ['bold' => true],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '9BC2E6']],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
+                ];
+                $sheet->getStyle('A1:' . $lastColLetter . '2')->applyFromArray($style);
+
+                $lastRow = $sheet->getHighestRow();
+                if ($lastRow > 2) {
+                    $sheet->getStyle('A3:' . $lastColLetter . $lastRow)->applyFromArray([
+                        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                        'alignment' => ['vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true]
+                    ]);
+                    $this->applyTimelineColoring($sheet, $lastRow);
                 }
             },
         ];
     }
 
-    /**
-     * Apply timeline coloring
-     */
-    private function applyTimelineColoring($sheet, $maxRow)
-    {
-        foreach ($this->timelineData as $rowIndex => $monthsData) {
-            $actualRow = $rowIndex + 3; // Data dimulai dari baris 3
-            if ($actualRow <= $maxRow) {
-                for ($month = 0; $month < 12; $month++) {
-                    if (isset($monthsData[$month]) && $monthsData[$month] === true) {
-                        $columnLetter = chr(77 + $month); // M=77, N=78, dst.
-                        $sheet->getStyle($columnLetter . $actualRow)->applyFromArray([
-                            'fill' => [
-                                'fillType' => Fill::FILL_SOLID,
-                                'startColor' => ['rgb' => '5B9BD5']
-                            ],
-                            'borders' => [
-                                'allBorders' => [
-                                    'borderStyle' => Border::BORDER_THIN,
-                                    'color' => ['rgb' => '000000']
-                                ]
-                            ]
-                        ]);
-                    }
-                }
+    private function applyTimelineColoring($sheet, $maxRow) {
+        foreach ($this->timelineData as $rowIndex => $activeMonths) {
+            $row = $rowIndex + 3;
+            foreach ($activeMonths as $mIdx) {
+                // mIdx adalah index bulan dari startYear (0 = Jan thn pertama)
+                // Kolom dimulai dari L (index 12)
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(12 + $mIdx);
+                $sheet->getStyle($colLetter . $row)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('5B9BD5');
             }
         }
     }
 
-    /**
-     * @return Collection
-     */
     public function collection()
     {
         $risikos = ProjectRisk::with([
             'projectPeriodeList.project',
-            'penyebabRisikoProjects.opsiPerlakuanRisiko',
-            'penyebabRisikoProjects.jenisRencanaPerlakuanRisiko',
-            'penyebabRisikoProjects.perlakuanPenyebabRisiko.lastMonitoring'
-        ])
-            // ->where('project_id', $this->projectId)
-            ->whereIn('project_id', $this->projectIds)
-            ->get()
-            ->sortByDesc('projectRiskAnalisa.skala_risiko');
+            'penyebabRisikoProjects.perlakuanPenyebabRisiko.lastMonitoring',
+            'perlakuanDampakRisikos.lastMonitoring'
+        ])->whereIn('project_id', $this->projectIds)->get();
 
         $exportData = new Collection();
-        $nomorUrutRisiko = 1;
-        $currentRowIndex = 0;
+        $noUrut = 1;
+        $currentRow = 0;
 
         foreach ($risikos as $risiko) {
-            $project = $risiko->projectPeriodeList->project;
-            $penyebabRisikos = $risiko->penyebabRisikoProjects;
+            $projectName = $risiko->projectPeriodeList->project->project_name ?? '-';
 
-            if ($penyebabRisikos->isEmpty()) {
-                $timelineMonths = array_fill(0, 12, '');
-                $timelineBooleans = array_fill(0, 12, false);
-
-                $rowData = [
-                    'no' => $nomorUrutRisiko,
-                    'nama_project' => $project->project_name ?? '-',
-                    'no_risiko' => $nomorUrutRisiko,
-                    'kode_penyebab_risiko' => '-',
-                    'penyebab_risiko' => '-',
-                    'opsi_perlakuan_risiko' => '-',
-                    'jenis_rencana_perlakuan_risiko' => '-',
-                    'rencana_perlakuan_risiko' => '-',
-                    'output_perlakuan_risiko' => '-',
-                    'biaya_perlakuan_risiko' => '-',
-                    'jenis_program_rkap' => '-',
-                    'pic' => '-',
-                ];
-
-                $finalRow = array_merge($rowData, $timelineMonths);
-                $exportData->push($finalRow);
-                $this->timelineData[$currentRowIndex] = $timelineBooleans;
-                $currentRowIndex++;
-            } else {
-                $isFirstRowOfGroup = true;
-                $nomorUrutPenyebab = 1;
-
-                foreach ($penyebabRisikos as $penyebab) {
-                    $perlakuanRisikos = $penyebab->perlakuanPenyebabRisiko;
-
-                    if (!$perlakuanRisikos->isEmpty()) {
-                        $isFirstPerlakuan = true;
-
-                        foreach ($perlakuanRisikos as $perlakuan) {
-                            $timelineMonths = array_fill(0, 12, '');
-                            $timelineBooleans = array_fill(0, 12, false);
-
-                            // Proses rentang timeline dari perlakuan
-                            $start = $perlakuan->timeline_perlakuan_risiko_start;
-                            $end = $perlakuan->timeline_perlakuan_risiko_end;
-
-                            if ($start && $end) {
-                                try {
-                                    $startDate = Carbon::parse($start);
-                                    $endDate = Carbon::parse($end);
-
-                                    $period = CarbonPeriod::create($startDate, '1 month', $endDate);
-
-                                    foreach ($period as $date) {
-                                        $monthIndex = (int)$date->format('n') - 1; // Jan=0, Des=11
-                                        if ($monthIndex >= 0 && $monthIndex < 12) {
-                                            $timelineBooleans[$monthIndex] = true;
-                                        }
-                                    }
-                                } catch (\Exception $e) {
-                                    // Tangani error parsing tanggal
-                                }
-                            }
-
-                            $lastMonitoring = $perlakuan->perlakuanPenyebabMonitorings()->orderBy('created_at', 'desc')->first();
-                            $rowData = [
-                                'no' => ($isFirstRowOfGroup && $isFirstPerlakuan) ? $nomorUrutRisiko : '',
-                                'nama_project' => ($isFirstRowOfGroup && $isFirstPerlakuan) ? ($project->project_name ?? '-') : '',
-                                'no_risiko' => ($isFirstRowOfGroup && $isFirstPerlakuan) ? $nomorUrutRisiko : '',
-                                'kode_penyebab_risiko' => $isFirstPerlakuan ? "'" . $nomorUrutRisiko . '.' . $nomorUrutPenyebab : '',
-                                'penyebab_risiko' => $isFirstPerlakuan ? $penyebab->penyebab_risiko ?? '-' : '',
-                                'opsi_perlakuan_risiko' => $this->opsiPerlakuan[$perlakuan->opsi_perlakuan_risiko] ?? '-',
-                                'jenis_rencana_perlakuan_risiko' => $this->jenisRencana[$perlakuan->jenis_rencana_perlakuan_risiko] ?? '-',
-                                'rencana_perlakuan_risiko' => $perlakuan->rencana_perlakuan_risiko ?? '-',
-                                'output_perlakuan_risiko' => $perlakuan->output_perlakuan_risiko ?? '-',
-                                'biaya_perlakuan_risiko' => $this->formatRupiah($perlakuan->biaya_perlakuan_risiko),
-                                'jenis_program_rkap' => $lastMonitoring->jenis_program_rkap ?? '-',
-                                'pic' => $perlakuan->pic ?? '-',
-                            ];
-
-                            $finalRow = array_merge($rowData, $timelineMonths);
-                            $exportData->push($finalRow);
-                            $this->timelineData[$currentRowIndex] = $timelineBooleans;
-                            $currentRowIndex++;
-
-                            $isFirstPerlakuan = false;
-                        }
-                    }
-
-                    $isFirstRowOfGroup = false;
-                    $nomorUrutPenyebab++;
+            // 1. Perlakuan terhadap Penyebab
+            foreach ($risiko->penyebabRisikoProjects as $penyebab) {
+                foreach ($penyebab->perlakuanPenyebabRisiko as $perlakuan) {
+                    $exportData->push($this->mapPerlakuan($noUrut, $projectName, $risiko, 'Penyebab', $penyebab->penyebab_risiko, $perlakuan, $currentRow));
+                    $currentRow++;
                 }
             }
 
-            $nomorUrutRisiko++;
+            // 2. Perlakuan terhadap Dampak
+            foreach ($risiko->perlakuanDampakRisikos as $perlakuanDampak) {
+                $exportData->push($this->mapPerlakuan($noUrut, $projectName, $risiko, 'Dampak', '-', $perlakuanDampak, $currentRow));
+                $currentRow++;
+            }
+
+            $noUrut++;
         }
-
-        $this->totalRows = $exportData->count();
-
         return $exportData;
     }
 
-    /**
-     * Format nilai rupiah
-     */
-    private function formatRupiah($value)
+    private function mapPerlakuan($no, $project, $risiko, $tipe, $objek, $perlakuan, $rowIdx)
     {
-        if ($value === null || $value === 0) {
-            return '-';
+        $activeMonthIndexes = [];
+        $start = $perlakuan->timeline_perlakuan_risiko_start;
+        $end = $perlakuan->timeline_perlakuan_risiko_end;
+
+        if ($start && $end) {
+            $startDate = Carbon::parse($start);
+            $endDate = Carbon::parse($end);
+
+            // Hitung index bulan relatif terhadap startYear
+            $startMonthIdx = (($startDate->year - $this->startYear) * 12) + ($startDate->month - 1);
+            $endMonthIdx = (($endDate->year - $this->startYear) * 12) + ($endDate->month - 1);
+
+            for ($i = $startMonthIdx; $i <= $endMonthIdx; $i++) {
+                if ($i >= 0 && $i < $this->totalMonths) {
+                    $activeMonthIndexes[] = $i;
+                }
+            }
         }
-        return 'Rp ' . number_format($value, 0, ',', '.');
+        $this->timelineData[$rowIdx] = $activeMonthIndexes;
+
+        $data = [
+            'no' => $no,
+            'project' => $project,
+            'no_risiko' => $no,
+            'tipe' => $tipe,
+            'objek' => $objek,
+            'opsi' => $this->opsiPerlakuan[$perlakuan->opsi_perlakuan_risiko] ?? '-',
+            'rencana' => $perlakuan->rencana_perlakuan_risiko ?? '-',
+            'output' => $perlakuan->output_perlakuan_risiko ?? '-',
+            'biaya' => $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-',
+            'progress' => ($perlakuan->lastMonitoring->progress_rencana_perlakuan_risiko ?? 0) . '%',
+            'pic' => $perlakuan->pic ?? '-',
+        ];
+
+        // Tambahkan placeholder kosong sebanyak total bulan agar border excel terbentuk
+        for ($i = 0; $i < $this->totalMonths; $i++) {
+            $data['month_' . $i] = '';
+        }
+
+        return $data;
     }
 }
