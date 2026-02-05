@@ -9,6 +9,7 @@ use Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use DateTime;
 use App\Models\Project;
 use App\Models\ProjectRisk;
 use App\Models\ProjectPeriodeList;
@@ -158,8 +159,8 @@ class ProjectLEDController extends Controller
                 'nama_kejadian' => $request->nama_kejadian,
                 'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
                 'deskripsi_kejadian' => $request->deskripsi_kejadian ?? null,
-                'tanggal_kejadian' => $request->tanggal_kejadian,
-                'tahun' => Carbon::parse($request->tanggal_kejadian)->format('Y'),
+                'tanggal_kejadian' => DateTime::createFromFormat('d/m/Y', $request->tanggal_kejadian)->format('Y-m-d'),
+                'tahun' => DateTime::createFromFormat('d/m/Y', $request->tanggal_kejadian)->format('Y'),
                 'kategori_kejadian_id' => $request->kategori_kejadian_id,
                 'sumber_penyebab_kejadian' => $request->sumber_penyebab_kejadian,
                 'kategori_risiko_bumn' => $request->kategori_risiko_bumn ?? 1,

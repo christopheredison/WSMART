@@ -40,7 +40,7 @@
                             <div class="col-md-6 mb-3">
                                 <label for="tanggal_kejadian" class="form-label">Tanggal Kejadian <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control flatpickr-date" id="tanggal_kejadian" name="tanggal_kejadian"
-                                value="{{ old('tanggal_kejadian') }}" required>
+                                value="{{ old('tanggal_kejadian') }}" required placeholder="Pilih Tanggal Kejadian" />
                             </div>
 
                             <div class="col-md-6 mb-3">
@@ -285,9 +285,9 @@ $(document).ready(function() {
     renderPenyebabTable();
     flatpickr(".flatpickr-date",
       {
-        altInput: true,
-        altFormat: "d/m/Y",
-        dateFormat: "Y-m-d",
+        altInput: false,
+        altFormat: "j F Y",
+        dateFormat: "d/m/Y",
         disableMobile: true,
         maxDate: "today",
       }
