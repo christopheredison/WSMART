@@ -10,6 +10,7 @@ use App\Exports\Sheets\Project\RisikoResidualKuantitatifSheet;
 use App\Exports\Sheets\Project\RisikoResidualKualitatifSheet;
 use App\Exports\Sheets\Project\RencanaPerlakuanRisikoSheet;
 use App\Exports\Sheets\Project\RealisasiResidualSheet;
+use App\Exports\Sheets\Project\ResumeProjectSheet;
 
 class LaporanProjectExport implements WithMultipleSheets
 {
@@ -25,15 +26,20 @@ class LaporanProjectExport implements WithMultipleSheets
      */
     public function sheets(): array
     {
-        $sheets = [
-            new ProfilRisikoSheet($this->projectIds),
-            new RisikoInherentKuantitatifSheet($this->projectIds),
-            new RisikoInherentKualitatifSheet($this->projectIds),
-            new RisikoResidualKuantitatifSheet($this->projectIds),
-            new RisikoResidualKualitatifSheet($this->projectIds),
-            new RencanaPerlakuanRisikoSheet($this->projectIds),
-            new RealisasiResidualSheet($this->projectIds),
-        ];
+        $sheets = [];
+
+        if (count($this->projectIds) === 1) {
+            $singleProjectId = $this->projectIds[array_key_first($this->projectIds)];
+            $sheets[] = new ResumeProjectSheet($singleProjectId);
+        }
+
+        $sheets[] = new ProfilRisikoSheet($this->projectIds);
+        $sheets[] = new RisikoInherentKuantitatifSheet($this->projectIds);
+        $sheets[] = new RisikoInherentKualitatifSheet($this->projectIds);
+        $sheets[] = new RisikoResidualKuantitatifSheet($this->projectIds);
+        $sheets[] = new RisikoResidualKualitatifSheet($this->projectIds);
+        $sheets[] = new RencanaPerlakuanRisikoSheet($this->projectIds);
+        $sheets[] = new RealisasiResidualSheet($this->projectIds);
 
         return $sheets;
     }
