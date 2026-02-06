@@ -420,7 +420,7 @@
                                             @endif
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
                                             <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
-                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
+                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}</td>
                                         </tr>
                                     @endforeach
                                 @else
@@ -485,7 +485,7 @@
                                             @endif
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
                                             <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
-                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
+                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}</td>
                                         </tr>
                                     @endforeach
                                 @else
