@@ -55,9 +55,10 @@
                                     <th>Dampak Risiko</th>
                                     <th>Rencana Perlakuan</th>
                                     <th>Biaya Perlakuan</th>
+                                    <th>Realisasi Perlakuan</th>
                                     <th>Progress (%)</th>
                                     <th>Realisasi Biaya</th>
-                                    <th>Waktu Perlakuan</th>
+                                    <th>Waktu Realisasi</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -83,17 +84,20 @@
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
                                             <td>
                                                 <span class="inputmask-fixed">
-                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                                 </span>
+                                            </td>
+                                            <td>
+                                                {{ $perlakuan->lastMonitoring?->deskripsi_perlakuan_risiko ?? '-' }}
                                             </td>
                                             <td class="display-progress inputmask-fixed  text-center">
                                                 {{ $perlakuan->lastMonitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
                                             </td>
                                             <td class="display-biaya inputmask-fixed">
-                                                {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                             </td>
                                             <td class="display-timeline text-center">
-                                                {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}
+                                                {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d M Y') ?: '-' }}
                                             </td>
                                             <td>
                                                   <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
@@ -123,10 +127,11 @@
                                     <th>Penyebab Risiko</th>
                                     <th>Rencana Perlakuan</th>
                                     <th>Biaya Perlakuan</th>
+                                    <th>Realisasi Perlakuan</th>
                                     <th>Progress (%)</th>
                                     <th>Realisasi Biaya</th>
-                                    <th>Waktu Perlakuan</th>
-                                    <th></th>
+                                    <th>Waktu Realisasi</th>
+                                    <th style="width: 80px; text-align: center;">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -138,8 +143,11 @@
                                         <td>{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->rencana_perlakuan_risiko ?: '-' }}</td>
                                         <td>
                                           <span class="inputmask-fixed">
-                                            {{ isset(($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->biaya_perlakuan_risiko) ? 'Rp ' . number_format($penyebabRisiko->perlakuanPenyebabRisiko[0]->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                            {{ isset(($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->biaya_perlakuan_risiko) ? 'Rp ' . number_format($penyebabRisiko->perlakuanPenyebabRisiko[0]->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                           </span>
+                                        </td>
+                                        <td>
+                                            {{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->last_monitoring?->deskripsi_perlakuan_risiko ?? '-' }}
                                         </td>
                                         <td class="display-progress inputmask-fixed text-center">
                                             {{ ($penyebabRisiko->perlakuanPenyebabRisiko[0] ?? null)?->last_monitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
@@ -161,7 +169,10 @@
                                             @endif
                                             <tr data-id="{{ $perlakuan->id }}">
                                                 <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
-                                                <td><span class="inputmask-fixed">{{ $perlakuan->biaya_perlakuan_risiko ?: '-' }}</span></td>
+                                                <td><span class="inputmask-fixed">{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}</span></td>
+                                                <td>
+                                                    {{ $perlakuan->last_monitoring?->deskripsi_perlakuan_risiko ?? '-' }}
+                                                </td>
                                                 <td class="display-progress inputmask-fixed text-center">
                                                     {{ $perlakuan->last_monitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
                                                 </td>
