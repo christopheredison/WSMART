@@ -13,11 +13,9 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class LaporanLossEventProjectExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithColumnFormatting
 {
-    // Ubah dari $projectId (singular) menjadi $projectIds (plural/array)
     protected $projectIds;
     protected $rowNumber = 0;
 
-    // Constructor menerima array
     public function __construct(array $projectIds)
     {
         $this->projectIds = $projectIds;
@@ -26,6 +24,7 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
     public function collection()
     {
         return LossEventProject::with([
+            'project',
             'peristiwaRisiko',
             'kategoriKejadian',
             'penyebabRisikoProjectLeds.perlakuanPenyebabRisiko',
@@ -33,7 +32,6 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
             'jenisRisiko',
             'risiko.projectRiskAnalisa'
         ])
-        // Ganti where menjadi whereIn untuk menangani banyak ID
         ->whereIn('project_id', $this->projectIds)
         ->get();
     }
@@ -41,8 +39,6 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
     public function map($row): array
     {
         $this->rowNumber++;
-
-        // --- LOGIC MAP TETAP SAMA SEPERTI SEBELUMNYA ---
 
         $sumberPenyebab = match ($row->sumber_penyebab_kejadian) {
             '1' => 'Internal',
@@ -71,6 +67,7 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
 
         return [
             $this->rowNumber,
+            optional($row->project)->project_name ?? '-',
             $row->nama_kejadian,
             optional($row->peristiwaRisiko)->title,
             optional($row->kategoriKejadian)->kategori_kejadian,
@@ -101,31 +98,56 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
 
     public function headings(): array
     {
-        // Tetap sama
         return [
-            'No', 'Nama Kejadian', 'Identifikasi Kejadian', 'Kategori Kejadian',
-            'Sumber Penyebab', 'Penyebab Kejadian', 'Penanganan Saat Kejadian',
-            'Deskripsi Kejadian', 'Kategori Risiko BUMN', 'Kategori Risiko T2 & T3 KBUMN',
-            'Penjelasan Kerugian', 'Nilai Kerugian', 'Kejadian Berulang',
-            'Frekuensi Kejadian', 'Mitigasi yang Direncanakan', 'Realisasi Mitigasi',
-            'Perbaikan Mendatang', 'Pihak Terkait', 'Status Asuransi',
-            'Nilai Premi', 'Nilai Klaim', 'Teridentifikasi di Risk Register',
-            'No Urut Risiko', 'Biaya Risiko Inheren', 'Biaya Upaya Perbaikan',
+            'No',
+            'Nama Proyek', // Tambahan Header
+            'Nama Kejadian',
+            'Identifikasi Kejadian',
+            'Kategori Kejadian',
+            'Sumber Penyebab',
+            'Penyebab Kejadian',
+            'Penanganan Saat Kejadian',
+            'Deskripsi Kejadian',
+            'Kategori Risiko BUMN',
+            'Kategori Risiko T2 & T3 KBUMN',
+            'Penjelasan Kerugian',
+            'Nilai Kerugian',
+            'Kejadian Berulang',
+            'Frekuensi Kejadian',
+            'Mitigasi yang Direncanakan',
+            'Realisasi Mitigasi',
+            'Perbaikan Mendatang',
+            'Pihak Terkait',
+            'Status Asuransi',
+            'Nilai Premi',
+            'Nilai Klaim',
+            'Teridentifikasi di Risk Register',
+            'No Urut Risiko',
+            'Biaya Risiko Inheren',
+            'Biaya Upaya Perbaikan',
             'Hasil dari Perbaikan'
         ];
     }
 
     public function columnFormats(): array
     {
-        // Tetap sama
+        // Format Currency digeser huruf kolomnya karena ada tambahan 1 kolom di depan
+        // L -> M (Nilai Kerugian)
+        // T -> U (Nilai Premi)
+        // U -> V (Nilai Klaim)
+        // X -> Y (Biaya Risiko Inheren)
+        // Y -> Z (Biaya Upaya Perbaikan)
+        // Z -> AA (Hasil Perbaikan)
+
         $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
+
         return [
-            'L' => $currencyFormat,
-            'T' => $currencyFormat,
-            'U' => $currencyFormat,
-            'X' => $currencyFormat,
-            'Y' => $currencyFormat,
-            'Z' => $currencyFormat,
+            'M' => $currencyFormat, // Sebelumnya L
+            'U' => $currencyFormat, // Sebelumnya T
+            'V' => $currencyFormat, // Sebelumnya U
+            'Y' => $currencyFormat, // Sebelumnya X
+            'Z' => $currencyFormat, // Sebelumnya Y
+            'AA' => $currencyFormat, // Sebelumnya Z
         ];
     }
 
