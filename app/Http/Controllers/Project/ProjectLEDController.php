@@ -62,7 +62,7 @@ class ProjectLEDController extends Controller
                     return $row->nama_kejadian ?? '-';
                 })
                 ->editColumn('peristiwa_risiko', function($row) {
-                    return $row->peristiwaRisiko ? $row->peristiwaRisiko->title : '-';
+                    return $row->peristiwa_risiko_id == 0 ? $row->deskripsi_kejadian : ($row->peristiwaRisiko ? $row->peristiwaRisiko->title : '-');
                 })
                 ->editColumn('kategori_kejadian', function($row) {
                     return $row->kategoriKejadian ? $row->kategoriKejadian->kategori_kejadian : '-';
@@ -131,7 +131,7 @@ class ProjectLEDController extends Controller
             'project_id' => 'required|exists:projects,id',
             'nama_kejadian' => 'required|string',
             'peristiwa_risiko_id' => 'required',
-            'deskripsi_kejadian' => $request->peristiw_risiko_id == 'other' ? 'required|string' : 'nullable|string',
+            'deskripsi_kejadian' => $request->peristiwa_risiko_id == 'other' ? 'required|string' : 'nullable|string',
             'tanggal_kejadian' => 'required',
             // 'kategori_kejadian_id' => 'required|exists:kategori_kejadians,id',
             'sumber_penyebab_kejadian' => 'required|in:1,2',
@@ -157,7 +157,7 @@ class ProjectLEDController extends Controller
             $led = LossEventProject::create([
                 'project_id' => $request->project_id,
                 'nama_kejadian' => $request->nama_kejadian,
-                'peristiwa_risiko_id' => $request->peristiwa_risiko_id,
+                'peristiwa_risiko_id' => $request->peristiwa_risiko_id == 'other' ? 0 : $request->peristiwa_risiko_id,
                 'deskripsi_kejadian' => $request->deskripsi_kejadian ?? null,
                 'tanggal_kejadian' => DateTime::createFromFormat('d/m/Y', $request->tanggal_kejadian)->format('Y-m-d'),
                 'tahun' => DateTime::createFromFormat('d/m/Y', $request->tanggal_kejadian)->format('Y'),
@@ -364,7 +364,8 @@ class ProjectLEDController extends Controller
         // dd($request->all());
         $validator = Validator::make($request->all(), [
             'nama_kejadian' => 'required|string|max:255',
-            'peristiwa_risiko_id' => 'required|exists:peristiwa_risikos,id',
+            'peristiwa_risiko_id' => 'required',
+            'deskripsi_kejadian' => $request->peristiwa_risiko_id == '0' ? 'required|string' : 'nullable|string',
             'tanggal_kejadian' => 'required',
             // 'kategori_kejadian_id' => 'required|exists:kategori_kejadians,id',
             'sumber_penyebab_kejadian' => 'required|in:1,2',

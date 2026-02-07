@@ -28,14 +28,24 @@
 
                             <div class="col-md-6 mb-3">
                                 <label for="peristiwa_risiko_id" class="form-label">Identifikasi Kejadian <span class="text-danger">*</span></label>
-                                <select class="form-select select2" name="peristiwa_risiko_id" required>
-                                    <option value="">Pilih Identifikasi Kejadian</option>
-                                    @foreach($peristiwaRisikos as $risiko)
-                                        <option value="{{ $risiko->id }}" @if(old('peristiwa_risiko_id', $lossEvent->peristiwa_risiko_id) == $risiko->id) selected @endif>
-                                            {{ $risiko->title }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                                <div class="w-100">
+                                  <select class="form-select select2" name="peristiwa_risiko_id" required>
+                                      <option value="">Pilih Identifikasi Kejadian</option>
+                                      @foreach($peristiwaRisikos as $peristiwa)
+                                          <option value="{{ $peristiwa->id }}" @if(old('peristiwa_risiko_id', $lossEvent->peristiwa_risiko_id) == $peristiwa->id) selected @endif>
+                                              {{ $peristiwa->title }}
+                                          </option>
+                                      @endforeach
+                                      <option value="0" {{ old('peristiwa_risiko_id') == 0 ? 'selected' : '' }}>Lainnya</option>
+                                  </select>
+                                  <textarea
+                                    class="form-control mt-2 {{ (old('peristiwa_risiko_id') == 0 || (!empty($lossEvent->deskripsi_kejadian) && $lossEvent->peristiwa_risiko_id == 0)) ? '' : 'd-none' }}"
+                                    id="peristiwa_risiko_lainnya"
+                                    name="deskripsi_kejadian"
+                                    rows="3"
+                                    placeholder="Masukkan Identifikasi Kejadian Lainnya"
+                                  >{{ old('deskripsi_kejadian', $lossEvent->deskripsi_kejadian ?? '') }}</textarea>
+                                </div>
                             </div>
 
                             <div class="col-md-6 mb-3">
@@ -206,6 +216,17 @@
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
 $(document).ready(function() {
+    $('#peristiwa_risiko_id').on('change', function() {
+        const selectedValue = $(this).val();
+        const otherTextarea = $('#peristiwa_risiko_lainnya');
+
+        if (selectedValue === 'other') {
+            otherTextarea.removeClass('d-none').attr('required', true);
+        } else {
+            otherTextarea.addClass('d-none').attr('required', false).val('');
+        }
+    });
+
     let penyebabData = @json($penyebabData);
 
     var flatpickrMulai = flatpickr("#timelineRange1", {

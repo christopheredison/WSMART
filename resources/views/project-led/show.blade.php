@@ -60,7 +60,7 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Identifikasi Kejadian</label>
-                            <p>{{ $lossEvent->peristiwaRisiko->title ?? '-' }}</p>
+                            <p>{{ $lossEvent->peristiwa_risiko_id == 0 ? $lossEvent->deskripsi_kejadian : ($lossEvent->peristiwaRisiko->title ?? '-') }}</p>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Kategori Kejadian</label>
