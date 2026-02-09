@@ -331,7 +331,7 @@ class ProjectController extends BasicCRUDController
         // Iterasi 1: -1 Bulan
         // Iterasi 2: -2 Bulan
         // Iterasi 3: -3 Bulan
-        $maxRetries = 4;
+        $maxRetries = 5;
 
         for ($i = 0; $i < $maxRetries; $i++) {
             $currentPeriod = $dateCheck->format('Ym');
