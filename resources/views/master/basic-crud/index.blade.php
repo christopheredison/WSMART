@@ -581,6 +581,22 @@ $(document).ready(function() {
 
 const fetchedData = [];
 $(document).ready(function() {
+    function cleanInputJS(value) {
+        if (!value) return '';
+
+        let stringValue = value.toString()
+            .replace(/&quot;/g, '"')
+            .replace(/&#039;/g, "'")
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>');
+        stringValue = stringValue.replace(/[\r\n]+/g, ' ');
+
+        const cleanRegex = /[^a-zA-Z0-9\s.,\-_()\/%]/g;
+
+        return stringValue.replace(cleanRegex, '');
+    }
+
     $("body").tooltip({ selector: '[data-bs-toggle=tooltip]' });
 
     const datatableColumns = [
@@ -726,8 +742,9 @@ $(document).ready(function() {
                 if (activeState) {
                     let buttonHtml = `@include('master.basic-crud._table_action', ['action' => $action, 'id' => ':id', 'code' => ':code'])`;
 
-                    const title = (row.peristiwa_risiko?.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                    const desc = (row.deskripsi_peristiwa_risiko || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    const title = cleanInputJS(row?.peristiwa_risiko_id == 0 ? row?.rencana_kegiatan : (row?.peristiwa_risiko?.title || '-'));
+                    const desc = cleanInputJS(row?.deskripsi_peristiwa_risiko);
+
                     const quarter = $('#table-filter select[name="quarter"]').val();
                     const tahun = $('#table-filter select[name="tahun"]').val();
                     const month = $('#table-filter select[name="month"]').val();
