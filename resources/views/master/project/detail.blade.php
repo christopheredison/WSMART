@@ -64,7 +64,7 @@
                 </div>
                 <div class="row mb-2">
                     <div class="col-md-5 fw-bold text-muted">Jenis Kontrak</div>
-                    <div class="col-md-7">{{ $meta['jenis_kontrak_id'] ?? '-' }}</div>
+                    <div class="col-md-7">{{ $meta['jenis_kontrak_name'] ?? '-' }}</div>
                 </div>
                 <div class="row mb-2">
                     <div class="col-md-5 fw-bold text-muted">Klasifikasi</div>

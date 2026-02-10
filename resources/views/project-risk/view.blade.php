@@ -196,7 +196,7 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td>{{ $projectRisk->peristiwaRisiko?->title ?? '-' }}</td>
+                                <td>{{ $projectRisk->peristiwa_risiko_id == 0 ? $projectRisk->rencana_kegiatan : ($projectRisk->peristiwaRisiko?->title ?? '-') }}</td>
                                 <td>{{ $projectRisk->deskripsi_peristiwa_risiko ?? '-' }}</td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak, 0, ',', '.') : '-' }}</td>
                                 <td>
