@@ -49,13 +49,17 @@
 
                         <div class="col-md-12">
                             <div class="form-group d-lg-flex">
-                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko</label>
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko <span class="text-danger">*</span></label>
                                 <div class="w-100">
-                                    <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Masukkan Sasaran Risiko" required></textarea>
+                                    <textarea class="form-control @error('target_capaian_kinerja') is-invalid @enderror"
+                                        id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
+                                        placeholder="Masukkan Sasaran Risiko" required>{{ old('target_capaian_kinerja') }}</textarea>
+                                    @error('target_capaian_kinerja')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
-
                         {{-- Hide Danantara --}}
                         {{-- <div class="col-md-12">
                             <div class="form-group d-lg-flex">
@@ -93,15 +97,24 @@
                         </div> --}}
                         <div class="col-12">
                             <div class="form-group form-floating">
-                                <textarea class="form-control" id="peristiwa_risiko" name="peristiwa_risiko" rows="3"  placeholder="Peristiwa Risiko" required>{{ old('peristiwa_risiko') }}</textarea>
-                                <label for="peristiwa_risiko">Peristiwa Risiko</label>
+                                <textarea class="form-control @error('peristiwa_risiko') is-invalid @enderror"
+                                    id="peristiwa_risiko" name="peristiwa_risiko" rows="3"
+                                    placeholder="Peristiwa Risiko" required>{{ old('peristiwa_risiko') }}</textarea>
+                                <label for="peristiwa_risiko">Peristiwa Risiko <span class="text-danger">*</span></label>
+                                @error('peristiwa_risiko')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                         <div class="col-12">
                             <div class="form-group form-floating">
-                                <textarea class="form-control" id="deskripsi_peristiwa_risiko" name="deskripsi_peristiwa_risiko" rows="3"
-                                    value="{{ old('deskripsi_peristiwa_risiko') }}" placeholder="Deskripsi Peristiwa Risiko" required></textarea>
-                                <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</label>
+                                <textarea class="form-control @error('deskripsi_peristiwa_risiko') is-invalid @enderror"
+                                    id="deskripsi_peristiwa_risiko" name="deskripsi_peristiwa_risiko" rows="3"
+                                    placeholder="Deskripsi Peristiwa Risiko" required>{{ old('deskripsi_peristiwa_risiko') }}</textarea>
+                                <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko <span class="text-danger">*</span></label>
+                                @error('deskripsi_peristiwa_risiko')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                         {{-- <div class="col-12">
@@ -414,15 +427,28 @@
                             </div> --}}
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker2">Perkiraan Waktu Mulai Terpapar Risiko</label>
-                                <input class="form-control datetimepicker" name="perkiraan_waktu_mulai_terpapar_risiko"
-                                    id="timepicker2" type="text" placeholder="d/m/y"
-                                    value="{{ old('perkiraan_waktu_mulai_terpapar_risiko') }}" />
+                                <div class="w-100">
+                                    <input class="form-control datetimepicker bg-white @error('perkiraan_waktu_mulai_terpapar_risiko') is-invalid @enderror"
+                                        name="perkiraan_waktu_mulai_terpapar_risiko"
+                                        id="timepicker2" type="text" placeholder="d/m/y"
+                                        value="{{ old('perkiraan_waktu_mulai_terpapar_risiko') }}" />
+                                    @error('perkiraan_waktu_mulai_terpapar_risiko')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
+
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker3">Perkiraan Waktu Selesai Terpapar Risiko</label>
-                                <input class="form-control datetimepicker" name="perkiraan_waktu_selesai_terpapar_risiko"
-                                    id="timepicker3" type="text" placeholder="d/m/y"
-                                    value="{{ old('perkiraan_waktu_selesai_terpapar_risiko') }}" />
+                                <div class="w-100">
+                                    <input class="form-control datetimepicker bg-white @error('perkiraan_waktu_selesai_terpapar_risiko') is-invalid @enderror"
+                                        name="perkiraan_waktu_selesai_terpapar_risiko"
+                                        id="timepicker3" type="text" placeholder="d/m/y"
+                                        value="{{ old('perkiraan_waktu_selesai_terpapar_risiko') }}" />
+                                    @error('perkiraan_waktu_selesai_terpapar_risiko')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -998,23 +1024,71 @@
                             $('.btn-action').prop('disabled', false);
                             $clickedButton.html(originalText);
 
-                            const errors = xhr.responseJSON.errors;
-                            if (errors) {
-                                let message = '<ul>';
-                                for (const key in errors) {
-                                    message += `<li>${errors[key]}</li>`;
-                                }
-                                message += '</ul>';
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Gagal',
-                                    html: message
+                            if (xhr.status === 422) {
+                                const errors = xhr.responseJSON.errors;
+                                let firstErrorElement = null;
+
+                                $('.is-invalid').removeClass('is-invalid');
+                                $('.invalid-feedback').remove();
+                                $('.select2-selection').removeClass('border-danger');
+
+                                $.each(errors, function(key, messages) {
+                                    let message = messages[0];
+                                    let inputElement;
+
+                                    if (key.includes('.')) {
+                                        let parts = key.split('.');
+                                        let name = parts[0];
+                                        let index = parts[1];
+                                        inputElement = $(`[name="${name}[]"]:eq(${index})`);
+                                    } else {
+                                        inputElement = $(`[name="${key}"]`);
+                                        if (inputElement.length === 0) inputElement = $(`#${key}`);
+                                    }
+
+                                    if (inputElement.length > 0) {
+                                        if (inputElement.hasClass('select2-hidden-accessible')) {
+                                            inputElement.next('.select2-container').find('.select2-selection').addClass('border-danger');
+                                            inputElement.next('.select2-container').after(`<div class="invalid-feedback d-block text-danger mt-1"><small>${message}</small></div>`);
+                                        }
+                                        else {
+                                            inputElement.addClass('is-invalid');
+
+                                            if(inputElement.parent('.input-group').length) {
+                                                inputElement.parent().after(`<div class="invalid-feedback d-block">${message}</div>`);
+                                            } else {
+                                                inputElement.after(`<div class="invalid-feedback d-block">${message}</div>`);
+                                            }
+                                        }
+
+                                        if (!firstErrorElement) {
+                                            firstErrorElement = inputElement;
+                                        }
+                                    }
                                 });
+
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Validasi Gagal',
+                                    text: 'Mohon periksa kembali isian form yang berwarna merah.',
+                                    confirmButtonText: 'OK'
+                                }).then(() => {
+                                    if (firstErrorElement) {
+                                        let targetScroll = firstErrorElement.hasClass('select2-hidden-accessible')
+                                            ? firstErrorElement.next('.select2-container')
+                                            : firstErrorElement;
+
+                                        $('html, body').animate({
+                                            scrollTop: targetScroll.offset().top - 150
+                                        }, 500);
+                                    }
+                                });
+
                             } else {
                                 Swal.fire({
                                     icon: 'error',
-                                    title: 'Gagal',
-                                    text: xhr.responseJSON.message || 'Terjadi kesalahan saat menyimpan data'
+                                    title: 'Terjadi Kesalahan',
+                                    text: xhr.responseJSON.message || 'Terjadi kesalahan sistem, silakan coba lagi.'
                                 });
                             }
                         }

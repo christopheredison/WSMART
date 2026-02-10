@@ -883,7 +883,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 $targetLabel = 'Kirim ke Risk Owner Project';
 
                 if ($revisionCount > 0) {
-                    $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$revisionCount}</strong> risiko yang <strong>dikembalikan (revisi)</strong>. Mohon perbaiki data."];
+                    $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$revisionCount}</strong> monitoring risiko yang <strong>dikembalikan (revisi)</strong>. Mohon perbaiki data."];
                     $escalationConfig['show'] = true;
                     $escalationConfig['disabled'] = true;
                 } elseif ($unstartedCount > 0) {
@@ -924,14 +924,14 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                         $summaryInfo = [
                             'type' => 'danger',
                             'icon' => 'bx-undo',
-                            'message' => "Terdapat <strong>{$returnedCount}</strong> risiko yang <strong>dikembalikan oleh {$rejectorLabel}</strong>. Mohon verifikasi ulang."
+                            'message' => "Terdapat <strong>{$returnedCount}</strong> monitoring yang <strong>dikembalikan oleh {$rejectorLabel}</strong>. Mohon verifikasi ulang."
                         ];
                     } else {
                         $senderLabel = $workflow[$step - 1]['label'] ?? 'Tahap Sebelumnya';
                         $summaryInfo = [
                             'type' => 'warning',
                             'icon' => 'bxs-error-circle',
-                            'message' => "Terdapat <strong>{$unapprovedCount}</strong> risiko aktif dari <strong>{$senderLabel}</strong> menunggu verifikasi Anda."
+                            'message' => "Terdapat <strong>{$unapprovedCount}</strong> monitoring aktif dari <strong>{$senderLabel}</strong> menunggu verifikasi Anda."
                         ];
                     }
                 } else {
@@ -940,7 +940,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     $summaryInfo = [
                         'type' => 'success',
                         'icon' => 'bx-check-double',
-                        'message' => "Seluruh risiko telah diverifikasi. Silahkan klik tombol <strong>{$btnLabel}</strong> untuk melanjutkan."
+                        'message' => "Seluruh monitoring telah diverifikasi. Silahkan klik tombol <strong>{$btnLabel}</strong> untuk melanjutkan."
                     ];
                     $escalationConfig['show'] = true;
                     $escalationConfig['disabled'] = false;

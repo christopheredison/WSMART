@@ -190,7 +190,7 @@
                   </div>
                   @endif --}}
                   <div class="form-check mb-0">
-                    <input class="form-check-input" type="checkbox" id="check-all-risiko" />
+                    <input class="form-check-input" type="checkbox" id="check-all-risiko" autocomplete="off" />
                   </div>
                 </th>
                 <th class="white-space-nowrap">#</th>
@@ -231,7 +231,7 @@
                                     // && !$item->is_closed;
                     @endphp
                     <div class="form-check mb-0 d-inline-block">
-                        <input class="form-check-input row-checkbox" type="checkbox" value="{{ $item->id }}" {{ $canVerify ? '' : 'disabled' }}>
+                        <input class="form-check-input row-checkbox" type="checkbox" value="{{ $item->id }}" {{ $canVerify ? '' : 'disabled' }} autocomplete="off">
                     </div>
                 </td>
                 <td class="index-number">
@@ -388,19 +388,6 @@
             </tbody>
           </table>
         </div>
-
-        {{-- Tampilkan data batch notes jika ada --}}
-        <!-- @if(isset($batchNotes) && $batchNotes)
-        <div class="alert alert-warning mb-3">
-          <strong>Catatan Perbaikan:</strong> {{ $batchNotes->notes }}
-        </div>
-        @endif
-
-        @if(isset($pending_risk) && $pending_risk > 0 && $step_order == $dataBatch->step_verification)
-        <div class="alert alert-info mb-3">
-          <strong>Informasi:</strong> Terdapat {{ $pending_risk }} risiko yang menunggu verifikasi/revisi.
-        </div>
-        @endif -->
 
         {{-- Informasi Average Eksposure Risiko Unit --}}
         @if(isset($avgQuantitativeExposure))

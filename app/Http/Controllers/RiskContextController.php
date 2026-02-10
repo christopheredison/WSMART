@@ -12,6 +12,8 @@ use App\Models\Jabatan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\Notification;
+use App\Models\User;
 
 class RiskContextController extends Controller
 {
@@ -565,6 +567,38 @@ class RiskContextController extends Controller
             'catatan_perbaikan' => null
         ]);
 
+        $unit = $context->unit;
+
+        $targetLink = '#';
+        if ($unit->unit_type_id == 1) {
+            $targetLink = route('risk-context.detail', [
+                'periodeId' => $context->periode_id,
+                'unitId' => $context->unit_id
+            ]);
+        } else if ($unit->unit_type_id == 2) {
+            $targetLink = route('risk-context-anper.detail', [
+                'periodeId' => $context->periode_id,
+                'unitId' => $context->unit_id
+            ]);
+        }
+
+        $riskOwners = User::where('level_id', 2)
+            ->where('unit_id', $context->unit_id)
+            ->with(['unit'])
+            ->get();
+
+
+        foreach ($riskOwners as $riskOwner) {
+            Notification::create([
+                'user_id' => $riskOwner->id,
+                'title'   => 'Verifikasi Risk Context',
+                'message' => 'Risk Context divisi ' . $unit->name . ' menunggu verifikasi Anda.',
+                'icon'    => 'bx bx-check-circle',
+                'link'    => $targetLink,
+                'read_at' => null,
+            ]);
+        }
+
         return back()->with('success', 'Risk Context berhasil diajukan ke Risk Owner.');
     }
 
@@ -590,6 +624,36 @@ class RiskContextController extends Controller
             'verified_at' => now(),
             'catatan_perbaikan' => null
         ]);
+
+        $unit = $context->unit;
+
+        $targetLink = '#';
+        if ($unit->unit_type_id == 1) {
+          $targetLink = route('risk-context.detail', [
+            'periodeId' => $context->periode_id,
+            'unitId' => $context->unit_id
+          ]);
+        } else if ($unit->unit_type_id == 2) {
+          $targetLink = route('risk-context-anper.detail', [
+            'periodeId' => $context->periode_id,
+            'unitId' => $context->unit_id
+          ]);
+        }
+
+        $riskOfficers = User::where('level_id', 1)
+            ->where('unit_id', $context->unit_id)
+            ->get();
+
+        foreach ($riskOfficers as $officer) {
+            Notification::create([
+                'user_id' => $officer->id,
+                'title'   => 'Risk Context Disetujui',
+                'message' => 'Risk Context divisi ' . $unit->name . ' telah diverifikasi.',
+                'icon'    => 'bx bx-check-double',
+                'link'    => $targetLink,
+                'read_at' => null,
+            ]);
+        }
 
         return back()->with('success', 'Risk Context berhasil diverifikasi.');
     }
@@ -619,6 +683,36 @@ class RiskContextController extends Controller
             'verified_by' => null,
             'verified_at' => null
         ]);
+
+        $unit = $context->unit;
+
+        $targetLink = '#';
+        if ($unit->unit_type_id == 1) {
+          $targetLink = route('risk-context.detail', [
+            'periodeId' => $context->periode_id,
+            'unitId' => $context->unit_id
+          ]);
+        } else if ($unit->unit_type_id == 2) {
+          $targetLink = route('risk-context-anper.detail', [
+            'periodeId' => $context->periode_id,
+            'unitId' => $context->unit_id
+          ]);
+        }
+
+        $riskOfficers = User::where('level_id', 1)
+            ->where('unit_id', $context->unit_id)
+            ->get();
+
+        foreach ($riskOfficers as $officer) {
+            Notification::create([
+                'user_id' => $officer->id,
+                'title'   => 'Revisi Risk Context',
+                'message' => 'Perbaikan diperlukan pada divisi ' . $unit->name . '.',
+                'icon'    => 'bx bx-check-double',
+                'link'    => $targetLink,
+                'read_at' => null,
+            ]);
+        }
 
         return back()->with('success', 'Risk Context dikembalikan untuk perbaikan.');
     }

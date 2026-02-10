@@ -105,7 +105,7 @@
                             <i class="bx bx-check-circle fs-3 text-success me-3"></i>
                             <div class="flex-1">
                                 <strong>Dokumen Terverifikasi</strong><br> oleh <span class="fw-bold">{{ $context->verifier->name ?? 'Risk Owner' }}</span> pada
-                                {{ \Carbon\Carbon::parse($context->verified_at)->setTimezone('Asia/Jakarta')->translatedFormat('d F Y, H:i') }}
+                                {{ \Carbon\Carbon::parse($context->verified_at)->setTimezone('Asia/Jakarta')->translatedFormat('d F Y, H:i') }} WIB
                             </div>
                         </div>
                     @endif

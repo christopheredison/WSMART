@@ -3,18 +3,18 @@
 @include('partials.success-message')
 
     @php
-        $context = $riskContexts->first(); 
+        $context = $riskContexts->first();
         $status = $context ? $context->status : 'Draft';
 
         $user = auth()->user();
-        $isRiskOfficer = ($user->level_id == 1); 
+        $isRiskOfficer = ($user->level_id == 1);
         $isRiskOwner = ($user->level_id == 2);
     @endphp
 
     <div class="row g-5 mb-5">
         <div class="col-12">
             <div class="card shadow-sm">
-                
+
                 <div class="card-header d-flex align-items-center gap-3 py-4">
                     <div class="bg-info-subtle p-2 rounded-4">
                         <div class="lead__icon">
@@ -23,7 +23,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="d-block">
                         <h3 class="m-0">Risk Context Divisi</h2>
                         <div class="ff-preheading mb-0 mt-1 text-muted">
@@ -51,7 +51,7 @@
                                     <a href="{{ route('risk-context.update-or-create', ['unit_id' => $unit->id, 'periode_id' => $periode->id]) }}" class="btn btn-sm d-flex align-items-center gap-2 btn-primary">
                                         <i class="bx bx-edit"></i> {{ $context ? 'Edit Data' : 'Isi Data' }}
                                     </a>
-                                    
+
                                     @if($context)
                                     <form id="form-submit-context" action="{{ route('risk-context.submit', $context->id) }}" method="POST" class="d-inline">
                                         @csrf
@@ -74,7 +74,7 @@
                                         <i class="bx bx-x"></i> Revisi
                                     </button>
                                 @endif
-                                
+
                                 @if($status == 'Submitted')
                                     <form id="form-verify-context" action="{{ route('risk-context.verify', $context->id) }}" method="POST" class="d-inline">
                                         @csrf
@@ -90,7 +90,7 @@
 
                 <div class="card-body p-lg-4">
                     {{-- Alert Revisi --}}
-                    @if($context && $status == 'Revision' && $context->catatan_perbaikan)
+                    @if($context && ($status == 'Revision' || $status == 'Draft') && $context->catatan_perbaikan)
                     <div class="alert alert-danger d-flex align-items-center mt-0 mb-4" role="alert">
                         <div class="svg-icon svg-icon-danger me-3">
                             @include('partials.icon-alert')
@@ -106,8 +106,8 @@
                         <div class="alert alert-success d-flex align-items-center mt-0 mb-4 border-success border-dashed bg-light-success" role="alert">
                             <i class="bx bx-check-circle fs-3 text-success me-3"></i>
                             <div class="flex-1">
-                                <strong>Dokumen Terverifikasi</strong><br> oleh <span class="fw-bold">{{ $context->verifier->name ?? 'Risk Owner' }}</span> pada 
-                                {{ \Carbon\Carbon::parse($context->verified_at)->translatedFormat('d F Y, H:i') }}
+                                <strong>Dokumen Terverifikasi</strong><br> oleh <span class="fw-bold">{{ $context->verifier->name ?? 'Risk Owner' }}</span> pada
+                                {{ \Carbon\Carbon::parse($context->verified_at)->setTimezone('Asia/Jakarta')->translatedFormat('d F Y, H:i') }} WIB
                             </div>
                         </div>
                     @endif
@@ -121,10 +121,10 @@
                             @endif
                         </div>
                     @else
-                        
-                        @php 
+
+                        @php
                           $thClass = "bg-light text-dark fw-bold align-middle";
-                          $tdClass = "align-middle"; 
+                          $tdClass = "align-middle text-pre-wrap";
                         @endphp
 
                         {{-- I. INFORMASI UMUM --}}
@@ -151,7 +151,7 @@
                                         <tr>
                                             <td class="{{ $thClass }}" style="text-align:center;">4</td>
                                             <td class="{{ $thClass }}">Anggota</td>
-                                            <td class="{{ $tdClass }}">
+                                            <td>
                                                 @if($context->members->count() > 0)
                                                     <ul class="mb-0 ps-3 text-gray-700">
                                                         @foreach($context->members as $member)
@@ -231,7 +231,7 @@
                         {{-- IV. STAKEHOLDER --}}
                         <div class="mb-5">
                             <h5 class="text-dark fw-bold mb-3">IV. Stakeholder</h5>
-                            
+
                             <div class="mb-3">
                                 <h6 class="fw-bold">Stakeholder Internal</h6>
                                 <div class="table-responsive">

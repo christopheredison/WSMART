@@ -549,6 +549,16 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         if ($canEdit) {
             $monitoringRoute = route('risk-register-unit.monitorings.edit', ['period' => $period->id, 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
+
+            $this->tableActions[] = [
+                'label' => 'Peluang',
+                'btn_icon' => false,
+                'action' => 'script',
+                'script' => "showPeluangModal($(this).data('id'), '__RISK_TITLE__', '__RISK_DESC__')",
+                'active_state' => '(data, type, row) => true',
+                'extra_attrs' => [ 'style' => 'font-size: 16px; font-weight: 400;', 'data-id' => 'row.id' ]
+            ];
+
             $this->tableActions[] = [
                 'label' => 'Monitoring',
                 'btn_icon' => false,
@@ -564,16 +574,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'btn_icon' => false,
                 'action' => 'change_to_led_unit',
                 'active_state' => '(data, type, row) => !row.is_closed && (row.last_monitoring_risiko?.status == '.UnitRiskMonitoring::STATUS_PUBLISHED.')',
-                'extra_attrs' => [ 'style' => 'font-size: 14px; font-weight: 400;' ]
-            ];
-
-            $this->tableActions[] = [
-                'label' => 'Peluang',
-                'btn_icon' => false,
-                'action' => 'script',
-                'script' => "showPeluangModal($(this).data('id'), '__RISK_TITLE__', '__RISK_DESC__')",
-                'active_state' => '(data, type, row) => true',
-                'extra_attrs' => [ 'style' => 'font-size: 14px; font-weight: 400;', 'data-id' => 'row.id' ]
+                'extra_attrs' => [ 'style' => 'font-size: 16px; font-weight: 400;' ]
             ];
         }
 
@@ -810,17 +811,29 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     $targetLabel = $isUnitMr ? 'Kirim ke Risk Owner MR' : 'Kirim ke Risk Owner Divisi';
 
                     if ($revisionCount > 0) {
-                        $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$revisionCount}</strong> monitoring dikembalikan (revisi)."];
+                        $summaryInfo = [
+                          'type' => 'danger',
+                          'icon' => 'bx-undo',
+                          'message' => "Terdapat <strong>{$revisionCount}</strong> monitoring risiko yang <strong>dikembalikan (revisi)</strong>. Mohon perbaiki data."
+                        ];
                         $escalationConfig['show'] = true;
                         $escalationConfig['disabled'] = false;
                         $escalationConfig['label'] = 'Kirim Perbaikan';
                     } elseif ($unstartedCount > 0) {
-                        $summaryInfo = ['type' => 'warning', 'icon' => 'bx-info-circle', 'message' => "Terdapat <strong>{$unstartedCount}</strong> risiko belum di-monitoring."];
+                        $summaryInfo = [
+                          'type' => 'warning',
+                          'icon' => 'bx-info-circle',
+                          'message' => "Terdapat <strong>{$unstartedCount}</strong> risiko aktif belum di-monitoring."
+                        ];
                         $escalationConfig['show'] = true;
                         $escalationConfig['disabled'] = true;
                         $escalationConfig['label'] = $targetLabel;
                     } else {
-                        $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Monitoring siap dikirim."];
+                        $summaryInfo = [
+                          'type' => 'success',
+                          'icon' => 'bx-check-double',
+                          'message' => "Seluruh monitoring siap. Silahkan klik tombol <strong>{$targetLabel}</strong> untuk melanjutkan."
+                        ];
                         $escalationConfig['show'] = true;
                         $escalationConfig['disabled'] = false;
                         $escalationConfig['label'] = $targetLabel;
@@ -848,12 +861,25 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                         $escalationConfig['disabled'] = true;
 
                         if ($returnedCount > 0) {
-                            $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$returnedCount}</strong> monitoring dikembalikan."];
+                            $summaryInfo = [
+                              'type' => 'danger',
+                              'icon' => 'bx-undo',
+                              'message' => "Terdapat <strong>{$returnedCount}</strong> monitoring yang <strong>dikembalikan. Mohon verifikasi ulang."
+
+                            ];
                         } else {
-                            $summaryInfo = ['type' => 'warning', 'icon' => 'bxs-error-circle', 'message' => "Terdapat <strong>{$unapprovedCount}</strong> monitoring menunggu verifikasi."];
+                            $summaryInfo = [
+                              'type' => 'warning',
+                              'icon' => 'bxs-error-circle',
+                              'message' => "Terdapat <strong>{$unapprovedCount}</strong> monitoring aktif menunggu verifikasi Anda."
+                            ];
                         }
                     } else {
-                        $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Seluruh monitoring terverifikasi. Siap dikirim."];
+                        $summaryInfo = [
+                          'type' => 'success',
+                          'icon' => 'bx-check-double',
+                          'message' => "Seluruh monitoring telah diverifikasi. Silahkan klik tombol <strong>{$nextLabel}</strong> untuk melanjutkan."
+                        ];
                         $escalationConfig['show'] = true;
                         $escalationConfig['disabled'] = false;
                     }

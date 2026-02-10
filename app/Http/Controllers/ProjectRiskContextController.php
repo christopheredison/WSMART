@@ -13,7 +13,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Notification;
-// Hapus Auth jika tidak perlukan scoping by unit
 
 class ProjectRiskContextController extends Controller
 {

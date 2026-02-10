@@ -43,6 +43,7 @@ use App\Models\TaksonomiRisiko;
 use App\Models\UnitRiskMonitoring;
 use Illuminate\Support\Facades\DB;
 use App\Models\PerlakuanDampakRisikoUnit;
+use App\Models\RiskContext;
 
 class RiskRegisterUnitController extends Controller
 {
@@ -78,6 +79,12 @@ class RiskRegisterUnitController extends Controller
         // 3. Setup Data Batch & Logic Unit MR
         $selectedUnit = Unit::find($unitId);
         $is_unit_mr = $selectedUnit->unit_mr == 1;
+
+        // Cek sudah ada Risk Context belum
+        $riskContext = RiskContext::where('unit_id', $selectedUnit->id)->first();
+        if (!$riskContext || $riskContext->status != RiskContext::STATUS_VERIFIED) {
+            return redirect()->route('risk-register-unit.periods')->with('error', 'Silahkan buat Risk Context terlebih dahulu pada Divisi ' . $selectedUnit->name . '.');
+        }
 
         // --- LOGIC: Tentukan Min Verification ---
         // Unit MR = 1 (Karena Step 0 Drafter -> Step 1 Owner MR [Final])
@@ -216,18 +223,19 @@ class RiskRegisterUnitController extends Controller
                             $escalationConfig['parameters']['send_type'] = 'rev';
 
                             if ($pending_risk > 0) {
-                                $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Ada <strong>{$pending_risk}</strong> risiko revisi. Silahkan edit."];
+                                $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$pending_risk}</strong> risiko yang <strong>dikembalikan (revisi)</strong>. Silahkan perbaiki data."];
                                 $escalationConfig['disabled'] = false;
                             } else {
-                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Perbaikan selesai. Klik tombol di kanan atas."];
+                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Seluruh perbaikan telah selesai. Silahkan klik tombol <strong>Kirim Perbaikan</strong> untuk melanjutkan ke Risk Owner Divisi."];
                                 $escalationConfig['disabled'] = false;
                             }
                         } else {
                             if ($draft_risk > 0) {
-                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data siap dikirim."];
+                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan ke Risk Owner Divisi."];
+
                                 $escalationConfig['disabled'] = false;
                             } else {
-                                $summaryInfo = ['type' => 'info', 'icon' => 'bx-info-circle', 'message' => "Belum ada data risiko."];
+                                $summaryInfo = ['type' => 'info', 'icon' => 'bx-info-circle', 'message' => "Belum ada data risiko. Silahkan tambah risiko baru."];
                                 $escalationConfig['disabled'] = true;
                             }
                         }
@@ -259,15 +267,15 @@ class RiskRegisterUnitController extends Controller
                         $escalationConfig['label'] = 'Kirim Perbaikan';
                         $escalationConfig['parameters']['send_type'] = 'rev';
                         if ($pending_risk > 0) {
-                            $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Perbaiki <strong>{$pending_risk}</strong> risiko revisi."];
+                            $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$pending_risk}</strong> risiko yang <strong>dikembalikan (revisi)</strong>. Silahkan perbaiki data."];
                             $escalationConfig['disabled'] = false;
                         } else {
-                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Perbaikan selesai."];
+                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Seluruh perbaikan telah selesai. Silahkan klik tombol <strong>Kirim Perbaikan</strong>."];
                             $escalationConfig['disabled'] = false;
                         }
                     } elseif ($status == DataBatch::STATUS_PROSES) {
                         if ($draft_risk > 0) {
-                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data siap dikirim."];
+                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan ke Risk Owner Divisi."];
                             $escalationConfig['disabled'] = false;
                         } else {
                             $escalationConfig['disabled'] = true;
@@ -285,14 +293,21 @@ class RiskRegisterUnitController extends Controller
                             $escalationConfig['parameters']['send_type'] = 'mainrisk';
                         } else {
                             // Label next step manual mapping, bisa diperbagus
-                            $escalationConfig['label'] = "Kirim Lanjut";
+                            $escalationConfig['label'] = "Kirim Risiko";
                         }
 
                         if ($pending_risk > 0) {
-                            $summaryInfo = ['type' => 'warning', 'icon' => 'bxs-error-circle', 'message' => "Verifikasi <strong>{$pending_risk}</strong> risiko tersisa."];
+                            $summaryInfo = ['type' => 'warning', 'icon' => 'bxs-error-circle', 'message' => "Terdapat <strong>{$pending_risk}</strong> risiko belum diverifikasi."];
                             $escalationConfig['disabled'] = true;
+                        } else if ($step_order >= $min_verification) {
+                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Semua terverifikasi. Siap Publish."];
+                            $escalationConfig['disabled'] = false;
                         } else {
-                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Siap dilanjutkan."];
+                            $summaryInfo = [
+                              'type' => 'success',
+                              'icon' => 'bx-check-double',
+                              'message' => "Seluruh risiko telah diverifikasi. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan."
+                            ];
                             $escalationConfig['disabled'] = false;
                         }
                     }
@@ -600,39 +615,67 @@ class RiskRegisterUnitController extends Controller
 
     public function store(Request $request)
     {
-        // Validasi input
-        $validated = $request->validate([
+        $rules = [
             'periode_id' => 'required|exists:periodes,id',
             'target_capaian_kinerja' => 'required|string',
-            // 'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
-            'wbs' => 'nullable|string',
+            // 'wbs' => 'nullable|string', // Opsional sesuai kebutuhan
+
+            // Validasi Array (Minimal 1 baris)
             'dampak_risiko' => 'required|array|min:1',
             'dampak_risiko.*' => 'required|string',
-            'penyebab_risiko' => 'required|array',
+
+            'penyebab_risiko' => 'required|array|min:1',
             'penyebab_risiko.*' => 'required|string',
-            'key_risk_indicator' => 'nullable|array',
-            'key_risk_indicator.*' => 'nullable|string',
-            'satuan_kri' => 'nullable|array',
-            'satuan_kri.*' => 'nullable|string',
-            'batas_aman' => 'nullable|array',
-            'batas_aman.*' => 'nullable|string',
-            'batas_waspada' => 'nullable|array',
-            'batas_waspada.*' => 'nullable|string',
-            'batas_bahaya' => 'nullable|array',
-            'batas_bahaya.*' => 'nullable|string',
-            // 'jenis_kontrol_eksisting_id' => 'nullable|exists:jenis_kontrol_eksistings,id',
-            //'kontrol_eksisting_id' => 'nullable|array',
-            //'kontrol_eksisting_id.*' => 'nullable|exists:kontrol_eksistings,id',
-            //'kontrol_eksisting' => 'required|string',
-            'kontrol_eksisting' => 'required|array',
+
+            'kontrol_eksisting' => 'required|array|min:1',
             'kontrol_eksisting.*' => 'required|string',
-            // 'penilaian_efektifitas_kontrol' => 'nullable|exists:penilaian_efektivitas_kontrols,id',
-            'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
-            'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
+
+            // Validasi KRI (Array)
+            'key_risk_indicator' => 'required|array|min:1',
+            'key_risk_indicator.*' => 'required|string',
+            'satuan_kri.*' => 'required|string',
+            'batas_aman.*' => 'required',
+            'batas_waspada.*' => 'required',
+            'batas_bahaya.*' => 'required',
+
+            'perkiraan_waktu_mulai_terpapar_risiko' => 'required|date_format:d/m/Y',
+            'perkiraan_waktu_selesai_terpapar_risiko' => 'required|date_format:d/m/Y',
             'unit_id' => 'nullable|exists:units,id',
-        ]);
+        ];
+
+        // 2. Custom Error Messages (Bahasa Indonesia)
+        $messages = [
+            'periode_id.required' => 'Periode wajib dipilih.',
+            'target_capaian_kinerja.required' => 'Sasaran Risiko wajib diisi.',
+            'peristiwa_risiko.required' => 'Peristiwa Risiko wajib diisi.',
+            'deskripsi_peristiwa_risiko.required' => 'Deskripsi detail peristiwa risiko wajib diisi.',
+
+            'dampak_risiko.required' => 'Mohon masukkan minimal satu Dampak Risiko.',
+            'dampak_risiko.*.required' => 'Dampak risiko tidak boleh ada yang kosong.',
+
+            'penyebab_risiko.required' => 'Mohon masukkan minimal satu Penyebab Risiko.',
+            'penyebab_risiko.*.required' => 'Penyebab risiko tidak boleh ada yang kosong.',
+
+            'kontrol_eksisting.required' => 'Mohon masukkan minimal satu Kontrol Eksisting.',
+            'kontrol_eksisting.*.required' => 'Kontrol eksisting tidak boleh ada yang kosong.',
+
+            'key_risk_indicator.required' => 'Mohon masukkan minimal satu Key Risk Indicator (KRI).',
+            'key_risk_indicator.*.required' => 'Nama KRI wajib diisi.',
+            'satuan_kri.*.required' => 'Satuan wajib diisi.',
+            'batas_aman.*.required' => 'Batas Aman wajib diisi.',
+            'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
+            'batas_bahaya.*.required' => 'Batas Bahaya wajib diisi.',
+
+            'perkiraan_waktu_mulai_terpapar_risiko.required' => 'Tanggal mulai terpapar risiko wajib diisi.',
+            'perkiraan_waktu_mulai_terpapar_risiko.date_format' => 'Format tanggal mulai salah (harus d/m/Y).',
+            'perkiraan_waktu_selesai_terpapar_risiko.required' => 'Tanggal selesai terpapar risiko wajib diisi.',
+            'perkiraan_waktu_selesai_terpapar_risiko.date_format' => 'Format tanggal selesai salah (harus d/m/Y).',
+        ];
+
+        // Jalankan Validasi
+        $validated = $request->validate($rules, $messages);
 
         $peristiwa_risiko = $request->peristiwa_risiko;
         $unitId = auth()->user()->unit_id;
@@ -1519,36 +1562,62 @@ class RiskRegisterUnitController extends Controller
 
     public function update(Request $request, $id)
     {
-        // Validasi input
-        $validated = $request->validate([
+        $user = auth()->user();
+        $rules = [
             'periode_id' => 'required|exists:periodes,id',
             'target_capaian_kinerja' => 'required|string',
-            // 'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
-            'wbs' => 'nullable|string',
+            'wbs_id' => 'nullable|exists:w_b_s,id',
+
+            // Array Validation
             'dampak_risiko' => 'required|array|min:1',
             'dampak_risiko.*' => 'required|string',
-            'penyebab_risiko' => 'required|array',
-            'penyebab_risiko.*' => 'required|string',
-            'key_risk_indicator' => 'nullable|array',
-            'key_risk_indicator.*' => 'nullable|string',
-            'satuan_kri' => 'nullable|array',
-            'satuan_kri.*' => 'nullable|string',
-            'batas_aman' => 'nullable|array',
-            'batas_aman.*' => 'nullable|string',
-            'batas_waspada' => 'nullable|array',
-            'batas_waspada.*' => 'nullable|string',
-            'batas_bahaya' => 'nullable|array',
-            'batas_bahaya.*' => 'nullable|string',
-            // 'jenis_kontrol_eksisting_id' => 'nullable|exists:jenis_kontrol_eksistings,id',
-            'kontrol_eksisting' => 'required|array',
-            'kontrol_eksisting.*' => 'required|string',
-            // 'penilaian_efektifitas_kontrol' => 'nullable|exists:penilaian_efektivitas_kontrols,id',
-            'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
-            'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
-        ]);
 
+            'penyebab_risiko' => 'required|array|min:1',
+            'penyebab_risiko.*' => 'required|string',
+
+            'kontrol_eksisting' => 'required|array|min:1',
+            'kontrol_eksisting.*' => 'required|string',
+
+            // KRI Validation
+            'key_risk_indicator' => 'required|array|min:1',
+            'key_risk_indicator.*' => 'required|string',
+            'satuan_kri.*' => 'required|string',
+            'batas_aman.*' => 'required',
+            'batas_waspada.*' => 'required',
+            'batas_bahaya.*' => 'required',
+
+            'perkiraan_waktu_mulai_terpapar_risiko' => 'required|date_format:d/m/Y',
+            'perkiraan_waktu_selesai_terpapar_risiko' => 'required|date_format:d/m/Y',
+        ];
+
+        $messages = [
+            'periode_id.required' => 'Periode wajib dipilih.',
+            'target_capaian_kinerja.required' => 'Sasaran Risiko wajib diisi.',
+            'peristiwa_risiko.required' => 'Peristiwa Risiko wajib diisi.',
+            'deskripsi_peristiwa_risiko.required' => 'Deskripsi detail wajib diisi.',
+
+            'dampak_risiko.required' => 'Minimal satu Dampak Risiko wajib diisi.',
+            'dampak_risiko.*.required' => 'Dampak risiko tidak boleh kosong.',
+
+            'penyebab_risiko.required' => 'Minimal satu Penyebab Risiko wajib diisi.',
+            'penyebab_risiko.*.required' => 'Penyebab risiko tidak boleh kosong.',
+
+            'kontrol_eksisting.required' => 'Minimal satu Kontrol Eksisting wajib diisi.',
+            'kontrol_eksisting.*.required' => 'Kontrol eksisting tidak boleh kosong.',
+
+            'key_risk_indicator.*.required' => 'Nama KRI wajib diisi.',
+            'satuan_kri.*.required' => 'Satuan wajib diisi.',
+            'batas_aman.*.required' => 'Batas Aman wajib diisi.',
+            'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
+            'batas_bahaya.*.required' => 'Batas Bahaya wajib diisi.',
+
+            'perkiraan_waktu_mulai_terpapar_risiko.required' => 'Tanggal mulai wajib diisi.',
+            'perkiraan_waktu_selesai_terpapar_risiko.required' => 'Tanggal selesai wajib diisi.',
+        ];
+
+        $validated = $request->validate($rules, $messages);
         try {
             // Konversi format tanggal
             $waktuMulai = null;
@@ -1897,13 +1966,13 @@ class RiskRegisterUnitController extends Controller
             }
 
             // Jika ada error, redirect back
-            if (!empty($pesanError)) {
-                $pesanError .= 'Silahkan lengkapi data tersebut terlebih dahulu.';
-                return redirect()->route('risk-register-unit.index', [
-                    'pid' => $periode_id,
-                    'unit_id' => $unit_id
-                ])->with('error', $pesanError);
-            }
+            // if (!empty($pesanError)) {
+            //     $pesanError .= 'Silahkan lengkapi data tersebut terlebih dahulu.';
+            //     return redirect()->route('risk-register-unit.index', [
+            //         'pid' => $periode_id,
+            //         'unit_id' => $unit_id
+            //     ])->with('error', $pesanError);
+            // }
         }
 
         // 3. Logic Batch & Step (Original Logic)
@@ -2195,6 +2264,7 @@ class RiskRegisterUnitController extends Controller
         $identifikasiRisiko = IdentifikasiRisiko::findOrFail($riskRegisterId);
         $unit_id = $identifikasiRisiko->unit_id;
         $periode_id = $identifikasiRisiko->periode_id;
+        $unit = Unit::findOrFail($unit_id);
 
         // $appFlow = $this->getFlowData($unit_id, $level_id);
         // $step_order = $appFlow['step_order'];
@@ -2209,7 +2279,7 @@ class RiskRegisterUnitController extends Controller
         ->first();
 
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
-        $verificationData = $this->getUserVerificationStep($level_id, $is_mr);
+        $verificationData = $this->getUserVerificationStep($level_id, $is_mr, $unit->unit_mr);
         $u_step = $verificationData['u_step'];
         $user_verification = $verificationData['user_verification'];
         $step_order = $u_step;
@@ -2605,7 +2675,7 @@ class RiskRegisterUnitController extends Controller
         $unit = Unit::find($risk->unit_id);
         $is_unit_mr = $unit->unit_mr == 1;
 
-        $verificationData = $this->getUserVerificationStep($user->level_id, $is_unit_mr);
+        $verificationData = $this->getUserVerificationStep($user->level_id, $user?->unit?->unit_mr ,$is_unit_mr);
         $u_step = $verificationData['u_step'];
 
         // Min Verification: Unit MR = 1, Biasa = 3
