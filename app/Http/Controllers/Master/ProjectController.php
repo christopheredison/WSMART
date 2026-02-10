@@ -347,7 +347,7 @@ class ProjectController extends BasicCRUDController
 
                     // LOGIC UTAMA:
                     // Jika AUTORISASI -> Ambil nilainya, return immediately.
-                    if ($statusAutorisasi === 'AUTORISASI') {
+                    if ($statusAutorisasi === 'AUTORISASI' && $data['hasil_usaha']['kontrak_review'] !== 0) {
                         $nilai = $data['hasil_usaha']['kontrak_review'] ?? 0;
                         return (float) $nilai;
                     }

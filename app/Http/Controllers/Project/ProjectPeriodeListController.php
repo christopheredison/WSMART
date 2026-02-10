@@ -449,6 +449,9 @@ class ProjectPeriodeListController extends BasicCRUDController
                     $user->hasProject($data) ||
                     ($user->unit && $data->project && $data->project->cost_center_parent == $user->unit->cost_center);
             });
+            $dataTable->addColumn('has_calculate', function () {
+                return Gate::check('project_risk_recalculate');
+            });
 
             $dataTable->rawColumns(['status_risiko_html', 'status_monitoring_html']);
 
@@ -566,6 +569,42 @@ class ProjectPeriodeListController extends BasicCRUDController
             ];
             $this->tableLegend[] = ['icon' => '<span class="bx bx-target-lock"></span>', 'label' => 'Risk Context'];
         }
+
+        $recalculateRoute = route('project-periode-list.recalculate', ':id');
+        $this->tableActions[] = [
+            'label' => '<i class="bx bx-refresh"></i>',
+            'title' => 'Recalculate',
+            'btn_icon' => 'btn-input-icon',
+            'icon' => 'bx bx-refresh',
+            'active_state' => '(data, type, row) => row?.has_calculate',
+            'action' => 'script',
+            'script' => <<<JS
+                Swal.fire({
+                    title: "Hitung ulang data?",
+                    text: "Proses ini akan menghitung ulang Analisa dan Peta Risiko Terkini",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#3085d6",
+                    confirmButtonText: "Ya, Hitung ulang",
+                    cancelButtonText: "Batal",
+                    reverseButtons: true,
+                    showCloseButton: true,
+                    showConfirmButton: true,
+                    showCancelButton: true,
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: "$recalculateRoute".replace(":id", $(this).data('id')),
+                            type: "GET",
+                            success: function(response) {
+                                Swal.fire("Berhasil", "Data berhasil dihitung ulang", "success");
+                                $('.ajax-datatable').DataTable().ajax.reload();
+                            }
+                        });
+                    }
+                });
+            JS,
+        ];
 
         $this->extraViewData['showKamusRisikoButton'] = true;
 
@@ -1362,5 +1401,17 @@ class ProjectPeriodeListController extends BasicCRUDController
 
         $user = Auth()->user();
         return view('project-periode.show', compact('projectPeriode', 'tahunMonitorings', 'formattedCurrentRiskMaps', 'editFields', 'riskMaps', 'user'));
+    }
+
+    public function recalculate($resource)
+    {
+        $projectPeriode = $this->model::findOrfail($resource);
+
+        $projectPeriode->recalculateAnalisa();
+        $projectPeriode->refreshNilai();
+
+        return response()->json([
+            'message' => 'Data berhasil dihitung ulang',
+        ]);
     }
 }

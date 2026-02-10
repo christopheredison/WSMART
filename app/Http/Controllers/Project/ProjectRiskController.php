@@ -1713,6 +1713,7 @@ class ProjectRiskController extends BasicCRUDController
         DB::beginTransaction();
         try {
             $projectRisk = ProjectRisk::findOrFail(request()->route('risk'));
+            $projectPeriodeList = ProjectPeriodeList::findOrFail(request()->route('project'));
 
             if (!Gate::check('project_risk_delete')) {
                 return response()->json([
@@ -1729,6 +1730,9 @@ class ProjectRiskController extends BasicCRUDController
             $projectRisk->projectRiskAnalisas()->delete();
             $projectRisk->projectKontrolEksistings()->delete();
             $projectRisk->delete();
+
+            $projectPeriodeList->recalculateAnalisa();
+            $projectPeriodeList->refreshNilai();
             DB::commit();
 
             return response()->json([
@@ -1818,6 +1822,7 @@ class ProjectRiskController extends BasicCRUDController
 
         //$risk_limit = $projectPeriodeList->risk_limit;
         $risk_limit = ($projectPeriodeList->project->nk ?? 0) * 0.03;
+        // dd($projectRisk);
 
         return view('project-risk.analisa', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'skalaProbabilitas', 'riskMaps', 'analisa', 'areas', 'groupedAreas', 'risk_tolerance', 'risk_limit', 'parameterTypes', 'groupedSkalaParameters', 'selectedParameterType'));
     }

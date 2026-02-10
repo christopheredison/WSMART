@@ -185,6 +185,7 @@ return [
         'project_risk_edit',
         'project_risk_delete',
         'project_risk_delete_admin',
+        'project_risk_recalculate',
 
         'project_monitoring_list',
         'project_monitoring_edit',

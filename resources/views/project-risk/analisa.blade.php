@@ -139,7 +139,7 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label>Nilai Dampak</label>
-                        {{ Form::text('nilai_dampak', $analisa->nilai_dampak, ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak']) }}
+                        {{ Form::text('nilai_dampak', $analisa->nilai_dampak, ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak', 'autocomplete' => 'off']) }}
                     </div>
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
@@ -161,7 +161,7 @@
                     </div>
                     <div class="col-md-4">
                         <label>Eksposur Risiko</label>
-                        {{ Form::text('eksposur_risiko', '', ['class' => 'form-control inputmask-rupiah', 'disabled' => true, 'required' => true]) }}
+                        {{ Form::text('eksposur_risiko', '', ['class' => 'form-control inputmask-rupiah', 'disabled' => true, 'required' => true, 'autocomplete' => 'off']) }}
                     </div>
                 </div>
                 <div class="row mb-3">
@@ -227,7 +227,7 @@
                 <div class="row mb-3 gx-3">
                     <div class="col-md-4">
                         <label>Nilai Dampak</label>
-                        {{ Form::text('nilai_dampak_residual', $analisa->nilai_dampak_residual, ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak_residual']) }}
+                        {{ Form::text('nilai_dampak_residual', $analisa->nilai_dampak_residual, ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak_residual', 'autocomplete' => 'off']) }}
                     </div>
                     <div class="col-md-4">
                         <label for="skala_parameter_type_residual">Parameter Probabilitas</label>
@@ -240,7 +240,7 @@
                     </div>
                     <div class="col-md-4">
                         <label>Eksposur Risiko</label>
-                        {{ Form::text('eksposur_risiko_residual', '', ['class' => 'form-control inputmask-rupiah', 'disabled' => true, 'required' => true]) }}
+                        {{ Form::text('eksposur_risiko_residual', '', ['class' => 'form-control inputmask-rupiah', 'disabled' => true, 'required' => true, 'autocomplete' => 'off']) }}
                     </div>
                 </div>
                 <div class="row mb-3 gx-3">
@@ -462,7 +462,7 @@ $(document).ready(function() {
         populateSkalaDropdown('Persentase Kemungkinan Terjadi', $scaleResidual);
     }
 
-    function populateSkalaDropdown(selectedType, $scaleSelect) {
+    function populateSkalaDropdown(selectedType, $scaleSelect, selectedValue = null) {
         $scaleSelect.prop('disabled', true).html('<option value="">Pilih Skala...</option>');
         if (!selectedType) return;
 
@@ -473,6 +473,10 @@ $(document).ready(function() {
         });
 
         $scaleSelect.html(options).prop('disabled', false);
+
+        if (selectedValue && $scaleSelect.find(`option[value="${selectedValue}"]`).length > 0) {
+            $scaleSelect.val(selectedValue);
+        }
     }
 
     // === FITUR 2: Validasi Terbalik (Probabilitas -> Skala) ===

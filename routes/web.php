@@ -453,6 +453,7 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::resource('master-kri', MasterKriController::class)->except(['create', 'show', 'edit']);
     Route::resource('project-periode-list', ProjectPeriodeListController::class)->except(['create', 'edit']);
+    Route::get('project-periode-list/{id}/recalculate', [ProjectPeriodeListController::class, 'recalculate'])->name('project-periode-list.recalculate');
     Route::resource('jenis-kontrol-eksisting', JenisKontrolEksistingController::class)->except(['create', 'show', 'edit']);
     Route::resource('kontrol-eksisting', KontrolEksistingController::class)->except(['create', 'show', 'edit']);
     Route::resource('taksonomi-risiko', TaksonomiRisikoController::class)->except(['create', 'show', 'edit']);
