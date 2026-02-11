@@ -1476,7 +1476,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 if ($documentFiles = $request->{'document_dampak_file_' . $id}) {
                     $documentDescriptions = json_decode($request->input('document_description_' . $id, '[]'), true) ?: [];
                     foreach ($documentFiles as $idx => $documentFile) {
-                        $storeFile = $documentFile->store('project-monitoring-documents');
+                        $storeFile = $documentFile->store('project-monitoring-documents', 'public');
                         $projectMonitoring->perlakuanDampakRisikoDocuments()->create([
                             'perlakuan_dampak_risiko_id' => $id,
                             'user_id' => request()->user()->id,
@@ -1517,7 +1517,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             if ($documentFiles = $request->{'document_file_' . $id}) {
                 $documentDescriptions = json_decode($request->input('document_description_' . $id, '[]'), true) ?: [];
                 foreach ($documentFiles as $idx => $documentFile) {
-                    $storeFile = $documentFile->store('project-monitoring-documents');
+                    $storeFile = $documentFile->store('project-monitoring-documents', 'public');
                     $projectMonitoring->perlakuanPenyebabRisikoDocuments()->create([
                         'perlakuan_penyebab_risiko_id' => $id,
                         'user_id' => request()->user()->id,
