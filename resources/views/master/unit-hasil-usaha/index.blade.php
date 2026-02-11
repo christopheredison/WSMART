@@ -51,7 +51,6 @@
                 <form id="dataForm">
                     <div class="modal-body">
                         <input type="hidden" name="id" id="id">
-                        {{-- Memuat file partial yang berisi field-field form --}}
                         @include('master.unit-hasil-usaha._form')
                     </div>
                     <div class="modal-footer">
@@ -68,7 +67,6 @@
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
 $(document).ready(function() {
-    // 1. Inisialisasi DataTable
     const table = $('#unitHasilUsahaTable').DataTable({
         processing: true,
         serverSide: true,
@@ -83,14 +81,19 @@ $(document).ready(function() {
         ]
     });
 
-    // 2. Inisialisasi InputMask untuk format Rupiah pada semua input yang relevan
     $('.inputmask-general').inputmask({
-        alias: 'numeric', groupSeparator: '.', radixPoint: ',', autoGroup: true,
-        digits: 0, digitsOptional: true, placeholder: '0', rightAlign: false,
-        autoUnmask: true, removeMaskOnSubmit: true,
+        alias: 'numeric',
+        groupSeparator: '.',
+        radixPoint: ',',
+        autoGroup: true,
+        digits: 2,
+        digitsOptional: false,
+        placeholder: '0',
+        rightAlign: false,
+        autoUnmask: false,
+        removeMaskOnSubmit: false,
     });
 
-    // 3. Logika Tombol Tambah Data
     $('#btn-tambah').click(function() {
         $('#dataForm').trigger("reset");
         $('#dataModalLabel').text("Tambah Data");
@@ -98,31 +101,36 @@ $(document).ready(function() {
         $('[name="progress_fisik_ra"]').val('0.00 %');
         $('[name="progress_fisik_ri"]').val('0.00 %');
         $('#dataModal').modal('show');
-
-        $('#unit_id').select2({
-          dropdownParent: $('#dataModal')
-        });
+        $('#unit_id').select2({ dropdownParent: $('#dataModal') });
     });
 
-    // 4. Logika Tombol Edit Data
     $('body').on('click', '.btn-edit', function() {
         const id = $(this).data('id');
         $.get("{{ url('hasil-usaha-divisi') }}/" + id + "/edit", function(data) {
             $('#dataModalLabel').text("Edit Data");
             $('#dataModal').modal('show');
+
             for (const key in data) {
-                $(`[name="${key}"]`).val(data[key]);
+                if (['kontrak_review', 'penjualan_ra', 'penjualan_ri', 'lsp_review', 'lsp_proyeksi', 'lsp_ra', 'lsp_ri'].includes(key)) {
+                    let value = data[key];
+                    if (value !== null) {
+                        value = String(value).replace('.', ',');
+                        $(`[name="${key}"]`).val(value);
+                    }
+                } else {
+                    $(`[name="${key}"]`).val(data[key]);
+                }
             }
-            $('.inputmask-general').trigger('input');
+
+            $('#unit_id').val(data.unit_id).trigger('change.select2');
+            $('#cost_center').val(data.cost_center);
+
             calculateProgress();
 
-            $('#unit_id').select2({
-              dropdownParent: $('#dataModal')
-            });
+            $('#unit_id').select2({ dropdownParent: $('#dataModal') });
         });
     });
 
-    // 5. Logika Simpan Data (Create & Update)
     $('#dataForm').submit(function(e) {
         e.preventDefault();
         $('#btn-save').html('Menyimpan...').prop('disabled', true);
@@ -139,7 +147,12 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 let errors = xhr.responseJSON.errors;
-                let errorMsg = Object.values(errors).join('<br>');
+                let errorMsg = '';
+                if(errors) {
+                    errorMsg = Object.values(errors).flat().join('<br>');
+                } else {
+                    errorMsg = 'Terjadi kesalahan pada server';
+              }
                 Swal.fire("Error!", errorMsg, "error");
             },
             complete: function() {
@@ -148,7 +161,6 @@ $(document).ready(function() {
         });
     });
 
-    // 6. Logika Hapus Data
     $('body').on('click', '.btn-delete', function() {
         const id = $(this).data('id');
         Swal.fire({
@@ -167,23 +179,32 @@ $(document).ready(function() {
         });
     });
 
-    // 7. Logika Kalkulasi Progress Fisik Otomatis
     function calculateProgress() {
-        const kontrak = parseFloat($('[name="kontrak_review"]').inputmask('unmaskedvalue')) || 0;
-        const penjualanRA = parseFloat($('[name="penjualan_ra"]').inputmask('unmaskedvalue')) || 0;
-        const penjualanRI = parseFloat($('[name="penjualan_ri"]').inputmask('unmaskedvalue')) || 0;
+        function parseMaskedNumber(val) {
+            if (!val) return 0;
+            let clean = val.replace(/\./g, '').replace(',', '.');
+            return parseFloat(clean) || 0;
+        }
+
+        const kontrak = parseMaskedNumber($('[name="kontrak_review"]').val());
+        const penjualanRA = parseMaskedNumber($('[name="penjualan_ra"]').val());
+        const penjualanRI = parseMaskedNumber($('[name="penjualan_ri"]').val());
+
         let progressRA = (kontrak > 0) ? (penjualanRA / kontrak) * 100 : 0;
         let progressRI = (kontrak > 0) ? (penjualanRI / kontrak) * 100 : 0;
+
         $('[name="progress_fisik_ra"]').val(progressRA.toFixed(2) + ' %');
         $('[name="progress_fisik_ri"]').val(progressRI.toFixed(2) + ' %');
     }
+
     const sourceFields = '[name="kontrak_review"], [name="penjualan_ra"], [name="penjualan_ri"]';
-    $('#dataModal').on('keyup', sourceFields, calculateProgress);
-    
-    // 8. Logika Mengisi Cost Center Otomatis
+    $('#dataModal').on('keyup change', sourceFields, calculateProgress);
+
     $('#unit_id').on('change', function() {
         const selectedCostCenter = $(this).find('option:selected').data('cost-center');
-        $('#cost_center').val(selectedCostCenter || '');
+        if (selectedCostCenter) {
+            $('#cost_center').val(selectedCostCenter);
+        }
     });
 });
 </script>

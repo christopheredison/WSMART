@@ -28,7 +28,7 @@ class ProjectHasilUsahaController extends Controller
             ->addColumn('action', function($row){
                 $editBtn = '<button class="btn-input-icon btn-edit" data-id="'.$row->id.'" data-bs-toggle="tooltip" title="Edit"><i class="bx bx-edit"></i></button>';
                 $deleteBtn = '<button class="btn-input-icon text-danger btn-delete ms-1" data-id="'.$row->id.'" data-bs-toggle="tooltip" title="Hapus"><i class="bx bx-trash"></i></button>';
-                
+
                 return $editBtn . $deleteBtn;
             })
             ->rawColumns(['action'])
@@ -41,8 +41,11 @@ class ProjectHasilUsahaController extends Controller
             'project_id' => 'required|exists:projects,id',
             'period' => 'required|string|size:6',
         ]);
-        
-        ProjectHasilUsaha::create($request->all());
+
+        $data = $request->all();
+        $data = $this->sanitizeCurrency($data);
+
+        ProjectHasilUsaha::create($data);
 
         return response()->json(['success' => 'Data berhasil disimpan.']);
     }
@@ -59,10 +62,14 @@ class ProjectHasilUsahaController extends Controller
             'project_id' => 'required|exists:projects,id',
             'period' => 'required|string|size:6',
         ]);
-        
+
         $data = ProjectHasilUsaha::findOrFail($id);
-        $data->update($request->all());
-        
+
+        $input = $request->all();
+        $input = $this->sanitizeCurrency($input);
+
+        $data->update($input);
+
         return response()->json(['success' => 'Data berhasil diperbarui.']);
     }
 
@@ -102,5 +109,29 @@ class ProjectHasilUsahaController extends Controller
             }
         }
         return redirect()->route('project-hasil-usaha.index')->with('import_summary', $summary);
+    }
+
+    private function sanitizeCurrency($data)
+    {
+        $currencyFields = [
+            'kontrak_review',
+            'penjualan_ra',
+            'penjualan_ri',
+            'lsp_review',
+            'lsp_proyeksi',
+            'lsp_ra',
+            'lsp_ri'
+        ];
+
+        foreach ($currencyFields as $field) {
+            if (isset($data[$field])) {
+                $clean = str_replace('.', '', $data[$field]);
+                $clean = str_replace(',', '.', $clean);
+
+                $data[$field] = $clean;
+            }
+        }
+
+        return $data;
     }
 }
