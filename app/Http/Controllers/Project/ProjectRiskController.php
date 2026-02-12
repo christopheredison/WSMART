@@ -1732,8 +1732,8 @@ class ProjectRiskController extends BasicCRUDController
             $projectRisk->delete();
 
             $projectPeriodeList = $projectPeriodeList->fresh();
-            $projectPeriodeList->recalculateAnalisa();
-            $projectPeriodeList->refreshNilai();
+            // $projectPeriodeList->recalculateAnalisa();
+            // $projectPeriodeList->refreshNilai();
             DB::commit();
 
             return response()->json([
