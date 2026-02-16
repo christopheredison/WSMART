@@ -199,8 +199,8 @@
                 </div>
             </div>
             <div class="d-block mt-3">
-                <div class="">
-                    <table class="table table-responsive table-strategi">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-strategi">
                         <thead>
                             <tr>
                                 <th rowspan="2" class="align-middle">No</th>

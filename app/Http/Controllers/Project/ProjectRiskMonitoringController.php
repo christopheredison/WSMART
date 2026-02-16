@@ -158,7 +158,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'data' => 'projectRiskAnalisa.nilai_dampak',
                 'sortable' => true,
                 'searchable' => false,
-                'render' => '(data, type, row) => "Rp" + Intl.NumberFormat("id-ID").format(row.project_risk_analisa?.nilai_dampak) || "-"',
+                'render' => '(data, type, row) => "Rp" + Intl.NumberFormat("id-ID").format(row.project_risk_analisa?.nilai_dampak) || "0"',
             ],
             'skala_dampak' => [
                 'label' => 'Skala Dampak Inheren',
@@ -203,7 +203,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'data' => 'projectRiskAnalisa.nilai_dampak_residual',
                 'sortable' => true,
                 'searchable' => false,
-                'render' => '(data, type, row) => "Rp" + Intl.NumberFormat("id-ID").format(row.project_risk_analisa?.nilai_dampak_residual) || "-"',
+                'render' => '(data, type, row) => "Rp" + Intl.NumberFormat("id-ID").format(row.project_risk_analisa?.nilai_dampak_residual) || "0"',
             ],
             'skala_dampak_residual' => [
                 'label' => 'Skala Dampak Residual',
@@ -242,6 +242,13 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                         $(td).addClass(colorClass).addClass("text-white");
                     }
                 }'
+            ],
+            'nilai_dampak_monitoring' => [
+                'label' => 'Nilai Dampak Realisasi',
+                'data' => 'projectRiskMonitoring.nilai_dampak',
+                'sortable' => true,
+                'searchable' => false,
+                'render' => '(data, type, row) => (!!row.project_risk_monitoring?.nilai_dampak ? "Rp" + Intl.NumberFormat("id-ID").format(row.project_risk_monitoring?.nilai_dampak) : "-")',
             ],
             'skala_dampak_monitoring' => [
                 'label' => 'Skala Dampak Realisasi',

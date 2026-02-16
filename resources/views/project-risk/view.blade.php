@@ -175,29 +175,46 @@
             </div>
             <div class="d-block mt-3">
                 <div class="table-responsive scrollbar">
-                    <table class="table table-strategi">
-                        <thead>
+                    <table class="table table-bordered table-strategi align-middle">
+                        <thead class="table-light text-center align-middle">
                             <tr>
-                                <th>Peristiwa Risiko</th>
-                                <th>Deskripsi Peristiwa Risiko</th>
-                                <th>Nilai Dampak Inherent</th>
-                                <th>Skala Dampak Inherent</th>
-                                <th>Nilai Probabilitas Inherent</th>
-                                <th>Skala Probabilitas Inherent</th>
-                                <th>Nilai Risiko Inherent</th>
-                                <th>Level Risiko Inherent</th>
-                                <th>Nilai Dampak Residual</th>
-                                <th>Skala Dampak Residual</th>
-                                <th>Nilai Probabilitas Residual</th>
-                                <th>Skala Probabilitas Residual</th>
-                                <th>Nilai Risiko Residual</th>
-                                <th>Level Risiko Residual</th>
+                                <th rowspan="2">Peristiwa Risiko</th>
+                                <th rowspan="2">Deskripsi Peristiwa Risiko</th>
+                                <th colspan="6" class="bg-light">Inherent</th>
+                                <th colspan="6" style="background-color: #e8f4fd;">Realisasi / Current</th>
+                                <th colspan="6" class="bg-light">Residual</th>
+                            </tr>
+                            <tr>
+                                {{-- Inherent Columns --}}
+                                <th>Nilai Dampak</th>
+                                <th>Skala Dampak</th>
+                                <th>Nilai Prob.</th>
+                                <th>Skala Prob.</th>
+                                <th>Nilai Risiko</th>
+                                <th>Level Risiko</th>
+
+                                <th style="background-color: #e8f4fd;">Nilai Dampak</th>
+                                <th style="background-color: #e8f4fd;">Skala Dampak</th>
+                                <th style="background-color: #e8f4fd;">Nilai Prob.</th>
+                                <th style="background-color: #e8f4fd;">Skala Prob.</th>
+                                <th style="background-color: #e8f4fd;">Nilai Risiko</th>
+                                <th style="background-color: #e8f4fd;">Level Risiko</th>
+
+                                {{-- Residual Columns --}}
+                                <th>Nilai Dampak</th>
+                                <th>Skala Dampak</th>
+                                <th>Nilai Prob.</th>
+                                <th>Skala Prob.</th>
+                                <th>Nilai Risiko</th>
+                                <th>Level Risiko</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
+                            <tr data-risk-id="{{ $projectRisk->id }}">
                                 <td>{{ $projectRisk->peristiwa_risiko_id == 0 ? $projectRisk->rencana_kegiatan : ($projectRisk->peristiwaRisiko?->title ?? '-') }}</td>
                                 <td>{{ $projectRisk->deskripsi_peristiwa_risiko ?? '-' }}</td>
+
+                                {{-- Inherent Data --}}
                                 <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak, 0, ',', '.') : '-' }}</td>
                                 <td>
                                     {{ $projectRisk->projectRiskAnalisa?->skalaDampakObj?->tingkat
@@ -211,7 +228,19 @@
                                         : '-' }}
                                 </td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->skala_risiko ?? '-' }}</td>
-                                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko ?? '-' }}</td>
+                                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko)))}} text-white fw-bold">
+                                    {{ $projectRisk->projectRiskAnalisa?->level_risiko ?? '-' }}
+                                </td>
+
+                                {{-- Realisasi Data (Diisi via JS) --}}
+                                <td class="realisasi-nilai-dampak">-</td>
+                                <td class="realisasi-skala-dampak">-</td>
+                                <td class="realisasi-nilai-prob">-</td>
+                                <td class="realisasi-skala-prob">-</td>
+                                <td class="realisasi-nilai-risiko">-</td>
+                                <td class="realisasi-level-risiko fw-bold">-</td>
+
+                                {{-- Residual Data --}}
                                 <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak_residual ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak_residual, 0, ',', '.') : '-' }}</td>
                                 <td>
                                     {{ $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat
@@ -225,7 +254,9 @@
                                         : '-' }}
                                 </td>
                                 <td>{{ $projectRisk->projectRiskAnalisa?->skala_risiko_residual ?? '-' }}</td>
-                                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko_residual)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko_residual ?? '-' }}</td>
+                                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko_residual)))}} text-white fw-bold">
+                                    {{ $projectRisk->projectRiskAnalisa?->level_risiko_residual ?? '-' }}
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -948,7 +979,7 @@
                                         {{ $monitoring->eksposure_risiko ? 'Rp ' . number_format($monitoring->eksposure_risiko, 0, ',', '.') : '-' }}
                                     </td>
                                     <td class="text-center">
-                                        <div class="badge p-2 w-100 bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($monitoring->level_risiko)))}} fs-6">
+                                        <div class="badge p-2 w-100 bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($monitoring->level_risiko)))}}">
                                             {{ $monitoring->skala_risiko }} - {{ $monitoring->level_risiko ?? '-' }}
                                         </div>
                                     </td>
@@ -1252,9 +1283,21 @@
 @push('scripts')
 <script>
 $(document).ready(function () {
-    const risks = [@json($projectRisk)]; // Buat jadi array berisi 1 objek
+    const risks = [@json($projectRisk)]; 
     const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
+    const riskRealisasiData = @json($riskRealisasiData); // Data Realisasi Tabel
 
+    // --- Helper Functions ---
+    const formatRupiah = (number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+    };
+
+    const getLevelClass = (levelName) => {
+        if (!levelName) return '';
+        return 'bg-' + levelName.toLowerCase().replace('to ', '').replace(' ', '-');
+    };
+
+    // --- 1. Init Peta Risiko (Static Inherent & Residual) ---
     function initializeMaps() {
         $('#inherentMap .kode-peristiwa, #currentMap .kode-peristiwa').empty();
 
@@ -1268,7 +1311,7 @@ $(document).ready(function () {
             $(`#inherentMap .data-cell[data-matrix="${matrixI}"]`).find('.kode-peristiwa').append(`<span class="box-inherent">R${code}</span>`);
             $(`#inherentMap .data-cell[data-matrix="${matrixR}"]`).find('.kode-peristiwa').append(`<span class="box-residual">R${code}</span>`);
 
-            // Peta Current
+            // Peta Current (Prepared, hidden by default)
             if (formattedCurrentRiskMaps[risk.id]) {
                 Object.keys(formattedCurrentRiskMaps[risk.id]).forEach((tahun) => {
                     formattedCurrentRiskMaps[risk.id][tahun].forEach((currentRiskMap) => {
@@ -1282,14 +1325,72 @@ $(document).ready(function () {
         });
     }
 
-    $('#monthSelect, #tahunSelect').on('change', function() {
-        const month = $('#monthSelect').val();
-        const tahun = $('#tahunSelect').val();
+    // --- 2. Update Fungsi Dashboard (Map & Table) ---
+    function updateDashboard(month, tahun) {
+        // A. Update Peta Risiko (Tampilkan Bubble sesuai filter)
         $('#currentMap').prop('class', 'table-risk-map');
         $('#currentMap').addClass('show-' + tahun + '-m' + month);
-    }).change();
 
+        // B. Update Tabel Risiko (Kolom Realisasi)
+        $('tr[data-risk-id]').each(function() {
+            const tr = $(this);
+            const riskId = tr.data('risk-id');
+            const key = tahun + '-' + month;
+
+            // Default values
+            let valDampak = '-', valSkalaDampak = '-', valProb = '-', valSkalaProb = '-', valRisiko = '-', valLevel = '-', classLevel = '';
+
+            if (riskRealisasiData[riskId] && riskRealisasiData[riskId][key]) {
+                const data = riskRealisasiData[riskId][key];
+
+                valDampak = data.nilai_dampak ? formatRupiah(data.nilai_dampak) : '-';
+                valSkalaDampak = data.skala_dampak ? `(${data.skala_dampak}) ${data.skala_dampak_desc ?? ''}` : '-';
+                valProb = data.nilai_probabilitas ?? '-';
+                valSkalaProb = data.skala_probabilitas ? `(${data.skala_probabilitas}) ${data.skala_probabilitas_desc ?? ''}` : '-';
+                valRisiko = data.nilai_risiko ?? '-';
+                valLevel = data.level_risiko ?? '-';
+                classLevel = getLevelClass(data.level_risiko);
+            }
+
+            tr.find('.realisasi-nilai-dampak').text(valDampak);
+            tr.find('.realisasi-skala-dampak').text(valSkalaDampak);
+            tr.find('.realisasi-nilai-prob').text(valProb);
+            tr.find('.realisasi-skala-prob').text(valSkalaProb);
+            tr.find('.realisasi-nilai-risiko').text(valRisiko);
+
+            const tdLevel = tr.find('.realisasi-level-risiko');
+            tdLevel.text(valLevel);
+            // Reset class bg-* lalu tambah class baru
+            tdLevel.removeClass(function (index, className) {
+                return (className.match (/(^|\s)bg-\S+/g) || []).join(' ');
+            });
+            if (classLevel) {
+                tdLevel.addClass(classLevel + ' text-white');
+            }
+        });
+    }
+
+    // Event Listener
+    $('#monthSelect, #tahunSelect').on('change', function() {
+        updateDashboard($('#monthSelect').val(), $('#tahunSelect').val());
+    });
+
+    // Init Logic
     initializeMaps();
+    
+    // Trigger update pertama kali (Default ke bulan/tahun sekarang atau nilai awal select)
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+    
+    // Jika dropdown tahun memiliki tahun sekarang, set valuenya (opsional, tergantung preferensi UX)
+    if ($("#tahunSelect option[value='"+currentYear+"']").length > 0 && !$('#tahunSelect').val()) {
+         $('#tahunSelect').val(currentYear);
+    }
+    if (!$('#monthSelect').val()) {
+        $('#monthSelect').val(currentMonth);
+    }
+
+    updateDashboard($('#monthSelect').val(), $('#tahunSelect').val());
 });
 </script>
 @endpush

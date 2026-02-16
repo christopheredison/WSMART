@@ -1641,32 +1641,64 @@ class ProjectRiskController extends BasicCRUDController
             ->where('project_periode_list_id', request()->route('project'))
             ->findOrFail(request()->route('risk'));
 
-        $projectRisk->append('currentRiskMapsMonth');
+        // $projectRisk->append('currentRiskMapsMonth');
 
         $tahunMonitorings = $projectRisk->projectRiskMonitorings->pluck('tahun')->unique()->toArray();
         $tahunMonitorings[] = $projectRisk->created_at->year;
         sort($tahunMonitorings);
+        
         $minTahun = !empty($tahunMonitorings) ? min($tahunMonitorings) : date('Y');
         $maxTahun = !empty($tahunMonitorings) ? max($tahunMonitorings) : date('Y');
         $tahunMonitorings = range($minTahun, $maxTahun);
 
-        $currentRiskMaps = $projectRisk->currentRiskMapsMonth;
+        $currentState = [
+            'skala_dampak' => $projectRisk->projectRiskAnalisa?->skala_dampak,
+            'skala_probabilitas' => $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->tingkat,
+            'nilai_dampak' => $projectRisk->projectRiskAnalisa?->nilai_dampak,
+            'skala_dampak_desc' => $projectRisk->projectRiskAnalisa?->skalaDampakObj?->deskripsi,
+            'nilai_probabilitas' => $projectRisk->projectRiskAnalisa?->nilai_probabilitas,
+            'skala_probabilitas_desc' => $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->skala,
+            'nilai_risiko' => $projectRisk->projectRiskAnalisa?->skala_risiko,
+            'level_risiko' => $projectRisk->projectRiskAnalisa?->level_risiko,
+            'month' => 0
+        ];
+
         $formattedCurrentRiskMaps = [];
-        $currentValue = $projectRisk->currentRiskMaps['inherent'] ?? null;
+        $riskRealisasiData = [];
 
-        if ($currentValue) {
-            foreach ($tahunMonitorings as $tahun) {
-                for ($month = 1; $month <= 12; $month++) {
-                    if ($nextValue = ($projectRisk->currentRiskMapsMonth[$tahun . '-' . $month] ?? null)) {
-                        $currentValue = $nextValue;
-                    }
+        // Grouping monitoring berdasarkan tahun-bulan untuk akses cepat
+        $monitorings = $projectRisk->projectRiskMonitorings->keyBy(function($item) {
+            return $item->tahun . '-' . $item->month;
+        });
 
-                    $currentValue['tahun'] = $tahun;
-                    $currentValue['quarter'] = ceil($month / 3);
-                    $currentValue['month'] = $month;
+        foreach ($tahunMonitorings as $tahun) {
+            for ($month = 1; $month <= 12; $month++) {
+                $key = $tahun . '-' . $month;
 
-                    $formattedCurrentRiskMaps[$projectRisk->id][$tahun][] = $currentValue;
+                // Jika ada monitoring di bulan ini, update current state
+                if (isset($monitorings[$key])) {
+                    $m = $monitorings[$key];
+                    $currentState = [
+                        'skala_dampak' => $m->skala_dampak,
+                        'skala_probabilitas' => $m->skalaProbabilitas?->tingkat,
+                        'nilai_dampak' => $m->nilai_dampak,
+                        'skala_dampak_desc' => $m->skalaDampakObj?->deskripsi,
+                        'nilai_probabilitas' => $m->nilai_probabilitas,
+                        'skala_probabilitas_desc' => $m->skalaProbabilitas?->skala,
+                        'nilai_risiko' => $m->skala_risiko,
+                        'level_risiko' => $m->level_risiko,
+                    ];
                 }
+
+                // Data untuk Peta (Maps)
+                $mapData = $currentState;
+                $mapData['tahun'] = $tahun;
+                $mapData['month'] = $month;
+                $mapData['quarter'] = ceil($month / 3);
+                $formattedCurrentRiskMaps[$projectRisk->id][$tahun][] = $mapData;
+
+                // Data untuk Tabel Realisasi
+                $riskRealisasiData[$projectRisk->id][$key] = $currentState;
             }
         }
 
@@ -1690,9 +1722,7 @@ class ProjectRiskController extends BasicCRUDController
             ], function ($value) {
                 return $value !== null && $value != 0;
             });
-
             $risk_tolerance = reset($risk_tolerance) ?: 0;
-
             $risk_tolerance = 2/100 *($risk_tolerance);
         } else if($project->type==1){
             $risk_tolerance = $project->rapt ?? 0;
@@ -1707,11 +1737,11 @@ class ProjectRiskController extends BasicCRUDController
             $risk_limit = 1/100*$risk_tolerance;
         }
 
-        // dd($risk_limit, $risk_tolerance);
         return view('project-risk.view', compact(
             'projectRisk',
             'tahunMonitorings',
             'formattedCurrentRiskMaps',
+            'riskRealisasiData',
             'riskMaps',
             'risk_limit',
             'risk_tolerance',
