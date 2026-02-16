@@ -1740,8 +1740,9 @@ class ProjectRiskController extends BasicCRUDController
             $projectRisk->projectKontrolEksistings()->delete();
             $projectRisk->delete();
 
-            $projectPeriodeList->recalculateAnalisa();
-            $projectPeriodeList->refreshNilai();
+            $projectPeriodeList = $projectPeriodeList->fresh();
+            // $projectPeriodeList->recalculateAnalisa();
+            // $projectPeriodeList->refreshNilai();
             DB::commit();
 
             return response()->json([
@@ -1750,7 +1751,7 @@ class ProjectRiskController extends BasicCRUDController
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'Terjadi kesalahan: ' + $e->getMessage()
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
         }
     }

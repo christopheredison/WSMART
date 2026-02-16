@@ -24,7 +24,6 @@ class UnitHasilUsahaController extends Controller
             ->addColumn('unit_name', fn($row) => $row->unit->name ?? '-')
             ->addColumn('cost_center', fn($row) => $row->cost_center)
             ->addColumn('period', fn($row) => $row->period ? preg_replace('/(\d{4})(\d{2})/', '$1-$2', $row->period) : '-')
-            // ->editColumn('lsp_ri', fn($row) => 'Rp ' . number_format($row->lsp_ri, 0, ',', '.'))
             ->editColumn('kontrak_review', fn($row) => 'Rp ' . number_format($row->kontrak_review, 0, ',', '.'))
             ->addColumn('action', function($row){
                 $editBtn = '<button class="btn-input-icon btn-edit" data-id="'.$row->id.'" data-bs-toggle="tooltip" title="Edit"><i class="bx bx-edit"></i></button>';
@@ -42,9 +41,10 @@ class UnitHasilUsahaController extends Controller
             'cost_center' => 'required|string|max:255',
             'period' => 'required|string|size:6|unique:unit_hasil_usaha,period,NULL,id,unit_id,' . $request->unit_id,
         ]);
-        
+
         $data = $request->only((new UnitHasilUsaha)->getFillable());
-        
+        $data = $this->sanitizeCurrency($data);
+
         $kontrak = (float)($data['kontrak_review'] ?? 0);
         $penjualanRA = (float)($data['penjualan_ra'] ?? 0);
         $penjualanRI = (float)($data['penjualan_ri'] ?? 0);
@@ -70,9 +70,10 @@ class UnitHasilUsahaController extends Controller
             'cost_center' => 'required|string|max:255',
             'period' => 'required|string|size:6|unique:unit_hasil_usaha,period,' . $id . ',id,unit_id,' . $request->unit_id,
         ]);
-        
+
         $dataToUpdate = $request->only((new UnitHasilUsaha)->getFillable());
-        
+        $dataToUpdate = $this->sanitizeCurrency($dataToUpdate);
+
         $kontrak = (float)($dataToUpdate['kontrak_review'] ?? 0);
         $penjualanRA = (float)($dataToUpdate['penjualan_ra'] ?? 0);
         $penjualanRI = (float)($dataToUpdate['penjualan_ri'] ?? 0);
@@ -82,7 +83,7 @@ class UnitHasilUsahaController extends Controller
 
         $data = UnitHasilUsaha::findOrFail($id);
         $data->update($dataToUpdate);
-        
+
         return response()->json(['success' => 'Data berhasil diperbarui.']);
     }
 
@@ -90,5 +91,28 @@ class UnitHasilUsahaController extends Controller
     {
         UnitHasilUsaha::destroy($id);
         return response()->json(['success' => 'Data berhasil dihapus.']);
+    }
+
+    private function sanitizeCurrency($data)
+    {
+        $currencyFields = [
+            'kontrak_review',
+            'penjualan_ra',
+            'penjualan_ri',
+            'lsp_review',
+            'lsp_proyeksi',
+            'lsp_ra',
+            'lsp_ri'
+        ];
+
+        foreach ($currencyFields as $field) {
+            if (isset($data[$field])) {
+                $clean = str_replace('.', '', $data[$field]);
+                $clean = str_replace(',', '.', $clean);
+                $data[$field] = $clean;
+            }
+        }
+
+        return $data;
     }
 }

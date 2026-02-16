@@ -117,7 +117,7 @@ class ProjectRiskMonitoringDocumentController extends BasicCRUDController
 
         $file = $request->file('file');
         $fileName = $file->getClientOriginalName();
-        $filePath = $file->store('project_risk_monitoring_documents');
+        $filePath = $file->store('project_risk_monitoring_documents', 'public');
 
         $data = $request->only(['description']);
         $data['file_name'] = $fileName;

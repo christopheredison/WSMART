@@ -14,7 +14,7 @@
             @if(!empty($summary['failed_rows']))
                 <hr>
                 <h6>Detail Kegagalan:</h6>
-                <ul class="mb-0 small" style="padding-left: 20px;"> 
+                <ul class="mb-0 small" style="padding-left: 20px;">
                     @foreach($summary['failed_rows'] as $error)
                         <li>{{ $error }}</li>
                     @endforeach
@@ -37,7 +37,7 @@
                 </div>
                 <div class="ms-auto d-flex align-items-center gap-2">
 
-                    @include('master.project-hasil-usaha._sync_button') 
+                    @include('master.project-hasil-usaha._sync_button')
 
                     <button id="btn-tambah" class="btn btn-outline-info btn-sm">
                         <span class="bx bx-plus"></span>
@@ -106,9 +106,16 @@ $(document).ready(function() {
 
     // 2. Inisialisasi InputMask untuk format Rupiah
     $('.inputmask-general').inputmask({
-        alias: 'numeric', groupSeparator: '.', radixPoint: ',', autoGroup: true,
-        digits: 0, digitsOptional: true, placeholder: '0', rightAlign: false,
-        autoUnmask: true, removeMaskOnSubmit: true,
+        alias: 'numeric',
+        groupSeparator: '.',
+        radixPoint: ',',
+        autoGroup: true,
+        digits: 2,
+        digitsOptional: false,
+        placeholder: '0',
+        rightAlign: false,
+        autoUnmask: false,
+        removeMaskOnSubmit: false,
     });
 
     // 3. Tombol Tambah Data
@@ -116,7 +123,6 @@ $(document).ready(function() {
         $('#dataForm').trigger("reset");
         $('#dataModalLabel').text("Tambah Data");
         $('#id').val('');
-        // Reset progress fisik
         $('[name="progress_fisik_ra"]').val('0.00 %');
         $('[name="progress_fisik_ri"]').val('0.00 %');
         $('#dataModal').modal('show');
@@ -131,17 +137,21 @@ $(document).ready(function() {
         $.get("{{ url('project-hasil-usaha') }}/" + id + "/edit", function(data) {
             $('#dataModalLabel').text("Edit Data");
             $('#dataModal').modal('show');
-            // Isi semua field dari data yang diterima
-            for (const key in data) {
-                $(`[name="${key}"]`).val(data[key]);
-            }
-            // Trigger inputmask untuk format ulang nilai
-            $('.inputmask-general').trigger('input');
-            calculateProgress(); // Hitung progress setelah data diisi
 
-            $('#project_id').select2({
-              dropdownParent: $('#dataModal')
-            });
+            for (const key in data) {
+                if (['kontrak_review', 'penjualan_ra', 'penjualan_ri', 'lsp_review', 'lsp_proyeksi', 'lsp_ra', 'lsp_ri'].includes(key)) {
+                    let value = data[key];
+                    if (value !== null) {
+                        value = String(value).replace('.', ',');
+                        $(`[name="${key}"]`).val(value);
+                    }
+                } else {
+                    $(`[name="${key}"]`).val(data[key]);
+                }
+            }
+
+            $('#project_id').select2({ dropdownParent: $('#dataModal') });
+            calculateProgress();
         });
     });
 
@@ -204,9 +214,16 @@ $(document).ready(function() {
 
     // 7. Logika Kalkulasi Progress Fisik
     function calculateProgress() {
-        const kontrak = parseFloat($('[name="kontrak_review"]').inputmask('unmaskedvalue')) || 0;
-        const penjualanRA = parseFloat($('[name="penjualan_ra"]').inputmask('unmaskedvalue')) || 0;
-        const penjualanRI = parseFloat($('[name="penjualan_ri"]').inputmask('unmaskedvalue')) || 0;
+        function parseMaskedNumber(val) {
+            if (!val) return 0;
+            let clean = val.replace(/\./g, '');
+            clean = clean.replace(',', '.');
+            return parseFloat(clean) || 0;
+        }
+
+        const kontrak = parseMaskedNumber($('[name="kontrak_review"]').val());
+        const penjualanRA = parseMaskedNumber($('[name="penjualan_ra"]').val());
+        const penjualanRI = parseMaskedNumber($('[name="penjualan_ri"]').val());
 
         let progressRA = (kontrak > 0) ? (penjualanRA / kontrak) * 100 : 0;
         let progressRI = (kontrak > 0) ? (penjualanRI / kontrak) * 100 : 0;
@@ -217,7 +234,7 @@ $(document).ready(function() {
 
     const sourceFields = '[name="kontrak_review"], [name="penjualan_ra"], [name="penjualan_ri"]';
     $('#dataModal').on('keyup', sourceFields, calculateProgress);
-    
+
     // 8. Logika Tombol Sinkronisasi
     $('#syncForm').on('submit', function() {
         $('#submitSyncBtn').prop('disabled', true);

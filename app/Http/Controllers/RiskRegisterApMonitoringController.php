@@ -1150,7 +1150,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             if ($documentFiles = $request->{'document_file_' . $id}) {
                 $documentDescriptions = json_decode($request->input('document_description_' . $id, '[]'), true) ?: [];
                 foreach ($documentFiles as $idx => $documentFile) {
-                    $storeFile = $documentFile->store('risk-register-ap-monitoring-documents');
+                    $storeFile = $documentFile->store('risk-register-ap-monitoring-documents', 'public');
                     PerlakuanPenyebabRisikoUnitDocument::create([
                         'perlakuan_penyebab_risiko_unit_id' => $id,
                         'unit_risk_monitoring_id' => $projectMonitoring->id,

@@ -1274,6 +1274,8 @@ class ProjectPeriodeListController extends BasicCRUDController
                     $query->orderBy('id', 'desc');
                     $query->with('skalaProbabilitas');
                 },
+                'projectRisks.projectRiskMonitorings.skalaDampakObj',
+                'projectRisks.projectRiskMonitorings.skalaProbabilitas',
             ])
             ->findOrFail($resource);
 
@@ -1292,11 +1294,7 @@ class ProjectPeriodeListController extends BasicCRUDController
 
         $projectPeriode->setRelation('projectRisks', $sortedRisks);
 
-        $projectPeriode->projectRisks->each(function($projectRisk) {
-            $projectRisk->append('currentRiskMapsMonth');
-        });
-
-        $tahunMonitorings = $projectPeriode->projectRisks->pluck('projectRiskMonitorings')->flatten()->pluck('tahun')->unique()->toArray();
+        $tahunMonitorings = $projectPeriode->projectRisks->pluck('projectRiskMonitorings')->flatten()->pluck('tahun')->unique()->filter()->toArray();
         $tahunMonitorings[] = $projectPeriode->created_at?->format('Y') ?? date('Y');
         sort($tahunMonitorings);
 
@@ -1308,20 +1306,50 @@ class ProjectPeriodeListController extends BasicCRUDController
             $tahunMonitorings[] = $tahun;
         }
 
-        $currentRiskMaps = $projectPeriode->projectRisks->pluck('currentRiskMapsMonth');
         $formattedCurrentRiskMaps = [];
-        foreach ($projectPeriode->projectRisks as $idx => $projectRisk) {
-            $currentValue = $projectRisk->currentRiskMaps['inherent'];
+        $riskRealisasiData = [];
+
+        foreach ($projectPeriode->projectRisks as $projectRisk) {
+            $currentState = [
+                'skala_dampak' => $projectRisk->projectRiskAnalisa?->skala_dampak,
+                'skala_probabilitas' => $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->tingkat,
+                'nilai_dampak' => $projectRisk->projectRiskAnalisa?->nilai_dampak,
+                'skala_dampak_desc' => $projectRisk->projectRiskAnalisa?->skalaDampakObj?->deskripsi,
+                'nilai_probabilitas' => $projectRisk->projectRiskAnalisa?->nilai_probabilitas,
+                'skala_probabilitas_desc' => $projectRisk->projectRiskAnalisa?->skalaProbabilitas?->skala,
+                'nilai_risiko' => $projectRisk->projectRiskAnalisa?->skala_risiko,
+                'level_risiko' => $projectRisk->projectRiskAnalisa?->level_risiko,
+            ];
+
+            $monitorings = $projectRisk->projectRiskMonitorings->keyBy(function($item) {
+                return $item->tahun . '-' . $item->month;
+            });
+
             foreach ($tahunMonitorings as $tahun) {
                 for ($month = 1; $month <= 12; $month++) {
-                    if ($nextValue = ($projectRisk->currentRiskMapsMonth[$tahun . '-' . $month] ?? null)) {
-                        $currentValue = $nextValue;
-                    }
-                    $currentValue['tahun'] = $tahun;
-                    $currentValue['quarter'] = ceil($month / 3);
-                    $currentValue['month'] = $month;
+                    $key = $tahun . '-' . $month;
 
-                    $formattedCurrentRiskMaps[$projectRisk->id][$tahun][] = $currentValue;
+                    if (isset($monitorings[$key])) {
+                        $m = $monitorings[$key];
+                        $currentState = [
+                            'skala_dampak' => $m->skala_dampak,
+                            'skala_probabilitas' => $m->skalaProbabilitas?->tingkat,
+                            'nilai_dampak' => $m->nilai_dampak,
+                            'skala_dampak_desc' => $m->skalaDampakObj?->deskripsi,
+                            'nilai_probabilitas' => $m->nilai_probabilitas,
+                            'skala_probabilitas_desc' => $m->skalaProbabilitas?->skala,
+                            'nilai_risiko' => $m->skala_risiko,
+                            'level_risiko' => $m->level_risiko,
+                        ];
+                    }
+
+                    $mapData = $currentState;
+                    $mapData['tahun'] = $tahun;
+                    $mapData['month'] = $month;
+                    $mapData['quarter'] = ceil($month / 3);
+                    $formattedCurrentRiskMaps[$projectRisk->id][$tahun][] = $mapData;
+
+                    $riskRealisasiData[$projectRisk->id][$key] = $currentState;
                 }
             }
         }
@@ -1375,22 +1403,22 @@ class ProjectPeriodeListController extends BasicCRUDController
                     ]
                 ],
             ],
-            [
-                'name' => 'batas_nilai',
-                'type' => 'text',
-                'label' => 'Batas Nilai',
-                'parameters' => [
-                    'batas_nilai',
-                    $projectPeriode->project->batas_nilai,
-                    [
-                        'class' => 'form-control inputmask-general',
-                        'placeholder' => 'Masukkan Batas Nilai',
-                        'required' => true,
-                        'step' => '0.01',
-                        'autocomplete' => 'off',
-                    ]
-                ],
-            ],
+            // [
+            //     'name' => 'batas_nilai',
+            //     'type' => 'text',
+            //     'label' => 'Batas Nilai',
+            //     'parameters' => [
+            //         'batas_nilai',
+            //         $projectPeriode->project->batas_nilai,
+            //         [
+            //             'class' => 'form-control inputmask-general',
+            //             'placeholder' => 'Masukkan Batas Nilai',
+            //             'required' => true,
+            //             'step' => '0.01',
+            //             'autocomplete' => 'off',
+            //         ]
+            //     ],
+            // ],
         ];
 
         $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
@@ -1400,7 +1428,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             });
 
         $user = Auth()->user();
-        return view('project-periode.show', compact('projectPeriode', 'tahunMonitorings', 'formattedCurrentRiskMaps', 'editFields', 'riskMaps', 'user'));
+        return view('project-periode.show', compact('projectPeriode', 'tahunMonitorings', 'formattedCurrentRiskMaps', 'riskRealisasiData', 'editFields', 'riskMaps', 'user'));
     }
 
     public function recalculate($resource)
