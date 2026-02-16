@@ -1626,7 +1626,16 @@ class ProjectRiskController extends BasicCRUDController
                 'projectRiskAnalisa.skalaDampakResidualObj',
                 'projectRiskAnalisa.skalaProbabilitasResidual',
                 'projectRiskMonitorings' => function($query) {
-                    $query->orderBy('id', 'desc')->with('skalaProbabilitas');
+                    $query->orderBy('id', 'desc')
+                        ->with([
+                            'skalaProbabilitas', 
+                            'skalaDampakObj',
+                            'kriProyekMonitorings.kriProject', 
+                            'perlakuanPenyebabMonitorings.perlakuanPenyebab.penyebabRisikoProject',
+                            'perlakuanDampakMonitorings.perlakuanDampak.dampakRisikoProject',
+                            'perlakuanPenyebabRisikoDocuments', 
+                            'perlakuanDampakRisikoDocuments'
+                        ]);
                 },
             ])
             ->where('project_periode_list_id', request()->route('project'))

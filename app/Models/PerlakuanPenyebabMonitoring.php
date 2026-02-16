@@ -30,7 +30,7 @@ class PerlakuanPenyebabMonitoring extends Model
 
     public function perlakuanPenyebab()
     {
-        return $this->belongsTo(PerlakuanPenyebabMonitoring::class, 'perlakuan_penyebab_id');
+        return $this->belongsTo(PerlakuanPenyebabRisiko::class, 'perlakuan_penyebab_id');
     }
 
     public function projectMonitoring()
