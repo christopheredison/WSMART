@@ -1077,10 +1077,10 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         }
 
         // Validasi Publish Risiko
-        if ($projectRisk->status != ProjectRisk::STATUS_PUBLISHED) {
-            return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
-                ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum terpublikasi. Harap minta persetujuan risiko terlebih dahulu.');
-        }
+        // if ($projectRisk->status != ProjectRisk::STATUS_PUBLISHED) {
+        //     return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
+        //         ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum terpublikasi. Harap minta persetujuan risiko terlebih dahulu.');
+        // }
 
         $requiredAnalisaFields = [
             'kategori_dampak', 'nilai_dampak', 'nilai_probabilitas', 'skala_dampak',
@@ -1329,6 +1329,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         // Logic Kalkulasi Otomatis hanya jika Dropdown Kosong tapi Nilai Ada
         if (empty($skalaProbabilitasId) && !is_null($nilaiProbabilitas)) {
             $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($nilaiProbabilitas);
+            dd($tingkatSkalaProbabilitas);
             if ($tingkatSkalaProbabilitas) {
                 $skalaProbabilitasId = $tingkatSkalaProbabilitas->id; // Sesuaikan column ID atau Tingkat
             }
@@ -1339,12 +1340,8 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $levelRisiko = null;
 
         if ($skalaDampak && $skalaProbabilitasId) {
-            // Ambil ID tingkat (asumsi value dropdown adalah tingkat/level, misal 1,2,3,4,5)
-            // Jika value dropdown adalah ID tabel, sesuaikan querynya.
-            // Di blade Anda value="{{ $param->tingkat }}", jadi kita pakai tingkat.
-
             $riskMap = RiskMap::where('skala_dampak', $skalaDampak)
-                ->where('skala_probabilitas', $skalaProbabilitasId) // Asumsi $skalaProbabilitasId ini adalah 'tingkat' (1-5)
+                ->where('skala_probabilitas', $skalaProbabilitasId)
                 ->first();
 
             if ($riskMap) {
@@ -1353,8 +1350,6 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             }
         }
 
-        // Jika User Override Skala Risiko/Level secara manual (hidden input mungkin terisi via JS)
-        // Gunakan input manual jika risk map tidak ditemukan atau user memaksa
         $skalaRisiko = $request->realisasi_skala_risiko ?? $request->realisasi_skala_risiko_hidden ?? $skalaRisiko;
         $levelRisiko = $request->realisasi_level_risiko ?? $request->realisasi_level_risiko_hidden ?? $levelRisiko;
 
@@ -1562,6 +1557,12 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         // Hindari pembagian dengan nol
         if ($selisih_inherent_rencana != 0) {
             $efektivitas = (($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana) * 100;
+        }
+
+        if ($projectMonitoring) {
+            $projectMonitoring->update([
+                'efektivitas_perlakuan_risiko' => round($efektivitas, 2)
+            ]);
         }
 
         $projectRisk->update([

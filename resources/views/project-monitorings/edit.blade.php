@@ -875,28 +875,37 @@ function getSkalaProbabilitasByValue(value) {
 
 function refreshSkalaAndLevelRisiko() {
     const riskMaps = @json($riskMaps);
-    const nilaiDampak = parseFloat($('#realisasi_nilai_dampak').val());
-    const nilaiProbabilitas = parseFloat($('#realisasi_nilai_probabilitas').val());
-    const skalaDampak = parseFloat($('#realisasi_skala_dampak').val());
-    const skalaProbabilitas = getSkalaProbabilitasByValue(nilaiProbabilitas);
 
-    // const domSkalaProbabilitas = $('#realisasi_skala_probabilitas');
-    const tingkatProbabilitas = $('#realisasi_skala_probabilitas').val();
+    // 1. Ambil Skala Dampak (Input Dropdown)
+    const skalaDampak = parseInt($('#realisasi_skala_dampak').val());
+
+    // 2. Ambil Skala Probabilitas (Input Dropdown) - PERBAIKAN DISINI
+    // Kita ambil langsung valuenya (tingkat), bukan hitung dari persen
+    const skalaProbabilitas = parseInt($('#realisasi_skala_probabilitas').val());
+
+    // Update Hidden Input untuk keperluan submit form
+    $('#realisasi_skala_probabilitas_hidden').val(skalaProbabilitas);
+    $('#realisasi_skala_dampak_hidden').val(skalaDampak);
+
     const domSkalaRisiko = $('#realisasi_skala_risiko');
     const domLevelRisiko = $('#realisasi_level_risiko');
 
-    // if (skalaProbabilitas) {
-    //     domSkalaProbabilitas.val(skalaProbabilitas.tingkat + ' - ' + skalaProbabilitas.skala);
-    //     $('#realisasi_skala_probabilitas_hidden').val(skalaProbabilitas.tingkat);
-    // } else {
-    //     domSkalaProbabilitas.val('');
-    //     $('#realisasi_skala_probabilitas_hidden').val('');
-    // }
+    // Validasi jika belum dipilih
+    if (!skalaDampak || !skalaProbabilitas) {
+        domSkalaRisiko.val('');
+        domLevelRisiko.val('');
+        $('#realisasi_skala_risiko_hidden').val('');
+        $('#realisasi_level_risiko_hidden').val('');
+        return;
+    }
 
-    $('#realisasi_skala_probabilitas_hidden').val(tingkatProbabilitas);
+    // 3. Mapping Risk Map (Kunci: "SkalaDampak-SkalaProbabilitas")
+    const key = skalaDampak + '-' + skalaProbabilitas;
+    const riskMap = riskMaps[key];
 
-    const riskMap = riskMaps[skalaDampak + '-' + (skalaProbabilitas?.tingkat)];
-    if  (riskMap) {
+    // console.log('Mapping Key:', key, 'Result:', riskMap); // Debugging
+
+    if (riskMap) {
         domSkalaRisiko.val(riskMap.nilai_risiko);
         domLevelRisiko.val(riskMap.level_risiko);
         $('#realisasi_skala_risiko_hidden').val(riskMap.nilai_risiko);

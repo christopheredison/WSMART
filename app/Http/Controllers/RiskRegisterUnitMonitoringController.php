@@ -1362,6 +1362,12 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             $efektivitas = (($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana) * 100;
         }
 
+        if ($projectMonitoring) {
+            $projectMonitoring->update([
+                'efektivitas_perlakuan_risiko' => round($efektivitas, 2)
+            ]);
+        }
+
         $risk->update([
             'efektivitas_perlakuan_risiko' => round($efektivitas, 2)
         ]);

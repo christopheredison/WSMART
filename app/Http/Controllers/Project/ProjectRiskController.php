@@ -1903,7 +1903,26 @@ class ProjectRiskController extends BasicCRUDController
             return $item->skala_dampak . '-' . $item->skala_probabilitas;
         });
 
-        //
+        // Ambil object Skala Parameter berdasarkan ID yang dipilih user
+        $skalaInherent = SkalaParameter::find($request->skala_parameter_id);
+        $skalaResidual = SkalaParameter::find($request->skala_parameter_residual_id);
+
+        if (!$skalaInherent || !$skalaResidual) {
+            return response()->json([
+                'message' => 'Gagal memproses data: Parameter skala tidak lengkap. Silakan pilih ulang Skala Probabilitas.'
+            ], 422);
+        }
+
+        // Pastikan kita menggunakan 'tingkat' dari SkalaParameter yang dipilih user
+        $tingkatInherent = $skalaInherent->tingkat;
+        $tingkatResidual = $skalaResidual->tingkat;
+
+        // Validasi logic (Residual tidak boleh > Inheren)
+        // if ($tingkatResidual > $tingkatInherent) {
+        //     return response()->json([
+        //         'message' => 'Tingkat skala probabilitas residual tidak boleh lebih tinggi dari inheren.',
+        //     ], 422);
+        // }
 
         $toUpdate = [
             'skala_probabilitas_id' => null, // calculated [Done]
@@ -1931,22 +1950,6 @@ class ProjectRiskController extends BasicCRUDController
             'skala_parameter_residual_id' => $request->skala_parameter_residual_id,
         ];
 
-        $skalaInherent = SkalaParameter::find($request->skala_parameter_id);
-        $skalaResidual = SkalaParameter::find($request->skala_parameter_residual_id);
-
-        // CEK NULL SEBELUM AKSES ->tingkat
-        if (!$skalaInherent || !$skalaResidual) {
-            return response()->json([
-                'message' => 'Gagal memproses data: Parameter skala tidak lengkap. Silakan pilih ulang Skala Probabilitas.'
-            ], 422);
-        }
-
-        $analisa->update($toUpdate);
-
-        $toUpdate = [
-            'nilai_probabilitas' => $request->nilai_probabilitas,
-            'nilai_probabilitas_residual' => $request->nilai_probabilitas_residual,
-        ];
         $risk_tolerance = 0;
         $risk_limit = 0;
 
@@ -1981,7 +1984,6 @@ class ProjectRiskController extends BasicCRUDController
         }
 
         if($request->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF){
-
             $sum_risk = ProjectRisk::where('periode_id', $projectPeriodeList->periode_id)
                 ->where('project_id', $projectPeriodeList->project_id)
                 ->where('id', '!=', $projectRisk->id)
@@ -1991,27 +1993,32 @@ class ProjectRiskController extends BasicCRUDController
                 ->count();
             $sum_risk = $sum_risk + 1;
 
-            //$risk_limit = $projectPeriodeList->risk_limit;
             $risk_limit = ($projectPeriodeList->project->nk ?? 0) * 0.03;
 
-            // Old Code (Calculated)
-            // $skala_dampak = $this->hitungSkalaDampak($nilai_dampak, $risk_limit);
-            // $skala_dampak_residual = $this->hitungSkalaDampak($nilai_dampak_residual, $risk_limit);
 
-            $toUpdate['skala_dampak'] = $request->skala_dampak;
-            $toUpdate['skala_dampak_residual'] = $request->skala_dampak_residual;
+            $skalaDampakFinal = $request->skala_dampak;
+            $skalaDampakResidualFinal = $request->skala_dampak_residual;
+            // $toUpdate['skala_dampak'] = $request->skala_dampak;
+            // $toUpdate['skala_dampak_residual'] = $request->skala_dampak_residual;
 
             $toUpdate['nilai_dampak'] = $nilai_dampak;
             $toUpdate['nilai_dampak_residual'] = $nilai_dampak_residual;
             $toUpdate['risk_limit'] = $risk_limit;
         }
         else{
-            $toUpdate['skala_dampak'] = $request->skala_dampak_hidden;
-            $toUpdate['skala_dampak_residual'] = $request->skala_dampak_residual_hidden;
+            $skalaDampakFinal = $request->skala_dampak_hidden ?: $request->skala_dampak;
+            $skalaDampakResidualFinal = $request->skala_dampak_residual_hidden ?: $request->skala_dampak_residual;
+
+            // $toUpdate['skala_dampak'] = $request->skala_dampak_hidden;
+            // $toUpdate['skala_dampak_residual'] = $request->skala_dampak_residual_hidden;
+
             $toUpdate['nilai_dampak'] = 0;
             $toUpdate['nilai_dampak_residual'] = 0;
             $toUpdate['risk_limit'] = 1/100*$risk_tolerance;
         }
+
+        $toUpdate['skala_dampak'] = $skalaDampakFinal;
+        $toUpdate['skala_dampak_residual'] = $skalaDampakResidualFinal;
 
         //dd($toUpdate);
         $skalaInherent = SkalaParameter::find($request->skala_parameter_id);
@@ -2036,10 +2043,11 @@ class ProjectRiskController extends BasicCRUDController
             ], 422);
         }
 
-        $toUpdate['skala_probabilitas_id'] = $tingkatSkalaProbabilitas->id;
-        $toUpdate['skala_probabilitas_residual_id'] = $tingkatSkalaProbabilitasResidual->id;
+        $toUpdate['skala_probabilitas_id'] = $tingkatSkalaProbabilitas->id ?? null;
+        $toUpdate['skala_probabilitas_residual_id'] = $tingkatSkalaProbabilitasResidual->id ?? null;
 
-        $riskMap = $riskMaps[$toUpdate['skala_dampak'] . '-' . $tingkatSkalaProbabilitas->tingkat] ?? null;
+        $riskMap = $riskMaps[$skalaDampakFinal . '-' . $tingkatInherent] ?? null;
+
         if (!$riskMap) {
             return response()->json([
                 'message' => 'Tidak ada data risk map untuk skala dampak dan probabilitas yang dipilih',
@@ -2075,7 +2083,6 @@ class ProjectRiskController extends BasicCRUDController
 
         $projectPeriodeList->recalculateAnalisa($risk_limit);
         $projectPeriodeList->refreshNilai();
-        //dd($toUpdate);
 
         return [
             'message' => 'Analisa berhasil disimpan',

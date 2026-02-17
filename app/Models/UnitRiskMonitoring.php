@@ -30,11 +30,13 @@ class UnitRiskMonitoring extends Model
         'aktual_month_1',
         'aktual_month_2',
         'aktual_status',
+        'efektivitas_perlakuan_risiko',
     ];
 
     protected $casts = [
         'is_approved' => 'boolean',
         'is_revision' => 'boolean',
+        'efektivitas_perlakuan_risiko' => 'decimal:2',
     ];
 
     public function identifikasiRisiko()

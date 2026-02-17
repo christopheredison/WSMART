@@ -165,7 +165,7 @@
                     </div>
                 </div>
                 <div class="row mb-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label>Skala Dampak</label>
                         {{ Form::select('skala_dampak', \App\Models\SkalaDampak::get()->mapWithKeys(function($item) { return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi]; }), $analisa->skala_dampak, [
                             'class' => 'form-select',
@@ -179,7 +179,7 @@
                         <label>Skala Probabilitas</label>
                         {{ Form::text('skala_probabilitas', '', ['class' => 'form-control', 'disabled' => false, 'required' => true]) }}
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label for="skala_parameter_id">Skala Probabilitas</label>
                         <select name="skala_parameter_id" id="skala_parameter_id" class="form-select" required>
                             <option value="">Pilih Skala...</option>
@@ -244,7 +244,7 @@
                     </div>
                 </div>
                 <div class="row mb-3 gx-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label>Skala Dampak Residual</label>
                         {{ Form::select('skala_dampak_residual', \App\Models\SkalaDampak::get()->mapWithKeys(function($item) { return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi]; }), $analisa->skala_dampak_residual, ['class' => 'form-select', 'placeholder' => 'Pilih Skala Dampak Residual', 'required' => true, 'id' => 'skala_dampak_residual']) }}
                     </div>
@@ -252,7 +252,7 @@
                         <label>Skala Probabilitas</label>
                         {{ Form::text('skala_probabilitas_residual', '', ['class' => 'form-control', 'disabled' => false, 'required' => true]) }}
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label for="skala_parameter_residual_id">Skala Probabilitas</label>
                         <select name="skala_parameter_residual_id" id="skala_parameter_residual_id" class="form-select" required>
                             <option value="">Pilih Skala...</option>
@@ -402,10 +402,23 @@ function refreshEksposureRisiko(residual = false) {
 
 function refreshSkalaAndLevelRisiko(residual = false, isInit = false) {
     const riskMaps = @json($riskMaps);
+
+    // 1. Ambil Elemen Input Output (Target)
     const domSkalaRisiko = $('[name="skala_risiko' + (residual ? '_residual' : '') + '"]');
     const domLevelRisiko = $('[name="level_risiko' + (residual ? '_residual' : '') + '"]');
+
+    // 2. Ambil Input Skala Dampak
     const skalaDampak = $('[name="skala_dampak' + (residual ? '_residual' : '') + '"]').val();
-    const skalaProbabilitas = $('[name="skala_probabilitas' + (residual ? '_residual' : '') + '"]').data('tingkat');
+
+    // 3. Ambil Tingkat dari Dropdown Skala Parameter (Bukan dari input hidden/text)
+    let skalaProbabilitas = 0;
+    if (residual) {
+        // Ambil dari dropdown Residual
+        skalaProbabilitas = $('#skala_parameter_residual_id').find(':selected').data('tingkat');
+    } else {
+        // Ambil dari dropdown Inheren
+        skalaProbabilitas = $('#skala_parameter_id').find(':selected').data('tingkat');
+    }
 
     if (isInit) {
         if (!residual && savedSkalaRisiko && savedLevelRisiko) {
@@ -426,7 +439,12 @@ function refreshSkalaAndLevelRisiko(residual = false, isInit = false) {
         return;
     }
 
-    const riskMap = riskMaps[skalaDampak + '-' + skalaProbabilitas];
+    // 4. Mapping Risk Map (Kunci: "SkalaDampak-SkalaProbabilitas")
+    const key = skalaDampak + '-' + skalaProbabilitas;
+    const riskMap = riskMaps[key];
+
+    // console.log('Check Map:', key, riskMap); // Debugging
+
     if (riskMap) {
         domSkalaRisiko.val(riskMap.nilai_risiko);
         domLevelRisiko.val(riskMap.level_risiko);
@@ -623,7 +641,7 @@ $(document).ready(function() {
             }
         }
 
-        refreshSkalaAndLevelRisiko();
+        refreshSkalaAndLevelRisiko(false);
     });
 
     $scaleResidual.on('change', function() {
@@ -809,13 +827,12 @@ $(document).ready(function() {
         refreshEksposureRisiko(true);
     }).change();
 
-    $('[name="nilai_dampak"],[name="skala_dampak"]').on('input change', function() {
-        //console.log('change nilai dampak');
+    $('[name="nilai_dampak"]').on('input change', function() {
         refreshEksposureRisiko();
         refreshSkalaAndLevelRisiko();
     }).change();
 
-    $('[name="nilai_dampak_residual"],[name="skala_dampak_residual"]').on('input change', function() {
+    $('[name="nilai_dampak_residual"]').on('input change', function() {
         refreshEksposureRisiko(true);
         refreshSkalaAndLevelRisiko(true);
     }).change();
@@ -937,30 +954,95 @@ $(document).ready(function() {
         });
     });
 
+    // Old Code
+    // $('#skala_dampak').on('change', function () {
+    //     if ($('#kategoriDampak').val() !== '{{ \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF }}') {
+    //         return;
+    //     }
+
+    //     const selectedSkalaDampak = parseInt($(this).val());
+    //     const $skalaDampakResidual = $('#skala_dampak_residual');
+    //     const currentValueResidual = parseInt($skalaDampakResidual.val());
+
+    //     if (isNaN(selectedSkalaDampak)) {
+    //         $skalaDampakResidual.find('option').prop('disabled', false);
+    //         return;
+    //     }
+
+    //     if (currentValueResidual > selectedSkalaDampak) {
+    //         $skalaDampakResidual.val('').trigger('change');
+    //     }
+
+    //     $skalaDampakResidual.find('option').each(function () {
+    //         if (!$(this).val()) return;
+
+    //         const optionValue = parseInt($(this).val());
+    //         $(this).prop('disabled', optionValue > selectedSkalaDampak);
+    //     });
+    // });
+
     $('#skala_dampak').on('change', function () {
-        if ($('#kategoriDampak').val() !== '{{ \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF }}') {
-            return;
-        }
+        // Ambil nilai integer (1-5) dari dropdown
+        const inherentVal = parseInt($(this).val()) || 0;
 
-        const selectedSkalaDampak = parseInt($(this).val());
-        const $skalaDampakResidual = $('#skala_dampak_residual');
-        const currentValueResidual = parseInt($skalaDampakResidual.val());
+        const $residualSelect = $('#skala_dampak_residual');
+        const residualVal = parseInt($residualSelect.val()) || 0;
 
-        if (isNaN(selectedSkalaDampak)) {
-            $skalaDampakResidual.find('option').prop('disabled', false);
-            return;
-        }
-
-        if (currentValueResidual > selectedSkalaDampak) {
-            $skalaDampakResidual.val('').trigger('change');
-        }
-
-        $skalaDampakResidual.find('option').each(function () {
-            if (!$(this).val()) return;
-
-            const optionValue = parseInt($(this).val());
-            $(this).prop('disabled', optionValue > selectedSkalaDampak);
+        // 1. Loop semua opsi residual untuk disable yang lebih besar dari inheren
+        $residualSelect.find('option').each(function () {
+            const optVal = parseInt($(this).val());
+            if (optVal > 0) { // Skip placeholder value ""
+                if (inherentVal > 0 && optVal > inherentVal) {
+                    $(this).prop('disabled', true); // Disable jika > Inheren
+                } else {
+                    $(this).prop('disabled', false); // Enable jika <= Inheren
+                }
+            }
         });
+
+        // 2. Cek Validasi Nilai: Jika Residual saat ini melebihi Inheren baru
+        if (residualVal > inherentVal && inherentVal > 0) {
+            // Set nilai residual SAMA dengan inheren (sesuai request)
+            $residualSelect.val(inherentVal).trigger('change');
+
+            // Opsional: Beri notifikasi toast/console agar user sadar ada perubahan otomatis
+            // console.log('Skala Dampak Residual disesuaikan otomatis karena melebihi Inheren');
+        }
+
+        // 3. Update Input Hidden (Untuk Kualitatif)
+        $('#skala_dampak_hidden').val($(this).val());
+
+        // 4. Refresh Kalkulasi Risk Map
+        refreshEksposureRisiko();
+        refreshSkalaAndLevelRisiko(false); // Refresh Inheren
+    });
+
+    $('#skala_dampak_residual').on('change', function () {
+        const $inherentSelect = $('#skala_dampak');
+        const inherentVal = parseInt($inherentSelect.val()) || 0;
+        const residualVal = parseInt($(this).val()) || 0;
+
+        // 1. Validasi Manual: Cegah user memilih nilai > Inheren
+        // (Meskipun sudah di-disable, validasi ini untuk double protection)
+        if (inherentVal > 0 && residualVal > inherentVal) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Skala Dampak Residual tidak boleh lebih besar dari Skala Dampak Inheren.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+
+            // Reset ke nilai inheren (max allowed)
+            $(this).val(inherentVal).trigger('change');
+            return;
+        }
+
+        // 2. Update Input Hidden (Untuk Kualitatif)
+        $('#skala_dampak_residual_hidden').val($(this).val());
+
+        // 3. Refresh Kalkulasi Risk Map
+        refreshEksposureRisiko(true);
+        refreshSkalaAndLevelRisiko(true); // Refresh Residual
     });
 
     // Event listener untuk dropdown kategori dampak
@@ -1119,23 +1201,6 @@ $(document).ready(function() {
     $('[name="skala_dampak"], [name="skala_dampak_residual"]').on('change', function() {
         const targetHiddenField = $(this).attr('name') === 'skala_dampak' ? '#skala_dampak_hidden' : '#skala_dampak_residual_hidden';
         $(targetHiddenField).val($(this).val());
-    });
-
-    $('#skala_dampak').change(function () {
-        var selectedSkalaDampak = parseInt($(this).val()); // Ambil nilai skala dampak yang dipilih
-
-        // Reset skala dampak residual ke placeholder
-        $('#skala_dampak_residual').val('').change();
-
-        // Nonaktifkan opsi skala dampak residual yang lebih besar dari skala dampak
-        $('#skala_dampak_residual option').each(function () {
-            var optionValue = parseInt($(this).val());
-            if (optionValue > selectedSkalaDampak) {
-                $(this).prop('disabled', true); // Nonaktifkan opsi yang lebih besar
-            } else {
-                $(this).prop('disabled', false); // Aktifkan opsi yang sesuai
-            }
-        });
     });
 
     function parseRupiahToNumber(value) {
