@@ -11,12 +11,12 @@ class CalculateEfektivitasMonitoringSeeder extends Seeder
     {
         $this->command->info('Memulai perhitungan efektivitas risiko...');
 
-        ProjectRiskMonitoring::with(['risiko.projectRiskAnalisa'])
+        ProjectRiskMonitoring::with(['projectRisk.projectRiskAnalisa'])
             ->chunk(200, function ($monitorings) {
                 foreach ($monitorings as $monitoring) {
 
                     // 1. Cek Data Analisa (Inherent & Target)
-                    $analisa = $monitoring->risiko->projectRiskAnalisa ?? null;
+                    $analisa = $monitoring?->projectRisk?->projectRiskAnalisa ?? null;
                     if (!$analisa) continue;
 
                     // 2. Cek Data Realisasi (Monitoring)
