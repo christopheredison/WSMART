@@ -1259,6 +1259,20 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ])
             ->findOrFail(request()->route('monitoring'));
 
+        $historyMonitorings = ProjectRiskMonitoring::where('risiko_id', $projectRisk->id)
+            ->with([
+                'skalaDampakObj',
+                'skalaProbabilitas',
+                'perlakuanPenyebabMonitorings.perlakuanPenyebab.penyebabRisikoProject',
+                'perlakuanDampakMonitorings.perlakuanDampak.dampakRisikoProject',
+                'perlakuanPenyebabRisikoDocuments',
+                'perlakuanDampakRisikoDocuments',
+                'kriProyekMonitorings.kriProject'
+            ])
+            ->orderBy('tahun', 'desc')
+            ->orderBy('month', 'desc')
+            ->get();
+
         $peristiwaRisiko = $projectRisk->peristiwaRisiko;
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
         $riskMaps = RiskMap::get()->keyBy(function($item) {
@@ -1299,6 +1313,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'dateCurrent' => $currentDate,
             'dateM1' => $dateM1,
             'dateM2' => $dateM2,
+            'historyMonitorings' => $historyMonitorings,
         ]);
     }
 

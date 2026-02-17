@@ -11,7 +11,7 @@
             @if($project->project_status == 1)
                 <span class="badge bg-success rounded-pill">Active</span>
             @else
-                <span class="badge bg-secondary rounded-pill">Inactive</span>
+                <span class="badge bg-dark rounded-pill">Inactive</span>
             @endif
         </div>
       </div>
