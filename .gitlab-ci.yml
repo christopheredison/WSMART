@@ -89,39 +89,24 @@ W4MnCd5vi9EAAAAVY2hyaXN0b3BoZXJAcndpLmNvLmlkAQIDBAUG
     #                (Nanti saya jelaskan cara dapat hash-nya di bawah script ini)
 
     - echo "yes" | openconnect --protocol=fortinet "$VPN_ADDRESS:$VPN_PORT" --user="$VPN_USER" --passwd-on-stdin <<< "$VPN_PASSWORD" --background --no-cert-check || true
-
-    # Tunggu 15 detik untuk negosiasi koneksi
     - sleep 15
-
-    # Cek IP (untuk memastikan sudah dapat IP VPN)
     - ip addr show
-
   script:
     - echo "🚀 Deploying ke Server ($SERVER_IP)..."
-
-    # SSH ke server melalui tunnel VPN
     - ssh $SERVER_USER@$SERVER_IP "
         echo '✅ Login Sukses!';
-
-        # Masuk ke folder project
         cd /vhosts/rwi/https;
-
         echo '🔄 Git Pull EUT-DEV...';
         git fetch origin EUT-DEV;
         git reset --hard origin/EUT-DEV;
-
         echo '📦 Composer Install...';
-        # Hapus --no-dev jika butuh package development
         composer install --optimize-autoloader --no-dev;
-
         echo '🗄️ Migrasi Database...';
         php artisan migrate --force;
-
         echo '🧹 Clear Cache...';
         php artisan optimize:clear;
         php artisan config:cache;
         php artisan route:cache;
         php artisan view:cache;
-
         echo '🎉 Deployment Selesai!';
       "
