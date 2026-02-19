@@ -157,8 +157,16 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         //         'orderable' => false,
         //         'searchable' => false,
         //         'render' => <<<JS
-        //             function (data) {
-        //                 return 'Quarter ' + $('#table-filter select[name="quarter"]').val();
+        //             function (data, type, row) {
+        //                 const monthNames = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        //                 const m = row.last_monitoring_risiko;
+
+        //                 const monthIdx = m?.month || $('#table-filter select[name="month"]').val();
+        //                 const quarter = m?.quarter || $('#table-filter select[name="quarter"]').val();
+        //                 const tahun = '$tahunPeriode';
+
+        //                 const monthName = monthNames[parseInt(monthIdx)] || "";
+        //                 return `\${monthName} (Q\${quarter}) - \${tahun}`;
         //             }
         //         JS,
         //     ],
@@ -169,111 +177,221 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         //         'class' => 'mw-10r',
         //     ],
         //     'deskripsi_peristiwa_risiko' => [
-        //         'label' => 'Deskripsi Peristiwa Risiko',
+        //         'label' => 'Deskripsi',
         //         'data' => 'deskripsi_peristiwa_risiko',
         //         'sortable' => false,
-        //         'searchable' => true,
-        //         'class' => 'mw-10r',
+        //         'class' => 'mw-20r',
         //     ],
+
+        //     // === DATA RISIKO INHEREN ===
         //     'nilai_dampak' => [
-        //         'label' => 'Nilai Dampak Residual',
-        //         'data' => 'nilai_dampak_residual',
-        //         'sortable' => false,
-        //         'searchable' => false,
-        //         'render' => '(data, type, row) => "Rp" + Intl.NumberFormat("id-ID").format(data) || "-"',
+        //         'label' => 'Nilai Dampak Inheren',
+        //         'data' => 'risk_analysis.nilai_dampak',
+        //         'name' => 'ra.nilai_dampak',
+        //         'class' => 'white-space-nowrap',
+        //         'defaultContent' => '-',
+        //         'sortable' => true,
+        //         'render' => '(data, type, row) => "Rp " + new Intl.NumberFormat("id-ID").format(row.risk_analysis?.nilai_dampak || 0)',
         //     ],
         //     'skala_dampak' => [
-        //         'label' => 'Skala Dampak Residual',
-        //         'data' => 'skala_dampak_residual',
-        //         'sortable' => false,
-        //         'searchable' => false,
-        //         'render' => '(data, type, row) => data || "-"',
+        //         'label' => 'Skala Dampak Inheren',
+        //         'data' => 'risk_analysis.skala_dampak',
+        //         'name' => 'ra.skala_dampak',
+        //         'defaultContent' => '-',
+        //         'sortable' => true,
+        //         'render' => '(data, type, row) => {
+        //             const analisa = row.risk_analysis;
+        //             return analisa?.skala_dampak ? `(${analisa.skala_dampak}) ${analisa.skala_dampak_obj?.deskripsi || ""}` : "-";
+        //         }',
         //     ],
         //     'skala_probabilitas' => [
-        //         'label' => 'Skala Probabilitas Residual',
-        //         'data' => 'skala_probabilitas_residual',
+        //         'label' => 'Skala Probabilitas Inheren',
+        //         'data' => 'risk_analysis.skala_probabilitas.tingkat',
+        //         'name' => 'ra.skala_probabilitas_id',
+        //         'defaultContent' => '-',
         //         'sortable' => false,
-        //         'searchable' => false,
-        //         'render' => '(data, type, row) => data || "-"',
+        //         'render' => '(data, type, row) => {
+        //             const prob = row.risk_analysis?.skala_probabilitas;
+        //             return prob ? `(${prob.tingkat}) ${prob.skala || ""}` : "-";
+        //         }',
         //     ],
         //     'skala_risiko' => [
-        //         'label' => 'Skala Risiko Residual',
-        //         'data' => 'skala_risiko_residual',
+        //         'label' => 'Level Risiko Inheren',
+        //         'data' => 'risk_analysis.skala_risiko',
+        //         'name' => 'ra.skala_risiko',
+        //         'defaultContent' => '-',
+        //         'sortable' => true,
+        //         'class' => 'text-center align-middle',
+        //         'render' => '(data, type, row) => {
+        //             const analisa = row.risk_analysis;
+        //             return analisa?.skala_risiko ? (analisa.skala_risiko + " - " + analisa.level_risiko) : "-";
+        //         }',
+        //         'createdCell' => 'function (td, cellData, rowData, row, col) {
+        //             const level = rowData.risk_analysis?.level_risiko;
+        //             if (level) {
+        //                 const colorClass = "bg-" + level.toLowerCase().replace(/to\s+/g, "").replace(/\s+/g, "-");
+        //                 $(td).addClass(colorClass).addClass("text-white");
+        //             }
+        //         }'
+        //     ],
+        //     // ==================================
+
+        //     // --- DATA RESIDUAL (PLANNING) ---
+        //     'nilai_dampak_residual' => [
+        //         'label' => 'Nilai Dampak Residual',
+        //         'data' => null,
+        //         'defaultContent' => '-',
         //         'sortable' => false,
         //         'searchable' => false,
-        //         'render' => '(data, type, row) => data || "-"',
+        //         'class' => 'white-space-nowrap',
+        //         'render' => '(data, type, row) => {
+        //             const q = $("#table-filter select[name=\'quarter\']").val() || 1;
+        //             const val = row.risk_analysis ? row.risk_analysis["nilai_dampak_residual_q" + q] : 0;
+        //             return "Rp " + new Intl.NumberFormat("id-ID").format(val || 0);
+        //         }',
         //     ],
+        //     'skala_dampak_residual' => [
+        //         'label' => 'Skala Dampak Residual',
+        //         'data' => null,
+        //         'defaultContent' => '-',
+        //         'sortable' => false,
+        //         'render' => '(data, type, row) => {
+        //             const q = $("#table-filter select[name=\'quarter\']").val() || 1;
+        //             const analisa = row.risk_analysis;
+        //             if(!analisa) return "-";
+
+        //             const val = analisa["skala_dampak_residual_q" + q];
+        //             const objKey = "skala_dampak_residual_q" + q + "_obj";
+        //             const desc = analisa[objKey]?.deskripsi || "";
+
+        //             return val ? `(${val}) ${desc}` : "-";
+        //         }',
+        //     ],
+        //     'skala_probabilitas_residual' => [
+        //         'label' => 'Skala Probabilitas Residual',
+        //         'data' => null,
+        //         'defaultContent' => '-',
+        //         'sortable' => false,
+        //         'render' => '(data, type, row) => {
+        //             const q = $("#table-filter select[name=\'quarter\']").val() || 1;
+        //             const analisa = row.risk_analysis;
+        //             if(!analisa) return "-";
+
+        //             const relKey = "skala_probabilitas_residual_q" + q;
+        //             const tingkat = analisa[relKey]?.tingkat;
+        //             const ket = analisa[relKey]?.skala || "";
+
+        //             const valFlat = analisa["nilai_probabilitas_residual_q" + q];
+
+        //             return tingkat ? `(${tingkat}) ${ket}` : (valFlat || "-");
+        //         }',
+        //     ],
+        //     'skala_risiko_residual' => [
+        //         'label' => 'Level Risiko Residual',
+        //         'data' => null,
+        //         'defaultContent' => '-',
+        //         'sortable' => false,
+        //         'class' => 'text-center align-middle',
+        //         'render' => '(data, type, row) => {
+        //             const q = $("#table-filter select[name=\'quarter\']").val() || 1;
+        //             const val = row.risk_analysis ? row.risk_analysis["skala_risiko_residual_q" + q] : "";
+        //             const level = row.risk_analysis ? row.risk_analysis["level_risiko_residual_q" + q] : "";
+        //             return val ? (val + " - " + level) : "-";
+        //         }',
+        //         'createdCell' => 'function (td, cellData, rowData, row, col) {
+        //             const q = $("#table-filter select[name=\'quarter\']").val() || 1;
+        //             const level = rowData.risk_analysis ? rowData.risk_analysis["level_risiko_residual_q" + q] : "";
+        //             if (level) {
+        //                 const colorClass = "bg-" + level.toLowerCase().replace(/to\s+/g, "").replace(/\s+/g, "-");
+        //                 $(td).addClass(colorClass).addClass("text-white");
+        //             }
+        //         }'
+        //     ],
+
+        //     // --- DATA REALISASI (MONITORING) ---
         //     'skala_dampak_monitoring' => [
         //         'label' => 'Skala Dampak Realisasi',
-        //         'data' => 'lastMonitoringRisiko.skala_dampak',
+        //         'data' => 'last_monitoring_risiko.skala_dampak',
+        //         'defaultContent' => '-',
         //         'sortable' => false,
-        //         'searchable' => false,
-        //         'render' => '(data, type, row) => row.last_monitoring_risiko?.skala_dampak || "-"',
+        //         'render' => '(data, type, row) => {
+        //             const m = row.last_monitoring_risiko;
+        //             // Pastikan akses properti object skala_dampak_obj (dari with: skalaDampakObj)
+        //             return m?.skala_dampak ? `(${m.skala_dampak}) ${m.skala_dampak_obj?.deskripsi || ""}` : "-";
+        //         }',
         //     ],
         //     'skala_probabilitas_monitoring' => [
         //         'label' => 'Skala Probabilitas Realisasi',
-        //         'data' => 'lastMonitoringRisiko.skalaProbabilitas.tingkat',
+        //         'data' => 'last_monitoring_risiko.skala_probabilitas.tingkat',
+        //         'defaultContent' => '-',
         //         'sortable' => false,
-        //         'searchable' => false,
-        //         'render' => '(data, type, row) => row.last_monitoring_risiko?.skala_probabilitas?.tingkat || "-"',
+        //         'render' => '(data, type, row) => {
+        //             const m = row.last_monitoring_risiko;
+        //             // Pastikan akses properti object skala_probabilitas (dari with: skalaProbabilitas)
+        //             const p = m?.skala_probabilitas;
+        //             return p ? `(${p.tingkat}) ${p.skala || ""}` : "-";
+        //         }',
         //     ],
         //     'skala_risiko_monitoring' => [
-        //         'label' => 'Skala Risiko Realisasi',
-        //         'data' => 'lastMonitoringRisiko.skala_risiko',
+        //         'label' => 'Level Risiko Realisasi',
+        //         'data' => 'last_monitoring_risiko.skala_risiko',
+        //         'defaultContent' => '-',
         //         'sortable' => false,
-        //         'searchable' => false,
-        //         'render' => '(data, type, row) => row.last_monitoring_risiko?.skala_risiko || "-"',
+        //         'class' => 'text-center align-middle',
+        //         'render' => '(data, type, row) => {
+        //             const m = row.last_monitoring_risiko;
+        //             return m?.skala_risiko ? (m.skala_risiko + " - " + m.level_risiko) : "-";
+        //         }',
+        //         'createdCell' => 'function (td, cellData, rowData, row, col) {
+        //             const level = rowData.last_monitoring_risiko?.level_risiko;
+        //             if (level) {
+        //                 const colorClass = "bg-" + level.toLowerCase().replace(/to\s+/g, "").replace(/\s+/g, "-");
+        //                 $(td).addClass(colorClass).addClass("text-white");
+        //             }
+        //         }'
         //     ],
+
         //     'is_closed' => [
         //         'label' => 'Status Risiko',
         //         'data' => 'is_closed',
-        //         'sortable' => false,
-        //         'searchable' => false,
-        //         'render' => '(data, type, row) => row?.is_closed ? `<div class="badge bg-danger rounded-pill px-2 mt-auto">
-        //           Closed
-        //         </div>` : `<div class="badge bg-success rounded-pill px-2 mt-auto">
-        //           Open
-        //         </div>`',
+        //         'render' => '(data, type, row) => row.is_closed ? `<div class="badge bg-danger rounded-pill px-2">Closed</div>` : `<div class="badge bg-success rounded-pill px-2">Open</div>`',
         //     ],
         //     'status_monitoring' => [
         //         'label' => 'Status',
         //         'render' => '(data, type, row) => {
         //             if (row.is_closed) return `<div class="badge text-danger bg-danger-subtle">Dihentikan</div>`;
-        //             if (!row.last_monitoring_risiko) return `<div class="badge bg-light text-dark">Belum Dimonitor</div>`;
+        //             if (!row.last_monitoring_risiko) return `<div class="badge bg-light text-dark border">Belum Dimonitor</div>`;
 
-        //             const monitoring = row.last_monitoring_risiko;
-        //             let statusText = "";
-        //             const unitMrName = "' . $unitMrName . '";
+        //             const m = row.last_monitoring_risiko;
+        //             const status = parseInt(m.status);
+        //             const isRevision = m.is_revision;
+        //             const isApproved = m.is_approved;
+        //             const map = ' . json_encode($verificatorMap) . ';
 
-        //             const STATUS_DRAFT = ' . UnitRiskMonitoring::STATUS_DRAFT_REVISI . ';
-        //             const STATUS_ROW_DIVISI = ' . UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI . ';
-        //             const STATUS_RO_MR = ' . UnitRiskMonitoring::STATUS_VERIFIKASI_RO_DIVISI_MR . ';
-        //             const STATUS_ROW_MR = ' . UnitRiskMonitoring::STATUS_VERIFIKASI_ROW_DIVISI_MR . ';
-        //             const STATUS_PUBLISHED = ' . UnitRiskMonitoring::STATUS_PUBLISHED . ';
-
-        //             switch(monitoring.status) {
-        //                 case STATUS_DRAFT:
-        //                     return monitoring.is_revision ? `<div class="badge bg-danger">Revisi</div>` : `<div class="badge bg-warning">Draft</div>`;
-        //                 case STATUS_ROW_DIVISI:
-        //                     statusText = `Risk Owner Divisi ${row.unit?.name || ""}`;
-        //                     break;
-        //                 case STATUS_RO_MR:
-        //                     statusText = `Risk Officer ${unitMrName}`;
-        //                     break;
-        //                 case STATUS_ROW_MR:
-        //                     statusText = `Risk Owner ${unitMrName}`;
-        //                     break;
-        //                 case STATUS_PUBLISHED:
-        //                     return `<div class="badge bg-primary">Terverifikasi</div>`;
-        //                 default:
-        //                     return "-";
+        //             // 1. Revisi
+        //             if (isRevision && !isApproved) {
+        //                 let source = "";
+        //                 if (status === 1) source = "Risk Owner Divisi";
+        //                 if (status === 2) source = "Risk Officer MR";
+        //                 if (status === 3) source = "Risk Owner MR";
+        //                 return `<div class="badge bg-danger"><i class="bx bx-undo me-1"></i>Ditolak perlu revisi </div>`;
         //             }
 
-        //             if (statusText) {
-        //                 return monitoring.is_approved
-        //                     ? `<div class="badge bg-info">Terverifikasi ${statusText}</div>`
-        //                     : `<div class="badge border border-info text-info">Menunggu Verifikasi ${statusText}</div>`;
+        //             // 2. Draft
+        //             if (status === 1) return `<div class="badge bg-warning text-dark">Draft</div>`;
+
+        //             // 3. Verifikasi
+        //             if (map[status]) {
+        //                 const name = map[status];
+        //                 if (isApproved) {
+        //                     return `<div class="badge bg-info"><i class="bx bx-check-circle me-1"></i>Terverifikasi ${name}</div>`;
+        //                 } else {
+        //                     return `<div class="badge border border-info text-info bg-white"><i class="bx bx-time-five me-1"></i>Menunggu Verifikasi ${name}</div>`;
+        //                 }
         //             }
+
+        //             // 4. Selesai
+        //             if (status === 100) return `<div class="badge bg-success">Selesai</div>`;
 
         //             return "-";
         //         }',
@@ -363,73 +481,52 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     }
                 }'
             ],
-            // ==================================
 
-            // --- DATA RESIDUAL (PLANNING) ---
+            // === DATA RESIDUAL (DYNAMIC BERDASARKAN FILTER QUARTER) ===
             'nilai_dampak_residual' => [
                 'label' => 'Nilai Dampak Residual',
-                'data' => null,
+                'data' => 'risk_analysis.nilai_dampak_residual_q' . $quarter,
                 'defaultContent' => '-',
                 'sortable' => false,
                 'searchable' => false,
                 'class' => 'white-space-nowrap',
                 'render' => '(data, type, row) => {
-                    const q = $("#table-filter select[name=\'quarter\']").val() || 1;
-                    const val = row.risk_analysis ? row.risk_analysis["nilai_dampak_residual_q" + q] : 0;
-                    return "Rp " + new Intl.NumberFormat("id-ID").format(val || 0);
+                    return "Rp " + new Intl.NumberFormat("id-ID").format(data || 0);
                 }',
             ],
             'skala_dampak_residual' => [
                 'label' => 'Skala Dampak Residual',
-                'data' => null,
+                'data' => 'risk_analysis.skala_dampak_residual_q' . $quarter,
                 'defaultContent' => '-',
                 'sortable' => false,
                 'render' => '(data, type, row) => {
-                    const q = $("#table-filter select[name=\'quarter\']").val() || 1;
                     const analisa = row.risk_analysis;
-                    if(!analisa) return "-";
-
-                    const val = analisa["skala_dampak_residual_q" + q];
-                    const objKey = "skala_dampak_residual_q" + q + "_obj";
-                    const desc = analisa[objKey]?.deskripsi || "";
-
-                    return val ? `(${val}) ${desc}` : "-";
+                    const obj = analisa?.["skala_dampak_residual_q' . $quarter . '_obj"];
+                    return data ? `(${data}) ${obj?.deskripsi || ""}` : "-";
                 }',
             ],
             'skala_probabilitas_residual' => [
                 'label' => 'Skala Probabilitas Residual',
-                'data' => null,
+                'data' => 'risk_analysis.skala_probabilitas_residual_q' . $quarter . '_id',
                 'defaultContent' => '-',
                 'sortable' => false,
                 'render' => '(data, type, row) => {
-                    const q = $("#table-filter select[name=\'quarter\']").val() || 1;
-                    const analisa = row.risk_analysis;
-                    if(!analisa) return "-";
-
-                    const relKey = "skala_probabilitas_residual_q" + q;
-                    const tingkat = analisa[relKey]?.tingkat;
-                    const ket = analisa[relKey]?.skala || "";
-
-                    const valFlat = analisa["nilai_probabilitas_residual_q" + q];
-
-                    return tingkat ? `(${tingkat}) ${ket}` : (valFlat || "-");
+                    const prob = row.risk_analysis?.["skala_probabilitas_residual_q' . $quarter . '"];
+                    return prob ? `(${prob.tingkat}) ${prob.skala || ""}` : "-";
                 }',
             ],
             'skala_risiko_residual' => [
                 'label' => 'Level Risiko Residual',
-                'data' => null,
+                'data' => 'risk_analysis.skala_risiko_residual_q' . $quarter,
                 'defaultContent' => '-',
                 'sortable' => false,
                 'class' => 'text-center align-middle',
                 'render' => '(data, type, row) => {
-                    const q = $("#table-filter select[name=\'quarter\']").val() || 1;
-                    const val = row.risk_analysis ? row.risk_analysis["skala_risiko_residual_q" + q] : "";
-                    const level = row.risk_analysis ? row.risk_analysis["level_risiko_residual_q" + q] : "";
-                    return val ? (val + " - " + level) : "-";
+                    const level = row.risk_analysis?.["level_risiko_residual_q' . $quarter . '"];
+                    return data ? (data + " - " + level) : "-";
                 }',
                 'createdCell' => 'function (td, cellData, rowData, row, col) {
-                    const q = $("#table-filter select[name=\'quarter\']").val() || 1;
-                    const level = rowData.risk_analysis ? rowData.risk_analysis["level_risiko_residual_q" + q] : "";
+                    const level = rowData.risk_analysis?.["level_risiko_residual_q' . $quarter . '"];
                     if (level) {
                         const colorClass = "bg-" + level.toLowerCase().replace(/to\s+/g, "").replace(/\s+/g, "-");
                         $(td).addClass(colorClass).addClass("text-white");
@@ -437,7 +534,14 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 }'
             ],
 
-            // --- DATA REALISASI (MONITORING) ---
+            // === DATA REALISASI (MONITORING) ===
+            'nilai_dampak_monitoring' => [
+                'label' => 'Nilai Dampak Realisasi',
+                'data' => 'last_monitoring_risiko.nilai_dampak',
+                'defaultContent' => '-',
+                'sortable' => false,
+                'render' => '(data, type, row) => (!!row.last_monitoring_risiko?.nilai_dampak ? "Rp " + new Intl.NumberFormat("id-ID").format(row.last_monitoring_risiko?.nilai_dampak) : "-")',
+            ],
             'skala_dampak_monitoring' => [
                 'label' => 'Skala Dampak Realisasi',
                 'data' => 'last_monitoring_risiko.skala_dampak',
@@ -445,7 +549,6 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'sortable' => false,
                 'render' => '(data, type, row) => {
                     const m = row.last_monitoring_risiko;
-                    // Pastikan akses properti object skala_dampak_obj (dari with: skalaDampakObj)
                     return m?.skala_dampak ? `(${m.skala_dampak}) ${m.skala_dampak_obj?.deskripsi || ""}` : "-";
                 }',
             ],
@@ -455,9 +558,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'defaultContent' => '-',
                 'sortable' => false,
                 'render' => '(data, type, row) => {
-                    const m = row.last_monitoring_risiko;
-                    // Pastikan akses properti object skala_probabilitas (dari with: skalaProbabilitas)
-                    const p = m?.skala_probabilitas;
+                    const p = row.last_monitoring_risiko?.skala_probabilitas;
                     return p ? `(${p.tingkat}) ${p.skala || ""}` : "-";
                 }',
             ],
@@ -480,13 +581,14 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 }'
             ],
 
+            // === STATUS ===
             'is_closed' => [
                 'label' => 'Status Risiko',
                 'data' => 'is_closed',
                 'render' => '(data, type, row) => row.is_closed ? `<div class="badge bg-danger rounded-pill px-2">Closed</div>` : `<div class="badge bg-success rounded-pill px-2">Open</div>`',
             ],
             'status_monitoring' => [
-                'label' => 'Status',
+                'label' => 'Status Approval',
                 'render' => '(data, type, row) => {
                     if (row.is_closed) return `<div class="badge text-danger bg-danger-subtle">Dihentikan</div>`;
                     if (!row.last_monitoring_risiko) return `<div class="badge bg-light text-dark border">Belum Dimonitor</div>`;
@@ -497,19 +599,16 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     const isApproved = m.is_approved;
                     const map = ' . json_encode($verificatorMap) . ';
 
-                    // 1. Revisi
                     if (isRevision && !isApproved) {
                         let source = "";
                         if (status === 1) source = "Risk Owner Divisi";
                         if (status === 2) source = "Risk Officer MR";
                         if (status === 3) source = "Risk Owner MR";
-                        return `<div class="badge bg-danger"><i class="bx bx-undo me-1"></i>Ditolak perlu revisi </div>`;
+                        return `<div class="badge bg-danger"><i class="bx bx-undo me-1"></i>Ditolak ${source}</div>`;
                     }
 
-                    // 2. Draft
                     if (status === 1) return `<div class="badge bg-warning text-dark">Draft</div>`;
 
-                    // 3. Verifikasi
                     if (map[status]) {
                         const name = map[status];
                         if (isApproved) {
@@ -519,7 +618,6 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                         }
                     }
 
-                    // 4. Selesai
                     if (status === 100) return `<div class="badge bg-success">Selesai</div>`;
 
                     return "-";
