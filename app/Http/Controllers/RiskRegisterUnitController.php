@@ -1171,7 +1171,7 @@ class RiskRegisterUnitController extends Controller
     {
         $validated = $request->validate([
             'xd_output_perlakuan_risiko' => 'required',
-            'xd_output_perlakuan_risiko'  => 'required',
+            'xd_rencana_perlakuan_risiko'  => 'required',
             'xd_opsi_perlakuan_risiko'    => 'required',
             'xd_biaya_perlakuan_risiko'   => 'required|numeric',
             'xd_pic'                      => 'required',
@@ -1184,7 +1184,7 @@ class RiskRegisterUnitController extends Controller
         $jabatan = Jabatan::find($request->xpic);
 
         $perlakuan->update([
-            'rencana_perlakuan_risiko' => $validated['xd_output_perlakuan_risiko'],
+            'rencana_perlakuan_risiko' => $validated['xd_rencana_perlakuan_risiko'],
             'output_perlakuan_risiko'  => $validated['xd_output_perlakuan_risiko'],
             'opsi_perlakuan_risiko'    => $validated['xd_opsi_perlakuan_risiko'],
             'biaya_perlakuan_risiko'   => $validated['xd_biaya_perlakuan_risiko'],

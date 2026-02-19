@@ -43,7 +43,7 @@
             </div>
             <div class="row mb-3">
                 <div class="col-md-2">Skala Dampak</div>
-                <div class="col-md-2 fw-bold">{{ $analisa?->skala_dampak ?: '-' }}</div>
+                <div class="col-md-2 fw-bold">{{ ($analisa?->skalaDampakObj? '(' .$analisa->skalaDampakObj->tingkat . ') ' . $analisa->skalaDampakObj->deskripsi : null) ?: '-' }}</div>
                 <div class="col-md-2">Skala Probabilitas</div>
                 <div class="col-md-2 fw-bold">{{ ($analisa?->skalaProbabilitas? '(' . $analisa->skalaProbabilitas->tingkat . ') ' . $analisa->skalaProbabilitas->skala : null) ?: '-' }}</div>
                 <div class="col-md-2">Level Risiko</div>

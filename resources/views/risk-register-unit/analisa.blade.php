@@ -96,7 +96,7 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label>Kategori Dampak</label>
+                        <label>Kategori Dampak <span class="text-danger">*</span></label>
                         {{ Form::select('kategori_dampak',
                             [
                                 'Kuantitatif' => 'Kuantitatif',
@@ -108,7 +108,7 @@
                     </div>
                     <div class="col-md-4" id="divAreaDampak">
                         <div class="d-flex align-items-center">
-                            <label for="area_dampak" class="me-2 mb-0">Area Dampak</label>
+                            <label for="area_dampak" class="me-2 mb-0">Area Dampak <span class="text-danger">*</span></label>
                             <button type="button" class="btn btn-link p-0" id="btnShowKualitatif" title="Lihat Risiko Kualitatif">
                                 <i class='bx bx-show bx-sm'></i> <!-- Boxicons Eye Icon -->
                             </button>
@@ -135,12 +135,12 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label>Nilai Dampak</label>
+                        <label>Nilai Dampak <span class="text-danger">*</span></label>
                         {{ Form::text('nilai_dampak', $analisa->nilai_dampak, ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak']) }}
                     </div>
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
-                            <label>Nilai Probabilitas (%)</label>
+                            <label>Nilai Probabilitas (%) <span class="text-danger">*</span></label>
                             <!-- <button type="button" class="btn btn-link p-0" id="btnCalculatePoisson" title="Hitung">
                                 <i class='bx bx-calculator bx-sm'></i>
                             </button> -->
@@ -154,7 +154,7 @@
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label>Skala Dampak</label>
+                        <label>Skala Dampak <span class="text-danger">*</span></label>
                         {{ Form::select('skala_dampak',
                             \App\Models\SkalaDampak::get()->mapWithKeys(function($item) {
                                 return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi];
@@ -165,7 +165,7 @@
                         <input type="hidden" name="skala_dampak_hidden" id="skala_dampak_hidden" value="{{ $analisa->skala_dampak }}">
                     </div>
                     <div class="col-md-4">
-                        <label>Skala Probabilitas</label>
+                        <label>Skala Probabilitas <span class="text-danger">*</span></label>
                         {{ Form::text('skala_probabilitas', '', ['class' => 'form-control', 'disabled' => true, 'required' => true]) }}
                     </div>
                     <div class="col-md-2">
@@ -179,14 +179,14 @@
                 </div>
                 <div class="row" id="divDeskripsiDampak">
                     <div class="col-md-12">
-                        <label id="labelDeskripsiDampak">Deskripsi Dampak</label>
+                        <label id="labelDeskripsiDampak">Deskripsi Dampak <span class="text-danger">*</span></label>
                         {{ Form::textarea('deskripsi_dampak', $analisa->deskripsi_dampak, ['class' => 'form-control', 'rows' => 5]) }}
                         <input type="hidden" name="risk_tolerance" id="risk_tolerance" value="{{ $risk_tolerance }}" />
                     </div>
                 </div>
                 <div class="row" id="divAsumsiDampak">
                     <div class="col-md-12">
-                        <label>Asumsi Perhitungan Dampak & Probabilitas Inherent</label>
+                        <label>Asumsi Perhitungan Dampak & Probabilitas Inherent <span class="text-danger">*</span></label>
                         {{ Form::textarea('asumsi_perhitungan_dampak', $analisa->asumsi_perhitungan_dampak, ['class' => 'form-control', 'rows' => 5]) }}
                     </div>
                 </div>
@@ -207,12 +207,12 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label>Nilai Dampak</label>
+                        <label>Nilai Dampak <span class="text-danger">*</span></label>
                         {{ Form::text('nilai_dampak_residual_q' . $i, $analisa->{'nilai_dampak_residual_q' . $i} ?? '', ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak_residual_q' . $i]) }}
                     </div>
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
-                            <label>Nilai Probabilitas (%)</label>
+                            <label>Nilai Probabilitas (%) <span class="text-danger">*</span></label>
                         </div>
                         {{ Form::number('nilai_probabilitas_residual_q' . $i, $analisa->{'nilai_probabilitas_residual_q' . $i} ?? '', ['class' => 'form-control', 'required' => true, 'step' => 0.01, 'min' => 0, 'max' => 100, 'onkeypress' => 'return isNumberKey(event)', 'id' => 'nilai_probabilitas_residual_q' . $i]) }}
                     </div>
@@ -224,9 +224,9 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
-                            <label>Skala Dampak Residual</label>
+                            <label>Skala Dampak Residual <span class="text-danger">*</span></label>
                             <button type="button" class="btn btn-link p-0 btnShowKualitatifRes" id="btnShowKualitatifResQ{{ $i }}" title="Skala Dampak">
-                                <i class='bx bx-show bx-sm'></i> <!-- Boxicons Eye Icon -->
+                                <i class='bx bx-show bx-sm'></i>
                             </button>
                         </div>
                         {{ Form::select('skala_dampak_residual_q' . $i,
@@ -239,7 +239,7 @@
                         <input type="hidden" name="skala_dampak_residual_q{{ $i }}_hidden" id="skala_dampak_residual_q{{ $i }}_hidden" value="{{ $analisa->{'skala_dampak_residual_q' . $i} ?? '' }}">
                     </div>
                     <div class="col-md-4">
-                        <label>Skala Probabilitas</label>
+                        <label>Skala Probabilitas <span class="text-danger">*</span></label>
                         {{ Form::text('skala_probabilitas_residual_q' . $i, '', ['class' => 'form-control', 'disabled' => true, 'required' => true]) }}
                     </div>
                     <div class="col-md-2">

@@ -1077,10 +1077,10 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         }
 
         // Validasi Publish Risiko
-        // if ($projectRisk->status != ProjectRisk::STATUS_PUBLISHED) {
-        //     return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
-        //         ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum terpublikasi. Harap minta persetujuan risiko terlebih dahulu.');
-        // }
+        if ($projectRisk->status != ProjectRisk::STATUS_PUBLISHED) {
+            return redirect()->route('projects.monitorings.index', ['project' => $projectPeriode->id])
+                ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum terpublikasi. Harap minta persetujuan risiko terlebih dahulu.');
+        }
 
         $requiredAnalisaFields = [
             'kategori_dampak', 'nilai_dampak', 'nilai_probabilitas', 'skala_dampak',
