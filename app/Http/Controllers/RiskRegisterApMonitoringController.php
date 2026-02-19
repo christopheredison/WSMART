@@ -910,6 +910,37 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             // 'parameterRisikos',
         ]);
 
+        
+        $analisa = $risk->riskAnalysis;
+        $namaRisikoLengkap = $risk->peristiwa_risiko;
+        if (!empty($risk->deskripsi_peristiwa_risiko)) {
+            $namaRisikoLengkap .= ' - ' . $risk->deskripsi_peristiwa_risiko;
+        }
+
+        // Validasi Analisa Risiko
+        if (!$analisa) {
+            return redirect()->route('risk-register-ap.monitorings.index', ['period' => $risk->periode_id, 'unit_id' => $risk->unit_id])
+                ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum dianalisa. Harap lengkapi analisa risiko terlebih dahulu.');
+        }
+
+        // Validasi Publish Risiko
+        if ($risk->status != IdentifikasiRisiko::STATUS_PUBLISHED) {
+            return redirect()->route('risk-register-ap.monitorings.index', ['period' => $risk->periode_id, 'unit_id' => $risk->unit_id])
+                ->with('error', 'Risiko "' . $namaRisikoLengkap . '" belum terpublikasi. Harap minta persetujuan risiko terlebih dahulu.');
+        }
+
+        $requiredAnalisaFields = [
+            'kategori_dampak', 'nilai_dampak', 'nilai_probabilitas', 'skala_dampak',
+            'nilai_dampak_residual', 'nilai_probabilitas_residual', 'skala_dampak_residual'
+        ];
+
+        foreach ($requiredAnalisaFields as $field) {
+            if (is_null($analisa->{$field})) {
+                return redirect()->route('risk-register-ap.monitorings.index', ['period' => $risk->periode_id, 'unit_id' => $risk->unit_id])
+                    ->with('error', 'Analisa untuk risiko "' . $namaRisikoLengkap . '" belum lengkap. Harap lengkapi semua field analisa inheren dan residual.');
+            }
+        }
+
         $unit = $risk->unit;
         $periode = $risk->periode;
         $currentYear = $period->tahun;

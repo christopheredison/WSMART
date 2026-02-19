@@ -1,4 +1,4 @@
-<div class="modal fade" id="modalEditRencana" tabindex="-1" role="dialog" aria-labelledby="modalEditRencana" aria-hidden="true">
+<div class="modal fade" id="modalEditRencana" tabindex="-1" role="dialog" aria-labelledby="modalEditRencana" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content">
             <form method="POST" id="formEditRencana">

@@ -395,9 +395,9 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
     private function calculateEfektifitas($analisa, $risiko)
     {
         // 1. Cek apakah risiko sudah ditutup (closed)
-        if (!$risiko->is_closed) {
-            return 'Belum Ditutup';
-        }
+        // if (!$risiko->is_closed) {
+        //     return 'Belum Ditutup';
+        // }
 
         // 2. Jika sudah ditutup, cek nilai efektivitas dari tabel ProjectRisk ($risiko)
         $nilaiEfektivitas = (float) $risiko->efektivitas_perlakuan_risiko;

@@ -48,7 +48,7 @@
 
                             <div class="col-md-6 mb-3">
                                 <label for="tanggal_kejadian" class="form-label">Tanggal Kejadian <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="tanggal_kejadian" name="tanggal_kejadian"
+                                <input type="text" class="form-control bg-white" id="tanggal_kejadian" name="tanggal_kejadian"
                                       value="{{ \Carbon\Carbon::parse($projectRisk->perkiraan_waktu_terpapar_risiko_mulai)->format('Y-m-d') }}" required>
                             </div>
 

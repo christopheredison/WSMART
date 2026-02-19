@@ -136,7 +136,7 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label>Nilai Dampak</label>
-                        {{ Form::text('nilai_dampak', $analisa->nilai_dampak, ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak']) }}
+                        {{ Form::text('nilai_dampak', $analisa->nilai_dampak, ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak', 'autocomplete' => 'off']) }}
                     </div>
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
@@ -149,7 +149,7 @@
                     </div>
                     <div class="col-md-4">
                         <label>Eksposur Risiko</label>
-                        {{ Form::text('eksposur_risiko', '', ['class' => 'form-control inputmask-rupiah', 'disabled' => true, 'required' => true]) }}
+                        {{ Form::text('eksposur_risiko', '', ['class' => 'form-control inputmask-rupiah', 'disabled' => true, 'required' => true, 'autocomplete' => 'off']) }}
                     </div>
                 </div>
                 <div class="row mb-3">
@@ -208,7 +208,7 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label>Nilai Dampak</label>
-                        {{ Form::text('nilai_dampak_residual_q' . $i, $analisa->{'nilai_dampak_residual_q' . $i} ?? '', ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak_residual_q' . $i]) }}
+                        {{ Form::text('nilai_dampak_residual_q' . $i, $analisa->{'nilai_dampak_residual_q' . $i} ?? '', ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak_residual_q' . $i, 'autocomplete' => 'off']) }}
                     </div>
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
@@ -218,7 +218,7 @@
                     </div>
                     <div class="col-md-4">
                         <label>Eksposur Risiko</label>
-                        {{ Form::text('eksposur_risiko_residual_q' . $i, $analisa->{'eksposur_risiko_residual_q' . $i} ?? '', ['class' => 'form-control inputmask-rupiah', 'disabled' => true, 'required' => true]) }}
+                        {{ Form::text('eksposur_risiko_residual_q' . $i, $analisa->{'eksposur_risiko_residual_q' . $i} ?? '', ['class' => 'form-control inputmask-rupiah', 'disabled' => true, 'required' => true, 'autocomplete' => 'off']) }}
                     </div>
                 </div>
                 <div class="row mb-3">

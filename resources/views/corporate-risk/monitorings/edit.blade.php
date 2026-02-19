@@ -471,7 +471,7 @@
                                     <th>Biaya Perlakuan</th>
                                     <th>Progress (%)</th>
                                     <th>Realisasi Biaya</th>
-                                    <th>Waktu Perlakuan</th>
+                                    <th>Waktu Realisasi</th>
                                     <th style="width: 80px; text-align: center;">Action</th>
                                 </tr>
                             </thead>
@@ -549,7 +549,7 @@
                                     <th>Biaya Perlakuan</th>
                                     <th>Progress (%)</th>
                                     <th>Realisasi Biaya</th>
-                                    <th>Waktu Perlakuan</th>
+                                    <th>Waktu Realisasi</th>
                                     <th style="width: 80px; text-align: center;">Action</th>
                                 </tr>
                             </thead>
@@ -868,7 +868,7 @@ var flatpickrIns = flatpickr("#timelineInput", {
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     minDate: risk ? dayjs(risk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
-    maxDate: dayjs().toDate(),
+    // maxDate: dayjs().toDate(),
     disableMobile: true
 });
 
@@ -880,7 +880,7 @@ var impactFlatpickr = flatpickr("#timelineImpactInput", {
     altFormat: "j F Y",
     dateFormat: "d/m/Y",
     minDate: risk ? dayjs(risk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
-    maxDate: dayjs().toDate(),
+    // maxDate: dayjs().toDate(),
     disableMobile: true
 });
 

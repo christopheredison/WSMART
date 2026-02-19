@@ -2362,7 +2362,7 @@ class RiskRegisterApController extends Controller
 
     // Helper untuk cek giliran verifikasi Monitoring
     private function checkIsMyTurnMon($mon, $levelId, $is_mr) {
-        if (!$mon || $mon->status == 100) return false;
+        if (!$mon || $mon->status == 100 || $mon->is_approved) return false;
         $target = match (true) {
             $levelId == 1 && !$is_mr => 1, // Officer Divisi
             $levelId == 2 && !$is_mr => 2, // Owner Divisi
@@ -2462,7 +2462,7 @@ class RiskRegisterApController extends Controller
             return '<span class="badge bg-light text-dark border border-dark">Belum Dimonitor</span>';
         }
 
-        if ($latestMon->status == 100) {
+        if ($latestMon->status == 100 || $latestMon->is_approved) {
             return '<span class="badge bg-success">Selesai</span>';
         }
 
