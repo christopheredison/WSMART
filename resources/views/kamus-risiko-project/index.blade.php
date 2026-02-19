@@ -88,26 +88,19 @@
                 <tr>
                     <th>No</th>
                     <th>Action</th>
-                    <th>Proyek</th>
-                    <th>Taksonomi Risiko</th>
+                    <th>Nama Proyek</th>
+                    <th>Standarisasi Risiko</th>
                     <th>Peristiwa Risiko</th>
-                    <th>Deskripsi Peristiwa Risiko</th>
-                    <th>Nilai Dampak Inheren</th>
-                    <th>Skala Dampak Inheren</th>
-                    <th>Nilai Probabilitas Inheren</th>
-                    <th>Eksposur Risiko Inheren</th>
-                    <th>Level Risiko Inheren</th>
-                    <th>Nilai Dampak Residual</th>
-                    <th>Skala Dampak Residual</th>
-                    <th>Nilai Probabilitas Residual</th>
-                    <th>Eksposur Risiko Residual</th>
-                    <th>Level Risiko Residual</th>
-                    <th>Realisasi Nilai Dampak</th>
-                    <th>Realisasi Skala Dampak</th>
-                    <th>Realisasi Skala Probabilitas</th>
-                    <th>Realisasi Level Risiko</th>
-                    {{-- <th>Realisasi Eksposur Risiko</th> --}}
-                    <th>Efektivitas Risiko</th>
+                    <th>Penyebab Risiko</th>
+                    <th>Dampak Risiko</th>
+                    <th>Dampak Risiko Kuantitatif Rupiah Inheren</th>
+                    <th>Perlakuan Risiko Rencana</th>
+                    <th>Biaya Perlakuan Risiko Rencana</th>
+                    <th>Dampak Risiko Kuantitatif Rupiah Rencana</th>
+                    <th>Perlakuan Risiko Realisasi</th>
+                    <th>Realisasi Biaya Perlakuan Risiko</th>
+                    <th>Dampak Risiko Kuantitatif Rupiah Realisasi</th>
+                    <th>Efektifitas Perlakuan Risiko</th>
                 </tr>
             </thead>
             <tbody>
@@ -115,7 +108,6 @@
         </table>
     </div>
 </div>
-
 
 <div class="modal fade" id="selectProjectModal" aria-labelledby="selectProjectModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -176,7 +168,6 @@ $(document).ready(function() {
             url: "{{ route('kamus-risiko-project.index') }}",
             type: "POST",
             data: function (d) {
-                // Kirim parameter filter dalam body request
                 d.project_id = $('#project_id').val();
                 d.peristiwa_risiko_id = $('#peristiwa_risiko_id').val();
                 d.jenis_risiko_id = $('#jenis_risiko_id').val();
@@ -193,31 +184,18 @@ $(document).ready(function() {
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
             { data: 'action', name: 'action', orderable: false, searchable: false },
             { data: 'proyek', name: 'project.project_name' },
-            { data: 'taksonomi_risiko', name: 'projectRisk.jenisRisiko.title', orderable: false, searchable: false },
+            { data: 'standarisasi_risiko', name: 'projectRisk.jenisRisiko.title', orderable: false, searchable: false },
             { data: 'peristiwa_risiko', name: 'projectRisk.peristiwaRisiko.title' },
-            { data: 'deskripsi_peristiwa_risiko', name: 'projectRisk.deskripsi_peristiwa_risiko' },
-
-            // Inherent
-            { data: 'nilai_dampak_inheren', name: 'projectRisk.projectRiskAnalisa.nilai_dampak' },
-            { data: 'skala_dampak_inheren', name: 'projectRisk.projectRiskAnalisa.skala_dampak' },
-            { data: 'nilai_probabilitas_inheren', name: 'projectRisk.projectRiskAnalisa.nilai_probabilitas' },
-            { data: 'eksposur_risiko_inheren', name: 'projectRisk.projectRiskAnalisa.eksposur_risiko' },
-            { data: 'level_risiko_inheren', name: 'projectRisk.projectRiskAnalisa.level_risiko' },
-
-            // Residual
-            { data: 'nilai_dampak_residual', name: 'projectRisk.projectRiskAnalisa.nilai_dampak_residual' },
-            { data: 'skala_dampak_residual', name: 'projectRisk.projectRiskAnalisa.skala_dampak_residual' },
-            { data: 'nilai_probabilitas_residual', name: 'projectRisk.projectRiskAnalisa.nilai_probabilitas_residual' },
-            { data: 'eksposur_risiko_residual', name: 'projectRisk.projectRiskAnalisa.eksposur_risiko_residual' },
-            { data: 'level_risiko_residual', name: 'projectRisk.projectRiskAnalisa.level_risiko_residual' },
-
-            // Monitoring
-            { data: 'realisasi_nilai_dampak', name: 'projectRisk.projectRiskMonitoring.nilai_dampak' },
-            { data: 'realisasi_skala_dampak', name: 'projectRisk.projectRiskMonitoring.skala_dampak' },
-            { data: 'realisasi_skala_probabilitas', name: 'projectRisk.projectRiskMonitoring.skala_probabilitas' },
-            { data: 'realisasi_level_risiko', name: 'projectRisk.projectRiskMonitoring.level_risiko' },
-
-            { data: 'efektivitas', name: 'projectRisk.efektivitas_perlakuan_risiko' },
+            { data: 'penyebab_risiko', name: 'penyebab_risiko', orderable: false, searchable: false },
+            { data: 'dampak_risiko', name: 'dampak_risiko', orderable: false, searchable: false },
+            { data: 'dampak_kuantitatif_inheren', name: 'projectRisk.projectRiskAnalisa.nilai_dampak' },
+            { data: 'perlakuan_risiko_rencana', name: 'perlakuan_risiko_rencana', orderable: false, searchable: false },
+            { data: 'biaya_perlakuan_rencana', name: 'biaya_perlakuan_rencana', orderable: false, searchable: false },
+            { data: 'dampak_kuantitatif_rencana', name: 'projectRisk.projectRiskAnalisa.nilai_dampak_residual' },
+            { data: 'perlakuan_risiko_realisasi', name: 'perlakuan_risiko_realisasi', orderable: false, searchable: false },
+            { data: 'biaya_perlakuan_realisasi', name: 'biaya_perlakuan_realisasi', orderable: false, searchable: false },
+            { data: 'dampak_kuantitatif_realisasi', name: 'projectRisk.projectRiskMonitoring.nilai_dampak' },
+            { data: 'efektivitas', name: 'projectRisk.efektivitas_perlakuan_risiko' }
         ],
         order: [[2, 'asc']]
     });

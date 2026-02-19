@@ -21,19 +21,15 @@ class KamusRisikoProjectController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $user->load('projects', 'unit'); // Eager load relasi
+        $user->load('projects', 'unit');
 
-        // A. Ambil Project yang di-assign langsung ke User
         $userProjectIds = $user->projects->pluck('id');
-
-        // B. Ambil Project dibawah Unit/Divisi (Cek Permission)
         $unitProjectIds = collect([]);
+
         if ($user->unit && Gate::check('can_access_project_under_division')) {
-            // Asumsi relasi unit->projects() mengambil project berdasarkan cost_center_parent
             $unitProjectIds = $user->unit->projects()->pluck('id');
         }
 
-        // C. Gabungkan ID (Assign + Unit)
         $allAllowedIds = $userProjectIds->merge($unitProjectIds)->unique();
 
         if ($request->ajax()) {
@@ -43,13 +39,15 @@ class KamusRisikoProjectController extends Controller
                 'projectRisk.jenisRisiko.kategoriRisiko',
                 'projectRisk.projectRiskAnalisa',
                 'projectRisk.projectRiskMonitoring',
+                'projectRisk.penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings',
+                'projectRisk.dampakRisikoProjects',
+                'projectRisk.perlakuanDampakRisikos.perlakuanDampakMonitorings'
             ]);
 
             if ($request->filled('project_id')) {
                 $query->where('project_id', $request->project_id);
             }
 
-            // Filter Relation via ProjectRisk
             $query->whereHas('projectRisk', function ($q) use ($request) {
                 if ($request->filled('peristiwa_risiko_id')) {
                     $q->where('peristiwa_risiko_id', $request->peristiwa_risiko_id);
@@ -76,10 +74,9 @@ class KamusRisikoProjectController extends Controller
                 ->addIndexColumn()
                 ->addColumn('action', function ($row) {
                     $projectPeriodeId = $row->projectRisk->project_periode_list_id ?? $row->project_id;
-
                     $detailUrl = route('projects.risks.view', ['project' => $projectPeriodeId, 'risk' => $row->project_risk_id]);
 
-                    $btn_view = '<a href="' . $detailUrl . '" target="_blank" class="btn btn-sm btn-info d-flex align-items-center justify-content-center" title="View Detail">
+                    $btn_view = '<a href="' . $detailUrl . '" target="_blank" class="btn btn-sm btn-info d-flex align-items-center justify-content-center mb-1" title="View Detail">
                                     <span class="bx bx-show me-1"></span>
                                     <span>View Detail</span>
                                 </a>';
@@ -89,12 +86,12 @@ class KamusRisikoProjectController extends Controller
                                     <span>Ambil Risiko</span>
                                 </button>';
 
-                    return '<div class="d-flex flex-column gap-1">' . $btn_view . $btn_ambil . '</div>';
+                    return '<div class="d-flex flex-column">' . $btn_view . $btn_ambil . '</div>';
                 })
                 ->addColumn('proyek', function ($row) {
                     return $row->project->project_name ?? '-';
                 })
-                ->addColumn('taksonomi_risiko', function ($row) {
+                ->addColumn('standarisasi_risiko', function ($row) {
                     $kategori = $row->projectRisk->jenisRisiko->kategoriRisiko->title ?? 'N/A';
                     $jenis = $row->projectRisk->jenisRisiko->title ?? 'N/A';
                     return $kategori . ' - ' . $jenis;
@@ -102,93 +99,147 @@ class KamusRisikoProjectController extends Controller
                 ->addColumn('peristiwa_risiko', function ($row) {
                     return $row->projectRisk->peristiwaRisiko->title ?? '-';
                 })
-                ->addColumn('deskripsi_peristiwa_risiko', function ($row) {
-                    return $row->projectRisk->deskripsi_peristiwa_risiko ?? '-';
+                ->addColumn('penyebab_risiko', function ($row) {
+                    $list = [];
+                    if ($row->projectRisk && $row->projectRisk->penyebabRisikoProjects) {
+                        foreach ($row->projectRisk->penyebabRisikoProjects as $idx => $item) {
+                            $list[] = ($idx + 1) . '. ' . $item->penyebab_risiko;
+                        }
+                    }
+                    return empty($list) ? '-' : implode('<br>', $list);
                 })
-
-                // Inherent
-                ->addColumn('nilai_dampak_inheren', function ($row) {
+                ->addColumn('dampak_risiko', function ($row) {
+                    $list = [];
+                    if ($row->projectRisk && $row->projectRisk->dampakRisikoProjects) {
+                        foreach ($row->projectRisk->dampakRisikoProjects as $idx => $item) {
+                            $list[] = ($idx + 1) . '. ' . $item->dampak_risiko;
+                        }
+                    }
+                    return empty($list) ? '-' : implode('<br>', $list);
+                })
+                ->addColumn('dampak_kuantitatif_inheren', function ($row) {
                     return 'Rp ' . number_format($row->projectRisk->projectRiskAnalisa->nilai_dampak ?? 0, 0, ',', '.');
                 })
-                ->addColumn('skala_dampak_inheren', function ($row) {
-                    return $row->projectRisk->projectRiskAnalisa->skala_dampak ?? '-';
-                })
-                ->addColumn('nilai_probabilitas_inheren', function ($row) {
-                    return ($row->projectRisk->projectRiskAnalisa->nilai_probabilitas ?? 0) . ' %';
-                })
-                ->addColumn('eksposur_risiko_inheren', function ($row) {
-                    return 'Rp ' . number_format($row->projectRisk->projectRiskAnalisa->eksposur_risiko ?? 0, 0, ',', '.');
-                })
-                ->addColumn('level_risiko_inheren', function ($row) {
-                    $analisa = $row->projectRisk->projectRiskAnalisa;
-                    if (!$analisa || !$analisa->level_risiko) return '-';
-                    $css_class = str_replace(' ', '.', $analisa->level_risiko);
-                    return '<span class="badge-level ' . e($css_class) . '">' . e($analisa->level_risiko) . ' (' . e($analisa->skala_risiko) . ')</span>';
-                })
+                ->addColumn('perlakuan_risiko_rencana', function ($row) {
+                    $penyebabStr = [];
+                    if ($row->projectRisk && $row->projectRisk->penyebabRisikoProjects) {
+                        foreach ($row->projectRisk->penyebabRisikoProjects as $idxPenyebab => $penyebab) {
+                            foreach ($penyebab->perlakuanPenyebabRisiko as $idxPerlakuan => $perlakuan) {
+                                $penyebabStr[] = ($idxPenyebab + 1) . '.' . ($idxPerlakuan + 1) . ' ' . $perlakuan->rencana_perlakuan_risiko;
+                            }
+                        }
+                    }
 
-                // Residual
-                ->addColumn('nilai_dampak_residual', function ($row) {
+                    $dampakStr = [];
+                    if ($row->projectRisk && $row->projectRisk->perlakuanDampakRisikos) {
+                        foreach ($row->projectRisk->perlakuanDampakRisikos as $idx => $pd) {
+                            $dampakStr[] = ($idx + 1) . '. ' . $pd->rencana_perlakuan_risiko;
+                        }
+                    }
+
+                    $res = "<strong>Penyebab:</strong><br>" . (empty($penyebabStr) ? '-' : implode('<br>', $penyebabStr)) . "<br><br>";
+                    $res .= "<strong>Dampak:</strong><br>" . (empty($dampakStr) ? '-' : implode('<br>', $dampakStr));
+                    return $res;
+                })
+                ->addColumn('biaya_perlakuan_rencana', function ($row) {
+                    $biayaPenyebab = 0;
+                    if ($row->projectRisk && $row->projectRisk->penyebabRisikoProjects) {
+                        foreach ($row->projectRisk->penyebabRisikoProjects as $penyebab) {
+                            $biayaPenyebab += $penyebab->perlakuanPenyebabRisiko->sum('biaya_perlakuan_risiko');
+                        }
+                    }
+
+                    $biayaDampak = 0;
+                    if ($row->projectRisk && $row->projectRisk->perlakuanDampakRisikos) {
+                        $biayaDampak = $row->projectRisk->perlakuanDampakRisikos->sum('biaya_perlakuan_risiko');
+                    }
+
+                    $res = "<strong>Penyebab:</strong> Rp " . number_format($biayaPenyebab, 0, ',', '.') . "<br>";
+                    $res .= "<strong>Dampak:</strong> Rp " . number_format($biayaDampak, 0, ',', '.');
+                    return $res;
+                })
+                ->addColumn('dampak_kuantitatif_rencana', function ($row) {
                     return 'Rp ' . number_format($row->projectRisk->projectRiskAnalisa->nilai_dampak_residual ?? 0, 0, ',', '.');
                 })
-                ->addColumn('skala_dampak_residual', function ($row) {
-                    return $row->projectRisk->projectRiskAnalisa->skala_dampak_residual ?? '-';
-                })
-                ->addColumn('nilai_probabilitas_residual', function ($row) {
-                    return ($row->projectRisk->projectRiskAnalisa->nilai_probabilitas_residual ?? 0) . ' %';
-                })
-                ->addColumn('eksposur_risiko_residual', function ($row) {
-                    return 'Rp ' . number_format($row->projectRisk->projectRiskAnalisa->eksposur_risiko_residual ?? 0, 0, ',', '.');
-                })
-                ->addColumn('level_risiko_residual', function ($row) {
-                    $analisa = $row->projectRisk->projectRiskAnalisa;
-                    if (!$analisa || !$analisa->level_risiko_residual) return '-';
-                    $css_class = str_replace(' ', '.', $analisa->level_risiko_residual);
-                    return '<span class="badge-level ' . e($css_class) . '">' . e($analisa->level_risiko_residual) . ' (' . e($analisa->skala_risiko_residual) . ')</span>';
-                })
+                ->addColumn('perlakuan_risiko_realisasi', function ($row) {
+                    $penyebabStr = [];
+                    if ($row->projectRisk && $row->projectRisk->penyebabRisikoProjects) {
+                        foreach ($row->projectRisk->penyebabRisikoProjects as $idxPenyebab => $penyebab) {
+                            foreach ($penyebab->perlakuanPenyebabRisiko as $idxPerlakuan => $perlakuan) {
+                                $lastMon = $perlakuan->perlakuanPenyebabMonitorings->sortByDesc('id')->first();
+                                $realDesc = $lastMon->deskripsi_perlakuan_risiko ?? '-';
+                                $penyebabStr[] = ($idxPenyebab + 1) . '.' . ($idxPerlakuan + 1) . ' ' . $realDesc;
+                            }
+                        }
+                    }
 
-                // Monitoring
-                ->addColumn('realisasi_nilai_dampak', function ($row) {
-                    return 'Rp ' . number_format($row->projectRisk->projetRiskMonitoring->nilai_dampak ?? 0, 0, ',', '.');
+                    $dampakStr = [];
+                    if ($row->projectRisk && $row->projectRisk->perlakuanDampakRisikos) {
+                        foreach ($row->projectRisk->perlakuanDampakRisikos as $idx => $pd) {
+                            $lastMon = $pd->perlakuanDampakMonitorings->sortByDesc('id')->first();
+                            $realDesc = $lastMon->deskripsi_perlakuan_risiko ?? '-';
+                            $dampakStr[] = ($idx + 1) . '. ' . $realDesc;
+                        }
+                    }
+
+                    $res = "<strong>Penyebab:</strong><br>" . (empty($penyebabStr) ? '-' : implode('<br>', $penyebabStr)) . "<br><br>";
+                    $res .= "<strong>Dampak:</strong><br>" . (empty($dampakStr) ? '-' : implode('<br>', $dampakStr));
+                    return $res;
                 })
-                ->addColumn('realisasi_skala_dampak', function ($row) {
-                    return $row->projectRisk->projectRiskMonitoring->skala_dampak ?? '-';
+                ->addColumn('biaya_perlakuan_realisasi', function ($row) {
+                    $realBiayaPenyebab = 0;
+                    if ($row->projectRisk && $row->projectRisk->penyebabRisikoProjects) {
+                        foreach ($row->projectRisk->penyebabRisikoProjects as $penyebab) {
+                            foreach ($penyebab->perlakuanPenyebabRisiko as $perlakuan) {
+                                $lastMon = $perlakuan->perlakuanPenyebabMonitorings->sortByDesc('id')->first();
+                                $realBiayaPenyebab += $lastMon->realisasi_biaya_perlakuan_risiko ?? 0;
+                            }
+                        }
+                    }
+
+                    $realBiayaDampak = 0;
+                    if ($row->projectRisk && $row->projectRisk->perlakuanDampakRisikos) {
+                        foreach ($row->projectRisk->perlakuanDampakRisikos as $pd) {
+                            $lastMon = $pd->perlakuanDampakMonitorings->sortByDesc('id')->first();
+                            $realBiayaDampak += $lastMon->realisasi_biaya_perlakuan_risiko ?? 0;
+                        }
+                    }
+
+                    $res = "<strong>Penyebab:</strong> Rp " . number_format($realBiayaPenyebab, 0, ',', '.') . "<br>";
+                    $res .= "<strong>Dampak:</strong> Rp " . number_format($realBiayaDampak, 0, ',', '.');
+                    return $res;
                 })
-                ->addColumn('realisasi_skala_probabilitas', function ($row) {
-                    return $row->projectRisk->projectRiskMonitoring?->skalaProbabilitas?->tingkat ?? '-';
+                ->addColumn('dampak_kuantitatif_realisasi', function ($row) {
+                    // Berdasarkan code asal, nilai dampak dari tabel monitoring
+                    return 'Rp ' . number_format($row->projectRisk->projectRiskMonitoring->nilai_dampak ?? 0, 0, ',', '.');
                 })
-                ->addColumn('realisasi_level_risiko', function ($row) {
-                    $monitoring = $row->projectRisk->projectRiskMonitoring;
-                    if (!$monitoring || !$monitoring->level_risiko) return '-';
-                    $css_class = str_replace(' ', '.', $monitoring->level_risiko);
-                    return '<span class="badge-level ' . e($css_class) . '">' . e($monitoring->level_risiko) . ' (' . e($monitoring->skala_risiko) . ')</span>';
-                })
-                // ->addColumn('realisasi_eksposur_risiko', function ($row) {
-                //     return 'Rp ' . number_format($row->projectRisk->projectRiskMonitoring->eksposur_risiko ?? 0, 0, ',', '.');
-                // })
                 ->addColumn('efektivitas', function ($row) {
                     $efektivitas = $row->projectRisk->efektivitas_perlakuan_risiko;
-
                     if (is_null($efektivitas)) {
                         return '-';
                     }
-
                     $class = $efektivitas > 0 ? 'text-success' : ($efektivitas < 0 ? 'text-danger' : 'text-warning');
-
                     return '<span class="fw-bold ' . $class . '">' . $efektivitas . '%</span>';
                 })
-                ->rawColumns(['action', 'level_risiko_inheren', 'level_risiko_residual', 'realisasi_level_risiko', 'efektivitas'])
+                ->rawColumns([
+                    'action',
+                    'penyebab_risiko',
+                    'dampak_risiko',
+                    'perlakuan_risiko_rencana',
+                    'biaya_perlakuan_rencana',
+                    'perlakuan_risiko_realisasi',
+                    'biaya_perlakuan_realisasi',
+                    'efektivitas'
+                ])
                 ->make(true);
         }
 
         $projectsQuery = Project::orderBy('project_name');
-
         if (!Gate::check('project_admin_access')) {
             $projectsQuery->whereIn('id', $allAllowedIds);
         }
-
         $projectUser = $projectsQuery->get(['id', 'project_name']);
 
-        // Data untuk filter
         $projects = Project::orderBy('project_name')->get(['id', 'project_name']);
         $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->orderBy('title')->get(['id', 'title']);
         $jenisRisikos = JenisRisiko::with('kategoriRisiko')->get();
