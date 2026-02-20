@@ -49,7 +49,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             'class' => 'fw-bold',
         ],
         'ok' => [
-            'label' => 'Nilai OK',
+            'label' => 'Nilai OK Total',
             'data' => 'nk',
             'name' => 'projects.nk',
             'render' => '(data, type, row) => row.nk ? Intl.NumberFormat(\'id-ID\').format(row.nk) : "-"',
@@ -1435,8 +1435,9 @@ class ProjectPeriodeListController extends BasicCRUDController
     {
         $projectPeriode = $this->model::findOrfail($resource);
 
-        $projectPeriode->recalculateAnalisa();
-        $projectPeriode->refreshNilai();
+        $projectPeriode->recalculateAllRisks();
+        // $projectPeriode->recalculateAnalisa();
+        // $projectPeriode->refreshNilai();
 
         return response()->json([
             'message' => 'Data berhasil dihitung ulang',

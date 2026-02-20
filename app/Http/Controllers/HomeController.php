@@ -1462,7 +1462,7 @@ class HomeController extends Controller
 
         // Inisialisasi data summary
         $summaryData = [
-            'omset_kontrak' => 0,
+            'omset_kontrak_total' => 0,
             'omset_penjualan_sd_bulan' => 0,
             'progress_sd_bulan' => 0,
             'lsp_rencana_sd_bulan' => 0,
@@ -1516,6 +1516,7 @@ class HomeController extends Controller
                                     'profit_center'   => $profitCenter,
                                     'response_data'   => $apiResponse['data'],
                                     'kontrak_review'    => $apiData['kontrak_review'] ?? 0,
+                                    'kontrak_review_total'    => $apiData['kontrak_review_total'] ?? 0,
                                     'progress_fisik_ra' => $apiData['progress_fisik_ra'] ?? 0,
                                     'progress_fisik_ri' => $apiData['progress_fisik_ri'] ?? 0,
                                     'penjualan_ra'      => $apiData['penjualan_ra'] ?? 0,
@@ -1531,7 +1532,7 @@ class HomeController extends Controller
 
                     // 3. Sekarang, isi $summaryData dari $hasilUsahaRecord (baik dari DB maupun API)
                     if ($hasilUsahaRecord) {
-                        $summaryData['omset_kontrak'] = $hasilUsahaRecord->kontrak_review;
+                        $summaryData['omset_kontrak_total'] = $hasilUsahaRecord->kontrak_review_total;
                         $summaryData['omset_penjualan_sd_bulan'] = $hasilUsahaRecord->penjualan_ri;
                         $summaryData['lsp_rencana_sd_bulan'] = $hasilUsahaRecord->lsp_ra;
                         $summaryData['lsp_realisasi_sd_bulan'] = $hasilUsahaRecord->lsp_ri;
@@ -1539,8 +1540,8 @@ class HomeController extends Controller
                         $summaryData['lsp_rencana_sd_selesai'] = $hasilUsahaRecord->lsp_review;
                         $summaryData['lsp_realisasi_sd_selesai'] = $hasilUsahaRecord->lsp_proyeksi;
 
-                        $summaryData['progress_sd_bulan'] = ($summaryData['omset_kontrak'] > 0)
-                            ? ($summaryData['omset_penjualan_sd_bulan'] / $summaryData['omset_kontrak']) * 100
+                        $summaryData['progress_sd_bulan'] = ($summaryData['omset_kontrak_total'] > 0)
+                            ? ($summaryData['omset_penjualan_sd_bulan'] / $summaryData['omset_kontrak_total']) * 100
                             : 0;
                     }
                 }

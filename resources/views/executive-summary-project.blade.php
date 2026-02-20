@@ -63,8 +63,8 @@
     <div class="row g-4 mb-4">
         <div class="col-lg-4 col-md-6">
             <div class="card card-body h-100 shadow-sm border-start border-4 border-success">
-                <p class="text-muted text-uppercase mb-1">Omset Kontrak</p>
-                <h3 class="fw-bold text-dark mb-0">Rp {{ number_format($summaryData['omset_kontrak'], 0, ',', '.') }}</h3>
+                <p class="text-muted text-uppercase mb-1">Omset Kontrak Total</p>
+                <h3 class="fw-bold text-dark mb-0">Rp {{ number_format($summaryData['omset_kontrak_total'], 0, ',', '.') }}</h3>
             </div>
         </div>
         <div class="col-lg-4 col-md-6">

@@ -53,7 +53,8 @@
                         <th>#</th>
                         <th>Nama Proyek</th>
                         <th>Periode</th>
-                        <th>Nilai Kontrak</th>
+                        <th>Nilai Kontrak Total</th>
+                        <th>Nilai Kontrak Porsi</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -99,6 +100,7 @@ $(document).ready(function() {
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
             { data: 'project_name', name: 'project.project_name' },
             { data: 'period', name: 'period' },
+            { data: 'kontrak_review_total', name: 'kontrak_review_total' },
             { data: 'kontrak_review', name: 'kontrak_review' },
             { data: 'action', name: 'action', orderable: false, searchable: false },
         ]

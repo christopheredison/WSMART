@@ -50,6 +50,7 @@ class Project extends Model
         'cost_center_parent',
         'profit_center',
         'tanggal_mulai',
+        'nilai_ok_porsi',
     ];
 
     protected $casts = [

@@ -1344,7 +1344,6 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         // Logic Kalkulasi Otomatis hanya jika Dropdown Kosong tapi Nilai Ada
         if (empty($skalaProbabilitasId) && !is_null($nilaiProbabilitas)) {
             $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($nilaiProbabilitas);
-            dd($tingkatSkalaProbabilitas);
             if ($tingkatSkalaProbabilitas) {
                 $skalaProbabilitasId = $tingkatSkalaProbabilitas->id; // Sesuaikan column ID atau Tingkat
             }
@@ -1386,63 +1385,13 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             // 'aktual_status' => $request->aktual_status,
         ];
 
+        $riskLimit = ($projectPeriode->project->nk ?? 0) * 0.03;
+
         //perhitungan eksposur risiko
         if ($projectRisk->projectRiskAnalisa?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF) {
-            $toCreate['eksposure_risiko'] = floatval($toCreate['skala_dampak']) * (1/100) * floatval($toCreate['nilai_probabilitas']) * ($projectRisk->projectRiskAnalisa?->risk_limit ?: 0);
+            $toCreate['eksposure_risiko'] = floatval($toCreate['skala_dampak']) * (1/100) * floatval($toCreate['nilai_probabilitas']) * $riskLimit;
         } elseif ($projectRisk->projectRiskAnalisa?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
             $toCreate['eksposure_risiko'] = floatval($toCreate['nilai_dampak']) * floatval($toCreate['nilai_probabilitas']) / 100;
-        }
-
-        if ($request->is_closed == '1') {
-            // Gabungkan data untuk validasi
-            // $validationData = $toCreate;
-            // $validationData['perlakuan_penyebab'] = $perlakuanPenyebabRequests;
-            // $validationData['kri_projects'] = $kriProjectRequests;
-
-            // $validator = Validator::make($validationData, [
-            //     // Validasi data monitoring utama
-            //     'nilai_dampak' => 'required',
-            //     'skala_dampak' => 'required',
-            //     'nilai_probabilitas' => 'required',
-            //     'skala_probabilitas_id' => 'required',
-            //     'skala_risiko' => 'required',
-            //     'level_risiko' => 'required',
-
-            //     // Validasi data perlakuan (harus ada dan array)
-            //     'perlakuan_penyebab' => 'present|array',
-            //     'perlakuan_penyebab.*.progress_rencana_perlakuan_risiko' => 'required',
-            //     'perlakuan_penyebab.*.realisasi_biaya_perlakuan_risiko' => 'required',
-            //     'perlakuan_penyebab.*.deskripsi_perlakuan_risiko' => 'required',
-            //     'perlakuan_penyebab.*.timeline_perlakuan_risiko' => 'required|array|min:1',
-
-            //     // Validasi data KRI (harus ada dan array)
-            //     'kri_projects' => 'present|array',
-            //     'kri_projects.*.status_kri_terkini' => 'required',
-            //     'kri_projects.*.nilai_kri_terkini' => 'required',
-            // ], [
-            //     // Custom messages
-            //     'nilai_dampak.required' => 'Realisasi Nilai Dampak wajib diisi untuk menutup risiko.',
-            //     'skala_dampak.required' => 'Realisasi Skala Dampak wajib diisi untuk menutup risiko.',
-            //     'nilai_probabilitas.required' => 'Realisasi Nilai Probabilitas wajib diisi untuk menutup risiko.',
-            //     'skala_probabilitas_id.required' => 'Realisasi Nilai Probabilitas tidak valid.',
-            //     'skala_risiko.required' => 'Realisasi Skala Risiko wajib diisi untuk menutup risiko.',
-            //     'level_risiko.required' => 'Realisasi Level Risiko wajib diisi untuk menutup risiko.',
-
-            //     'perlakuan_penyebab.*.progress_rencana_perlakuan_risiko.required' => 'Progress Rencana Perlakuan wajib diisi untuk semua penyebab.',
-            //     'perlakuan_penyebab.*.realisasi_biaya_perlakuan_risiko.required' => 'Realisasi Biaya Perlakuan wajib diisi untuk semua penyebab.',
-            //     'perlakuan_penyebab.*.deskripsi_perlakuan_risiko.required' => 'Deskripsi Perlakuan wajib diisi untuk semua penyebab.',
-            //     'perlakuan_penyebab.*.timeline_perlakuan_risiko.required' => 'Timeline Perlakuan wajib diisi untuk semua penyebab.',
-
-            //     'kri_projects.*.status_kri_terkini.required' => 'Status KRI Terkini wajib diisi untuk semua KRI.',
-            //     'kri_projects.*.nilai_kri_terkini.required' => 'Nilai KRI Terkini wajib diisi untuk semua KRI.',
-            // ]);
-
-            // if ($validator->fails()) {
-            //     return response()->json([
-            //         'message' => 'Gagal menutup risiko. Harap lengkapi semua data monitoring.',
-            //         'errors' => $validator->errors()
-            //     ], 422);
-            // }
         }
 
         $projectMonitoring = $projectRisk->projectRiskMonitoring()->create($toCreate);

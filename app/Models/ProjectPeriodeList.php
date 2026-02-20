@@ -62,6 +62,21 @@ class ProjectPeriodeList extends Model
             });
     }
 
+    public function recalculateAllRisks()
+    {
+        // Gunakan NK project yang terbaru
+        $risk_limit = ($this->project->nk ?? 0) * 0.03;
+
+        // 1. Hitung ulang Analisa (Inherent & Residual)
+        $this->recalculateAnalisa($risk_limit);
+
+        // 2. Hitung ulang Monitoring (Realisasi)
+        $this->recalculateMonitorings($risk_limit);
+
+        // 3. Refresh akumulasi nilai periode
+        $this->refreshNilai();
+    }
+
     public function refreshNilai()
     {
         $this->load([
@@ -71,7 +86,9 @@ class ProjectPeriodeList extends Model
             },
         ]);
 
-        $currentData = [];
+        $currentData = [
+            'risks' => []
+        ];
 
         // inherent
         $avg = $this->projectRisks->avg('skala_risiko');
@@ -104,14 +121,17 @@ class ProjectPeriodeList extends Model
             }
         }
 
-        $skalaRisikoQ1 = round(collect($currentData['risks'])->avg('nilai_q1'));
-        $levelRisikoQ1 = $riskmaps[$skalaRisikoQ1];
-        $skalaRisikoQ2 = round(collect($currentData['risks'])->avg('nilai_q2'));
-        $levelRisikoQ2 = $riskmaps[$skalaRisikoQ2];
-        $skalaRisikoQ3 = round(collect($currentData['risks'])->avg('nilai_q3'));
-        $levelRisikoQ3 = $riskmaps[$skalaRisikoQ3];
-        $skalaRisikoQ4 = round(collect($currentData['risks'])->avg('nilai_q4'));
-        $levelRisikoQ4 = $riskmaps[$skalaRisikoQ4];
+        $skalaRisikoQ1 = round(collect($currentData['risks'])->avg('nilai_q1') ?? 0);
+        $levelRisikoQ1 = $riskmaps[$skalaRisikoQ1] ?? null;
+
+        $skalaRisikoQ2 = round(collect($currentData['risks'])->avg('nilai_q2') ?? 0);
+        $levelRisikoQ2 = $riskmaps[$skalaRisikoQ2] ?? null;
+
+        $skalaRisikoQ3 = round(collect($currentData['risks'])->avg('nilai_q3') ?? 0);
+        $levelRisikoQ3 = $riskmaps[$skalaRisikoQ3] ?? null;
+
+        $skalaRisikoQ4 = round(collect($currentData['risks'])->avg('nilai_q4') ?? 0);
+        $levelRisikoQ4 = $riskmaps[$skalaRisikoQ4] ?? null;
 
         $currentData['summary'] = [
             'skala_risiko_q1' => $skalaRisikoQ1,
@@ -205,6 +225,46 @@ class ProjectPeriodeList extends Model
                     'skala_risiko' => $skala_risiko_baru,
                     'level_risiko' => $level_risiko_baru,
                 ]);
+            }
+        }
+    }
+
+    public function recalculateMonitorings($risk_limit)
+    {
+        $projectRisks = ProjectRisk::where('periode_id', $this->periode_id)
+            ->where('project_id', $this->project_id)
+            ->with(['projectRiskAnalisa', 'projectRiskMonitorings'])
+            ->get();
+
+        $riskMaps = RiskMap::get()->keyBy(function($item) {
+            return $item->skala_dampak . '-' . $item->skala_probabilitas;
+        });
+
+        foreach ($projectRisks as $projectRisk) {
+            $analisa = $projectRisk->projectRiskAnalisa;
+
+            foreach ($projectRisk->projectRiskMonitorings as $monitoring) {
+                if ($analisa && $analisa->kategori_dampak === 'Kuantitatif') {
+                    $skala_dampak_baru = $this->hitungSkalaDampak($monitoring->nilai_dampak, $risk_limit);
+
+                    $tingkatSkalaProbabilitas = \App\Models\SkalaProbabilitas::find($monitoring->skala_probabilitas_id);
+                    $tingkat = $tingkatSkalaProbabilitas ? $tingkatSkalaProbabilitas->tingkat : 1;
+
+                    $riskMap = $riskMaps[$skala_dampak_baru . '-' . $tingkat] ?? null;
+
+                    $monitoring->skala_dampak = $skala_dampak_baru;
+                    $monitoring->skala_risiko = $riskMap->nilai_risiko ?? 1;
+                    $monitoring->level_risiko = $riskMap->level_risiko ?? 'Low';
+
+                    // Eksposur Kuantitatif
+                    $monitoring->eksposure_risiko = floatval($monitoring->nilai_dampak) * floatval($monitoring->nilai_probabilitas) / 100;
+
+                } else if ($analisa && $analisa->kategori_dampak === 'Kualitatif') {
+                    // Eksposur Kualitatif bergantung pada risk limit
+                    $monitoring->eksposure_risiko = floatval($monitoring->skala_dampak) * (1/100) * floatval($monitoring->nilai_probabilitas) * $risk_limit;
+                }
+
+                $monitoring->save();
             }
         }
     }

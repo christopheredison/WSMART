@@ -15,6 +15,7 @@ class ProjectHasilUsaha extends Model
         'project_id',
         'profit_center',
         'period',
+        'kontrak_review_total',
         'kontrak_review',
         'progress_fisik_ra',
         'progress_fisik_ri',
