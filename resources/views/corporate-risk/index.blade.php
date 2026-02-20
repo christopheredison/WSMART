@@ -129,7 +129,7 @@
               <tr>
                 <td class="white-space-nowrap">
                   @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
-                  <div class="form-check mb-0"> 
+                  <div class="form-check mb-0">
                     <input class="form-check-input select-item" type="checkbox" name="selected_items[]"
                       value="{{ $item->id }}" />
                   </div>
@@ -137,7 +137,7 @@
                 </td>
                 <td class="index-number">
                   @if($item->status_risiko== 2)
-                    <span class="badge bg-primary">Rekomendasi</span> 
+                    <span class="badge bg-primary">Rekomendasi</span>
                   @elseif($item->status_risiko == 3 || $item->status_risiko == 4 || $item->status_risiko == 5)
                     <span class="badge bg-danger">Risiko Utama</span>
                   @endif
@@ -151,12 +151,12 @@
                 <td class="peristiwa_risiko">
                   @php
                     $add = '';
-                    if ($item->riskAnalysis && $item->riskAnalysis->kategori_dampak === 'Kuantitatif' && 
+                    if ($item->riskAnalysis && $item->riskAnalysis->kategori_dampak === 'Kuantitatif' &&
                         isset($avgQuantitativeExposure) && $item->riskAnalysis->eksposur_risiko >= $avgQuantitativeExposure) {
-                        $add = '<span class="badge bg-primary">!</span> ';
-                    } else if ($item->riskAnalysis && $item->riskAnalysis->kategori_dampak === 'Kualitatif' && 
+                        $add = '<span class="badge bg-primary" data-bs-toggle="tooltip" title="Rekomendasi Risiko di atas rata-rata IRE">!</span> ';
+                    } else if ($item->riskAnalysis && $item->riskAnalysis->kategori_dampak === 'Kualitatif' &&
                               $item->riskAnalysis->skala_risiko >= 20) {
-                        $add = '<span class="badge bg-primary">!</span> ';
+                        $add = '<span class="badge bg-primary" data-bs-toggle="tooltip" title="Rekomendasi Risiko di atas rata-rata IRE">!</span> ';
                     }
                   @endphp
                   {!! $add !!}{{ $item->peristiwa_risiko ?? '-' }}
@@ -165,7 +165,7 @@
                 <td class="kontrol_eksisting">{{ $item->jenisKontrolEksisting->jenis_kontrol ?? '-' }}</td>
                 <td class="kategori_dampak">{{ $item->riskAnalysis->kategori_dampak ?? '-' }}</td>
                 <td class="nilai_risiko" @if($item->riskAnalysis && $item->riskAnalysis->level_risiko)
-                    style="background-color: 
+                    style="background-color:
                     @switch(strtolower($item->riskAnalysis->level_risiko))
                         @case('low')
                             #14A20E
@@ -300,14 +300,14 @@ $(document).ready(function() {
     //table.column(1).search(unitId).draw();
     const selectedUnitId = $(this).val();
     const currentUrl = new URL(window.location.href);
-    
+
     // Hapus parameter unit_id jika "Semua Unit" dipilih
     if (selectedUnitId === '') {
         currentUrl.searchParams.delete('unit_id');
     } else {
         currentUrl.searchParams.set('unit_id', selectedUnitId);
     }
-    
+
     // Refresh halaman dengan parameter baru
     window.location.href = currentUrl.toString();
   });
@@ -343,7 +343,7 @@ $(document).ready(function() {
       document.querySelectorAll('.select-item:checked').forEach(function(checkbox) {
         selectedRisks.push(checkbox.value);
       });
-      
+
       // Jika tidak ada risiko yang dipilih, tampilkan peringatan
       if(selectedRisks.length === 0) {
         Swal.fire({

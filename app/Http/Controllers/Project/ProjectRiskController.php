@@ -462,13 +462,17 @@ class ProjectRiskController extends BasicCRUDController
         $formattedAverageExposure = 'Rp ' . number_format($averageExposure, 0, ',', '.');
 
         // Render Kolom
+        $this->tableLegend[] = [
+            'icon' => '<span class="badge bg-primary">!</span>',
+            'label' => 'Rekomendasi Risiko'
+        ];
         $this->tableColumns['peristiwa_risiko']['render'] = <<< JS
             (data, type, row) => {
                 let add = '';
                 if (row.project_risk_analisa?.kategori_dampak === 'Kuantitatif' && row.project_risk_analisa?.eksposur_risiko >= $averageExposure) {
-                    add = '<span class="badge bg-primary">!</span> ';
+                    add = '<span class="badge bg-primary" data-bs-toggle="tooltip" title="Rekomendasi Risiko di atas rata-rata Eksposure Risiko">!</span> ';
                 } else if (row.project_risk_analisa?.kategori_dampak === 'Kualitatif' && row.skala_risiko >= 20) {
-                    add = '<span class="badge bg-primary">!</span> ';
+                    add = '<span class="badge bg-primary" data-bs-toggle="tooltip" title="Rekomendasi Risiko di atas rata-rata Eksposure Risiko">!</span> ';
                 }
                 return add + (row.peristiwa_risiko?.title || row?.rencana_kegiatan || '-');
             }
@@ -1628,12 +1632,12 @@ class ProjectRiskController extends BasicCRUDController
                 'projectRiskMonitorings' => function($query) {
                     $query->orderBy('id', 'desc')
                         ->with([
-                            'skalaProbabilitas', 
+                            'skalaProbabilitas',
                             'skalaDampakObj',
-                            'kriProyekMonitorings.kriProject', 
+                            'kriProyekMonitorings.kriProject',
                             'perlakuanPenyebabMonitorings.perlakuanPenyebab.penyebabRisikoProject',
                             'perlakuanDampakMonitorings.perlakuanDampak.dampakRisikoProject',
-                            'perlakuanPenyebabRisikoDocuments', 
+                            'perlakuanPenyebabRisikoDocuments',
                             'perlakuanDampakRisikoDocuments'
                         ]);
                 },
@@ -1646,7 +1650,7 @@ class ProjectRiskController extends BasicCRUDController
         $tahunMonitorings = $projectRisk->projectRiskMonitorings->pluck('tahun')->unique()->toArray();
         $tahunMonitorings[] = $projectRisk->created_at->year;
         sort($tahunMonitorings);
-        
+
         $minTahun = !empty($tahunMonitorings) ? min($tahunMonitorings) : date('Y');
         $maxTahun = !empty($tahunMonitorings) ? max($tahunMonitorings) : date('Y');
         $tahunMonitorings = range($minTahun, $maxTahun);

@@ -252,10 +252,10 @@
                     $add = '';
                     if ($item->riskAnalysis && $item->riskAnalysis->kategori_dampak === 'Kuantitatif' &&
                         isset($avgQuantitativeExposure) && $item->riskAnalysis->eksposur_risiko >= $avgQuantitativeExposure) {
-                        $add = '<span class="badge bg-primary">!</span> ';
+                        $add = '<span class="badge bg-primary" data-bs-toggle="tooltip" title="Rekomendasi Risiko di atas rata-rata IRE">!</span> ';
                     } else if ($item->riskAnalysis && $item->riskAnalysis->kategori_dampak === 'Kualitatif' &&
                               $item->riskAnalysis->skala_risiko >= 20) {
-                        $add = '<span class="badge bg-primary">!</span> ';
+                        $add = '<span class="badge bg-primary" data-bs-toggle="tooltip" title="Rekomendasi Risiko di atas rata-rata IRE">!</span> ';
                     }
                   @endphp
                   {!! $add !!}{{ $item->peristiwa_risiko ?? '-' }}
