@@ -742,7 +742,7 @@ $(document).ready(function() {
                 if (activeState) {
                     let buttonHtml = `@include('master.basic-crud._table_action', ['action' => $action, 'id' => ':id', 'code' => ':code'])`;
 
-                    const title = cleanInputJS(row?.peristiwa_risiko_id == 0 ? row?.rencana_kegiatan : (row?.peristiwa_risiko?.title || '-'));
+                    const title = cleanInputJS(row?.peristiwa_risiko_id == 0 ? row?.rencana_kegiatan : (row?.peristiwa_risiko?.title ? row?.peristiwa_risiko?.title : (row?.peristiwa_risiko ?? '-')));
                     const desc = cleanInputJS(row?.deskripsi_peristiwa_risiko);
 
                     const quarter = $('#table-filter select[name="quarter"]').val();

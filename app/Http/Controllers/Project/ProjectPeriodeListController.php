@@ -175,7 +175,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'projects.cost_center_parent',
                 'projects.nk',
                 'projects.tanggal_mulai',
-                'units.name as divisi_name', // Ambil nama divisi untuk sorting
+                'units.name as divisi_name',
             ]);
 
             // Subquery untuk Jumlah Risiko (agar bisa disort)
@@ -1150,9 +1150,17 @@ class ProjectPeriodeListController extends BasicCRUDController
 
         // --- SKENARIO 1: SELESAI ---
         if ($countTotal > 0 && $countTotal === $countApproved) {
-            $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Disetujui</div>';
+            // Mapping nama bulan agar lebih mudah dibaca
+            $namaBulan = [
+                1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+            ];
+            $bulanStr = $namaBulan[(int)$referenceMon->month] ?? $referenceMon->month;
+
+            $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Selesai</div>';
             return '<div class="d-flex flex-column align-items-start">
-                        <span class="badge bg-success" data-bs-toggle="tooltip" title="Status: Monitoring Bulan '.$referenceMon->month.' Disetujui">Selesai</span>
+                        <span class="badge bg-success" data-bs-toggle="tooltip" title="Status: Monitoring Bulan '.$bulanStr.' Disetujui">Selesai ('.$bulanStr.')</span>
                         '.$positionHtml.'
                     </div>';
         }
@@ -1162,12 +1170,12 @@ class ProjectPeriodeListController extends BasicCRUDController
             $isMyMonTurn = true;
             if ($hasRevision) {
                 $statusLabel = 'Perlu Revisi';
-                $badgeColor = 'bg-danger';
+                $badgeColor = 'bg-danger border border-danger text-white';
                 $labelPosisi = 'Dikembalikan ke Risk Officer Proyek';
                 $tooltipText = 'Status: Dikembalikan. Mohon perbaiki data risiko sesuai catatan.';
             } else {
                 $statusLabel = 'Draft / Input Monitoring';
-                $badgeColor = 'bg-info';
+                $badgeColor = 'bg-info border border-info text-white';
                 $labelPosisi = 'Risk Officer Proyek';
                 $tooltipText = 'Status: Draft Monitoring. Mohon lengkapi data.';
             }
@@ -1177,25 +1185,25 @@ class ProjectPeriodeListController extends BasicCRUDController
         elseif ($levelId == 7 && $hasVerifROP) {
             $isMyMonTurn = true;
             $statusLabel = 'Perlu Verifikasi';
-            $badgeColor = 'bg-warning text-dark';
+            $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
             $labelPosisi = 'Risk Owner Proyek';
         }
         elseif ($levelId == 1 && !$user->unit->unit_mr && $hasVerifROD) {
             $isMyMonTurn = true;
             $statusLabel = 'Perlu Verifikasi';
-            $badgeColor = 'bg-warning text-dark';
+            $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
             $labelPosisi = 'Risk Officer Divisi';
         }
         elseif ($levelId == 1 && $user->unit->unit_mr && $hasVerifROMR) {
             $isMyMonTurn = true;
             $statusLabel = 'Perlu Verifikasi';
-            $badgeColor = 'bg-warning text-dark';
+            $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
             $labelPosisi = 'Risk Officer MR';
         }
         elseif ($levelId == 2 && $user->unit->unit_mr && $hasVerifROWMR) {
             $isMyMonTurn = true;
             $statusLabel = 'Perlu Verifikasi';
-            $badgeColor = 'bg-warning text-dark';
+            $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
             $labelPosisi = 'Risk Owner MR';
         }
 
@@ -1223,7 +1231,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             return '
                 <div class="d-flex flex-column align-items-start">
                     <a href="'.$redirectUrl.'" class="text-decoration-none">
-                        <span class="badge '.$badgeColor.' cursor-pointer border shadow-sm position-relative"
+                        <span class="badge '.$badgeColor.' cursor-pointer position-relative"
                               data-bs-toggle="tooltip"
                               title="'.$tooltipText.'">
                             <i class="bx bx-radar bx-flashing me-1"></i> '.$statusLabel.'

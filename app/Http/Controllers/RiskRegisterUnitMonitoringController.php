@@ -485,48 +485,64 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             // === DATA RESIDUAL (DYNAMIC BERDASARKAN FILTER QUARTER) ===
             'nilai_dampak_residual' => [
                 'label' => 'Nilai Dampak Residual',
-                'data' => 'risk_analysis.nilai_dampak_residual_q' . $quarter,
+                'data' => null, // Set ke null agar tidak mematok statis ke salah satu Q saat init
                 'defaultContent' => '-',
                 'sortable' => false,
                 'searchable' => false,
                 'class' => 'white-space-nowrap',
                 'render' => '(data, type, row) => {
-                    return "Rp " + new Intl.NumberFormat("id-ID").format(data || 0);
+                    const q = $(\'select[name="quarter"]\').val() || 1;
+                    const val = row.risk_analysis ? row.risk_analysis["nilai_dampak_residual_q" + q] : 0;
+                    return "Rp " + new Intl.NumberFormat("id-ID").format(val || 0);
                 }',
             ],
             'skala_dampak_residual' => [
                 'label' => 'Skala Dampak Residual',
-                'data' => 'risk_analysis.skala_dampak_residual_q' . $quarter,
+                'data' => null,
                 'defaultContent' => '-',
                 'sortable' => false,
                 'render' => '(data, type, row) => {
+                    const q = $(\'select[name="quarter"]\').val() || 1;
                     const analisa = row.risk_analysis;
-                    const obj = analisa?.["skala_dampak_residual_q' . $quarter . '_obj"];
-                    return data ? `(${data}) ${obj?.deskripsi || ""}` : "-";
+                    if (!analisa) return "-";
+
+                    const val = analisa["skala_dampak_residual_q" + q];
+                    const obj = analisa["skala_dampak_residual_q" + q + "_obj"];
+                    return val ? `(${val}) ${obj?.deskripsi || ""}` : "-";
                 }',
             ],
             'skala_probabilitas_residual' => [
                 'label' => 'Skala Probabilitas Residual',
-                'data' => 'risk_analysis.skala_probabilitas_residual_q' . $quarter . '_id',
+                'data' => null,
                 'defaultContent' => '-',
                 'sortable' => false,
                 'render' => '(data, type, row) => {
-                    const prob = row.risk_analysis?.["skala_probabilitas_residual_q' . $quarter . '"];
+                    const q = $(\'select[name="quarter"]\').val() || 1;
+                    const analisa = row.risk_analysis;
+                    if (!analisa) return "-";
+
+                    const prob = analisa["skala_probabilitas_residual_q" + q];
                     return prob ? `(${prob.tingkat}) ${prob.skala || ""}` : "-";
                 }',
             ],
             'skala_risiko_residual' => [
                 'label' => 'Level Risiko Residual',
-                'data' => 'risk_analysis.skala_risiko_residual_q' . $quarter,
+                'data' => null,
                 'defaultContent' => '-',
                 'sortable' => false,
                 'class' => 'text-center align-middle',
                 'render' => '(data, type, row) => {
-                    const level = row.risk_analysis?.["level_risiko_residual_q' . $quarter . '"];
-                    return data ? (data + " - " + level) : "-";
+                    const q = $(\'select[name="quarter"]\').val() || 1;
+                    const analisa = row.risk_analysis;
+                    if (!analisa) return "-";
+
+                    const val = analisa["skala_risiko_residual_q" + q];
+                    const level = analisa["level_risiko_residual_q" + q];
+                    return val ? (val + " - " + (level || "")) : "-";
                 }',
                 'createdCell' => 'function (td, cellData, rowData, row, col) {
-                    const level = rowData.risk_analysis?.["level_risiko_residual_q' . $quarter . '"];
+                    const q = $(\'select[name="quarter"]\').val() || 1;
+                    const level = rowData.risk_analysis?.["level_risiko_residual_q" + q];
                     if (level) {
                         const colorClass = "bg-" + level.toLowerCase().replace(/to\s+/g, "").replace(/\s+/g, "-");
                         $(td).addClass(colorClass).addClass("text-white");
@@ -1272,6 +1288,19 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         ])
         ->findOrFail(request()->route('monitoring'));
 
+        $historyMonitorings = \App\Models\UnitRiskMonitoring::where('identifikasi_risiko_id', $risk->id)
+            ->with([
+                'skalaDampakObj',
+                'skalaProbabilitas',
+                'perlakuanPenyebabMonitorings.perlakuanPenyebabRisikoUnit.penyebabRisiko',
+                'perlakuanDampakMonitorings.perlakuanDampak.dampakRisikoUnit',
+                'perlakuanPenyebabRisikoDocuments',
+                // 'perlakuanDampakRisikoDocuments',
+                'kriUnitMonitorings.keyRiskIndicator'
+            ])
+            ->orderBy('id', 'desc')
+            ->get();
+
         $skalaDampaks = SkalaDampak::pluck('deskripsi', 'tingkat');
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
         $riskMaps = RiskMap::get()->keyBy(function($item) {
@@ -1293,6 +1322,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'risk' => $risk,
             'quarter' => $quarter,
             'month' => $month,
+            'tahun' => $period->tahun,
             'riskAnalysis' => optional($risk->riskAnalysis),
             'riskMonitoring' => $risk->lastMonitoringRisiko,
             'skalaDampaks' => $skalaDampaks,
@@ -1304,6 +1334,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'dateCurrent' => $dateCurrent,
             'dateM1' => $dateM1,
             'dateM2' => $dateM2,
+            'historyMonitorings' => $historyMonitorings,
         ]);
     }
 

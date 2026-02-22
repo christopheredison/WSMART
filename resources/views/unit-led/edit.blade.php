@@ -51,7 +51,7 @@
 
                             <div class="col-md-6 mb-3">
                                 <label for="tanggal_kejadian" class="form-label">Tanggal Kejadian <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control flatpickr-date" name="tanggal_kejadian" value="{{ old('tanggal_kejadian', $lossEvent->tanggal_kejadian) }}" required>
+                                <input type="text" class="form-control flatpickr-date bg-white" name="tanggal_kejadian" value="{{ old('tanggal_kejadian', $lossEvent->tanggal_kejadian) }}" required>
                             </div>
 
                             <div class="col-md-6 mb-3">

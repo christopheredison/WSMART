@@ -667,11 +667,12 @@
 
         <div class="col-12">
             <div class="divider my-3 my-md-5">
-                <div class="divider-text">
+                <div class="divider-text d-flex align-items-center justify-content-between cursor-pointer" data-bs-toggle="collapse" data-bs-target="#logPerlakuanRisiko" aria-expanded="false">
                     <h4 class="mb-0 ff-heading-sm">Log Perlakuan Risiko</h4>
+                    <span class="toggle-text ms-2"><i class='bx bx-chevron-down'></i> Show Log</span>
                 </div>
             </div>
-            <div class="row g-2">
+            <div class="row g-2 collapse" id="logPerlakuanRisiko">
                 <div class="card">
                     <div class="card-body">
                         <table class="table datatable">
@@ -1158,6 +1159,15 @@ $(document).ready(function() {
     $('#section-realisasi').on('change', '.update-trigger', function() {
         refreshSkalaAndLevelRisiko();
     }).change();
+
+    // Toggle logic for log section
+    $('#logPerlakuanRisiko').on('show.bs.collapse', function () {
+        const toggle = $(this).prev('.divider').find('.toggle-text');
+        toggle.html("<i class='bx bx-chevron-up'></i> Hide Log");
+    }).on('hide.bs.collapse', function () {
+        const toggle = $(this).prev('.divider').find('.toggle-text');
+        toggle.html("<i class='bx bx-chevron-down'></i> Show Log");
+    });
 
     $('.btn-action').on('click', function() {
         const action = $(this).data('action');

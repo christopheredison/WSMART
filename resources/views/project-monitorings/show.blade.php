@@ -937,6 +937,14 @@
         </div>
     @endforeach
 
+    <div class="col-12 mt-5">
+        <div class="row g-2">
+            <div class="col-auto order-1">
+                <a href="{{ route('projects.monitorings.index', ['project' => $projectPeriode->id, 'tahun' => $tahun, 'quarter' => $quarter, 'month' => $month]) }}" class="btn btn-outline-secondary">Kembali</a>
+            </div>
+        </div>
+    </div>
+
     @include('project-monitorings._modal_mitigasi')
 @endsection
 
