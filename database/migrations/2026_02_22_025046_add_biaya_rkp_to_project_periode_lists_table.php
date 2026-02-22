@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::table('projects', function (Blueprint $table) {
             if (!Schema::hasColumn('projects', 'biaya_perlakuan_risiko_rkp')) {
                 $table->decimal('biaya_perlakuan_risiko_rkp', 22, 2)->nullable()->default(0)->after('nk');
             }
