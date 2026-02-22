@@ -184,65 +184,81 @@
             </div>
             <div class="d-block mt-3">
                 <div class="table-responsive scrollbar">
-                    <table class="table table-strategi">
+                    <table class="table table-bordered table-strategi">
                         <thead>
                             <tr>
-                                <th>No</th>
-                                <th>Peristiwa Risiko</th>
-                                <th>Deskripsi Peristiwa Risiko</th>
-                                <th>Nilai Dampak Inherent</th>
-                                <th>Skala Dampak Inherent</th>
-                                <th>Nilai Probabilitas Inherent</th>
-                                <th>Skala Probabilitas Inherent</th>
-                                <th>Nilai Risiko Inherent</th>
-                                <th>Level Risiko Inherent</th>
-                                <th>Nilai Dampak Residual</th>
-                                <th>Skala Dampak Residual</th>
-                                <th>Nilai Probabilitas Residual</th>
-                                <th>Skala Probabilitas Residual</th>
-                                <th>Nilai Risiko Residual</th>
-                                <th>Level Risiko Residual</th>
-                                <th>Status Risiko</th>
+                                <th rowspan="2" class="align-middle">No</th>
+                                <th rowspan="2" class="align-middle">Peristiwa Risiko</th>
+                                <th rowspan="2" class="align-middle">Deskripsi Peristiwa Risiko</th>
+
+                                <th colspan="6" class="text-center bg-light">Inherent</th>
+                                <th colspan="6" class="text-center" style="background-color: #e8f4fd;">Realisasi / Current</th>
+                                <th colspan="6" class="text-center bg-light">Residual <br><small>(Sesuai Kuartal)</small></th>
+                                
+                                <th rowspan="2" class="align-middle">Status Risiko</th>
+                            </tr>
+                            <tr>
+                                {{-- Inherent --}}
+                                <th class="bg-light">Nilai Dampak</th>
+                                <th class="bg-light">Skala Dampak</th>
+                                <th class="bg-light">Nilai Prob.</th>
+                                <th class="bg-light">Skala Prob.</th>
+                                <th class="bg-light">Nilai Risiko</th>
+                                <th class="bg-light">Level Risiko</th>
+
+                                {{-- Realisasi (Current) --}}
+                                <th style="background-color: #e8f4fd;">Nilai Dampak</th>
+                                <th style="background-color: #e8f4fd;">Skala Dampak</th>
+                                <th style="background-color: #e8f4fd;">Nilai Prob.</th>
+                                <th style="background-color: #e8f4fd;">Skala Prob.</th>
+                                <th style="background-color: #e8f4fd;">Nilai Risiko</th>
+                                <th style="background-color: #e8f4fd;">Level Risiko</th>
+
+                                {{-- Residual --}}
+                                <th class="bg-light">Nilai Dampak</th>
+                                <th class="bg-light">Skala Dampak</th>
+                                <th class="bg-light">Nilai Prob.</th>
+                                <th class="bg-light">Skala Prob.</th>
+                                <th class="bg-light">Nilai Risiko</th>
+                                <th class="bg-light">Level Risiko</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($risikos as $risiko)
-                            <tr>
+                            @forelse($risikos as $risiko)
+                            <tr data-risk-id="{{ $risiko->id }}">
                                 <td>{{ $loop->iteration }}</td>
                                 <td>
-                                  <a href="{{ route('risk-register-unit.view', ['riskRegister' => $risiko->id]) }}">
+                                <a href="{{ route('risk-register-unit.view', ['riskRegister' => $risiko->id]) }}">
                                     {{ $risiko->peristiwa_risiko ?? '-' }}
-                                  </a>
+                                </a>
                                 </td>
                                 <td>{{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}</td>
+
+                                {{-- INHERENT --}}
                                 <td>{{ $risiko->riskAnalysis?->nilai_dampak ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak, 0, ',', '.') : '-' }}</td>
-                                <td>
-                                    {{ $risiko->riskAnalysis?->skalaDampakObj?->tingkat
-                                        ? '(' . $risiko->riskAnalysis?->skalaDampakObj?->tingkat . ') ' . $risiko->riskAnalysis?->skalaDampakObj?->deskripsi
-                                        : '-' }}
-                                </td>
+                                <td>{{ $risiko->riskAnalysis?->skalaDampakObj?->tingkat ? '(' . $risiko->riskAnalysis?->skalaDampakObj?->tingkat . ') ' . $risiko->riskAnalysis?->skalaDampakObj?->deskripsi : '-' }}</td>
                                 <td>{{ $risiko->riskAnalysis?->nilai_probabilitas ?? '-' }}</td>
-                                <td>
-                                    {{ $risiko->riskAnalysis?->skalaProbabilitas?->tingkat
-                                        ? '(' . $risiko->riskAnalysis?->skalaProbabilitas?->tingkat . ') ' . $risiko->riskAnalysis?->skalaProbabilitas?->skala
-                                        : '-' }}
-                                </td>
+                                <td>{{ $risiko->riskAnalysis?->skalaProbabilitas?->tingkat ? '(' . $risiko->riskAnalysis?->skalaProbabilitas?->tingkat . ') ' . $risiko->riskAnalysis?->skalaProbabilitas?->skala : '-' }}</td>
                                 <td>{{ $risiko->riskAnalysis?->skala_risiko ?? '-' }}</td>
                                 <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($risiko->riskAnalysis?->level_risiko)))}}">{{ $risiko->riskAnalysis?->level_risiko ?? '-' }}</td>
-                                <td>{{ $risiko->riskAnalysis?->nilai_dampak_residual ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak_residual, 0, ',', '.') : '-' }}</td>
-                                <td>
-                                    {{ $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->tingkat
-                                        ? '(' . $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->tingkat . ') ' . $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->deskripsi
-                                        : '-' }}
-                                </td>
-                                <td>{{ $risiko->riskAnalysis?->nilai_probabilitas_residual ?? '-' }}</td>
-                                <td>
-                                    {{ $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->tingkat
-                                        ? '(' . $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->tingkat . ') ' . $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->skala
-                                        : '-' }}
-                                </td>
-                                <td>{{ $risiko->riskAnalysis?->skala_risiko_residual ?? '-' }}</td>
-                                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($risiko->riskAnalysis?->level_risiko_residual)))}}">{{ $risiko->riskAnalysis?->level_risiko_residual ?? '-' }}</td>
+
+                                {{-- REALISASI / CURRENT (Akan di-overwrite via JS) --}}
+                                <td class="realisasi-nilai-dampak">-</td>
+                                <td class="realisasi-skala-dampak">-</td>
+                                <td class="realisasi-nilai-prob">-</td>
+                                <td class="realisasi-skala-prob">-</td>
+                                <td class="realisasi-nilai-risiko">-</td>
+                                <td class="realisasi-level-risiko">-</td>
+
+                                {{-- RESIDUAL (Akan di-overwrite via JS berdasarkan Kuartal) --}}
+                                <td class="residual-nilai-dampak">-</td>
+                                <td class="residual-skala-dampak">-</td>
+                                <td class="residual-nilai-prob">-</td>
+                                <td class="residual-skala-prob">-</td>
+                                <td class="residual-nilai-risiko">-</td>
+                                <td class="residual-level-risiko">-</td>
+
+                                {{-- STATUS RISIKO --}}
                                 <td>
                                     @if ($risiko->is_closed)
                                         <span class="badge bg-danger rounded-pill px-2 mt-auto">Closed</span>
@@ -251,12 +267,11 @@
                                     @endif
                                 </td>
                             </tr>
-                            @endforeach
-                            @if ($risikos->isEmpty())
+                            @empty
                             <tr>
-                                <td colspan="15" class="text-center p-3">Tidak ada data</td>
+                                <td colspan="22" class="text-center p-3">Tidak ada data</td>
                             </tr>
-                            @endif
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -391,6 +406,84 @@ $(document).ready(function () {
         // Arahkan browser ke URL yang baru
         window.location.href = currentUrl.toString();
     });
+
+    // Deklarasi Variabel dari Controller
+    const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
+    const riskRealisasiData = @json($riskRealisasiData);
+    const riskResidualData = @json($riskResidualData);
+
+    // Format Helper
+    const formatRupiah = (number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+    };
+
+    const getLevelClass = (levelName) => {
+        if (!levelName) return '';
+        return 'bg-' + levelName.toLowerCase().replace('to ', '').replace(/\s+/g, '-');
+    };
+
+    // Fungsi Render Peta & Tabel Dinamis
+    function updateDashboard(month) {
+        const quarter = Math.ceil(month / 3);
+
+        // 1. Update Map Current
+        $('#currentMap').prop('class', 'table-risk-map');
+        $('#currentMap').addClass('show-m' + month);
+
+        // 2. Update Table Content (Realisasi & Residual)
+        $('tr[data-risk-id]').each(function() {
+            const tr = $(this);
+            const riskId = tr.data('risk-id');
+
+            // A. Inject Realisasi (Sesuai Bulan)
+            if (riskRealisasiData[riskId] && riskRealisasiData[riskId][month]) {
+                const dataReal = riskRealisasiData[riskId][month];
+
+                tr.find('.realisasi-nilai-dampak').text(dataReal.nilai_dampak ? formatRupiah(dataReal.nilai_dampak) : '-');
+                tr.find('.realisasi-skala-dampak').text(dataReal.skala_dampak ? `(${dataReal.skala_dampak}) ${dataReal.skala_dampak_desc ?? ''}` : '-');
+                tr.find('.realisasi-nilai-prob').text(dataReal.nilai_probabilitas ?? '-');
+                tr.find('.realisasi-skala-prob').text(dataReal.skala_probabilitas ? `(${dataReal.skala_probabilitas}) ${dataReal.skala_probabilitas_desc ?? ''}` : '-');
+                tr.find('.realisasi-nilai-risiko').text(dataReal.nilai_risiko ?? '-');
+
+                const tdRealLevel = tr.find('.realisasi-level-risiko');
+                tdRealLevel.text(dataReal.level_risiko ?? '-');
+                tdRealLevel.removeClass(function (index, className) {
+                    return (className.match(/(^|\s)bg-\S+/g) || []).join(' ');
+                });
+                if (dataReal.level_risiko) tdRealLevel.addClass(getLevelClass(dataReal.level_risiko));
+            }
+
+            // B. Inject Residual (Sesuai Kuartal)
+            if (riskResidualData[riskId] && riskResidualData[riskId][quarter]) {
+                const dataRes = riskResidualData[riskId][quarter];
+
+                tr.find('.residual-nilai-dampak').text(dataRes.nilai_dampak ? formatRupiah(dataRes.nilai_dampak) : '-');
+                tr.find('.residual-skala-dampak').text(dataRes.skala_dampak ?? '-');
+                tr.find('.residual-nilai-prob').text(dataRes.nilai_prob ?? '-');
+                tr.find('.residual-skala-prob').text(dataRes.skala_prob ?? '-');
+                tr.find('.residual-nilai-risiko').text(dataRes.skala_risiko ?? '-');
+
+                const tdResLevel = tr.find('.residual-level-risiko');
+                tdResLevel.text(dataRes.level_risiko ?? '-');
+                tdResLevel.removeClass(function (index, className) {
+                    return (className.match(/(^|\s)bg-\S+/g) || []).join(' ');
+                });
+                if (dataRes.level_risiko) tdResLevel.addClass(getLevelClass(dataRes.level_risiko));
+            }
+        });
+    }
+
+    // Deteksi saat bulan dropdown diganti
+    $('#monthSelect').on('change', function() {
+        updateDashboard($(this).val());
+    });
+
+    // Jalankan Load Pertama Kali
+    const currentMonth = new Date().getMonth() + 1;
+    $('#monthSelect').val(currentMonth); // Set input select default
+    updateDashboard(currentMonth); // Call update
+
+    // (Sisa script Anda untuk Peta Inherent/Residual awal, InputMask, dll biarkan seperti biasa)
 
     const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
     risks.forEach((risk, idx) => {
