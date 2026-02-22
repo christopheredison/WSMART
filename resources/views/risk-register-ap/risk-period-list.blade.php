@@ -70,10 +70,8 @@
                 <th class="sort" data-sort="tahun">Tahun</th>
                 <th class="sort text-center" data-sort="risk_count">Total Risiko</th>
                 <th class="sort text-center" data-sort="unit_status">Status Anak Perusahaan</th>
-                {{-- NEW COLUMNS --}}
                 <th class="sort text-center">Status Risiko</th>
                 <th class="sort text-center">Status Monitoring</th>
-                {{-- END NEW COLUMNS --}}
                 <th class="no-sort white-space-nowrap" data-sort="action">Action</th>
               </tr>
             </thead>
@@ -95,16 +93,12 @@
                     {{ $unitStatusLabel }}
                   </figure>
                 </td>
-
-                {{-- NEW DATA --}}
                 <td class="text-center">
                     {!! $item['risk_status_html'] !!}
                 </td>
                 <td class="text-center">
                     {!! $item['mon_status_html'] !!}
                 </td>
-                {{-- END NEW DATA --}}
-
                 <td class="white-space-nowrap">
                   @if ($apAdmin)
                     <a href="{{ route('risk-register-ap.periods.show', ['period' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">

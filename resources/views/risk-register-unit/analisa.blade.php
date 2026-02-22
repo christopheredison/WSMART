@@ -253,13 +253,13 @@
                 </div>
                 <div class="row" id="divDeskripsiDampakResidualQ{{ $i }}">
                     <div class="col-md-12">
-                        <label>Deskripsi Dampak Residual Q{{ $i }}</label>
+                        <label>Deskripsi Dampak Residual Q{{ $i }} <span class="text-danger">*</span></label>
                         {{ Form::textarea('deskripsi_dampak_residual_q' . $i, $analisa->{'deskripsi_dampak_residual_q' . $i} ?? '', ['class' => 'form-control', 'rows' => 5]) }}
                     </div>
                 </div>
                 <div class="row" id="divAsumsiDampakResidualQ{{ $i }}">
                     <div class="col-md-12">
-                        <label>Asumsi Perhitungan Dampak & Probabilitas Residual Q{{ $i }}</label>
+                        <label>Asumsi Perhitungan Dampak & Probabilitas Residual Q{{ $i }} <span class="text-danger">*</span></label>
                         {{ Form::textarea('asumsi_perhitungan_dampak_residual_q' . $i, $analisa->{'asumsi_perhitungan_dampak_residual_q' . $i} ?? '', ['class' => 'form-control', 'rows' => 5]) }}
                     </div>
                 </div>

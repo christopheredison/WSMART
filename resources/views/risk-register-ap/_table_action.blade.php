@@ -6,7 +6,7 @@
     || $item->status == 5
   ) && (
     auth()->user()->level_id == 1
-    // && auth()->user()->unit_id == $item->unit_id
+    && auth()->user()->unit_id == $item->unit_id
   ))
     @can('risk_register_edit')
       <a href="{{ route('risk-register-ap.edit', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip"
@@ -53,7 +53,7 @@
     || $item->status == 5
   ) && (
     auth()->user()->level_id == 1
-    // && auth()->user()->unit_id == $item->unit_id
+    && auth()->user()->unit_id == $item->unit_id
   ))
   @can('risk_register_delete')
     <button type="button" class="btn-input-icon" data-bs-toggle="modal"

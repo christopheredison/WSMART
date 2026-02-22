@@ -78,10 +78,10 @@
             <tbody class="list" id="bulk-select-body">
               @forelse ($dataToDisplay as $index => $item)
               @php
-                    $unit = $item['unit'];
-                    $periode = $item['periode'];
-                    $unitStatus = $item['unit_status'] ?? 'active';
-                @endphp
+                  $unit = $item['unit'];
+                  $periode = $item['periode'];
+                  $unitStatus = $item['unit_status'] ?? 'active';
+              @endphp
               <tr>
                 <td class="index-number">{{ $index + 1 }}</td>
                 <td class="unit">{{ $unit->name }}</td>
@@ -96,7 +96,6 @@
                 <td class="text-center">
                     {!! $item['risk_status_html'] !!}
                 </td>
-
                 <td class="text-center">
                     {!! $item['mon_status_html'] !!}
                 </td>

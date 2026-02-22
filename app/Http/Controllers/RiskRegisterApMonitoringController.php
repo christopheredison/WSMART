@@ -352,18 +352,17 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                     }
                 }'
             ],
-            // ==================================
-
-            // --- DATA RESIDUAL (PLANNING) ---
+            
+            // === DATA RESIDUAL (DYNAMIC BERDASARKAN FILTER QUARTER) ===
             'nilai_dampak_residual' => [
                 'label' => 'Nilai Dampak Residual',
-                'data' => null,
+                'data' => null, // Set ke null agar tidak mematok statis ke salah satu Q saat init
                 'defaultContent' => '-',
                 'sortable' => false,
                 'searchable' => false,
                 'class' => 'white-space-nowrap',
                 'render' => '(data, type, row) => {
-                    const q = $("#table-filter select[name=\'quarter\']").val() || 1;
+                    const q = $(\'select[name="quarter"]\').val() || 1;
                     const val = row.risk_analysis ? row.risk_analysis["nilai_dampak_residual_q" + q] : 0;
                     return "Rp " + new Intl.NumberFormat("id-ID").format(val || 0);
                 }',
@@ -374,15 +373,13 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                 'defaultContent' => '-',
                 'sortable' => false,
                 'render' => '(data, type, row) => {
-                    const q = $("#table-filter select[name=\'quarter\']").val() || 1;
+                    const q = $(\'select[name="quarter"]\').val() || 1;
                     const analisa = row.risk_analysis;
-                    if(!analisa) return "-";
+                    if (!analisa) return "-";
 
                     const val = analisa["skala_dampak_residual_q" + q];
-                    const objKey = "skala_dampak_residual_q" + q + "_obj";
-                    const desc = analisa[objKey]?.deskripsi || "";
-
-                    return val ? `(${val}) ${desc}` : "-";
+                    const obj = analisa["skala_dampak_residual_q" + q + "_obj"];
+                    return val ? `(${val}) ${obj?.deskripsi || ""}` : "-";
                 }',
             ],
             'skala_probabilitas_residual' => [
@@ -391,17 +388,12 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                 'defaultContent' => '-',
                 'sortable' => false,
                 'render' => '(data, type, row) => {
-                    const q = $("#table-filter select[name=\'quarter\']").val() || 1;
+                    const q = $(\'select[name="quarter"]\').val() || 1;
                     const analisa = row.risk_analysis;
-                    if(!analisa) return "-";
+                    if (!analisa) return "-";
 
-                    const relKey = "skala_probabilitas_residual_q" + q;
-                    const tingkat = analisa[relKey]?.tingkat;
-                    const ket = analisa[relKey]?.skala || "";
-
-                    const valFlat = analisa["nilai_probabilitas_residual_q" + q];
-
-                    return tingkat ? `(${tingkat}) ${ket}` : (valFlat || "-");
+                    const prob = analisa["skala_probabilitas_residual_q" + q];
+                    return prob ? `(${prob.tingkat}) ${prob.skala || ""}` : "-";
                 }',
             ],
             'skala_risiko_residual' => [
@@ -411,14 +403,17 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                 'sortable' => false,
                 'class' => 'text-center align-middle',
                 'render' => '(data, type, row) => {
-                    const q = $("#table-filter select[name=\'quarter\']").val() || 1;
-                    const val = row.risk_analysis ? row.risk_analysis["skala_risiko_residual_q" + q] : "";
-                    const level = row.risk_analysis ? row.risk_analysis["level_risiko_residual_q" + q] : "";
-                    return val ? (val + " - " + level) : "-";
+                    const q = $(\'select[name="quarter"]\').val() || 1;
+                    const analisa = row.risk_analysis;
+                    if (!analisa) return "-";
+
+                    const val = analisa["skala_risiko_residual_q" + q];
+                    const level = analisa["level_risiko_residual_q" + q];
+                    return val ? (val + " - " + (level || "")) : "-";
                 }',
                 'createdCell' => 'function (td, cellData, rowData, row, col) {
-                    const q = $("#table-filter select[name=\'quarter\']").val() || 1;
-                    const level = rowData.risk_analysis ? rowData.risk_analysis["level_risiko_residual_q" + q] : "";
+                    const q = $(\'select[name="quarter"]\').val() || 1;
+                    const level = rowData.risk_analysis?.["level_risiko_residual_q" + q];
                     if (level) {
                         const colorClass = "bg-" + level.toLowerCase().replace(/to\s+/g, "").replace(/\s+/g, "-");
                         $(td).addClass(colorClass).addClass("text-white");
@@ -426,7 +421,14 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                 }'
             ],
 
-            // --- DATA REALISASI (MONITORING) ---
+            // === DATA REALISASI (MONITORING) ===
+            'nilai_dampak_monitoring' => [
+                'label' => 'Nilai Dampak Realisasi',
+                'data' => 'last_monitoring_risiko.nilai_dampak',
+                'defaultContent' => '-',
+                'sortable' => false,
+                'render' => '(data, type, row) => (!!row.last_monitoring_risiko?.nilai_dampak ? "Rp " + new Intl.NumberFormat("id-ID").format(row.last_monitoring_risiko?.nilai_dampak) : "-")',
+            ],
             'skala_dampak_monitoring' => [
                 'label' => 'Skala Dampak Realisasi',
                 'data' => 'last_monitoring_risiko.skala_dampak',
@@ -434,7 +436,6 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                 'sortable' => false,
                 'render' => '(data, type, row) => {
                     const m = row.last_monitoring_risiko;
-                    // Pastikan akses properti object skala_dampak_obj (dari with: skalaDampakObj)
                     return m?.skala_dampak ? `(${m.skala_dampak}) ${m.skala_dampak_obj?.deskripsi || ""}` : "-";
                 }',
             ],
@@ -444,9 +445,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                 'defaultContent' => '-',
                 'sortable' => false,
                 'render' => '(data, type, row) => {
-                    const m = row.last_monitoring_risiko;
-                    // Pastikan akses properti object skala_probabilitas (dari with: skalaProbabilitas)
-                    const p = m?.skala_probabilitas;
+                    const p = row.last_monitoring_risiko?.skala_probabilitas;
                     return p ? `(${p.tingkat}) ${p.skala || ""}` : "-";
                 }',
             ],
@@ -468,6 +467,8 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                     }
                 }'
             ],
+
+            // === STATUS ===
             'is_closed' => [
                 'label' => 'Status Risiko',
                 'data' => 'is_closed',
@@ -537,6 +538,16 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
 
         if ($canEdit) {
             $monitoringRoute = route('risk-register-ap.monitorings.edit', ['period' => $period->id, 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
+
+            $this->tableActions[] = [
+                'label' => 'Peluang',
+                'btn_icon' => false,
+                'action' => 'script',
+                'script' => "showPeluangModal($(this).data('id'), '__RISK_TITLE__', '__RISK_DESC__')",
+                'active_state' => '(data, type, row) => true',
+                'extra_attrs' => [ 'style' => 'font-size: 16px; font-weight: 400;', 'data-id' => 'row.id' ]
+            ];
+
             $this->tableActions[] = [
                 'label' => 'Monitoring',
                 'btn_icon' => false,
@@ -622,7 +633,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
 
         $this->availableFilters = [
             'unit_id' => [
-                'label' => 'Divisi',
+                'label' => 'Anak Perusahaan',
                 'type' => 'select',
                 'parameters' => [
                     'unit_id',
@@ -789,7 +800,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
 
                 // --- LOGIC TOMBOL ---
 
-                // KASUS 1: DRAFTER (Unit Biasa Step 1 atau Unit MR Officer)
+                 // KASUS 1: DRAFTER (Unit Biasa Step 1 atau Unit MR Officer)
                 if ($step == 1) {
                     $unstartedCount = $risksInMyStep->filter(fn($r) => !isset($activeMonitorings[$r->id]))->count();
                     $revisionCount = $risksInMyStep->filter(fn($r) => isset($activeMonitorings[$r->id]) && $activeMonitorings[$r->id]->status == 1 && $activeMonitorings[$r->id]->is_revision)->count();
@@ -798,17 +809,29 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                     $targetLabel = $isUnitMr ? 'Kirim ke Risk Owner MR' : 'Kirim ke Risk Owner Divisi';
 
                     if ($revisionCount > 0) {
-                        $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$revisionCount}</strong> monitoring dikembalikan (revisi)."];
+                        $summaryInfo = [
+                          'type' => 'danger',
+                          'icon' => 'bx-undo',
+                          'message' => "Terdapat <strong>{$revisionCount}</strong> monitoring risiko yang <strong>dikembalikan (revisi)</strong>. Mohon perbaiki data."
+                        ];
                         $escalationConfig['show'] = true;
                         $escalationConfig['disabled'] = false;
                         $escalationConfig['label'] = 'Kirim Perbaikan';
                     } elseif ($unstartedCount > 0) {
-                        $summaryInfo = ['type' => 'warning', 'icon' => 'bx-info-circle', 'message' => "Terdapat <strong>{$unstartedCount}</strong> risiko belum di-monitoring."];
+                        $summaryInfo = [
+                          'type' => 'warning',
+                          'icon' => 'bx-info-circle',
+                          'message' => "Terdapat <strong>{$unstartedCount}</strong> risiko aktif belum di-monitoring."
+                        ];
                         $escalationConfig['show'] = true;
                         $escalationConfig['disabled'] = true;
                         $escalationConfig['label'] = $targetLabel;
                     } else {
-                        $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Monitoring siap dikirim."];
+                        $summaryInfo = [
+                          'type' => 'success',
+                          'icon' => 'bx-check-double',
+                          'message' => "Seluruh monitoring siap. Silahkan klik tombol <strong>{$targetLabel}</strong> untuk melanjutkan."
+                        ];
                         $escalationConfig['show'] = true;
                         $escalationConfig['disabled'] = false;
                         $escalationConfig['label'] = $targetLabel;
@@ -836,12 +859,25 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                         $escalationConfig['disabled'] = true;
 
                         if ($returnedCount > 0) {
-                            $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$returnedCount}</strong> monitoring dikembalikan."];
+                            $summaryInfo = [
+                              'type' => 'danger',
+                              'icon' => 'bx-undo',
+                              'message' => "Terdapat <strong>{$returnedCount}</strong> monitoring yang <strong>dikembalikan. Mohon verifikasi ulang."
+
+                            ];
                         } else {
-                            $summaryInfo = ['type' => 'warning', 'icon' => 'bxs-error-circle', 'message' => "Terdapat <strong>{$unapprovedCount}</strong> monitoring menunggu verifikasi."];
+                            $summaryInfo = [
+                              'type' => 'warning',
+                              'icon' => 'bxs-error-circle',
+                              'message' => "Terdapat <strong>{$unapprovedCount}</strong> monitoring aktif menunggu verifikasi Anda."
+                            ];
                         }
                     } else {
-                        $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Seluruh monitoring terverifikasi. Siap dikirim."];
+                        $summaryInfo = [
+                          'type' => 'success',
+                          'icon' => 'bx-check-double',
+                          'message' => "Seluruh monitoring telah diverifikasi. Silahkan klik tombol <strong>{$nextLabel}</strong> untuk melanjutkan."
+                        ];
                         $escalationConfig['show'] = true;
                         $escalationConfig['disabled'] = false;
                     }
@@ -910,6 +946,9 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             // 'parameterRisikos',
         ]);
 
+        $unit = $risk->unit;
+        $periode = $risk->periode;
+        $currentYear = $period->tahun;
         
         $analisa = $risk->riskAnalysis;
         $namaRisikoLengkap = $risk->peristiwa_risiko;
@@ -940,10 +979,6 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                     ->with('error', 'Analisa untuk risiko "' . $namaRisikoLengkap . '" belum lengkap. Harap lengkapi semua field analisa inheren dan residual.');
             }
         }
-
-        $unit = $risk->unit;
-        $periode = $risk->periode;
-        $currentYear = $period->tahun;
 
         $skalaDampaks = SkalaDampak::pluck('deskripsi', 'tingkat');
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
@@ -1016,28 +1051,42 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
 
         $quarter = request()->input('quarter') ?: 1;
         $risk = $period->identifikasiRisikos()
-            ->findOrFail(request()->route('monitoring'));
+        ->with([
+            'taksonomiRisiko',
+            'parameterRisikos',
+            'peristiwaRisiko',
+            'riskAnalysis',
+            'lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
+                $query->where('quarter', $quarter)
+                      ->where('month', $month)
+                      ->with('pengendalians.parameter');
+            },
+            'penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
+                $query->with(['lastMonitoring' => function ($q) use ($quarter, $month) {
+                    $q->whereHas('unitRiskMonitoring', function ($q2) use ($quarter, $month) {
+                        $q2->where('quarter', $quarter)->where('month', $month);
+                    });
+                }]);
+            },
+            'kris.kriUnitMonitorings' => function ($query) use ($quarter, $month) {
+                $query->whereHas('unitRiskMonitoring', function ($q) use ($quarter, $month) {
+                    $q->where('quarter', $quarter)->where('month', $month);
+                });
+            }
+        ])
+        ->findOrFail(request()->route('monitoring'));
 
-        $risk->load(['lastMonitoringRisiko' => function ($query) use ($quarter, $month) {
-            $query->where('quarter', $quarter);
-            $query->where('month', $month);
-            $query->with('perlakuanPenyebabRisikos', 'perlakuanPenyebabMonitorings', 'kriUnitMonitorings');
-        }])->load(['penyebabRisikos.perlakuanPenyebabRisiko' => function ($query) use ($quarter, $month) {
-            $query->select('perlakuan_penyebab_risiko_units.*', 'id as deskripsi_perlakuan_risiko', 'id as jenis_program_rkap', 'id as jenis_program_rkap_id', 'id as timeline_perlakuan_risiko');
-            $query->with(['lastMonitoring' => function ($query) use ($quarter, $month) {
-                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
-                    $query->where('quarter', $quarter);
-                    $query->where('month', $month);
-                });
-            }]);
-            $query->with(['perlakuanPenyebabMonitorings' => function ($query) use ($quarter, $month) {
-                $query->whereHas('unitRiskMonitoring', function ($query) use ($quarter, $month) {
-                    $query->where('quarter', $quarter);
-                    $query->where('month', $month);
-                });
-            }]);
-            $query->with(['documents']);
-        }]);
+        $historyMonitorings = \App\Models\UnitRiskMonitoring::where('identifikasi_risiko_id', $risk->id)
+            ->with([
+                'skalaDampakObj',
+                'skalaProbabilitas',
+                'perlakuanPenyebabMonitorings.perlakuanPenyebabRisikoUnit.penyebabRisiko',
+                'perlakuanDampakMonitorings.perlakuanDampak.dampakRisikoUnit',
+                'perlakuanPenyebabRisikoDocuments',
+                'kriUnitMonitorings.keyRiskIndicator'
+            ])
+            ->orderBy('id', 'desc')
+            ->get();
 
         $skalaDampaks = SkalaDampak::pluck('deskripsi', 'tingkat');
         $skalaProbabilitas = SkalaProbabilitas::umum()->orderBy('min', 'desc')->get();
@@ -1058,6 +1107,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             'skalaProbabilitas' => $skalaProbabilitas,
             'riskMaps' => $riskMaps,
             'files' => $files,
+            'historyMonitorings' => $historyMonitorings,
         ]);
     }
 
@@ -1089,7 +1139,6 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             'eksposure_risiko' => null,
         ];
 
-        //dd($toCreate);
         if ($request->realisasi_nilai_probabilitas >= 0) {
             $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($request->realisasi_nilai_probabilitas);
 
@@ -1508,17 +1557,17 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         return back()->with('success', 'Verifikasi berhasil disimpan.');
     }
 
-    public function getNotes(Request $request, Periode $period, IdentifikasiRisiko $risk)
+    public function getNotes(Request $request, $period, $riskId)
     {
-        $validated = $request->validate([
-            'quarter' => 'required|integer',
-            'month'   => 'required|integer',
-        ]);
+        $periodModel = Periode::find($period);
 
-        $notes = RiskMonitoringNote::where('risiko_id', $risk->id)
+        $risk = IdentifikasiRisiko::find($riskId);
+        if (!$risk) return response()->json(['message' => 'Risk not found'], 404);
+
+        $notes = RiskMonitoringNote::where('risiko_id', $riskId)
             ->where('type', 1)
-            ->where('quarter', $validated['quarter'])
-            ->where('month', $validated['month'])
+            ->where('quarter', $request->query('quarter'))
+            ->where('month', $request->query('month'))
             ->with('user:id,name')
             ->latest()
             ->get();
@@ -1526,15 +1575,17 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         return response()->json($notes);
     }
 
-    private function getFilterScripts()
+    private function getFilterScripts($quarter, $month)
     {
-        // Menggunakan Nowdoc (kutip tunggal) untuk keamanan
-        return <<<'HTML'
+        $phpQuarter = $quarter;
+        $phpMonth   = $month;
+
+        return <<<JS
             <script>
             function submitEskalasiForm(formId, actionText) {
                 Swal.fire({
                     title: 'Konfirmasi',
-                    text: `Apakah Anda yakin ingin melakukan "${actionText}"?`,
+                    text: `Apakah Anda yakin ingin melakukan "\${actionText}"?`,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonText: 'Ya, Lanjutkan',
@@ -1563,27 +1614,61 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             }
 
             $(document).ready(function() {
-                $('#table-filter select[name="quarter"]').on('change', function() {
-                    const quarter = $(this).val();
-                    if (quarter) {
-                        const allMonths = {
-                            '1': {'1': 'Januari', '2': 'Februari', '3': 'Maret'},
-                            '2': {'4': 'April', '5': 'Mei', '6': 'Juni'},
-                            '3': {'7': 'Juli', '8': 'Agustus', '9': 'September'},
-                            '4': {'10': 'Oktober', '11': 'November', '12': 'Desember'},
-                        };
-                        $('#table-filter select[name="month"]').empty();
-                        const months = allMonths[quarter];
-                        $.each(months, function(key, value) {
-                            $('#table-filter select[name="month"]').append('<option value="' + key + '">' + value + '</option>');
+                const allMonths = {
+                    '1': {'1': 'Januari', '2': 'Februari', '3': 'Maret'},
+                    '2': {'4': 'April', '5': 'Mei', '6': 'Juni'},
+                    '3': {'7': 'Juli', '8': 'Agustus', '9': 'September'},
+                    '4': {'10': 'Oktober', '11': 'November', '12': 'Desember'},
+                };
+
+                function updateMonthDropdown(quarter, selectedMonth = null) {
+                    const monthSelect = $('select[name="month"]');
+                    monthSelect.empty();
+                    if (quarter && allMonths[quarter]) {
+                        $.each(allMonths[quarter], function(key, value) {
+                            const isSelected = (String(key) === String(selectedMonth)) ? 'selected' : '';
+                            monthSelect.append(`<option value="\${key}" \${isSelected}>\${value}</option>`);
                         });
                     } else {
-                        $('#table-filter select[name="month"]').empty();
+                        monthSelect.append('<option value="">Pilih Quarter</option>');
                     }
-                }).change();
+                    if (monthSelect.hasClass('select2-hidden-accessible')) {
+                        monthSelect.trigger('change.select2');
+                    }
+                }
+
+                const activeQuarter = "$phpQuarter";
+                const activeMonth   = "$phpMonth";
+
+                $('select[name="quarter"]').val(activeQuarter).trigger('change.select2');
+                updateMonthDropdown(activeQuarter, activeMonth);
+
+                $('select[name="quarter"]').on('change', function() {
+                    const newQuarter = $(this).val();
+                    let firstMonth = null;
+                    if (allMonths[newQuarter]) firstMonth = Object.keys(allMonths[newQuarter])[0];
+                    updateMonthDropdown(newQuarter, firstMonth);
+                });
+
+                $('select[name="month"]').val(activeMonth).trigger('change');
+
+                $('select[name="quarter"], select[name="month"]').on('change', function() {
+                    const q = $('select[name="quarter"]').val();
+                    const m = $('select[name="month"]').val();
+                    if (!q || !m) return;
+
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('quarter', q);
+                    url.searchParams.set('month', m);
+                    window.history.pushState({path: url.href}, '', url.href);
+
+                    if (typeof window.LaravelDataTables !== 'undefined') {
+                         $('.ajax-datatable').DataTable().ajax.reload();
+                    }
+                });
             });
             </script>
-        HTML;
+        JS;
     }
 
     private function cleanRupiah($value) {

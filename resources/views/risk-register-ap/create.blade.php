@@ -40,13 +40,43 @@
                         </div>
                     </div>
                     <div class="row g-3 gx-md-5">
-                        <div class="col-12">
+                        {{-- <div class="col-12">
                             <div class="form-group form-floating">
-                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Sasaran Risiko" required>{{ old('target_capaian_kinerja') }}</textarea>
+                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Sasaran" required>{{ old('target_capaian_kinerja') }}</textarea>
                                 <label for="target_capaian_kinerja">Sasaran Risiko</label>
                             </div>
+                        </div> --}}
+
+                        <div class="col-md-12">
+                            <div class="form-group d-lg-flex">
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko <span class="text-danger">*</span></label>
+                                <div class="w-100">
+                                    <textarea class="form-control @error('target_capaian_kinerja') is-invalid @enderror"
+                                        id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
+                                        placeholder="Masukkan Sasaran Risiko" required>{{ old('target_capaian_kinerja') }}</textarea>
+                                    @error('target_capaian_kinerja')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-12">
+                        {{-- Hide Danantara --}}
+                        {{-- <div class="col-md-12">
+                            <div class="form-group d-lg-flex">
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Danantara</label>
+                                <div class="w-100">
+                                    <select class="form-select select2" name="taksonomi_risiko_id" required>
+                                        <option value="">Pilih Taksonomi</option>
+                                        @foreach($taksonomiRisikos as $tax)
+                                            <option value="{{ $tax->id }}" {{ old('taksonomi_risiko_id', $projectRisk->taksonomi_risiko_id ?? '') == $tax->id ? 'selected' : '' }}>
+                                                {{ $tax->nama }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </div> --}}
+                        {{-- <div class="col-12">
                             <div class="form-group d-lg-flex">
                                 <div class="form-floating flex-grow-1">
                                     <select class="form-select select2" id="jenis_risiko_id" name="jenis_risiko_id" required>
@@ -64,18 +94,27 @@
                                     <label for="jenis_risiko_id">Jenis Risiko T2 & T3 KBUMN</label>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="col-12">
                             <div class="form-group form-floating">
-                                <textarea class="form-control" id="peristiwa_risiko" name="peristiwa_risiko" rows="3"  placeholder="Peristiwa Risiko" required>{{ old('peristiwa_risiko') }}</textarea>
-                                <label for="peristiwa_risiko">Peristiwa Risiko</label>
+                                <textarea class="form-control @error('peristiwa_risiko') is-invalid @enderror"
+                                    id="peristiwa_risiko" name="peristiwa_risiko" rows="3"
+                                    placeholder="Peristiwa Risiko" required>{{ old('peristiwa_risiko') }}</textarea>
+                                <label for="peristiwa_risiko">Peristiwa Risiko <span class="text-danger">*</span></label>
+                                @error('peristiwa_risiko')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                         <div class="col-12">
                             <div class="form-group form-floating">
-                                <textarea class="form-control" id="deskripsi_peristiwa_risiko" name="deskripsi_peristiwa_risiko" rows="3"
-                                    value="{{ old('deskripsi_peristiwa_risiko') }}" placeholder="Deskripsi Peristiwa Risiko" required></textarea>
-                                <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</label>
+                                <textarea class="form-control @error('deskripsi_peristiwa_risiko') is-invalid @enderror"
+                                    id="deskripsi_peristiwa_risiko" name="deskripsi_peristiwa_risiko" rows="3"
+                                    placeholder="Deskripsi Peristiwa Risiko" required>{{ old('deskripsi_peristiwa_risiko') }}</textarea>
+                                <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko <span class="text-danger">*</span></label>
+                                @error('deskripsi_peristiwa_risiko')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                         {{-- <div class="col-12">
@@ -90,6 +129,83 @@
             </div>
         </div>
         <!-- ::DataRisiko End -->
+
+        {{-- Hide Danantara --}}
+        {{-- <!-- ::ParameeterRisiko Start -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header stepper border-0 pb-0">
+                    <div class="nav-link active d-flex align-items-center p-0">
+                        <span class="nav-item-circle-parent">
+                            <span class="nav-item-circle">2</span>
+                        </span>
+                        <span class="h3 mb-0">Parameter Risiko</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="parameter-risiko-body">
+                        <div class="row g-2 mb-3 parameter-row-item">
+                            <div class="col-md-1 text-center d-flex justify-content-center align-items-center">
+                              <span class="number-pill-info">1</span>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input type="hidden" name="parameter_risiko_id[]">
+                                    <input type="text" class="form-control" name="param_nama[]" placeholder="Nama">
+                                    <label>Nama Parameter</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" name="param_formula[]" placeholder="Formula">
+                                    <label>Formula</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" name="param_satuan[]" placeholder="Satuan">
+                                    <label>Satuan</label>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-center">
+                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)"><i class="bx bx-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary rounded-pill p-2 float-end" id="add-parameter"><i class='bx bx-plus fs-5'></i></button>
+                </div>
+            </div>
+        </div>
+        <!-- ::ParameeterRisiko End -->
+
+        <!-- ::Threshold Start -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header stepper border-0 pb-0">
+                    <div class="nav-link active d-flex align-items-center p-0">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">3</span></span>
+                        <span class="h3 mb-0">Threshold</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Limit</label>
+                            <input type="text" class="form-control rupiah-input" name="threshold_risk_limit" value="{{ 0 }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Appetite</label>
+                            <input type="text" class="form-control rupiah-input" name="threshold_risk_appetite" value="{{ 0 }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Tolerance</label>
+                            <input type="text" class="form-control rupiah-input" name="threshold_risk_tolerance" value="{{ 0 }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ::Threshold End --> --}}
 
         <!-- ::DampakRisiko Start -->
         <div class="col-12">
@@ -260,7 +376,7 @@
                 <div class="card-body">
                     <div class="row gy-3 gx-xxl-6 mb-3">
                         <div class="col-md-6 col-lg-5 col-xxl-6">
-                            <div class="form-group d-lg-flex mb-4">
+                            {{-- <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Jenis Kontrol Eksisting</label>
                                 <select name="jenis_kontrol_eksisting_id" class="form-select select2">
                                     <option value="" selected disabled>Jenis Kontrol Eksisting</option>
@@ -269,7 +385,7 @@
                                             {{ $jenisKontrolEksisting->jenis_kontrol }}</option>
                                     @endforeach
                                 </select>
-                            </div>
+                            </div> --}}
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Kontrol Eksisting</label>
                                 <div class="w-100">
@@ -297,7 +413,7 @@
                             </div>
                         </div>
                         <div class="col-md-6 col-lg-7 col-xxl-6">
-                            <div class="form-group d-lg-flex mb-4">
+                            {{-- <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Penilaian Efektivitas
                                     Kontrol</label>
                                 <select class="form-select select2" name="penilaian_efektifitas_kontrol">
@@ -308,18 +424,31 @@
                                             {{ $efektivitasKontrol->efektivitas_kontrol }}</option>
                                     @endforeach
                                 </select>
-                            </div>
+                            </div> --}}
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker2">Perkiraan Waktu Mulai Terpapar Risiko</label>
-                                <input class="form-control datetimepicker" name="perkiraan_waktu_mulai_terpapar_risiko"
-                                    id="timepicker2" type="text" placeholder="d/m/y"
-                                    value="{{ old('perkiraan_waktu_mulai_terpapar_risiko') }}" />
+                                <div class="w-100">
+                                    <input class="form-control datetimepicker bg-white @error('perkiraan_waktu_mulai_terpapar_risiko') is-invalid @enderror"
+                                        name="perkiraan_waktu_mulai_terpapar_risiko"
+                                        id="timepicker2" type="text" placeholder="d/m/y"
+                                        value="{{ old('perkiraan_waktu_mulai_terpapar_risiko') }}" />
+                                    @error('perkiraan_waktu_mulai_terpapar_risiko')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
+
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker3">Perkiraan Waktu Selesai Terpapar Risiko</label>
-                                <input class="form-control datetimepicker" name="perkiraan_waktu_selesai_terpapar_risiko"
-                                    id="timepicker3" type="text" placeholder="d/m/y"
-                                    value="{{ old('perkiraan_waktu_selesai_terpapar_risiko') }}" />
+                                <div class="w-100">
+                                    <input class="form-control datetimepicker bg-white @error('perkiraan_waktu_selesai_terpapar_risiko') is-invalid @enderror"
+                                        name="perkiraan_waktu_selesai_terpapar_risiko"
+                                        id="timepicker3" type="text" placeholder="d/m/y"
+                                        value="{{ old('perkiraan_waktu_selesai_terpapar_risiko') }}" />
+                                    @error('perkiraan_waktu_selesai_terpapar_risiko')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -348,6 +477,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
     function removeRow(event) {
         let row = $(event.target).closest('.row');
@@ -372,6 +502,43 @@
     }
 
     $(document).ready(function() {
+        $('.select2').select2({
+            width: '100%',
+        });
+
+        $('.rupiah-input').inputmask({
+            alias: 'numeric',
+            groupSeparator: '.',
+            autoGroup: true,
+            digits: 0,
+            digitsOptional: false,
+            prefix: 'Rp ',
+            placeholder: '0',
+            rightAlign: false,
+            autoUnmask: true,
+            removeMaskOnSubmit: true,
+            min: 0,
+            allowMinus: false,
+            onKeyDown: function(e) {
+            if (e.key === 'Backspace' || e.keyCode === 8) {
+                // tunda eksekusi sampai mask selesai di-apply
+                setTimeout(() => {
+                    const unmasked = this.inputmask.unmaskedvalue();
+                    // kalau masih ada angka tersisa
+                    if (unmasked.length > 0) {
+                    // cek posisi cursor
+                    const pos = this.selectionStart;
+                    if (pos === 0) {
+                        // pindahkan ke paling kanan
+                        const end = this.value.length;
+                        this.setSelectionRange(end, end);
+                    }
+                    }
+                }, 0);
+                }
+            }
+        });
+
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const penyebabRisikoFromUrl = urlParams.get('penyebab_risiko');
@@ -458,6 +625,33 @@
                 </div>
             </div>`;
             $('#dampak-risiko-body').append(html);
+        });
+
+        $('#add-parameter').click(function() {
+            let rowIdx = $('.parameter-row-item').length + 1;
+            let html = `
+            <div class="row g-2 mb-3 parameter-row-item">
+                <div class="col-md-1 text-center d-flex justify-content-center align-items-center">
+                  <span class="number-pill-info">${rowIdx}</span>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-floating">
+                        <input type="hidden" name="parameter_risiko_id[]" value="">
+                        <input type="text" class="form-control" name="param_nama[]" placeholder="Nama">
+                        <label>Nama Parameter</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-floating"><input type="text" class="form-control" name="param_formula[]" placeholder="Formula"><label>Formula</label></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-floating"><input type="text" class="form-control" name="param_satuan[]" placeholder="Satuan"><label>Satuan</label></div>
+                </div>
+                <div class="col-auto d-flex align-items-center">
+                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)"><i class="bx bx-trash"></i></button>
+                </div>
+            </div>`;
+            $('#parameter-risiko-body').append(html);
         });
 
         $('#add-column').click(function() {
@@ -654,23 +848,71 @@
                             $('.btn-action').prop('disabled', false);
                             $clickedButton.html(originalText);
 
-                            const errors = xhr.responseJSON.errors;
-                            if (errors) {
-                                let message = '<ul>';
-                                for (const key in errors) {
-                                    message += `<li>${errors[key]}</li>`;
-                                }
-                                message += '</ul>';
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Gagal',
-                                    html: message
+                            if (xhr.status === 422) {
+                                const errors = xhr.responseJSON.errors;
+                                let firstErrorElement = null;
+
+                                $('.is-invalid').removeClass('is-invalid');
+                                $('.invalid-feedback').remove();
+                                $('.select2-selection').removeClass('border-danger');
+
+                                $.each(errors, function(key, messages) {
+                                    let message = messages[0];
+                                    let inputElement;
+
+                                    if (key.includes('.')) {
+                                        let parts = key.split('.');
+                                        let name = parts[0];
+                                        let index = parts[1];
+                                        inputElement = $(`[name="${name}[]"]:eq(${index})`);
+                                    } else {
+                                        inputElement = $(`[name="${key}"]`);
+                                        if (inputElement.length === 0) inputElement = $(`#${key}`);
+                                    }
+
+                                    if (inputElement.length > 0) {
+                                        if (inputElement.hasClass('select2-hidden-accessible')) {
+                                            inputElement.next('.select2-container').find('.select2-selection').addClass('border-danger');
+                                            inputElement.next('.select2-container').after(`<div class="invalid-feedback d-block text-danger mt-1"><small>${message}</small></div>`);
+                                        }
+                                        else {
+                                            inputElement.addClass('is-invalid');
+
+                                            if(inputElement.parent('.input-group').length) {
+                                                inputElement.parent().after(`<div class="invalid-feedback d-block">${message}</div>`);
+                                            } else {
+                                                inputElement.after(`<div class="invalid-feedback d-block">${message}</div>`);
+                                            }
+                                        }
+
+                                        if (!firstErrorElement) {
+                                            firstErrorElement = inputElement;
+                                        }
+                                    }
                                 });
+
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Validasi Gagal',
+                                    text: 'Mohon periksa kembali isian form yang berwarna merah.',
+                                    confirmButtonText: 'OK'
+                                }).then(() => {
+                                    if (firstErrorElement) {
+                                        let targetScroll = firstErrorElement.hasClass('select2-hidden-accessible')
+                                            ? firstErrorElement.next('.select2-container')
+                                            : firstErrorElement;
+
+                                        $('html, body').animate({
+                                            scrollTop: targetScroll.offset().top - 150
+                                        }, 500);
+                                    }
+                                });
+
                             } else {
                                 Swal.fire({
                                     icon: 'error',
-                                    title: 'Gagal',
-                                    text: xhr.responseJSON.message || 'Terjadi kesalahan saat menyimpan data'
+                                    title: 'Terjadi Kesalahan',
+                                    text: xhr.responseJSON.message || 'Terjadi kesalahan sistem, silakan coba lagi.'
                                 });
                             }
                         }

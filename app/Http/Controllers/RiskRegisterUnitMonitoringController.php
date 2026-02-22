@@ -31,14 +31,6 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
     protected $baseRoute = 'risk-register-unit.monitorings.';
     protected $editType = 'link';
 
-    public function getRisikoId($id)
-    {
-        $monitoring = UnitRiskMonitoring::findOrFail($id);
-        return response()->json([
-            'identifikasi_risiko_id' => $monitoring->identifikasi_risiko_id
-        ]);
-    }
-
     public function index() {
         $this->baseRouteParams = [
           'period' => request()->route('period'),
@@ -429,7 +421,6 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'sortable' => false,
                 'class' => 'mw-20r',
             ],
-
             // === DATA RISIKO INHEREN ===
             'nilai_dampak' => [
                 'label' => 'Nilai Dampak Inheren',

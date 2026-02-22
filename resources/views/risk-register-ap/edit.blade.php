@@ -19,120 +19,79 @@
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">1</span>
-                        </span>
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">1</span></span>
                         <span class="h3 mb-0">Data Risiko</span>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="divider mb-3 mb-md-5 mt-0">
-                                <div class="divider-text">
-                                    <h5 class="mb-0 ff-heading-sm">Periode Tahun {{ $selectedPeriode->tahun }}</h5>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="divider mb-3 mb-md-5 mt-0">
+                        <div class="divider-text"><h5 class="mb-0 ff-heading-sm">Periode Tahun {{ $selectedPeriode->tahun }}</h5></div>
                     </div>
+
                     <div class="row g-3 gx-md-5">
-                        <div class="col-12">
-                            <div class="form-group form-floating">
-                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3" placeholder="Sasaran Risiko" required>{{ $identifikasiRisiko->target_capaian_kinerja }}</textarea>
-                                <label for="target_capaian_kinerja">Sasaran Risiko</label>
-                            </div>
-                        </div>
-                        <div class="col-12">
+                        <div class="col-md-12">
                             <div class="form-group d-lg-flex">
-                                <div class="form-floating flex-grow-1">
-                                    <select class="form-select select2" id="jenis_risiko_id" name="jenis_risiko_id" required>
-                                        <option value="" selected disabled>Pilih Jenis Risiko</option>
-                                        @foreach($jenisRisiko as $id => $title)
-                                            @php
-                                                $kategori = \App\Models\JenisRisiko::find($id)->kategoriRisiko;
-                                                $kategoriTitle = $kategori ? $kategori->title : '';
-                                            @endphp
-                                            <option value="{{ $id }}" {{ $identifikasiRisiko->jenis_risiko_id == $id ? 'selected' : '' }}>
-                                                {{ $kategoriTitle }} - {{ $title }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <label for="jenis_risiko_id">Jenis Risiko T2 & T3 KBUMN</label>
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko <span class="text-danger">*</span></label>
+                                <div class="w-100">
+                                    <textarea class="form-control @error('target_capaian_kinerja') is-invalid @enderror"
+                                        id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
+                                        placeholder="Masukkan Sasaran Risiko" required>{{ old('target_capaian_kinerja', $identifikasiRisiko->target_capaian_kinerja) }}</textarea>
+                                    @error('target_capaian_kinerja')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                             </div>
                         </div>
+
                         <div class="col-12">
                             <div class="form-group form-floating">
-                                <textarea class="form-control" id="peristiwa_risiko" name="peristiwa_risiko" rows="3" placeholder="Peristiwa Risiko" required>{{ $identifikasiRisiko->peristiwa_risiko }}</textarea>
-                                <label for="peristiwa_risiko">Peristiwa Risiko</label>
+                                <textarea class="form-control @error('peristiwa_risiko') is-invalid @enderror"
+                                    id="peristiwa_risiko" name="peristiwa_risiko" rows="3"
+                                    placeholder="Peristiwa Risiko" required>{{ old('peristiwa_risiko', $identifikasiRisiko->peristiwa_risiko) }}</textarea>
+                                <label for="peristiwa_risiko">Peristiwa Risiko <span class="text-danger">*</span></label>
+                                @error('peristiwa_risiko')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                         </div>
+
                         <div class="col-12">
                             <div class="form-group form-floating">
-                                <textarea class="form-control" id="deskripsi_peristiwa_risiko" name="deskripsi_peristiwa_risiko" rows="3" placeholder="Deskripsi Peristiwa Risiko" required>{{ $identifikasiRisiko->deskripsi_peristiwa_risiko }}</textarea>
-                                <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</label>
+                                <textarea class="form-control @error('deskripsi_peristiwa_risiko') is-invalid @enderror"
+                                    id="deskripsi_peristiwa_risiko" name="deskripsi_peristiwa_risiko" rows="3"
+                                    placeholder="Deskripsi Peristiwa Risiko" required>{{ old('deskripsi_peristiwa_risiko', $identifikasiRisiko->deskripsi_peristiwa_risiko) }}</textarea>
+                                <label for="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko <span class="text-danger">*</span></label>
+                                @error('deskripsi_peristiwa_risiko')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                         </div>
-                        {{-- <div class="col-12">
-                            <div class="form-group form-floating">
-                                <textarea class="form-control" id="wbs" name="wbs" rows="3" placeholder="WBS" required>{{ $identifikasiRisiko->wbs }}</textarea>
-                                <label for="wbs">WBS</label>
-                            </div>
-                        </div> --}}
                     </div>
                 </div>
             </div>
         </div>
-        <!-- ::DataRisiko End -->
-
-        <!-- ::Peristiwa Risiko Start -->
-        {{-- <div class="col-12">
-            <div class="card">
-                <div class="card-header stepper border-0 pb-0">
-                    <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">2</span>
-                        </span>
-                        <span class="h3 mb-0">Peristiwa Risiko</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="row gy-3 gx-xxl-6 mb-3">
-                        <div class="col-md-6 col-lg-5 col-xxl-6">
-                            <div class="form-group d-lg-flex mb-4">
-                                <label class="form-label label-lg-start col-lg-5 col-xl-4">Peristiwa Risiko</label>
-                                <input type="text" class="form-control" name="peristiwa_risiko" value="{{ $identifikasiRisiko->peristiwa_risiko }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-7 col-xxl-6">
-                            <div class="form-group d-lg-flex mb-4">
-                                <label class="form-label label-lg-start col-lg-5 col-xl-4">Deskripsi Peristiwa Risiko</label>
-                                <textarea class="form-control" name="deskripsi_peristiwa_risiko" rows="3">{{ $identifikasiRisiko->deskripsi_peristiwa_risiko }}</textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div> --}}
-        <!-- ::Peristiwa Risiko End -->
-
-        <!-- ::DampakRisiko Start -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">2</span>
-                        </span>
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">2</span></span>
                         <span class="h3 mb-0">Dampak Risiko</span>
                     </div>
                 </div>
                 <div class="card-body">
                     <div id="dampak-risiko-body">
+                        @forelse($identifikasiRisiko->dampakRisikos as $index => $dampak)
                         <div class="row g-2 mb-3 dampak-row-item">
                             <div class="col">
                                 <div class="form-floating">
-                                    <input type="hidden" name="penyebab_dampak_id[]">
+                                    <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required>{{ $dampak->dampak_risiko }}</textarea>
+                                    <label>Dampak Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-center">
+                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
+                                    <i class="bx bx-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        @empty
+                        <div class="row g-2 mb-3 dampak-row-item">
+                            <div class="col">
+                                <div class="form-floating">
                                     <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required></textarea>
                                     <label>Dampak Risiko</label>
                                 </div>
@@ -143,11 +102,11 @@
                                 </button>
                             </div>
                         </div>
+                        @endforelse
                     </div>
                     <div class="row">
                         <div class="col-auto ms-auto">
-                            <button type="button" class="btn btn-outline-secondary rounded-pill p-2" id="add-dampak"
-                                data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Tambah Dampak Risiko">
+                            <button type="button" class="btn btn-outline-secondary rounded-pill p-2" id="add-dampak">
                                 <i class='bx bx-plus fs-5'></i>
                             </button>
                         </div>
@@ -155,27 +114,21 @@
                 </div>
             </div>
         </div>
-        <!-- ::DampakRisiko End -->
-
-        <!-- ::Penyebab Risiko Start -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">3</span>
-                        </span>
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">3</span></span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
                 </div>
                 <div class="card-body">
                     <div id="penyebab-risiko-body">
-                        <div class="row g-2">
+                        @forelse($identifikasiRisiko->penyebabRisiko as $penyebab)
+                        <div class="row g-2 mb-3">
                             <div class="col">
                                 <div class="form-floating">
-                                    <input type="hidden" name="penyebab_risiko_id[]">
-                                    <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]"
-                                        placeholder="Masukkan Penyebab Risiko">
+                                    <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]" value="{{ $penyebab->penyebab_risiko }}" placeholder="Masukkan Penyebab Risiko">
                                     <label>Penyebab Risiko</label>
                                 </div>
                             </div>
@@ -184,15 +137,26 @@
                                     <i class="bx bx-trash"></i>
                                 </button>
                             </div>
-                            <div class="col-12 mt-0">
-                                <hr>
+                        </div>
+                        @empty
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko">
+                                    <label>Penyebab Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-center">
+                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
+                                    <i class="bx bx-trash"></i>
+                                </button>
                             </div>
                         </div>
+                        @endforelse
                     </div>
                     <div class="row">
                         <div class="col-auto ms-auto">
-                            <button type="button" class="btn btn-outline-secondary rounded-pill p-2" id="add-column"
-                                data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Tambah Penyebab Risiko">
+                            <button type="button" class="btn btn-outline-secondary rounded-pill p-2" id="add-column">
                                 <i class='bx bx-plus fs-5'></i>
                             </button>
                         </div>
@@ -200,143 +164,117 @@
                 </div>
             </div>
         </div>
-        <!-- ::Penyebab Risiko End -->
-
-        <!-- ::Key Risk Indicator Start -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">4</span>
-                        </span>
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">4</span></span>
                         <span class="h3 mb-0">Key Risk Indicator</span>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="row gy-3 gx-xxl-6 mb-3">
-                        <div class="col-12">
-                            <div class="form-group d-lg-flex mb-4">
-                                {{-- <label class="form-label label-lg-start col-lg-5 col-xl-4">Key Risk Indicator</label> --}}
-                                <div class="w-100">
-                                    <div id="kri-body">
-                                        @forelse($identifikasiRisiko->kris as $index => $kri)
-                                            <div class="row g-2">
-                                                <div class="col-12 col-lg-11">
-                                                    <div class="row g-2">
-                                                        <div class="col-12">
-                                                            <div class="form-group form-floating">
-                                                                <input type="text" class="form-control" name="key_risk_indicator[]" value="{{ $kri->kri }}">
-                                                                <label for="key_risk_indicator_1">Key Risk Indicator</label>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                                            <div class="form-group form-floating">
-                                                                <input type="text" class="form-control" name="satuan_kri[]" value="{{ $kri->satuan_kri }}">
-                                                                <label for="satuan_kri_1">Satuan KRI</label>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                                            <div class="form-group form-floating text-center">
-                                                                <input type="text" class="form-control border-success" name="batas_aman[]" value="{{ $kri->batas_aman }}">
-                                                                <label for="batas_aman_1">Batas Aman</label>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                                            <div class="form-group form-floating text-center">
-                                                                <input type="text" class="form-control border-warning" name="batas_waspada[]" value="{{ $kri->batas_waspada }}">
-                                                                <label for="batas_waspada_1">Batas Waspada</label>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                                            <div class="form-group form-floating text-center">
-                                                                <input type="text" class="form-control border-danger" name="batas_bahaya[]" value="{{ $kri->batas_bahaya }}">
-                                                                <label for="batas_bahaya_1">Batas Bahaya</label>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-auto d-flex align-items-center ms-auto">
-                                                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)" {{ count($identifikasiRisiko->kris) <= 1 ? 'disabled' : '' }}>
-                                                        <i class="bx bx-trash"></i>
-                                                    </button>
-                                                </div>
-                                                <div class="col-12 mt-0">
-                                                    <hr>
-                                                </div>
-                                            </div>
-                                        @empty
-                                            <div class="row g-2">
-                                                <div class="col-12 col-lg-11">
-                                                    <div class="row g-2">
-                                                        <div class="col-12">
-                                                            <div class="form-group form-floating">
-                                                                <input type="text" class="form-control" name="key_risk_indicator[]">
-                                                                <label for="key_risk_indicator_1">Key Risk Indicator</label>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                                            <div class="form-group form-floating">
-                                                                <input type="text" class="form-control" name="satuan_kri[]">
-                                                                <label for="satuan_kri_1">Satuan KRI</label>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                                            <div class="form-group form-floating text-center">
-                                                                <input type="text" class="form-control border-success" name="batas_aman[]">
-                                                                <label for="batas_aman_1">Batas Aman</label>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                                            <div class="form-group form-floating text-center">
-                                                                <input type="text" class="form-control border-warning" name="batas_waspada[]">
-                                                                <label for="batas_waspada_1">Batas Waspada</label>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                                            <div class="form-group form-floating text-center">
-                                                                <input type="text" class="form-control border-danger" name="batas_bahaya[]">
-                                                                <label for="batas_bahaya_1">Batas Bahaya</label>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-auto d-flex align-items-center ms-auto">
-                                                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)" disabled>
-                                                        <i class="bx bx-trash"></i>
-                                                    </button>
-                                                </div>
-                                                <div class="col-12 mt-0">
-                                                    <hr>
-                                                </div>
-                                            </div>
-                                        @endforelse
+                    <div id="kri-body">
+                        @forelse($identifikasiRisiko->kris as $kri)
+                        <div class="row g-2 mb-3 border-bottom pb-3">
+                            <div class="col-12 col-lg-11">
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <div class="form-group form-floating">
+                                            <input type="text" class="form-control" name="key_risk_indicator[]" value="{{ $kri->kri }}">
+                                            <label>Key Risk Indicator</label>
+                                        </div>
                                     </div>
-                                    <div class="row mt-2">
-                                        <div class="col-auto ms-auto">
-                                            <button type="button" class="btn btn-outline-secondary rounded-pill p-2" id="add-column-kri"
-                                                data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Tambah Key Risk Indicator">
-                                                <i class='bx bx-plus fs-5'></i>
-                                            </button>
+                                    <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
+                                        <div class="form-group form-floating">
+                                            <input type="text" class="form-control" name="satuan_kri[]" value="{{ $kri->satuan_kri }}">
+                                            <label>Satuan KRI</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
+                                        <div class="form-group form-floating text-center">
+                                            <input type="text" class="form-control border-success" name="batas_aman[]" value="{{ $kri->batas_aman }}">
+                                            <label>Batas Aman</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
+                                        <div class="form-group form-floating text-center">
+                                            <input type="text" class="form-control border-warning" name="batas_waspada[]" value="{{ $kri->batas_waspada }}">
+                                            <label>Batas Waspada</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
+                                        <div class="form-group form-floating text-center">
+                                            <input type="text" class="form-control border-danger" name="batas_bahaya[]" value="{{ $kri->batas_bahaya }}">
+                                            <label>Batas Bahaya</label>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            <div class="col-auto d-flex align-items-center ms-auto">
+                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
+                                    <i class="bx bx-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        @empty
+                        <div class="row g-2 mb-3 border-bottom pb-3">
+                            <div class="col-12 col-lg-11">
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <div class="form-group form-floating">
+                                            <input type="text" class="form-control" name="key_risk_indicator[]">
+                                            <label>Key Risk Indicator</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
+                                        <div class="form-group form-floating">
+                                            <input type="text" class="form-control" name="satuan_kri[]">
+                                            <label>Satuan KRI</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
+                                        <div class="form-group form-floating text-center">
+                                            <input type="text" class="form-control border-success" name="batas_aman[]">
+                                            <label>Batas Aman</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
+                                        <div class="form-group form-floating text-center">
+                                            <input type="text" class="form-control border-warning" name="batas_waspada[]">
+                                            <label>Batas Waspada</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
+                                        <div class="form-group form-floating text-center">
+                                            <input type="text" class="form-control border-danger" name="batas_bahaya[]">
+                                            <label>Batas Bahaya</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-center ms-auto">
+                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
+                                    <i class="bx bx-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        @endforelse
+                    </div>
+                    <div class="row">
+                        <div class="col-auto ms-auto d-flex">
+                            <button type="button" class="btn btn-outline-secondary rounded-pill p-2" id="add-column-kri">
+                                <i class='bx bx-plus fs-5'></i>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <!-- ::Key Risk Indicator End -->
-
-        <!-- ::Kontrol Start -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">5</span>
-                        </span>
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">5</span></span>
                         <span class="h3 mb-0">Kontrol</span>
                     </div>
                 </div>
@@ -344,47 +282,36 @@
                     <div class="row gy-3 gx-xxl-6 mb-3">
                         <div class="col-md-6 col-lg-5 col-xxl-6">
                             <div class="form-group d-lg-flex mb-4">
-                                <label class="form-label label-lg-start col-lg-5 col-xl-4">Jenis Kontrol Eksisting</label>
-                                <select name="jenis_kontrol_eksisting_id" class="form-select select2">
-                                    <option value="" selected disabled>Jenis Kontrol Eksisting</option>
-                                    @foreach ($jenisKontrolEksistings as $jenisKontrolEksisting)
-                                        <option value="{{ $jenisKontrolEksisting->id }}" {{ $identifikasiRisiko->jenis_kontrol_eksisting_id == $jenisKontrolEksisting->id ? 'selected' : '' }}>
-                                            {{ $jenisKontrolEksisting->jenis_kontrol }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="form-group d-lg-flex mb-4">
-                                <label class="form-label label-lg-start col-lg-5 col-xl-4">Kontrol Eksisting</label>
+                                <label class="form-label label-lg-start col-lg-5 col-xl-4">Kontrol Eksisting <span class="text-danger">*</span></label>
                                 <div class="w-100">
                                     <div id="kontrol-eksisting-body">
-                                        @forelse($identifikasiRisiko->kontrolEksistings as $index => $kontrol)
-                                            <div class="row g-2 mb-2">
-                                                <div class="col">
-                                                    <textarea class="form-control" name="kontrol_eksisting[]" rows="3" placeholder="Masukkan kontrol eksisting">{{ $kontrol->kontrol_eksisting }}</textarea>
-                                                </div>
-                                                <div class="col-auto d-flex align-items-center">
-                                                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeKontrolRow(event)" {{ count($identifikasiRisiko->kontrolEksistings) <= 1 ? 'disabled' : '' }}>
-                                                        <i class="bx bx-trash"></i>
-                                                    </button>
-                                                </div>
+                                        @forelse($identifikasiRisiko->kontrolEksistings as $kontrol)
+                                        <div class="row g-2 mb-2">
+                                            <div class="col">
+                                                <textarea class="form-control" name="kontrol_eksisting[]" rows="3" placeholder="Masukkan kontrol eksisting">{{ $kontrol->kontrol_eksisting }}</textarea>
                                             </div>
+                                            <div class="col-auto d-flex align-items-center">
+                                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeKontrolRow(event)">
+                                                    <i class="bx bx-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                         @empty
-                                            <div class="row g-2 mb-2">
-                                                <div class="col">
-                                                    <textarea class="form-control" name="kontrol_eksisting[]" rows="3" placeholder="Masukkan kontrol eksisting">{{ $identifikasiRisiko->kontrol_eksisting }}</textarea>
-                                                </div>
-                                                <div class="col-auto d-flex align-items-center">
-                                                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeKontrolRow(event)" disabled>
-                                                        <i class="bx bx-trash"></i>
-                                                    </button>
-                                                </div>
+                                        <div class="row g-2 mb-2">
+                                            <div class="col">
+                                                <textarea class="form-control" name="kontrol_eksisting[]" rows="3" placeholder="Masukkan kontrol eksisting"></textarea>
                                             </div>
+                                            <div class="col-auto d-flex align-items-center">
+                                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeKontrolRow(event)">
+                                                    <i class="bx bx-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                         @endforelse
                                     </div>
                                     <div class="row mt-2">
                                         <div class="col-auto ms-auto">
-                                            <button type="button" class="btn btn-outline-secondary rounded-pill p-2" id="add-kontrol-eksisting"
-                                                data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Tambah Kontrol Eksisting">
+                                            <button type="button" class="btn btn-outline-secondary rounded-pill p-2" id="add-kontrol-eksisting">
                                                 <i class='bx bx-plus fs-5'></i>
                                             </button>
                                         </div>
@@ -394,34 +321,45 @@
                         </div>
                         <div class="col-md-6 col-lg-7 col-xxl-6">
                             <div class="form-group d-lg-flex mb-4">
-                                <label class="form-label label-lg-start col-lg-5 col-xl-4">Penilaian Efektivitas
-                                    Kontrol</label>
-                                <select class="form-select select2" name="penilaian_efektifitas_kontrol">
-                                    <option selected disabled>Penilaian Efektivitas Kontrol</option>
-                                    @foreach ($penilaianEfektifitasKontrols as $efektivitasKontrol)
-                                        <option value="{{ $efektivitasKontrol->id }}" {{ $identifikasiRisiko->penilaian_efektifitas_kontrol == $efektivitasKontrol->id ? 'selected' : '' }}>
-                                            {{ $efektivitasKontrol->efektivitas_kontrol }}</option>
-                                    @endforeach
-                                </select>
+                                <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker2">Perkiraan Waktu Mulai</label>
+                                <div class="w-100">
+                                    <input class="form-control datetimepicker bg-white @error('perkiraan_waktu_mulai_terpapar_risiko') is-invalid @enderror"
+                                        name="perkiraan_waktu_mulai_terpapar_risiko"
+                                        id="timepicker2" type="text" placeholder="d/m/y"
+                                        value="{{ old('perkiraan_waktu_mulai_terpapar_risiko', $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai ? \Carbon\Carbon::parse($identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai)->format('d/m/Y') : '') }}" />
+                                    @error('perkiraan_waktu_mulai_terpapar_risiko')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
                             </div>
                             <div class="form-group d-lg-flex mb-4">
-                                <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker2">Perkiraan Waktu Mulai Terpapar Risiko</label>
-                                <input class="form-control datetimepicker" name="perkiraan_waktu_mulai_terpapar_risiko"
-                                    id="timepicker2" type="text" placeholder="d/m/y"
-                                    value="{{ $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai ? \Carbon\Carbon::parse($identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai)->format('d/m/Y') : '' }}" />
-                            </div>
-                            <div class="form-group d-lg-flex mb-4">
-                                <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker3">Perkiraan Waktu Selesai Terpapar Risiko</label>
-                                <input class="form-control datetimepicker" name="perkiraan_waktu_selesai_terpapar_risiko"
-                                    id="timepicker3" type="text" placeholder="d/m/y"
-                                    value="{{ $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir ? \Carbon\Carbon::parse($identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir)->format('d/m/Y') : '' }}" />
+                                <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker3">Perkiraan Waktu Selesai</label>
+                                <div class="w-100">
+                                    <input class="form-control datetimepicker bg-white @error('perkiraan_waktu_selesai_terpapar_risiko') is-invalid @enderror"
+                                        name="perkiraan_waktu_selesai_terpapar_risiko"
+                                        id="timepicker3" type="text" placeholder="d/m/y"
+                                        value="{{ old('perkiraan_waktu_selesai_terpapar_risiko', $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir ? \Carbon\Carbon::parse($identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir)->format('d/m/Y') : '') }}" />
+                                    @error('perkiraan_waktu_selesai_terpapar_risiko')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <!-- ::Kontrol End -->
+        @if(isset($projects) && $projects->isNotEmpty())
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle" id="tabelRisikoProyekTerpilih">
+                                <thead class="bg-light">
+                                    </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
 
         <div class="col-12 mt-5">
             <div class="row g-2">
@@ -440,6 +378,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
     function removeRow(event) {
         let row = $(event.target).closest('.row');
@@ -464,8 +403,72 @@
     }
 
     $(document).ready(function() {
+        $('.select2').select2({
+            width: '100%',
+        });
+
+        $('.rupiah-input').inputmask({
+            alias: 'numeric',
+            groupSeparator: '.',
+            autoGroup: true,
+            digits: 0,
+            digitsOptional: false,
+            prefix: 'Rp ',
+            placeholder: '0',
+            rightAlign: false,
+            autoUnmask: true,
+            removeMaskOnSubmit: true,
+            min: 0,
+            allowMinus: false,
+            onKeyDown: function(e) {
+            if (e.key === 'Backspace' || e.keyCode === 8) {
+                // tunda eksekusi sampai mask selesai di-apply
+                setTimeout(() => {
+                    const unmasked = this.inputmask.unmaskedvalue();
+                    // kalau masih ada angka tersisa
+                    if (unmasked.length > 0) {
+                    // cek posisi cursor
+                    const pos = this.selectionStart;
+                    if (pos === 0) {
+                        // pindahkan ke paling kanan
+                        const end = this.value.length;
+                        this.setSelectionRange(end, end);
+                    }
+                    }
+                }, 0);
+                }
+            }
+        });
+
         const masterKris = @json($masterKris->keyBy('id'));
         const kontrolExistings = @json($kontrolEksistings->keyBy('id'));
+
+        $('#add-parameter').click(function() {
+            let rowIdx = $('.parameter-row-item').length + 1;
+            let html = `
+            <div class="row g-2 mb-3 parameter-row-item">
+                <div class="col-md-1 text-center d-flex justify-content-center align-items-center">
+                  <span class="number-pill-info">${rowIdx}</span>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-floating">
+                        <input type="hidden" name="parameter_risiko_id[]" value="">
+                        <input type="text" class="form-control" name="param_nama[]" placeholder="Nama">
+                        <label>Nama Parameter</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-floating"><input type="text" class="form-control" name="param_formula[]" placeholder="Formula"><label>Formula</label></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-floating"><input type="text" class="form-control" name="param_satuan[]" placeholder="Satuan"><label>Satuan</label></div>
+                </div>
+                <div class="col-auto d-flex align-items-center">
+                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)"><i class="bx bx-trash"></i></button>
+                </div>
+            </div>`;
+            $('#parameter-risiko-body').append(html);
+        });
 
         $('#add-dampak').click(function() {
             let html = `
@@ -488,7 +491,6 @@
 
         // Add Column Penyebab Risiko
         let row = 0;
-
         $('#add-column').click(function() {
             row++;
             let html = `
@@ -626,13 +628,18 @@
             const form = $('#main-form');
             const url = form.attr('action');
             const data = new FormData(form[0]);
-
             data.append('action', action);
 
-            // Tampilkan konfirmasi sebelum mengirim request
+            const $clickedButton = $(this);
+            const originalText = $clickedButton.html();
+
+            // Clear previous errors
+            $('.is-invalid').removeClass('is-invalid');
+            $('.invalid-feedback').remove();
+
             Swal.fire({
-                title: 'Simpan Data?',
-                text: "Apakah Anda yakin ingin menyimpan data ini?",
+                title: 'Simpan Perubahan?',
+                text: "Apakah Anda yakin ingin memperbarui data ini?",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#3085d6',
@@ -641,52 +648,70 @@
                 cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Jika user menekan "Ya", lanjutkan request AJAX
+                    $clickedButton.html('<span class="spinner-border spinner-border-sm"></span> Menyimpan...').prop('disabled', true);
+
                     $.ajax({
                         url: url,
-                        type: 'POST',
+                        type: 'POST', // Method spoofing via @method('PUT') inside form handles PUT
                         data: data,
                         contentType: false,
                         processData: false,
                         success: function(response) {
                             if (response.redirect) {
                                 Swal.fire({
-                                    icon: 'success',
-                                    title: 'Berhasil',
-                                    text: response.message || 'Data berhasil disimpan',
-                                    showConfirmButton: false,
-                                    timer: 1500
-                                }).then(() => {
-                                    window.location.href = response.redirect;
-                                });
-                            } else {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Berhasil',
-                                    text: response.message || 'Data berhasil disimpan',
-                                    showConfirmButton: false,
-                                    timer: 1500
-                                });
+                                    icon: 'success', title: 'Berhasil',
+                                    text: response.message, showConfirmButton: false, timer: 1500
+                                }).then(() => { window.location.href = response.redirect; });
                             }
                         },
                         error: function(xhr) {
-                            const errors = xhr.responseJSON.errors;
-                            if (errors) {
-                                let message = '<ul>';
-                                for (const key in errors) {
-                                    message += `<li>${errors[key]}</li>`;
-                                }
-                                message += '</ul>';
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Gagal',
-                                    html: message
+                            $clickedButton.html(originalText).prop('disabled', false);
+
+                            if (xhr.status === 422) {
+                                const errors = xhr.responseJSON.errors;
+                                let firstError = null;
+
+                                $.each(errors, function(key, messages) {
+                                    // Handle Array Inputs (e.g., penyebab_risiko.0)
+                                    let inputName = key;
+                                    if(key.includes('.')) {
+                                        let parts = key.split('.');
+                                        // Convert "penyebab_risiko.0" to "penyebab_risiko[]" index 0
+                                        let fieldName = parts[0];
+                                        let index = parts[1];
+                                        // Selector untuk elemen array ke-sekian
+                                        let el = $(`[name="${fieldName}[]"]:eq(${index})`);
+
+                                        el.addClass('is-invalid');
+                                        if(el.parent('.form-floating').length) {
+                                            el.parent().after(`<div class="invalid-feedback d-block">${messages[0]}</div>`);
+                                        } else {
+                                            el.after(`<div class="invalid-feedback d-block">${messages[0]}</div>`);
+                                        }
+                                        if(!firstError) firstError = el;
+                                    } else {
+                                        // Standard Inputs
+                                        let el = $(`[name="${key}"]`);
+                                        el.addClass('is-invalid');
+                                        el.after(`<div class="invalid-feedback d-block">${messages[0]}</div>`);
+                                        if(!firstError) firstError = el;
+                                    }
                                 });
+
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Validasi Gagal',
+                                    text: 'Mohon periksa kembali inputan Anda yang berwarna merah.'
+                                });
+
+                                if(firstError) {
+                                    $('html, body').animate({ scrollTop: firstError.offset().top - 150 }, 500);
+                                }
                             } else {
                                 Swal.fire({
                                     icon: 'error',
                                     title: 'Gagal',
-                                    text: xhr.responseJSON.message || 'Terjadi kesalahan saat menyimpan data'
+                                    text: xhr.responseJSON.message || 'Terjadi kesalahan pada server.'
                                 });
                             }
                         }

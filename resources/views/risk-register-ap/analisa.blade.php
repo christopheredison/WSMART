@@ -96,7 +96,7 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label>Kategori Dampak</label>
+                        <label>Kategori Dampak <span class="text-danger">*</span></label>
                         {{ Form::select('kategori_dampak',
                             [
                                 'Kuantitatif' => 'Kuantitatif',
@@ -108,7 +108,7 @@
                     </div>
                     <div class="col-md-4" id="divAreaDampak">
                         <div class="d-flex align-items-center">
-                            <label for="area_dampak" class="me-2 mb-0">Area Dampak</label>
+                            <label for="area_dampak" class="me-2 mb-0">Area Dampak <span class="text-danger">*</span></label>
                             <button type="button" class="btn btn-link p-0" id="btnShowKualitatif" title="Lihat Risiko Kualitatif">
                                 <i class='bx bx-show bx-sm'></i> <!-- Boxicons Eye Icon -->
                             </button>
@@ -117,7 +117,7 @@
                     </div>
                     <div class="col-md-4" id="div_risk_limit">
                         <label>Risk Limit</label>
-                        {{ Form::text('_risk_limit', $risk_limit, ['class' => 'form-control inputmask-rupiah', 'readonly' => true, 'required' => true, 'id' => 'risk_limit']) }}
+                        {{ Form::text('_risk_limit', $risk_limit, ['class' => 'form-control inputmask-rupiah', 'readonly' => true, 'required' => true, 'id' => 'risk_limit', 'autocomplete' => 'off']) }}
                     </div>
                 </div>
             </div>
@@ -135,12 +135,12 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label>Nilai Dampak</label>
+                        <label>Nilai Dampak <span class="text-danger">*</span></label>
                         {{ Form::text('nilai_dampak', $analisa->nilai_dampak, ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak', 'autocomplete' => 'off']) }}
                     </div>
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
-                            <label>Nilai Probabilitas (%)</label>
+                            <label>Nilai Probabilitas (%) <span class="text-danger">*</span></label>
                             <!-- <button type="button" class="btn btn-link p-0" id="btnCalculatePoisson" title="Hitung">
                                 <i class='bx bx-calculator bx-sm'></i>
                             </button> -->
@@ -154,7 +154,7 @@
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label>Skala Dampak</label>
+                        <label>Skala Dampak <span class="text-danger">*</span></label>
                         {{ Form::select('skala_dampak',
                             \App\Models\SkalaDampak::get()->mapWithKeys(function($item) {
                                 return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi];
@@ -165,7 +165,7 @@
                         <input type="hidden" name="skala_dampak_hidden" id="skala_dampak_hidden" value="{{ $analisa->skala_dampak }}">
                     </div>
                     <div class="col-md-4">
-                        <label>Skala Probabilitas</label>
+                        <label>Skala Probabilitas <span class="text-danger">*</span></label>
                         {{ Form::text('skala_probabilitas', '', ['class' => 'form-control', 'disabled' => true, 'required' => true]) }}
                     </div>
                     <div class="col-md-2">
@@ -179,14 +179,14 @@
                 </div>
                 <div class="row" id="divDeskripsiDampak">
                     <div class="col-md-12">
-                        <label id="labelDeskripsiDampak">Deskripsi Dampak</label>
+                        <label id="labelDeskripsiDampak">Deskripsi Dampak <span class="text-danger">*</span></label>
                         {{ Form::textarea('deskripsi_dampak', $analisa->deskripsi_dampak, ['class' => 'form-control', 'rows' => 5]) }}
                         <input type="hidden" name="risk_tolerance" id="risk_tolerance" value="{{ $risk_tolerance }}" />
                     </div>
                 </div>
                 <div class="row" id="divAsumsiDampak">
                     <div class="col-md-12">
-                        <label>Asumsi Perhitungan Dampak & Probabilitas Inherent</label>
+                        <label>Asumsi Perhitungan Dampak & Probabilitas Inherent <span class="text-danger">*</span></label>
                         {{ Form::textarea('asumsi_perhitungan_dampak', $analisa->asumsi_perhitungan_dampak, ['class' => 'form-control', 'rows' => 5]) }}
                     </div>
                 </div>
@@ -207,12 +207,12 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label>Nilai Dampak</label>
+                        <label>Nilai Dampak <span class="text-danger">*</span></label>
                         {{ Form::text('nilai_dampak_residual_q' . $i, $analisa->{'nilai_dampak_residual_q' . $i} ?? '', ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak_residual_q' . $i, 'autocomplete' => 'off']) }}
                     </div>
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
-                            <label>Nilai Probabilitas (%)</label>
+                            <label>Nilai Probabilitas (%) <span class="text-danger">*</span></label>
                         </div>
                         {{ Form::number('nilai_probabilitas_residual_q' . $i, $analisa->{'nilai_probabilitas_residual_q' . $i} ?? '', ['class' => 'form-control', 'required' => true, 'step' => 0.01, 'min' => 0, 'max' => 100, 'onkeypress' => 'return isNumberKey(event)', 'id' => 'nilai_probabilitas_residual_q' . $i]) }}
                     </div>
@@ -224,7 +224,7 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
-                            <label>Skala Dampak Residual</label>
+                            <label>Skala Dampak Residual <span class="text-danger">*</span></label>
                             <button type="button" class="btn btn-link p-0 btnShowKualitatifRes" id="btnShowKualitatifResQ{{ $i }}" title="Skala Dampak">
                                 <i class='bx bx-show bx-sm'></i> <!-- Boxicons Eye Icon -->
                             </button>
@@ -239,7 +239,7 @@
                         <input type="hidden" name="skala_dampak_residual_q{{ $i }}_hidden" id="skala_dampak_residual_q{{ $i }}_hidden" value="{{ $analisa->{'skala_dampak_residual_q' . $i} ?? '' }}">
                     </div>
                     <div class="col-md-4">
-                        <label>Skala Probabilitas</label>
+                        <label>Skala Probabilitas <span class="text-danger">*</span></label>
                         {{ Form::text('skala_probabilitas_residual_q' . $i, '', ['class' => 'form-control', 'disabled' => true, 'required' => true]) }}
                     </div>
                     <div class="col-md-2">
@@ -253,13 +253,13 @@
                 </div>
                 <div class="row" id="divDeskripsiDampakResidualQ{{ $i }}">
                     <div class="col-md-12">
-                        <label>Deskripsi Dampak Residual Q{{ $i }}</label>
+                        <label>Deskripsi Dampak Residual Q{{ $i }} <span class="text-danger">*</span></label>
                         {{ Form::textarea('deskripsi_dampak_residual_q' . $i, $analisa->{'deskripsi_dampak_residual_q' . $i} ?? '', ['class' => 'form-control', 'rows' => 5]) }}
                     </div>
                 </div>
                 <div class="row" id="divAsumsiDampakResidualQ{{ $i }}">
                     <div class="col-md-12">
-                        <label>Asumsi Perhitungan Dampak & Probabilitas Residual Q{{ $i }}</label>
+                        <label>Asumsi Perhitungan Dampak & Probabilitas Residual Q{{ $i }} <span class="text-danger">*</span></label>
                         {{ Form::textarea('asumsi_perhitungan_dampak_residual_q' . $i, $analisa->{'asumsi_perhitungan_dampak_residual_q' . $i} ?? '', ['class' => 'form-control', 'rows' => 5]) }}
                     </div>
                 </div>
@@ -367,28 +367,6 @@ function getSkalaProbabilitasByValue(value) {
     }
 }
 
-function updateSkalaProbabilitas(residual = false, quarter = null) {
-    let suffix = '';
-    if (residual) {
-        if (typeof quarter === 'number' && quarter >= 1 && quarter <= 4) {
-            suffix = `_residual_q${quarter}`;
-        } else {
-            suffix = `_residual`;
-        }
-    }
-
-    const nilaiProbabilitas = parseFloat($(`[name="nilai_probabilitas${suffix}"]`).val()) || 0;
-    const skalaProbabilitas = getSkalaProbabilitasByValue(nilaiProbabilitas);
-
-    if (skalaProbabilitas) {
-        $(`[name="skala_probabilitas${suffix}"]`)
-            .val('(' + skalaProbabilitas.tingkat + ') ' + skalaProbabilitas.skala)
-            .data('tingkat', skalaProbabilitas.tingkat);
-    } else {
-        $(`[name="skala_probabilitas${suffix}"]`).val('');
-    }
-}
-
 function refreshEksposureRisiko(residual = false, quarter = null) {
 
   let suffix = '';
@@ -483,182 +461,6 @@ function isNumberKey(evt) {
         return false;
     }
     return true;
-}
-
-// Fungsi untuk validasi custom formAdd commentMore actions
-function validateForm() {
-    let isValid = true;
-
-    // Hapus error sebelumnya
-    $('.is-invalid').removeClass('is-invalid');
-    $('.invalid-feedback').remove();
-
-    const kategoriDampak = $('[name="kategori_dampak"]').val();
-
-    // Validasi field yang wajib diisi berdasarkan kategori
-    if (!kategoriDampak) {
-        addFieldError('kategori_dampak', 'Kategori Dampak wajib dipilih.');
-        isValid = false;
-    }
-    if (kategoriDampak === 'Kualitatif' && !$('textarea[name="deskripsi_dampak"]').val().trim()) {
-        addFieldError('deskripsi_dampak', 'Deskripsi Dampak wajib diisi untuk kategori Kualitatif.');
-        isValid = false;
-    }
-    if (kategoriDampak === 'Kuantitatif' && !$('textarea[name="asumsi_perhitungan_dampak"]').val().trim()) {
-        addFieldError('asumsi_perhitungan_dampak', 'Asumsi Perhitungan wajib diisi untuk kategori Kuantitatif.');
-        isValid = false;
-    }
-
-    const nilaiProbabilitas = parseFloat($('[name="nilai_probabilitas"]').val());
-    if (isNaN(nilaiProbabilitas) || nilaiProbabilitas <= 0) {
-        addFieldError('nilai_probabilitas', 'Nilai Probabilitas Inheren wajib diisi.');
-        isValid = false;
-    } else if (nilaiProbabilitas > 100) {
-        addFieldError('nilai_probabilitas', 'Nilai Probabilitas Inheren tidak boleh melebihi 100.');
-        isValid = false;
-    }
-
-    // Validasi Bagian Residual (Q1-Q4)
-    let isAnyQuarterFilled = false;
-    let partialErrors = false;
-
-    for (let i = 1; i <= 4; i++) {
-        const nilaiDampakRes = $(`[name="nilai_dampak_residual_q${i}"]`).val();
-        const nilaiProbRes = $(`[name="nilai_probabilitas_residual_q${i}"]`).val();
-        const skalaDampakRes = $(`[name="skala_dampak_residual_q${i}"]`).val();
-        const asumsiRes = $(`[name="asumsi_perhitungan_dampak_residual_q${i}"]`).val();
-        const deskripsiRes = $(`[name="deskripsi_dampak_residual_q${i}"]`).val();
-
-        // Cek jika ada salah satu field di quarter ini yang diisi
-        const isPartiallyFilled = nilaiDampakRes || nilaiProbRes || skalaDampakRes || (asumsiRes && asumsiRes.trim()) || (deskripsiRes && deskripsiRes.trim());
-
-        if (isPartiallyFilled) {
-            let isThisQuarterComplete = true;
-
-            // Semua quarter yang diisi sebagian, wajib diisi probabilitas dan skala dampaknya
-            if (!nilaiProbRes || parseFloat(nilaiProbRes) <= 0) {
-                addFieldError(`nilai_probabilitas_residual_q${i}`, 'Nilai Probabilitas wajib diisi.');
-                isThisQuarterComplete = false;
-            } else if (parseFloat(nilaiProbRes) > 100) {
-                addFieldError(`nilai_probabilitas_residual_q${i}`, 'Nilai Probabilitas tidak boleh melebihi 100.');
-                isThisQuarterComplete = false;
-            }
-            if (!skalaDampakRes) {
-                addFieldError(`skala_dampak_residual_q${i}`, 'Skala Dampak wajib dipilih.');
-                isThisQuarterComplete = false;
-            }
-
-            // Validasi tambahan berdasarkan kategori
-            if (kategoriDampak === 'Kuantitatif') {
-                if (!asumsiRes || !asumsiRes.trim()) {
-                    addFieldError(`asumsi_perhitungan_dampak_residual_q${i}`, 'Asumsi Perhitungan wajib diisi.');
-                    isThisQuarterComplete = false;
-                }
-            } else { // Kualitatif
-                if (!deskripsiRes || !deskripsiRes.trim()) {
-                    addFieldError(`deskripsi_dampak_residual_q${i}`, 'Deskripsi Dampak wajib diisi.');
-                    isThisQuarterComplete = false;
-                }
-            }
-
-            if (isThisQuarterComplete) {
-                isAnyQuarterFilled = true;
-            } else {
-                partialErrors = true;
-            }
-        }
-    }
-
-    if (partialErrors) {
-        isValid = false;
-    }
-
-    // Jika tidak ada satu pun quarter yang diisi, anggap tidak valid
-    if (!isAnyQuarterFilled) {
-        isValid = false;
-        addFieldError('nilai_probabilitas_residual_q1', 'Setidaknya satu kuartal (Q1-Q4) harus diisi dengan lengkap.');
-    }
-
-    return isValid;
-}
-
-// Fungsi untuk validasi nilai residual
-function validateResidualValues() {
-    let errors = [];
-    const kategoriDampak = $('[name="kategori_dampak"]').val();
-
-    const nilaiDampakInheren = parseRupiahToNumber($('#nilai_dampak').val());
-    const nilaiProbInheren = parseFloat($('#nilai_probabilitas').val()) || 0;
-    const skalaDampakInheren = parseInt($('#skala_dampak').val()) || 0;
-
-    for (let i = 1; i <= 4; i++) {
-        const nilaiProbResidualInput = $(`#nilai_probabilitas_residual_q${i}`);
-        const nilaiProbResidual = parseFloat(nilaiProbResidualInput.val()) || 0;
-
-        if (nilaiProbResidual > 0) {
-            if (kategoriDampak === 'Kuantitatif') {
-                const input = $(`#nilai_dampak_residual_q${i}`);
-                const value = parseRupiahToNumber(input.val());
-                const pembandingInput = (i === 1) ? $('#nilai_dampak') : $(`#nilai_dampak_residual_q${i-1}`);
-                const pembanding = parseRupiahToNumber(pembandingInput.val());
-                if (value > pembanding) {
-                    errors.push(`Nilai Dampak Residual Q${i} tidak boleh > ${i === 1 ? 'Inheren' : 'Q'+(i-1)}.`);
-                    input.val(pembandingInput.val()).trigger('change');
-                }
-            }
-
-            const inputProb = $(`#nilai_probabilitas_residual_q${i}`);
-            const valueProb = parseFloat(inputProb.val()) || 0;
-            const pembandingProbInput = (i === 1) ? $('#nilai_probabilitas') : $(`#nilai_probabilitas_residual_q${i-1}`);
-            const pembandingProb = parseFloat(pembandingProbInput.val()) || 0;
-            if (valueProb > pembandingProb) {
-                errors.push(`Nilai Probabilitas Residual Q${i} tidak boleh > ${i === 1 ? 'Inheren' : 'Q'+(i-1)}.`);
-                inputProb.val(pembandingProbInput.val()).trigger('change');
-            }
-
-            if (kategoriDampak === 'Kualitatif') {
-                const inputSkala = $(`#skala_dampak_residual_q${i}`);
-                const valueSkala = parseInt(inputSkala.val()) || 0;
-                const pembandingSkalaInput = (i === 1) ? $('#skala_dampak') : $(`#skala_dampak_residual_q${i-1}`);
-                const pembandingSkala = parseInt(pembandingSkalaInput.val()) || 0;
-                if (valueSkala > pembandingSkala) {
-                    errors.push(`Skala Dampak Residual Q${i} tidak boleh > ${i === 1 ? 'Inheren' : 'Q'+(i-1)}.`);
-                    inputSkala.val(pembandingSkalaInput.val()).trigger('change');
-                }
-            }
-        }
-    }
-
-    if (errors.length > 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Validasi Gagal',
-            html: errors.map(e => `<div style="text-align: left; color: #dc3545; margin-bottom: 5px;">❌ ${e}</div>`).join(''),
-            confirmButtonText: 'OK'
-        });
-        return false;
-    }
-    return true;
-}
-
-function parseRupiahToNumber(value) {
-    if (!value) return 0;
-    // Menghapus semua karakter kecuali angka
-    const cleanValue = String(value).replace(/[^\d]/g, '');
-    return parseInt(cleanValue, 10) || 0;
-}
-
-function addFieldError(fieldName, message) {
-    const field = $(`[name="${fieldName}"]`);
-    if (field.length > 0) {
-        field.addClass('is-invalid');
-        // Hapus pesan error sebelumnya agar tidak duplikat
-        field.siblings('.invalid-feedback').remove();
-        field.next('.invalid-feedback').remove();
-
-        // Tambahkan pesan error baru
-        field.after(`<div class="invalid-feedback d-block">${message}</div>`);
-    }
 }
 
 $(document).ready(function() {
@@ -850,17 +652,6 @@ $(document).ready(function() {
         }
     });
 
-    // Event listeners for residual values validation
-    $('#nilai_dampak, [id^="nilai_dampak_residual_q"]').on('blur', validateResidualValues);
-    $('#nilai_probabilitas, [id^="nilai_probabilitas_residual_q"]').on('blur', validateResidualValues);
-
-    // Event listener for skala dampak
-    $('#skala_dampak, [id^="skala_dampak_residual_q"]').on('change', function() {
-        if ($('[name="kategori_dampak"]').val() === 'Kualitatif') {
-            validateResidualValues();
-        }
-    });
-
     // Event listener untuk perubahan nilai dampak, nilai dampak residual, kategori dampak, dan risk limit
     $('[name="nilai_dampak"], [name="nilai_dampak_residual_q1"], [name="nilai_dampak_residual_q2"], [name="nilai_dampak_residual_q3"], [name="nilai_dampak_residual_q4"], [name="kategori_dampak"]').on('change', function() {
         updateSkalaDampak();
@@ -890,35 +681,177 @@ $(document).ready(function() {
     });
 
     $('[name="nilai_dampak"],[name="skala_dampak"]').on('change', function() {
+        //console.log('change nilai dampak');
         refreshEksposureRisiko();
         refreshSkalaAndLevelRisiko();
 
     }).change();
 
-    $('[name="nilai_dampak"]').on('change', function() {
-        const value = $(this).val();
-        const skalaProbabilitas = getSkalaProbabilitasByValue(value);
-
-        if (!skalaProbabilitas || value === '') {
-            $('[name="skala_probabilitas"]').val('').change();
-            return;
-        }
-        $('[name="skala_probabilitas"]').val('(' + skalaProbabilitas.tingkat + ') ' + skalaProbabilitas.skala).data('tingkat', skalaProbabilitas.tingkat).change();
-        refreshEksposureRisiko();
-    }).change();
-
+    // Add event listeners for all quarter residual inputs
     for (let i = 1; i <= 4; i++) {
-        $(`[name="nilai_dampak_residual_q${i}"]`).on('change', function() {
-            updateSkalaProbabilitas(true, i);
+        $(`[name="nilai_dampak_residual_q${i}"],[name="skala_dampak_residual_q${i}"]`).on('change', function() {
+            refreshEksposureRisiko(true, i);
+            refreshSkalaAndLevelRisiko(true, i);
+        }).change();
+
+        $(`[name="nilai_probabilitas_residual_q${i}"]`).on('change', function() {
+            const value = $(this).val();
+            const skalaProbabilitas = getSkalaProbabilitasByValue(value);
+
+            if (!skalaProbabilitas || value === '') {
+                $(`[name="skala_probabilitas_residual_q${i}"]`).val('').change();
+                return;
+            }
+            $(`[name="skala_probabilitas_residual_q${i}"]`).val('(' + skalaProbabilitas.tingkat + ') ' + skalaProbabilitas.skala).data('tingkat', skalaProbabilitas.tingkat).change();
             refreshEksposureRisiko(true, i);
         }).change();
+
+        $(`[name="skala_probabilitas_residual_q${i}"]`).on('change', function() {
+            refreshSkalaAndLevelRisiko(true, i);
+        }).change();
+
+        // Add input validation for residual quarter values
+        $(`#nilai_dampak_residual_q${i}`).on('blur', function () {
+            var nilaiDampak = parseRupiahToNumber($('#nilai_dampak').val());
+            var nilaiResidual = parseRupiahToNumber($(this).val());
+
+            // For Q1, validate against inherent value
+            if (i === 1) {
+                if (nilaiResidual > nilaiDampak) {
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: 'Nilai Dampak Residual Q1 tidak boleh lebih besar dari Nilai Dampak Inheren!',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
+                    $(this).val($('#nilai_dampak').val()).change();
+                    return;
+                }
+            }
+
+            // For other quarters, validate against previous quarter
+            if (i > 1) {
+                var prevQuarterValue = parseRupiahToNumber($(`#nilai_dampak_residual_q${i-1}`).val());
+                if (nilaiResidual > prevQuarterValue) {
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: `Nilai Dampak Residual Q${i} tidak boleh lebih besar dari Q${i-1}!`,
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
+                    $(this).val($(`#nilai_dampak_residual_q${i-1}`).val()).change();
+                }
+            }
+        });
+
+        // Add validation for probability values
+        $(`#nilai_probabilitas_residual_q${i}`).on('blur', function() {
+            var currentValue = parseFloat($(this).val()) || 0;
+            var inherentProb = parseFloat($('#nilai_probabilitas').val()) || 0;
+
+            if (currentValue < 0) {
+                Swal.fire({
+                    title: 'Peringatan!',
+                    text: `Nilai Probabilitas Q${i} tidak boleh kurang dari 0!`,
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                $(this).val(0).change();
+                return;
+            } else if (currentValue > 100) {
+                Swal.fire({
+                    title: 'Peringatan!',
+                    text: `Nilai Probabilitas Q${i} tidak boleh lebih dari 100!`,
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                $(this).val(100).change();
+                currentValue = 100;
+            }
+
+            // For Q1, validate against inherent probability
+            if (i === 1) {
+                if (currentValue > inherentProb) {
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: 'Nilai Probabilitas Q1 tidak boleh lebih besar dari Nilai Probabilitas Inheren!',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
+                    $(this).val(inherentProb).change();
+                    return;
+                }
+            }
+
+            // For other quarters, validate against previous quarter
+            if (i > 1) {
+                var prevQuarterValue = parseFloat($(`#nilai_probabilitas_residual_q${i-1}`).val()) || 0;
+                if (currentValue > prevQuarterValue) {
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: `Nilai Probabilitas Q${i} tidak boleh lebih besar dari Q${i-1}!`,
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
+                    $(this).val(prevQuarterValue).change();
+                }
+            }
+        });
+
+        // Add validation for impact scale values
+        $(`#skala_dampak_residual_q${i}`).on('change', function() {
+            var currentValue = parseInt($(this).val());
+            var inherentScale = parseInt($('#skala_dampak').val());
+
+            // For Q1, validate against inherent scale
+            if (i === 1) {
+                if (currentValue > inherentScale) {
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: 'Skala Dampak Q1 tidak boleh lebih besar dari Skala Dampak Inheren!',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
+                    $(this).val(inherentScale).change();
+                    return;
+                }
+            }
+
+            // For other quarters, validate against previous quarter
+            if (i > 1) {
+                var prevQuarterValue = parseInt($(`#skala_dampak_residual_q${i-1}`).val());
+                if (currentValue > prevQuarterValue) {
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: `Skala Dampak Q${i} tidak boleh lebih besar dari Q${i-1}!`,
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
+                    $(this).val(prevQuarterValue).change();
+                }
+            }
+        });
     }
 
-    const probabilityFields = 'input[name="nilai_probabilitas"], input[name^="nilai_probabilitas_residual_q"]';
-    $(document).on('input', probabilityFields, function() {
-        let value = parseFloat($(this).val());
-        if (!isNaN(value) && value > 100) {
-            $(this).val(100);
+    $('#nilai_probabilitas').on('blur', function() {
+        let value = parseFloat($(this).val()) || 0;
+
+        if (value < 0) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Nilai Probabilitas Inheren tidak boleh kurang dari 0!',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            $(this).val(0).change(); // Reset ke 0 dan trigger change
+        } else if (value > 100) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Nilai Probabilitas Inheren tidak boleh lebih dari 100!',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            $(this).val(100).change(); // Reset ke 100 dan trigger change
         }
     });
 
@@ -933,24 +866,6 @@ $(document).ready(function() {
         $('[name="skala_probabilitas"]').val('(' + skalaProbabilitas.tingkat + ') ' + skalaProbabilitas.skala).data('tingkat', skalaProbabilitas.tingkat).change();
         refreshEksposureRisiko();
     }).change();
-
-    for (let i = 1; i <= 4; i++) {
-        $(`[name="nilai_probabilitas_residual_q${i}"]`).on('change', function() {
-            updateSkalaProbabilitas(true, i);
-            refreshEksposureRisiko(true, i);
-            refreshSkalaAndLevelRisiko(true, i);
-        }).change();
-    }
-
-    $('[name="skala_dampak"]').on('change', function() {
-        refreshSkalaAndLevelRisiko();
-    }).change();
-
-    for (let i = 1; i <= 4; i++) {
-        $(`[name="skala_dampak_residual_q${i}"]`).on('change', function() {
-            refreshSkalaAndLevelRisiko(true, i);
-        }).change();
-    }
 
     $('[name="skala_probabilitas"]').on('change', function() {
         refreshSkalaAndLevelRisiko();
@@ -1023,25 +938,8 @@ $(document).ready(function() {
         const action = $(this).data('action'); // Ambil action dari tombol yang ditekan
         const form = $('#mainForm');
 
-        const isFormValid = validateForm();
-        if (!isFormValid) {
-            // Jika ada error, tampilkan pesan dan stop
-            Swal.fire({
-                title: 'Form Tidak Valid',
-                text: 'Mohon lengkapi semua field yang wajib diisi',
-                icon: 'error',
-                confirmButtonText: 'OK'
-            });
-            return;
-        }
-
         if (!form[0].checkValidity()) {
             form[0].reportValidity();
-            return;
-        }
-
-        // Validate residual values
-        if (!validateResidualValues()) {
             return;
         }
 
@@ -1059,22 +957,11 @@ $(document).ready(function() {
             if (result.isConfirmed) {
                 // Jika user menekan "Ya", lanjutkan request AJAX
                 const formData = new FormData(form[0]);
-                // for (const [key, value] of formData.entries()) {
-                //     console.log(key, value);
-                // }
+                for (const [key, value] of formData.entries()) {
+                    console.log(key, value);
+                }
 
                 formData.append('action', action); // Tambahkan action ke formData
-
-                // Tambahkan field disabled secara manual
-                formData.append('eksposur_risiko', $('#eksposur_risiko').val());
-                formData.append('skala_risiko', $('#skala_risiko').val());
-                formData.append('level_risiko', $('#level_risiko').val());
-
-                for (let i = 1; i <= 4; i++) {
-                    formData.append(`eksposur_risiko_residual_q${i}`, $(`#eksposur_risiko_residual_q${i}`).val());
-                    formData.append(`skala_risiko_residual_q${i}`, $(`#skala_risiko_residual_q${i}`).val());
-                    formData.append(`level_risiko_residual_q${i}`, $(`#level_risiko_residual_q${i}`).val());
-                }
 
                 const url = "{{ route('risk-register-ap.do-analisa', $identifikasiRisiko->id) }}";
 
@@ -1102,18 +989,6 @@ $(document).ready(function() {
                         });
                     },
                     error: function(response) {
-                        // Clear previous errors
-                        $('.is-invalid').removeClass('is-invalid');
-                        $('.invalid-feedback').remove();
-
-                        // Handle server validation errors
-                        if (response.responseJSON && response.responseJSON.errors) {
-                            const errors = response.responseJSON.errors;
-                            for (const [key, messages] of Object.entries(errors)) {
-                                addFieldError(key, messages[0]);
-                            }
-                        }
-
                         Swal.fire({
                             title: 'Gagal',
                             text: response.responseJSON.message || 'Terjadi kesalahan saat menyimpan data',

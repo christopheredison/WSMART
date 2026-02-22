@@ -467,6 +467,7 @@ class RiskRegisterUnitController extends Controller
               'label' => 'Risk Context'
             ],
         ];
+
         // Ambil semua data periode (untuk dropdown filter)
         $periodes = Periode::orderBy('tahun', 'desc')->get();
 
@@ -728,7 +729,7 @@ class RiskRegisterUnitController extends Controller
             $identifikasiRisiko->wbs = $request->wbs;
             // $identifikasiRisiko->jenis_kontrol_eksisting_id = $request->jenis_kontrol_eksisting_id;
             $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
-            $identifikasiRisiko->penilaian_efektifitas_kontrol = $this->cleanInput($request->penilaian_efektifitas_kontrol);
+            $identifikasiRisiko->penilaian_efektifitas_kontrol = $request->penilaian_efektifitas_kontrol;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
             $identifikasiRisiko->user_id = auth()->id();
@@ -2462,10 +2463,6 @@ class RiskRegisterUnitController extends Controller
     public function view($id)
     {
         $user    = request()->user()->load('unit');
-        // $risikos = IdentifikasiRisiko::where('id', $id)
-        //     ->with('riskAnalysis')
-        //     ->get();
-
         $risikos = IdentifikasiRisiko::where('id', $id)
             ->with([
               'taksonomiRisiko',

@@ -451,77 +451,289 @@
         </div>
     </div>
 
-    <div class="col-12">
-        <div class="divider my-3 my-md-5">
-            <div class="divider-text">
-                <h4 class="mb-0 ff-heading-sm">Log Perlakuan Risiko</h4>
-            </div>
+    <div class="divider my-3 my-md-5">
+        <div class="divider-text">
+            <h4 class="mb-0 ff-heading-sm">Log Perubahan Monitoring Risiko</h4>
         </div>
-        <div class="row g-2">
-            <div class="card">
-                <div class="card-body">
-                    <table class="table datatable">
-                        <thead>
+    </div>
+
+    <div class="col-12 mt-5 mb-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light text-center small fw-bold text-uppercase">
                             <tr>
-                                <th>No</th>
-                                <th>Penyebab Risiko</th>
-                                <th>Tanggal Input</th>
-                                <th>Waktu Perlakuan Risiko</th>
-                                <th>PIC</th>
-                                <th>Rencana Perlakuan Risiko</th>
-                                <th>Rencana Biaya Perlakuan Risiko (Rp)</th>
-                                <th>Deskripsi Perlakuan Risiko</th>
-                                <th>Realisasi Biaya Perlakuan Risiko (Rp)</th>
-                                <th>Progress (%)</th>
-                                <th>Action</th>
+                                <th width="5%">#</th>
+                                <th width="12%">Periode</th>
+                                <th width="15%">Tanggal Input</th>
+                                <th width="15%">Realisasi Dampak</th>
+                                <th width="15%">Realisasi Probabilitas</th>
+                                <th width="15%">Realisasi Eksposur</th>
+                                <th width="13%">Realisasi Level</th>
+                                <th width="10%">Detail</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($risk->penyebabRisikos as $penyebabRisiko)
-                            @php
-                                $perlakuanPenyebabMonitorings = $penyebabRisiko->perlakuanPenyebabRisiko->pluck('perlakuanPenyebabMonitorings')->flatten();
-                            @endphp
-
-                            @foreach ($penyebabRisiko->perlakuanPenyebabRisiko as $perlakuanPenyebab)
-                                @foreach ($perlakuanPenyebab->perlakuanPenyebabMonitorings as $perlakuanMonitoring)
-                                    <tr>
-                                        <td>{{ $loop->iteration + 1 }}</td>
-                                        <td>{{ $penyebabRisiko->penyebab_risiko }}</td>
-                                        <td>{{ $perlakuanMonitoring->created_at }}</td>
-                                        <td>{{ $perlakuanMonitoring->timeline_perlakuan_risiko_start }}</td>
-                                        <td>{{ $perlakuanPenyebab->pic }}</td>
-                                        <td>
-                                          {{ $perlakuanPenyebab->rencana_perlakuan_risiko }}
-                                        </td>
-                                        <td>
-                                          {{ $perlakuanPenyebab->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuanPenyebab->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
-                                        </td>
-                                        <td>{{ $perlakuanMonitoring->deskripsi_perlakuan_risiko }}</td>
-                                        <td>
-                                          {{ $perlakuanMonitoring->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuanMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
-                                        </td>
-                                        <td>{{ $perlakuanMonitoring->progress_rencana_perlakuan_risiko }}</td>
-                                        <td>
-                                            <button type="button"
-                                                class="btn-input-icon btn-action"
-                                                data-action="view-details"
-                                                data-bs-toggle="tooltip"
-                                                title="Detail Mitigasi"
-                                                data-perlakuan-id="{{ $perlakuanPenyebab->id }}"
-                                                data-id="{{ $perlakuanMonitoring->id }}">
-                                                <span class="bx bx-show text-primary"></span>
+                            @forelse($historyMonitorings as $hLog)
+                                <tr class="{{ ($hLog->month == $month && $hLog->quarter == $quarter) ? 'table-primary' : '' }}">
+                                    <td class="text-center">{{ $loop->iteration }}</td>
+                                    <td class="text-center">
+                                        <div class="fw-bold">Quarter {{ $hLog->quarter }}</div>
+                                        <div class="fw-normal">
+                                            @if($hLog->month)
+                                                @lang('basic.month.' . $hLog->month)
+                                            @else - @endif
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        {{ \Carbon\Carbon::parse($hLog->created_at)->setTimezone('Asia/Jakarta')->translatedFormat('d M Y, H:i') }} WIB
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold">Rp {{ number_format($hLog->nilai_dampak, 0, ',', '.') }}</span>
+                                            <span class="text-muted">
+                                              {{ $hLog->skalaDampakObj ? '('.$hLog->skalaDampakObj->tingkat.') '.$hLog->skalaDampakObj->deskripsi : '-' }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span>{{ $hLog->nilai_probabilitas ?? '-' }}%</span>
+                                            <span class="text-muted">
+                                              {{ $hLog->skalaProbabilitas ? '('.$hLog->skalaProbabilitas->tingkat.') '.$hLog->skalaProbabilitas->skala : '-' }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="text-end fw-bold">
+                                        Rp {{ number_format($hLog->eksposure_risiko, 0, ',', '.') }}
+                                    </td>
+                                    <td class="text-center">
+                                        @php $lvlColor = str_replace(' ', '-', str_replace('to ', '', strtolower($hLog->level_risiko))); @endphp
+                                        <div class="badge p-2 w-100 bg-{{ $lvlColor ?: 'secondary' }}">
+                                            {{ $hLog->skala_risiko }} - {{ $hLog->level_risiko ?? '-' }}
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailMonitoring{{ $hLog->id }}">
+                                            <span class="bx bx-show"></span> Detail
                                         </button>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            @endforeach
-                            @endforeach
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted fst-italic">Belum ada history monitoring untuk risiko ini.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
+
+    @foreach($historyMonitorings as $monitoring)
+        <div class="modal fade" id="modalDetailMonitoring{{ $monitoring->id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content p-0">
+                    <div class="modal-header border-bottom">
+                        <h5 class="modal-title">
+                            Detail Realisasi: Q{{ $monitoring->quarter }} Tahun {{ $tahun }} (@lang('basic.month.' . $monitoring->month))
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body bg-light p-4">
+
+                        <ul class="nav nav-tabs nav-line-tabs mb-4">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#tab_penyebab_{{ $monitoring->id }}">Perlakuan Penyebab</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#tab_dampak_{{ $monitoring->id }}">Perlakuan Dampak</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#tab_kri_{{ $monitoring->id }}">Realisasi KRI</a>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="tab_penyebab_{{ $monitoring->id }}" role="tabpanel">
+                                @php
+                                    $groupedPenyebab = $monitoring->perlakuanPenyebabMonitorings->groupBy(function($item) {
+                                        return $item->perlakuanPenyebabRisikoUnit->penyebabRisiko->penyebab_risiko ?? 'Lainnya';
+                                    });
+                                @endphp
+                                @forelse($groupedPenyebab as $penyebabName => $items)
+                                    <div class="card mb-3 border-0 shadow-sm">
+                                        <div class="card-body p-4">
+                                            <div class="mb-3 border-bottom pb-2">
+                                                <label class="text-muted fw-bold small text-uppercase">Penyebab Risiko</label>
+                                                <div class="fw-bold text-dark">{{ $penyebabName }}</div>
+                                            </div>
+                                            <table class="table table-bordered align-top small">
+                                                <thead class="bg-light fw-bold text-muted">
+                                                    <tr>
+                                                        <th width="45%">Rencana Perlakuan</th>
+                                                        <th width="55%">Realisasi & Dokumen</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($items as $realisasi)
+                                                        <tr>
+                                                            <td class="bg-white">
+                                                                <strong class="text-primary">{{ $realisasi->perlakuanPenyebabRisikoUnit->rencana_perlakuan_risiko ?? '-' }}</strong>
+                                                                <div class="mt-3 small">
+                                                                    <div class="text-muted">Anggaran: <span class="text-dark fw-bold">Rp {{ number_format($realisasi->perlakuanPenyebabRisikoUnit->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</span></div>
+                                                                    <div class="text-muted">PIC: <span class="text-dark">{{ $realisasi->perlakuanPenyebabRisikoUnit->pic ?? '-' }}</span></div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="bg-white">
+                                                                <div class="mb-2"><strong>Deskripsi:</strong> {{ $realisasi->deskripsi_perlakuan_risiko ?? '-' }}</div>
+                                                                <div class="bg-light p-2 border rounded mb-2">
+                                                                    <div class="row text-center">
+                                                                        <div class="col-4 border-end">Progress:<br><strong>{{ $realisasi->progress_rencana_perlakuan_risiko ?? 0 }}%</strong></div>
+                                                                        <div class="col-4 border-end">Biaya:<br><strong>Rp {{ number_format($realisasi->realisasi_biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</strong></div>
+                                                                        <div class="col-4">Tgl Realisasi:<br><strong>{{ $realisasi->timeline_perlakuan_risiko_start ? \Carbon\Carbon::parse($realisasi->timeline_perlakuan_risiko_start)->format('d/m/Y') : '-' }}</strong></div>
+                                                                    </div>
+                                                                </div>
+                                                                @php $docs = $monitoring->perlakuanPenyebabRisikoDocuments->where('perlakuan_penyebab_risiko_unit_id', $realisasi->perlakuan_penyebab_risiko_unit_id); @endphp
+                                                                @if($docs->isNotEmpty())
+                                                                    <div class="small mt-2"><strong>Dokumen:</strong><br>
+                                                                        @foreach($docs as $doc)
+                                                                            <a href="{{ asset('storage/' . $doc->file_path) }}" target="_blank" class="badge bg-secondary text-primary text-decoration-none mt-1 me-1 p-2"><i class="bx bx-paperclip"></i> {{ $doc->file_name }}</a>
+                                                                        @endforeach
+                                                                    </div>
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="alert alert-light text-center text-muted">Belum ada realisasi perlakuan penyebab.</div>
+                                @endforelse
+                            </div>
+
+                            <div class="tab-pane fade" id="tab_dampak_{{ $monitoring->id }}" role="tabpanel">
+                                @php
+                                    $groupedDampak = $monitoring->perlakuanDampakMonitorings->groupBy(function($item) {
+                                        return $item->perlakuanDampak->dampakRisikoUnit->dampak_risiko ?? 'Lainnya';
+                                    });
+                                @endphp
+                                @forelse($groupedDampak as $dampakName => $items)
+                                    <div class="card mb-3 border-0 shadow-sm">
+                                        <div class="card-body p-4">
+                                            <div class="mb-3 border-bottom pb-2">
+                                                <label class="text-muted fw-bold small text-uppercase">Dampak Risiko</label>
+                                                <div class="fw-bold text-dark">{{ $dampakName }}</div>
+                                            </div>
+                                            <table class="table table-bordered align-top small">
+                                                <thead class="bg-light fw-bold text-muted">
+                                                    <tr>
+                                                        <th width="45%">Rencana Perlakuan</th>
+                                                        <th width="55%">Realisasi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($items as $realisasi)
+                                                        <tr>
+                                                            <td class="bg-white">
+                                                                <strong class="text-warning text-dark">{{ $realisasi->perlakuanDampak->rencana_perlakuan_risiko ?? '-' }}</strong>
+                                                                <div class="mt-3 small">
+                                                                    <div class="text-muted">Anggaran: <span class="text-dark fw-bold">Rp {{ number_format($realisasi->perlakuanDampak->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</span></div>
+                                                                    <div class="text-muted">PIC: <span class="text-dark">{{ $realisasi->perlakuanDampak->pic ?? '-' }}</span></div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="bg-white">
+                                                                <div class="mb-2"><strong>Deskripsi:</strong> {{ $realisasi->deskripsi_perlakuan_risiko ?? '-' }}</div>
+                                                                <div class="bg-light p-2 border rounded mb-2">
+                                                                    <div class="row text-center">
+                                                                        <div class="col-4 border-end">Progress:<br><strong>{{ $realisasi->progress_rencana_perlakuan_risiko ?? 0 }}%</strong></div>
+                                                                        <div class="col-4 border-end">Biaya:<br><strong>Rp {{ number_format($realisasi->realisasi_biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</strong></div>
+                                                                        <div class="col-4">Tgl Realisasi:<br><strong>{{ $realisasi->timeline_perlakuan_risiko_start ? \Carbon\Carbon::parse($realisasi->timeline_perlakuan_risiko_start)->format('d/m/Y') : '-' }}</strong></div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {{-- DOKUMEN DAMPAK (Jika ada relasinya di Model) --}}
+                                                                @if(isset($monitoring->perlakuanDampakRisikoDocuments))
+                                                                    @php $docsDampak = $monitoring->perlakuanDampakRisikoDocuments->where('perlakuan_dampak_risiko_unit_id', $realisasi->perlakuan_dampak_risiko_unit_id); @endphp
+                                                                    @if($docsDampak->isNotEmpty())
+                                                                        <div class="small mt-2"><strong>Dokumen:</strong><br>
+                                                                            @foreach($docsDampak as $doc)
+                                                                                <a href="{{ asset('storage/' . $doc->file_path) }}" target="_blank" class="badge bg-secondary text-primary text-decoration-none mt-1 me-1 p-2"><i class="bx bx-paperclip"></i> {{ $doc->file_name }}</a>
+                                                                            @endforeach
+                                                                        </div>
+                                                                    @endif
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="alert alert-light text-center text-muted">Belum ada realisasi perlakuan dampak.</div>
+                                @endforelse
+                            </div>
+
+                            <div class="tab-pane fade" id="tab_kri_{{ $monitoring->id }}" role="tabpanel">
+                                <div class="card card-body shadow-sm border-0">
+                                    <table class="table table-bordered align-middle">
+                                        <thead class="bg-light text-center small fw-bold">
+                                            <tr>
+                                                <th rowspan="2" class="align-middle">Indikator (KRI)</th>
+                                                <th colspan="3">Target Threshold</th>
+                                                <th rowspan="2" class="align-middle">Nilai Realisasi</th>
+                                                <th rowspan="2" class="align-middle">Status</th>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-success text-white">Aman</th>
+                                                <th class="bg-warning text-dark">Waspada</th>
+                                                <th class="bg-danger text-white">Bahaya</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse($monitoring->kriUnitMonitorings as $realisasiKri)
+                                                <tr>
+                                                    <td>
+                                                        <div class="fw-bold">{{ $realisasiKri->keyRiskIndicator->kri ?? '-' }}</div>
+                                                        <small class="text-muted">Satuan: {{ $realisasiKri->keyRiskIndicator->satuan_kri ?? '-' }}</small>
+                                                    </td>
+                                                    <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_aman ?? '-' }}</td>
+                                                    <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_waspada ?? '-' }}</td>
+                                                    <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_bahaya ?? '-' }}</td>
+                                                    <td class="fw-bold text-center text-primary">{{ $realisasiKri->nilai_kri_terkini ?? '-' }}</td>
+                                                    <td class="text-center">
+                                                        @php
+                                                            $statusMap = [1 => 'Aman', 2 => 'Waspada', 3 => 'Bahaya'];
+                                                            $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
+                                                            $status = $realisasiKri->status_kri_terkini;
+                                                        @endphp
+                                                        <span class="badge bg-{{ $statusColor[$status] ?? 'light text-dark border' }} p-2">
+                                                            {{ $statusMap[$status] ?? '-' }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr><td colspan="6" class="text-center text-muted">Belum ada KRI yang dimonitoring</td></tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endforeach
 
     <div class="col-12 mt-5">
         <div class="row g-2">

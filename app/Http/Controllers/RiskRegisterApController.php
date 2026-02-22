@@ -38,6 +38,7 @@ use App\Models\ApprovalStep;
 use App\Models\DataBatchNotes;
 use App\Models\PerlakuanDampakRisikoUnit;
 use App\Models\UnitRiskMonitoring;
+use App\Models\RiskContext;
 
 class RiskRegisterApController extends Controller
 {
@@ -73,6 +74,12 @@ class RiskRegisterApController extends Controller
         // 3. Setup Data Batch & Logic Unit MR
         $selectedUnit = Unit::find($unitId);
         $is_unit_mr = $selectedUnit->unit_mr == 1;
+
+        // Cek sudah ada Risk Context belum
+        $riskContext = RiskContext::where('unit_id', $selectedUnit->id)->first();
+        if (!$riskContext || $riskContext->status != RiskContext::STATUS_VERIFIED) {
+            return redirect()->route('risk-register-ap.periods')->with('error', 'Silahkan buat Risk Context terlebih dahulu pada Anak Perusahaan ' . $selectedUnit->name . '.');
+        }
 
         // --- LOGIC: Tentukan Min Verification ---
         // Unit MR = 1 (Karena Step 0 Drafter -> Step 1 Owner MR [Final])
@@ -211,18 +218,19 @@ class RiskRegisterApController extends Controller
                             $escalationConfig['parameters']['send_type'] = 'rev';
 
                             if ($pending_risk > 0) {
-                                $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Ada <strong>{$pending_risk}</strong> risiko revisi. Silahkan edit."];
+                                $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$pending_risk}</strong> risiko yang <strong>dikembalikan (revisi)</strong>. Silahkan perbaiki data."];
                                 $escalationConfig['disabled'] = false;
                             } else {
-                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Perbaikan selesai. Klik tombol di kanan atas."];
+                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Seluruh perbaikan telah selesai. Silahkan klik tombol <strong>Kirim Perbaikan</strong> untuk melanjutkan ke Risk Owner Divisi."];
                                 $escalationConfig['disabled'] = false;
                             }
                         } else {
                             if ($draft_risk > 0) {
-                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data siap dikirim."];
+                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan ke Risk Owner Divisi."];
+
                                 $escalationConfig['disabled'] = false;
                             } else {
-                                $summaryInfo = ['type' => 'info', 'icon' => 'bx-info-circle', 'message' => "Belum ada data risiko."];
+                                $summaryInfo = ['type' => 'info', 'icon' => 'bx-info-circle', 'message' => "Belum ada data risiko. Silahkan tambah risiko baru."];
                                 $escalationConfig['disabled'] = true;
                             }
                         }
@@ -254,15 +262,15 @@ class RiskRegisterApController extends Controller
                         $escalationConfig['label'] = 'Kirim Perbaikan';
                         $escalationConfig['parameters']['send_type'] = 'rev';
                         if ($pending_risk > 0) {
-                            $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Perbaiki <strong>{$pending_risk}</strong> risiko revisi."];
+                            $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$pending_risk}</strong> risiko yang <strong>dikembalikan (revisi)</strong>. Silahkan perbaiki data."];
                             $escalationConfig['disabled'] = false;
                         } else {
-                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Perbaikan selesai."];
+                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Seluruh perbaikan telah selesai. Silahkan klik tombol <strong>Kirim Perbaikan</strong>."];
                             $escalationConfig['disabled'] = false;
                         }
                     } elseif ($status == DataBatch::STATUS_PROSES) {
                         if ($draft_risk > 0) {
-                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data siap dikirim."];
+                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan ke Risk Owner Divisi."];
                             $escalationConfig['disabled'] = false;
                         } else {
                             $escalationConfig['disabled'] = true;
@@ -284,10 +292,17 @@ class RiskRegisterApController extends Controller
                         }
 
                         if ($pending_risk > 0) {
-                            $summaryInfo = ['type' => 'warning', 'icon' => 'bxs-error-circle', 'message' => "Verifikasi <strong>{$pending_risk}</strong> risiko tersisa."];
+                            $summaryInfo = ['type' => 'warning', 'icon' => 'bxs-error-circle', 'message' => "Terdapat <strong>{$pending_risk}</strong> risiko belum diverifikasi."];
                             $escalationConfig['disabled'] = true;
+                        } else if ($step_order >= $min_verification) {
+                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Semua terverifikasi. Siap Publish."];
+                            $escalationConfig['disabled'] = false;
                         } else {
-                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Siap dilanjutkan."];
+                            $summaryInfo = [
+                              'type' => 'success',
+                              'icon' => 'bx-check-double',
+                              'message' => "Seluruh risiko telah diverifikasi. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan."
+                            ];
                             $escalationConfig['disabled'] = false;
                         }
                     }
@@ -423,17 +438,15 @@ class RiskRegisterApController extends Controller
             ],
         ];
 
-        // Ambil data periode
+        // Ambil semua data periode (untuk dropdown filter)
         $periodes = Periode::orderBy('tahun', 'desc')->get();
+
+        // Ambil periode aktif jika ada dan set sebagai default pilihan
         $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
         $selectedPeriodeId = $request->query('pid') ?? ($activePeriode?->id);
         $selectedPeriode = $selectedPeriodeId ? Periode::find($selectedPeriodeId) : null;
-
-        // Setup User & Verifikasi (Sesuai Referensi Unit)
         $user = auth()->user();
-        $userUnit = $user->unit;
         $levelId = $user->level_id;
-        // Cek MR (Asumsi logic sama dengan Unit, sesuaikan jika AP beda)
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
 
         // Ambil data step verifikasi (Pastikan method ini ada di controller/trait Anda)
@@ -460,9 +473,8 @@ class RiskRegisterApController extends Controller
             if ($selectedPeriode) {
                 $today = \Carbon\Carbon::today();
 
-                // 1. Cek Validitas Unit
-                $isValid = ((is_null($unit->valid_to)) || $unit->valid_to->isSameDay($today) || $unit->valid_to->isAfter($today))
-                    && ((is_null($unit->valid_from)) || $unit->valid_from->isBefore($today) || $unit->valid_from->isSameDay($today));
+                // 1. Status Kelayakan Unit (Valid/Expired)
+                $isValid = ((is_null($unit->valid_to)) || $unit->valid_to->isAfter($today) || $unit->valid_to->isSameDay($today));
                 $unitStatus = $isValid ? 'valid' : 'expired';
 
                 // 2. Hitung Total Risiko
@@ -470,14 +482,14 @@ class RiskRegisterApController extends Controller
                     ->where('periode_id', $selectedPeriode->id)
                     ->count();
 
-                // 3. Ambil Batch Risiko Terakhir (NEW)
+                // 3. Ambil Batch Risiko Terakhir
                 $lastBatch = DataBatch::where('unit_id', $unit->id)
                     ->where('periode_id', $selectedPeriode->id)
                     ->where('type', 1)
                     ->orderBy('batch', 'desc')
                     ->first();
 
-                // 4. Ambil Monitoring Terakhir (NEW)
+                // 4. Ambil Monitoring Terakhir
                 $latestMon = UnitRiskMonitoring::whereHas('identifikasiRisiko', function($q) use ($unit, $selectedPeriode) {
                         $q->where('unit_id', $unit->id)->where('periode_id', $selectedPeriode->id);
                     })
@@ -500,7 +512,6 @@ class RiskRegisterApController extends Controller
                     'periode' => $selectedPeriode,
                     'unit_status' => $unitStatus,
                     'risk_count' => $riskCount,
-                    // Generate HTML Status (Pastikan method ini ada)
                     'risk_status_html' => $this->generateRiskStatusHtml($tmpData, $u_step, $levelId),
                     'mon_status_html' => $this->generateMonitoringStatusHtml($tmpData, $levelId, $is_mr)
                 ]);
@@ -569,39 +580,67 @@ class RiskRegisterApController extends Controller
 
     public function store(Request $request)
     {
-        // Validasi input
-        $validated = $request->validate([
+        $rules = [
             'periode_id' => 'required|exists:periodes,id',
             'target_capaian_kinerja' => 'required|string',
-            // 'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
-            'wbs' => 'nullable|string',
+            // 'wbs' => 'nullable|string', // Opsional sesuai kebutuhan
+
+            // Validasi Array (Minimal 1 baris)
             'dampak_risiko' => 'required|array|min:1',
             'dampak_risiko.*' => 'required|string',
-            'penyebab_risiko' => 'required|array',
+
+            'penyebab_risiko' => 'required|array|min:1',
             'penyebab_risiko.*' => 'required|string',
-            'key_risk_indicator' => 'nullable|array',
-            'key_risk_indicator.*' => 'nullable|string',
-            'satuan_kri' => 'nullable|array',
-            'satuan_kri.*' => 'nullable|string',
-            'batas_aman' => 'nullable|array',
-            'batas_aman.*' => 'nullable|string',
-            'batas_waspada' => 'nullable|array',
-            'batas_waspada.*' => 'nullable|string',
-            'batas_bahaya' => 'nullable|array',
-            'batas_bahaya.*' => 'nullable|string',
-            // 'jenis_kontrol_eksisting_id' => 'nullable|exists:jenis_kontrol_eksistings,id',
-            //'kontrol_eksisting_id' => 'nullable|array',
-            //'kontrol_eksisting_id.*' => 'nullable|exists:kontrol_eksistings,id',
-            //'kontrol_eksisting' => 'required|string',
-            'kontrol_eksisting' => 'required|array',  // Ubah menjadi array
-            'kontrol_eksisting.*' => 'required|string', // Validasi setiap item
-            // 'penilaian_efektifitas_kontrol' => 'nullable|exists:penilaian_efektivitas_kontrols,id',
-            'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
-            'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
+
+            'kontrol_eksisting' => 'required|array|min:1',
+            'kontrol_eksisting.*' => 'required|string',
+
+            // Validasi KRI (Array)
+            'key_risk_indicator' => 'required|array|min:1',
+            'key_risk_indicator.*' => 'required|string',
+            'satuan_kri.*' => 'required|string',
+            'batas_aman.*' => 'required',
+            'batas_waspada.*' => 'required',
+            'batas_bahaya.*' => 'required',
+
+            'perkiraan_waktu_mulai_terpapar_risiko' => 'required|date_format:d/m/Y',
+            'perkiraan_waktu_selesai_terpapar_risiko' => 'required|date_format:d/m/Y',
             'unit_id' => 'nullable|exists:units,id',
-        ]);
+        ];
+
+        // 2. Custom Error Messages (Bahasa Indonesia)
+        $messages = [
+            'periode_id.required' => 'Periode wajib dipilih.',
+            'target_capaian_kinerja.required' => 'Sasaran Risiko wajib diisi.',
+            'peristiwa_risiko.required' => 'Peristiwa Risiko wajib diisi.',
+            'deskripsi_peristiwa_risiko.required' => 'Deskripsi detail peristiwa risiko wajib diisi.',
+
+            'dampak_risiko.required' => 'Mohon masukkan minimal satu Dampak Risiko.',
+            'dampak_risiko.*.required' => 'Dampak risiko tidak boleh ada yang kosong.',
+
+            'penyebab_risiko.required' => 'Mohon masukkan minimal satu Penyebab Risiko.',
+            'penyebab_risiko.*.required' => 'Penyebab risiko tidak boleh ada yang kosong.',
+
+            'kontrol_eksisting.required' => 'Mohon masukkan minimal satu Kontrol Eksisting.',
+            'kontrol_eksisting.*.required' => 'Kontrol eksisting tidak boleh ada yang kosong.',
+
+            'key_risk_indicator.required' => 'Mohon masukkan minimal satu Key Risk Indicator (KRI).',
+            'key_risk_indicator.*.required' => 'Nama KRI wajib diisi.',
+            'satuan_kri.*.required' => 'Satuan wajib diisi.',
+            'batas_aman.*.required' => 'Batas Aman wajib diisi.',
+            'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
+            'batas_bahaya.*.required' => 'Batas Bahaya wajib diisi.',
+
+            'perkiraan_waktu_mulai_terpapar_risiko.required' => 'Tanggal mulai terpapar risiko wajib diisi.',
+            'perkiraan_waktu_mulai_terpapar_risiko.date_format' => 'Format tanggal mulai salah (harus d/m/Y).',
+            'perkiraan_waktu_selesai_terpapar_risiko.required' => 'Tanggal selesai terpapar risiko wajib diisi.',
+            'perkiraan_waktu_selesai_terpapar_risiko.date_format' => 'Format tanggal selesai salah (harus d/m/Y).',
+        ];
+
+        // Jalankan Validasi
+        $validated = $request->validate($rules, $messages);
 
         $peristiwa_risiko = $request->peristiwa_risiko;
         $unitId = auth()->user()->unit_id;
@@ -638,7 +677,7 @@ class RiskRegisterApController extends Controller
             // Simpan data risiko
             $identifikasiRisiko = new IdentifikasiRisiko();
             $identifikasiRisiko->periode_id = $request->periode_id;
-            $identifikasiRisiko->target_capaian_kinerja = $request->target_capaian_kinerja;
+            $identifikasiRisiko->target_capaian_kinerja = $this->cleanInput($request->target_capaian_kinerja);
 
             // Hilangkan jenis risiko dan kategori risiko
             // $identifikasiRisiko->jenis_risiko_id = $request->jenis_risiko_id;
@@ -649,8 +688,8 @@ class RiskRegisterApController extends Controller
             $identifikasiRisiko->jenis_risiko_id = 0;
             $identifikasiRisiko->kategori_risiko_id = 0;
 
-            $identifikasiRisiko->peristiwa_risiko = $request->peristiwa_risiko;
-            $identifikasiRisiko->deskripsi_peristiwa_risiko = $request->deskripsi_peristiwa_risiko;
+            $identifikasiRisiko->peristiwa_risiko = $this->cleanInput($request->peristiwa_risiko);
+            $identifikasiRisiko->deskripsi_peristiwa_risiko = $this->cleanInput($request->deskripsi_peristiwa_risiko);
             $identifikasiRisiko->wbs = $request->wbs;
             // $identifikasiRisiko->jenis_kontrol_eksisting_id = $request->jenis_kontrol_eksisting_id;
             $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
@@ -686,7 +725,7 @@ class RiskRegisterApController extends Controller
                         $identifikasiRisiko->kontrolEksistings()->create([
                             'risiko_id' => $identifikasiRisiko->id,
                             'peristiwa_risiko_id' => null,
-                            'kontrol_eksisting' => $kontrolEksisting,
+                            'kontrol_eksisting' => $this->cleanInput($kontrolEksisting),
                         ]);
                     }
                 }
@@ -701,7 +740,7 @@ class RiskRegisterApController extends Controller
                 foreach ($request->dampak_risiko as $dampak) {
                     $identifikasiRisiko->dampakRisikos()->create([
                         'risiko_id' => $identifikasiRisiko->id,
-                        'dampak_risiko' => $dampak,
+                        'dampak_risiko' => $this->cleanInput($dampak),
                     ]);
                 }
             }
@@ -711,7 +750,7 @@ class RiskRegisterApController extends Controller
                 foreach ($request->penyebab_risiko as $penyebab) {
                     if (!empty($penyebab)) {
                         $identifikasiRisiko->penyebabRisiko()->create([
-                            'penyebab_risiko' => $penyebab,
+                            'penyebab_risiko' => $this->cleanInput($penyebab),
                             'risiko_id' => $identifikasiRisiko->id,
                         ]);
                     }
@@ -725,7 +764,7 @@ class RiskRegisterApController extends Controller
                         $identifikasiRisiko->kris()->create([
                             'kri_id' => 0, // Karena tidak menggunakan master_kri_id lagi
                             'risiko_id' => $identifikasiRisiko->id,
-                            'kri' => $request->key_risk_indicator[$i],
+                            'kri' => $this->cleanInput($request->key_risk_indicator[$i]),
                             'satuan_kri' => $request->satuan_kri[$i] ?? null,
                             'batas_aman' => $request->batas_aman[$i] ?? null,
                             'batas_waspada' => $request->batas_waspada[$i] ?? null,
@@ -1285,6 +1324,8 @@ class RiskRegisterApController extends Controller
           'kontrolEksistings',
           'penyebabRisiko',
           'kris',
+          'parameterRisikos',
+          'dampakRisikos',
         ])->findOrFail($id);
 
         // Ambil periode yang dipilih
@@ -1326,36 +1367,62 @@ class RiskRegisterApController extends Controller
 
     public function update(Request $request, $id)
     {
-        // Validasi input
-        $validated = $request->validate([
+        $user = auth()->user();
+        $rules = [
             'periode_id' => 'required|exists:periodes,id',
             'target_capaian_kinerja' => 'required|string',
-            // 'jenis_risiko_id' =>'required|exists:jenis_risikos,id',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
-            'wbs' => 'nullable|string',
+            'wbs_id' => 'nullable|exists:w_b_s,id',
+
+            // Array Validation
             'dampak_risiko' => 'required|array|min:1',
             'dampak_risiko.*' => 'required|string',
-            'penyebab_risiko' => 'required|array',
-            'penyebab_risiko.*' => 'required|string',
-            'key_risk_indicator' => 'nullable|array',
-            'key_risk_indicator.*' => 'nullable|string',
-            'satuan_kri' => 'nullable|array',
-            'satuan_kri.*' => 'nullable|string',
-            'batas_aman' => 'nullable|array',
-            'batas_aman.*' => 'nullable|string',
-            'batas_waspada' => 'nullable|array',
-            'batas_waspada.*' => 'nullable|string',
-            'batas_bahaya' => 'nullable|array',
-            'batas_bahaya.*' => 'nullable|string',
-            // 'jenis_kontrol_eksisting_id' => 'nullable|exists:jenis_kontrol_eksistings,id',
-            'kontrol_eksisting' => 'required|array',
-            'kontrol_eksisting.*' => 'required|string',
-            // 'penilaian_efektifitas_kontrol' => 'nullable|exists:penilaian_efektivitas_kontrols,id',
-            'perkiraan_waktu_mulai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
-            'perkiraan_waktu_selesai_terpapar_risiko' => 'nullable|date_format:d/m/Y',
-        ]);
 
+            'penyebab_risiko' => 'required|array|min:1',
+            'penyebab_risiko.*' => 'required|string',
+
+            'kontrol_eksisting' => 'required|array|min:1',
+            'kontrol_eksisting.*' => 'required|string',
+
+            // KRI Validation
+            'key_risk_indicator' => 'required|array|min:1',
+            'key_risk_indicator.*' => 'required|string',
+            'satuan_kri.*' => 'required|string',
+            'batas_aman.*' => 'required',
+            'batas_waspada.*' => 'required',
+            'batas_bahaya.*' => 'required',
+
+            'perkiraan_waktu_mulai_terpapar_risiko' => 'required|date_format:d/m/Y',
+            'perkiraan_waktu_selesai_terpapar_risiko' => 'required|date_format:d/m/Y',
+        ];
+
+        $messages = [
+            'periode_id.required' => 'Periode wajib dipilih.',
+            'target_capaian_kinerja.required' => 'Sasaran Risiko wajib diisi.',
+            'peristiwa_risiko.required' => 'Peristiwa Risiko wajib diisi.',
+            'deskripsi_peristiwa_risiko.required' => 'Deskripsi detail wajib diisi.',
+
+            'dampak_risiko.required' => 'Minimal satu Dampak Risiko wajib diisi.',
+            'dampak_risiko.*.required' => 'Dampak risiko tidak boleh kosong.',
+
+            'penyebab_risiko.required' => 'Minimal satu Penyebab Risiko wajib diisi.',
+            'penyebab_risiko.*.required' => 'Penyebab risiko tidak boleh kosong.',
+
+            'kontrol_eksisting.required' => 'Minimal satu Kontrol Eksisting wajib diisi.',
+            'kontrol_eksisting.*.required' => 'Kontrol eksisting tidak boleh kosong.',
+
+            'key_risk_indicator.*.required' => 'Nama KRI wajib diisi.',
+            'satuan_kri.*.required' => 'Satuan wajib diisi.',
+            'batas_aman.*.required' => 'Batas Aman wajib diisi.',
+            'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
+            'batas_bahaya.*.required' => 'Batas Bahaya wajib diisi.',
+
+            'perkiraan_waktu_mulai_terpapar_risiko.required' => 'Tanggal mulai wajib diisi.',
+            'perkiraan_waktu_selesai_terpapar_risiko.required' => 'Tanggal selesai wajib diisi.',
+        ];
+
+        $validated = $request->validate($rules, $messages);
         try {
             // Konversi format tanggal
             $waktuMulai = null;
@@ -1374,7 +1441,7 @@ class RiskRegisterApController extends Controller
 
             // Update data risiko
             $identifikasiRisiko->periode_id = $request->periode_id;
-            $identifikasiRisiko->target_capaian_kinerja = $request->target_capaian_kinerja;
+            $identifikasiRisiko->target_capaian_kinerja = $this->cleanInput($request->target_capaian_kinerja);
 
             // Hilangkan jenis risiko dan kategori risiko
             // $identifikasiRisiko->jenis_risiko_id = $request->jenis_risiko_id;
@@ -1383,8 +1450,8 @@ class RiskRegisterApController extends Controller
             //     $identifikasiRisiko->kategori_risiko_id = $jenisRisiko->kategori_risiko_id;
             // }
 
-            $identifikasiRisiko->peristiwa_risiko = $request->peristiwa_risiko;
-            $identifikasiRisiko->deskripsi_peristiwa_risiko = $request->deskripsi_peristiwa_risiko;
+            $identifikasiRisiko->peristiwa_risiko = $this->cleanInput($request->peristiwa_risiko);
+            $identifikasiRisiko->deskripsi_peristiwa_risiko = $this->cleanInput($request->deskripsi_peristiwa_risiko);
             $identifikasiRisiko->wbs = $request->wbs;
             // $identifikasiRisiko->jenis_kontrol_eksisting_id = $request->jenis_kontrol_eksisting_id;
             $identifikasiRisiko->kontrol_eksisting = $request->kontrol_eksisting[0] ?? '';
@@ -1404,7 +1471,7 @@ class RiskRegisterApController extends Controller
                         $identifikasiRisiko->kontrolEksistings()->create([
                             'risiko_id' => $identifikasiRisiko->id,
                             'peristiwa_risiko_id' => null,
-                            'kontrol_eksisting' => $kontrolEksisting,
+                            'kontrol_eksisting' => $this->cleanInput($kontrolEksisting),
                         ]);
                     }
                 }
@@ -1416,11 +1483,11 @@ class RiskRegisterApController extends Controller
 
                 if ($exist) {
                     $exist->update([
-                        'dampak_risiko' => $dampakRisiko,
+                        'dampak_risiko' => $this->cleanInput($dampakRisiko),
                     ]);
                 } else {
                     $exist = $identifikasiRisiko->dampakRisikos()->create([
-                        'dampak_risiko' => $dampakRisiko
+                        'dampak_risiko' => $this->cleanInput($dampakRisiko),
                     ]);
                 }
                 $dampakRisikoIds[] = $exist->id;
@@ -1432,11 +1499,11 @@ class RiskRegisterApController extends Controller
                 $exist = $identifikasiRisiko->penyebabRisiko()->where('id', $penyebabRisikoId)->first();
                 if ($exist) {
                     $exist->update([
-                        'penyebab_risiko' => $penyebabRisiko,
+                        'penyebab_risiko' => $this->cleanInput($penyebabRisiko),
                     ]);
                 } else {
                     $exist = $identifikasiRisiko->penyebabRisiko()->create([
-                        'penyebab_risiko' => $penyebabRisiko,
+                        'penyebab_risiko' => $this->cleanInput($penyebabRisiko),
                     ]);
                 }
                 $penyebabRisikoIds[] = $exist->id;
@@ -2148,13 +2215,26 @@ class RiskRegisterApController extends Controller
         $user    = request()->user()->load('unit');
         $risikos = IdentifikasiRisiko::where('id', $id)
             ->with([
-              // 'taksonomiRisiko',
+              'taksonomiRisiko',
               'dampakRisikos',
               'penyebabRisikos',
-              // 'parameterRisikos',
+              'parameterRisikos',
               'riskAnalysis',
+              'projectRisks.project',
+              'projectRisks.projectRiskAnalisa',
+              'projectRisks.penyebabRisikoProjects',
+              'monitoringRisikos.skalaProbabilitas',
+              'monitoringRisikos.skalaDampakObj',
+              'monitoringRisikos.kriUnitMonitorings.keyRiskIndicator',
+              'monitoringRisikos.perlakuanPenyebabMonitorings.perlakuanPenyebabRisikoUnit.penyebabRisiko',
+              'monitoringRisikos.perlakuanDampakMonitorings.perlakuanDampak.dampakRisikoUnit',
+              'monitoringRisikos.perlakuanPenyebabRisikoDocuments',
             ])
             ->get();
+
+        $risiko = $risikos->first();
+
+        $historyMonitorings = $risiko->monitoringRisikos->sortByDesc('id');
 
         $currentRiskMaps = $risikos->pluck('currentRiskMaps');
         $formattedCurrentRiskMaps = [];
@@ -2215,7 +2295,7 @@ class RiskRegisterApController extends Controller
         $risk_limit = 0;
         $risiko = $risikos->first();
 
-        if ($risiko->riskAnalysis->kategori_dampak == 'Kuantitatif') {
+        if ($risiko->riskAnalysis && $risiko->riskAnalysis->kategori_dampak == 'Kuantitatif') {
             $unit = $risiko->unit;
             $periode = $risiko->periode;
 
@@ -2226,8 +2306,7 @@ class RiskRegisterApController extends Controller
             }
         }
 
-        // dd($risk_limit, $risk_tolerance);
-        return view('risk-register-ap.view', compact('user', 'risikos', 'riskMaps', 'formattedCurrentRiskMaps', 'risk_limit', 'risk_tolerance'));
+        return view('risk-register-ap.view', compact('user', 'risikos', 'risiko', 'riskMaps', 'formattedCurrentRiskMaps', 'risk_limit', 'risk_tolerance', 'historyMonitorings'));
     }
 
     private function getUserVerificationStep($level_id, $is_mr = false, $unit_mr = false)
@@ -2241,7 +2320,7 @@ class RiskRegisterApController extends Controller
                 $user_verification = "Risk Owner Manajemen Risiko";
             } else {
                 $u_step = 1; // step verifikasi user
-                $user_verification = "Risk Owner Divisi";
+                $user_verification = "Risk Owner Anak Perusahaan";
             }
         }
         else if($level_id == 1 && $is_mr) { // RO MR
@@ -2254,7 +2333,7 @@ class RiskRegisterApController extends Controller
         }
         else{
             $u_step = 0;
-            $user_verification = "Risk Officer Divisi";
+            $user_verification = "Risk Officer Anak Perusahaan";
         }
 
         return [
@@ -2356,8 +2435,18 @@ class RiskRegisterApController extends Controller
 
     private function checkIsMyTurnRisk($batch, $u_step, $levelId) {
         if (!$batch || $batch->finish) return false;
-        if ($levelId == 1 && !$u_step) return in_array($batch->status, [DataBatch::STATUS_PROSES, DataBatch::STATUS_REVISI]);
-        return ($batch->step_verification == $u_step);
+
+        $userUnitId = auth()->user()->unit_id;
+        $batchUnitId = $batch->unit_id;
+
+        // Level 1: Inputter (Risk Officer Divisi)
+        if ($levelId == 1 && $userUnitId == $batchUnitId) {
+            return in_array($batch->status, [DataBatch::STATUS_PROSES, DataBatch::STATUS_REVISI, 0, 1, 5]);
+        } else {
+            // Jika statusnya REVISI (5), maka BUKAN giliran Verifikator
+            if ($batch->status == DataBatch::STATUS_REVISI || $batch->status == 5) return false;
+            return ($batch->step_verification == $u_step);
+        }
     }
 
     // Helper untuk cek giliran verifikasi Monitoring
@@ -2378,13 +2467,14 @@ class RiskRegisterApController extends Controller
         $lastBatch = $item['last_batch'];
         $unitId = $item['unit']->id;
         $periodeId = $item['periode']->id;
+        $userUnitId = auth()->user()->unit_id; // Ambil Unit ID user yang sedang login
 
+        // 1. Cek Data Kosong
         if ($item['risk_count'] == 0) {
             return '<span class="badge bg-light text-dark border border-dark">Tidak Aktif</span>';
         }
 
         // 2. Logika Cek Published (Batch Finish ATAU Semua Item berstatus 6)
-        // Ambil status semua risiko untuk unit & periode ini
         $allRisksStatus = IdentifikasiRisiko::where('unit_id', $unitId)
             ->where('periode_id', $periodeId)
             ->pluck('status')
@@ -2395,123 +2485,304 @@ class RiskRegisterApController extends Controller
 
         // Jika batch sudah finish ATAU (risiko ada dan semuanya sudah published)
         if (($lastBatch && $lastBatch->finish) || ($totalRisk > 0 && $totalRisk === $publishedCount)) {
-            return '<span class="badge bg-success">Published</span>';
-        }
+            $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Selesai</div>';
 
-        $batchStep = $lastBatch ? $lastBatch->step_verification : 0;
-        $batchStatus = $lastBatch ? $lastBatch->status : 1;
-
-        $stepLabels = [
-            0 => 'Risk Officer Divisi (Draft)',
-            1 => 'Risk Owner Divisi',
-            2 => 'Risk Officer MR',
-            3 => 'Risk Owner MR',
-        ];
-
-        $currentPos = $stepLabels[$batchStep] ?? 'Verifikator';
-        if ($batchStatus == DataBatch::STATUS_REVISI) $currentPos = "Revisi: Kembali ke " . ($stepLabels[0]);
-
-        $pulse = '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
-                  <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
-
-        $redirectUrl = route('risk-register-ap.index', ['pid' => $item['periode']->id, 'unit_id' => $item['unit']->id]);
-
-        // LOGIKA TAMPILAN JIKA GILIRAN USER INI
-        if ($item['is_my_turn_risk']) {
-            // A. Jika User adalah Officer Divisi (Drafter/Level 1) dan batch di step 0
-            if ($levelId == 1 && $batchStep == 0) {
-                return '<a href="'.$redirectUrl.'" class="text-decoration-none">
-                            <span class="badge bg-info text-white position-relative" data-bs-toggle="tooltip"
-                                  title="Status: Draft/Revisi. Mohon lengkapi atau perbaiki data risiko.">
-                                Draft / Perlu Revisi '.$pulse.'
-                            </span>
-                        </a>';
-            }
-            // B. Jika User adalah Verifikator (Owner Divisi / MR)
-            else {
-                return '<a href="'.$redirectUrl.'" class="text-decoration-none">
-                            <span class="badge bg-warning text-dark position-relative" data-bs-toggle="tooltip"
-                                  title="Klik untuk verifikasi: '.$currentPos.'">
-                                <i class="bx bx-error-circle bx-flashing me-1"></i> Perlu Verifikasi '.$pulse.'
-                            </span>
-                        </a>';
-            }
-        }
-
-        // KONDISI 2: BUKAN GILIRAN SAYA (Tapi saya punya peran dalam alur ini)
-        // Cek apakah levelId user termasuk dalam alur (Level 1 atau 2)
-        if (in_array($levelId, [1, 2])) {
-            return '<div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="Posisi saat ini: '.$currentPos.'">
-                        <span class="badge bg-info bg-opacity-10 text-info border border-info">
-                            <i class="bx bx-time-five me-1"></i> Proses Validasi
-                        </span>
+            return '<div class="d-flex flex-column align-items-start">
+                        <span class="badge bg-success" data-bs-toggle="tooltip" title="Status: Published / Selesai">Published</span>
+                        '.$positionHtml.'
                     </div>';
         }
 
-        // TAMPILAN MENUNGGU (Waiting)
-        return '<span class="badge bg-info bg-opacity-10 text-info border border-info position-relative" data-bs-toggle="tooltip" title="Posisi saat ini: '.$currentPos.'">
-                <i class="bx bx-info-circle me-1"></i> Sedang Diproses
-            </span>';
+        // 3. Logic Proses
+        $batchStep = $lastBatch ? $lastBatch->step_verification : 0;
+        $batchStatus = $lastBatch ? $lastBatch->status : 1;
+
+        // Label Posisi
+        $stepLabels = [
+            0 => 'Risk Officer Anak Perusahaan (Draft)',
+            1 => 'Risk Owner Anak Perusahaan',
+            2 => 'Risk Officer MR',
+            3 => 'Risk Owner MR',
+        ];
+        $currentLabel = $stepLabels[$batchStep] ?? 'Verifikator';
+
+        // Jika status revisi (dikembalikan)
+        if ($batchStatus == 5) {
+            $currentLabel = 'Dikembalikan ke Risk Officer Anak Perusahaan';
+        }
+
+        // Subtitle Posisi
+        $positionHtml = '
+        <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">
+            Posisi: ' . $currentLabel . '
+        </div>';
+
+        // Cek Giliran
+        $isMyTurn = false;
+        // Jika user adalah level 1 dan di unit yang sama (Drafter)
+        if ($levelId == 1 && $userUnitId == $unitId) {
+            if (in_array($batchStatus, [1, 5, 0])) $isMyTurn = true;
+        } else {
+            // Verifikator
+            if ($batchStatus != 5 && $u_step == $batchStep) {
+                $isMyTurn = true;
+            }
+        }
+
+        $pulseDot = '
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
+
+        $redirectUrl = route('risk-register-ap.index', ['pid' => $periodeId, 'unit_id' => $unitId]);
+
+        // --- RENDER HTML ---
+
+        // JIKA GILIRAN USER YANG BERSANGKUTAN
+        if ($isMyTurn) {
+            // --- KONDISI KHUSUS INPUTTER (Drafter Level 1) ---
+            if ($levelId == 1 && $userUnitId == $unitId) {
+                // KASUS REVISI (Status 5) -> MERAH HANYA UNTUK USER DI UNIT YANG SAMA
+                if ($batchStatus == 5) {
+                    return '
+                    <div class="d-flex flex-column align-items-start">
+                        <a href="'.$redirectUrl.'" class="text-decoration-none">
+                            <span class="badge bg-danger cursor-pointer border border-danger text-white position-relative"
+                                  data-bs-toggle="tooltip"
+                                  title="Status: Dikembalikan. Mohon perbaiki data risiko sesuai catatan.">
+                                <i class="bx bx-undo me-1"></i> Perlu Revisi
+                                '.$pulseDot.'
+                            </span>
+                        </a>
+                        '.$positionHtml.'
+                    </div>';
+                }
+                // KASUS DRAFT / BUKAN DI UNIT YANG SAMA -> BIRU (INFO)
+                else {
+                    return '
+                    <div class="d-flex flex-column align-items-start">
+                        <a href="'.$redirectUrl.'" class="text-decoration-none">
+                            <span class="badge bg-info cursor-pointer border border-info text-white position-relative"
+                                  data-bs-toggle="tooltip"
+                                  title="Status: Draft. Silakan lengkapi dan ajukan.">
+                                Draft / Input Risiko
+                                '.$pulseDot.'
+                            </span>
+                        </a>
+                        '.$positionHtml.'
+                    </div>';
+                }
+            } else {
+                // --- KONDISI VERIFIKATOR ---
+                return '
+                <div class="d-flex flex-column align-items-start">
+                    <a href="'.$redirectUrl.'" class="text-decoration-none">
+                        <span class="badge bg-warning text-dark border border-warning shadow-sm cursor-pointer position-relative"
+                              data-bs-toggle="tooltip"
+                              title="Klik untuk verifikasi: '.$currentLabel.'">
+                            <i class="bx bx-error-circle bx-flashing me-1"></i> Perlu Verifikasi
+                            '.$pulseDot.'
+                        </span>
+                    </a>
+                    '.$positionHtml.'
+                </div>';
+            }
+        }
+
+        // JIKA MENUNGGU (BUKAN GILIRANNYA / VIEW ONLY)
+
+        // Jika posisinya sedang di-Revisi, tampilkan info sedang di Officer Divisi
+        if ($batchStatus == 5 || $batchStatus == 1 || $batchStatus == 0) {
+            return '
+            <div class="d-flex flex-column align-items-start">
+                <div class="d-inline-block position-relative"
+                    data-bs-toggle="tooltip"
+                    title="Posisi saat ini: '.$currentLabel.'">
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                        <i class="bx bx-info-circle me-1"></i> Draft / Input Risiko
+                    </span>
+                </div>
+                '.$positionHtml.'
+            </div>';
+        }
+
+        // Jika posisinya sedang di Verifikator
+        return '
+        <div class="d-flex flex-column align-items-start">
+            <div class="d-inline-block position-relative"
+                data-bs-toggle="tooltip"
+                title="Posisi saat ini: '.$currentLabel.'">
+                <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                    <i class="bx bx-time-five me-1"></i> Proses Validasi
+                </span>
+            </div>
+            '.$positionHtml.'
+        </div>';
     }
 
     private function generateMonitoringStatusHtml($item, $levelId, $is_mr)
     {
-        $latestMon = $item['latest_mon'];
+        // 1. Cari Acuan Periode dari Monitoring Terakhir (Global Last ID di Unit & Periode ini)
+        $referenceMon = $item['latest_mon'];
+        $unitId = $item['unit']->id;
+        $periodeId = $item['periode']->id;
 
-        if (!$latestMon) {
+        if (!$referenceMon) {
             return '<span class="badge bg-light text-dark border border-dark">Belum Dimonitor</span>';
         }
 
-        if ($latestMon->status == 100 || $latestMon->is_approved) {
-            return '<span class="badge bg-success">Selesai</span>';
-        }
+        // 2. Ambil Raw History pada Quarter & Bulan Tersebut (Hanya untuk Risiko Aktif)
+        $rawMonitorings = \App\Models\UnitRiskMonitoring::whereHas('identifikasiRisiko', function($q) use ($unitId, $periodeId) {
+                $q->where('unit_id', $unitId)
+                  ->where('periode_id', $periodeId)
+                  ->where('is_closed', false); // Hanya risiko yang masih Open
+            })
+            ->where('quarter', $referenceMon->quarter)
+            ->where('month', $referenceMon->month)
+            ->get();
 
-        $monLabels = [
-            1 => 'Risk Officer Divisi (Drafting)',
-            2 => 'Risk Owner Divisi',
-            3 => 'Risk Officer MR',
-            4 => 'Risk Owner MR'
-        ];
-        $currentPos = $monLabels[$latestMon->status] ?? 'Verifikasi';
+        // 3. FILTER: Ambil Hanya Data TERBARU per Risiko
+        $currentMonitorings = $rawMonitorings
+            ->groupBy('identifikasi_risiko_id')
+            ->map(function ($items) {
+                return $items->sortByDesc('id')->first();
+            });
 
-        $pulse = '<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
-                  <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
+        // --- LOGIKA PENENTUAN STATUS KESELURUHAN ---
+        $countTotal = $currentMonitorings->count();
 
-        $redirectUrl = route('risk-register-ap.monitorings.index', ['period' => $item['periode']->id, 'unit_id' => $item['unit']->id]);
+        // STATUS SELESAI HANYA JIKA SEMUA DATA TERBARU STATUSNYA = 100
+        $countApproved = $currentMonitorings->where('status', 100)->count();
 
-        if ($item['is_my_turn_mon']) {
-            // A. Jika User adalah Officer Divisi (Drafter Monitoring)
-            if ($levelId == 1 && !$is_mr) {
-                return '<a href="'.$redirectUrl.'" class="text-decoration-none">
-                            <span class="badge bg-info text-white position-relative" data-bs-toggle="tooltip"
-                                  title="Status: Draft Monitoring. Mohon lengkapi atau perbaiki data.">
-                                Draft / Perlu Revisi '.$pulse.'
-                            </span>
-                        </a>';
-            }
-            // B. Jika User adalah Verifikator Monitoring
-            else {
-                return '<a href="'.$redirectUrl.'" class="text-decoration-none">
-                            <span class="badge bg-warning text-dark position-relative" data-bs-toggle="tooltip"
-                                  title="Klik untuk verifikasi monitoring: '.$currentPos.'">
-                                <i class="bx bx-radar bx-flashing me-1"></i> Verifikasi Mon. '.$pulse.'
-                            </span>
-                        </a>';
-            }
-        }
+        // Cek Flag Status Masing-masing Tahap
+        $hasDraft = $currentMonitorings->where('status', 1)->isNotEmpty();
+        // Revisi jika statusnya 1 DAN flag is_revision bernilai true
+        $hasRevision = $currentMonitorings->where('status', 1)->where('is_revision', true)->isNotEmpty();
 
-        // KONDISI 2: BUKAN GILIRAN SAYA (Tapi masuk alur verifikasi)
-        if (in_array($levelId, [1, 2])) {
-            return '<div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="Posisi saat ini: '.$currentPos.'">
-                        <span class="badge bg-info bg-opacity-10 text-info border border-info">
-                            <i class="bx bx-radar me-1"></i> Proses Monitoring
-                        </span>
+        $hasVerifROD = $currentMonitorings->where('status', 2)->isNotEmpty();
+        $hasVerifROMR = $currentMonitorings->where('status', 3)->isNotEmpty();
+        $hasVerifROWMR = $currentMonitorings->where('status', 4)->isNotEmpty();
+
+        $redirectUrl = route('risk-register-ap.monitorings.index', ['period' => $periodeId, 'unit_id' => $unitId]);
+
+        $pulseDot = '
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
+
+        $isMyMonTurn = false;
+        $statusLabel = '';
+        $badgeColor = 'bg-info';
+        $labelPosisi = 'Verifikasi';
+        $tooltipText = '';
+
+        // --- SKENARIO 1: SELESAI SEMUA ---
+        if ($countTotal > 0 && $countTotal === $countApproved) {
+            // Mapping nama bulan agar lebih mudah dibaca
+            $namaBulan = [
+                1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+            ];
+            $bulanStr = $namaBulan[(int)$referenceMon->month] ?? $referenceMon->month;
+
+            $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Selesai</div>';
+            return '<div class="d-flex flex-column align-items-start">
+                        <span class="badge bg-success" data-bs-toggle="tooltip" title="Status: Monitoring Bulan '.$bulanStr.' Disetujui">Selesai ('.$bulanStr.')</span>
+                        '.$positionHtml.'
                     </div>';
         }
 
-        // KONDISI 3: USER LUAR / HANYA VIEW
-        return '<span class="badge bg-info bg-opacity-10 text-info border border-info position-relative" data-bs-toggle="tooltip" title="Posisi saat ini: '.$currentPos.'">
-                    <i class="bx bx-radar me-1"></i> Sedang Diproses
-                </span>';
+        // --- SKENARIO 2: INPUTTER (Risk Officer Divisi / Officer MR saat input divisi MR) ---
+        $is_unit_mr = $item['unit']->unit_mr == 1;
+
+        if ($levelId == 1 && (!$is_mr || ($is_mr && $is_unit_mr)) && $hasDraft) {
+            $isMyMonTurn = true;
+            if ($hasRevision) {
+                $statusLabel = 'Perlu Revisi';
+                $badgeColor = 'bg-danger border border-danger text-white';
+                $labelPosisi = 'Dikembalikan ke Risk Officer Anak Perusahaan';
+                $tooltipText = 'Status: Dikembalikan. Mohon perbaiki data monitoring sesuai catatan.';
+            } else {
+                $statusLabel = 'Draft / Input Monitoring';
+                $badgeColor = 'bg-info border border-info text-white';
+                $labelPosisi = 'Risk Officer Anak Perusahaan';
+                $tooltipText = 'Status: Draft Monitoring. Mohon lengkapi data.';
+            }
+        }
+        // --- SKENARIO 3: VERIFIKATOR ---
+        elseif ($levelId == 2 && !$is_mr && $hasVerifROD) {
+            $isMyMonTurn = true;
+            $statusLabel = 'Perlu Verifikasi';
+            $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
+            $labelPosisi = 'Risk Owner Anak Perusahaan';
+        }
+        elseif ($levelId == 1 && $is_mr && $hasVerifROMR) {
+            $isMyMonTurn = true;
+            $statusLabel = 'Perlu Verifikasi';
+            $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
+            $labelPosisi = 'Risk Officer MR';
+        }
+        elseif ($levelId == 2 && $is_mr && $hasVerifROWMR) {
+            $isMyMonTurn = true;
+            $statusLabel = 'Perlu Verifikasi';
+            $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
+            $labelPosisi = 'Risk Owner MR';
+        }
+
+        // Set Tooltip default untuk Verifikator jika belum di-set di Inputter
+        if ($isMyMonTurn && empty($tooltipText)) {
+            $tooltipText = 'Klik untuk verifikasi monitoring: ' . $labelPosisi;
+        }
+
+        // --- RENDER HTML ---
+        // 1. Tentukan Label Posisi (Jika View Only / Menunggu)
+        if (!$isMyMonTurn) {
+            if ($hasDraft) $labelPosisi = ($hasRevision) ? 'Dikembalikan ke Risk Officer Anak Perusahaan' : 'Risk Officer Anak Perusahaan';
+            elseif ($hasVerifROD) $labelPosisi = 'Risk Owner Anak Perusahaan';
+            elseif ($hasVerifROMR) $labelPosisi = 'Risk Officer MR';
+            elseif ($hasVerifROWMR) $labelPosisi = 'Risk Owner MR';
+
+            $tooltipText = 'Posisi saat ini: ' . $labelPosisi;
+        }
+
+        $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: ' . $labelPosisi . '</div>';
+
+        // 2. Jika Giliran User & Punya Akses (Tombol Aktif)
+        if ($isMyMonTurn) {
+            return '
+                <div class="d-flex flex-column align-items-start">
+                    <a href="'.$redirectUrl.'" class="text-decoration-none">
+                        <span class="badge '.$badgeColor.' cursor-pointer position-relative"
+                              data-bs-toggle="tooltip"
+                              title="'.$tooltipText.'">
+                            <i class="bx bx-radar bx-flashing me-1"></i> '.$statusLabel.'
+                            '.$pulseDot.'
+                        </span>
+                    </a>
+                    '.$positionHtml.'
+                </div>';
+        }
+        // 3. Jika Menunggu / View Only (Tombol Pasif)
+        else {
+            return '
+                <div class="d-flex flex-column align-items-start">
+                    <div class="d-inline-block position-relative"
+                        data-bs-toggle="tooltip"
+                        title="'.$tooltipText.'">
+                        <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                            <i class="bx bx-radar me-1"></i> Proses Monitoring
+                        </span>
+                    </div>
+                    '.$positionHtml.'
+                </div>';
+        }
+    }
+
+    private function cleanInput($value)
+    {
+        if (empty($value)) return $value;
+
+        // Regex ini berarti: GANTI semua karakter YANG BUKAN (^) a-z, A-Z, 0-9, spasi, dan simbol2 standar DENGAN string kosong.
+        // Simbol yang dibolehkan: . , - _ ( ) / %
+        return preg_replace('/[^a-zA-Z0-9\s\.\,\-\_\(\)\/\%]/', '', $value);
     }
 }
