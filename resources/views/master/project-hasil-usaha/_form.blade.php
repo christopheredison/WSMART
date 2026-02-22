@@ -21,19 +21,19 @@
 </div>
 
 <div class="row">
-    <div class="col-md-4 mb-3">
+    <div class="col-md-6 mb-3">
         <label for="kontrak_review" class="form-label">Kontrak Review Total</label>
         <input type="text" name="kontrak_review_total" class="form-control inputmask-general">
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-6 mb-3">
         <label for="kontrak_review" class="form-label">Kontrak Review</label>
         <input type="text" name="kontrak_review" class="form-control inputmask-general">
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-6 mb-3">
         <label for="penjualan_ra" class="form-label">Penjualan Rencana (RA)</label>
         <input type="text" name="penjualan_ra" class="form-control inputmask-general">
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-6 mb-3">
         <label for="penjualan_ri" class="form-label">Penjualan Realisasi (RI)</label>
         <input type="text" name="penjualan_ri" class="form-control inputmask-general">
     </div>

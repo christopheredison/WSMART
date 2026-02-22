@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class ProjectPeriodeList extends Model
 {
@@ -65,7 +66,11 @@ class ProjectPeriodeList extends Model
     public function recalculateAllRisks()
     {
         // Gunakan NK project yang terbaru
-        $risk_limit = ($this->project->nk ?? 0) * 0.03;
+        $nk = (float) ($this->project->nk ?? 0);
+        $risk_limit = $nk * 0.03;
+
+        Log::info("ProjectPeriodeList ID: {$this->id}, Project ID: {$this->project_id}");
+        Log::info("Nilai Kontrak (NK): {$nk} | Risk Limit (3%): {$risk_limit}");
 
         // 1. Hitung ulang Analisa (Inherent & Residual)
         $this->recalculateAnalisa($risk_limit);
@@ -75,6 +80,8 @@ class ProjectPeriodeList extends Model
 
         // 3. Refresh akumulasi nilai periode
         $this->refreshNilai();
+
+        Log::info("=== END RECALCULATE ALL RISKS ===");
     }
 
     public function refreshNilai()
@@ -157,11 +164,14 @@ class ProjectPeriodeList extends Model
 
     public function hitungSkalaDampak($nilai_dampak, $risk_limit)
     {
+        $limit = (float) $risk_limit;
+        $dampak = (float) $nilai_dampak;
+
         if ($risk_limit <= 0) {
             return 5; // Jika risk limit 0 atau negatif, default ke High (5)
         }
 
-        $persentase = ($nilai_dampak / $risk_limit) * 100;
+        $persentase = ($dampak / $limit) * 100;
 
         if ($persentase <= 20) return 1; // Low
         if ($persentase > 20 && $persentase <= 40) return 2; // Low to Moderate
@@ -176,7 +186,7 @@ class ProjectPeriodeList extends Model
             $risk_limit = ($this->project->nk ?? 0) * 0.03;
         }
 
-        $projectRisks = ProjectRisk::where('periode_id', $this->periode_id)
+        $projectRisks = ProjectRisk::where('periode_id', 0)
             ->where('project_id', $this->project_id)
             ->where('id', '!=', request()->route('risk'))
             ->whereHas('projectRiskAnalisa', function ($query) {
@@ -193,6 +203,7 @@ class ProjectPeriodeList extends Model
 
                 $skala_dampak_baru = $this->hitungSkalaDampak($nilai_dampak, $risk_limit);
                 $skala_dampak_residual_baru = $this->hitungSkalaDampak($nilai_dampak_residual, $risk_limit);
+                Log::info("Memproses Risk ID: {$projectRisk->id} | nilai_dampak: {$nilai_dampak} | nilai_dampak_residual: {$nilai_dampak_residual} | skala_dampak_baru: {$skala_dampak_baru} | skala_dampak_residual_baru: {$skala_dampak_residual_baru}");
 
                 $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($analisa->nilai_probabilitas);
 
@@ -231,7 +242,11 @@ class ProjectPeriodeList extends Model
 
     public function recalculateMonitorings($risk_limit)
     {
-        $projectRisks = ProjectRisk::where('periode_id', $this->periode_id)
+        Log::info("--- START RECALCULATE MONITORINGS ---");
+
+        $risk_limit = (float) $risk_limit;
+
+        $projectRisks = ProjectRisk::where('periode_id', 0)
             ->where('project_id', $this->project_id)
             ->with(['projectRiskAnalisa', 'projectRiskMonitorings'])
             ->get();
@@ -243,29 +258,73 @@ class ProjectPeriodeList extends Model
         foreach ($projectRisks as $projectRisk) {
             $analisa = $projectRisk->projectRiskAnalisa;
 
+            if (!$analisa) {
+                Log::info("Risk ID: {$projectRisk->id} dilewati karena tidak memiliki Analisa.");
+                continue;
+            }
+
+            $skala_risiko_inherent = (float) $analisa->skala_risiko;
+            $skala_risiko_rencana = (float) $analisa->skala_risiko_residual;
+            $selisih_inherent_rencana = $skala_risiko_inherent - $skala_risiko_rencana;
+
+            Log::info("Memproses Risk ID: {$projectRisk->id} | Kategori: {$analisa->kategori_dampak}");
+
+            $lastMonitoringEfektivitas = 0.0;
+
             foreach ($projectRisk->projectRiskMonitorings as $monitoring) {
-                if ($analisa && $analisa->kategori_dampak === 'Kuantitatif') {
-                    $skala_dampak_baru = $this->hitungSkalaDampak($monitoring->nilai_dampak, $risk_limit);
+                Log::info("  > Monitoring ID: {$monitoring->id} (Bulan: {$monitoring->month}, Tahun: {$monitoring->tahun})");
 
-                    $tingkatSkalaProbabilitas = \App\Models\SkalaProbabilitas::find($monitoring->skala_probabilitas_id);
-                    $tingkat = $tingkatSkalaProbabilitas ? $tingkatSkalaProbabilitas->tingkat : 1;
+                $nilaiDampak = (float) $monitoring->nilai_dampak;
+                $nilaiProbabilitas = (float) $monitoring->nilai_probabilitas;
 
-                    $riskMap = $riskMaps[$skala_dampak_baru . '-' . $tingkat] ?? null;
+                // --- 1. Tentukan Skala Dampak Baru ---
+                if ($analisa->kategori_dampak === 'Kuantitatif') {
+                    $skala_dampak_baru = $this->hitungSkalaDampak($nilaiDampak, $risk_limit);
+                } else {
+                    $skala_dampak_baru = (int) $monitoring->skala_dampak;
+                }
+                $monitoring->skala_dampak = $skala_dampak_baru;
 
-                    $monitoring->skala_dampak = $skala_dampak_baru;
-                    $monitoring->skala_risiko = $riskMap->nilai_risiko ?? 1;
-                    $monitoring->level_risiko = $riskMap->level_risiko ?? 'Low';
+                // --- 2. Tentukan Skala Probabilitas Baru ---
+                $skalaProbObj = \App\Models\SkalaProbabilitas::getSkalaByValue($nilaiProbabilitas);
+                $tingkat = $skalaProbObj ? $skalaProbObj->tingkat : 1;
+                $monitoring->skala_probabilitas_id = $tingkat;
 
-                    // Eksposur Kuantitatif
-                    $monitoring->eksposure_risiko = floatval($monitoring->nilai_dampak) * floatval($monitoring->nilai_probabilitas) / 100;
+                // --- 3. Cari Skala Risiko & Level Risiko di RiskMap ---
+                $keyMap = $skala_dampak_baru . '-' . $tingkat;
+                $riskMap = $riskMaps[$keyMap] ?? null;
 
-                } else if ($analisa && $analisa->kategori_dampak === 'Kualitatif') {
-                    // Eksposur Kualitatif bergantung pada risk limit
-                    $monitoring->eksposure_risiko = floatval($monitoring->skala_dampak) * (1/100) * floatval($monitoring->nilai_probabilitas) * $risk_limit;
+                $monitoring->skala_risiko = $riskMap->nilai_risiko ?? 1;
+                $monitoring->level_risiko = $riskMap->level_risiko ?? 'Low';
+
+                // --- 4. Hitung Ulang Eksposur Risiko ---
+                if ($analisa->kategori_dampak === 'Kuantitatif') {
+                    $monitoring->eksposure_risiko = $nilaiDampak * ($nilaiProbabilitas / 100);
+                } else {
+                    $monitoring->eksposure_risiko = $skala_dampak_baru * (1/100) * $nilaiProbabilitas * $risk_limit;
                 }
 
+                // --- 5. HITUNG EFEKTIVITAS ---
+                $efektivitas = 0.0;
+                $skala_risiko_realisasi = (float) $monitoring->skala_risiko;
+
+                if ($selisih_inherent_rencana != 0) {
+                    $efektivitas = (($skala_risiko_rencana - $skala_risiko_realisasi) / $selisih_inherent_rencana) * 100;
+                }
+
+                $monitoring->efektivitas_perlakuan_risiko = round($efektivitas, 2);
                 $monitoring->save();
+
+                $lastMonitoringEfektivitas = round($efektivitas, 2);
+            }
+
+            if ($projectRisk->projectRiskMonitorings->isNotEmpty()) {
+                $projectRisk->update([
+                    'efektivitas_perlakuan_risiko' => $lastMonitoringEfektivitas
+                ]);
             }
         }
+
+        Log::info("--- END RECALCULATE MONITORINGS ---");
     }
 }

@@ -51,6 +51,7 @@ class Project extends Model
         'profit_center',
         'tanggal_mulai',
         'nilai_ok_porsi',
+        'biaya_perlakuan_risiko_rkp',
     ];
 
     protected $casts = [
@@ -73,6 +74,8 @@ class Project extends Model
         'rapk_100_persen' => 'float',
         'batas_nilai' => 'integer',
         'tanggal_mulai' => 'date:Y-m-d',
+        'nilai_ok_porsi' => 'float',
+        'biaya_perlakuan_risiko_rkp' => 'float',
     ];
 
     // for autofill project

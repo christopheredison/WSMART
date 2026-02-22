@@ -209,13 +209,28 @@ class ProjectController extends BasicCRUDController
 
     public function update(Request $request, $resource)
     {
+        if ($request->has('biaya_perlakuan_risiko_rkp') && $request->biaya_perlakuan_risiko_rkp !== null) {
+            $cleanRkp = str_replace('.', '', $request->biaya_perlakuan_risiko_rkp);
+            $cleanRkp = str_replace(',', '.', $cleanRkp);
+            $request->merge(['biaya_perlakuan_risiko_rkp' => $cleanRkp]);
+        }
+
         $request->validate([
-            'batas_nilai' => 'numeric|min:0',
+            // 'batas_nilai' => 'nullable|numeric|min:0',
+            'biaya_perlakuan_risiko_rkp' => 'nullable|numeric|min:0',
         ]);
 
-        $toUpdate['batas_nilai'] = $request->batas_nilai;
+        $toUpdate = [];
 
-        $data = $this->model::with('projectPeriodeList')->findOrfail($resource);
+        if ($request->has('batas_nilai')) {
+            $toUpdate['batas_nilai'] = $request->batas_nilai;
+        }
+
+        if ($request->has('biaya_perlakuan_risiko_rkp')) {
+            $toUpdate['biaya_perlakuan_risiko_rkp'] = $request->biaya_perlakuan_risiko_rkp;
+        }
+
+        $data = $this->model::with('projectPeriodeList')->findOrFail($resource);
 
         $data->update($toUpdate);
 

@@ -878,3 +878,5 @@ Route::prefix('my-tasks')->middleware(['auth'])->group(function () {
     Route::get('/', [TaskController::class, 'index'])->name('tasks.index');
     Route::get('/count', [TaskController::class, 'getCount'])->name('tasks.count');
 });
+
+Route::get('/logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index'])->middleware(['auth']);

@@ -18,48 +18,86 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
-                    <div class="row d-flex align-items-center">
-                        <label class="col-md-3">Kode Project</label>
-                        <div class="col-md-9">
-                            {{ Form::text('project_code', $projectPeriode->project->meta['profit_center'] ?? '-', ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Nama Project</label>
-                        <div class="col-md-9">
-                            {{ Form::text('project_name', $projectPeriode->project->project_name, ['class' => 'form-control', 'readonly']) }}
-                        </div>
-                    </div>
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <td width="45%" class="fw-bold text-muted">Kode Project</td>
+                            <td>: {{ $meta['profit_center'] ?? '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold text-muted">Nama Project</td>
+                            <td>: {{ $project->project_name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td class="fw-bold text-muted">Divisi Operasi</td>
+                            <td>: {{ $project?->divisi?->name ?? '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold text-muted">Nilai OK Total</td>
+                            <td>: Rp {{ number_format($project->nk ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold text-muted">Nilai OK Porsi</td>
+                            <td>: Rp {{ number_format($project->nilai_ok_porsi ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold text-muted">Laba Setelah Pajak Review</td>
+                            <td>: Rp {{ number_format($lspValue, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold text-muted">Biaya Perlakuan Risiko Sesuai RKP</td>
+                            <td>: Rp {{ number_format($project->biaya_perlakuan_risiko_rkp ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                    </table>
                 </div>
+
                 <div class="col-md-6">
-                    {{-- <div class="row d-flex align-items-center mt-3 mt-md-0">
-                        <label class="col-md-3">Nilai OK</label>
-                        <div class="col-md-9">
-                            {{ $projectPeriode->project->nk }}
-                        </div>
-                    </div> --}}
-                    <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Risk Limit</label>
-                        <div class="col-md-9">
-                            {{ Form::text('risk_limit', ($projectPeriode->project->nk ?? 0) * 0.03, ['class' => 'form-control inputmask-general', 'readonly']) }}
-                        </div>
-                    </div>
-                    {{-- <div class="row d-flex align-items-center mt-3">
-                        <label class="col-md-3">Batas Nilai</label>
-                        <div class="col-md-9">
-                            {{ Form::text('batas_nilai', $projectPeriode->project->batas_nilai, ['class' => 'form-control inputmask-general', 'readonly']) }}
-                        </div>
-                    </div> --}}
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <td class="fw-bold text-muted">Rencana Biaya Perlakuan Risiko</td>
+                            <td>: Rp {{ number_format($rencanaBiayaTotal, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold text-muted">Realisasi Biaya Perlakuan Risiko</td>
+                            <td>: Rp {{ number_format($realisasiBiayaTotal, 0, ',', '.') }}</td>
+                        </tr>
+                        @php
+                            $jenisKontrak = empty($meta['jenis_kontrak_name'])
+                                ? '-'
+                                : (is_array($meta['jenis_kontrak_name']) ? implode(', ', $meta['jenis_kontrak_name']) : $meta['jenis_kontrak_name']);
+
+                            $caraPembayaran = empty($meta['pembayaran_name'])
+                                ? '-'
+                                : (is_array($meta['pembayaran_name']) ? implode(', ', $meta['pembayaran_name']) : $meta['pembayaran_name']);
+                        @endphp
+
+                        <tr>
+                            <td class="fw-bold text-muted">Tipe Kontrak</td>
+                            <td>: {{ $jenisKontrak }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold text-muted">Cara Pembayaran</td>
+                            <td>: {{ $caraPembayaran }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold text-muted">Batasan Biaya Perlakuan Risiko</td>
+                            <td>: Rp 0</td>
+                        </tr>
+                        <td width="45%" class="fw-bold text-muted">Nilai Batasan Risiko</td>
+                            <td>: Rp {{ number_format($riskLimit, 2, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                          <td colspan="2">
+                              @if ($canEditProject)
+                                <div class="d-flex justify-content-end my-2">
+                                    <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#modalEdit">Edit Data Proyek</button>
+                                </div>
+                              @endif
+                          </td>
+                        </tr>
+                    </table>
                 </div>
             </div>
-            @php
-              $userProjects = $user->projects->pluck('id')->toArray();
-            @endphp
-            @if ($userProjects && in_array($projectPeriode->project->id, $userProjects))
-              <div class="mb-2 mt-4">
-                  <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modalEdit">Edit</button>
-              </div>
-            @endif
         </div>
     </div>
 

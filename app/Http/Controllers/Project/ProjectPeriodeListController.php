@@ -581,7 +581,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             'script' => <<<JS
                 Swal.fire({
                     title: "Hitung ulang data?",
-                    text: "Proses ini akan menghitung ulang Analisa dan Peta Risiko Terkini",
+                    text: "Proses ini akan menghitung ulang Analisa, Peta Risiko Terkini, dan Efektivitas secara keseluruhan.",
                     icon: "warning",
                     showCancelButton: true,
                     confirmButtonColor: "#3085d6",
@@ -589,16 +589,45 @@ class ProjectPeriodeListController extends BasicCRUDController
                     cancelButtonText: "Batal",
                     reverseButtons: true,
                     showCloseButton: true,
-                    showConfirmButton: true,
-                    showCancelButton: true,
+                    allowOutsideClick: () => !Swal.isLoading(),
                 }).then((result) => {
                     if (result.isConfirmed) {
+                        Swal.fire({
+                            title: 'Sedang Memproses...',
+                            html: 'Mohon tunggu, jangan tutup halaman ini.',
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            showConfirmButton: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
                         $.ajax({
                             url: "$recalculateRoute".replace(":id", $(this).data('id')),
                             type: "GET",
                             success: function(response) {
-                                Swal.fire("Berhasil", "Data berhasil dihitung ulang", "success");
-                                $('.ajax-datatable').DataTable().ajax.reload();
+                                Swal.fire({
+                                    icon: "success",
+                                    title: "Berhasil!",
+                                    text: response.message || "Data berhasil dihitung ulang.",
+                                    confirmButtonText: "OK"
+                                }).then(() => {
+                                    $('.ajax-datatable').DataTable().ajax.reload(null, false);
+                                });
+                            },
+                            error: function(xhr, status, error) {
+                                let errorMsg = "Terjadi kesalahan pada server saat menghitung ulang data.";
+                                if (xhr.responseJSON && xhr.responseJSON.message) {
+                                    errorMsg = xhr.responseJSON.message;
+                                }
+
+                                Swal.fire({
+                                    icon: "error",
+                                    title: "Gagal!",
+                                    text: errorMsg,
+                                    confirmButtonText: "Tutup"
+                                });
                             }
                         });
                     }
@@ -1354,6 +1383,35 @@ class ProjectPeriodeListController extends BasicCRUDController
             }
         }
 
+        $project = $projectPeriode->project;
+        $meta = $project->meta ?? [];
+        $riskLimit = ($project->nk ?? 0) * 0.03; // 3% dari Nilai Kontrak (NK)
+
+        // Cari LSP (Laba Setelah Pajak)
+        $hasilUsaha = \App\Models\ProjectHasilUsaha::where('profit_center', $meta['profit_center'] ?? null)
+                        ->orderBy('period', 'desc')
+                        ->first();
+        $lspValue = $hasilUsaha ? $hasilUsaha->lsp_review : 0;
+
+        // Hitung Rencana dan Realisasi Biaya
+        $rencanaBiayaTotal = 0;
+        $realisasiBiayaTotal = 0;
+
+        foreach ($projectPeriode->projectRisks as $risk) {
+            foreach ($risk->penyebabRisikoProjects as $penyebab) {
+                foreach ($penyebab->perlakuanPenyebabRisiko as $perlakuan) {
+                    $rencanaBiayaTotal += $perlakuan->biaya_perlakuan_risiko ?? 0;
+                    $lastMon = $perlakuan->perlakuanPenyebabMonitorings()->orderBy('id', 'desc')->first();
+                    $realisasiBiayaTotal += $lastMon->realisasi_biaya_perlakuan_risiko ?? 0;
+                }
+            }
+            foreach ($risk->perlakuanDampakRisikos as $perlakuanDampak) {
+                $rencanaBiayaTotal += $perlakuanDampak->biaya_perlakuan_risiko ?? 0;
+                $lastMon = $perlakuanDampak->perlakuanDampakMonitorings()->orderBy('id', 'desc')->first();
+                $realisasiBiayaTotal += $lastMon->realisasi_biaya_perlakuan_risiko ?? 0;
+            }
+        }
+
         $editFields = [
             [
                 'name' => 'project_code',
@@ -1362,12 +1420,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'parameters' => [
                     'project_code',
                     $projectPeriode->project->project_code,
-                    [
-                        'class' => 'form-control',
-                        'placeholder' => 'Masukkan Kode Project',
-                        'readonly' => true,
-                        'required' => true,
-                    ]
+                    ['class' => 'form-control', 'readonly' => true, 'required' => true]
                 ],
             ],
             [
@@ -1377,11 +1430,19 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'parameters' => [
                     'project_name',
                     $projectPeriode->project->project_name,
+                    ['class' => 'form-control', 'readonly' => true, 'required' => true]
+                ],
+            ],
+            [
+                'name' => 'biaya_perlakuan_risiko_rkp',
+                'type' => 'text',
+                'label' => 'Biaya Perlakuan Risiko Sesuai RKP',
+                'parameters' => [
+                    'biaya_perlakuan_risiko_rkp',
+                    number_format((float)($project->biaya_perlakuan_risiko_rkp ?? 0), 2, ',', ''),
                     [
-                        'class' => 'form-control',
-                        'placeholder' => 'Masukkan Nama Project',
-                        'readonly' => true,
-                        'required' => true,
+                        'class' => 'form-control inputmask-general',
+                        'placeholder' => 'Masukkan Nilai RKP',
                     ]
                 ],
             ],
@@ -1391,34 +1452,14 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'label' => 'Risk Limit',
                 'parameters' => [
                     'risk_limit',
-                    ($projectPeriode->project->nk ?? 0) * 0.03,
+                    number_format((float)$riskLimit, 2, ',', ''),
                     [
                         'class' => 'form-control inputmask-general',
-                        'placeholder' => 'Masukkan Risk Limit',
-                        'required' => true,
-                        'step' => '0.01',
-                        'autocomplete' => 'off',
                         'readonly' => true,
                         'disabled' => true,
                     ]
                 ],
             ],
-            // [
-            //     'name' => 'batas_nilai',
-            //     'type' => 'text',
-            //     'label' => 'Batas Nilai',
-            //     'parameters' => [
-            //         'batas_nilai',
-            //         $projectPeriode->project->batas_nilai,
-            //         [
-            //             'class' => 'form-control inputmask-general',
-            //             'placeholder' => 'Masukkan Batas Nilai',
-            //             'required' => true,
-            //             'step' => '0.01',
-            //             'autocomplete' => 'off',
-            //         ]
-            //     ],
-            // ],
         ];
 
         $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
@@ -1428,7 +1469,9 @@ class ProjectPeriodeListController extends BasicCRUDController
             });
 
         $user = Auth()->user();
-        return view('project-periode.show', compact('projectPeriode', 'tahunMonitorings', 'formattedCurrentRiskMaps', 'riskRealisasiData', 'editFields', 'riskMaps', 'user'));
+        $canEditProject = $this->userHasAccessToProject($user, $projectPeriode);
+
+        return view('project-periode.show', compact('projectPeriode', 'tahunMonitorings', 'formattedCurrentRiskMaps', 'riskRealisasiData', 'editFields', 'riskMaps', 'user', 'project', 'meta', 'riskLimit', 'lspValue', 'rencanaBiayaTotal', 'realisasiBiayaTotal', 'canEditProject'));
     }
 
     public function recalculate($resource)
