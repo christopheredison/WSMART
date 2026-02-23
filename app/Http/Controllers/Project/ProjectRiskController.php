@@ -122,7 +122,7 @@ class ProjectRiskController extends BasicCRUDController
         'eksposur_risiko' => [
             'label' => 'Eksposur Risiko Inheren',
             'data' => 'projectRiskAnalisa?.eksposur_risiko',
-            'sortable' => true,
+            'sortable' => false,
             'searchable' => false,
             'render' => '(data, type, row) => {
                 const val = row.project_risk_analisa?.eksposur_risiko;
@@ -184,7 +184,7 @@ class ProjectRiskController extends BasicCRUDController
         'eksposur_risiko_residual' => [
             'label' => 'Eksposur Risiko Residual',
             'data' => 'projectRiskAnalisa?.eksposur_risiko_residual',
-            'sortable' => true,
+            'sortable' => false,
             'searchable' => false,
             'render' => '(data, type, row) => {
                 const val = row.project_risk_analisa?.eksposur_risiko_residual;
@@ -350,6 +350,7 @@ class ProjectRiskController extends BasicCRUDController
                     'projectRiskAnalisa.skalaDampakObj',
                     'projectRiskAnalisa.skalaDampakResidualObj',
                 ])
+                ->orderBy('project_risks.is_closed', 'asc')
                 ->orderBy('project_risk_analisas.skala_risiko', 'desc')
                 ->orderBy('project_risk_analisas.eksposur_risiko', 'desc');
         };

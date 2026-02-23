@@ -107,6 +107,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
               }])
               ->orderBy('project_risks.is_closed', 'asc')
               ->orderBy('pra.skala_risiko', 'desc')
+              ->orderBy('pra.eksposur_risiko', 'desc')
               ->select('project_risks.*');
         };
 
@@ -163,7 +164,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'skala_dampak' => [
                 'label' => 'Skala Dampak Inheren',
                 'data' => 'projectRiskAnalisa.skala_dampak',
-                'sortable' => true,
+                'sortable' => false,
                 'searchable' => false,
                 'render' => '(data, type, row) => {
                     const analisa = row.project_risk_analisa;
@@ -178,6 +179,17 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'render' => '(data, type, row) => {
                     const prob = row.project_risk_analisa?.skala_probabilitas;
                     return prob ? `(${prob.tingkat}) ${prob.skala || ""}` : "-";
+                }',
+            ],
+            'eksposur_risiko_inheren' => [
+                'label' => 'Eksposur Risiko Inheren',
+                'data' => 'projectRiskAnalisa.eksposur_risiko',
+                'sortable' => false,
+                'searchable' => false,
+                'class' => 'white-space-nowrap text-end',
+                'render' => '(data, type, row) => {
+                    const val = row.project_risk_analisa?.eksposur_risiko;
+                    return (val !== null && val !== undefined) ? "Rp " + Intl.NumberFormat("id-ID").format(val) : "-";
                 }',
             ],
             'skala_risiko' => [
@@ -198,28 +210,17 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     }
                 }'
             ],
-            // 'eksposur_risiko_inheren' => [
-            //     'label' => 'Eksposur Risiko Inheren',
-            //     'data' => 'projectRiskAnalisa.eksposur_risiko',
-            //     'sortable' => true,
-            //     'searchable' => false,
-            //     'class' => 'white-space-nowrap text-end',
-            //     'render' => '(data, type, row) => {
-            //         const val = row.project_risk_analisa?.eksposur_risiko;
-            //         return (val !== null && val !== undefined) ? "Rp " + Intl.NumberFormat("id-ID").format(val) : "-";
-            //     }',
-            // ],
             'nilai_dampak_residual' => [
                 'label' => 'Nilai Dampak Residual',
-                'data' => 'projectRiskAnalisa.nilai_dampak_residual',
-                'sortable' => true,
+                'data' => null,
+                'sortable' => false,
                 'searchable' => false,
                 'render' => '(data, type, row) => "Rp" + Intl.NumberFormat("id-ID").format(row.project_risk_analisa?.nilai_dampak_residual) || "0"',
             ],
             'skala_dampak_residual' => [
                 'label' => 'Skala Dampak Residual',
                 'data' => 'projectRiskAnalisa.skala_dampak_residual',
-                'sortable' => true,
+                'sortable' => false,
                 'searchable' => false,
                 'render' => '(data, type, row) => {
                     const analisa = row.project_risk_analisa;
@@ -234,6 +235,17 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'render' => '(data, type, row) => {
                     const prob = row.project_risk_analisa?.skala_probabilitas_residual;
                     return prob ? `(${prob.tingkat}) ${prob.skala || ""}` : "-";
+                }',
+            ],
+            'eksposur_risiko_residual_rencana' => [
+                'label' => 'Eksposur Risiko Residual Rencana',
+                'data' => 'projectRiskAnalisa.eksposur_risiko_residual',
+                'sortable' => false,
+                'searchable' => false,
+                'class' => 'white-space-nowrap text-end',
+                'render' => '(data, type, row) => {
+                    const val = row.project_risk_analisa?.eksposur_risiko_residual;
+                    return (val !== null && val !== undefined) ? "Rp " + Intl.NumberFormat("id-ID").format(val) : "-";
                 }',
             ],
             'skala_risiko_residual' => [
@@ -253,17 +265,6 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                         $(td).addClass(colorClass).addClass("text-white");
                     }
                 }'
-            ],
-            'eksposur_risiko_residual_rencana' => [
-                'label' => 'Eksposur Risiko Residual Rencana',
-                'data' => 'projectRiskAnalisa.eksposur_risiko_residual',
-                'sortable' => true,
-                'searchable' => false,
-                'class' => 'white-space-nowrap text-end',
-                'render' => '(data, type, row) => {
-                    const val = row.project_risk_analisa?.eksposur_risiko_residual;
-                    return (val !== null && val !== undefined) ? "Rp " + Intl.NumberFormat("id-ID").format(val) : "-";
-                }',
             ],
             'nilai_dampak_monitoring' => [
                 'label' => 'Nilai Dampak Realisasi',
@@ -292,6 +293,17 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     return prob ? `(${prob.tingkat}) ${prob.skala || ""}` : "-";
                 }',
             ],
+            'eksposur_risiko_realisasi' => [
+                'label' => 'Eksposur Risiko Residual Realisasi',
+                'data' => null,
+                'sortable' => false,
+                'searchable' => false,
+                'class' => 'white-space-nowrap text-end',
+                'render' => '(data, type, row) => {
+                    const val = row.project_risk_monitoring?.eksposure_risiko;
+                    return (val !== null && val !== undefined) ? "Rp " + Intl.NumberFormat("id-ID").format(val) : "-";
+                }',
+            ],
             'skala_risiko_monitoring' => [
                 'label' => 'Level Risiko Realisasi',
                 'data' => 'id',
@@ -310,17 +322,6 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     }
                 }'
             ],
-            // 'eksposur_risiko_realisasi' => [
-            //     'label' => 'Eksposur Risiko Residual Realisasi',
-            //     'data' => 'projectRiskMonitoring.eksposure_risiko',
-            //     'sortable' => true,
-            //     'searchable' => false,
-            //     'class' => 'white-space-nowrap text-end',
-            //     'render' => '(data, type, row) => {
-            //         const val = row.project_risk_monitoring?.eksposure_risiko;
-            //         return (val !== null && val !== undefined) ? "Rp " + Intl.NumberFormat("id-ID").format(val) : "-";
-            //     }',
-            // ],
             'is_closed' => [
                 'label' => 'Status Risiko',
                 'data' => 'projectRiskAnalisa.risiko.is_closed',
