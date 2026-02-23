@@ -626,8 +626,9 @@ $(document).ready(function() {
         $scaleResidual.find('option').each(function() {
             const tingkatOption = parseInt($(this).data('tingkat')) || 0;
             if (tingkatOption > 0) {
+                // [UPDATE] disabled tingkat skala probabilitas residual validasi
                 // Disable jika tingkat residual > tingkat inherent
-                $(this).prop('disabled', tingkatOption > tingkatInherent);
+                // $(this).prop('disabled', tingkatOption > tingkatInherent);
             }
         });
 

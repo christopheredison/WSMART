@@ -5,7 +5,7 @@
             <div class="svg-icon svg-icon-secondary">
                 @include('partials.icon-tool')
             </div>
-            <h3 class="mb-0">Detail Risiko Project: {{ $projectRisk->peristiwaRisiko?->title ?? 'N/A' }}</h3>
+            <h3 class="mb-0">Data Risiko: {{ $projectRisk->peristiwa_risiko_id == 0 ? $projectRisk->rencana_kegiatan : ($projectRisk->peristiwaRisiko?->title ?? '-') }}</h3>
         </div>
     </div>
 

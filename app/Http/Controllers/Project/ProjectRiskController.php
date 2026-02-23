@@ -87,52 +87,124 @@ class ProjectRiskController extends BasicCRUDController
             'render' => '(data, type, row) => data || "-"',
             'class' => 'mw-20r',
         ],
+        // --- INHERENT ---
         'nilai_dampak' => [
-            'label' => 'Nilai Dampak',
+            'label' => 'Nilai Dampak Inheren',
             'data' => 'projectRiskAnalisa.nilai_dampak',
             'sortable' => false,
             'searchable' => false,
-            'render' => '(data, type, row) => row.project_risk_analisa?.nilai_dampak || "-"',
-            'class' => 'white-space-nowrap'
+            'render' => '(data, type, row) => {
+                const val = row.project_risk_analisa?.nilai_dampak;
+                return val ? "Rp " + parseInt(val).toLocaleString("id-ID") : "-";
+            }',
+            'class' => 'white-space-nowrap text-end'
         ],
         'skala_dampak' => [
-            'label' => 'Skala Dampak',
+            'label' => 'Skala Dampak Inheren',
             'data' => 'projectRiskAnalisa.skala_dampak',
             'sortable' => false,
             'searchable' => false,
-            'render' => '(data, type, row) => row.project_risk_analisa?.skala_dampak || "-"',
+            'render' => '(data, type, row) => {
+                const obj = row.project_risk_analisa?.skala_dampak_obj || row.project_risk_analisa?.skalaDampakObj;
+                return obj ? `(${obj.tingkat}) ${obj.deskripsi}` : "-";
+            }',
         ],
         'skala_probabilitas' => [
-            'label' => 'Skala Probabilitas',
+            'label' => 'Skala Probabilitas Inheren',
             'data' => 'projectRiskAnalisa.skalaProbabilitas.tingkat',
             'sortable' => false,
             'searchable' => false,
-            'render' => '(data, type, row) => row.project_risk_analisa?.skala_probabilitas?.skala || "-"',
+            'render' => '(data, type, row) => {
+                const obj = row.project_risk_analisa?.skala_probabilitas || row.project_risk_analisa?.skalaProbabilitas;
+                return obj ? `(${obj.tingkat}) ${obj.skala}` : "-";
+            }',
         ],
         'eksposur_risiko' => [
-            'label' => 'Eksposur Risiko',
-            'data' => 'projectRiskAnalisa.eksposur_risiko',
+            'label' => 'Eksposur Risiko Inheren',
+            'data' => 'projectRiskAnalisa?.eksposur_risiko',
             'sortable' => true,
             'searchable' => false,
-            'render' => '(data, type, row) => row.project_risk_analisa?.eksposur_risiko ? new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(row.project_risk_analisa.eksposur_risiko) : "-"',
-            'class' => 'white-space-nowrap'
-        ],
-        'nilai_risiko' => [
-            'label' => 'Skala Risiko',
-            'data' => 'projectRiskAnalisa.skala_risiko',
-            'sortable' => true,
-            'searchable' => false,
-            'render' => '(data, type, row) => row.project_risk_analisa?.skala_risiko || "-"',
+            'render' => '(data, type, row) => {
+                const val = row.project_risk_analisa?.eksposur_risiko;
+                return val ? "Rp " + parseInt(val).toLocaleString("id-ID") : "-";
+            }',
+            'class' => 'white-space-nowrap text-end'
         ],
         'level_risiko' => [
-            'label' => 'Level Risiko',
+            'label' => 'Level Risiko Inheren',
             'data' => 'level_risiko',
             'sortable' => false,
             'searchable' => false,
-            'class' => 'text-center align-middle',
-            'render' => '(data, type, row) => data || "-"',
+            'class' => 'text-center align-middle white-space-nowrap',
+            'render' => '(data, type, row) => {
+                const level = row.project_risk_analisa?.level_risiko || row.level_risiko;
+                const skala = row.project_risk_analisa?.skala_risiko || "-";
+                return level ? `${level} - ${skala}` : "-";
+            }',
             'createdCell' => 'function (td, cellData, rowData, row, col) {
-                const level = rowData.level_risiko;
+                const level = rowData.project_risk_analisa?.level_risiko || rowData.level_risiko;
+                if (level) {
+                    const colorClass = "bg-" + level.toLowerCase().replace(/to\s+/g, "").replace(/\s+/g, "-");
+                    $(td).addClass(colorClass).addClass("text-white");
+                }
+            }'
+        ],
+        // --- RESIDUAL ---
+        'nilai_dampak_residual' => [
+            'label' => 'Nilai Dampak Residual',
+            'data' => 'projectRiskAnalisa?.nilai_dampak_residual',
+            'sortable' => false,
+            'searchable' => false,
+            'render' => '(data, type, row) => {
+                const val = row.project_risk_analisa?.nilai_dampak_residual;
+                return val ? "Rp " + parseInt(val).toLocaleString("id-ID") : "-";
+            }',
+            'class' => 'white-space-nowrap text-end'
+        ],
+        'skala_dampak_residual' => [
+            'label' => 'Skala Dampak Residual',
+            'data' => 'projectRiskAnalisa?.skala_dampak_residual',
+            'sortable' => false,
+            'searchable' => false,
+            'render' => '(data, type, row) => {
+                const obj = row.project_risk_analisa?.skala_dampak_residual_obj || row.project_risk_analisa?.skalaDampakResidualObj;
+                return obj ? `(${obj.tingkat}) ${obj.deskripsi}` : "-";
+            }',
+        ],
+        'skala_probabilitas_residual' => [
+            'label' => 'Skala Probabilitas Residual',
+            'data' => 'projectRiskAnalisa?.skalaProbabilitasResidual?.tingkat',
+            'sortable' => false,
+            'searchable' => false,
+            'render' => '(data, type, row) => {
+                const obj = row.project_risk_analisa?.skala_probabilitas_residual || row.project_risk_analisa?.skalaProbabilitasResidual;
+                return obj ? `(${obj.tingkat}) ${obj.skala}` : "-";
+            }',
+        ],
+        'eksposur_risiko_residual' => [
+            'label' => 'Eksposur Risiko Residual',
+            'data' => 'projectRiskAnalisa?.eksposur_risiko_residual',
+            'sortable' => true,
+            'searchable' => false,
+            'render' => '(data, type, row) => {
+                const val = row.project_risk_analisa?.eksposur_risiko_residual;
+                return val ? "Rp " + parseInt(val).toLocaleString("id-ID") : "-";
+            }',
+            'class' => 'white-space-nowrap text-end'
+        ],
+        'level_risiko_residual' => [
+            'label' => 'Level Risiko Residual',
+            'data' => null,
+            'sortable' => false,
+            'searchable' => false,
+            'class' => 'text-center align-middle white-space-nowrap',
+            'render' => '(data, type, row) => {
+                const level = row.project_risk_analisa?.level_risiko_residual;
+                const skala = row.project_risk_analisa?.skala_risiko_residual || "-";
+                return level ? `${level} - ${skala}` : "-";
+            }',
+            'createdCell' => 'function (td, cellData, rowData, row, col) {
+                const level = rowData.project_risk_analisa?.level_risiko_residual;
                 if (level) {
                     const colorClass = "bg-" + level.toLowerCase().replace(/to\s+/g, "").replace(/\s+/g, "-");
                     $(td).addClass(colorClass).addClass("text-white");
@@ -271,7 +343,13 @@ class ProjectRiskController extends BasicCRUDController
         $this->callbackQuery = function($query) use ($projectPeriodeListId) {
             $query->leftJoin('project_risk_analisas', 'project_risk_analisas.risiko_id', '=', 'project_risks.id')
                 ->where('project_risks.project_periode_list_id', $projectPeriodeListId)
-                ->with('peristiwaRisiko', 'projectRiskAnalisa.skalaProbabilitas')
+                ->with([
+                    'peristiwaRisiko',
+                    'projectRiskAnalisa.skalaProbabilitas',
+                    'projectRiskAnalisa.skalaProbabilitasResidual',
+                    'projectRiskAnalisa.skalaDampakObj',
+                    'projectRiskAnalisa.skalaDampakResidualObj',
+                ])
                 ->orderBy('project_risk_analisas.skala_risiko', 'desc')
                 ->orderBy('project_risk_analisas.eksposur_risiko', 'desc');
         };
@@ -2028,12 +2106,13 @@ class ProjectRiskController extends BasicCRUDController
         $skalaInherent = SkalaParameter::find($request->skala_parameter_id);
         $skalaResidual = SkalaParameter::find($request->skala_parameter_residual_id);
 
-        // Validasi tingkat residual tidak boleh > inheren
-        if ($skalaResidual->tingkat > $skalaInherent->tingkat) {
-            return response()->json([
-                'message' => 'Tingkat skala probabilitas residual tidak boleh lebih tinggi dari inheren.',
-            ], 422);
-        }
+        // [UPDATE] disabled tingkat skala probabilitas residual validasi
+        // // Validasi tingkat residual tidak boleh > inheren
+        // if ($skalaResidual->tingkat > $skalaInherent->tingkat) {
+        //     return response()->json([
+        //         'message' => 'Tingkat skala probabilitas residual tidak boleh lebih tinggi dari inheren.',
+        //     ], 422);
+        // }
 
         // $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($request->nilai_probabilitas);
         // $tingkatSkalaProbabilitasResidual = SkalaProbabilitas::getSkalaByValue($request->nilai_probabilitas_residual);

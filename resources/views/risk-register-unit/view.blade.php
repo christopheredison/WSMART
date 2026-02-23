@@ -5,7 +5,7 @@
             <div class="svg-icon svg-icon-secondary">
                 @include('partials.icon-tool')
             </div>
-            <h3 class="mb-0">Data {{ $risikos->first()->peristiwa_risiko }}</h3>
+            <h3 class="mb-0">Data Risiko: {{ $risikos->first()->peristiwa_risiko }}</h3>
             {{-- <div class="ms-auto">
                 <button id="exportPdfBtn" class="btn btn-sm btn-danger ms-auto d-flex align-items-center gap-1">
                     <i class='bx bxs-file-pdf'></i> Export PDF
