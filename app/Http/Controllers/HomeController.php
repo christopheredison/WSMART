@@ -1554,9 +1554,21 @@ class HomeController extends Controller
 
             // --- Perhitungan dari Database Lokal (LED & Eksposur Risiko) ---
             $ledProyekTotal = LossEventProject::where('project_id', $selectedProjectId)->sum('nilai_kerugian_finansial');
-            $eksposurRisikoTotal = ProjectRiskMonitoring::whereHas('projectRisk', function($q) use ($selectedProjectId) {
-                $q->where('project_id', $selectedProjectId);
-            })->sum('eksposure_risiko');
+
+            $activeRiskIds = \App\Models\ProjectRisk::where('project_id', $selectedProjectId)
+                ->where('is_closed', 0)
+                ->pluck('id');
+
+            // 2. Cari ID monitoring TERAKHIR (MAX id) untuk masing-masing risiko aktif tersebut
+            $latestMonitoringIds = \App\Models\ProjectRiskMonitoring::whereIn('risiko_id', $activeRiskIds)
+                ->selectRaw('MAX(id) as id')
+                ->groupBy('risiko_id')
+                ->pluck('id');
+
+            // 3. Jumlahkan eksposure_risiko HANYA dari monitoring terakhir tersebut
+            // Casting ke (float) memastikan tipe data decimal:2 tertangani dengan baik di PHP
+            $eksposurRisikoTotal = (float) \App\Models\ProjectRiskMonitoring::whereIn('id', $latestMonitoringIds)
+                ->sum('eksposure_risiko');
 
             // --- Perhitungan LED dan Eksposur ---
             $summaryData['led_proyek_total'] = $ledProyekTotal;

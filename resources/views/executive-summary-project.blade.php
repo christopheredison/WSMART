@@ -159,7 +159,7 @@
                     <div class="w-100 d-flex justify-content-between align-items-center">
                         <ul class="list-group list-group-flush flex-grow-1">
                           <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                              <span class="text-muted">Residual Total</span>
+                              <span class="text-muted">Residual Realisasi Total</span>
                               <span class="fw-bold fs-4 text-warning">Rp {{ number_format($summaryData['eksposur_risiko_total'], 0, ',', '.') }}</span>
                           </li>
                         </ul>
