@@ -47,6 +47,15 @@ class PerlakuanPenyebabRisiko extends Model
         return $this->hasMany(PerlakuanPenyebabMonitoring::class, 'perlakuan_penyebab_id');
     }
 
+    public function picJabatan()
+    {
+        return $this->belongsTo(Jabatan::class, 'pic_jabatan_id');
+    }
+
+    public function opsiPerlakuan() {
+        return $this->belongsTo(OpsiPerlakuanRisiko::class, 'opsi_perlakuan_risiko');
+    }
+
     public function lastMonitoring()
     {
         return $this->hasOne(PerlakuanPenyebabMonitoring::class, 'perlakuan_penyebab_id')->orderBy('created_at', 'desc');
@@ -136,11 +145,6 @@ class PerlakuanPenyebabRisiko extends Model
             })
             ->sortByDesc('id')
             ->first();
-    }
-
-    public function picJabatan()
-    {
-        return $this->belongsTo(Jabatan::class, 'pic_jabatan_id');
     }
 
     public function getDivisiTerkaitUnitsAttribute()

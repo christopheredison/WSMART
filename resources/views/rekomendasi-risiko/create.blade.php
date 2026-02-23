@@ -13,7 +13,7 @@
         @csrf
         <input type="hidden" name="periode_id" value="{{ $periode->id }}">
         <input type="hidden" name="unit_id" value="{{ $unit->id }}">
-        
+
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
@@ -144,7 +144,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            
+
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4">Kontrol Eksisting</label>
                                 <div class="w-100">
@@ -215,7 +215,7 @@
     function removeRow(element) {
         let parentContainer = $(element).closest('[id$="-body"]');
         $(element).closest('.row.g-2').remove();
-        
+
         if (parentContainer.find('.row.g-2').length <= 1) {
             parentContainer.find('.btn-icon-danger').prop('disabled', true);
         }
@@ -288,7 +288,7 @@
         var periodeYear = {{ $periode->tahun }};
         var startOfYear = new Date(periodeYear, 0, 1);
         var endOfYear = new Date(periodeYear, 11, 31);
-        
+
         flatpickr("#timepicker_mulai", {
             altInput: true, altFormat: "j F Y", dateFormat: "d/m/Y",
             minDate: startOfYear, maxDate: endOfYear,
@@ -307,7 +307,7 @@
             const originalText = button.html();
 
             button.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...').prop('disabled', true);
-            
+
             $.ajax({
                 url: url,
                 type: 'POST',

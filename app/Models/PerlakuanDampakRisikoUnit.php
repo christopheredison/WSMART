@@ -40,6 +40,10 @@ class PerlakuanDampakRisikoUnit extends Model
         return $this->belongsTo(Jabatan::class, 'pic_jabatan_id');
     }
 
+    public function opsiPerlakuan() {
+        return $this->belongsTo(OpsiPerlakuanRisiko::class, 'opsi_perlakuan_risiko');
+    }
+
     public function getWaktuPerlakuanRisikoAttribute() {
         if (!$this->timeline_perlakuan_risiko_start) return '-';
         $start = $this->timeline_perlakuan_risiko_start->format('d M Y');

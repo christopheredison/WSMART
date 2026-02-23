@@ -548,15 +548,78 @@ class RiskRegisterApController extends Controller
             abort(404, 'Unit tidak ditemukan.');
         }
 
-        $risikos = IdentifikasiRisiko::where('periode_id', $period)
-            ->where('unit_id', $targetUnitId)
-            ->with('riskAnalysis')
-            ->get();
+        $status = request()->query('status');
 
-        $currentRiskMaps = $risikos->pluck('currentRiskMapsMonth');
+        // Eager load relasi untuk Inherent & Residual Q1-Q4
+        $risikosQuery = IdentifikasiRisiko::where('periode_id', $period)
+        ->where('unit_id', $targetUnit->id)
+        ->with([
+            'riskAnalysis.skalaDampakObj',
+            'riskAnalysis.skalaProbabilitas',
+            'riskAnalysis.skalaDampakResidualQ1Obj',
+            'riskAnalysis.skalaProbabilitasResidualQ1',
+            'riskAnalysis.skalaDampakResidualQ2Obj',
+            'riskAnalysis.skalaProbabilitasResidualQ2',
+            'riskAnalysis.skalaDampakResidualQ3Obj',
+            'riskAnalysis.skalaProbabilitasResidualQ3',
+            'riskAnalysis.skalaDampakResidualQ4Obj',
+            'riskAnalysis.skalaProbabilitasResidualQ4',
+        ]);
+
+        if ($status === 'open') {
+            $risikosQuery->where('is_closed', 0);
+        } elseif ($status === 'closed') {
+            $risikosQuery->where('is_closed', 1);
+        }
+        $risikos = $risikosQuery->get();
+
         $formattedCurrentRiskMaps = [];
+        $riskRealisasiData = [];
+        $riskResidualData = [];
+
         foreach ($risikos as $idx => $risiko) {
-            $currentValue = $risiko->currentRiskMapsMonth['inherent'];
+            $currentValue = $risiko->currentRiskMapsMonth['inherent'] ?? [];
+            $riskAnalysis = $risiko->riskAnalysis;
+
+            // 1. Siapkan Data Residual per Kuartal (Q1 - Q4)
+            if ($riskAnalysis) {
+                $riskResidualData[$risiko->id] = [
+                    1 => [ // Q1
+                        'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q1,
+                        'skala_dampak' => $riskAnalysis->skalaDampakResidualQ1Obj ? "({$riskAnalysis->skalaDampakResidualQ1Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ1Obj->deskripsi}" : '-',
+                        'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q1,
+                        'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ1 ? "({$riskAnalysis->skalaProbabilitasResidualQ1->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ1->skala}" : '-',
+                        'skala_risiko' => $riskAnalysis->skala_risiko_residual_q1,
+                        'level_risiko' => $riskAnalysis->level_risiko_residual_q1,
+                    ],
+                    2 => [ // Q2
+                        'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q2,
+                        'skala_dampak' => $riskAnalysis->skalaDampakResidualQ2Obj ? "({$riskAnalysis->skalaDampakResidualQ2Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ2Obj->deskripsi}" : '-',
+                        'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q2,
+                        'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ2 ? "({$riskAnalysis->skalaProbabilitasResidualQ2->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ2->skala}" : '-',
+                        'skala_risiko' => $riskAnalysis->skala_risiko_residual_q2,
+                        'level_risiko' => $riskAnalysis->level_risiko_residual_q2,
+                    ],
+                    3 => [ // Q3
+                        'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q3,
+                        'skala_dampak' => $riskAnalysis->skalaDampakResidualQ3Obj ? "({$riskAnalysis->skalaDampakResidualQ3Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ3Obj->deskripsi}" : '-',
+                        'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q3,
+                        'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ3 ? "({$riskAnalysis->skalaProbabilitasResidualQ3->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ3->skala}" : '-',
+                        'skala_risiko' => $riskAnalysis->skala_risiko_residual_q3,
+                        'level_risiko' => $riskAnalysis->level_risiko_residual_q3,
+                    ],
+                    4 => [ // Q4
+                        'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q4,
+                        'skala_dampak' => $riskAnalysis->skalaDampakResidualQ4Obj ? "({$riskAnalysis->skalaDampakResidualQ4Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ4Obj->deskripsi}" : '-',
+                        'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q4,
+                        'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ4 ? "({$riskAnalysis->skalaProbabilitasResidualQ4->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ4->skala}" : '-',
+                        'skala_risiko' => $riskAnalysis->skala_risiko_residual_q4,
+                        'level_risiko' => $riskAnalysis->level_risiko_residual_q4,
+                    ],
+                ];
+            }
+
+            // 2. Siapkan Data Peta Risiko & Realisasi per Bulan
             for ($month = 1; $month <= 12; $month++) {
                 if ($nextValue = ($risiko->currentRiskMapsMonth[$month] ?? null)) {
                     $currentValue = $nextValue;
@@ -566,6 +629,18 @@ class RiskRegisterApController extends Controller
                 $currentValue['month'] = $month;
 
                 $formattedCurrentRiskMaps[$risiko->id][] = $currentValue;
+
+                // Format Data Realisasi untuk Tabel
+                $riskRealisasiData[$risiko->id][$month] = [
+                    'nilai_dampak'       => $currentValue['nilai_dampak'] ?? null,
+                    'skala_dampak'       => $currentValue['skala_dampak'] ?? null,
+                    'skala_dampak_desc'       => $currentValue['skala_dampak_obj']['deskripsi'] ?? null,
+                    'nilai_probabilitas' => $currentValue['nilai_probabilitas'] ?? null,
+                    'skala_probabilitas' => $currentValue['skala_probabilitas'] ?? null,
+                    'skala_probabilitas_desc' => $currentValue['skala_probabilitas_obj']['skala'] ?? null,
+                    'nilai_risiko'       => $currentValue['skala_risiko'] ?? null,
+                    'level_risiko'       => $currentValue['level_risiko'] ?? null,
+                ];
             }
         }
 
@@ -575,7 +650,7 @@ class RiskRegisterApController extends Controller
                 return $item->skala_dampak . '-' . $item->skala_probabilitas;
             });
 
-        return view('risk-register-ap.risk-period-dashboard', compact('user', 'periode', 'risikos', 'riskMaps', 'formattedCurrentRiskMaps', 'targetUnit'));
+        return view('risk-register-ap.risk-period-dashboard', compact('user', 'periode', 'risikos', 'riskMaps', 'formattedCurrentRiskMaps', 'riskRealisasiData', 'riskResidualData', 'targetUnit'));
     }
 
     public function store(Request $request)

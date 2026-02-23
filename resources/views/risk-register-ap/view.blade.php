@@ -355,10 +355,11 @@
                         <thead class="table-light">
                             <tr>
                                 <th width="5%">#</th>
-                                <th width="25%">Dampak Risiko</th>
+                                <th width="20%">Dampak Risiko</th>
                                 <th width="25%">Rencana Perlakuan Risiko</th>
-                                <th width="25%">Output Perlakuan Risiko</th>
+                                <th width="20%">Output Perlakuan Risiko</th>
                                 <th width="20%">Biaya Perlakuan Risiko</th>
+                                <th width="10%" class="text-center">Detail</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -375,24 +376,94 @@
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
                                             <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
                                             <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailDampak{{ $perlakuan->id }}" title="Lihat Detail">
+                                                    <span class='bx bx-show'></span>
+                                                </button>
+
+                                                <div class="modal fade text-start" id="modalDetailDampak{{ $perlakuan->id }}" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                                                        <div class="modal-content border-0 shadow p-0">
+                                                            <div class="modal-header border-bottom bg-light">
+                                                                <h5 class="modal-title fw-bold">Detail Perlakuan Dampak Risiko</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body p-4">
+                                                                <div class="row g-4">
+                                                                    <div class="col-12">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Dampak Risiko</span>
+                                                                        <div class="text-dark fs-6">{{ $dampak->dampak_risiko ?? '-' }}</div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-6">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Rencana Perlakuan Risiko</span>
+                                                                        <div class="text-dark">{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-6">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Output Perlakuan Risiko</span>
+                                                                        <div class="text-dark">{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</div>
+                                                                    </div>
+
+                                                                    <div class="col-12">
+                                                                        <hr class="my-2 text-muted">
+                                                                    </div>
+
+                                                                    <div class="col-12 col-md-6">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Opsi Perlakuan Risiko</span>
+                                                                        <div class="text-dark">
+                                                                            {{ $perlakuan->opsiPerlakuan->opsi_perlakuan_risiko ?? $perlakuan->opsi_perlakuan_risiko ?? '-' }}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-6">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">PIC</span>
+                                                                        <div class="text-dark">{{ $perlakuan->picJabatan->name ?? $perlakuan->pic ?? '-' }}</div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-4">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Biaya Perlakuan</span>
+                                                                        <div class="text-primary fw-bold">
+                                                                            {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-4">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Mulai</span>
+                                                                        <div class="text-dark">
+                                                                            <i class='bx bx-calendar-event me-1 text-muted'></i>
+                                                                            {{ $perlakuan->timeline_perlakuan_risiko_start ? $perlakuan->timeline_perlakuan_risiko_start->format('d F Y') : '-' }}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-4">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Selesai</span>
+                                                                        <div class="text-dark">
+                                                                            <i class='bx bx-calendar-check me-1 text-muted'></i>
+                                                                            {{ $perlakuan->timeline_perlakuan_risiko_end ? $perlakuan->timeline_perlakuan_risiko_end->format('d F Y') : '-' }}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer bg-light border-top-0">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                </td>
                                         </tr>
                                     @endforeach
                                 @else
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
                                         <td>{{ $dampak->dampak_risiko }}</td>
-                                        <td colspan="3" class="text-center text-muted">Belum ada rencana perlakuan</td>
+                                        <td colspan="4" class="text-center text-muted">Belum ada rencana perlakuan</td>
                                     </tr>
                                 @endif
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">Tidak ada dampak risiko</td>
+                                    <td colspan="6" class="text-center text-muted">Tidak ada dampak risiko</td>
                                 </tr>
                             @endforelse
                             @if($totalBiaya > 0)
                                 <tr class="table-warning">
                                     <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
-                                    <td class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                                    <td colspan="2" class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
                                 </tr>
                             @endif
                         </tbody>
@@ -420,10 +491,11 @@
                         <thead class="table-light">
                             <tr>
                                 <th width="5%">#</th>
-                                <th width="25%">Penyebab Risiko</th>
+                                <th width="20%">Penyebab Risiko</th>
                                 <th width="25%">Rencana Perlakuan Risiko</th>
-                                <th width="25%">Output Perlakuan Risiko</th>
+                                <th width="20%">Output Perlakuan Risiko</th>
                                 <th width="20%">Biaya Perlakuan Risiko</th>
+                                <th width="10%" class="text-center">Detail</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -440,24 +512,94 @@
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
                                             <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
                                             <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailPenyebab{{ $perlakuan->id }}" title="Lihat Detail">
+                                                    <span class='bx bx-show'></span>
+                                                </button>
+
+                                                <div class="modal fade text-start" id="modalDetailPenyebab{{ $perlakuan->id }}" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                                                        <div class="modal-content border-0 shadow p-0">
+                                                            <div class="modal-header border-bottom bg-light">
+                                                                <h5 class="modal-title fw-bold">Detail Perlakuan Penyebab Risiko</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body p-4">
+                                                                <div class="row g-4">
+                                                                    <div class="col-12">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Penyebab Risiko</span>
+                                                                        <div class="text-dark fs-6">{{ $penyebab->penyebab_risiko ?? '-' }}</div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-6">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Rencana Perlakuan Risiko</span>
+                                                                        <div class="text-dark">{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-6">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Output Perlakuan Risiko</span>
+                                                                        <div class="text-dark">{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</div>
+                                                                    </div>
+
+                                                                    <div class="col-12">
+                                                                        <hr class="my-2 text-muted">
+                                                                    </div>
+
+                                                                    <div class="col-12 col-md-6">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Opsi Perlakuan Risiko</span>
+                                                                        <div class="text-dark">
+                                                                            {{ $perlakuan->opsiPerlakuan->opsi_perlakuan_risiko ?? $perlakuan->opsi_perlakuan_risiko ?? '-' }}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-6">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">PIC</span>
+                                                                        <div class="text-dark">{{ $perlakuan->picJabatan->name ?? $perlakuan->pic ?? '-' }}</div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-4">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Biaya Perlakuan</span>
+                                                                        <div class="text-primary fw-bold">
+                                                                            {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-4">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Mulai</span>
+                                                                        <div class="text-dark">
+                                                                            <i class='bx bx-calendar-event me-1 text-muted'></i>
+                                                                            {{ $perlakuan->timeline_perlakuan_risiko_start ? $perlakuan->timeline_perlakuan_risiko_start->format('d F Y') : '-' }}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-4">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Selesai</span>
+                                                                        <div class="text-dark">
+                                                                            <i class='bx bx-calendar-check me-1 text-muted'></i>
+                                                                            {{ $perlakuan->timeline_perlakuan_risiko_end ? $perlakuan->timeline_perlakuan_risiko_end->format('d F Y') : '-' }}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer bg-light border-top-0">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                              </td>
                                         </tr>
                                     @endforeach
                                 @else
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
                                         <td>{{ $penyebab->penyebab_risiko }}</td>
-                                        <td colspan="3" class="text-center text-muted">Belum ada rencana perlakuan</td>
+                                        <td colspan="4" class="text-center text-muted">Belum ada rencana perlakuan</td>
                                     </tr>
                                 @endif
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">Tidak ada penyebab risiko</td>
+                                    <td colspan="6" class="text-center text-muted">Tidak ada penyebab risiko</td>
                                 </tr>
                             @endforelse
                             @if($totalBiaya > 0)
                                 <tr class="table-warning">
                                     <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
-                                    <td class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                                    <td colspan="2" class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
                                 </tr>
                             @endif
                         </tbody>
@@ -887,7 +1029,7 @@
                                     </td>
                                     <td class="text-center">
                                         <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailMonitoring{{ $monitoring->id }}">
-                                            <span class="bx bx-show"></span> Detail
+                                            <span class="bx bx-show"></span>
                                         </button>
                                     </td>
                                 </tr>
@@ -1102,7 +1244,7 @@
     <div class="col-12 mt-5">
         <div class="row g-2">
             <div class="col-auto order-1">
-                <a href="{{ route('risk-register-ap.index') }}" class="btn btn-outline-secondary">Kembali</a>
+                <a href="{{ route('risk-register-ap.index', ['pid' => $risiko->periode_id, 'unit_id' => $risiko->unit_id]) }}" class="btn btn-outline-secondary">Kembali</a>
             </div>
         </div>
     </div>

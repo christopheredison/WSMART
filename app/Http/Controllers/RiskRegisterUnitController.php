@@ -662,11 +662,11 @@ class RiskRegisterUnitController extends Controller
                 $riskRealisasiData[$risiko->id][$month] = [
                     'nilai_dampak'       => $currentValue['nilai_dampak'] ?? null,
                     'skala_dampak'       => $currentValue['skala_dampak'] ?? null,
-                    'skala_dampak_desc'  => $currentValue['skala_dampak_desc'] ?? null,
+                    'skala_dampak_desc'       => $currentValue['skala_dampak_obj']['deskripsi'] ?? null,
                     'nilai_probabilitas' => $currentValue['nilai_probabilitas'] ?? null,
                     'skala_probabilitas' => $currentValue['skala_probabilitas'] ?? null,
-                    'skala_probabilitas_desc' => $currentValue['skala_probabilitas_desc'] ?? null,
-                    'nilai_risiko'       => $currentValue['nilai_risiko'] ?? null,
+                    'skala_probabilitas_desc' => $currentValue['skala_probabilitas_obj']['skala'] ?? null,
+                    'nilai_risiko'       => $currentValue['skala_risiko'] ?? null,
                     'level_risiko'       => $currentValue['level_risiko'] ?? null,
                 ];
             }

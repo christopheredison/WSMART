@@ -193,8 +193,8 @@
 
                                 <th colspan="6" class="text-center bg-light">Inherent</th>
                                 <th colspan="6" class="text-center" style="background-color: #e8f4fd;">Realisasi / Current</th>
-                                <th colspan="6" class="text-center bg-light">Residual <br><small>(Sesuai Kuartal)</small></th>
-                                
+                                <th colspan="6" class="text-center bg-light">Residual <small>(Sesuai Kuartal)</small></th>
+
                                 <th rowspan="2" class="align-middle">Status Risiko</th>
                             </tr>
                             <tr>
@@ -235,14 +235,14 @@
                                 <td>{{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}</td>
 
                                 {{-- INHERENT --}}
-                                <td>{{ $risiko->riskAnalysis?->nilai_dampak ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak, 0, ',', '.') : '-' }}</td>
+                                <td>{{ $risiko->riskAnalysis?->nilai_dampak ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak, 0, ',', '.') : 'Rp 0' }}</td>
                                 <td>{{ $risiko->riskAnalysis?->skalaDampakObj?->tingkat ? '(' . $risiko->riskAnalysis?->skalaDampakObj?->tingkat . ') ' . $risiko->riskAnalysis?->skalaDampakObj?->deskripsi : '-' }}</td>
                                 <td>{{ $risiko->riskAnalysis?->nilai_probabilitas ?? '-' }}</td>
                                 <td>{{ $risiko->riskAnalysis?->skalaProbabilitas?->tingkat ? '(' . $risiko->riskAnalysis?->skalaProbabilitas?->tingkat . ') ' . $risiko->riskAnalysis?->skalaProbabilitas?->skala : '-' }}</td>
                                 <td>{{ $risiko->riskAnalysis?->skala_risiko ?? '-' }}</td>
                                 <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($risiko->riskAnalysis?->level_risiko)))}}">{{ $risiko->riskAnalysis?->level_risiko ?? '-' }}</td>
 
-                                {{-- REALISASI / CURRENT (Akan di-overwrite via JS) --}}
+                                {{-- REALISASI / CURRENT --}}
                                 <td class="realisasi-nilai-dampak">-</td>
                                 <td class="realisasi-skala-dampak">-</td>
                                 <td class="realisasi-nilai-prob">-</td>
@@ -250,7 +250,7 @@
                                 <td class="realisasi-nilai-risiko">-</td>
                                 <td class="realisasi-level-risiko">-</td>
 
-                                {{-- RESIDUAL (Akan di-overwrite via JS berdasarkan Kuartal) --}}
+                                {{-- RESIDUAL --}}
                                 <td class="residual-nilai-dampak">-</td>
                                 <td class="residual-skala-dampak">-</td>
                                 <td class="residual-nilai-prob">-</td>
@@ -402,7 +402,7 @@ $(document).ready(function () {
             // Jika memilih "Semua", hapus query parameter 'status'
             currentUrl.searchParams.delete('status');
         }
-        
+
         // Arahkan browser ke URL yang baru
         window.location.href = currentUrl.toString();
     });
@@ -485,7 +485,6 @@ $(document).ready(function () {
 
     // (Sisa script Anda untuk Peta Inherent/Residual awal, InputMask, dll biarkan seperti biasa)
 
-    const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
     risks.forEach((risk, idx) => {
         const matrixI = risk.risk_analysis?.skala_dampak + '-' + risk.risk_analysis?.skala_probabilitas?.tingkat;
         const matrixR = risk.risk_analysis?.skala_dampak_residual + '-' + risk.risk_analysis?.skala_probabilitas_residual_q4?.tingkat;
