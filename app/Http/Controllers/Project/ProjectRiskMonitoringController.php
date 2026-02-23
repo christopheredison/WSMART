@@ -183,7 +183,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ],
             'eksposur_risiko_inheren' => [
                 'label' => 'Eksposur Risiko Inheren',
-                'data' => 'projectRiskAnalisa.eksposur_risiko',
+                'data' => null,
                 'sortable' => false,
                 'searchable' => false,
                 'class' => 'white-space-nowrap text-end',
@@ -239,7 +239,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ],
             'eksposur_risiko_residual_rencana' => [
                 'label' => 'Eksposur Risiko Residual Rencana',
-                'data' => 'projectRiskAnalisa.eksposur_risiko_residual',
+                'data' => null,
                 'sortable' => false,
                 'searchable' => false,
                 'class' => 'white-space-nowrap text-end',
