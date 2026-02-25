@@ -321,7 +321,8 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
             'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings',
             'perlakuanDampakRisikos.perlakuanDampakMonitorings',
             'dampakRisikoProjects',
-            'projectRiskAnalisa'
+            'projectRiskAnalisa',
+            'projectRiskMonitorings',
         ])
         ->where('project_id', $this->projectId)
         ->get();
@@ -426,9 +427,15 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
             $penyebabList = $risk->penyebabRisikoProjects->map(fn($item, $k) => ($k + 1) . '. ' . $item->penyebab_risiko)->implode("\n");
             $dampakList = $risk->dampakRisikoProjects->map(fn($item, $k) => ($k + 1) . '. ' . $item->dampak_risiko)->implode("\n");
 
+            $lastMonitoring = $risk->projectRiskMonitorings->sortByDesc('id')->first();
             $analisa = $risk->projectRiskAnalisa;
             $levelInheren = ($analisa->level_risiko ?? '-') . ' - ' . ($analisa->skala_risiko ?? 0);
             $levelResidual = ($analisa->level_risiko_residual ?? '-') . ' - ' . ($analisa->skala_risiko_residual ?? 0);
+
+            // Data Realisasi (Hasil Monitoring)
+            $dampakRealisasiRP = $lastMonitoring->nilai_dampak ?? 0;
+            $eksposureRealisasi = $lastMonitoring->eksposure_risiko ?? 0;
+            $levelRealisasiText = ($lastMonitoring->level_risiko ?? '-') . ' - ' . ($lastMonitoring->skala_risiko ?? 0);
 
             $row = [
                 'no' => $no++,
@@ -466,9 +473,9 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                 'realisasi_dampak' => trim($realisasiDampakStr) ?: '-',
                 'realisasi_biaya_penyebab' => $this->formatCurrency($realBiayaPenyebab),
                 'realisasi_biaya_dampak' => $this->formatCurrency($realBiayaDampak),
-                'dampak_realisasi_rp' => $this->formatCurrency($analisa->nilai_dampak_residual ?? 0), // Biasanya ada field beda, tapi saya ikut code existing
-                'eksposur_realisasi' => $this->formatCurrency($analisa->eksposur_risiko_residual ?? 0),
-                'level_realisasi' => $levelResidual,
+                'dampak_realisasi_rp' => $this->formatCurrency($dampakRealisasiRP),
+                'eksposure_realisasi' => $this->formatCurrency($eksposureRealisasi),
+                'level_realisasi' => $levelRealisasiText,
 
                 'status' => $risk->is_closed ? 'Closed' : 'Open',
                 'efektivitas' => $this->calculateEfektifitas($risk),
