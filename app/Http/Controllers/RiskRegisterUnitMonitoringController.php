@@ -1753,6 +1753,31 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ]);
 
             DB::commit();
+
+            $targetLink = route('risk-register-unit.monitorings.index', ['period' => $period->id, 'unit_id' => $unit->id]);
+
+            if ($isFinal) {
+                // Notifikasi Publish
+                $msg = 'Monitoring Risiko Divisi telah disetujui penuh & berhasil dipublish.';
+                $this->sendNotificationCustom('RO_DIVISI', $unit->id, 'Monitoring Dipublish', $msg, $targetLink, 'bx bx-check-shield');
+                $this->sendNotificationCustom('RW_DIVISI', $unit->id, 'Monitoring Dipublish', $msg, $targetLink, 'bx bx-check-shield');
+            } else {
+                // Tentukan siapa target verifikator selanjutnya
+                $targetNotif = '';
+                if ($isUnitMr) {
+                    if ($currentDataStatus == 1) $targetNotif = 'RW_MR';
+                } else {
+                    if ($currentDataStatus == 1) $targetNotif = 'RW_DIVISI';
+                    elseif ($currentDataStatus == 2) $targetNotif = 'RO_MR';
+                    elseif ($currentDataStatus == 3) $targetNotif = 'RW_MR';
+                }
+
+                if ($targetNotif) {
+                    $msg = 'Terdapat pengajuan monitoring risiko yang butuh verifikasi Anda.';
+                    $this->sendNotificationCustom($targetNotif, $unit->id, 'Menunggu Verifikasi Monitoring', $msg, $targetLink, 'bx bx-bell');
+                }
+            }
+
             return response()->json(['success' => true, 'message' => 'Berhasil mengirim monitoring.']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1769,6 +1794,10 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $unit = $monitoring->identifikasiRisiko->unit;
         $isUnitMr = $unit->unit_mr == 1;
+        
+        // Simpan status sebelum diubah untuk pengecekan notifikasi
+        $currentStatus = $monitoring->status; 
+        $targetLink = route('risk-register-unit.monitorings.index', ['period' => $period->id, 'unit_id' => $unit->id]);
 
         DB::transaction(function () use ($validated, $monitoring, $isUnitMr) {
             if ($validated['status_verifikasi'] == 'terima') {
@@ -1793,6 +1822,18 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'year' => null,
             ]);
         });
+
+        if ($validated['status_verifikasi'] == 'tolak') {
+            // 1. Informasikan ke Risk Officer Divisi (Drafter)
+            $msg = 'Monitoring Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $validated['notes'];
+            $this->sendNotificationCustom('RO_DIVISI', $unit->id, 'Monitoring Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+
+            // 2. Jika yang menolak adalah pihak MR (Status 3 = Officer MR, Status 4 = Owner MR)
+            if ($currentStatus >= 3) {
+                $msgOwner = 'Terdapat monitoring risiko dari Divisi Anda yang ditolak oleh MR dan dikembalikan ke Drafter. Catatan: ' . $validated['notes'];
+                $this->sendNotificationCustom('RW_DIVISI', $unit->id, 'Monitoring Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
+            }
+        }
 
         return back()->with('success', 'Verifikasi berhasil disimpan.');
     }
@@ -1913,5 +1954,46 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
     private function cleanRupiah($value) {
         return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
+    }
+
+    /**
+     * Helper untuk mengirim notifikasi berdasarkan Role dan Unit
+     * Target: RO_DIVISI, RW_DIVISI, RO_MR, RW_MR
+     */
+    private function sendNotificationCustom($target, $unitId, $title, $message, $link, $icon)
+    {
+        $users = collect();
+
+        if ($target === 'RO_DIVISI') {
+            // Risk Officer Divisi: level 1, di unit yang sama
+            $users = \App\Models\User::where('level_id', 1)->where('unit_id', $unitId)->get();
+        }
+        elseif ($target === 'RW_DIVISI') {
+            // Risk Owner Divisi: level 2, di unit yang sama
+            $users = \App\Models\User::where('level_id', 2)->where('unit_id', $unitId)->get();
+        }
+        elseif ($target === 'RO_MR') {
+            // Risk Officer MR: level 1, unit_mr = 1
+            $users = \App\Models\User::where('level_id', 1)->whereHas('unit', function($q) {
+                $q->where('unit_mr', 1);
+            })->get();
+        }
+        elseif ($target === 'RW_MR') {
+            // Risk Owner MR: level 2, unit_mr = 1
+            $users = \App\Models\User::where('level_id', 2)->whereHas('unit', function($q) {
+                $q->where('unit_mr', 1);
+            })->get();
+        }
+
+        foreach ($users as $user) {
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'title'   => $title,
+                'message' => $message,
+                'icon'    => $icon,
+                'link'    => $link,
+                'read_at' => null,
+            ]);
+        }
     }
 }

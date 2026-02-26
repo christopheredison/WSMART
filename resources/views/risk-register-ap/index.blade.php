@@ -634,9 +634,17 @@ function showCatatanRisiko(riskId) {
             } else {
                 let html = '';
                 notes.forEach(note => {
-                    const statusBadge = note.status == 1
-                        ? '<span class="badge bg-success-subtle text-success">Diterima</span>'
-                        : '<span class="badge bg-danger-subtle text-danger">Ditolak</span>';
+                    // Penyesuaian Status Badge (1: Terima, 2: Tolak, 3: Perbaikan)
+                    let statusBadge = '';
+                    if (note.status == 1) {
+                        statusBadge = '<span class="badge bg-success-subtle text-success border border-success"><i class="bx bx-check me-1"></i>Diterima</span>';
+                    } else if (note.status == 2) {
+                        statusBadge = '<span class="badge bg-danger-subtle text-danger border border-danger"><i class="bx bx-x me-1"></i>Ditolak</span>';
+                    } else if (note.status == 3) {
+                        statusBadge = '<span class="badge bg-info-subtle text-info border border-info"><i class="bx bx-refresh me-1"></i>Perbaikan Dikirim</span>';
+                    } else {
+                        statusBadge = '<span class="badge bg-primary-subtle text-secondary border border-secondary">Informasi</span>';
+                    }
 
                     const formattedDate = new Date(note.created_at).toLocaleString('id-ID', {
                         day: '2-digit', month: 'short', year: 'numeric',
@@ -649,12 +657,12 @@ function showCatatanRisiko(riskId) {
                             <div class="fw-bold">
                                 ${note.user ? note.user.name : 'User Tidak Ditemukan'}
                             </div>
-                            <div class="d-flex align-items-center">
-                                <small class="text-muted me-3">${formattedDate}</small>
+                            <div class="d-flex align-items-center gap-2">
+                                <small class="text-muted">${formattedDate}</small>
                                 ${statusBadge}
                             </div>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body py-2">
                             <p class="card-text mb-0">${note.notes || '<i>Tidak ada catatan.</i>'}</p>
                         </div>
                     </div>

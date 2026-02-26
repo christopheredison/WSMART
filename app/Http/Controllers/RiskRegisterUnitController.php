@@ -2035,13 +2035,13 @@ class RiskRegisterUnitController extends Controller
             }
 
             // Jika ada error, redirect back
-            // if (!empty($pesanError)) {
-            //     $pesanError .= 'Silahkan lengkapi data tersebut terlebih dahulu.';
-            //     return redirect()->route('risk-register-unit.index', [
-            //         'pid' => $periode_id,
-            //         'unit_id' => $unit_id
-            //     ])->with('error', $pesanError);
-            // }
+            if (!empty($pesanError)) {
+                $pesanError .= 'Silahkan lengkapi data tersebut terlebih dahulu.';
+                return redirect()->route('risk-register-unit.index', [
+                    'pid' => $periode_id,
+                    'unit_id' => $unit_id
+                ])->with('error', $pesanError);
+            }
         }
 
         // 3. Logic Batch & Step (Original Logic)
@@ -2417,17 +2417,14 @@ class RiskRegisterUnitController extends Controller
                 return redirect()->back()->with('error', 'Anda tidak memiliki izin untuk melakukan verifikasi risiko');
             }
 
-            // catat log disini
             Log::channel('verification')->info('Verifikasi risiko dengan ID: ' . $identifikasiRisiko->id . ' oleh user dengan ID: ' . auth()->id());
             Log::channel('verification')->info('Step Order: ' . $step_order);
             Log::channel('verification')->info('Min Verification: ' . $min_verification);
 
             // Update status risiko berdasarkan hasil verifikasi
             if ($validated['status_verifikasi'] === 'terima') {
-                //catat log disini
                 Log::channel('verification')->info('Verifikasi risiko dengan ID: ' . $identifikasiRisiko->id . ' diterima oleh user dengan ID: ' . auth()->id());
 
-                //pengecekan jika step_order yang dimiliki level_id adalah sama dengan min_verification
                 if($step_order >= $min_verification){
                     // Jika diterima, update status menjadi terverifikasi
                     $identifikasiRisiko->update([
@@ -2437,20 +2434,25 @@ class RiskRegisterUnitController extends Controller
                         'step_verification' => $step_order
                     ]);
 
-                    // Notif ke Officer Divisi
+                    // Notif ke Officer Divisi & Owner Divisi bahwa sudah Full Approve
                     $msg = 'Risiko disetujui penuh & menunggu Publish. Catatan: ' . $validated['catatan_verifikasi'];
                     $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Risiko Disetujui', $msg, $targetLink, 'bx bx-check-circle');
+                    $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Risiko Disetujui', $msg, $targetLink, 'bx bx-check-circle');
                 }
                 else{
-                    // Jika diterima, update status menjadi terverifikasi
+                    // Jika diterima tahap awal/tengah
                     $identifikasiRisiko->update([
                         'status' => IdentifikasiRisiko::STATUS_TUNGGU_VERIFIKASI, //3
                         'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW, //1
                         'step_verification' => $step_order + 1
                     ]);
 
+                    // FIX BUG: Deklarasikan $nextStep terlebih dahulu
+                    $nextStep = $step_order + 1; 
+                    
                     // Tentukan siapa verifikator selanjutnya
                     $targetNotif = '';
+                    if ($nextStep == 1) $targetNotif = 'RW_DIVISI'; // Jaga-jaga jika Drafter hit verifikasi
                     if ($nextStep == 2) $targetNotif = 'RO_MR';
                     if ($nextStep == 3) $targetNotif = 'RW_MR';
 
@@ -2460,47 +2462,31 @@ class RiskRegisterUnitController extends Controller
                     }
                 }
 
-                //disini maka akan simpan approval logs
-                // ApprovalLog::create([
-                //     'risk_id' => $riskRegisterId,
-                //     'approval_step_id' => $approval_step_id,
-                //     'type' => 1, // 1 untuk unit
-                //     'step_order' => $step_order,
-                //     'approved_by' => auth()->id(),
-                //     'approved_at' => now(),
-                // ]);
-
-                //semua batch notes perlu diupdate sudah read jadi unread menjadi false
                 $batchNotes = DataBatchNotes::where('data_batch_id', $dataBatch->id)
                     ->where('step_order', $step_order)
-                    ->update([
-                        'unread' => false
-                    ]);
+                    ->update(['unread' => false]);
             }
-            else {//ditolak
-                //catat log disini
+            else { // ditolak
                 Log::channel('verification')->info('Verifikasi risiko dengan ID: ' . $identifikasiRisiko->id . ' ditolak oleh user dengan ID: ' . auth()->id());
 
-                // Jika ditolak, kembalikan ke status input data
                 $identifikasiRisiko->update([
                     'status' => IdentifikasiRisiko::STATUS_REJECTED,
                     'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVISION_DELETED // Kembali ke input data
                 ]);
 
-                $dataBatch->update([
-                    'status' => DataBatch::STATUS_REVISI,
-                ]);
+                $dataBatch->update(['status' => DataBatch::STATUS_REVISI]);
 
-                //semua batch notes perlu diupdate sudah read jadi unread menjadi false
                 $batchNotes = DataBatchNotes::where('data_batch_id', $dataBatch->id)
                     ->where('step_order', $step_order)
-                    ->update([
-                        'unread' => false
-                    ]);
+                    ->update(['unread' => false]);
 
-                // Notifikasi kembalikan ke Drafter (Risk Officer Divisi)
+                // Notifikasi kembalikan ke Drafter (Risk Officer Divisi) DAN Risk Owner Divisi
                 $msg = 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $validated['catatan_verifikasi'];
                 $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                
+                // Beritahu RW_DIVISI agar bisa memonitor officer-nya
+                $msgOwner = 'Terdapat risiko dari divisi Anda yang ditolak dan dikembalikan ke Drafter. Catatan: ' . $validated['catatan_verifikasi'];
+                $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Risiko Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
             }
 
             // Simpan catatan verifikasi ke RiskNote
@@ -2511,20 +2497,15 @@ class RiskRegisterUnitController extends Controller
                 'notes' => $validated['catatan_verifikasi'],
                 'user_id' => auth()->id(),
             ]);
-
             $riskNote->save();
 
-            // Redirect dengan pesan sukses
             return redirect()->route('risk-register-unit.index', [
                 'pid' => $identifikasiRisiko->periode_id,
                 'unit_id' => $identifikasiRisiko->unit_id
-            ])
-                ->with('success', 'Verifikasi risiko berhasil dilakukan');
+            ])->with('success', 'Verifikasi risiko berhasil dilakukan');
 
         } catch (\Exception $e) {
-            // Tangani kesalahan
-            return redirect()->back()
-                ->with('error', 'Terjadi kesalahan saat memverifikasi risiko: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat memverifikasi risiko: ' . $e->getMessage());
         }
     }
 
@@ -2798,8 +2779,7 @@ class RiskRegisterUnitController extends Controller
         $targetLink = route('risk-register-unit.index', ['pid' => $periode_id, 'unit_id' => $unit_id]);
 
         $unit = Unit::find($unit_id);
-        // $min_verification = $unit->unit_mr == 1 ? 1 : 3;
-        $min_verification = 3;
+        $min_verification = $unit->unit_mr == 1 ? 1 : 3;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
         $verificationData = $this->getUserVerificationStep($user->level_id, $is_mr, $unit->unit_mr);
         $u_step = $verificationData['u_step'];
@@ -2817,9 +2797,11 @@ class RiskRegisterUnitController extends Controller
                 if ($u_step >= $min_verification) {
                     $msg = "{$jumlahData} Risiko disetujui penuh & siap dipublish. Catatan: " . $request->catatan_verifikasi;
                     $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Verifikasi Masal Diterima', $msg, $targetLink, 'bx bx-check-double');
+                    $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Verifikasi Masal Diterima', $msg, $targetLink, 'bx bx-check-double');
                 } else {
                     $nextStep = $u_step + 1;
                     $targetNotif = '';
+                    if ($nextStep == 1) $targetNotif = 'RW_DIVISI';
                     if ($nextStep == 2) $targetNotif = 'RO_MR';
                     if ($nextStep == 3) $targetNotif = 'RW_MR';
 
@@ -2828,9 +2810,13 @@ class RiskRegisterUnitController extends Controller
                         $this->sendNotificationCustom($targetNotif, $unit_id, 'Verifikasi Masal Lanjutan', $msg, $targetLink, 'bx bx-info-circle');
                     }
                 }
-            } else {
+            } else { // Jika ditolak masal
                 $msg = "{$jumlahData} Risiko ditolak secara masal. Catatan: " . $request->catatan_verifikasi;
                 $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Verifikasi Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                
+                // Beritahu RW_DIVISI agar bisa memantau
+                $msgOwner = "{$jumlahData} Risiko divisi Anda ditolak dan dikembalikan ke Drafter. Catatan: " . $request->catatan_verifikasi;
+                $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Verifikasi Masal Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
             }
 
             return response()->json(['message' => 'Berhasil memverifikasi ' . count($request->ids) . ' risiko divisi.']);
