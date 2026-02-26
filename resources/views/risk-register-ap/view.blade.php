@@ -1048,7 +1048,7 @@
             <div class="modal-content p-0">
                 <div class="modal-header border-bottom">
                     <h5 class="modal-title">
-                        Detail Realisasi: Quarter {{ $monitoring->quarter }} Tahun {{ $risiko->periode->tahun ?? date('Y') }}
+                        Detail Realisasi: Quarter {{ $monitoring->quarter }} Tahun
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>

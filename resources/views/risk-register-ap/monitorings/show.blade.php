@@ -538,7 +538,7 @@
                 <div class="modal-content p-0">
                     <div class="modal-header border-bottom">
                         <h5 class="modal-title">
-                            Detail Realisasi: Q{{ $monitoring->quarter }} Tahun {{ $tahun }} (@lang('basic.month.' . $monitoring->month))
+                            Detail Realisasi: Q{{ $monitoring->quarter }} Tahun (@lang('basic.month.' . $monitoring->month))
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
