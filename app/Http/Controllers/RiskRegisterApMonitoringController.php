@@ -352,7 +352,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                     }
                 }'
             ],
-            
+
             // === DATA RESIDUAL (DYNAMIC BERDASARKAN FILTER QUARTER) ===
             'nilai_dampak_residual' => [
                 'label' => 'Nilai Dampak Residual',
@@ -623,7 +623,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         $unitFilterAttributes = ['class' => 'form-select select2'];
 
         if ($viewAllDivision) {
-            $unitFilterOptions = Unit::where('unit_type_id', 1)->pluck('name', 'id')->toArray();
+            $unitFilterOptions = Unit::where('unit_type_id', 2)->pluck('name', 'id')->toArray();
         } else {
             if ($user->unit) {
                 $unitFilterOptions = [$user->unit_id => $user->unit->name];
@@ -949,7 +949,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         $unit = $risk->unit;
         $periode = $risk->periode;
         $currentYear = $period->tahun;
-        
+
         $analisa = $risk->riskAnalysis;
         $namaRisikoLengkap = $risk->peristiwa_risiko;
         if (!empty($risk->deskripsi_peristiwa_risiko)) {
