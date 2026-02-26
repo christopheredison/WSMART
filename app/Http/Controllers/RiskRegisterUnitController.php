@@ -2338,6 +2338,7 @@ class RiskRegisterUnitController extends Controller
                         ->where('periode_id', $periode_id)
                         ->where(function ($query) {
                             $query->where('status', IdentifikasiRisiko::STATUS_INPUT_DATA)
+                                  ->orWhere('status', IdentifikasiRisiko::STATUS_REJECTED)
                                   ->orWhereNull('status');
                         })
                         ->update([
@@ -2496,7 +2497,7 @@ class RiskRegisterUnitController extends Controller
                     ->update([
                         'unread' => false
                     ]);
-                
+
                 // Notifikasi kembalikan ke Drafter (Risk Officer Divisi)
                 $msg = 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $validated['catatan_verifikasi'];
                 $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
@@ -2790,7 +2791,7 @@ class RiskRegisterUnitController extends Controller
 
         $user = auth()->user();
         $jumlahData = count($request->ids);
-        
+
         $firstRisk = IdentifikasiRisiko::find($request->ids[0]);
         $unit_id = $firstRisk ? $firstRisk->unit_id : $user->unit_id;
         $periode_id = $firstRisk ? $firstRisk->periode_id : null;
@@ -3275,17 +3276,17 @@ class RiskRegisterUnitController extends Controller
         if ($target === 'RO_DIVISI') {
             // Risk Officer Divisi: level 1, di unit yang sama
             $users = User::where('level_id', 1)->where('unit_id', $unitId)->get();
-        } 
+        }
         elseif ($target === 'RW_DIVISI') {
             // Risk Owner Divisi: level 2, di unit yang sama
             $users = User::where('level_id', 2)->where('unit_id', $unitId)->get();
-        } 
+        }
         elseif ($target === 'RO_MR') {
             // Risk Officer MR: level 1, unit_mr = 1
             $users = User::where('level_id', 1)->whereHas('unit', function($q) {
                 $q->where('unit_mr', 1);
             })->get();
-        } 
+        }
         elseif ($target === 'RW_MR') {
             // Risk Owner MR: level 2, unit_mr = 1
             $users = User::where('level_id', 2)->whereHas('unit', function($q) {

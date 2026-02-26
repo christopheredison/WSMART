@@ -462,9 +462,9 @@ class RiskRegisterApController extends Controller
             $units = Unit::where('unit_type_id', 2)->pluck('name', 'id');
             $displayUnits = Unit::where('unit_type_id', 2)->get();
         } else {
-            $units = Unit::where('unit_type_id', 2)->where('id', $userUnit->id)->pluck('name', 'id');
-            if ($userUnit && $userUnit->unit_type_id == 2) {
-                $displayUnits = collect([$userUnit]);
+            $units = Unit::where('unit_type_id', 2)->where('id', $user->id)->pluck('name', 'id');
+            if ($user && $user->unit_type_id == 2) {
+                $displayUnits = collect([$user]);
             }
         }
 
