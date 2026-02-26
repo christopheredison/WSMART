@@ -75,10 +75,10 @@
                   @include('partials.modal-restore-alert')
                   @else
                   <button type="button" class="btn-input-icon" data-bs-toggle="modal" data-bs-target="#modalAmbangBatas{{ $item->id }}" data-periode-id="{{ $item->id }}" title="Atur Ambang Batas">
-                    <span class="bx bx-slider text-info"></span>
+                    <span class="bx bx-slider text-info" data-bs-toggle="tooltip" title="Atur Ambang Batas"></span>
                   </button>
                   <button type="button" class="btn-input-icon btn-action" data-action="risk-limit" data-periode-id="{{ $item->id }}" title="Atur Risk Limit">
-                    <span class="bx bx-slider-alt text-warning"></span>
+                    <span class="bx bx-slider-alt text-warning" data-bs-toggle="tooltip" title="Atur Risk Limit"></span>
                   </button>
                   <a href="{{ route('periode.edit', $item) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Edit">
                     <span class="bx bx-edit"></span>
@@ -114,26 +114,26 @@
                       <div class="modal-body">
                         <div class="form-group mb-3">
                           <label class="form-label" for="nilai_kapasitas_risiko">Nilai Kapasitas Risiko</label>
-                          <input type="text" class="form-control inputmask-rupiah" id="nilai_kapasitas_risiko" name="nilai_kapasitas_risiko" 
-                                 value="{{ old('nilai_kapasitas_risiko', $item->ambangBatasRisiko->nilai_kapasitas_risiko ?? '') }}" 
+                          <input type="text" class="form-control inputmask-rupiah" id="nilai_kapasitas_risiko" name="nilai_kapasitas_risiko"
+                                 value="{{ old('nilai_kapasitas_risiko', $item->ambangBatasRisiko->nilai_kapasitas_risiko ?? '') }}"
                                  step="1" required>
                         </div>
                         <div class="form-group mb-3">
                           <label class="form-label" for="nilai_selera_risiko">Nilai Selera Risiko</label>
-                          <input type="text" class="form-control inputmask-rupiah" id="nilai_selera_risiko" name="nilai_selera_risiko" 
-                                 value="{{ old('nilai_selera_risiko', $item->ambangBatasRisiko->nilai_selera_risiko ?? '') }}" 
+                          <input type="text" class="form-control inputmask-rupiah" id="nilai_selera_risiko" name="nilai_selera_risiko"
+                                 value="{{ old('nilai_selera_risiko', $item->ambangBatasRisiko->nilai_selera_risiko ?? '') }}"
                                  step="1" required>
                         </div>
                         <div class="form-group mb-3">
                           <label class="form-label" for="nilai_toleransi_risiko">Nilai Toleransi Risiko</label>
-                          <input type="text" class="form-control inputmask-rupiah" id="nilai_toleransi_risiko" name="nilai_toleransi_risiko" 
-                                 value="{{ old('nilai_toleransi_risiko', $item->ambangBatasRisiko->nilai_toleransi_risiko ?? '') }}" 
+                          <input type="text" class="form-control inputmask-rupiah" id="nilai_toleransi_risiko" name="nilai_toleransi_risiko"
+                                 value="{{ old('nilai_toleransi_risiko', $item->ambangBatasRisiko->nilai_toleransi_risiko ?? '') }}"
                                  step="1" required>
                         </div>
                         <div class="form-group mb-3">
                           <label class="form-label" for="nilai_batasan_risiko">Nilai Batasan Risiko</label>
-                          <input type="text" class="form-control inputmask-rupiah" id="nilai_batasan_risiko" name="nilai_batasan_risiko" 
-                                 value="{{ old('nilai_batasan_risiko', $item->ambangBatasRisiko->nilai_batasan_risiko ?? '') }}" 
+                          <input type="text" class="form-control inputmask-rupiah" id="nilai_batasan_risiko" name="nilai_batasan_risiko"
+                                 value="{{ old('nilai_batasan_risiko', $item->ambangBatasRisiko->nilai_batasan_risiko ?? '') }}"
                                  step="1" required>
                         </div>
                       </div>
@@ -288,19 +288,19 @@ elList.forEach(function(el) {
 });
 </script>
 <script>
-// Tambahkan fungsi untuk mengambil data ambang batas 
-function getAmbangBatas(periodeId) { 
-    fetch(`/periode/${periodeId}/ambang-batas`) 
-        .then(response => response.json()) 
-        .then(data => { 
-            if (data) { 
-                document.getElementById('nilai_kapasitas_risiko').value = data.nilai_kapasitas_risiko; 
-                document.getElementById('nilai_selera_risiko').value = data.nilai_selera_risiko; 
-                document.getElementById('nilai_toleransi_risiko').value = data.nilai_toleransi_risiko; 
-                document.getElementById('nilai_batasan_risiko').value = data.nilai_batasan_risiko; 
-            } 
-        }); 
-} 
+// Tambahkan fungsi untuk mengambil data ambang batas
+function getAmbangBatas(periodeId) {
+    fetch(`/periode/${periodeId}/ambang-batas`)
+        .then(response => response.json())
+        .then(data => {
+            if (data) {
+                document.getElementById('nilai_kapasitas_risiko').value = data.nilai_kapasitas_risiko;
+                document.getElementById('nilai_selera_risiko').value = data.nilai_selera_risiko;
+                document.getElementById('nilai_toleransi_risiko').value = data.nilai_toleransi_risiko;
+                document.getElementById('nilai_batasan_risiko').value = data.nilai_batasan_risiko;
+            }
+        });
+}
 
 // Tambahkan event listener untuk modal
 document.querySelectorAll('[data-bs-target^="#modalAmbangBatas"]').forEach(button => {
@@ -313,7 +313,7 @@ document.querySelectorAll('[data-bs-target^="#modalAmbangBatas"]').forEach(butto
 // Tambahkan event listener untuk form submit dengan SweetAlert
 document.querySelector('#formAmbangBatas').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     Swal.fire({
         title: 'Konfirmasi',
         text: 'Apakah Anda yakin untuk melakukan update data?',
@@ -371,16 +371,16 @@ document.addEventListener('DOMContentLoaded', function() {
       const form = $('#formRiskLimit');
       const modal = $('#modalRiskLimit');
       const selectedPeriode = periodes.find(p => p.id === periodeId);
-      
+
       if (!selectedPeriode) {
         console.error('Data periode tidak ditemukan untuk ID:', periodeId);
         return;
       }
-      
+
       // Set action URL form secara dinamis
       const actionUrl = '{{ route('periode.update-risk-limit', ':id') }}'.replace(':id', periodeId);
-       form.attr('action', actionUrl);
-      
+       form.attr('action', actionUrl);
+
       // Set judul modal
       modal.find('#periode-tahun-title').text(selectedPeriode.tahun);
 
@@ -416,7 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#formRiskLimit').on('input', '.input-risk-limit', function() {
         const unitId = $(this).data('unit-id');
         const unmaskedValue = $(this).inputmask('unmaskedvalue');
-        
+
         // Targetkan input tersembunyi yang benar menggunakan ID
         const targetHiddenInput = $('#holder_risk_limit_' + unitId);
 
