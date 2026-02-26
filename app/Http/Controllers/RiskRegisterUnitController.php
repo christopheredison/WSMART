@@ -1930,6 +1930,7 @@ class RiskRegisterUnitController extends Controller
 
         $level_id = $user->level_id;
         $send_type = $request->send_type ?? 'send';
+        $targetLink = route('risk-register-unit.index', ['pid' => $periode_id, 'unit_id' => $unit_id]);
 
         // 2. VALIDASI KELENGKAPAN DATA (Mirip Project)
         // Hanya validasi jika bukan 'mainrisk' (Publish) atau bisa juga divalidasi saat publish tergantung kebutuhan
@@ -2091,6 +2092,10 @@ class RiskRegisterUnitController extends Controller
             // Tetapkan project risk utama
             IdentifikasiRisiko::determineMainRisks($unit_id, $periode_id);
 
+            // NOTIFIKASI: Beri tahu Officer dan Owner Divisi bahwa risiko sudah di Publish
+            $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Risiko Dipublish', 'Risiko divisi Anda telah dipublish oleh MR.', $targetLink, 'bx bx-check-shield');
+            $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Risiko Dipublish', 'Risiko divisi Anda telah dipublish oleh MR.', $targetLink, 'bx bx-check-shield');
+
             return redirect()->route('risk-register-unit.index', [
                 'pid' => $periode_id,
                 'unit_id' => $unit_id
@@ -2126,16 +2131,33 @@ class RiskRegisterUnitController extends Controller
                 $dataBatch->refresh();
 
                 // Update risiko yang statusnya REJECTED atau INPUT menjadi DIKIRIM/VERIFIKASI
-                IdentifikasiRisiko::where('unit_id', $unit_id)
+                $risikoToRevise = IdentifikasiRisiko::where('unit_id', $unit_id)
                     ->where('periode_id', $periode_id)
                     ->whereIn('status', [
                         IdentifikasiRisiko::STATUS_INPUT_DATA,
                         IdentifikasiRisiko::STATUS_REJECTED
-                    ])
-                    ->update([
+                    ])->get();
+
+                $catatanPerbaikan = $request->catatan_perbaikan ?? 'Tidak ada catatan tambahan';
+
+                foreach ($risikoToRevise as $risk) {
+                    // Update Status
+                    $risk->update([
                         'status' => $update_status,
                         'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW
                     ]);
+
+                    // TAMBAHAN: Simpan ke RiskNote per Risiko saat Officer Kirim Perbaikan
+                    if (!empty($request->catatan_perbaikan)) {
+                        RiskNote::create([
+                            'risiko_id' => $risk->id,
+                            'type' => 1,
+                            'status' => 3,
+                            'notes' => $catatanPerbaikan,
+                            'user_id' => auth()->id(),
+                        ]);
+                    }
+                }
 
                 // Isi Batch Notes jika ada
                 if ($request->has('catatan_perbaikan') && !empty($request->catatan_perbaikan)) {
@@ -2145,6 +2167,17 @@ class RiskRegisterUnitController extends Controller
                         'step_order' => $dataBatch->step_verification,
                         'user_id' => auth()->id()
                     ]);
+                }
+
+                // NOTIFIKASI: Kirim ke Verifikator yang bersangkutan
+                $targetNotif = '';
+                if ($dataBatch->step_verification == 1) $targetNotif = 'RW_DIVISI';
+                elseif ($dataBatch->step_verification == 2) $targetNotif = 'RO_MR';
+                elseif ($dataBatch->step_verification >= 3) $targetNotif = 'RW_MR';
+
+                if ($targetNotif) {
+                    $msg = 'Risk Officer telah mengirimkan perbaikan. Catatan: ' . $catatanPerbaikan;
+                    $this->sendNotificationCustom($targetNotif, $unit_id, 'Perbaikan Risiko Dikirim', $msg, $targetLink, 'bx bx-refresh');
                 }
 
                 return redirect()->route('risk-register-unit.index', [
@@ -2315,6 +2348,16 @@ class RiskRegisterUnitController extends Controller
                         ]);
                 }
 
+                // NOTIFIKASI: Eskalasi (Kirim ke tahap berikutnya)
+                $targetNotif = '';
+                if ($dataBatch->step_verification == 1) $targetNotif = 'RW_DIVISI'; // Step 1: Ke Owner Divisi
+                elseif ($dataBatch->step_verification == 2) $targetNotif = 'RO_MR'; // Step 2: Ke Officer MR
+                elseif ($dataBatch->step_verification >= 3) $targetNotif = 'RW_MR'; // Step 3: Ke Owner MR
+
+                if ($targetNotif) {
+                    $this->sendNotificationCustom($targetNotif, $unit_id, 'Menunggu Verifikasi', 'Terdapat data risiko baru yang butuh verifikasi Anda.', $targetLink, 'bx bx-bell');
+                }
+
                 return redirect()->route('risk-register-unit.index', [
                     'pid' => $periode_id,
                     'unit_id' => $unit_id
@@ -2333,6 +2376,7 @@ class RiskRegisterUnitController extends Controller
         $unit_id = $identifikasiRisiko->unit_id;
         $periode_id = $identifikasiRisiko->periode_id;
         $unit = Unit::findOrFail($unit_id);
+        $targetLink = route('risk-register-unit.index', ['pid' => $periode_id, 'unit_id' => $unit_id]);
 
         // $appFlow = $this->getFlowData($unit_id, $level_id);
         // $step_order = $appFlow['step_order'];
@@ -2352,6 +2396,7 @@ class RiskRegisterUnitController extends Controller
         $user_verification = $verificationData['user_verification'];
         $step_order = $u_step;
         $min_verification = 3;
+        // $min_verification = $unit->unit_mr == 1 ? 1 : 3;
 
         if ($step_order == 0 || $dataBatch->step_verification != $step_order) {
             return redirect()->route('risk-register-unit.index')
@@ -2390,6 +2435,10 @@ class RiskRegisterUnitController extends Controller
                         'status_risiko' => 1, //valid
                         'step_verification' => $step_order
                     ]);
+
+                    // Notif ke Officer Divisi
+                    $msg = 'Risiko disetujui penuh & menunggu Publish. Catatan: ' . $validated['catatan_verifikasi'];
+                    $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Risiko Disetujui', $msg, $targetLink, 'bx bx-check-circle');
                 }
                 else{
                     // Jika diterima, update status menjadi terverifikasi
@@ -2398,6 +2447,16 @@ class RiskRegisterUnitController extends Controller
                         'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW, //1
                         'step_verification' => $step_order + 1
                     ]);
+
+                    // Tentukan siapa verifikator selanjutnya
+                    $targetNotif = '';
+                    if ($nextStep == 2) $targetNotif = 'RO_MR';
+                    if ($nextStep == 3) $targetNotif = 'RW_MR';
+
+                    if ($targetNotif) {
+                        $msg = 'Risiko telah lolos tahap sebelumnya. Catatan: ' . $validated['catatan_verifikasi'];
+                        $this->sendNotificationCustom($targetNotif, $unit_id, 'Verifikasi Risiko Lanjutan', $msg, $targetLink, 'bx bx-info-circle');
+                    }
                 }
 
                 //disini maka akan simpan approval logs
@@ -2437,6 +2496,10 @@ class RiskRegisterUnitController extends Controller
                     ->update([
                         'unread' => false
                     ]);
+                
+                // Notifikasi kembalikan ke Drafter (Risk Officer Divisi)
+                $msg = 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $validated['catatan_verifikasi'];
+                $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
             }
 
             // Simpan catatan verifikasi ke RiskNote
@@ -2726,6 +2789,19 @@ class RiskRegisterUnitController extends Controller
         ]);
 
         $user = auth()->user();
+        $jumlahData = count($request->ids);
+        
+        $firstRisk = IdentifikasiRisiko::find($request->ids[0]);
+        $unit_id = $firstRisk ? $firstRisk->unit_id : $user->unit_id;
+        $periode_id = $firstRisk ? $firstRisk->periode_id : null;
+        $targetLink = route('risk-register-unit.index', ['pid' => $periode_id, 'unit_id' => $unit_id]);
+
+        $unit = Unit::find($unit_id);
+        // $min_verification = $unit->unit_mr == 1 ? 1 : 3;
+        $min_verification = 3;
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        $verificationData = $this->getUserVerificationStep($user->level_id, $is_mr, $unit->unit_mr);
+        $u_step = $verificationData['u_step'];
 
         DB::beginTransaction();
         try {
@@ -2734,6 +2810,28 @@ class RiskRegisterUnitController extends Controller
                 $this->processVerificationLogic($risk, $request->status_verifikasi, $request->catatan_verifikasi, $user);
             }
             DB::commit();
+
+            // KIRIM NOTIFIKASI BULK
+            if ($request->status_verifikasi === 'terima') {
+                if ($u_step >= $min_verification) {
+                    $msg = "{$jumlahData} Risiko disetujui penuh & siap dipublish. Catatan: " . $request->catatan_verifikasi;
+                    $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Verifikasi Masal Diterima', $msg, $targetLink, 'bx bx-check-double');
+                } else {
+                    $nextStep = $u_step + 1;
+                    $targetNotif = '';
+                    if ($nextStep == 2) $targetNotif = 'RO_MR';
+                    if ($nextStep == 3) $targetNotif = 'RW_MR';
+
+                    if ($targetNotif) {
+                        $msg = "{$jumlahData} Risiko lolos ke tahap Anda. Catatan: " . $request->catatan_verifikasi;
+                        $this->sendNotificationCustom($targetNotif, $unit_id, 'Verifikasi Masal Lanjutan', $msg, $targetLink, 'bx bx-info-circle');
+                    }
+                }
+            } else {
+                $msg = "{$jumlahData} Risiko ditolak secara masal. Catatan: " . $request->catatan_verifikasi;
+                $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Verifikasi Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+            }
+
             return response()->json(['message' => 'Berhasil memverifikasi ' . count($request->ids) . ' risiko divisi.']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -3143,5 +3241,67 @@ class RiskRegisterUnitController extends Controller
         // Regex ini berarti: GANTI semua karakter YANG BUKAN (^) a-z, A-Z, 0-9, spasi, dan simbol2 standar DENGAN string kosong.
         // Simbol yang dibolehkan: . , - _ ( ) / %
         return preg_replace('/[^a-zA-Z0-9\s\.\,\-\_\(\)\/\%]/', '', $value);
+    }
+
+    /**
+     * Helper untuk mengirim notifikasi berdasarkan level_id dan unit_id
+     */
+    private function sendNotificationToRole($levelId, $unitId, $title, $message, $link, $icon)
+    {
+        $users = User::where('level_id', $levelId)
+            ->where('unit_id', $unitId)
+            ->get();
+
+        foreach ($users as $user) {
+            Notification::create([
+                'user_id' => $user->id,
+                'title'   => $title,
+                'message' => $message,
+                'icon'    => $icon,
+                'link'    => $link,
+                'read_at' => null,
+            ]);
+        }
+    }
+
+    /**
+     * Helper untuk mengirim notifikasi berdasarkan Role dan Unit
+     * Target: RO_DIVISI, RW_DIVISI, RO_MR, RW_MR
+     */
+    private function sendNotificationCustom($target, $unitId, $title, $message, $link, $icon)
+    {
+        $users = collect();
+
+        if ($target === 'RO_DIVISI') {
+            // Risk Officer Divisi: level 1, di unit yang sama
+            $users = User::where('level_id', 1)->where('unit_id', $unitId)->get();
+        } 
+        elseif ($target === 'RW_DIVISI') {
+            // Risk Owner Divisi: level 2, di unit yang sama
+            $users = User::where('level_id', 2)->where('unit_id', $unitId)->get();
+        } 
+        elseif ($target === 'RO_MR') {
+            // Risk Officer MR: level 1, unit_mr = 1
+            $users = User::where('level_id', 1)->whereHas('unit', function($q) {
+                $q->where('unit_mr', 1);
+            })->get();
+        } 
+        elseif ($target === 'RW_MR') {
+            // Risk Owner MR: level 2, unit_mr = 1
+            $users = User::where('level_id', 2)->whereHas('unit', function($q) {
+                $q->where('unit_mr', 1);
+            })->get();
+        }
+
+        foreach ($users as $user) {
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'title'   => $title,
+                'message' => $message,
+                'icon'    => $icon,
+                'link'    => $link,
+                'read_at' => null,
+            ]);
+        }
     }
 }
