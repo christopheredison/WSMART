@@ -36,6 +36,7 @@ use App\Models\ApprovalLog;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalStep;
 use App\Models\DataBatchNotes;
+use Illuminate\Support\Facades\DB;
 use App\Models\PerlakuanDampakRisikoUnit;
 use App\Models\UnitRiskMonitoring;
 use App\Models\RiskContext;
@@ -1875,7 +1876,8 @@ class RiskRegisterApController extends Controller
                 foreach ($risikoToRevise as $risk) {
                     $risk->update([
                         'status' => $update_status,
-                        'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW
+                        'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW,
+                        'step_verification' => 1,
                     ]);
 
                     // TAMBAHAN: Simpan ke RiskNote per Risiko saat Officer Kirim Perbaikan
@@ -2180,6 +2182,23 @@ class RiskRegisterApController extends Controller
                     ->update([
                         'unread' => false
                     ]);
+                
+                // Siapkan link target untuk notifikasi
+                $targetLink = route('risk-register-ap.index', [
+                    'pid' => $identifikasiRisiko->periode_id, 
+                    'unit_id' => $identifikasiRisiko->unit_id
+                ]);
+                
+                $msg = 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $validated['catatan_verifikasi'];
+                
+                // 1. Selalu kirim notifikasi ke Inputter (Risk Officer AP)
+                $this->sendNotificationCustom('RO_AP', $identifikasiRisiko->unit_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+
+                // 2. Jika yang menolak adalah pihak MR (Step 2 atau 3), kirim juga notifikasi ke Risk Owner AP
+                if ($step_order >= 2) {
+                    $msgOwnerNotif = "Terdapat risiko dari divisi Anda yang ditolak dan dikembalikan ke Drafter. Catatan: " . $validated['catatan_verifikasi'];
+                    $this->sendNotificationCustom('RW_AP', $identifikasiRisiko->unit_id, 'Risiko Ditolak', $msgOwnerNotif, $targetLink, 'bx bx-x-circle');
+                }
             }
 
             // Simpan catatan verifikasi ke RiskNote
@@ -2510,8 +2529,10 @@ class RiskRegisterApController extends Controller
                 $msg = "{$jumlahData} Risiko Anak Perusahaan ditolak secara masal. Catatan: " . $request->catatan_verifikasi;
                 $this->sendNotificationCustom('RO_AP', $unit_id, 'Verifikasi Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
                 
-                $msgOwner = "{$jumlahData} Risiko dari Anak Perusahaan Anda ditolak dan dikembalikan ke Drafter. Catatan: " . $request->catatan_verifikasi;
-                $this->sendNotificationCustom('RW_AP', $unit_id, 'Verifikasi Masal Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
+                if ($u_step >= 2) {
+                    $msgOwner = "{$jumlahData} Risiko dari Anak Perusahaan Anda ditolak dan dikembalikan ke Drafter. Catatan: " . $request->catatan_verifikasi;
+                    $this->sendNotificationCustom('RW_AP', $unit_id, 'Verifikasi Masal Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
+                }
             }
 
             return response()->json(['message' => 'Berhasil memverifikasi ' . count($request->ids) . ' risiko Anak Perusahaan.']);

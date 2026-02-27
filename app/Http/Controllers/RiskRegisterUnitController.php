@@ -2144,7 +2144,8 @@ class RiskRegisterUnitController extends Controller
                     // Update Status
                     $risk->update([
                         'status' => $update_status,
-                        'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW
+                        'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW,
+                        'step_verification' => 1,
                     ]);
 
                     // TAMBAHAN: Simpan ke RiskNote per Risiko saat Officer Kirim Perbaikan
@@ -2485,8 +2486,10 @@ class RiskRegisterUnitController extends Controller
                 $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
                 
                 // Beritahu RW_DIVISI agar bisa memonitor officer-nya
-                $msgOwner = 'Terdapat risiko dari divisi Anda yang ditolak dan dikembalikan ke Drafter. Catatan: ' . $validated['catatan_verifikasi'];
-                $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Risiko Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
+                if ($step_order >= 2) {
+                    $msgOwner = 'Terdapat risiko dari divisi Anda yang ditolak dan dikembalikan ke Drafter. Catatan: ' . $validated['catatan_verifikasi'];
+                    $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Risiko Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
+                }
             }
 
             // Simpan catatan verifikasi ke RiskNote
@@ -2815,8 +2818,10 @@ class RiskRegisterUnitController extends Controller
                 $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Verifikasi Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
                 
                 // Beritahu RW_DIVISI agar bisa memantau
-                $msgOwner = "{$jumlahData} Risiko divisi Anda ditolak dan dikembalikan ke Drafter. Catatan: " . $request->catatan_verifikasi;
-                $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Verifikasi Masal Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
+                if ($u_step >= 2) {
+                    $msgOwner = "{$jumlahData} Risiko divisi Anda ditolak dan dikembalikan ke Drafter. Catatan: " . $request->catatan_verifikasi;
+                    $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Verifikasi Masal Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
+                }
             }
 
             return response()->json(['message' => 'Berhasil memverifikasi ' . count($request->ids) . ' risiko divisi.']);
