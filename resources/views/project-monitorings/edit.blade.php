@@ -86,6 +86,11 @@
                                 value="{{ $projectRiskAnalisa->skala_risiko }}">
                                 <label for="">Skala Risiko Inherent</label>
                             </div>
+                            {{-- <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text" name="eksposur_risiko_inherent"
+                                value="{{ $projectRiskAnalisa->eksposur_risiko ? 'Rp ' . number_format($projectRiskAnalisa->eksposur_risiko, 0, ',', '.') : '-' }}">
+                                <label for="">Eksposur Risiko Inherent</label>
+                            </div> --}}
                             <div class="form-group pt-3">
                                 <p>Level Risiko Inherent: <span class="ff-heading fw-medium">{{ $projectRiskAnalisa->level_risiko }}</strong>
                                 </p>
@@ -148,6 +153,11 @@
                                 name="target_skala_risiko" value="{{ $projectRiskAnalisa->skala_risiko_residual }}">
                                 <label for="">Target Skala Risiko</label>
                             </div>
+                            {{-- <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text" id="target_eksposur_risiko"
+                                name="target_eksposur_risiko" value="{{ $projectRiskAnalisa->eksposur_risiko_residual ? 'Rp ' . number_format($projectRiskAnalisa->eksposur_risiko_residual, 0, ',', '.') : '-' }}">
+                                <label for="">Target Eksposur Risiko</label>
+                            </div> --}}
                             <div class="form-group pt-3">
                                 <p>Target Level Risiko: <span class="ff-heading fw-medium">{{ $projectRiskAnalisa->level_risiko_residual }}</span>
                                 </p>
@@ -263,6 +273,11 @@
                                 <input type="hidden" name="realisasi_skala_risiko_hidden" id="realisasi_skala_risiko_hidden">
                                 <label for="">Realisasi Skala Risiko</label>
                             </div>
+                            {{-- <div class="form-floating">
+                                <input class="form-control" type="text" name="realisasi_eksposure_risiko" id="realisasi_eksposure_risiko" placeholder=""
+                                value="0" readonly>
+                                <label for="">Realisasi Eksposur Risiko</label>
+                            </div> --}}
                             <div class="form-floating">
                                 <input class="form-control" name="realisasi_level_risiko" id="realisasi_level_risiko" type="text"
                                 placeholder="" readonly />

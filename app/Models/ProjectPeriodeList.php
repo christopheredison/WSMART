@@ -283,10 +283,9 @@ class ProjectPeriodeList extends Model
                 }
                 $monitoring->skala_dampak = $skala_dampak_baru;
 
-                // --- 2. Tentukan Skala Probabilitas Baru ---
-                $skalaProbObj = \App\Models\SkalaProbabilitas::getSkalaByValue($nilaiProbabilitas);
-                $tingkat = $skalaProbObj ? $skalaProbObj->tingkat : 1;
-                $monitoring->skala_probabilitas_id = $tingkat;
+                // --- 2. Gunakan Skala Probabilitas ID Langsung ---
+                // Kita langsung ambil dari ID yang sudah tersimpan di monitoring (default ke 1 jika kosong)
+                $tingkat = $monitoring->skala_probabilitas_id ?? 1;
 
                 // --- 3. Cari Skala Risiko & Level Risiko di RiskMap ---
                 $keyMap = $skala_dampak_baru . '-' . $tingkat;

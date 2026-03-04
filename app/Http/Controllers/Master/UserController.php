@@ -222,7 +222,6 @@ class UserController extends Controller
                 'message' => 'Tidak ditemukan',
             ], 404);
         }
-        dd($dataUser);
 
         if ($request->not_registered_only) {
             $email = $dataUser['email'] ?? null;
