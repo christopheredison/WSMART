@@ -2435,9 +2435,9 @@ class RiskRegisterUnitController extends Controller
                     ]);
 
                     // Notif ke Officer Divisi & Owner Divisi bahwa sudah Full Approve
-                    $msg = 'Risiko disetujui penuh & menunggu Publish. Catatan: ' . $validated['catatan_verifikasi'];
-                    $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Risiko Disetujui', $msg, $targetLink, 'bx bx-check-circle');
-                    $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Risiko Disetujui', $msg, $targetLink, 'bx bx-check-circle');
+                    // $msg = 'Risiko disetujui penuh & menunggu Publish. Catatan: ' . $validated['catatan_verifikasi'];
+                    // $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Risiko Disetujui', $msg, $targetLink, 'bx bx-check-circle');
+                    // $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Risiko Disetujui', $msg, $targetLink, 'bx bx-check-circle');
                 }
                 else{
                     // Jika diterima tahap awal/tengah
@@ -2447,19 +2447,18 @@ class RiskRegisterUnitController extends Controller
                         'step_verification' => $step_order + 1
                     ]);
 
-                    // FIX BUG: Deklarasikan $nextStep terlebih dahulu
-                    $nextStep = $step_order + 1; 
-                    
-                    // Tentukan siapa verifikator selanjutnya
-                    $targetNotif = '';
-                    if ($nextStep == 1) $targetNotif = 'RW_DIVISI'; // Jaga-jaga jika Drafter hit verifikasi
-                    if ($nextStep == 2) $targetNotif = 'RO_MR';
-                    if ($nextStep == 3) $targetNotif = 'RW_MR';
+                    // $nextStep = $step_order + 1;
 
-                    if ($targetNotif) {
-                        $msg = 'Risiko telah lolos tahap sebelumnya. Catatan: ' . $validated['catatan_verifikasi'];
-                        $this->sendNotificationCustom($targetNotif, $unit_id, 'Verifikasi Risiko Lanjutan', $msg, $targetLink, 'bx bx-info-circle');
-                    }
+                    // // Tentukan siapa verifikator selanjutnya
+                    // $targetNotif = '';
+                    // if ($nextStep == 1) $targetNotif = 'RW_DIVISI'; // Jaga-jaga jika Drafter hit verifikasi
+                    // if ($nextStep == 2) $targetNotif = 'RO_MR';
+                    // if ($nextStep == 3) $targetNotif = 'RW_MR';
+
+                    // if ($targetNotif) {
+                    //     $msg = 'Risiko telah lolos tahap sebelumnya. Catatan: ' . $validated['catatan_verifikasi'];
+                    //     $this->sendNotificationCustom($targetNotif, $unit_id, 'Verifikasi Risiko Lanjutan', $msg, $targetLink, 'bx bx-info-circle');
+                    // }
                 }
 
                 $batchNotes = DataBatchNotes::where('data_batch_id', $dataBatch->id)
@@ -2483,7 +2482,7 @@ class RiskRegisterUnitController extends Controller
                 // Notifikasi kembalikan ke Drafter (Risk Officer Divisi) DAN Risk Owner Divisi
                 $msg = 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $validated['catatan_verifikasi'];
                 $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
-                
+
                 // Beritahu RW_DIVISI agar bisa memonitor officer-nya
                 $msgOwner = 'Terdapat risiko dari divisi Anda yang ditolak dan dikembalikan ke Drafter. Catatan: ' . $validated['catatan_verifikasi'];
                 $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Risiko Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
@@ -2792,32 +2791,31 @@ class RiskRegisterUnitController extends Controller
             }
             DB::commit();
 
-            // KIRIM NOTIFIKASI BULK
-            if ($request->status_verifikasi === 'terima') {
-                if ($u_step >= $min_verification) {
-                    $msg = "{$jumlahData} Risiko disetujui penuh & siap dipublish. Catatan: " . $request->catatan_verifikasi;
-                    $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Verifikasi Masal Diterima', $msg, $targetLink, 'bx bx-check-double');
-                    $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Verifikasi Masal Diterima', $msg, $targetLink, 'bx bx-check-double');
-                } else {
-                    $nextStep = $u_step + 1;
-                    $targetNotif = '';
-                    if ($nextStep == 1) $targetNotif = 'RW_DIVISI';
-                    if ($nextStep == 2) $targetNotif = 'RO_MR';
-                    if ($nextStep == 3) $targetNotif = 'RW_MR';
+            // // KIRIM NOTIFIKASI BULK
+            // if ($request->status_verifikasi === 'terima') {
+            //     if ($u_step >= $min_verification) {
+            //         $msg = "{$jumlahData} Risiko disetujui penuh & siap dipublish. Catatan: " . $request->catatan_verifikasi;
+            //         $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Verifikasi Masal Diterima', $msg, $targetLink, 'bx bx-check-double');
+            //         $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Verifikasi Masal Diterima', $msg, $targetLink, 'bx bx-check-double');
+            //     } else {
+            //         $nextStep = $u_step + 1;
+            //         $targetNotif = '';
+            //         if ($nextStep == 1) $targetNotif = 'RW_DIVISI';
+            //         if ($nextStep == 2) $targetNotif = 'RO_MR';
+            //         if ($nextStep == 3) $targetNotif = 'RW_MR';
 
-                    if ($targetNotif) {
-                        $msg = "{$jumlahData} Risiko lolos ke tahap Anda. Catatan: " . $request->catatan_verifikasi;
-                        $this->sendNotificationCustom($targetNotif, $unit_id, 'Verifikasi Masal Lanjutan', $msg, $targetLink, 'bx bx-info-circle');
-                    }
-                }
-            } else { // Jika ditolak masal
-                $msg = "{$jumlahData} Risiko ditolak secara masal. Catatan: " . $request->catatan_verifikasi;
-                $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Verifikasi Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
-                
-                // Beritahu RW_DIVISI agar bisa memantau
-                $msgOwner = "{$jumlahData} Risiko divisi Anda ditolak dan dikembalikan ke Drafter. Catatan: " . $request->catatan_verifikasi;
-                $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Verifikasi Masal Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
-            }
+            //         if ($targetNotif) {
+            //             $msg = "{$jumlahData} Risiko lolos ke tahap Anda. Catatan: " . $request->catatan_verifikasi;
+            //             $this->sendNotificationCustom($targetNotif, $unit_id, 'Verifikasi Masal Lanjutan', $msg, $targetLink, 'bx bx-info-circle');
+            //         }
+            //     }
+            // } else { // Jika ditolak masal
+            //     $msg = "{$jumlahData} Risiko ditolak secara masal. Catatan: " . $request->catatan_verifikasi;
+            //     $this->sendNotificationCustom('RO_DIVISI', $unit_id, 'Verifikasi Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+
+            //     $msgOwner = "{$jumlahData} Risiko divisi Anda ditolak dan dikembalikan ke Drafter. Catatan: " . $request->catatan_verifikasi;
+            //     $this->sendNotificationCustom('RW_DIVISI', $unit_id, 'Verifikasi Masal Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
+            // }
 
             return response()->json(['message' => 'Berhasil memverifikasi ' . count($request->ids) . ' risiko divisi.']);
         } catch (\Exception $e) {

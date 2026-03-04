@@ -2076,6 +2076,7 @@ class RiskRegisterApController extends Controller
         $identifikasiRisiko = IdentifikasiRisiko::findOrFail($riskRegisterId);
         $unit_id = $identifikasiRisiko->unit_id;
         $periode_id = $identifikasiRisiko->periode_id;
+        $targetLink = route('risk-register-ap.index', ['pid' => $periode_id, 'unit_id' => $unit_id]);
 
         // $appFlow = $this->getFlowData($unit_id, $level_id);
         // $step_order = $appFlow['step_order'];
@@ -2180,6 +2181,14 @@ class RiskRegisterApController extends Controller
                     ->update([
                         'unread' => false
                     ]);
+
+                // Notifikasi kembalikan ke Drafter (Risk Officer Divisi) DAN Risk Owner Divisi
+                $msg = 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $validated['catatan_verifikasi'];
+                $this->sendNotificationCustom('RO_AP', $unit_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+
+                // Beritahu RW_AP agar bisa memonitor officer-nya
+                $msgOwner = 'Terdapat risiko dari divisi Anda yang ditolak dan dikembalikan ke Drafter. Catatan: ' . $validated['catatan_verifikasi'];
+                $this->sendNotificationCustom('RW_AP', $unit_id, 'Risiko Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
             }
 
             // Simpan catatan verifikasi ke RiskNote
@@ -2422,7 +2431,7 @@ class RiskRegisterApController extends Controller
     {
         $request->validate([
             'ids' => 'required|array',
-            'ids.*' => 'exists:identifikasi_risikos,id', // Pastikan ID valid di DB
+            'ids.*' => 'exists:identifikasi_risikos,id',
             'status_verifikasi' => 'required|in:terima,tolak',
             'catatan_verifikasi' => 'required|string',
         ]);
@@ -2445,7 +2454,7 @@ class RiskRegisterApController extends Controller
         $min_verification = $is_unit_mr ? 1 : 3;
 
         $is_user_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
-        
+
         // Panggil helper verifikasi dengan 3 parameter
         $verificationData = $this->getUserVerificationStep($user->level_id, $is_user_mr, $is_unit_mr);
         $u_step = $verificationData['u_step'];
@@ -2473,7 +2482,7 @@ class RiskRegisterApController extends Controller
             // Update status Batch Data CUKUP SEKALI di luar loop
             if ($request->status_verifikasi === 'tolak') {
                 $dataBatch->update(['status' => DataBatch::STATUS_REVISI]);
-                
+
                 DataBatchNotes::where('data_batch_id', $dataBatch->id)
                     ->where('step_order', $u_step)
                     ->update(['unread' => false]);
@@ -2486,33 +2495,33 @@ class RiskRegisterApController extends Controller
 
             DB::commit();
 
-            if ($request->status_verifikasi === 'terima') {
-                if ($u_step >= $min_verification) {
-                    // Notifikasi Final Approve
-                    $msg = "{$jumlahData} Risiko Anak Perusahaan disetujui penuh & menunggu Publish. Catatan: " . $request->catatan_verifikasi;
-                    $this->sendNotificationCustom('RO_AP', $unit_id, 'Verifikasi Masal Diterima', $msg, $targetLink, 'bx bx-check-double');
-                    $this->sendNotificationCustom('RW_AP', $unit_id, 'Verifikasi Masal Diterima', $msg, $targetLink, 'bx bx-check-double');
-                } else {
-                    // Notifikasi Naik Step Verifikasi
-                    $nextStep = $u_step + 1;
-                    $targetNotif = '';
-                    if ($nextStep == 1) $targetNotif = 'RW_AP';
-                    if ($nextStep == 2) $targetNotif = 'RO_MR';
-                    if ($nextStep == 3) $targetNotif = 'RW_MR';
+            // if ($request->status_verifikasi === 'terima') {
+            //     if ($u_step >= $min_verification) {
+            //         // Notifikasi Final Approve
+            //         $msg = "{$jumlahData} Risiko Anak Perusahaan disetujui penuh & menunggu Publish. Catatan: " . $request->catatan_verifikasi;
+            //         $this->sendNotificationCustom('RO_AP', $unit_id, 'Verifikasi Masal Diterima', $msg, $targetLink, 'bx bx-check-double');
+            //         $this->sendNotificationCustom('RW_AP', $unit_id, 'Verifikasi Masal Diterima', $msg, $targetLink, 'bx bx-check-double');
+            //     } else {
+            //         // Notifikasi Naik Step Verifikasi
+            //         $nextStep = $u_step + 1;
+            //         $targetNotif = '';
+            //         if ($nextStep == 1) $targetNotif = 'RW_AP';
+            //         if ($nextStep == 2) $targetNotif = 'RO_MR';
+            //         if ($nextStep == 3) $targetNotif = 'RW_MR';
 
-                    if ($targetNotif) {
-                        $msg = "{$jumlahData} Risiko Anak Perusahaan telah lolos ke tahap Anda. Catatan: " . $request->catatan_verifikasi;
-                        $this->sendNotificationCustom($targetNotif, $unit_id, 'Verifikasi Masal Lanjutan', $msg, $targetLink, 'bx bx-info-circle');
-                    }
-                }
-            } else {
-                // Notifikasi Ditolak / Revisi
-                $msg = "{$jumlahData} Risiko Anak Perusahaan ditolak secara masal. Catatan: " . $request->catatan_verifikasi;
-                $this->sendNotificationCustom('RO_AP', $unit_id, 'Verifikasi Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
-                
-                $msgOwner = "{$jumlahData} Risiko dari Anak Perusahaan Anda ditolak dan dikembalikan ke Drafter. Catatan: " . $request->catatan_verifikasi;
-                $this->sendNotificationCustom('RW_AP', $unit_id, 'Verifikasi Masal Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
-            }
+            //         if ($targetNotif) {
+            //             $msg = "{$jumlahData} Risiko Anak Perusahaan telah lolos ke tahap Anda. Catatan: " . $request->catatan_verifikasi;
+            //             $this->sendNotificationCustom($targetNotif, $unit_id, 'Verifikasi Masal Lanjutan', $msg, $targetLink, 'bx bx-info-circle');
+            //         }
+            //     }
+            // } else {
+            //     // Notifikasi Ditolak / Revisi
+            //     $msg = "{$jumlahData} Risiko Anak Perusahaan ditolak secara masal. Catatan: " . $request->catatan_verifikasi;
+            //     $this->sendNotificationCustom('RO_AP', $unit_id, 'Verifikasi Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+
+            //     $msgOwner = "{$jumlahData} Risiko dari Anak Perusahaan Anda ditolak dan dikembalikan ke Drafter. Catatan: " . $request->catatan_verifikasi;
+            //     $this->sendNotificationCustom('RW_AP', $unit_id, 'Verifikasi Masal Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
+            // }
 
             return response()->json(['message' => 'Berhasil memverifikasi ' . count($request->ids) . ' risiko Anak Perusahaan.']);
         } catch (\Exception $e) {
