@@ -58,6 +58,7 @@
                                     <th>Dampak Risiko</th>
                                     <th>Rencana Perlakuan</th>
                                     <th>Biaya Perlakuan</th>
+                                    <th>Realisasi Perlakuan</th>
                                     <th>Progress (%)</th>
                                     <th>Realisasi Biaya</th>
                                     <th>Waktu Realisasi</th>
@@ -86,14 +87,17 @@
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
                                             <td>
                                                 <span class="inputmask-fixed">
-                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                                 </span>
+                                            </td>
+                                            <td>
+                                                {{ $perlakuan->lastMonitoring?->deskripsi_perlakuan_risiko ?? '-' }}
                                             </td>
                                             <td class="display-progress inputmask-fixed">
                                                 {{ $perlakuan->lastMonitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
                                             </td>
                                             <td class="display-biaya inputmask-fixed">
-                                                {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                             </td>
                                             <td class="display-timeline">
                                                 {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}
@@ -126,6 +130,7 @@
                                     <th>Penyebab Risiko</th>
                                     <th>Rencana Perlakuan</th>
                                     <th>Biaya Perlakuan</th>
+                                    <th>Realisasi Perlakuan</th>
                                     <th>Progress (%)</th>
                                     <th>Realisasi Biaya</th>
                                     <th>Waktu Realisasi</th>
@@ -152,8 +157,11 @@
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
                                             <td>
                                               <span class="inputmask-fixed">
-                                                {{ isset($perlakuan->biaya_perlakuan_risiko) ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                {{ isset($perlakuan->biaya_perlakuan_risiko) ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                               </span>
+                                            </td>
+                                            <td>
+                                                {{ $perlakuan?->deskripsi_perlakuan_risiko ?? '-' }}
                                             </td>
                                             <td class="display-progress inputmask-fixed">
                                                 {{ $perlakuan->{'progress_rencana_perlakuan_risiko_q' . $quarter} ?? '-' }}
@@ -275,6 +283,11 @@
                                 value="{{ $riskAnalysis->skala_risiko }}">
                                 <label for="">Skala Risiko Inherent</label>
                             </div>
+                            <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text" name="eksposur_risiko_inherent"
+                                value="{{ $riskAnalysis->eksposur_risiko ? 'Rp ' . number_format($riskAnalysis->eksposur_risiko, 0, ',', '.') : '-' }}">
+                                <label for="">Eksposur Risiko Inherent</label>
+                            </div>
                             <div class="form-group pt-3">
                                 <p>Level Risiko Inherent: <span class="ff-heading fw-medium">{{ $riskAnalysis->level_risiko }}</strong>
                                 </p>
@@ -316,6 +329,11 @@
                                 name="target_skala_dampak"
                                 value="{{ $riskAnalysis->{'skalaDampakResidualQ' . $quarter . 'Obj'} ? $riskAnalysis->{'skalaDampakResidualQ' . $quarter . 'Obj'}->tingkat . ' - ' . $riskAnalysis->{'skalaDampakResidualQ' . $quarter . 'Obj'}->deskripsi : '-' }}">
                                 <label for="">Target Skala Dampak</label>
+                            </div>
+                            <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text" id="target_eksposur_risiko"
+                                name="target_eksposur_risiko" value="{{ $riskAnalysis->{'eksposur_risiko_residual_q' . $quarter} ? 'Rp ' . number_format($riskAnalysis->{'eksposur_risiko_residual_q' . $quarter}, 0, ',', '.') : '-' }}">
+                                <label for="">Target Eksposur Risiko</label>
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" id="target_nilai_probabilitas"
@@ -389,6 +407,11 @@
                                 @endforeach
                                 </select>
                                 <label for="">Realisasi Skala Dampak</label>
+                            </div>
+                            <div class="form-floating">
+                                <input class="form-control" type="text" name="realisasi_eksposure_risiko" id="realisasi_eksposure_risiko" placeholder=""
+                                value="{{ isset($riskMonitoring?->eksposure_risiko) ? 'Rp ' . number_format($riskMonitoring->eksposure_risiko, 0, ',', '.') : '-' }}" readonly>
+                                <label for="">Realisasi Eksposur Risiko</label>
                             </div>
                             <div class="form-floating">
                                 <input class="form-control update-trigger" type="number" id="realisasi_nilai_probabilitas"
