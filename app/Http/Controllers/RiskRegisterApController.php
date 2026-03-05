@@ -1875,7 +1875,8 @@ class RiskRegisterApController extends Controller
                 foreach ($risikoToRevise as $risk) {
                     $risk->update([
                         'status' => $update_status,
-                        'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW
+                        'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW,
+                        'step_verification' => 1,
                     ]);
 
                     // TAMBAHAN: Simpan ke RiskNote per Risiko saat Officer Kirim Perbaikan
