@@ -39,6 +39,7 @@ use App\Models\DataBatchNotes;
 use App\Models\PerlakuanDampakRisikoUnit;
 use App\Models\UnitRiskMonitoring;
 use App\Models\RiskContext;
+use Illuminate\Support\Facades\DB;
 
 class RiskRegisterApController extends Controller
 {
