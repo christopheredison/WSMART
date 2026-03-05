@@ -22,7 +22,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $users = User::with(['roles', 'unit'])->withTrashed()->select('users.*');
+            $users = User::with(['roles', 'unit', 'level'])->withTrashed()->select('users.*');
 
             return DataTables::of($users)
                 ->addIndexColumn()
@@ -30,6 +30,9 @@ class UserController extends Controller
                     return '<div class="form-check mb-0">
                               <input class="form-check-input" type="checkbox" data-bulk-select-row="data-bulk-select-row" value="'.$row->id.'" />
                             </div>';
+                })
+                ->addColumn('level', function($row) {
+                    return $row?->level?->name ? $row?->level?->name : '-';
                 })
                 ->addColumn('role_names', function($row) {
                     // Map roles to a string

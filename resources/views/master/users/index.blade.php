@@ -91,6 +91,7 @@
                     <th>Name</th>
                     <th>Email</th>
                     <th>NIP</th>
+                    <th>Level</th>
                     <th>Roles</th>
                     <th class="no-sort">Action</th>
                 </tr>
@@ -115,6 +116,7 @@
                 { data: 'name', name: 'name' },
                 { data: 'email', name: 'email' },
                 { data: 'nip', name: 'nip', defaultContent: '-' },
+                { data: 'level', name: 'level.name', defaultContent: '-' },
                 { data: 'role_names', name: 'roles.name', orderable: false },
                 { data: 'action', name: 'action', orderable: false, searchable: false }
             ],
