@@ -1640,7 +1640,7 @@ class RiskRegisterApController extends Controller
             $identifikasiRisiko = IdentifikasiRisiko::findOrFail($id);
 
             // Cek apakah user memiliki akses untuk menghapus
-            if (!Gate::check('risk_register_delete') && $identifikasiRisiko->user_id != auth()->id()) {
+            if (!Gate::check('risk_register_delete')) {
                 return redirect()->route('risk-register-ap.index')->with('error', 'Anda tidak memiliki izin untuk menghapus data ini');
             }
 

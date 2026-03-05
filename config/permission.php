@@ -271,6 +271,7 @@ return [
 
         'risk_register_verification',
         'risk_register_validation',
+        'risk_register_delete_admin',
         'jabatan_list',
         'jabatan_create',
 
