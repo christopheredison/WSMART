@@ -316,22 +316,6 @@
                             </div>
                         </div>
                     </div> --}}
-                    <div class="col-12">
-                        <div class="form-group">
-                            <label class="form-label fw-bold">Peristiwa Risiko</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ $risiko->peristiwa_risiko ?? '-' }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="form-group">
-                            <label class="form-label fw-bold">Deskripsi Peristiwa Risiko</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
