@@ -813,7 +813,233 @@ const perlakuanDampakRisikos = Object.fromEntries(
         ];
     })
 );
-console.log(perlakuanDampakRisikos);
+
+// 1. Variabel penampung dokumen yang ada di database
+const existingDampakDocs = @json($projectRisk->projectRiskMonitoring?->perlakuanDampakRisikoDocuments->groupBy('perlakuan_dampak_risiko_id') ?? []);
+
+// 2. Buka Modal Update Dampak
+$(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
+    const id = $(this).data('id');
+    const perlakuan = perlakuanDampakRisikos[id];
+    const dampakText = $(this).data('dampak-text');
+
+    if (!perlakuan) return;
+
+    $('#impact_id').val(id);
+    $('#impact_name').val(dampakText);
+    $('#impact_plan').val(perlakuan.rencana_perlakuan_risiko);
+    $('#impact_cost').val('Rp ' + Intl.NumberFormat('id-ID').format(perlakuan.biaya_perlakuan_risiko));
+    $('#impact_pic').val(perlakuan?.pic_jabatan?.name);
+
+    $('#timeline_perlakuan_risiko_dampak_start').val(dayjs(perlakuan.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
+    $('#timeline_perlakuan_risiko_dampak_end').val(dayjs(perlakuan.timeline_perlakuan_risiko_end).format('DD/MM/YYYY'));
+
+    const form = $('#formUpdateRealisasiDampak');
+    form.find('[name="realisasi_biaya_dampak"]').val(perlakuan.realisasi_biaya_perlakuan_risiko ?? 0);
+    form.find('[name="progress_dampak"]').val(perlakuan.progress_rencana_perlakuan_risiko ?? 0);
+    form.find('[name="deskripsi_dampak"]').val(perlakuan.deskripsi_perlakuan_risiko ?? '');
+
+    if (perlakuan.timeline_perlakuan_risiko) {
+        if (perlakuan.timeline_perlakuan_risiko.includes('-')) {
+            impactFlatpickr.setDate(dayjs(perlakuan.timeline_perlakuan_risiko).format('DD/MM/YYYY'));
+        } else {
+            impactFlatpickr.setDate(perlakuan.timeline_perlakuan_risiko, true, "d/m/Y");
+        }
+    } else {
+        impactFlatpickr.clear();
+    }
+
+    // Copy elemen file sementara dari tabel utama ke Modal
+    const trImpact = $(`#table-dampak-risiko tr[data-id="${id}"]`);
+    const domCell = trImpact.find('td.column-action-impact');
+    const domSaved = domCell.find('.dom-saved-impact');
+    domCell.find('.dom-edited-impact').remove();
+
+    const domEdited = domSaved.clone().addClass('dom-edited-impact').removeClass('dom-saved-impact');
+
+    // Copy native files dari clone
+    const originalFileInputs = domSaved.find('input[type="file"]');
+    domEdited.find('input[type="file"]').each(function(index) {
+        if (originalFileInputs[index].files && originalFileInputs[index].files.length > 0) {
+            this.files = originalFileInputs[index].files;
+        }
+    });
+    domCell.append(domEdited);
+
+    // Tampilkan Tabel File
+    const tableDocument = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
+    tableDocument.empty();
+
+    // Tampilkan dari database
+    const savedDocs = existingDampakDocs[id] || [];
+    savedDocs.forEach(function(doc) {
+        tableDocument.append(`
+            <tr class="existing-doc" data-doc-id="${doc.id}">
+                <td><span class="text-primary text-truncate d-block" style="max-width: 200px;">${doc.file_name}</span></td>
+                <td><input type="text" class="form-control form-control-sm" value="${doc.description || ''}" disabled></td>
+                <td><span class="badge bg-success">Tersimpan</span></td>
+            </tr>
+        `);
+    });
+
+    // Tampilkan file sementara yang baru saja diattach
+    const tempDescriptions = domEdited.find('.input-file-description-array'); // array inputs
+    domEdited.find('input[type=file]').each(function(index) {
+        const fileObj = this.files && this.files.length > 0 ? this.files[0] : null;
+        if (!fileObj) return;
+
+        const fileName = fileObj.name;
+        const fileId = $(this).attr('id');
+        // Ambil value deskripsi berdasarkan index urutannya
+        const description = tempDescriptions.eq(index).val() || '';
+
+        tableDocument.append(`
+            <tr data-id="${fileId}">
+                <td><span class="dokumen-filename text-truncate d-block" style="max-width: 200px;">${fileName}</span></td>
+                <td>
+                    <input type="text" class="form-control form-control-sm input-desc-impact" placeholder="Keterangan..." value="${description}">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-link btn-sm text-danger btn-delete-doc-impact">Hapus</button>
+                </td>
+            </tr>
+        `);
+    });
+
+    toggleAddDocButtonDampak();
+    $('#modalUpdateRealisasiDampak').modal('show');
+});
+
+
+// 3. Tambah Dokumen Dampak
+$('#btnTambahDokumenDampak').click(function() {
+    const dampakRisikoId = $('#impact_id').val();
+    const domCell = $(`#table-dampak-risiko tr[data-id="${dampakRisikoId}"] td.column-action-impact`);
+    const domEdited = domCell.find('.dom-edited-impact');
+    const uploadContainer = domEdited.find('.upload-container');
+    const tableDokumen = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
+
+    if (tableDokumen.find('tr').length >= 3) {
+        Swal.fire({ icon: 'error', title: 'Gagal', text: 'Maksimal 3 dokumen yang dapat diunggah.' });
+        return;
+    }
+
+    const newId = 'dokumen-dampak-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+
+    // Bikin input file array biasa []
+    uploadContainer.append(`<input type="file" style="display:none;" name="document_dampak_file_${dampakRisikoId}[]" id="${newId}" required>`);
+
+    // Bikin hidden input untuk array description
+    uploadContainer.append(`<input type="hidden" class="input-file-description-array" name="document_description_${dampakRisikoId}[]" data-ref="${newId}">`);
+
+    tableDokumen.append(`
+        <tr data-id="${newId}">
+            <td><span class="dokumen-filename text-truncate d-block" style="max-width: 200px;">Pilih file...</span></td>
+            <td>
+                <input type="text" class="form-control form-control-sm input-desc-impact" placeholder="Keterangan...">
+            </td>
+            <td>
+                <button type="button" class="btn btn-link btn-sm text-danger btn-delete-doc-impact">Hapus</button>
+            </td>
+        </tr>
+    `);
+
+    const appended = tableDokumen.find(`tr[data-id="${newId}"]`);
+    const fileInput = domEdited.find(`#${newId}`);
+
+    // Event on Change FIle
+    fileInput.change(function() {
+        if (this.files && this.files[0]) {
+            appended.find(`.dokumen-filename`).text(this.files[0].name);
+
+            let totalSize = 0;
+            domEdited.find('input[type="file"]').each(function() {
+                if (this.files && this.files[0]) totalSize += this.files[0].size;
+            });
+
+            const maxSizeLimit = {{ config('filesystems.max_upload_size', 10) }} * 1024 * 1024;
+            if (totalSize > maxSizeLimit) {
+                Swal.fire({ icon: 'error', title: 'File Terlalu Besar', text: 'Total ukuran maksimal ' + (maxSizeLimit / (1024 * 1024)) + ' MB.' });
+                appended.find('.btn-delete-doc-impact').click();
+            }
+        }
+    });
+
+    // Deteksi Cancel File Explorer
+    window.addEventListener('focus', function detectCancel() {
+        setTimeout(function() {
+            if (fileInput.length && fileInput[0].files.length === 0) {
+                appended.find('.btn-delete-doc-impact').click();
+            }
+        }, 300);
+        window.removeEventListener('focus', detectCancel);
+    }, { once: true });
+
+    fileInput.click();
+    toggleAddDocButtonDampak();
+});
+
+// 4. Update Realtime Text Deskripsi ke input hidden
+$(document).on('input', '.input-desc-impact', function() {
+    const tr = $(this).closest('tr');
+    const fileId = tr.data('id');
+    const dampakId = $('#impact_id').val();
+    const val = $(this).val();
+
+    const domEdited = $(`#table-dampak-risiko tr[data-id="${dampakId}"] td.column-action-impact .dom-edited-impact`);
+    domEdited.find(`input.input-file-description-array[data-ref="${fileId}"]`).val(val);
+});
+
+// 5. Hapus Baris Dokumen
+$(document).on('click', '.btn-delete-doc-impact', function() {
+    const tr = $(this).closest('tr');
+    const fileId = tr.data('id');
+    const dampakId = $('#impact_id').val();
+
+    const domEdited = $(`#table-dampak-risiko tr[data-id="${dampakId}"] td.column-action-impact .dom-edited-impact`);
+    domEdited.find(`#${fileId}`).remove(); // hapus input file
+    domEdited.find(`input.input-file-description-array[data-ref="${fileId}"]`).remove(); // hapus input deskripsi
+    tr.remove();
+
+    toggleAddDocButtonDampak();
+});
+
+function toggleAddDocButtonDampak() {
+    const rowCount = $('#modalUpdateRealisasiDampak .table-dokumen-dampak tr').length;
+    if (rowCount >= 3) {
+        $('#modalUpdateRealisasiDampak table tfoot').hide();
+    } else {
+        $('#modalUpdateRealisasiDampak table tfoot').show();
+    }
+}
+
+// 6. Simpan Form Realisasi Dampak
+$('#btnSimpanUpdateRealisasiDampak').on('click', function() {
+    const id = $('#impact_id').val();
+    const form = $('#formUpdateRealisasiDampak');
+
+    if(!form[0].checkValidity()) { form[0].reportValidity(); return; }
+
+    let realisasiBiaya = form.find('[name="realisasi_biaya_dampak"]').inputmask('unmaskedvalue');
+    if (!realisasiBiaya && realisasiBiaya !== "0") {
+        realisasiBiaya = form.find('[name="realisasi_biaya_dampak"]').val().replace(/[^0-9,-]+/g,"").replace(",",".");
+    }
+
+    perlakuanDampakRisikos[id]['realisasi_biaya_perlakuan_risiko'] = realisasiBiaya || 0;
+    perlakuanDampakRisikos[id]['progress_rencana_perlakuan_risiko'] = form.find('[name="progress_dampak"]').val();
+    perlakuanDampakRisikos[id]['deskripsi_perlakuan_risiko'] = form.find('[name="deskripsi_dampak"]').val();
+    perlakuanDampakRisikos[id]['timeline_perlakuan_risiko'] = form.find('[name="timeline_dampak"]').val();
+
+    const tr = $(`#table-dampak-risiko tr[data-id="${id}"]`);
+    tr.find('.display-biaya').text('Rp ' + Intl.NumberFormat('id-ID').format(perlakuanDampakRisikos[id]['realisasi_biaya_perlakuan_risiko']));
+    tr.find('.display-progress').text(perlakuanDampakRisikos[id]['progress_rencana_perlakuan_risiko']);
+    tr.find('.display-timeline').text(perlakuanDampakRisikos[id]['timeline_perlakuan_risiko']);
+
+    tr.find('.dom-saved-impact').remove();
+    tr.find('.dom-edited-impact').removeClass('dom-edited-impact').addClass('dom-saved-impact');
+
+    $('#modalUpdateRealisasiDampak').modal('hide');
+});
 
 const kriProjects = @json($kriProjects->keyBy('id'));
 const quarter = {{ $quarter }};
@@ -982,6 +1208,7 @@ function validateRealisasiForm() {
 
 function submitForm(isClosed) {
     $('.dom-edited').remove();
+    $('.dom-edited-impact').remove();
 
     const formData = new FormData($('#main-form')[0]);
     formData.append('perlakuan_penyebab_risikos', JSON.stringify(perlakuanPenyebabRisikos));
@@ -1276,6 +1503,13 @@ $(document).ready(function() {
             const domSaved = domCell.find('.dom-saved');
             domCell.find('.dom-edited').remove();
             const domEdited = domSaved.clone().addClass('dom-edited').removeClass('dom-saved');
+            const originalFileInputs = domSaved.find('input[type="file"]');
+            domEdited.find('input[type="file"]').each(function(index) {
+                if (originalFileInputs[index].files && originalFileInputs[index].files.length > 0) {
+                    this.files = originalFileInputs[index].files;
+                }
+            });
+
             domCell.append(domEdited);
 
             const documentDescriptions = domEdited.find('.input-file-description').val() ? JSON.parse(domEdited.find('.input-file-description').val()) : {};
@@ -1408,105 +1642,6 @@ $(document).ready(function() {
             // $('#btnSimpanUpdateRealisasi').data('target-type', 'dampak');
             // $('#modalUpdateRealisasi').modal('show');
         }
-    });
-
-    $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
-        const id = $(this).data('id');
-        const perlakuan = perlakuanDampakRisikos[id];
-        const dampakText = $(this).data('dampak-text');
-
-        if (!perlakuan) return;
-
-        // Mapping Data ke Modal
-        $('#impact_id').val(id);
-        $('#impact_name').val(dampakText);
-        $('#impact_plan').val(perlakuan.rencana_perlakuan_risiko);
-        $('#impact_cost').val('Rp ' + Intl.NumberFormat('id-ID').format(perlakuan.biaya_perlakuan_risiko));
-        $('#impact_pic').val(perlakuan?.pic_jabatan?.name);
-
-        $('#timeline_perlakuan_risiko_dampak_start').val(dayjs(perlakuan.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
-        $('#timeline_perlakuan_risiko_dampak_end').val(dayjs(perlakuan.timeline_perlakuan_risiko_end).format('DD/MM/YYYY'));
-
-        // Load Realisasi Sebelumnya jika ada
-        const lastMon = perlakuan.last_monitoring;
-        const form = $('#formUpdateRealisasiDampak');
-
-        form.find('[name="realisasi_biaya_dampak"]').val(lastMon?.realisasi_biaya_perlakuan_risiko ?? 0);
-        form.find('[name="progress_dampak"]').val(lastMon?.progress_rencana_perlakuan_risiko ?? 0);
-        form.find('[name="deskripsi_dampak"]').val(lastMon?.deskripsi_perlakuan_risiko ?? '');
-
-        if(lastMon?.timeline_perlakuan_risiko_start) {
-            impactFlatpickr.setDate(dayjs(lastMon.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
-        } else {
-            impactFlatpickr.clear();
-        }
-
-        // Handle Dokumen (mirip penyebab tapi beda selector)
-        const trImpact = $(`#table-dampak-risiko tr[data-id="${id}"]`);
-        const domCell = trImpact.find('td.column-action-impact');
-        const domSaved = domCell.find('.dom-saved-impact');
-        domCell.find('.dom-edited-impact').remove();
-        const domEdited = domSaved.clone().addClass('dom-edited-impact').removeClass('dom-saved-impact');
-        domCell.append(domEdited);
-
-        // Render ulang list dokumen di modal
-        const tableDocument = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
-        tableDocument.empty();
-
-        // Ambil data deskripsi dari input hidden di baris tabel
-        const domDeskripsiInput = domEdited.find('.input-file-description-impact');
-        const documentDescriptions = domDeskripsiInput.val() ? JSON.parse(domDeskripsiInput.val()) : {};
-
-        // Loop setiap input file yang sudah ada di dom-edited (file yang baru terpilih tapi belum di-save ke server)
-        domEdited.find('input[type=file]').each(function() {
-            const fileName = $(this).prop('files')[0]?.name;
-            const fileId = $(this).prop('id');
-            const description = documentDescriptions[fileId] || '';
-
-            tableDocument.append(`
-                <tr data-id="${fileId}">
-                    <td><span class="dokumen-filename text-truncate d-block" style="max-width: 200px;">${fileName}</span></td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm input-desc-impact"
-                              placeholder="Keterangan..." value="${description}">
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-link btn-sm text-danger btn-delete-doc-impact">Hapus</button>
-                    </td>
-                </tr>
-            `);
-        });
-
-        if (tableDocument.find('tr').length >= 3) {
-            tableDocument.closest('table').find('tfoot').hide();
-        } else {
-            tableDocument.closest('table').find('tfoot').show();
-        }
-
-        $('#modalUpdateRealisasiDampak').modal('show');
-    });
-
-    $('#btnSimpanUpdateRealisasiDampak').on('click', function() {
-        const id = $('#impact_id').val();
-        const form = $('#formUpdateRealisasiDampak');
-
-        if(!form[0].checkValidity()) { form[0].reportValidity(); return; }
-        console.log(perlakuanDampakRisikos[id])
-
-        perlakuanDampakRisikos[id]['realisasi_biaya_perlakuan_risiko'] = form.find('[name="realisasi_biaya_dampak"]').val();
-        perlakuanDampakRisikos[id]['progress_rencana_perlakuan_risiko'] = form.find('[name="progress_dampak"]').val();
-        perlakuanDampakRisikos[id]['deskripsi_perlakuan_risiko'] = form.find('[name="deskripsi_dampak"]').val();
-        perlakuanDampakRisikos[id]['timeline_perlakuan_risiko'] = form.find('[name="timeline_dampak"]').val();
-
-        const tr = $(`#table-dampak-risiko tr[data-id="${id}"]`);
-        tr.find('.display-biaya').text('Rp ' + Intl.NumberFormat('id-ID').format(perlakuanDampakRisikos[id]['realisasi_biaya_perlakuan_risiko']));
-        tr.find('.display-progress').text(perlakuanDampakRisikos[id]['progress_rencana_perlakuan_risiko']);
-        tr.find('.display-timeline').text(perlakuanDampakRisikos[id]['timeline_perlakuan_risiko']);
-
-        tr.find('.dom-saved-impact').remove();
-        tr.find('.dom-edited-impact').removeClass('dom-edited-impact').addClass('dom-saved-impact');
-
-        $('#modalUpdateRealisasiDampak').modal('hide');
     });
 
     $('#btnSimpanUpdateRealisasi').on('click', function() {

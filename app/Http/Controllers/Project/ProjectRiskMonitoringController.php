@@ -1060,7 +1060,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     $query->where('quarter', $quarter)
                         ->where('tahun', $tahun)
                         ->where('month', $month)
-                        ->with(['pengendalians', 'skalaProbabilitas']);
+                        ->with(['pengendalians', 'skalaProbabilitas', 'perlakuanDampakRisikoDocuments']);
                 },
                 'perlakuanDampakRisikos' => function ($query) use ($quarter, $tahun, $month) {
                     $query->with(['lastMonitoring' => function ($q) use ($quarter, $tahun, $month) {
@@ -1473,18 +1473,22 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     'timeline_perlakuan_risiko_end' => $start,
                 ]);
 
-                if ($documentFiles = $request->{'document_dampak_file_' . $id}) {
-                    $documentDescriptions = json_decode($request->input('document_description_' . $id, '[]'), true) ?: [];
+                $documentFiles = $request->file('document_dampak_file_' . $id);
+                if ($documentFiles = $request->file('document_dampak_file_' . $id)) {
+                    $documentDescriptions = $request->input('document_description_' . $id, []);
+
                     foreach ($documentFiles as $idx => $documentFile) {
-                        $storeFile = $documentFile->store('project-monitoring-documents', 'public');
-                        $projectMonitoring->perlakuanDampakRisikoDocuments()->create([
-                            'perlakuan_dampak_risiko_id' => $id,
-                            'user_id' => request()->user()->id,
-                            'file_name' => $documentFile->getClientOriginalName(),
-                            'file_path' => $storeFile,
-                            'mimetype' => $documentFile->getClientMimeType(),
-                            'description' => $documentDescriptions[$idx] ?? '',
-                        ]);
+                        if ($documentFile) {
+                            $storeFile = $documentFile->store('project-monitoring-documents', 'public');
+                            $projectMonitoring->perlakuanDampakRisikoDocuments()->create([
+                                'perlakuan_dampak_risiko_id' => $id,
+                                'user_id' => request()->user()->id,
+                                'file_name' => $documentFile->getClientOriginalName(),
+                                'file_path' => $storeFile,
+                                'mimetype' => $documentFile->getClientMimeType(),
+                                'description' => $documentDescriptions[$idx] ?? '',
+                            ]);
+                        }
                     }
                 }
             }
