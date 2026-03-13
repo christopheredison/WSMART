@@ -194,6 +194,10 @@ class ProjectPeriodeList extends Model
             })
             ->get();
 
+        $riskMaps = RiskMap::get()->keyBy(function($item) {
+            return $item->skala_dampak . '-' . $item->skala_probabilitas;
+        });
+
         foreach ($projectRisks as $projectRisk) {
             $analisa = $projectRisk->projectRiskAnalisa;
 
@@ -205,17 +209,11 @@ class ProjectPeriodeList extends Model
                 $skala_dampak_residual_baru = $this->hitungSkalaDampak($nilai_dampak_residual, $risk_limit);
                 Log::info("Memproses Risk ID: {$projectRisk->id} | nilai_dampak: {$nilai_dampak} | nilai_dampak_residual: {$nilai_dampak_residual} | skala_dampak_baru: {$skala_dampak_baru} | skala_dampak_residual_baru: {$skala_dampak_residual_baru}");
 
-                $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($analisa->nilai_probabilitas);
+                $probabilitas_id = $analisa->skala_probabilitas_id ?? 1;
+                $probabilitas_residual_id = $analisa->skala_probabilitas_residual_id ?? 1;
 
-                $tingkatSkalaProbabilitasResidual = SkalaProbabilitas::getSkalaByValue($analisa->nilai_probabilitas_residual);
-
-                $riskMaps = RiskMap::get()->keyBy(function($item) {
-                    return $item->skala_dampak . '-' . $item->skala_probabilitas;
-                });
-
-                $riskMap = $riskMaps[$skala_dampak_baru . '-' . $tingkatSkalaProbabilitas->tingkat] ?? null;
-
-                $riskMapResidual = $riskMaps[$skala_dampak_residual_baru . '-' . $tingkatSkalaProbabilitasResidual->tingkat] ?? null;
+                $riskMap = $riskMaps[$skala_dampak_baru . '-' . $probabilitas_id] ?? null;
+                $riskMapResidual = $riskMaps[$skala_dampak_residual_baru . '-' . $probabilitas_residual_id] ?? null;
 
                 $skala_risiko_baru  = $riskMap->nilai_risiko ?? 1;
                 $level_risiko_baru = $riskMap->level_risiko ?? 'Low';
@@ -285,10 +283,9 @@ class ProjectPeriodeList extends Model
                 }
                 $monitoring->skala_dampak = $skala_dampak_baru;
 
-                // --- 2. Tentukan Skala Probabilitas Baru ---
-                $skalaProbObj = \App\Models\SkalaProbabilitas::getSkalaByValue($nilaiProbabilitas);
-                $tingkat = $skalaProbObj ? $skalaProbObj->tingkat : 1;
-                $monitoring->skala_probabilitas_id = $tingkat;
+                // --- 2. Gunakan Skala Probabilitas ID Langsung ---
+                // Kita langsung ambil dari ID yang sudah tersimpan di monitoring (default ke 1 jika kosong)
+                $tingkat = $monitoring->skala_probabilitas_id ?? 1;
 
                 // --- 3. Cari Skala Risiko & Level Risiko di RiskMap ---
                 $keyMap = $skala_dampak_baru . '-' . $tingkat;

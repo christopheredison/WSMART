@@ -79,7 +79,7 @@
                             <div class="col">
                                 <div class="form-floating">
                                     <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required>{{ $dampak->dampak_risiko }}</textarea>
-                                    <label>Dampak Risiko</label>
+                                    <label>Dampak Risiko <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                             <div class="col-auto d-flex align-items-center">
@@ -93,7 +93,7 @@
                             <div class="col">
                                 <div class="form-floating">
                                     <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required></textarea>
-                                    <label>Dampak Risiko</label>
+                                    <label>Dampak Risiko <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                             <div class="col-auto d-flex align-items-center">
@@ -129,7 +129,7 @@
                             <div class="col">
                                 <div class="form-floating">
                                     <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]" value="{{ $penyebab->penyebab_risiko }}" placeholder="Masukkan Penyebab Risiko">
-                                    <label>Penyebab Risiko</label>
+                                    <label>Penyebab Risiko <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                             <div class="col-auto d-flex align-items-center">
@@ -143,7 +143,7 @@
                             <div class="col">
                                 <div class="form-floating">
                                     <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko">
-                                    <label>Penyebab Risiko</label>
+                                    <label>Penyebab Risiko <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                             <div class="col-auto d-flex align-items-center">
@@ -181,31 +181,31 @@
                                     <div class="col-12">
                                         <div class="form-group form-floating">
                                             <input type="text" class="form-control" name="key_risk_indicator[]" value="{{ $kri->kri }}">
-                                            <label>Key Risk Indicator</label>
+                                            <label>Key Risk Indicator <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating">
                                             <input type="text" class="form-control" name="satuan_kri[]" value="{{ $kri->satuan_kri }}">
-                                            <label>Satuan KRI</label>
+                                            <label>Satuan KRI <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
                                             <input type="text" class="form-control border-success" name="batas_aman[]" value="{{ $kri->batas_aman }}">
-                                            <label>Batas Aman</label>
+                                            <label>Batas Aman <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
                                             <input type="text" class="form-control border-warning" name="batas_waspada[]" value="{{ $kri->batas_waspada }}">
-                                            <label>Batas Waspada</label>
+                                            <label>Batas Waspada <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
                                             <input type="text" class="form-control border-danger" name="batas_bahaya[]" value="{{ $kri->batas_bahaya }}">
-                                            <label>Batas Bahaya</label>
+                                            <label>Batas Bahaya <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                 </div>
@@ -223,31 +223,31 @@
                                     <div class="col-12">
                                         <div class="form-group form-floating">
                                             <input type="text" class="form-control" name="key_risk_indicator[]">
-                                            <label>Key Risk Indicator</label>
+                                            <label>Key Risk Indicator <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating">
                                             <input type="text" class="form-control" name="satuan_kri[]">
-                                            <label>Satuan KRI</label>
+                                            <label>Satuan KRI <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
                                             <input type="text" class="form-control border-success" name="batas_aman[]">
-                                            <label>Batas Aman</label>
+                                            <label>Batas Aman <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
                                             <input type="text" class="form-control border-warning" name="batas_waspada[]">
-                                            <label>Batas Waspada</label>
+                                            <label>Batas Waspada <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
                                             <input type="text" class="form-control border-danger" name="batas_bahaya[]">
-                                            <label>Batas Bahaya</label>
+                                            <label>Batas Bahaya <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                 </div>
@@ -321,7 +321,7 @@
                         </div>
                         <div class="col-md-6 col-lg-7 col-xxl-6">
                             <div class="form-group d-lg-flex mb-4">
-                                <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker2">Perkiraan Waktu Mulai</label>
+                                <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker2">Perkiraan Waktu Mulai <span class="text-danger">*</span></label>
                                 <div class="w-100">
                                     <input class="form-control datetimepicker bg-white @error('perkiraan_waktu_mulai_terpapar_risiko') is-invalid @enderror"
                                         name="perkiraan_waktu_mulai_terpapar_risiko"
@@ -331,7 +331,7 @@
                                 </div>
                             </div>
                             <div class="form-group d-lg-flex mb-4">
-                                <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker3">Perkiraan Waktu Selesai</label>
+                                <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker3">Perkiraan Waktu Selesai <span class="text-danger">*</span></label>
                                 <div class="w-100">
                                     <input class="form-control datetimepicker bg-white @error('perkiraan_waktu_selesai_terpapar_risiko') is-invalid @enderror"
                                         name="perkiraan_waktu_selesai_terpapar_risiko"
@@ -520,7 +520,7 @@
                     <div class="form-floating">
                         <input type="hidden" name="penyebab_dampak_id[]">
                         <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required></textarea>
-                        <label>Dampak Risiko</label>
+                        <label>Dampak Risiko <span class="text-danger">*</span></label>
                     </div>
                 </div>
                 <div class="col-auto d-flex align-items-center">
@@ -542,7 +542,7 @@
                 <div class="form-floating">
                     <input type="hidden" name="penyebab_risiko_id[]" value="">
                     <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko">
-                    <label>Penyebab Risiko</label>
+                    <label>Penyebab Risiko <span class="text-danger">*</span></label>
                 </div>
                 </div>
                 <div class="col-auto d-flex align-items-center">
@@ -575,31 +575,31 @@
                             <div class="col-12">
                                 <div class="form-group form-floating">
                                     <input type="text" class="form-control" name="key_risk_indicator[]">
-                                    <label for="key_risk_indicator_1">Key Risk Indicator</label>
+                                    <label for="key_risk_indicator_1">Key Risk Indicator <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating">
                                     <input type="text" class="form-control" name="satuan_kri[]">
-                                    <label for="satuan_kri_1">Satuan KRI</label>
+                                    <label for="satuan_kri_1">Satuan KRI <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
                                     <input type="text" class="form-control border-success" name="batas_aman[]">
-                                    <label for="batas_aman_1">Batas Aman</label>
+                                    <label for="batas_aman_1">Batas Aman <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
                                     <input type="text" class="form-control border-warning" name="batas_waspada[]">
-                                    <label for="batas_waspada_1">Batas Waspada</label>
+                                    <label for="batas_waspada_1">Batas Waspada <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
                                     <input type="text" class="form-control border-danger" name="batas_bahaya[]">
-                                    <label for="batas_bahaya_1">Batas Bahaya</label>
+                                    <label for="batas_bahaya_1">Batas Bahaya <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                         </div>

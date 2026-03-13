@@ -21,10 +21,14 @@ use Carbon\Carbon;
 class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, ShouldAutoSize, WithEvents
 {
     private $projectId;
+    private $bulan;
+    private $tahun;
 
-    public function __construct($projectId)
+    public function __construct($projectId, $bulan, $tahun)
     {
         $this->projectId = $projectId;
+        $this->bulan = $bulan;
+        $this->tahun = $tahun;
     }
 
     public function title(): string
@@ -112,7 +116,7 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                     'B10' => ['Label' => 'Biaya Perlakuan Risiko Sesuai RKP:', 'Value' => $this->formatCurrency($biayaRkp)],
                     'B11' => ['Label' => 'Rencana Biaya Perlakuan Risiko:', 'Value' => $this->formatCurrency($rencanaBiayaTotal)],
                     'B12' => ['Label' => 'Realisasi Biaya Perlakuan Risiko:', 'Value' => $this->formatCurrency($realisasiBiayaTotal)],
-                    'B13' => ['Label' => 'Batasan Biaya Perlakuan Risiko:', 'Value' => $this->formatCurrency(0)],
+                    'B13' => ['Label' => 'Batasan Biaya Perlakuan Risiko:', 'Value' => $this->formatCurrency($project->batasan_biaya_perlakuan_risiko ?? 0)],
                 ];
 
                 foreach ($dataResume as $cell => $data) {
@@ -317,12 +321,21 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
         $risks = ProjectRisk::with([
             'sasaranProyek',
             'peristiwaRisiko',
-            'kriProjects.kriProjectMonitorings', // Load monitoring KRI
             'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings',
             'perlakuanDampakRisikos.perlakuanDampakMonitorings',
             'dampakRisikoProjects',
             'projectRiskAnalisa',
-            'projectRiskMonitorings',
+            'projectRiskMonitorings' => function($q) {
+                $q->where('month', $this->bulan)
+                  ->where('tahun', $this->tahun)
+                  ->orderBy('id', 'desc');
+            },
+            'kriProjects.kriProjectMonitorings' => function($q) {
+                $q->whereHas('projectMonitoring', function($sq) {
+                    $sq->where('month', $this->bulan)
+                    ->where('tahun', $this->tahun);
+                })->orderBy('id', 'desc');
+            }
         ])
         ->where('project_id', $this->projectId)
         ->get();

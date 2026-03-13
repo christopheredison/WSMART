@@ -87,12 +87,12 @@
                                         </small>
                                     </div>
                                 </div>
-                                <div class="mb-3">
+                                {{-- <div class="mb-3">
                                     <label class="form-label">Anggota Unit Kerja</label>
                                     <small class="form-text text-muted d-block mb-2">
                                         Keseluruhan anggota tim inti (nama dan jabatan) yang terlibat dalam unit kerja yang bersangkutan.
                                     </small>
-                                </div>
+                                </div> --}}
                             </div>
                         </div>
 

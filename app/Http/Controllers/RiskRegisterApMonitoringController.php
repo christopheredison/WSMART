@@ -536,17 +536,17 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         // Dan pastikan user di unit yang sedang dibuka
         $canEdit = Gate::check('risk_monitoring_input') && $userLevel == 1 && $user->unit_id == $targetUnitId;
 
+        $this->tableActions[] = [
+            'label' => 'Peluang',
+            'btn_icon' => false,
+            'action' => 'script',
+            'script' => "showPeluangModal($(this).data('id'), '__RISK_TITLE__', '__RISK_DESC__')",
+            'active_state' => '(data, type, row) => true',
+            'extra_attrs' => [ 'style' => 'font-size: 16px; font-weight: 400;', 'data-id' => 'row.id' ]
+        ];
+
         if ($canEdit) {
             $monitoringRoute = route('risk-register-ap.monitorings.edit', ['period' => $period->id, 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
-
-            $this->tableActions[] = [
-                'label' => 'Peluang',
-                'btn_icon' => false,
-                'action' => 'script',
-                'script' => "showPeluangModal($(this).data('id'), '__RISK_TITLE__', '__RISK_DESC__')",
-                'active_state' => '(data, type, row) => true',
-                'extra_attrs' => [ 'style' => 'font-size: 16px; font-weight: 400;', 'data-id' => 'row.id' ]
-            ];
 
             $this->tableActions[] = [
                 'label' => 'Monitoring',
@@ -1555,7 +1555,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         $isUnitMr = $unit->unit_mr == 1;
 
         // Simpan status sebelum diubah untuk pengecekan notifikasi
-        $currentStatus = $monitoring->status; 
+        $currentStatus = $monitoring->status;
         $targetLink = route('risk-register-ap.monitorings.index', ['period' => $period->id, 'unit_id' => $unit->id]);
 
         DB::transaction(function () use ($validated, $monitoring, $isUnitMr) {

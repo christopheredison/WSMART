@@ -169,6 +169,8 @@ class LaporanController extends Controller
         $request->validate([
             'project_ids'   => 'required|array',
             'project_ids.*' => 'string',
+            'month'         => 'nullable|integer|between:1,12',
+            'tahun'         => 'nullable|integer',
         ]);
 
         try {
@@ -176,6 +178,24 @@ class LaporanController extends Controller
             $inputIds = $request->input('project_ids');
             $finalProjectIds = [];
             $fileNameProject = '';
+
+            $month = $request->input('month');
+            $tahun = $request->input('tahun');
+
+            $namaBulan = [
+                1 => 'Januari',
+                2 => 'Februari',
+                3 => 'Maret',
+                4 => 'April',
+                5 => 'Mei',
+                6 => 'Juni',
+                7 => 'Juli',
+                8 => 'Agustus',
+                9 => 'September',
+                10 => 'Oktober',
+                11 => 'November',
+                12 => 'Desember'
+            ];
 
             // --- LOGIKA FILTER AKSES (SAMA DENGAN INDEX) ---
             $userProjectIds = $user->projects->pluck('id');
@@ -214,10 +234,16 @@ class LaporanController extends Controller
                 return response()->json(['message' => 'Tidak ada project yang dapat diakses untuk di-export.'], 403);
             }
 
-            $fileName = 'Laporan_Risk_Register_' . $fileNameProject . '.xlsx';
+            $monthString = $month ? $namaBulan[(int)$month] : '';
+
+            // Rakit nama file
+            $fileName = 'Laporan_Risk_Register_' . $fileNameProject . '_' . $monthString . '_' . $tahun . '.xlsx';
+
+            // Bersihkan jika ada double underscore (misal jika month kosong)
+            $fileName = str_replace('__', '_', $fileName);
 
             $fileContents = Excel::raw(
-                new LaporanProjectExport($finalProjectIds),
+                new LaporanProjectExport($finalProjectIds, $month, $tahun),
                 \Maatwebsite\Excel\Excel::XLSX
             );
 

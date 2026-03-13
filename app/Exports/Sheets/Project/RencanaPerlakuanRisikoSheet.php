@@ -19,14 +19,18 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
 {
     private $projectIds;
     private $timelineData = [];
+    private $month;
+    private $tahun;
     private $opsiPerlakuan = [];
     private $startYear;
     private $endYear;
     private $totalMonths;
 
-    public function __construct(array $projectIds)
+    public function __construct(array $projectIds, $month = null, $tahun = null)
     {
         $this->projectIds = $projectIds;
+        $this->month = $month;
+        $this->tahun = $tahun;
         $this->opsiPerlakuan = \App\Models\OpsiPerlakuanRisiko::pluck('opsi_perlakuan_risiko', 'id')->toArray();
 
         // Tentukan Range Tahun di Constructor
@@ -144,8 +148,20 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
     {
         $risikos = ProjectRisk::with([
             'projectPeriodeList.project',
-            'penyebabRisikoProjects.perlakuanPenyebabRisiko.lastMonitoring',
-            'perlakuanDampakRisikos.lastMonitoring'
+            'penyebabRisikoProjects.perlakuanPenyebabRisiko.lastMonitoring' => function($q) {
+                if ($this->month && $this->tahun) {
+                    $q->whereHas('projectMonitoring', function($sq) {
+                        $sq->where('month', $this->month)->where('tahun', $this->tahun);
+                    });
+                }
+            },
+            'perlakuanDampakRisikos.lastMonitoring' => function($q) {
+                if ($this->month && $this->tahun) {
+                    $q->whereHas('projectMonitoring', function($sq) {
+                        $sq->where('month', $this->month)->where('tahun', $this->tahun);
+                    });
+                }
+            }
         ])->whereIn('project_id', $this->projectIds)->get();
 
         $exportData = new Collection();

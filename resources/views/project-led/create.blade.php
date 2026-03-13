@@ -179,8 +179,17 @@
                         </div>
 
                         <div class="col-12 mt-4">
-                            <a href="{{ route('project-led.index-by-project', ['projectId' => $project->id]) }}" class="btn btn-secondary">Batal</a>
-                            <button type="button" class="btn btn-primary" id="save-led-button">Simpan</button>
+                            <div class="row g-2">
+                                <div class="col-auto">
+                                    <a href="{{ route('project-led.index-by-project', ['projectId' => $project->id]) }}" class="btn btn-secondary">Batal</a>
+                                </div>
+                                <div class="col-auto">
+                                    <button type="submit" class="btn btn-primary" id="save-led-button">Simpan</button>
+                                </div>
+                                <div class="col-auto ms-auto">
+                                    <button type="submit" class="btn btn-danger" id="save-led-risiko-button">Simpan & Jadikan Risiko</button>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -507,13 +516,36 @@ $(document).ready(function() {
 
         Swal.fire({
             title: 'Konfirmasi Penyimpanan',
+            text: "Apakah Anda yakin ingin menyimpan Loss Event ini?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Simpan',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $('#create_risk_from_led_input').val('0');
+                form.submit();
+            }
+        });
+    });
+
+    $('#save-led-risiko-button').on('click', function(e) {
+        e.preventDefault();
+        const form = document.getElementById('form-create-led');
+
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        Swal.fire({
+            title: 'Konfirmasi Penyimpanan',
             text: "Apakah Loss Event ini akan menjadi Risiko baru di Project?",
             icon: 'question',
             showDenyButton: true,
             showCancelButton: false,
             confirmButtonText: 'Ya, Jadikan Risiko',
-            denyButtonText: `Tidak, Simpan LED Saja`,
-            cancelButtonText: 'Batal'
+            denyButtonText: 'Tidak, Simpan LED Saja'
         }).then((result) => {
             if (result.isConfirmed) {
                 $('#create_risk_from_led_input').val('1');

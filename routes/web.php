@@ -438,6 +438,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('project/{project}/risks/bulk-verifikasi', [ProjectRiskController::class, 'bulkVerifikasi'])->name('projects.risks.bulk-verifikasi');
 
     Route::resource('projects/{project}/monitorings', ProjectRiskMonitoringController::class)->names('projects.monitorings')->only(['index', 'show', 'edit', 'update']);
+    Route::delete('projects/{project}/monitorings/{monitoring}/delete-document/{documentId}', [ProjectRiskMonitoringController::class, 'destroyDocument'])->name('projects.monitorings.document.destroy');
     Route::resource('projects-monitorings/{monitoring}/q-{quarter}/documents', ProjectRiskMonitoringDocumentController::class)->names('projects.monitorings.documents')->only(['index', 'show', 'store', 'destroy']);
     Route::prefix('projects/{project}/monitorings')->name('projects.monitorings.')->group(function () {
         Route::post('send-all', [ProjectRiskMonitoringController::class, 'sendAllMonitoring'])->name('send.all');

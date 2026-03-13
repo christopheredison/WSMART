@@ -393,15 +393,6 @@ $(document).ready(function() {
         validateBiaya($(this));
     });
 
-    // Validasi saat submit form
-    $('#formTambahRencana, #formEditRencana').on('submit', function(e) {
-        const biayaInput = $(this).find('input[name="biaya_perlakuan_risiko"], input[name="xbiaya_perlakuan_risiko"]');
-        if (!validateBiaya(biayaInput)) {
-            e.preventDefault();
-            return false;
-        }
-    });
-
     $(document).on('click', 'button[data-action="add"]', function() {
         const penyebabId = $(this).data('id');
         const penyebabNama = $(this).data('penyebab');
@@ -562,22 +553,6 @@ $(document).ready(function() {
         $('#modalTambahRencanaDampak').modal('show');
     });
 
-    // Submit Tambah Dampak
-    $('#btnSimpanTambahDampak').on('click', function() {
-        $.ajax({
-            url: '/risk-register-unit/rencana-perlakuan-dampak/tambah',
-            type: 'POST',
-            data: $('#formTambahRencanaDampak').serialize() + "&_token={{ csrf_token() }}",
-            success: function(response) {
-                $('#modalTambahRencanaDampak').modal('hide');
-                Swal.fire('Berhasil', response.message, 'success').then(() => location.reload());
-            },
-            error: function(xhr) {
-                Swal.fire('Error', xhr.responseJSON.message || 'Terjadi kesalahan', 'error');
-            }
-        });
-    });
-
     // Click Edit Dampak
     $(document).on('click', 'button[data-action="edit-dampak"]', function() {
         const id = $(this).data('id');
@@ -602,23 +577,6 @@ $(document).ready(function() {
             fpImpact2.setDate(data.timeline_perlakuan_risiko_end);
 
             $('#modalEditRencanaDampak').modal('show');
-        });
-    });
-
-    // Submit Update Dampak
-    $('#btnUpdateDampak').on('click', function() {
-        const id = $('#xdPerlakuanId').val();
-        $.ajax({
-            url: `/risk-register-unit/rencana-perlakuan-dampak/${id}`,
-            type: 'PUT',
-            data: $('#formEditRencanaDampak').serialize() + "&_token={{ csrf_token() }}",
-            success: function(response) {
-                $('#modalEditRencanaDampak').modal('hide');
-                Swal.fire('Berhasil', response.message, 'success').then(() => location.reload());
-            },
-            error: function(xhr) {
-                Swal.fire('Error', xhr.responseJSON.message || 'Gagal update', 'error');
-            }
         });
     });
 
@@ -660,6 +618,224 @@ $(document).ready(function() {
                             xhr.responseJSON.message || 'Terjadi kesalahan saat menghapus data.',
                             'error'
                         );
+                    }
+                });
+            }
+        });
+    });
+
+    // --- 1. SIMPAN TAMBAH RENCANA PENYEBAB ---
+    $('#btnSimpanTambahRencana').off('click').on('click', function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const form = $('#formTambahRencana');
+
+        // Validasi Manual
+        let isValid = true;
+        form.find('input[required], textarea[required], select[required]').each(function() {
+            if (!$(this).val() || $(this).val().trim() === '') {
+                isValid = false;
+                $(this).addClass('is-invalid');
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+
+        if (!isValid) {
+            Swal.fire('Error', 'Harap lengkapi semua field yang wajib diisi!', 'error');
+            return;
+        }
+
+        const biayaInput = form.find('input[name="biaya_perlakuan_risiko"]');
+        if (!validateBiaya(biayaInput)) return;
+
+        Swal.fire({
+            title: 'Simpan Rencana Penyebab?',
+            text: "Apakah Anda yakin data yang diinput sudah benar?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Simpan',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Disable tombol dan tampilkan loading
+                btn.prop('disabled', true).html('<i class="bx bx-loader bx-spin"></i> Menyimpan...');
+                Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+                $.ajax({
+                    url: '{{ route('risk-register-unit.do-perencanaan', $identifikasiRisiko->id) }}',
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        $('#modalTambahRencana').modal('hide');
+                        Swal.fire('Berhasil', response.message, 'success').then(() => window.location.reload());
+                    },
+                    error: function(xhr) {
+                        btn.prop('disabled', false).text('Simpan'); // Aktifkan tombol lagi
+                        let errorMessage = xhr.responseJSON?.message || 'Terjadi kesalahan.';
+                        Swal.fire('Error', errorMessage, 'error');
+                    }
+                });
+            }
+        });
+    });
+
+    // --- 2. SIMPAN EDIT RENCANA PENYEBAB ---
+    $('#btnSimpanEditRencana').off('click').on('click', function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const form = $('#formEditRencana');
+        const perlakuanId = $('#xperlakuanId').val();
+
+        // Validasi Manual
+        let isValid = true;
+        form.find('input[required], textarea[required], select[required]').each(function() {
+            if (!$(this).val() || $(this).val().trim() === '') {
+                isValid = false;
+                $(this).addClass('is-invalid');
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+
+        if (!isValid) {
+            Swal.fire('Error', 'Harap lengkapi semua field yang wajib diisi!', 'error');
+            return;
+        }
+
+        const biayaInput = form.find('input[name="xbiaya_perlakuan_risiko"]');
+        if (!validateBiaya(biayaInput)) return;
+
+        Swal.fire({
+            title: 'Update Rencana Penyebab?',
+            text: "Apakah Anda yakin ingin memperbarui data ini?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Update',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Disable tombol dan tampilkan loading
+                btn.prop('disabled', true).html('<i class="bx bx-loader bx-spin"></i> Memperbarui...');
+                Swal.fire({ title: 'Memperbarui...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+                $.ajax({
+                    url: `{{ route('risk-register-unit.update-rencana-perlakuan', ['riskRegister' => $identifikasiRisiko->id, 'id' => ':id']) }}`.replace(':id', perlakuanId),
+                    type: 'PUT',
+                    data: form.serialize(),
+                    success: function(response) {
+                        $('#modalEditRencana').modal('hide');
+                        Swal.fire('Berhasil!', response.message || 'Berhasil diperbarui.', 'success').then(() => window.location.reload());
+                    },
+                    error: function(xhr) {
+                        btn.prop('disabled', false).text('Simpan'); // Aktifkan tombol lagi
+                        Swal.fire('Gagal!', xhr.responseJSON?.message || 'Terjadi kesalahan saat menyimpan.', 'error');
+                    }
+                });
+            }
+        });
+    });
+
+    // --- 3. SIMPAN TAMBAH RENCANA DAMPAK ---
+    $('#btnSimpanTambahDampak').off('click').on('click', function(e) {
+        e.preventDefault();
+        const formObj = $('#formTambahRencanaDampak')[0];
+        const form = $('#formTambahRencanaDampak');
+        const btn = $(this);
+
+        if (!formObj.checkValidity()) {
+            formObj.reportValidity();
+            return;
+        }
+
+        const biayaInput = form.find('input[name="biaya_perlakuan_risiko"]');
+        if (!validateBiaya(biayaInput)) return;
+
+        Swal.fire({
+            title: 'Simpan Rencana Dampak?',
+            text: "Apakah Anda yakin data yang diinput sudah benar?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Simpan',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                btn.prop('disabled', true).html('<i class="bx bx-loader bx-spin"></i> Menyimpan...');
+                Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+                $.ajax({
+                    url: '/risk-register-unit/rencana-perlakuan-dampak/tambah',
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        $('#modalTambahRencanaDampak').modal('hide');
+                        Swal.fire('Berhasil', response.message, 'success').then(() => location.reload());
+                    },
+                    error: function(xhr) {
+                        btn.prop('disabled', false).text('Simpan');
+                        Swal.fire('Error', xhr.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                    }
+                });
+            }
+        });
+    });
+
+    // --- 4. SIMPAN EDIT RENCANA DAMPAK ---
+    $('#btnUpdateDampak').off('click').on('click', function(e) {
+        e.preventDefault();
+        const formObj = $('#formEditRencanaDampak')[0];
+        const form = $('#formEditRencanaDampak');
+        const btn = $(this);
+
+        // PERBAIKAN DISINI: Ambil ID dari input hidden yang benar
+        let id = $('#xdPerlakuanId').val();
+
+        // (Fallback) Jika di Blade HTML Anda menggunakan id "perlakuanDampakId"
+        if (!id) {
+            id = $('#perlakuanDampakId').val();
+        }
+
+        // Cegah AJAX berjalan jika ID tidak ditemukan (mencegah error validasi salah alamat)
+        if (!id) {
+            Swal.fire('Error Sistem', 'ID Perlakuan Dampak tidak ditemukan. Silakan refresh halaman dan coba lagi.', 'error');
+            return;
+        }
+
+        if (!formObj.checkValidity()) {
+            formObj.reportValidity();
+            return;
+        }
+
+        const biayaInput = form.find('input[name="xd_biaya_perlakuan_risiko"]');
+        if (!validateBiaya(biayaInput)) return;
+
+        Swal.fire({
+            title: 'Update Rencana Dampak?',
+            text: "Apakah Anda yakin ingin memperbarui data ini?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Update',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                btn.prop('disabled', true).html('<i class="bx bx-loader bx-spin"></i> Memperbarui...');
+                Swal.fire({ title: 'Memperbarui...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+                $.ajax({
+                    url: `/risk-register-unit/rencana-perlakuan-dampak/${id}`,
+                    type: 'PUT',
+                    data: form.serialize() + "&_token={{ csrf_token() }}",
+                    success: function(response) {
+                        $('#modalEditRencanaDampak').modal('hide');
+                        Swal.fire('Berhasil', response.message, 'success').then(() => location.reload());
+                    },
+                    error: function(xhr) {
+                        btn.prop('disabled', false).text('Update');
+                        Swal.fire('Error', xhr.responseJSON?.message || 'Gagal update', 'error');
                     }
                 });
             }

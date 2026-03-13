@@ -47,14 +47,14 @@
 </a>
 
 @if(!$unitExpired)
-  @if((
+  @if(((
     $item->status == 1
     || $item->status == null
     || $item->status == 5
   ) && (
     auth()->user()->level_id == 1
     && auth()->user()->unit_id == $item->unit_id
-  ))
+  )) || auth()->user()->can('risk_register_delete_admin'))
   @can('risk_register_delete')
     <button type="button" class="btn-input-icon" data-bs-toggle="modal"
       data-bs-target="#modalDelete{{ $item->id }}">

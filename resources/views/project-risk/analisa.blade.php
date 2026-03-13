@@ -187,7 +187,7 @@
                     </div>
                     <div class="col-md-2">
                         <label>Nilai Probabilitas (%)</label>
-                        {{ Form::number('nilai_probabilitas', $analisa->nilai_probabilitas, ['class' => 'form-control', 'required' => true, 'step' => '0.01', 'min' => 0, 'max' => 100, 'disabled' => false]) }}
+                        {{ Form::number('nilai_probabilitas', $analisa->nilai_probabilitas, ['class' => 'form-control', 'required' => true, 'step' => '0.01', 'min' => 0, 'max' => 100, 'disabled' => false, 'autocomplete' => 'off']) }}
                     </div>
                     <div class="col-md-2">
                         <label>Skala Risiko</label>
@@ -260,7 +260,7 @@
                     </div>
                     <div class="col-md-2">
                         <label>Nilai Probabilitas (%)</label>
-                        {{ Form::number('nilai_probabilitas_residual', $analisa->nilai_probabilitas_residual, ['class' => 'form-control', 'required' => true, 'step' => '0.01', 'min' => 0, 'max' => 100, 'disabled' => false]) }}
+                        {{ Form::number('nilai_probabilitas_residual', $analisa->nilai_probabilitas_residual, ['class' => 'form-control', 'required' => true, 'step' => '0.01', 'min' => 0, 'max' => 100, 'disabled' => false, 'autocomplete' => 'off']) }}
                     </div>
                     <div class="col-md-2">
                         <label>Skala Risiko</label>

@@ -308,7 +308,7 @@
             </div>
 
             <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
-                <h3 class="h4 mb-0">Daftar Risiko (Level Inheren: Moderate to High & High)</h3>
+                <h3 class="h4 mb-0">Daftar Risiko</h3>
             </div>
             <div class="table-responsive">
                 <table class="table table-bordered table-hover table-sm table-strategi">
@@ -347,11 +347,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($highImpactRisks as $projectRisk)
+                        @forelse($openRisks as $projectRisk)
                         <tr data-risk-id="{{ $projectRisk->id }}">
                             <td class="text-start fw-bold">
                               <a href="{{  route('projects.risks.view', ['project' => $projectRisk->project_id, 'risk' => $projectRisk->id]) }}">
-                                R{{ $loop->iteration }}
+                                R{{ $projectRisk->nomor_urut }}
                               </a>
                             </td>
                             <td class="text-start">{{ $projectRisk->peristiwaRisiko?->title ?? '-' }}</td>
@@ -382,7 +382,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="20" class="text-center p-4">Tidak ada data risiko dengan level 'Moderate to High' atau 'High'.</td>
+                            <td colspan="20" class="text-center p-4">Tidak ada data risiko yang berstatus Open.</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -641,6 +641,25 @@
     </div>
 @endif
 
+<div class="modal fade" id="heatmapDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow p-0">
+            <div class="modal-header bg-light border-bottom">
+                <h5 class="modal-title fw-bold">Detail Risiko</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <p class="text-muted small mb-3">Berikut adalah daftar risiko yang berada pada skala ini:</p>
+                <ul class="list-group list-group-flush shadow-sm rounded" id="heatmap-cell-risk-list">
+                    </ul>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('styles')
@@ -657,22 +676,36 @@
     width: calc(100% - 5px) !important;
 }
 .box-inherent {
-    background-color: #fff;
-    color: #000;
-    padding: 2px 5px;
-    border-radius: 5px;
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #000000; /* Border hitam agar terlihat jelas */
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.75rem;
+    line-height: 1;
 }
+
 .box-residual {
-    background-color: #000;
-    color: #fff;
-    padding: 2px 5px;
-    border-radius: 5px;
+    background-color: #000000;
+    color: #ffffff;
+    border: 1px solid #000000;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.75rem;
+    line-height: 1;
 }
+
 .box-current {
     background-color: #007bff;
-    color: #fff;
-    padding: 2px 5px;
-    border-radius: 5px;
+    color: #ffffff;
+    border: 1px solid #007bff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.75rem;
+    line-height: 1;
 }
 #currentMap .current-m1, #currentMap .current-m2, #currentMap .current-m3, #currentMap .current-m4, #currentMap .current-m5, #currentMap .current-m6, #currentMap .current-m7, #currentMap .current-m8, #currentMap .current-m9, #currentMap .current-m10, #currentMap .current-m11, #currentMap .current-m12 {
     display: none;
@@ -783,32 +816,84 @@ $(document).ready(function() {
     @if ($selectedProjectId && !$projectRisksJs->isEmpty())
         const risks = @json($projectRisksJs);
         const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
-        const highImpactLevels = ['High', 'Moderate to High'];
 
         function populateInherentMap() {
-            Object.values(risks).forEach(risk => {
-                // [FIX] Cek level risiko inheren sebelum menampilkan di peta
-                if(risk.project_risk_analisa && highImpactLevels.includes(risk.project_risk_analisa.level_risiko)) {
-                    // Tampilkan di Peta Inheren
-                    const matrixI = risk.project_risk_analisa.skala_dampak + '-' + risk.project_risk_analisa.skala_probabilitas?.tingkat;
-                    const cellI = $(`#inherentMap .data-cell[data-matrix="${matrixI}"]`);
-                    if (cellI.length) {
-                        // Menggunakan nomor urut dari tabel
-                        const riskNumber = $(`.table-strategi tbody tr[data-risk-id="${risk.id}"]`).find('td:first').text();
-                        if(riskNumber) {
-                          cellI.find('.kode-peristiwa').append(`<span class="box-inherent">${riskNumber}</span>`);
-                        }
-                    }
+            let inherentMapData = {};
+            let residualMapData = {};
 
-                    // Tampilkan di Peta Residual
+            // Bersihkan map sebelum render
+            $('#inherentMap .data-cell').removeAttr('data-bs-toggle data-bs-target data-risks data-title').css('cursor', 'default');
+            $('#inherentMap .kode-peristiwa').empty();
+
+            // Kelompokkan Risiko berdasarkan matrix Inherent dan Residual
+            Object.values(risks).forEach(risk => {
+                if (risk.is_closed) return; // Pastikan hanya open
+
+                if(risk.project_risk_analisa) {
+                    // Kelompokkan Inherent
+                    const matrixI = risk.project_risk_analisa.skala_dampak + '-' + risk.project_risk_analisa.skala_probabilitas?.tingkat;
+                    if (!inherentMapData[matrixI]) inherentMapData[matrixI] = [];
+                    inherentMapData[matrixI].push(risk);
+
+                    // Kelompokkan Residual
                     const matrixR = risk.project_risk_analisa.skala_dampak_residual + '-' + risk.project_risk_analisa.skala_probabilitas_residual?.tingkat;
-                    const cellR = $(`#inherentMap .data-cell[data-matrix="${matrixR}"]`);
-                    if (cellR.length) {
-                        const riskNumber = $(`.table-strategi tbody tr[data-risk-id="${risk.id}"]`).find('td:first').text();
-                        if(riskNumber) {
-                          cellR.find('.kode-peristiwa').append(`<span class="box-residual">${riskNumber}</span>`);
-                        }
-                    }
+                    if (!residualMapData[matrixR]) residualMapData[matrixR] = [];
+                    residualMapData[matrixR].push(risk);
+                }
+            });
+
+            // Render Inherent ke UI
+            Object.keys(inherentMapData).forEach(matrix => {
+                const cell = $(`#inherentMap .data-cell[data-matrix="${matrix}"]`);
+                if (cell.length) {
+                    let risksInCell = inherentMapData[matrix];
+                    // Cetak Angka Count
+                    cell.find('.kode-peristiwa').append(`<span class="box-inherent" title="Total Inherent: ${risksInCell.length}">${risksInCell.length}</span>`);
+
+                    let modalData = risksInCell.map(r => ({
+                        type: 'Inherent',
+                        code: 'R' + r.nomor_urut,
+                        name: r.peristiwa_risiko?.title || r.rencana_kegiatan,
+                        level: r.project_risk_analisa?.level_risiko,
+                        score: r.project_risk_analisa?.skala_risiko, // Ambil Nilai Angka
+                        url: `{{ url('projects') }}/${r.project_periode_list_id}/risks/${r.id}/view`
+                    }));
+
+                    const levelName = modalData[0]?.level || '-';
+                    const riskScore = modalData[0]?.score || '-';
+
+                    cell.css('cursor', 'pointer').attr('data-bs-toggle', 'modal').attr('data-bs-target', '#heatmapDetailModal')
+                        .attr('data-title', `Detail Risiko (${levelName}: ${riskScore})`)
+                        .attr('data-risks', JSON.stringify(modalData));
+                }
+            });
+
+            // Render Residual ke UI
+            Object.keys(residualMapData).forEach(matrix => {
+                const cell = $(`#inherentMap .data-cell[data-matrix="${matrix}"]`);
+                if (cell.length) {
+                    let risksInCell = residualMapData[matrix];
+                    // Cetak Angka Count
+                    cell.find('.kode-peristiwa').append(`<span class="box-residual" title="Total Residual: ${risksInCell.length}">${risksInCell.length}</span>`);
+
+                    let newRisks = risksInCell.map(r => ({
+                        type: 'Residual',
+                        code: 'R' + r.nomor_urut,
+                        name: r.peristiwa_risiko?.title || r.rencana_kegiatan,
+                        level: r.project_risk_analisa?.level_risiko_residual,
+                        score: r.project_risk_analisa?.skala_risiko_residual, // Ambil Nilai Angka
+                        url: `{{ url('projects') }}/${r.project_periode_list_id}/risks/${r.id}/view`
+                    }));
+
+                    let existingRisks = cell.attr('data-risks') ? JSON.parse(cell.attr('data-risks')) : [];
+                    let combinedRisks = existingRisks.concat(newRisks);
+
+                    const levelName = combinedRisks[0]?.level || '-';
+                    const riskScore = combinedRisks[0]?.score || '-';
+
+                    cell.css('cursor', 'pointer').attr('data-bs-toggle', 'modal').attr('data-bs-target', '#heatmapDetailModal')
+                        .attr('data-title', `Detail Risiko (${levelName}: ${riskScore})`)
+                        .attr('data-risks', JSON.stringify(combinedRisks));
                 }
             });
         }
@@ -816,44 +901,126 @@ $(document).ready(function() {
         function updateCurrentData() {
             const selectedMonth = $('#monthSelect').val();
             const selectedYear = $('#tahunSelect').val();
+
+            // Bersihkan Map Current
+            $('#currentMap .data-cell').removeAttr('data-bs-toggle data-bs-target data-risks data-title').css('cursor', 'default');
             $('#currentMap .kode-peristiwa').empty();
+
+            let currentMapData = {};
 
             Object.values(risks).forEach(risk => {
                 const riskId = risk.id;
                 const tableRow = $(`.table-strategi tbody tr[data-risk-id="${riskId}"]`);
-                const riskNumber = tableRow.find('td:first').text();
 
-                // [FIX] Cek level risiko inheren sebelum menampilkan di peta dan tabel
-                if(risk.project_risk_analisa && highImpactLevels.includes(risk.project_risk_analisa.level_risiko)) {
-                    const currentData = formattedCurrentRiskMaps[riskId]?.[selectedYear]?.[selectedMonth - 1];
+                if (risk.is_closed) return;
 
-                    if (currentData && riskNumber) {
-                        // Tampilkan di Peta Current
-                        const matrixC = currentData.skala_dampak + '-' + currentData.skala_probabilitas;
-                        const cellC = $(`#currentMap .data-cell[data-matrix="${matrixC}"]`);
-                        if (cellC.length) {
-                            cellC.find('.kode-peristiwa').append(`<span class="box-current">${riskNumber}</span>`);
-                        }
+                const currentData = formattedCurrentRiskMaps[riskId]?.[selectedYear]?.[selectedMonth - 1];
 
-                        // Update baris tabel
-                        if (tableRow.length) {
-                            const levelClass = (currentData.level_risiko || '').toLowerCase().replace(/ /g, '-').replace('to-', '');
-                            tableRow.find('.realisasi-nilai-dampak').html(currentData.nilai_dampak_formatted);
-                            tableRow.find('.realisasi-skala-dampak').html(currentData.skala_dampak_obj?.tingkat || '-');
-                            tableRow.find('.realisasi-nilai-probabilitas').html((currentData.nilai_probabilitas ? currentData.nilai_probabilitas + '%' : '-'));
-                            tableRow.find('.realisasi-skala-probabilitas').html(currentData.skala_probabilitas_obj?.tingkat || '-');
-                            tableRow.find('.realisasi-nilai-risiko').html(currentData.nilai_risiko || '-');
-                            tableRow.find('.realisasi-level-risiko').html(currentData.level_risiko || '-')
-                                .removeClass('bg-high bg-moderate-high bg-moderate bg-low-moderate bg-low').addClass('bg-' + levelClass);
-                        }
-                    } else if (tableRow.length) {
-                        // Kosongkan data jika tidak ada data current untuk periode terpilih
-                        tableRow.find('.realisasi-nilai-dampak, .realisasi-skala-dampak, .realisasi-nilai-probabilitas, .realisasi-skala-probabilitas, .realisasi-nilai-risiko, .realisasi-level-risiko').html('-');
-                        tableRow.find('.realisasi-level-risiko').removeClass('bg-high bg-moderate-high bg-moderate bg-low-moderate bg-low');
+                if (currentData) {
+                    // Kelompokkan data map
+                    const matrixC = currentData.skala_dampak + '-' + currentData.skala_probabilitas;
+                    if (!currentMapData[matrixC]) currentMapData[matrixC] = [];
+                    currentMapData[matrixC].push({risk: risk, currentData: currentData});
+
+                    // Update Table
+                    if (tableRow.length) {
+                        const levelClass = (currentData.level_risiko || '').toLowerCase().replace(/ /g, '-').replace('to-', '');
+                        tableRow.find('.realisasi-nilai-dampak').html(currentData.nilai_dampak_formatted);
+                        tableRow.find('.realisasi-skala-dampak').html(currentData.skala_dampak_obj?.tingkat || '-');
+                        tableRow.find('.realisasi-nilai-probabilitas').html((currentData.nilai_probabilitas ? currentData.nilai_probabilitas + '%' : '-'));
+                        tableRow.find('.realisasi-skala-probabilitas').html(currentData.skala_probabilitas_obj?.tingkat || '-');
+                        tableRow.find('.realisasi-nilai-risiko').html(currentData.nilai_risiko || '-');
+                        tableRow.find('.realisasi-level-risiko').html(currentData.level_risiko || '-')
+                            .removeClass('bg-high bg-moderate-high bg-moderate bg-low-moderate bg-low').addClass('bg-' + levelClass);
                     }
+                } else if (tableRow.length) {
+                    tableRow.find('.realisasi-nilai-dampak, .realisasi-skala-dampak, .realisasi-nilai-probabilitas, .realisasi-skala-probabilitas, .realisasi-nilai-risiko, .realisasi-level-risiko').html('-');
+                    tableRow.find('.realisasi-level-risiko').removeClass('bg-high bg-moderate-high bg-moderate bg-low-moderate bg-low');
+                }
+            });
+
+            // Render Current ke UI
+            Object.keys(currentMapData).forEach(matrix => {
+                const cell = $(`#currentMap .data-cell[data-matrix="${matrix}"]`);
+                if (cell.length) {
+                    let risksInCell = currentMapData[matrix];
+                    cell.find('.kode-peristiwa').append(`<span class="box-current" title="Total Current: ${risksInCell.length}">${risksInCell.length}</span>`);
+
+                    let modalData = risksInCell.map(item => ({
+                        type: 'Current',
+                        code: 'R' + item.risk.nomor_urut,
+                        name: item.risk.peristiwa_risiko?.title || item.risk.rencana_kegiatan,
+                        level: item.currentData.level_risiko,
+                        score: item.currentData.nilai_risiko, // Ambil Nilai Angka
+                        url: `{{ url('projects') }}/${item.risk.project_periode_list_id}/risks/${item.risk.id}/view`
+                    }));
+
+                    const levelName = modalData[0]?.level || '-';
+                    const riskScore = modalData[0]?.score || '-';
+
+                    cell.css('cursor', 'pointer').attr('data-bs-toggle', 'modal').attr('data-bs-target', '#heatmapDetailModal')
+                        .attr('data-title', `Detail Realisasi Risiko (${levelName}: ${riskScore})`)
+                        .attr('data-risks', JSON.stringify(modalData));
                 }
             });
         }
+
+        $('#heatmapDetailModal').on('show.bs.modal', function (event) {
+            // Ambil elemen kotak yang diklik
+            const cell = $(event.relatedTarget);
+
+            // Ambil data atribut dari elemen tersebut
+            const title = cell.attr('data-title') || 'Detail Risiko';
+            const risksRaw = cell.attr('data-risks');
+            const risks = risksRaw ? JSON.parse(risksRaw) : [];
+
+            // Update judul modal
+            const modal = $(this);
+            modal.find('.modal-title').text(title);
+
+            // Kosongkan list sebelumnya
+            const listContainer = modal.find('#heatmap-cell-risk-list');
+            listContainer.empty();
+
+            if (risks.length === 0) {
+                listContainer.append('<li class="list-group-item text-center text-muted">Tidak ada detail risiko di sel ini.</li>');
+                return;
+            }
+
+            // Render list baru
+            risks.forEach(function (risk) {
+
+                // 1. Tentukan style custom berdasarkan tipe
+                let customStyle = '';
+                if(risk.type === 'Inherent') {
+                    // Inherent: Background putih, text hitam, border hitam
+                    customStyle = 'background-color: #ffffff; color: #000000; border: 1px solid #000000;';
+                } else if(risk.type === 'Residual') {
+                    // Residual: Background hitam, text putih
+                    customStyle = 'background-color: #000000; color: #ffffff; border: 1px solid #000000;';
+                } else if(risk.type === 'Current') {
+                    // Current: Background biru, text putih
+                    customStyle = 'background-color: #007bff; color: #ffffff; border: 1px solid #007bff;';
+                }
+
+                // 2. Render HTML (Perhatikan: class di dalam span hanya "badge me-2")
+                const li = `
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold mb-1">
+                                <span class="badge me-2" style="${customStyle}">${risk.type}</span>
+                                <span class="text-primary">${risk.code}</span> - ${risk.name}
+                            </div>
+                            <span class="text-muted small">Level Risiko: <strong class="text-dark">${risk.level}</strong></span>
+                        </div>
+                        <a href="${risk.url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            Detail <span class="bx bx-link-external ms-1"></span>
+                        </a>
+                    </li>
+                `;
+                listContainer.append(li);
+            });
+        });
 
         populateInherentMap();
         updateCurrentData();

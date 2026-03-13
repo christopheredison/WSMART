@@ -80,7 +80,7 @@
                             </div>
                         </div>
 
-                        <div class="col-12 d-none">
+                        <div class="col-12">
                             <table class="table mt-3">
                                 <thead>
                                     <tr>
@@ -109,78 +109,3 @@
         </div>
     </div>
 </div>
-
-
-@push('scripts')
-<script>
-    $(document).ready(function() {
-        $('#btnTambahDokumenDampak').click(function() {
-            const dampakRisikoId = $(this).closest('form').find('input[name="perlakuan_dampak_id"]').val();
-            const domCell = $('#table-dampak-risiko tr[data-id="'+dampakRisikoId+'"] td.column-action-impact');
-            const domEdited = domCell.find('.dom-edited');
-
-            const uploadContainer = domEdited.find('.upload-container');
-            const inputDescription = domEdited.find('.input-file-description');
-            const tableDokumen = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
-            const newId = 'dokumen-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-
-            if (tableDokumen.find('tr').length >= 3) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Gagal',
-                    text: 'Maksimal 3 dokumen yang dapat diunggah.',
-                });
-                return;
-            }
-
-            uploadContainer.append('<input type="file" name="document_dampak_file_' + dampakRisikoId + '[' + newId + ']" id="'+newId+'" required>');
-
-            tableDokumen.append(`
-                <tr data-id="${newId}">
-                    <td>
-                        <span class="dokumen-filename">Pilih file</span>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control" name="deskripsi_dokumen[]" placeholder="Deskripsi dokumen">
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-link btn-sm text-danger delete-btn">Hapus</button>
-                    </td>
-                </tr>
-            `);
-
-            const appended = tableDokumen.find(`tr[data-id="${newId}"]`);
-
-            domEdited.find(`#${newId}`).change(function() {
-                const filename = $(this).prop('files')[0].name;
-                appended.find(`.dokumen-filename`).text(filename);
-
-                let totalSize = 0;
-                domEdited.find('input[type="file"]').each(function() {
-                    if (this.files[0]) {
-                        totalSize += this.files[0].size;
-                    }
-                });
-
-                if (totalSize > {{ config('filesystems.max_upload_size') }} * 1024 * 1024) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'File Terlalu Besar',
-                        text: 'Total ukuran file yang diunggah tidak boleh lebih dari {{ round(config('filesystems.max_upload_size')) }} MB.',
-                    });
-                    $('#modalUpdateRealisasiDampak .table-dokumen-dampak tr[data-id="'+newId+'"] .delete-btn').click();
-                }
-            });
-            domEdited.find(`#${newId}`).on('cancel', function() {
-                appended.find(`.delete-btn`).click();
-            });
-
-            domEdited.find(`#${newId}`).click();
-
-            if (tableDokumen.find('tr').length >= 3) {
-                tableDokumen.closest('table').find('tfoot').hide();
-            }
-        });
-    });
-</script>
-@endpush

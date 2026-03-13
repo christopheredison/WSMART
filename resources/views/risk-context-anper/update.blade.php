@@ -13,10 +13,10 @@
                 </div>
                 <div class="card-body">
                     @include('partials.success-message')
-                    
+
                     <form action="{{ route('risk-context-anper.store-or-update') }}" method="POST">
                         @csrf
-                        
+
                         <!-- Informasi Unit -->
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -29,7 +29,7 @@
                                 <select name="periode_id" class="form-control" required>
                                     <option value="">Pilih Periode</option>
                                     @foreach($periodes as $periode)
-                                        <option value="{{ $periode->id }}" 
+                                        <option value="{{ $periode->id }}"
                                             {{ ($selectedPeriode && $selectedPeriode->id == $periode->id) || (old('periode_id') == $periode->id) || ($riskContext && $riskContext->periode_id == $periode->id) ? 'selected' : '' }}>
                                             {{ $periode->tahun }}
                                         </option>
@@ -47,7 +47,7 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Nilai</label>
-                                        <input type="text" name="nilai" class="form-control" 
+                                        <input type="text" name="nilai" class="form-control"
                                                value="{{ old('nilai', $riskContext->nilai ?? '') }}">
                                         <small class="form-text text-muted">
                                             <strong>Proyek:</strong> Diisikan besaran nilai omzet kontrak yang akan dikerjakan.<br>
@@ -59,7 +59,7 @@
                                         <select name="pimpinan_tertinggi_jabatan_id" class="form-control select2">
                                             <option value="">Pilih Jabatan</option>
                                             @foreach($jabatans as $jabatan)
-                                                <option value="{{ $jabatan->id }}" 
+                                                <option value="{{ $jabatan->id }}"
                                                     {{ (old('pimpinan_tertinggi_jabatan_id') == $jabatan->id) || ($riskContext && $riskContext->pimpinan_tertinggi_jabatan_id == $jabatan->id) ? 'selected' : '' }}>
                                                     {{ $jabatan->name }}
                                                 </option>
@@ -73,7 +73,7 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Sponsor</label>
-                                        <input type="text" name="sponsor" class="form-control" 
+                                        <input type="text" name="sponsor" class="form-control"
                                                value="{{ old('sponsor', $riskContext->sponsor ?? '') }}">
                                         <small class="form-text text-muted">
                                             Adalah pihak yang memiliki anak perusahaan, individu atau entitas yang menyediakan sumber daya keuangan dalam bentuk tunai atau yang setara untuk proyek.
@@ -87,12 +87,12 @@
                                         </small>
                                     </div>
                                 </div>
-                                <div class="mb-3">
+                                {{-- <div class="mb-3">
                                     <label class="form-label">Anggota Anak Perusahaan</label>
                                     <small class="form-text text-muted d-block mb-2">
                                         Keseluruhan anggota tim inti (nama dan jabatan) yang terlibat dalam anak perusahaan yang bersangkutan.
                                     </small>
-                                </div>
+                                </div> --}}
                             </div>
                         </div>
 
@@ -439,6 +439,10 @@ function addMember() {
         </div>
     `;
     container.appendChild(memberRow);
+
+    $(memberRow).find('.select2').select2({
+        width: '100%'
+    });
 }
 
 function removeMember(button) {

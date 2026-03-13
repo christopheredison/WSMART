@@ -15,11 +15,15 @@ use Carbon\Carbon;
 
 class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, ShouldAutoSize, WithEvents
 {
-    private $projectIds;
+    protected $projectIds;
+    protected $month;
+    protected $tahun;
 
-    public function __construct(array $projectIds)
+    public function __construct(array $projectIds, $month = null, $tahun = null)
     {
         $this->projectIds = $projectIds;
+        $this->month = $month;
+        $this->tahun = $tahun;
     }
 
     public function title(): string

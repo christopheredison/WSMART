@@ -466,11 +466,18 @@ function isNumberKey(evt) {
 $(document).ready(function() {
     const autoCalculate = @json($autoCalculate);
 
+    let isInitialLoad = true;
+
     function updateSkalaDampak() {
         const kategoriDampak = $('[name="kategori_dampak"]').val();
         if (kategoriDampak === "Kualitatif") {
             return;
         }
+
+        if (isInitialLoad) {
+            return;
+        }
+
         // Hapus semua karakter non‐angka, lalu parseFloat, default 0
         const riskLimit      = parseFloat($('#risk_limit').val().replace(/[^0-9.-]+/g, '')) || 0;
         const suffixes = [
@@ -551,13 +558,13 @@ $(document).ready(function() {
             if (typeof $('[name="nilai_dampak"]').data('oldValue') !== 'undefined') {
                 $('[name="nilai_dampak"]').val($('[name="nilai_dampak"]').data('oldValue'));
             }
-            $('[name="skala_dampak"]').prop('disabled', true).data('oldValue', $('[name="skala_dampak"]').val());
+            $('[name="skala_dampak"]').prop('disabled', false).data('oldValue', $('[name="skala_dampak"]').val());
             for (let i = 1; i <= 4; i++) {
                 $(`[name="nilai_dampak_residual_q${i}"]`).prop('readonly', false);
                 if (typeof $(`[name="nilai_dampak_residual_q${i}"]`).data('oldValue') !== 'undefined') {
                     $(`[name="nilai_dampak_residual_q${i}"]`).val($(`[name="nilai_dampak_residual_q${i}"]`).data('oldValue'));
                 }
-                $(`[name="skala_dampak_residual_q${i}"]`).prop('disabled', true).data('oldValue', $(`[name="skala_dampak_residual_q${i}"]`).val());
+                $(`[name="skala_dampak_residual_q${i}"]`).prop('disabled', false).data('oldValue', $(`[name="skala_dampak_residual_q${i}"]`).val());
             }
         }
         updateSkalaDampak();
@@ -658,9 +665,27 @@ $(document).ready(function() {
     });
 
     // Event listener jika pengguna mengubah skala dampak secara manual (hanya untuk Kualitatif)
-    $('[name="skala_dampak"], [name="skala_dampak_residual"]').on('change', function() {
-        const targetHiddenField = $(this).attr('name') === 'skala_dampak' ? '#skala_dampak_hidden' : '#skala_dampak_residual_hidden';
-        $(targetHiddenField).val($(this).val());
+    // $('[name="skala_dampak"], [name="skala_dampak_residual"]').on('change', function() {
+    //     const targetHiddenField = $(this).attr('name') === 'skala_dampak' ? '#skala_dampak_hidden' : '#skala_dampak_residual_hidden';
+    //     $(targetHiddenField).val($(this).val());
+    // });
+
+    $('[name^="skala_dampak"]').on('change', function() {
+        const name = $(this).attr('name');
+
+        // Pastikan kita meng-update hidden input yang sesuai
+        if ($(`#${name}_hidden`).length) {
+            $(`#${name}_hidden`).val($(this).val());
+        }
+
+        // Panggil fungsi untuk refresh skala risiko dan level risiko agar langsung berubah di layar
+        refreshSkalaAndLevelRisiko();
+
+        // Khusus untuk residual q1-q4, kita parsing kuartalnya
+        let qMatch = name.match(/_q(\d)$/);
+        if (qMatch) {
+            refreshSkalaAndLevelRisiko(true, parseInt(qMatch[1]));
+        }
     });
 
     $('#skala_dampak').change(function () {
@@ -798,39 +823,39 @@ $(document).ready(function() {
             }
         });
 
-        // Add validation for impact scale values
-        $(`#skala_dampak_residual_q${i}`).on('change', function() {
-            var currentValue = parseInt($(this).val());
-            var inherentScale = parseInt($('#skala_dampak').val());
+        // [HIDE] Add validation for impact scale values
+        // $(`#skala_dampak_residual_q${i}`).on('change', function() {
+        //     var currentValue = parseInt($(this).val());
+        //     var inherentScale = parseInt($('#skala_dampak').val());
 
-            // For Q1, validate against inherent scale
-            if (i === 1) {
-                if (currentValue > inherentScale) {
-                    Swal.fire({
-                        title: 'Peringatan!',
-                        text: 'Skala Dampak Q1 tidak boleh lebih besar dari Skala Dampak Inheren!',
-                        icon: 'warning',
-                        confirmButtonText: 'OK'
-                    });
-                    $(this).val(inherentScale).change();
-                    return;
-                }
-            }
+        //     // For Q1, validate against inherent scale
+        //     if (i === 1) {
+        //         if (currentValue > inherentScale) {
+        //             Swal.fire({
+        //                 title: 'Peringatan!',
+        //                 text: 'Skala Dampak Q1 tidak boleh lebih besar dari Skala Dampak Inheren!',
+        //                 icon: 'warning',
+        //                 confirmButtonText: 'OK'
+        //             });
+        //             $(this).val(inherentScale).change();
+        //             return;
+        //         }
+        //     }
 
-            // For other quarters, validate against previous quarter
-            if (i > 1) {
-                var prevQuarterValue = parseInt($(`#skala_dampak_residual_q${i-1}`).val());
-                if (currentValue > prevQuarterValue) {
-                    Swal.fire({
-                        title: 'Peringatan!',
-                        text: `Skala Dampak Q${i} tidak boleh lebih besar dari Q${i-1}!`,
-                        icon: 'warning',
-                        confirmButtonText: 'OK'
-                    });
-                    $(this).val(prevQuarterValue).change();
-                }
-            }
-        });
+        //     // For other quarters, validate against previous quarter
+        //     if (i > 1) {
+        //         var prevQuarterValue = parseInt($(`#skala_dampak_residual_q${i-1}`).val());
+        //         if (currentValue > prevQuarterValue) {
+        //             Swal.fire({
+        //                 title: 'Peringatan!',
+        //                 text: `Skala Dampak Q${i} tidak boleh lebih besar dari Q${i-1}!`,
+        //                 icon: 'warning',
+        //                 confirmButtonText: 'OK'
+        //             });
+        //             $(this).val(prevQuarterValue).change();
+        //         }
+        //     }
+        // });
     }
 
     $('#nilai_probabilitas').on('blur', function() {
@@ -1034,6 +1059,10 @@ $(document).ready(function() {
             }
         }
     });
+
+    setTimeout(function() {
+        isInitialLoad = false;
+    }, 500);
 });
 </script>
 @endpush

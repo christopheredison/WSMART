@@ -18,11 +18,15 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
-    private $projectIds;
+    protected $projectIds;
+    protected $month;
+    protected $tahun;
 
-    public function __construct(array $projectIds)
+    public function __construct(array $projectIds, $month = null, $tahun = null)
     {
         $this->projectIds = $projectIds;
+        $this->month = $month;
+        $this->tahun = $tahun;
     }
 
     /**
@@ -231,11 +235,17 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
             'peristiwaRisiko',
             'projectRiskAnalisa.skalaProbabilitasResidual',
             'projectRiskAnalisa.skalaDampakResidualObj',
+            'projectRiskMonitorings' => function($query) {
+                if ($this->month && $this->tahun) {
+                    $query->where('month', $this->month)->where('tahun', $this->tahun);
+                }
+                $query->orderBy('id', 'desc');
+            },
+            'projectRiskMonitorings.skalaProbabilitas'
         ])
-            // ->where('project_id', $this->projectId)
-            ->whereIn('project_id', $this->projectIds)
-            ->get()
-            ->sortByDesc('projectRiskAnalisa.skala_risiko');
+        ->whereIn('project_id', $this->projectIds)
+        ->get()
+        ->sortByDesc('projectRiskAnalisa.skala_risiko');
 
         $exportData = new Collection();
         $nomorUrut = 1;
@@ -243,6 +253,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
         foreach ($risikos as $risiko) {
             $project = $risiko->projectPeriodeList->project;
             $analisa = $risiko->projectRiskAnalisa;
+            $monitoring = $risiko->projectRiskMonitorings->first();
 
             if (!$analisa) {
                 $rowData = [
@@ -271,6 +282,8 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
             // Tentukan jenis data berdasarkan kategori dampak
             $jenisData = ucfirst(strtolower($analisa->kategori_dampak ?? 'Kuantitatif'));
 
+            $efektivitasNilai = $monitoring->efektivitas_perlakuan_risiko ?? $risiko->efektivitas_perlakuan_risiko;
+
             $rowData = [
                 'jenis_data' => $jenisData,
                 'no' => $nomorUrut,
@@ -278,15 +291,15 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 'no_risiko' => $nomorUrut,
                 'peristiwa_risiko' => $risiko->peristiwaRisiko->title ?? $risiko->deskripsi_peristiwa_risiko ?? '-',
                 'asumsi_perhitungan_dampak' => $analisa->asumsi_perhitungan_dampak_residual ?? '-',
-                'nilai_dampak' => $this->formatNilaiDampak($analisa),
-                'skala_dampak' => $this->formatSkalaDampak($analisa),
-                'nilai_probabilitas' => $this->formatPercentage($analisa->nilai_probabilitas_residual ?? 0),
-                'skala_probabilitas' => $this->formatSkalaProbabilitas($analisa),
-                'eksposur_risiko' => $this->formatCurrency($analisa->eksposur_risiko_residual ?? 0),
-                'skala_risiko' => $analisa->skala_risiko_residual ?? '-',
-                'level_risiko' => $analisa->level_risiko_residual ?? '-',
-                'nilai_efektivitas' => $risiko->efektivitas_perlakuan_risiko ? $risiko->efektivitas_perlakuan_risiko . '%' : '-',
-                'efektifitas_perlakuan' => $this->calculateEfektifitas($analisa, $risiko),
+                'nilai_dampak' => $this->formatCurrency($monitoring->nilai_dampak ?? ($analisa->nilai_dampak_residual ?? 0)),
+                'skala_dampak' => $monitoring->skala_dampak ?? $this->formatSkalaDampak($analisa),
+                'nilai_probabilitas' => $this->formatPercentage($monitoring->nilai_probabilitas ?? ($analisa->nilai_probabilitas_residual ?? 0)),
+                'skala_probabilitas' => $monitoring ? ($monitoring->skalaProbabilitas->tingkat ?? '-') : $this->formatSkalaProbabilitas($analisa),
+                'eksposur_risiko' => $this->formatCurrency($monitoring->eksposure_risiko ?? ($analisa->eksposur_risiko_residual ?? 0)),
+                'skala_risiko' => $monitoring->skala_risiko ?? ($analisa->skala_risiko_residual ?? '-'),
+                'level_risiko' => $monitoring->level_risiko ?? ($analisa->level_risiko_residual ?? '-'),
+                'nilai_efektivitas' => $efektivitasNilai ? $efektivitasNilai . '%' : '-',
+                'efektifitas_perlakuan' => $this->calculateEfektifitasVal($efektivitasNilai),
             ];
 
             $exportData->push($rowData);
@@ -343,22 +356,10 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
     /**
      * Calculate efektifitas perlakuan risiko
      */
-    private function calculateEfektifitas($analisa, $risiko)
+    private function calculateEfektifitasVal($nilaiEfektivitas)
     {
-        // 1. Cek apakah risiko sudah ditutup (closed)
-        // if (!$risiko->is_closed) {
-        //     return 'Belum Ditutup';
-        // }
-
-        // 2. Jika sudah ditutup, cek nilai efektivitas dari tabel ProjectRisk ($risiko)
-        $nilaiEfektivitas = (float) $risiko->efektivitas_perlakuan_risiko;
-
-        if ($nilaiEfektivitas > 0) {
-            return 'Efektif';
-        } else {
-            // Ini akan mencakup nilai <= 0 (termasuk 0, negatif, atau null)
-            return 'Tidak Efektif';
-        }
+        $nilai = (float) $nilaiEfektivitas;
+        return $nilai > 0 ? 'Efektif' : 'Tidak Efektif';
     }
 
     /**

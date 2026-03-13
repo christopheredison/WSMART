@@ -352,8 +352,8 @@
                             {{-- Realisasi --}}
                             <td class="realisasi-nilai-dampak">-</td>
                             <td class="realisasi-skala-dampak text-center">-</td>
-                            <td class="realisasi-nilai-probabilitas text-center">-</td>
-                            <td class="realisasi-skala-probabilitas text-center">-</td>
+                            <td class="realisasi-nilai-prob text-center">-</td>
+                            <td class="realisasi-skala-prob text-center">-</td>
                             <td class="realisasi-nilai-risiko text-center">-</td>
                             <td class="realisasi-level-risiko text-center">-</td>
                         </tr>
@@ -734,50 +734,151 @@ $(document).ready(function() {
         const currentYear = '{{ $currentYear }}';
 
         function populateInherentMap() {
+            let inherentMapData = {};
+            let residualMapData = {};
+
+            $('#inherentMap .data-cell').removeAttr('data-bs-toggle data-bs-target data-risks data-title').css('cursor', 'default');
+            $('#inherentMap .kode-peristiwa').empty();
+
             Object.values(highImpactRisksJs).forEach(risk => {
                 if(risk.risk_analysis) {
-                    const riskNumber = 'R' + risk.nomor_urut_js;
                     const matrixI = risk.risk_analysis.skala_dampak + '-' + risk.risk_analysis.skala_probabilitas?.tingkat;
-                    const cellI = $(`#inherentMap .data-cell[data-matrix="${matrixI}"]`);
-                    if (cellI.length) cellI.find('.kode-peristiwa').append(`<span class="box-inherent">${riskNumber}</span>`);
+                    if (!inherentMapData[matrixI]) inherentMapData[matrixI] = [];
+                    inherentMapData[matrixI].push(risk);
 
-                    const matrixR = risk.risk_analysis.skala_dampak_residual + '-' + risk.risk_analysis.skala_probabilitas_residual?.tingkat;
-                    const cellR = $(`#inherentMap .data-cell[data-matrix="${matrixR}"]`);
-                    if (cellR.length) cellR.find('.kode-peristiwa').append(`<span class="box-residual">${riskNumber}</span>`);
+                    const probResidualRel = risk.risk_analysis['skala_probabilitas_residual_q' + currentQuarter];
+                    const probResidualTingkat = probResidualRel ? probResidualRel.tingkat : null;
+                    const dampakResidualObj = risk.risk_analysis['skala_dampak_residual_q' + currentQuarter + '_obj'];
+                    const dampakResidualTingkat = dampakResidualObj ? dampakResidualObj.tingkat : null;
+
+                    if (dampakResidualTingkat && probResidualTingkat) {
+                        const matrixR = dampakResidualTingkat + '-' + probResidualTingkat;
+                        if (!residualMapData[matrixR]) residualMapData[matrixR] = [];
+                        residualMapData[matrixR].push(risk);
+                    }
+                }
+            });
+
+            // Render Inherent
+            Object.keys(inherentMapData).forEach(matrix => {
+                const cell = $(`#inherentMap .data-cell[data-matrix="${matrix}"]`);
+                if (cell.length) {
+                    let risksInCell = inherentMapData[matrix];
+                    cell.find('.kode-peristiwa').append(`<span class="box-inherent" title="Total Inherent">${risksInCell.length}</span>`);
+
+                    let modalData = risksInCell.map(r => ({
+                        type: 'Inherent',
+                        code: 'R' + r.nomor_urut_js,
+                        name: r.peristiwa_risiko?.title || r.peristiwa_risiko,
+                        level: r.risk_analysis?.level_risiko,
+                        score: r.risk_analysis?.skala_risiko,
+                        url: `{{ url('risk-register-unit') }}/${r.id}/view`
+                    }));
+
+                    const levelName = modalData[0]?.level || '-';
+                    const riskScore = modalData[0]?.score || '-';
+
+                    cell.css('cursor', 'pointer').attr('data-bs-toggle', 'modal').attr('data-bs-target', '#heatmapDetailModal')
+                        .attr('data-title', `Detail Risiko (${levelName}: ${riskScore})`)
+                        .attr('data-risks', JSON.stringify(modalData));
+                }
+            });
+
+            // Render Residual
+            Object.keys(residualMapData).forEach(matrix => {
+                const cell = $(`#inherentMap .data-cell[data-matrix="${matrix}"]`);
+                if (cell.length) {
+                    let risksInCell = residualMapData[matrix];
+                    cell.find('.kode-peristiwa').append(`<span class="box-residual" title="Total Residual">${risksInCell.length}</span>`);
+
+                    let newRisks = risksInCell.map(r => ({
+                        type: 'Residual',
+                        code: 'R' + r.nomor_urut_js,
+                        name: r.peristiwa_risiko?.title || r.peristiwa_risiko,
+                        level: r.risk_analysis['level_risiko_residual_q' + currentQuarter],
+                        score: r.risk_analysis['skala_risiko_residual_q' + currentQuarter],
+                        url: `{{ url('risk-register-unit') }}/${r.id}/view`
+                    }));
+
+                    let existingRisks = cell.attr('data-risks') ? JSON.parse(cell.attr('data-risks')) : [];
+                    let combinedRisks = existingRisks.concat(newRisks);
+
+                    const levelName = combinedRisks[0]?.level || '-';
+                    const riskScore = combinedRisks[0]?.score || '-';
+
+                    cell.css('cursor', 'pointer').attr('data-bs-toggle', 'modal').attr('data-bs-target', '#heatmapDetailModal')
+                        .attr('data-title', `Detail Risiko (${levelName}: ${riskScore})`)
+                        .attr('data-risks', JSON.stringify(combinedRisks));
                 }
             });
         }
+
         function updateCurrentData() {
-            const selectedMonth = $('#monthSelect').val();
+            const selectedMonth = parseInt($('#monthSelect').val());
             const selectedYear = $('#tahunSelect').val();
+
+            $('#currentMap .data-cell').removeAttr('data-bs-toggle data-bs-target data-risks data-title').css('cursor', 'default');
             $('#currentMap .kode-peristiwa').empty();
+
+            let currentMapData = {};
 
             Object.values(highImpactRisksJs).forEach(risk => {
                 const riskId = risk.id;
                 const riskNumber = 'R' + risk.nomor_urut_js;
                 const tableRow = $(`.table-strategi tbody tr[data-risk-id="${riskId}"]`);
+
+                // Karena array di-push berurutan 1-12 di controller, index-nya adalah selectedMonth - 1
                 const currentData = formattedCurrentRiskMaps[riskId]?.[selectedYear]?.[selectedMonth - 1];
 
-                if (currentData && tableRow.length) {
+                if (currentData) {
                     const matrixC = currentData.skala_dampak + '-' + currentData.skala_probabilitas;
-                    const cellC = $(`#currentMap .data-cell[data-matrix="${matrixC}"]`);
-                    if (cellC.length) cellC.find('.kode-peristiwa').append(`<span class="box-current">${riskNumber}</span>`);
+                    if (!currentMapData[matrixC]) currentMapData[matrixC] = [];
+                    currentMapData[matrixC].push({risk: risk, currentData: currentData});
 
-                    const levelClass = (currentData.level_risiko_formatted || '').toLowerCase().replace(/ /g, '-').replace('to-', '');
-                    const td = tableRow.find('.realisasi-level-risiko');
+                    if (tableRow.length) {
+                        const levelClass = (currentData.level_risiko_formatted || '').toLowerCase().replace(/ /g, '-').replace('to-', '');
+                        const td = tableRow.find('.realisasi-level-risiko');
 
-                    tableRow.find('.realisasi-nilai-dampak').html(currentData.nilai_dampak_formatted);
-                    tableRow.find('.realisasi-skala-dampak').html(currentData.skala_dampak_obj?.tingkat || '-');
-                    tableRow.find('.realisasi-nilai-probabilitas').html((currentData.nilai_probabilitas_formatted || '-') + '%');
-                    tableRow.find('.realisasi-skala-probabilitas').html(currentData.skala_probabilitas_obj?.tingkat || '-');
-                    tableRow.find('.realisasi-nilai-risiko').html(currentData.nilai_risiko_formatted);
+                        tableRow.find('.realisasi-nilai-dampak').html(currentData.nilai_dampak_formatted);
+                        tableRow.find('.realisasi-skala-dampak').html(currentData.skala_dampak_obj?.tingkat || '-');
+                        tableRow.find('.realisasi-nilai-prob').html((currentData.nilai_probabilitas_formatted || '-') + '%');
+                        tableRow.find('.realisasi-skala-prob').html(currentData.skala_probabilitas_obj?.tingkat || '-');
+                        tableRow.find('.realisasi-nilai-risiko').html(currentData.nilai_risiko_formatted);
 
-                    // [FIX] Logika pewarnaan background
-                    td.html(currentData.level_risiko_formatted || '-');
-                    td.removeClass('bg-high bg-moderate-high bg-moderate bg-low-moderate bg-low');
-                    if (levelClass) {
-                        td.addClass('bg-' + levelClass);
+                        td.html(currentData.level_risiko_formatted || '-');
+                        td.removeClass('bg-high bg-moderate-high bg-moderate bg-low-moderate bg-low');
+                        if (levelClass && currentData.level_risiko_formatted !== '-') {
+                            td.addClass('bg-' + levelClass);
+                        }
                     }
+                } else if (tableRow.length) {
+                    tableRow.find('.realisasi-nilai-dampak, .realisasi-skala-dampak, .realisasi-nilai-prob, .realisasi-skala-prob, .realisasi-nilai-risiko, .realisasi-level-risiko').html('-');
+                    tableRow.find('.realisasi-level-risiko').removeClass('bg-high bg-moderate-high bg-moderate bg-low-moderate bg-low');
+                }
+            });
+
+            // Render Current ke UI (Angka Count)
+            Object.keys(currentMapData).forEach(matrix => {
+                const cell = $(`#currentMap .data-cell[data-matrix="${matrix}"]`);
+                if (cell.length) {
+                    let risksInCell = currentMapData[matrix];
+                    cell.find('.kode-peristiwa').append(`<span class="box-current" title="Total Current: ${risksInCell.length}">${risksInCell.length}</span>`);
+
+                    let modalData = risksInCell.map(item => ({
+                        type: 'Current',
+                        code: 'R' + item.risk.nomor_urut_js,
+                        name: item.risk.peristiwa_risiko?.title || item.risk.peristiwa_risiko,
+                        level: item.currentData.level_risiko_formatted,
+                        score: item.currentData.nilai_risiko_formatted,
+                        url: `{{ url('risk-register-unit') }}/${item.risk.id}/view`
+                    }));
+
+                    const levelName = modalData[0]?.level || '-';
+                    const riskScore = modalData[0]?.score || '-';
+
+                    cell.css('cursor', 'pointer').attr('data-bs-toggle', 'modal').attr('data-bs-target', '#heatmapDetailModal')
+                        .attr('data-title', `Detail Realisasi Risiko (${levelName}: ${riskScore})`)
+                        .attr('data-risks', JSON.stringify(modalData));
                 }
             });
         }

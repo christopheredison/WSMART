@@ -1587,15 +1587,21 @@ class HomeController extends Controller
                 'projectRisks.projectRiskMonitorings' => fn($query) => $query->orderBy('id', 'desc')->with(['skalaProbabilitas', 'skalaDampakObj']),
             ]);
 
-            $highImpactRisks = $selectedProjectPeriode->projectRisks->filter(function ($risk) {
-                $level = optional($risk->projectRiskAnalisa)->level_risiko;
-                return in_array($level, ['High', 'Moderate to High']);
-            })->sortByDesc(function ($risk) {
-                return optional($risk->projectRiskAnalisa)->skala_risiko ?? -1;
-            });
-
             $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
                 ->get()->keyBy(fn($item) => $item->skala_dampak . '-' . $item->skala_probabilitas);
+
+            $projectRisksJs = $selectedProjectPeriode->projectRisks
+                ->where('is_closed', false)
+                ->sortByDesc(function ($risk) {
+                    return optional($risk->projectRiskAnalisa)->skala_risiko ?? -1;
+                })
+                ->values()
+                ->mapWithKeys(function($risk, $index) {
+                    $risk->nomor_urut = $index + 1;
+                    return [$risk->id => $risk];
+                });
+
+            $openRisks = $projectRisksJs->values();
 
             $selectedProjectPeriode->projectRisks->each(fn($pr) => $pr->append('currentRiskMapsMonth'));
 
@@ -1631,10 +1637,18 @@ class HomeController extends Controller
                 // }
             }
 
-            $projectRisksJs = $selectedProjectPeriode->projectRisks->mapWithKeys(function($risk, $index) {
-                $risk->nomor_urut = $index + 1;
-                return [$risk->id => $risk];
-            });
+            // $projectRisksJs = $selectedProjectPeriode->projectRisks->mapWithKeys(function($risk, $index) {
+            //     $risk->nomor_urut = $index + 1;
+            //     return [$risk->id => $risk];
+            // });
+
+            $projectRisksJs = $selectedProjectPeriode->projectRisks
+                ->where('is_closed', 0)
+                ->values()
+                ->mapWithKeys(function($risk, $index) {
+                    $risk->nomor_urut = $index + 1;
+                    return [$risk->id => $risk];
+                });
         }
 
         $sortedKriData = collect();
@@ -1710,7 +1724,6 @@ class HomeController extends Controller
                 ->get();
         }
 
-        // dd($highImpactRisks);
 
         return view('executive-summary-project', compact(
             'units',
@@ -1720,7 +1733,7 @@ class HomeController extends Controller
             'selectedProject',
             'selectedPeriod',
             'summaryData',
-            'highImpactRisks',
+            'openRisks',
             'riskMaps',
             'tahunMonitorings',
             'formattedCurrentRiskMaps',
@@ -1741,8 +1754,21 @@ class HomeController extends Controller
         $currentYear = Carbon::createFromFormat('Y-m', $selectedPeriod)->year;
         $currentMonth = Carbon::createFromFormat('Y-m', $selectedPeriod)->month;
         $currentQuarter = (int)ceil($currentMonth / 3);
-        $units = Unit::whereIn('unit_type_id', [1])->orderBy('name')->get();
-        $selectedUnit = $selectedUnitId ? Unit::find($selectedUnitId) : null;
+
+        $user = auth()->user();
+        if (Gate::check('view_all_division')) {
+            $units = Unit::where('unit_type_id', 1)->orderBy('name')->get();
+        } else {
+            $units = Unit::where('id', $user->unit_id)->where('unit_type_id', 1)->get();
+        }
+
+        $requestedUnitId = $request->input('unit_id');
+        $selectedUnit = $requestedUnitId ? $units->firstWhere('id', $requestedUnitId) : null;
+        if (!$selectedUnit && $units->isNotEmpty()) {
+            $selectedUnit = $units->first();
+        }
+
+        $selectedUnitId = $selectedUnit ? $selectedUnit->id : null;
 
         $summaryData = [
             'omset_penjualan_sd_bulan'    => 0, // Akan diisi dari penjualan_ri
@@ -2012,8 +2038,22 @@ class HomeController extends Controller
         $currentYear = Carbon::createFromFormat('Y-m', $selectedPeriod)->year;
         $currentMonth = Carbon::createFromFormat('Y-m', $selectedPeriod)->month;
         $currentQuarter = (int)ceil($currentMonth / 3);
-        $units = Unit::whereIn('unit_type_id', [2])->orderBy('name')->get();
-        $selectedUnit = $selectedUnitId ? Unit::find($selectedUnitId) : null;
+
+        $user = auth()->user();
+        if (Gate::check('ap_admin')) {
+            $units = Unit::where('unit_type_id', 2)->orderBy('name')->get();
+        } else {
+            $units = Unit::where('id', $user->unit_id)->where('unit_type_id', 2)->get();
+        }
+
+        $requestedUnitId = $request->input('unit_id');
+        $selectedUnit = $requestedUnitId ? $units->firstWhere('id', $requestedUnitId) : null;
+
+        if (!$selectedUnit && $units->isNotEmpty()) {
+            $selectedUnit = $units->first();
+        }
+
+        $selectedUnitId = $selectedUnit ? $selectedUnit->id : null;
 
         $summaryData = [
             'omset_penjualan_sd_bulan'    => 0, // Akan diisi dari penjualan_ri
@@ -2128,9 +2168,29 @@ class HomeController extends Controller
             $unitRisks->each(fn($risk) => $risk->append('currentRiskMapsMonth'));
 
             foreach ($unitRisks as $risk) {
-                foreach ($risk->currentRiskMapsMonth as $month => $mapData) {
-                    if ($month === 'inherent' || !isset($mapData['month'])) continue;
-                    $formattedCurrentRiskMaps[$risk->id][$currentYear][] = $mapData;
+                // Ambil data inherent sebagai fallback awal
+                $currentValue = $risk->currentRiskMapsMonth['inherent'] ?? null;
+
+                // Looping pasti 12 bulan (1 sampai 12) agar array di JS tidak 'undefined' di indeks tertentu
+                for ($month = 1; $month <= 12; $month++) {
+                    // Jika ada data monitoring di bulan tersebut, tumpuk/update nilai currentValue
+                    if ($nextValue = ($risk->currentRiskMapsMonth[$month] ?? null)) {
+                        $currentValue = $nextValue;
+                    }
+
+                    if ($currentValue) {
+                        // Tambahkan properti kuartal dan bulan agar rapi
+                        $currentValue['quarter'] = ceil($month / 3);
+                        $currentValue['month'] = $month;
+
+                        // Siapkan formatted value untuk Javascript
+                        $currentValue['nilai_dampak_formatted'] = 'Rp ' . number_format($currentValue['nilai_dampak'] ?? 0, 0, ',', '.');
+                        $currentValue['nilai_probabilitas_formatted'] = $currentValue['nilai_probabilitas'] ?? '-';
+                        $currentValue['nilai_risiko_formatted'] = $currentValue['skala_risiko'] ?? '-';
+                        $currentValue['level_risiko_formatted'] = $currentValue['level_risiko'] ?? '-';
+
+                        $formattedCurrentRiskMaps[$risk->id][$currentYear][] = $currentValue;
+                    }
                 }
             }
 

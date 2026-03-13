@@ -117,11 +117,16 @@ class User extends Authenticatable
         return $this->jabatan ? $this->jabatan->levels() : collect([]);
     }
 
+    public function level()
+    {
+        return $this->belongsTo(Level::class, 'level_id');
+    }
+
     // Override method dari HasRoles trait untuk menggabungkan role dari jabatan
     public function getRoleNamesAttribute()
     {
         $directRoles = $this->roles()->pluck('name');
-        
+
         // Jika user memiliki jabatan, ambil role dari level yang terkait dengan jabatan
         if ($this->jabatan) {
             $levelRoles = $this->jabatan->levels()
@@ -130,10 +135,10 @@ class User extends Authenticatable
                 ->pluck('roles')
                 ->flatten()
                 ->pluck('name');
-            
+
             return $directRoles->merge($levelRoles)->unique();
         }
-        
+
         return $directRoles;
     }
 }
