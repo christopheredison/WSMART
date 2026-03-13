@@ -1587,15 +1587,21 @@ class HomeController extends Controller
                 'projectRisks.projectRiskMonitorings' => fn($query) => $query->orderBy('id', 'desc')->with(['skalaProbabilitas', 'skalaDampakObj']),
             ]);
 
-            $highImpactRisks = $selectedProjectPeriode->projectRisks->filter(function ($risk) {
-                $level = optional($risk->projectRiskAnalisa)->level_risiko;
-                return in_array($level, ['High', 'Moderate to High']);
-            })->sortByDesc(function ($risk) {
-                return optional($risk->projectRiskAnalisa)->skala_risiko ?? -1;
-            });
-
             $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
                 ->get()->keyBy(fn($item) => $item->skala_dampak . '-' . $item->skala_probabilitas);
+
+            $projectRisksJs = $selectedProjectPeriode->projectRisks
+                ->where('is_closed', false)
+                ->sortByDesc(function ($risk) {
+                    return optional($risk->projectRiskAnalisa)->skala_risiko ?? -1;
+                })
+                ->values()
+                ->mapWithKeys(function($risk, $index) {
+                    $risk->nomor_urut = $index + 1;
+                    return [$risk->id => $risk];
+                });
+
+            $openRisks = $projectRisksJs->values();
 
             $selectedProjectPeriode->projectRisks->each(fn($pr) => $pr->append('currentRiskMapsMonth'));
 
@@ -1631,10 +1637,18 @@ class HomeController extends Controller
                 // }
             }
 
-            $projectRisksJs = $selectedProjectPeriode->projectRisks->mapWithKeys(function($risk, $index) {
-                $risk->nomor_urut = $index + 1;
-                return [$risk->id => $risk];
-            });
+            // $projectRisksJs = $selectedProjectPeriode->projectRisks->mapWithKeys(function($risk, $index) {
+            //     $risk->nomor_urut = $index + 1;
+            //     return [$risk->id => $risk];
+            // });
+
+            $projectRisksJs = $selectedProjectPeriode->projectRisks
+                ->where('is_closed', 0)
+                ->values()
+                ->mapWithKeys(function($risk, $index) {
+                    $risk->nomor_urut = $index + 1;
+                    return [$risk->id => $risk];
+                });
         }
 
         $sortedKriData = collect();
@@ -1710,7 +1724,6 @@ class HomeController extends Controller
                 ->get();
         }
 
-        // dd($highImpactRisks);
 
         return view('executive-summary-project', compact(
             'units',
@@ -1720,7 +1733,7 @@ class HomeController extends Controller
             'selectedProject',
             'selectedPeriod',
             'summaryData',
-            'highImpactRisks',
+            'openRisks',
             'riskMaps',
             'tahunMonitorings',
             'formattedCurrentRiskMaps',
@@ -1760,11 +1773,9 @@ class HomeController extends Controller
         ];
 
         $isProjectUnit = false;
-        $highImpactRisks = collect();
         $riskMaps = collect();
         $tahunMonitorings = [$currentYear];
         $formattedCurrentRiskMaps = [];
-        $highImpactRisksJs = collect();
         $sortedKriData = collect();
         $closedRisks = collect();
         $efektivitasPerlakuanData = [];
