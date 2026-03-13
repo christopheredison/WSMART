@@ -1016,6 +1016,259 @@ class RiskRegisterUnitController extends Controller
         ));
     }
 
+    public function doAnalisa(Request $request, $riskRegisterId)
+    {
+        $identifikasiRisiko = IdentifikasiRisiko::findOrFail($riskRegisterId);
+
+        $user = $request->user();
+
+        // Cek akses
+        // if (!(Gate::check('risk_register_edit') || $identifikasiRisiko->user_id == $user->id)) {
+        //     abort(403);
+        // }
+
+        $request->merge([
+            'nilai_dampak_residual'              => $this->cleanRupiah($request->nilai_dampak_residual_q4),
+            'nilai_probabilitas_residual'        => $request->nilai_probabilitas_residual_q4,
+            'skala_dampak_residual'              => $request->skala_dampak_residual_q4,
+            'skala_dampak_residual_hidden'       => $request->skala_dampak_residual_q4,
+            'deskripsi_dampak_residual'          => $request->deskripsi_dampak_residual_q4,
+            'asumsi_perhitungan_dampak_residual' => $request->asumsi_perhitungan_dampak_residual_q4,
+
+            'nilai_dampak_residual_q1' => $this->cleanRupiah($request->nilai_dampak_residual_q1),
+            'nilai_dampak_residual_q2' => $this->cleanRupiah($request->nilai_dampak_residual_q2),
+            'nilai_dampak_residual_q3' => $this->cleanRupiah($request->nilai_dampak_residual_q3),
+            'nilai_dampak_residual_q4' => $this->cleanRupiah($request->nilai_dampak_residual_q4),
+            'nilai_dampak' => $this->cleanRupiah($request->nilai_dampak),
+        ]);
+
+        $validationRules = [
+            'kategori_dampak'                    => 'required|string|in:Kualitatif,Kuantitatif',
+            'area_dampak'                        => 'nullable|string',
+            //'risk_limit'                         => 'required|numeric',
+            'nilai_dampak'                       => 'required',
+            'nilai_probabilitas'                 => 'required|numeric',
+            'skala_dampak'                       => 'required_if:kategori_dampak,Kualitatif|integer',
+            'skala_dampak_hidden'                => 'required_if:kategori_dampak,Kualitatif|integer',
+            'deskripsi_dampak'                   => 'nullable|string',
+            'asumsi_perhitungan_dampak'          => 'nullable|string',
+        ];
+
+        for ($i = 1; $i <= 4; $i++) {
+            $validationRules['nilai_dampak_residual_q' . $i] = 'nullable';
+            $validationRules['nilai_probabilitas_residual_q' . $i] = 'nullable|numeric';
+            $validationRules['skala_dampak_residual_q' . $i] = 'nullable|integer';
+            $validationRules['skala_dampak_residual_hidden_q' . $i] = 'nullable|integer';
+            $validationRules['deskripsi_dampak_residual_q' . $i] = 'nullable|string';
+        }
+
+        // Validasi input
+        $validated = $request->validate($validationRules);
+        $unit = $identifikasiRisiko->unit;
+        $periode = $identifikasiRisiko->periode;
+        $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+
+        // [HIDE] Calculate Skala Dampak base on Nilai Dampak
+        // if ($request->kategori_dampak == 'Kuantitatif') {
+
+        //     $risk_limit = 0;
+
+
+        //     if ($riskLimitPeriode) {
+        //         $risk_limit = $riskLimitPeriode->risk_limit;
+        //         $risk_tolerance = $riskLimitPeriode->risk_limit;
+        //         // $totalOtherIdentifikasiRisiko = IdentifikasiRisiko::where('unit_id', $unit->id)
+        //         //     ->where('periode_id', $periode->id)
+        //         //     ->whereHas('riskAnalysis', function($query) {
+        //         //         $query->where('kategori_dampak', 'Kuantitatif');
+        //         //     })
+        //         //     ->count();
+
+        //         // if ($totalOtherIdentifikasiRisiko > 0) {
+        //         //     $risk_limit = $risk_limit / $totalOtherIdentifikasiRisiko;
+        //         // }
+        //     }
+
+        //     $toMerge = [
+        //         'skala_dampak' => $this->calculateSkalaDampak($request->nilai_dampak * 100 / $risk_limit),
+        //     ];
+        //     //echo "risk limit = " . $risk_limit . "\n";
+        //     for ($i = 1; $i <= 4; $i++) {
+        //         //echo "nilai_dampak_residual_q" . $i . " = " . $request->{'nilai_dampak_residual_q' . $i} . "\n";
+        //         $calculateSkala = $this->calculateSkalaDampak($request->{'nilai_dampak_residual_q' . $i} * 100 / $risk_limit);
+        //         //echo "skala dampak residual q" . $i . " = " . $calculateSkala . "\n";
+        //         $toMerge['skala_dampak_residual_q' . $i] = $calculateSkala;
+        //     }
+
+        //     $request->merge($toMerge);
+        // }
+
+        // validate q4 < q3 < q2 < q1 < inherent
+        $lastValues = [
+            'nilai_dampak' => $request->nilai_dampak,
+            'nilai_probabilitas' => $request->nilai_probabilitas,
+            'skala_dampak' => $request->skala_dampak,
+        ];
+        for ($i = 0; $i < 4; $i++) {
+            if ($request->{'nilai_dampak_residual_q' . ($i + 1)} > $lastValues['nilai_dampak']) {
+                return response()->json([
+                    'message' => 'Nilai dampak residual q' . ($i + 1) . ' tidak boleh lebih besar dari ' . ($i ? 'q' . $i : 'inherent'),
+                ], 422);
+            }
+            $lastValues['nilai_dampak'] = $request->{'nilai_dampak_residual_q' . ($i + 1)};
+
+            if ($request->{'nilai_probabilitas_residual_q' . ($i + 1)} > $lastValues['nilai_probabilitas']) {
+                return response()->json([
+                    'message' => 'Nilai probabilitas residual q' . ($i + 1) . ' tidak boleh lebih besar dari ' . ($i ? 'q' . $i : 'inherent'),
+                ], 422);
+            }
+            $lastValues['nilai_probabilitas'] = $request->{'nilai_probabilitas_residual_q' . ($i + 1)};
+
+            // [HIDE] Validation skala dampak
+            // if ($request->{'skala_dampak_residual_q' . ($i + 1)} > $lastValues['skala_dampak']) {
+            //     return response()->json([
+            //         'message' => 'Skala dampak residual q' . ($i + 1) . ' tidak boleh lebih besar dari ' . ($i ? 'q' . $i : 'inherent'),
+            //     ], 422);
+            // }
+            $lastValues['skala_dampak'] = $request->{'skala_dampak_residual_q' . ($i + 1)};
+        }
+
+        $nilai_dampak = $this->cleanRupiah($request->nilai_dampak);
+        $nilai_dampak_residual = $this->cleanRupiah($request->nilai_dampak_residual);
+
+        // Ambil atau buat data analisa
+        $analisa = $identifikasiRisiko->riskAnalysis;
+        if (!$analisa) {
+            $analisa = $identifikasiRisiko->riskAnalysis()->create([]);
+        }
+
+        // Ambil data risk map
+        $riskMaps = RiskMap::get()->keyBy(function($item) {
+            return $item->skala_dampak . '-' . $item->skala_probabilitas;
+        });
+
+        // Update data analisa
+        //$analisa->update($validated);
+        $toUpdate = [
+            'skala_probabilitas_id' => null, // calculated [Done]
+            'area_dampak' => $request->area_dampak ?? null,
+            'kategori_dampak' => $request->kategori_dampak,
+            'deskripsi_dampak' => $request->deskripsi_dampak,
+            'deskripsi_dampak_residual' => $request->deskripsi_dampak_residual,
+            'asumsi_perhitungan_dampak' => $request->asumsi_perhitungan_dampak,
+            'asumsi_perhitungan_dampak_residual' => $request->asumsi_perhitungan_dampak_residual,
+            'nilai_dampak' => null, // calculated [Done]
+            'nilai_probabilitas' => $request->nilai_probabilitas,
+            'skala_probabilitas_residual_id' => null, // calculated [Done]
+            'nilai_dampak_residual' => null, // calculated [Done]
+            'nilai_probabilitas_residual' => $request->nilai_probabilitas_residual,
+        ];
+
+        for ($i = 1; $i <= 4; $i++) {
+            $toUpdate['deskripsi_dampak_residual_q' . $i] = $request->{'deskripsi_dampak_residual_q' . $i};
+            $toUpdate['asumsi_perhitungan_dampak_residual_q' . $i] = $request->{'asumsi_perhitungan_dampak_residual_q' . $i};
+            $toUpdate['skala_probabilitas_residual_id_q' . $i] = null;
+            $toUpdate['nilai_dampak_residual_q' . $i] = null;
+            $toUpdate['nilai_probabilitas_residual_q' . $i] = $request->{'nilai_probabilitas_residual_q' . $i};
+        }
+
+        $analisa->update($toUpdate);
+
+        $toUpdate = [
+            'nilai_probabilitas' => $request->nilai_probabilitas,
+            'skala_dampak' => $request->skala_dampak_hidden,
+            'nilai_dampak' => $nilai_dampak,
+            //'risk_limit' => $request->risk_limit,
+            //'risk_tolerance' => null, // calculated [Done]
+        ];
+
+        $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($request->nilai_probabilitas);
+        $toUpdate['skala_probabilitas_id'] = $tingkatSkalaProbabilitas->id;
+
+        $riskMap = $riskMaps[$toUpdate['skala_dampak'] . '-' . $tingkatSkalaProbabilitas->tingkat] ?? null;
+        if (!$riskMap) {
+            return response()->json([
+                'message' => 'Tidak ada data risk map untuk skala dampak dan probabilitas yang dipilih',
+            ], 422);
+        }
+        $toUpdate['skala_risiko'] = $riskMap->nilai_risiko;
+        $toUpdate['level_risiko'] = $riskMap->level_risiko;
+
+        //$toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
+        if ($request->kategori_dampak == 'Kualitatif') {
+            // Untuk kualitatif, gunakan skala dampak * skala probabilitas
+            // Rumus: skalaDampak * (1/100) * (nilaiProbabilitas / 100) * riskTolerance
+            $toUpdate['eksposur_risiko'] = floatval($toUpdate['skala_dampak']) * (1/100) * (floatval($toUpdate['nilai_probabilitas']) / 100) * ($riskLimitPeriode->risk_limit ?: 0);
+        } else {
+            // Untuk kuantitatif, gunakan nilai dampak * probabilitas
+            // Rumus: (nilaiDampak * nilaiProbabilitas) / 100
+            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * ($toUpdate['nilai_probabilitas'] / 100);
+        }
+
+        for ($i = 1; $i <= 4; $i++) {
+            $nilaiProbResidual = $request->{'nilai_probabilitas_residual_q' . $i};
+
+            // Lanjutkan perhitungan hanya jika ada nilai probabilitas di kuartal ini
+            if (!is_null($nilaiProbResidual) && $nilaiProbResidual !== '') {
+                if ($request->kategori_dampak == 'Kualitatif') {
+                    $skalaDampakResidual = $request->{'skala_dampak_residual_q' . $i};
+                    $toUpdate['eksposur_risiko_residual_q' . $i] = floatval($skalaDampakResidual) * (1/100) * (floatval($nilaiProbResidual) / 100) * ($riskLimitPeriode->risk_limit ?: 0);
+                } else { // Kategori Kuantitatif
+                    $nilaiDampakResidual = $request->{'nilai_dampak_residual_q' . $i};
+                    $toUpdate['eksposur_risiko_residual_q' . $i] = $nilaiDampakResidual * ($nilaiProbResidual / 100);
+                }
+            } else {
+                // Jika tidak ada nilai probabilitas, set eksposur ke null
+                $toUpdate['eksposur_risiko_residual_q' . $i] = null;
+            }
+        }
+
+        $tingkatSkalaProbabilitasResiduals = [];
+        for ($i = 1; $i <= 4; $i++) {
+            $tingkatSkalaProbabilitasResiduals[$i] = SkalaProbabilitas::getSkalaByValue($request->{'nilai_probabilitas_residual_q' . $i});
+            $toUpdate['skala_probabilitas_residual_id_q' . $i] = optional($tingkatSkalaProbabilitasResiduals[$i])->id;
+            $toUpdate['nilai_probabilitas_residual_q' . $i] = $request->{'nilai_probabilitas_residual_q' . $i};
+            $toUpdate['skala_dampak_residual_q' . $i] = $request->{'skala_dampak_residual_q' . $i};
+            $toUpdate['nilai_dampak_residual_q' . $i] = $request->{'nilai_dampak_residual_q' . $i};
+
+            if ($toUpdate['skala_dampak_residual_q' . $i] && $tingkatSkalaProbabilitasResiduals[$i]) {
+                $riskMapResidual = $riskMaps[$toUpdate['skala_dampak_residual_q' . $i] . '-' . $tingkatSkalaProbabilitasResiduals[$i]->tingkat] ?? null;
+                if (!$riskMapResidual) {
+                    return response()->json([
+                        'message' => 'Tidak ada data risk map untuk skala dampak residual dan probabilitas residual yang dipilih',
+                    ], 422);
+                }
+            }
+
+            if ($riskMapResidual) {
+                $toUpdate['skala_risiko_residual_q' . $i] = $riskMapResidual->nilai_risiko;
+                $toUpdate['level_risiko_residual_q' . $i] = $riskMapResidual->level_risiko;
+            } else {
+                $toUpdate['skala_risiko_residual_q' . $i] = null;
+                $toUpdate['level_risiko_residual_q' . $i] = null;
+            }
+        }
+
+        $toUpdate['skala_probabilitas_residual_id'] = $toUpdate['skala_probabilitas_residual_id_q4'];
+        $toUpdate['nilai_probabilitas_residual'] = $toUpdate['nilai_probabilitas_residual_q4'];
+        $toUpdate['skala_dampak_residual'] = $toUpdate['skala_dampak_residual_q4'];
+        $toUpdate['nilai_dampak_residual'] = $toUpdate['nilai_dampak_residual_q4'];
+        $toUpdate['skala_risiko_residual'] = $toUpdate['skala_risiko_residual_q4'];
+        $toUpdate['level_risiko_residual'] = $toUpdate['level_risiko_residual_q4'];
+
+        $analisa->update($toUpdate);
+
+        $identifikasiRisiko->update([
+            'skala_risiko' => $toUpdate['skala_risiko'],
+            'level_risiko' => $toUpdate['level_risiko'],
+        ]);
+
+        return response()->json([
+            'message' => 'Analisa risiko berhasil disimpan',
+            'redirect' => route('risk-register-unit.index', ['pid' => $identifikasiRisiko->periode_id])
+        ]);
+    }
+
     public function perencanaan(Request $request, $riskRegisterId)
     {
         $identifikasiRisiko = IdentifikasiRisiko::with([
@@ -1289,256 +1542,6 @@ class RiskRegisterUnitController extends Controller
 
     private function cleanRupiah($value) {
         return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
-    }
-
-    public function doAnalisa(Request $request, $riskRegisterId)
-    {
-        $identifikasiRisiko = IdentifikasiRisiko::findOrFail($riskRegisterId);
-
-        $user = $request->user();
-
-        // Cek akses
-        // if (!(Gate::check('risk_register_edit') || $identifikasiRisiko->user_id == $user->id)) {
-        //     abort(403);
-        // }
-
-        $request->merge([
-            'nilai_dampak_residual'              => $this->cleanRupiah($request->nilai_dampak_residual_q4),
-            'nilai_probabilitas_residual'        => $request->nilai_probabilitas_residual_q4,
-            'skala_dampak_residual'              => $request->skala_dampak_residual_q4,
-            'skala_dampak_residual_hidden'       => $request->skala_dampak_residual_q4,
-            'deskripsi_dampak_residual'          => $request->deskripsi_dampak_residual_q4,
-            'asumsi_perhitungan_dampak_residual' => $request->asumsi_perhitungan_dampak_residual_q4,
-
-            'nilai_dampak_residual_q1' => $this->cleanRupiah($request->nilai_dampak_residual_q1),
-            'nilai_dampak_residual_q2' => $this->cleanRupiah($request->nilai_dampak_residual_q2),
-            'nilai_dampak_residual_q3' => $this->cleanRupiah($request->nilai_dampak_residual_q3),
-            'nilai_dampak_residual_q4' => $this->cleanRupiah($request->nilai_dampak_residual_q4),
-            'nilai_dampak' => $this->cleanRupiah($request->nilai_dampak),
-        ]);
-
-        $validationRules = [
-            'kategori_dampak'                    => 'required|string|in:Kualitatif,Kuantitatif',
-            'area_dampak'                        => 'nullable|string',
-            //'risk_limit'                         => 'required|numeric',
-            'nilai_dampak'                       => 'required',
-            'nilai_probabilitas'                 => 'required|numeric',
-            'skala_dampak'                       => 'required_if:kategori_dampak,Kualitatif|integer',
-            'skala_dampak_hidden'                => 'required_if:kategori_dampak,Kualitatif|integer',
-            'deskripsi_dampak'                   => 'nullable|string',
-            'asumsi_perhitungan_dampak'          => 'nullable|string',
-        ];
-
-        for ($i = 1; $i <= 4; $i++) {
-            $validationRules['nilai_dampak_residual_q' . $i] = 'nullable';
-            $validationRules['nilai_probabilitas_residual_q' . $i] = 'nullable|numeric';
-            $validationRules['skala_dampak_residual_q' . $i] = 'nullable|integer';
-            $validationRules['skala_dampak_residual_hidden_q' . $i] = 'nullable|integer';
-            $validationRules['deskripsi_dampak_residual_q' . $i] = 'nullable|string';
-        }
-
-        // Validasi input
-        $validated = $request->validate($validationRules);
-        $unit = $identifikasiRisiko->unit;
-        $periode = $identifikasiRisiko->periode;
-        $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
-        if ($request->kategori_dampak == 'Kuantitatif') {
-
-            $risk_limit = 0;
-
-
-            if ($riskLimitPeriode) {
-                $risk_limit = $riskLimitPeriode->risk_limit;
-                $risk_tolerance = $riskLimitPeriode->risk_limit;
-                // $totalOtherIdentifikasiRisiko = IdentifikasiRisiko::where('unit_id', $unit->id)
-                //     ->where('periode_id', $periode->id)
-                //     ->whereHas('riskAnalysis', function($query) {
-                //         $query->where('kategori_dampak', 'Kuantitatif');
-                //     })
-                //     ->count();
-
-                // if ($totalOtherIdentifikasiRisiko > 0) {
-                //     $risk_limit = $risk_limit / $totalOtherIdentifikasiRisiko;
-                // }
-            }
-
-            $toMerge = [
-                'skala_dampak' => $this->calculateSkalaDampak($request->nilai_dampak * 100 / $risk_limit),
-            ];
-            //echo "risk limit = " . $risk_limit . "\n";
-            for ($i = 1; $i <= 4; $i++) {
-                //echo "nilai_dampak_residual_q" . $i . " = " . $request->{'nilai_dampak_residual_q' . $i} . "\n";
-                $calculateSkala = $this->calculateSkalaDampak($request->{'nilai_dampak_residual_q' . $i} * 100 / $risk_limit);
-                //echo "skala dampak residual q" . $i . " = " . $calculateSkala . "\n";
-                $toMerge['skala_dampak_residual_q' . $i] = $calculateSkala;
-            }
-
-            $request->merge($toMerge);
-        }
-
-        // validate q4 < q3 < q2 < q1 < inherent
-        $lastValues = [
-            'nilai_dampak' => $request->nilai_dampak,
-            'nilai_probabilitas' => $request->nilai_probabilitas,
-            'skala_dampak' => $request->skala_dampak,
-        ];
-        for ($i = 0; $i < 4; $i++) {
-            if ($request->{'nilai_dampak_residual_q' . ($i + 1)} > $lastValues['nilai_dampak']) {
-                return response()->json([
-                    'message' => 'Nilai dampak residual q' . ($i + 1) . ' tidak boleh lebih besar dari ' . ($i ? 'q' . $i : 'inherent'),
-                ], 422);
-            }
-            $lastValues['nilai_dampak'] = $request->{'nilai_dampak_residual_q' . ($i + 1)};
-
-            if ($request->{'nilai_probabilitas_residual_q' . ($i + 1)} > $lastValues['nilai_probabilitas']) {
-                return response()->json([
-                    'message' => 'Nilai probabilitas residual q' . ($i + 1) . ' tidak boleh lebih besar dari ' . ($i ? 'q' . $i : 'inherent'),
-                ], 422);
-            }
-            $lastValues['nilai_probabilitas'] = $request->{'nilai_probabilitas_residual_q' . ($i + 1)};
-
-            if ($request->{'skala_dampak_residual_q' . ($i + 1)} > $lastValues['skala_dampak']) {
-                return response()->json([
-                    'message' => 'Skala dampak residual q' . ($i + 1) . ' tidak boleh lebih besar dari ' . ($i ? 'q' . $i : 'inherent'),
-                ], 422);
-            }
-            $lastValues['skala_dampak'] = $request->{'skala_dampak_residual_q' . ($i + 1)};
-        }
-
-        $nilai_dampak = $this->cleanRupiah($request->nilai_dampak);
-        $nilai_dampak_residual = $this->cleanRupiah($request->nilai_dampak_residual);
-
-        // Ambil atau buat data analisa
-        $analisa = $identifikasiRisiko->riskAnalysis;
-        if (!$analisa) {
-            $analisa = $identifikasiRisiko->riskAnalysis()->create([]);
-        }
-
-        // Ambil data risk map
-        $riskMaps = RiskMap::get()->keyBy(function($item) {
-            return $item->skala_dampak . '-' . $item->skala_probabilitas;
-        });
-
-        // Update data analisa
-        //$analisa->update($validated);
-        $toUpdate = [
-            'skala_probabilitas_id' => null, // calculated [Done]
-            'area_dampak' => $request->area_dampak ?? null,
-            'kategori_dampak' => $request->kategori_dampak,
-            'deskripsi_dampak' => $request->deskripsi_dampak,
-            'deskripsi_dampak_residual' => $request->deskripsi_dampak_residual,
-            'asumsi_perhitungan_dampak' => $request->asumsi_perhitungan_dampak,
-            'asumsi_perhitungan_dampak_residual' => $request->asumsi_perhitungan_dampak_residual,
-            'nilai_dampak' => null, // calculated [Done]
-            'nilai_probabilitas' => $request->nilai_probabilitas,
-            'skala_probabilitas_residual_id' => null, // calculated [Done]
-            'nilai_dampak_residual' => null, // calculated [Done]
-            'nilai_probabilitas_residual' => $request->nilai_probabilitas_residual,
-        ];
-
-        for ($i = 1; $i <= 4; $i++) {
-            $toUpdate['deskripsi_dampak_residual_q' . $i] = $request->{'deskripsi_dampak_residual_q' . $i};
-            $toUpdate['asumsi_perhitungan_dampak_residual_q' . $i] = $request->{'asumsi_perhitungan_dampak_residual_q' . $i};
-            $toUpdate['skala_probabilitas_residual_id_q' . $i] = null;
-            $toUpdate['nilai_dampak_residual_q' . $i] = null;
-            $toUpdate['nilai_probabilitas_residual_q' . $i] = $request->{'nilai_probabilitas_residual_q' . $i};
-        }
-
-        $analisa->update($toUpdate);
-
-        $toUpdate = [
-            'nilai_probabilitas' => $request->nilai_probabilitas,
-            'skala_dampak' => $request->skala_dampak_hidden,
-            'nilai_dampak' => $nilai_dampak,
-            //'risk_limit' => $request->risk_limit,
-            //'risk_tolerance' => null, // calculated [Done]
-        ];
-
-        $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($request->nilai_probabilitas);
-        $toUpdate['skala_probabilitas_id'] = $tingkatSkalaProbabilitas->id;
-
-        $riskMap = $riskMaps[$toUpdate['skala_dampak'] . '-' . $tingkatSkalaProbabilitas->tingkat] ?? null;
-        if (!$riskMap) {
-            return response()->json([
-                'message' => 'Tidak ada data risk map untuk skala dampak dan probabilitas yang dipilih',
-            ], 422);
-        }
-        $toUpdate['skala_risiko'] = $riskMap->nilai_risiko;
-        $toUpdate['level_risiko'] = $riskMap->level_risiko;
-
-        //$toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
-        if ($request->kategori_dampak == 'Kualitatif') {
-            // Untuk kualitatif, gunakan skala dampak * skala probabilitas
-            // Rumus: skalaDampak * (1/100) * (nilaiProbabilitas / 100) * riskTolerance
-            $toUpdate['eksposur_risiko'] = floatval($toUpdate['skala_dampak']) * (1/100) * (floatval($toUpdate['nilai_probabilitas']) / 100) * ($riskLimitPeriode->risk_limit ?: 0);
-        } else {
-            // Untuk kuantitatif, gunakan nilai dampak * probabilitas
-            // Rumus: (nilaiDampak * nilaiProbabilitas) / 100
-            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * ($toUpdate['nilai_probabilitas'] / 100);
-        }
-
-        for ($i = 1; $i <= 4; $i++) {
-            $nilaiProbResidual = $request->{'nilai_probabilitas_residual_q' . $i};
-
-            // Lanjutkan perhitungan hanya jika ada nilai probabilitas di kuartal ini
-            if (!is_null($nilaiProbResidual) && $nilaiProbResidual !== '') {
-                if ($request->kategori_dampak == 'Kualitatif') {
-                    $skalaDampakResidual = $request->{'skala_dampak_residual_q' . $i};
-                    $toUpdate['eksposur_risiko_residual_q' . $i] = floatval($skalaDampakResidual) * (1/100) * (floatval($nilaiProbResidual) / 100) * ($riskLimitPeriode->risk_limit ?: 0);
-                } else { // Kategori Kuantitatif
-                    $nilaiDampakResidual = $request->{'nilai_dampak_residual_q' . $i};
-                    $toUpdate['eksposur_risiko_residual_q' . $i] = $nilaiDampakResidual * ($nilaiProbResidual / 100);
-                }
-            } else {
-                // Jika tidak ada nilai probabilitas, set eksposur ke null
-                $toUpdate['eksposur_risiko_residual_q' . $i] = null;
-            }
-        }
-
-        $tingkatSkalaProbabilitasResiduals = [];
-        for ($i = 1; $i <= 4; $i++) {
-            $tingkatSkalaProbabilitasResiduals[$i] = SkalaProbabilitas::getSkalaByValue($request->{'nilai_probabilitas_residual_q' . $i});
-            $toUpdate['skala_probabilitas_residual_id_q' . $i] = optional($tingkatSkalaProbabilitasResiduals[$i])->id;
-            $toUpdate['nilai_probabilitas_residual_q' . $i] = $request->{'nilai_probabilitas_residual_q' . $i};
-            $toUpdate['skala_dampak_residual_q' . $i] = $request->{'skala_dampak_residual_q' . $i};
-            $toUpdate['nilai_dampak_residual_q' . $i] = $request->{'nilai_dampak_residual_q' . $i};
-
-            if ($toUpdate['skala_dampak_residual_q' . $i] && $tingkatSkalaProbabilitasResiduals[$i]) {
-                $riskMapResidual = $riskMaps[$toUpdate['skala_dampak_residual_q' . $i] . '-' . $tingkatSkalaProbabilitasResiduals[$i]->tingkat] ?? null;
-                if (!$riskMapResidual) {
-                    return response()->json([
-                        'message' => 'Tidak ada data risk map untuk skala dampak residual dan probabilitas residual yang dipilih',
-                    ], 422);
-                }
-            }
-
-            if ($riskMapResidual) {
-                $toUpdate['skala_risiko_residual_q' . $i] = $riskMapResidual->nilai_risiko;
-                $toUpdate['level_risiko_residual_q' . $i] = $riskMapResidual->level_risiko;
-            } else {
-                $toUpdate['skala_risiko_residual_q' . $i] = null;
-                $toUpdate['level_risiko_residual_q' . $i] = null;
-            }
-        }
-
-        $toUpdate['skala_probabilitas_residual_id'] = $toUpdate['skala_probabilitas_residual_id_q4'];
-        $toUpdate['nilai_probabilitas_residual'] = $toUpdate['nilai_probabilitas_residual_q4'];
-        $toUpdate['skala_dampak_residual'] = $toUpdate['skala_dampak_residual_q4'];
-        $toUpdate['nilai_dampak_residual'] = $toUpdate['nilai_dampak_residual_q4'];
-        $toUpdate['skala_risiko_residual'] = $toUpdate['skala_risiko_residual_q4'];
-        $toUpdate['level_risiko_residual'] = $toUpdate['level_risiko_residual_q4'];
-
-        $analisa->update($toUpdate);
-
-        $identifikasiRisiko->update([
-            'skala_risiko' => $toUpdate['skala_risiko'],
-            'level_risiko' => $toUpdate['level_risiko'],
-        ]);
-
-        return response()->json([
-            'message' => 'Analisa risiko berhasil disimpan',
-            'redirect' => route('risk-register-unit.index', ['pid' => $identifikasiRisiko->periode_id])
-        ]);
     }
 
     protected function calculateSkalaDampak($percentage) {

@@ -1188,36 +1188,37 @@ class RiskRegisterApController extends Controller
         $unit = $identifikasiRisiko->unit;
         $periode = $identifikasiRisiko->periode;
         $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
-        if ($request->kategori_dampak == 'Kuantitatif') {
 
-            $risk_limit = 0;
+        // [HIDE] Calculate Skala Dampak base on Nilai Dampak
+        // if ($request->kategori_dampak == 'Kuantitatif') {
 
+        //     $risk_limit = 0;
 
-            if ($riskLimitPeriode) {
-                $risk_limit = $riskLimitPeriode->risk_limit;
-                $risk_tolerance = $riskLimitPeriode->risk_limit;
-                // $totalOtherIdentifikasiRisiko = IdentifikasiRisiko::where('unit_id', $unit->id)
-                //     ->where('periode_id', $periode->id)
-                //     ->whereHas('riskAnalysis', function($query) {
-                //         $query->where('kategori_dampak', 'Kuantitatif');
-                //     })
-                //     ->count();
+        //     if ($riskLimitPeriode) {
+        //         $risk_limit = $riskLimitPeriode->risk_limit;
+        //         $risk_tolerance = $riskLimitPeriode->risk_limit;
+        //         // $totalOtherIdentifikasiRisiko = IdentifikasiRisiko::where('unit_id', $unit->id)
+        //         //     ->where('periode_id', $periode->id)
+        //         //     ->whereHas('riskAnalysis', function($query) {
+        //         //         $query->where('kategori_dampak', 'Kuantitatif');
+        //         //     })
+        //         //     ->count();
 
-                // if ($totalOtherIdentifikasiRisiko > 0) {
-                //     $risk_limit = $risk_limit / $totalOtherIdentifikasiRisiko;
-                // }
-            }
+        //         // if ($totalOtherIdentifikasiRisiko > 0) {
+        //         //     $risk_limit = $risk_limit / $totalOtherIdentifikasiRisiko;
+        //         // }
+        //     }
 
-            $toMerge = [
-                'skala_dampak' => $this->calculateSkalaDampak($request->nilai_dampak * 100 / $risk_limit),
-            ];
-            for ($i = 1; $i <= 4; $i++) {
-                $calculateSkala = $this->calculateSkalaDampak($request->{'nilai_dampak_residual_q' . $i} * 100 / $risk_limit);
-                $toMerge['skala_dampak_residual_q' . $i] = $calculateSkala;
-            }
+        //     $toMerge = [
+        //         'skala_dampak' => $this->calculateSkalaDampak($request->nilai_dampak * 100 / $risk_limit),
+        //     ];
+        //     for ($i = 1; $i <= 4; $i++) {
+        //         $calculateSkala = $this->calculateSkalaDampak($request->{'nilai_dampak_residual_q' . $i} * 100 / $risk_limit);
+        //         $toMerge['skala_dampak_residual_q' . $i] = $calculateSkala;
+        //     }
 
-            $request->merge($toMerge);
-        }
+        //     $request->merge($toMerge);
+        // }
 
         // validate q4 < q3 < q2 < q1 < inherent
         $lastValues = [
@@ -1240,11 +1241,12 @@ class RiskRegisterApController extends Controller
             }
             $lastValues['nilai_probabilitas'] = $request->{'nilai_probabilitas_residual_q' . ($i + 1)};
 
-            if ($request->{'skala_dampak_residual_q' . ($i + 1)} > $lastValues['skala_dampak']) {
-                return response()->json([
-                    'message' => 'Skala dampak residual q' . ($i + 1) . ' tidak boleh lebih besar dari ' . ($i ? 'q' . $i : 'inherent'),
-                ], 422);
-            }
+            // [HIDE] Validation skala dampak
+            // if ($request->{'skala_dampak_residual_q' . ($i + 1)} > $lastValues['skala_dampak']) {
+            //     return response()->json([
+            //         'message' => 'Skala dampak residual q' . ($i + 1) . ' tidak boleh lebih besar dari ' . ($i ? 'q' . $i : 'inherent'),
+            //     ], 422);
+            // }
             $lastValues['skala_dampak'] = $request->{'skala_dampak_residual_q' . ($i + 1)};
         }
 
