@@ -512,16 +512,15 @@
                                                 {{ $perlakuan->lastMonitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
                                             </td>
                                             <td class="display-biaya inputmask-fixed">
-                                                {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                             </td>
                                             <td class="display-timeline text-center">
-                                                {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: 'Rp 0' }}
+                                                {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}
                                             </td>
                                             <td style="white-space:nowrap" class="column-action-impact">
                                                 <div class="d-none dom-saved-impact">
                                                     <div class="upload-container">
                                                     </div>
-                                                    <input type="textarea" class="input-file-description" name="document_description_{{ $perlakuan->id }}" id="deskripsi_perlakuan_risiko_{{ $perlakuan->id }}">
                                                 </div>
                                                 <div class="text-center">
                                                     <a href="javascript:void(0)"
@@ -762,10 +761,423 @@
         </div>
     </form>
 
-    @include('project-monitorings._modal_kri')
-    @include('project-monitorings._modal_penyebab')
-    @include('project-monitorings._modal_mitigasi')
-    @include('project-monitorings._modal_update_realisasi_dampak')
+    {{-- Modal Update Realisasi KRI --}}
+    <div class="modal fade" id="modalUpdateKri" tabindex="-1" role="dialog" aria-labelledby="modalUpdateKri" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <form method="POST" id="formUpdateKri">
+                    <div class="modal-header d-flex flex-between-center">
+                        <h3 class="modal-title h4" id="modalUpdateKriLabel">Edit Rencana Terhadap KRI</h3>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    {{ Form::hidden('kri_project_id', '') }}
+                    <div class="modal-body">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <div class="form-group form-floating">
+                                    <input type="text" class="form-control" name="key_risk_indicator" disabled>
+                                    <label for="key_risk_indicator_1">Key Risk Indicator</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4 col-lg-auto flex-lg-grow-1">
+                                <div class="form-group form-floating text-center">
+                                    <input type="text" class="form-control border-success" name="batas_aman" disabled>
+                                    <label for="batas_aman_1">Batas Aman</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4 col-lg-auto flex-lg-grow-1">
+                                <div class="form-group form-floating text-center">
+                                    <input type="text" class="form-control border-warning" name="batas_waspada" disabled>
+                                    <label for="batas_waspada_1">Batas Waspada</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4 col-lg-auto flex-lg-grow-1">
+                                <div class="form-group form-floating text-center">
+                                    <input type="text" class="form-control border-danger" name="batas_bahaya" disabled>
+                                    <label for="batas_bahaya_1">Batas Bahaya</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4 col-lg-auto flex-lg-grow-1">
+                                <div class="form-group form-floating">
+                                    <input type="text" class="form-control" name="nilai_kri" required>
+                                    <label for="batas_bahaya_1">Nilai KRI</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4 col-lg-auto flex-lg-grow-1">
+                                <div class="form-group form-floating">
+                                    <select class="form-select" name="status_kri" required>
+                                        <option value="1">Aman</option>
+                                        <option value="2">Waspada</option>
+                                        <option value="3">Bahaya</option>
+                                    </select>
+                                    <label for="batas_bahaya_1">Status KRI</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-primary" id="btnSimpanUpdateKri">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    {{-- Modal Detail Mitigasi. --}}
+    <div class="modal fade" id="modalMitigasi" tabindex="-1" role="dialog" aria-labelledby="modalMitigasi" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <form method="POST" id="formMitigasi">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-header d-flex flex-between-center">
+                        <h3 class="modal-title h4" id="modalMitigasiLabel">Detail Mitigasi Data</h3>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-2">
+                            <!-- Hidden Input for penyebab_risiko_id -->
+                            {{ Form::hidden('penyebab_risiko_id', '') }}
+
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    {{ Form::text('penyebab_risiko', null, ['class' => 'form-control', 'disabled' => 'disabled']) }}
+                                    <label>Penyebab Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    {{ Form::textarea('rencana_perlakuan_risiko', null, ['class' => 'form-control', 'rows' => 3, 'disabled' => 'disabled']) }}
+                                    <label>Rencana Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ Form::text('biaya_perlakuan_risiko', null, ['class' => 'form-control inputmask-rupiah', 'disabled' => 'disabled']) }}
+                                    <label>Biaya Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ Form::text('pic', null, ['class' => 'form-control', 'disabled' => 'disabled']) }}
+                                    <label>PIC</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <h5 class="mt-3 mb-0">Realisasi</h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ Form::text('realisasi_biaya_perlakuan_risiko', null, ['class' => 'form-control inputmask-rupiah', 'disabled' => 'disabled']) }}
+                                    <label>Realisasi Biaya Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ Form::number('progress_perlakuan_risiko', null, ['class' => 'form-control', 'disabled' => 'disabled', 'max' => 100]) }}
+                                    <label>Progress Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    {{ Form::textarea('deskripsi_perlakuan_risiko', '', ['class' => 'form-control', 'required', 'rows' => 3, 'disabled' => 'disabled']) }}
+                                    <label for="deskripsi_perlakuan_risiko">Deskripsi Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            {{-- <div class="col-12">
+                                <div class="form-floating">
+                                    {{ Form::select('jenis_program_rkap_id', \App\Models\JenisProgramDalamRKAP::pluck('jenis_program_rkap', 'id'), '', ['class' => 'form-select', 'required', 'disabled' => 'disabled']) }}
+                                    <label for="jenis_program_rkap_id">Jenis Program RKAP</label>
+                                </div>
+                            </div> --}}
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" name="timeline_perlakuan_risiko" disabled>
+                                    <label>Waktu Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-md-9">
+                                <h5 class="mt-3 mb-0">Dokumen</h5>
+                            </div>
+                            <div class="col-md-3 col-auto text-end justify-content-end d-flex flex-column">
+                                <div>
+
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <table class="table tabel-dokumen-mitigasi">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Dokumen</th>
+                                            <th scope="col">Deskripsi</th>
+                                            <th scope="col">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal Update Realisasi Penyebab --}}
+    <div class="modal fade" id="modalUpdateRealisasi" tabindex="-1" role="dialog" aria-labelledby="modalUpdateRealisasi" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <form method="POST" id="formUpdateRealisasi">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-header d-flex flex-between-center">
+                        <h3 class="modal-title h4" id="modalUpdateRealisasiLabel">Realisasi Perlakuan Risiko</h3>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-2">
+                            <!-- Hidden Input for penyebab_risiko_id -->
+                            {{ Form::hidden('penyebab_risiko_id', '') }}
+
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    {{ Form::text('penyebab_risiko', null, ['class' => 'form-control', 'disabled' => 'disabled']) }}
+                                    <label>Penyebab Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="perkiraan_waktu_terpapar_risiko_mulai" name="perkiraan_waktu_terpapar_risiko_mulai" required disabled>
+                                    <label for="perkiraan_waktu_terpapar_risiko_mulai">Perkiraan Waktu Mulai Terpapar Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="perkiraan_waktu_terpapar_risiko_akhir" name="perkiraan_waktu_terpapar_risiko_akhir" required disabled>
+                                    <label for="perkiraan_waktu_terpapar_risiko_akhir">Perkiraan Waktu Selesai Terpapar Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    {{ Form::textarea('rencana_perlakuan_risiko', null, ['class' => 'form-control', 'rows' => 3, 'disabled' => 'disabled']) }}
+                                    <label>Rencana Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ Form::text('biaya_perlakuan_risiko', null, ['class' => 'form-control inputmask-rupiah', 'disabled' => 'disabled']) }}
+                                    <label>Biaya Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ Form::text('pic', null, ['class' => 'form-control', 'disabled' => 'disabled']) }}
+                                    <label>PIC</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="timeline_perlakuan_risiko_start" name="timeline_perlakuan_risiko_start" required disabled>
+                                    <label for="timeline_perlakuan_risiko_start">Waktu Mulai Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="timeline_perlakuan_risiko_end" name="timeline_perlakuan_risiko_end" required disabled>
+                                    <label for="timeline_perlakuan_risiko_end">Waktu Selesai Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <h5 class="mt-3 mb-0">Realisasi</h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ Form::text('realisasi_biaya_perlakuan_risiko', null, ['class' => 'form-control inputmask-rupiah', 'required' => 'required']) }}
+                                    <label>Realisasi Biaya Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ Form::number('progress_perlakuan_risiko', null, ['class' => 'form-control', 'required' => 'required', 'max' => 100]) }}
+                                    <label>Progress Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    {{ Form::textarea('deskripsi_perlakuan_risiko', '', ['class' => 'form-control', 'required', 'rows' => 3, 'required' => 'required']) }}
+                                    <label for="deskripsi_perlakuan_risiko">Deskripsi Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            {{-- <div class="col-12">
+                                <div class="form-floating">
+                                    {{ Form::select('jenis_program_rkap_id', \App\Models\JenisProgramDalamRKAP::pluck('jenis_program_rkap', 'id'), '', ['class' => 'form-select', 'required']) }}
+                                    <label for="jenis_program_rkap_id">Jenis Program RKAP</label>
+                                </div>
+                            </div> --}}
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="timelineInput" name="timeline_perlakuan_risiko" required>
+                                    <label for="timelineInput">Waktu Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-md-9">
+                                <h5 class="mt-3 mb-0">Dokumen</h5>
+                            </div>
+                            <div class="col-md-3 col-auto text-end justify-content-end d-flex flex-column">
+                                <div>
+
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Dokumen</th>
+                                            <th scope="col">Deskripsi</th>
+                                            <th scope="col">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="table-dokumen">
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="3" class="text-center"><button type="button" class="btn btn-link btn-sm py-1" id="btnTambahDokumen">Tambah Dokumen</button></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-primary" id="btnSimpanUpdateRealisasi">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    {{-- Modal Update Realisasi Dampak --}}
+    <div class="modal fade" id="modalUpdateRealisasiDampak" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <form method="POST" id="formUpdateRealisasiDampak">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-header d-flex flex-between-center">
+                        <h3 class="modal-title h4">Realisasi Perlakuan Dampak</h3>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-2">
+                            <input type="hidden" name="perlakuan_dampak_id" id="impact_id">
+
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="impact_name" disabled>
+                                    <label>Dampak Risiko</label>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <textarea class="form-control" name="impact_plan" id="impact_plan" rows="3" disabled></textarea>
+                                    <label>Rencana Perlakuan</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" name="impact_cost" id="impact_cost" disabled>
+                                    <label>Biaya Rencana</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" name="impact_pic" id="impact_pic" disabled>
+                                    <label>PIC</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="timeline_perlakuan_risiko_dampak_start" name="timeline_perlakuan_risiko_dampak_start" required disabled>
+                                    <label for="timeline_perlakuan_risiko_dampak_start">Waktu Mulai Perlakuan Risiko</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="timeline_perlakuan_risiko_dampak_end" name="timeline_perlakuan_risiko_dampak_end" required disabled>
+                                    <label for="timeline_perlakuan_risiko_dampak_end">Waktu Selesai Perlakuan Risiko</label>
+                                </div>
+                            </div>
+
+                            <div class="col-12"><h5 class="mt-3 mb-0">Realisasi Dampak</h5></div>
+
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control inputmask-rupiah" name="realisasi_biaya_dampak" required>
+                                    <label>Realisasi Biaya</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="number" class="form-control" name="progress_dampak" required max="100">
+                                    <label>Progress (%)</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <textarea class="form-control" name="deskripsi_dampak" rows="3" required></textarea>
+                                    <label>Deskripsi Realisasi</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="timelineImpactInput" name="timeline_dampak" required>
+                                    <label>Waktu Realisasi</label>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <table class="table mt-3">
+                                    <thead>
+                                        <tr>
+                                            <th>Dokumen</th>
+                                            <th>Deskripsi</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="table-dokumen-dampak"></tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="3" class="text-center">
+                                                <button type="button" class="btn btn-link btn-sm" id="btnTambahDokumenDampak">Tambah Dokumen</button>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-primary" id="btnSimpanUpdateRealisasiDampak">Simpan Realisasi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 @endsection
 
 @push('styles')
@@ -779,6 +1191,13 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
+const routeDeleteDoc = "{{ route('projects.monitorings.document.destroy', ['project' => request()->route('project'), 'monitoring' => request()->route('monitoring'), 'documentId' => ':id']) }}";
+const acceptedFiles = ".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx";
+const maxFileSize = 10 * 1024 * 1024; // 10MB dalam Bytes
+const maxFilesCount = 10; // Maksimal 10 file
+const existingPenyebabDocs = @json($projectRisk->projectRiskMonitoring?->perlakuanPenyebabRisikoDocuments->groupBy('perlakuan_penyebab_risiko_id') ?? []);
+const existingDampakDocs = @json($projectRisk->projectRiskMonitoring?->perlakuanDampakRisikoDocuments->groupBy('perlakuan_dampak_risiko_id') ?? []);
+
 const projectRisk = @json($projectRisk);
 const penyebabRisikoProjects = @json($penyebabRisikoProjects->keyBy('id'));
 const jsonPerlakuanPenyebabRisikos = @json($penyebabRisikoProjects->pluck('perlakuanPenyebabRisiko')->flatten()->keyBy('id'));
@@ -796,7 +1215,81 @@ const perlakuanPenyebabRisikos = Object.fromEntries(
         ];
     })
 );
-console.log(perlakuanPenyebabRisikos);
+
+function validateFormSweetAlert(formId) {
+    let isValid = true;
+    $(`#${formId} [required]`).each(function() {
+        if ($(this).val() === '' || $(this).val() === null) {
+            isValid = false;
+            $(this).addClass('is-invalid');
+        } else {
+            $(this).removeClass('is-invalid');
+        }
+    });
+
+    if (!isValid) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Peringatan',
+            text: 'Harap lengkapi semua field yang wajib diisi!',
+        });
+    }
+    return isValid;
+}
+
+function renderExistingDocuments(docs, tbodyElement) {
+    tbodyElement.empty();
+    if(docs && docs.length > 0) {
+        docs.forEach(function(doc) {
+            tbodyElement.append(`
+                <tr class="existing-doc" data-doc-id="${doc.id}">
+                    <td><span class="text-primary text-truncate d-block" style="max-width: 200px;"><a href="${doc.file_path}" target="_blank">${doc.file_name}</a></span></td>
+                    <td><input type="text" class="form-control form-control-sm" value="${doc.description || ''}" disabled></td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-danger btn-delete-db-doc" data-id="${doc.id}">
+                            <i class="bx bx-trash"></i> Hapus
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+    }
+}
+
+// Event Hapus File dari Database (Poin 1)
+$(document).on('click', '.btn-delete-db-doc', function() {
+    const docId = $(this).data('id');
+    const docType = $(this).data('type'); // Ambil tipe dari atribut HTML
+    const tr = $(this).closest('tr');
+
+    Swal.fire({
+        title: 'Hapus Dokumen?',
+        text: "Dokumen yang dihapus dari server tidak dapat dikembalikan!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+            $.ajax({
+                // Sertakan parameter type ke URL
+                url: routeDeleteDoc.replace(':id', docId) + '?type=' + docType,
+                type: 'DELETE',
+                data: { _token: '{{ csrf_token() }}' },
+                success: function(res) {
+                    Swal.fire('Terhapus!', res.message, 'success');
+                    tr.remove(); // Hapus baris tabel jika berhasil
+                },
+                error: function(xhr) {
+                    Swal.fire('Gagal!', 'Terjadi kesalahan saat menghapus.', 'error');
+                }
+            });
+        }
+    });
+});
 
 const jsonPerlakuanDampakRisikos = @json($projectRisk->perlakuanDampakRisikos->keyBy('id'));
 const perlakuanDampakRisikos = Object.fromEntries(
@@ -813,9 +1306,6 @@ const perlakuanDampakRisikos = Object.fromEntries(
         ];
     })
 );
-
-// 1. Variabel penampung dokumen yang ada di database
-const existingDampakDocs = @json($projectRisk->projectRiskMonitoring?->perlakuanDampakRisikoDocuments->groupBy('perlakuan_dampak_risiko_id') ?? []);
 
 // 2. Buka Modal Update Dampak
 $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
@@ -870,37 +1360,26 @@ $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
     const tableDocument = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
     tableDocument.empty();
 
-    // Tampilkan dari database
+    // Tampilkan dokumen existing dari database
     const savedDocs = existingDampakDocs[id] || [];
     savedDocs.forEach(function(doc) {
+        // Memastikan jika deskripsi null dari database, diubah jadi string kosong agar tidak error "null"
+        const descText = doc.description ? doc.description : '';
+
         tableDocument.append(`
             <tr class="existing-doc" data-doc-id="${doc.id}">
-                <td><span class="text-primary text-truncate d-block" style="max-width: 200px;">${doc.file_name}</span></td>
-                <td><input type="text" class="form-control form-control-sm" value="${doc.description || ''}" disabled></td>
-                <td><span class="badge bg-success">Tersimpan</span></td>
-            </tr>
-        `);
-    });
-
-    // Tampilkan file sementara yang baru saja diattach
-    const tempDescriptions = domEdited.find('.input-file-description-array'); // array inputs
-    domEdited.find('input[type=file]').each(function(index) {
-        const fileObj = this.files && this.files.length > 0 ? this.files[0] : null;
-        if (!fileObj) return;
-
-        const fileName = fileObj.name;
-        const fileId = $(this).attr('id');
-        // Ambil value deskripsi berdasarkan index urutannya
-        const description = tempDescriptions.eq(index).val() || '';
-
-        tableDocument.append(`
-            <tr data-id="${fileId}">
-                <td><span class="dokumen-filename text-truncate d-block" style="max-width: 200px;">${fileName}</span></td>
                 <td>
-                    <input type="text" class="form-control form-control-sm input-desc-impact" placeholder="Keterangan..." value="${description}">
+                    <span class="text-primary text-truncate d-block" style="max-width: 200px;">
+                        <a href="${doc.url}" target="_blank">${doc.file_name}</a>
+                    </span>
                 </td>
                 <td>
-                    <button type="button" class="btn btn-link btn-sm text-danger btn-delete-doc-impact">Hapus</button>
+                    <input type="text" class="form-control form-control-sm" value="${descText}" placeholder="Tidak ada deskripsi" disabled>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger btn-delete-db-doc" data-id="${doc.id}" data-type="dampak">
+                        <i class="bx bx-trash"></i> Hapus
+                    </button>
                 </td>
             </tr>
         `);
@@ -919,10 +1398,10 @@ $('#btnTambahDokumenDampak').click(function() {
     const uploadContainer = domEdited.find('.upload-container');
     const tableDokumen = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
 
-    if (tableDokumen.find('tr').length >= 3) {
-        Swal.fire({ icon: 'error', title: 'Gagal', text: 'Maksimal 3 dokumen yang dapat diunggah.' });
-        return;
-    }
+    // if (tableDokumen.find('tr').length >= 3) {
+    //    Swal.fire({ icon: 'error', title: 'Gagal', text: 'Maksimal 3 dokumen yang dapat diunggah.' });
+    //    return;
+    // }
 
     const newId = 'dokumen-dampak-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
 
@@ -1015,23 +1494,18 @@ function toggleAddDocButtonDampak() {
 
 // 6. Simpan Form Realisasi Dampak
 $('#btnSimpanUpdateRealisasiDampak').on('click', function() {
+    if (!validateFormSweetAlert('formUpdateRealisasiDampak')) return; // Poin 5
+
     const id = $('#impact_id').val();
-    const form = $('#formUpdateRealisasiDampak');
+    let realisasiBiaya = $('#formUpdateRealisasiDampak [name="realisasi_biaya_dampak"]').inputmask('unmaskedvalue') || 0;
 
-    if(!form[0].checkValidity()) { form[0].reportValidity(); return; }
-
-    let realisasiBiaya = form.find('[name="realisasi_biaya_dampak"]').inputmask('unmaskedvalue');
-    if (!realisasiBiaya && realisasiBiaya !== "0") {
-        realisasiBiaya = form.find('[name="realisasi_biaya_dampak"]').val().replace(/[^0-9,-]+/g,"").replace(",",".");
-    }
-
-    perlakuanDampakRisikos[id]['realisasi_biaya_perlakuan_risiko'] = realisasiBiaya || 0;
-    perlakuanDampakRisikos[id]['progress_rencana_perlakuan_risiko'] = form.find('[name="progress_dampak"]').val();
-    perlakuanDampakRisikos[id]['deskripsi_perlakuan_risiko'] = form.find('[name="deskripsi_dampak"]').val();
-    perlakuanDampakRisikos[id]['timeline_perlakuan_risiko'] = form.find('[name="timeline_dampak"]').val();
+    perlakuanDampakRisikos[id]['realisasi_biaya_perlakuan_risiko'] = realisasiBiaya;
+    perlakuanDampakRisikos[id]['progress_rencana_perlakuan_risiko'] = $('#formUpdateRealisasiDampak [name="progress_dampak"]').val();
+    perlakuanDampakRisikos[id]['deskripsi_perlakuan_risiko'] = $('#formUpdateRealisasiDampak [name="deskripsi_dampak"]').val();
+    perlakuanDampakRisikos[id]['timeline_perlakuan_risiko'] = $('#timelineImpactInput').val();
 
     const tr = $(`#table-dampak-risiko tr[data-id="${id}"]`);
-    tr.find('.display-biaya').text('Rp ' + Intl.NumberFormat('id-ID').format(perlakuanDampakRisikos[id]['realisasi_biaya_perlakuan_risiko']));
+    tr.find('.display-biaya').text('Rp ' + Intl.NumberFormat('id-ID').format(realisasiBiaya));
     tr.find('.display-progress').text(perlakuanDampakRisikos[id]['progress_rencana_perlakuan_risiko']);
     tr.find('.display-timeline').text(perlakuanDampakRisikos[id]['timeline_perlakuan_risiko']);
 
@@ -1039,6 +1513,7 @@ $('#btnSimpanUpdateRealisasiDampak').on('click', function() {
     tr.find('.dom-edited-impact').removeClass('dom-edited-impact').addClass('dom-saved-impact');
 
     $('#modalUpdateRealisasiDampak').modal('hide');
+    Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Data realisasi sementara disimpan. Jangan lupa klik tombol Simpan utama.', timer: 2000, showConfirmButton: false });
 });
 
 const kriProjects = @json($kriProjects->keyBy('id'));
@@ -1207,6 +1682,17 @@ function validateRealisasiForm() {
 }
 
 function submitForm(isClosed) {
+    if (!validateRealisasiForm()) return; // Pastikan validasi utama sukses
+
+    Swal.fire({
+        title: 'Menyimpan Data...',
+        text: 'Mohon tunggu, sedang mengupload dokumen dan menyimpan data.',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     $('.dom-edited').remove();
     $('.dom-edited-impact').remove();
 
@@ -1216,8 +1702,6 @@ function submitForm(isClosed) {
     formData.append('kri_projects', JSON.stringify(kriProjects));
     formData.append('quarter', quarter);
     formData.append('_method', 'PUT');
-
-    // Append new data for isClosed
     formData.append('is_closed', isClosed);
 
     $.ajax({
@@ -1234,18 +1718,12 @@ function submitForm(isClosed) {
                 confirmButtonText: 'OK',
             }).then(() => {
                 let baseUrl = '{{ route('projects.monitorings.index', ['project' => request()->route('project')]) }}';
-
-                const currentQuarter = '{{ $quarter }}';
-                const currentTahun = '{{ $tahun }}';
-                const currentMonth = '{{ $month }}';
-                const redirectUrl = `${baseUrl}?quarter=${currentQuarter}&tahun=${currentTahun}&month=${currentMonth}`;
-
+                const redirectUrl = `${baseUrl}?quarter={{ $quarter }}&tahun={{ $tahun }}&month={{ $month }}`;
                 window.location.href = redirectUrl;
-                // window.location.href = '{{ route('projects.monitorings.index', ['project' => request()->route('project')]) }}';
             });
         },
         error: function(xhr) {
-            let errorMessage = 'Terjadi kesalahan.';
+            let errorMessage = 'Terjadi kesalahan saat menyimpan data.';
             if (xhr.responseJSON && xhr.responseJSON.message) {
                 errorMessage = xhr.responseJSON.message;
             }
@@ -1548,7 +2026,6 @@ $(document).ready(function() {
                 // console.log(id, domCell);
 
                 const domDeskripsi = domEdited.find('.input-file-description');
-                console.log(domDeskripsi.length);
                 const deskripsi = domDeskripsi.val() ? JSON.parse(domDeskripsi.val()) : {};
                 deskripsi[id] = value;
                 domDeskripsi.val(JSON.stringify(deskripsi));
@@ -1565,6 +2042,21 @@ $(document).ready(function() {
                     tableDocument.closest('table').find('tfoot').show();
                 }
             });
+
+            const savedPenyebabDocs = existingPenyebabDocs[perlakuanPenyebab.id] || [];
+              savedPenyebabDocs.forEach(function(doc) {
+                  tableDocument.append(`
+                      <tr class="existing-doc" data-doc-id="${doc.id}">
+                          <td><span class="text-primary text-truncate d-block" style="max-width: 200px;"><a href="${doc.url}" target="_blank">${doc.file_name}</a></span></td>
+                          <td><input type="text" class="form-control form-control-sm" value="${doc.description || ''}" disabled></td>
+                          <td>
+                              <button type="button" class="btn btn-sm btn-danger btn-delete-db-doc" data-id="${doc.id}" data-type="penyebab">
+                                  <i class="bx bx-trash"></i> Hapus
+                              </button>
+                          </td>
+                      </tr>
+                  `);
+              });
 
             $('#modalUpdateRealisasi').modal('show');
         } else if (action === 'view-details') {
@@ -1624,58 +2116,100 @@ $(document).ready(function() {
 
             $('#modalMitigasi').modal('show');
         } else if (action === 'update-realisasi-dampak') {
-            // const perlakuanDampak = perlakuanDampakRisikos[$(this).data('id')];
+            // // 1. Ambil ID perlakuan dampak dari tombol yang diklik
+            // const id = $(this).data('id');
 
-            // // Reset dan Isi Modal (Gunakan modal yang sama dengan mitigasi penyebab)
-            // $('#modalUpdateRealisasi :input[name="penyebab_risiko_id"]').val($(this).data('id')); // Kita reuse field ID ini
-            // $('#modalUpdateRealisasi :input[name="penyebab_risiko"]').val("Dampak: " + @json($projectRisk->deskripsi_dampak));
-            // $('#modalUpdateRealisasi :input[name="rencana_perlakuan_risiko"]').val(perlakuanDampak.rencana_perlakuan_risiko);
-            // $('#modalUpdateRealisasi :input[name="biaya_perlakuan_risiko"]').val(perlakuanDampak.biaya_perlakuan_risiko);
+            // // 2. Definisikan elemen tabel tempat dokumen akan di-render
+            // const tableDocument = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
 
-            // // Load data monitoring jika sudah ada
-            // const lastMon = perlakuanDampak.last_monitoring;
-            // $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(lastMon?.realisasi_biaya_perlakuan_risiko ?? 0);
-            // $('#modalUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val(lastMon?.progress_rencana_perlakuan_risiko ?? 0);
-            // $('#modalUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val(lastMon?.deskripsi_perlakuan_risiko ?? '');
+            // // Kosongkan tabel dulu jika sebelumnya ada isinya (mencegah duplikat saat buka-tutup modal)
+            // tableDocument.empty();
 
-            // // Set Action Type agar saat simpan, JS tahu ini update Dampak atau Penyebab
-            // $('#btnSimpanUpdateRealisasi').data('target-type', 'dampak');
-            // $('#modalUpdateRealisasi').modal('show');
+            // // 3. Render dokumen dari database
+            // const savedDocs = existingDampakDocs[id] || [];
+            // savedDocs.forEach(function(doc) {
+            //     tableDocument.append(`
+            //         <tr class="existing-doc" data-doc-id="${doc.id}">
+            //             <td><span class="text-primary text-truncate d-block" style="max-width: 200px;"><a href="${doc.url}" target="_blank">${doc.file_name}</a></span></td>
+            //             <td><input type="text" class="form-control form-control-sm" value="${doc.description || ''}" disabled></td>
+            //             <td>
+            //                 <button type="button" class="btn btn-sm btn-danger btn-delete-db-doc" data-id="${doc.id}" data-type="dampak">
+            //                     <i class="bx bx-trash"></i> Hapus
+            //                 </button>
+            //             </td>
+            //         </tr>
+            //     `);
+            // });
         }
     });
 
+    // --- PENYEBAB RISIKO LOGIC ---
+    $('#btnTambahDokumen').click(function() {
+        const penyebabRisikoId = $('#formUpdateRealisasi :input[name="penyebab_risiko_id"]').val();
+        const domEdited = $('#table-penyebab-risiko tr[data-id="'+penyebabRisikoId+'"] td.column-action .dom-edited');
+        const uploadContainer = domEdited.find('.upload-container');
+        const tableDokumen = $('#modalUpdateRealisasi .table-dokumen');
+
+        // Poin 2: Batasan 10 Dokumen
+        const currentCount = tableDokumen.find('tr').length;
+        if (currentCount >= maxFilesCount) {
+            Swal.fire({ icon: 'error', title: 'Gagal', text: `Maksimal ${maxFilesCount} dokumen yang dapat diunggah.` });
+            return;
+        }
+
+        const newId = 'dokumen-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+        // Poin 2: Filter Accept extension
+        uploadContainer.append(`<input type="file" style="display:none;" accept="${acceptedFiles}" name="document_file_${penyebabRisikoId}[${newId}]" id="${newId}" required>`);
+
+        tableDokumen.append(`
+            <tr data-id="${newId}">
+                <td><span class="dokumen-filename text-truncate d-block" style="max-width: 200px;">Pilih file...</span></td>
+                <td><input type="text" class="form-control" name="deskripsi_dokumen[]" placeholder="Deskripsi dokumen"></td>
+                <td><button type="button" class="btn btn-sm btn-danger delete-btn"><i class="bx bx-trash"></i> Batal</button></td>
+            </tr>
+        `);
+
+        const fileInput = domEdited.find(`#${newId}`);
+
+        fileInput.change(function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                // Poin 2: Batasan Ukuran 10MB
+                if (file.size > maxFileSize) {
+                    Swal.fire({ icon: 'error', title: 'File Terlalu Besar', text: 'Ukuran file maksimal adalah 10 MB.' });
+                    tableDokumen.find(`tr[data-id="${newId}"]`).remove();
+                    $(this).remove();
+                    return;
+                }
+                tableDokumen.find(`tr[data-id="${newId}"] .dokumen-filename`).text(file.name);
+            }
+        });
+
+        fileInput.click();
+    });
+
     $('#btnSimpanUpdateRealisasi').on('click', function() {
-        if (!$('#formUpdateRealisasi')[0].checkValidity()) {
-            $('#formUpdateRealisasi')[0].reportValidity();
-            return;
-        }
+        if (!validateFormSweetAlert('formUpdateRealisasi')) return; // Poin 5
+
         const id = $('#formUpdateRealisasi :input[name="penyebab_risiko_id"]').val();
-        const realisasiBiayaPerlakuanRisiko = $('#formUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val();
-        const progressPerlakuanRisiko = $('#formUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val();
-        const deskripsiPerlakuanRisiko = $('#formUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val();
-        const timelinePerlakuanRisiko = $('#formUpdateRealisasi :input[name="timeline_perlakuan_risiko"]').val();
 
-        if (!timelinePerlakuanRisiko) {
-            Swal.fire('Error', 'Timeline perlakuan risiko harus diisi', 'error');
-            return;
-        }
+        // Set data ke memory
+        perlakuanPenyebabRisikos[id]['realisasi_biaya_perlakuan_risiko'] = $('#formUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').inputmask('unmaskedvalue') || 0;
+        perlakuanPenyebabRisikos[id]['progress_rencana_perlakuan_risiko'] = $('#formUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val();
+        perlakuanPenyebabRisikos[id]['deskripsi_perlakuan_risiko'] = $('#formUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val();
+        perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko'] = $('#timelineInput').val();
 
-        // update perlakuan penyebab risiko
-        perlakuanPenyebabRisikos[id]['realisasi_biaya_perlakuan_risiko'] = realisasiBiayaPerlakuanRisiko;
-        perlakuanPenyebabRisikos[id]['progress_rencana_perlakuan_risiko'] = progressPerlakuanRisiko;
-        perlakuanPenyebabRisikos[id]['deskripsi_perlakuan_risiko'] = deskripsiPerlakuanRisiko;
-        perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko'] = timelinePerlakuanRisiko;
-
-        // update DOM
+        // Update DOM table belakang
         const tr = $('#table-penyebab-risiko tr[data-id="' + id + '"]');
-        tr.find('.display-biaya').text('Rp' + Intl.NumberFormat('id-ID').format(realisasiBiayaPerlakuanRisiko));
-        tr.find('.display-progress').text(progressPerlakuanRisiko);
-        tr.find('.display-timeline').text(timelinePerlakuanRisiko);
+        tr.find('.display-biaya').text('Rp ' + Intl.NumberFormat('id-ID').format(perlakuanPenyebabRisikos[id]['realisasi_biaya_perlakuan_risiko']));
+        tr.find('.display-progress').text(perlakuanPenyebabRisikos[id]['progress_rencana_perlakuan_risiko']);
+        tr.find('.display-timeline').text(perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko']);
 
         tr.find('.dom-saved').remove();
         tr.find('.dom-edited').removeClass('dom-edited').addClass('dom-saved');
 
         $('#modalUpdateRealisasi').modal('hide');
+        Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Data realisasi sementara disimpan. Jangan lupa klik tombol Simpan utama.', timer: 2000, showConfirmButton: false });
     });
 
     $('#btnSimpanUpdateKri').on('click', function() {
@@ -1800,7 +2334,7 @@ $(document).ready(function() {
         const skalaDampakHidden = $('#realisasi_skala_dampak_hidden');
 
         if (kategoriDampak === 'Kuantitatif') {
-            console.log("risk limit : " + riskLimit);
+            // console.log("risk limit : " + riskLimit);
             var percentage = 100;
             var skala = 5;
 
@@ -1810,8 +2344,8 @@ $(document).ready(function() {
                 // Hitung skala berdasarkan persentase
                 skala = hitungSkalaDampak(percentage);
 
-                console.log("percentage : " + percentage);
-                console.log("skala : " + skala);
+                // console.log("percentage : " + percentage);
+                // console.log("skala : " + skala);
             }
 
             // Set nilai skala dampak dan trigger change event
@@ -1830,7 +2364,7 @@ $(document).ready(function() {
 
     // Event listener untuk perubahan nilai dampak
     $('#realisasi_nilai_dampak').on('keyup change', function() {
-        console.log("hitung skala dampak");
+        // console.log("hitung skala dampak");
         hitungRealisasiSkalaDampak();
         refreshSkalaAndLevelRisiko();
     });

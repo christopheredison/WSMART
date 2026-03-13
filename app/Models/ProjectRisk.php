@@ -371,6 +371,14 @@ class ProjectRisk extends Model
         return $this->belongsTo(SasaranProyek::class, 'sasaran_proyek_id');
     }
 
+    public function monitoringByPeriode($bulan, $tahun)
+    {
+        return $this->hasOne(ProjectRiskMonitoring::class, 'risiko_id')
+                    ->where('month', $bulan)
+                    ->where('tahun', $tahun)
+                    ->orderBy('id', 'desc');
+    }
+
     /**
      * Menentukan risiko utama berdasarkan kriteria:
      * - Untuk risiko kuantitatif: eksposur risiko di atas rata-rata

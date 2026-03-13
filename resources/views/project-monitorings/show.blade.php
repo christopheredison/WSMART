@@ -100,7 +100,7 @@
                                                 {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d M Y') ?: '-' }}
                                             </td>
                                             <td>
-                                                  <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
+                                                  <button type="button" class="btn btn-sm btn-link lihat-file-btn" data-type="dampak" title="Lihat File">
                                                       <i class='bx bx-file fs-5'></i>
                                                   </button>
                                               </td>
@@ -157,7 +157,7 @@
                                         </td>
                                         <td class="display-timeline text-center">{{ ($penyebabRisiko->perlakuanPenyebabRisiko[0]?? null)?->last_monitoring?->waktu_perlakuan_risiko?: '-' }}</td>
                                         <td>
-                                            <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
+                                            <button type="button" class="btn btn-sm btn-link lihat-file-btn" data-type="penyebab" title="Lihat File">
                                                 <i class='bx bx-file fs-5'></i>
                                             </button>
                                         </td>
@@ -990,7 +990,6 @@ function getSkalaProbabilitasByValue(value) {
     }
 }
 const riskMonitoring = @json($riskMonitoring);
-console.log(riskMonitoring);
 
 function refreshSkalaAndLevelRisiko() {
     const riskMaps = @json($riskMaps);
@@ -1266,30 +1265,40 @@ $(document).ready(function() {
 
     $("#timelineRange").data('_flatpickr', flatpickrIns);
 
-    const files = @json($files);
+    const filesPenyebab = @json($filesPenyebab);
+    const filesDampak = @json($filesDampak);
+
     $('.lihat-file-btn').on('click', function() {
         const id = $(this).closest('tr').data('id');
-        const filteredFiles = files[id];
+        const type = $(this).data('type'); // Ambil tipe (dampak/penyebab)
+
+        // Pilih array file yang benar berdasarkan tombol yang diklik
+        let filteredFiles = [];
+        if (type === 'penyebab') {
+            filteredFiles = filesPenyebab[id];
+        } else if (type === 'dampak') {
+            filteredFiles = filesDampak[id];
+        }
 
         const tbody = $('#modalLihatFile tbody');
         tbody.empty();
 
-        if (filteredFiles) {
+        if (filteredFiles && filteredFiles.length > 0) {
             for (let i in filteredFiles) {
                 const file = filteredFiles[i];
                 const tr = $('<tr></tr>');
                 tr.append('<td>' + file.file_name + '</td>');
                 tr.append('<td>' + (file.description || '-') + '</td>');
-                tr.append('<td><a href="' + file.url + '" download="' + file.file_name + '">Download</a></td>');
+                tr.append('<td><a href="' + file.url + '" download="' + file.file_name + '" class="btn btn-sm btn-primary"><i class="bx bx-download"></i> Download</a></td>');
                 tbody.append(tr);
             }
         } else {
-            tbody.append('<tr><td colspan="4" class="text-center">Tidak ada data</td></tr>');
+            // Diperbaiki colspan jadi 3 menyesuaikan jumlah kolom di tabel modal
+            tbody.append('<tr><td colspan="3" class="text-center text-muted fst-italic">Tidak ada file yang dilampirkan</td></tr>');
         }
 
         $('#modalLihatFile').modal('show');
     });
-
 
     $('.datatable').DataTable({
         paging: true,

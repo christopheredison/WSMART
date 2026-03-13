@@ -20,6 +20,8 @@ use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use App\Models\KamusRisikoProject;
+use App\Models\PerlakuanPenyebabRisikoDocument;
+use App\Models\PerlakuanDampakRisikoDocument;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -1312,9 +1314,16 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $riskMaps = RiskMap::get()->keyBy(function($item) {
             return $item->skala_dampak . '-' . $item->skala_probabilitas;
         });
-        $projectMonitoring = $projectRisk->projectRiskMonitoring()->where('quarter', $quarter)->where('tahun', $tahun)->where('month', $month)->first();
+        $projectMonitoring = $projectRisk->projectRiskMonitoring()
+            ->where('quarter', $quarter)
+            ->where('tahun', $tahun)
+            ->where('month', $month)
+            ->with(['perlakuanPenyebabRisikoDocuments', 'perlakuanDampakRisikoDocuments'])
+            ->first();
 
-        $files = $projectMonitoring?->perlakuanPenyebabRisikoDocuments->groupBy('perlakuan_penyebab_risiko_id') ?: [];
+        // Pisahkan file berdasarkan tipenya
+        $filesPenyebab = $projectMonitoring?->perlakuanPenyebabRisikoDocuments->groupBy('perlakuan_penyebab_risiko_id') ?: collect();
+        $filesDampak = $projectMonitoring?->perlakuanDampakRisikoDocuments->groupBy('perlakuan_dampak_risiko_id') ?: collect();
 
         $currentDate = \Carbon\Carbon::create($tahun, $month, 1);
         $dateM1 = $currentDate->copy()->subMonth();
@@ -1340,7 +1349,8 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'skalaProbabilitas' => $skalaProbabilitas,
             'quarter' => $quarter,
             'tahun' => $tahun,
-            'files' => $files,
+            'filesPenyebab' => $filesPenyebab,
+            'filesDampak' => $filesDampak,
             'month' => $month,
             'monitoringM1' => $monitoringM1,
             'monitoringM2' => $monitoringM2,
@@ -1909,4 +1919,32 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         }
         return true;
     }
+
+    public function destroyDocument(Request $request, $project, $monitoring, $documentId)
+{
+    try {
+        $type = $request->query('type'); // Ambil parameter dari request ajax
+
+        // Pilih model berdasarkan tipe yang dikirim
+        if ($type === 'penyebab') {
+            $doc = PerlakuanPenyebabRisikoDocument::find($documentId);
+        } elseif ($type === 'dampak') {
+            $doc = PerlakuanDampakRisikoDocument::find($documentId);
+        } else {
+            return response()->json(['success' => false, 'message' => 'Tipe dokumen tidak valid'], 400);
+        }
+
+        if ($doc) {
+            // Karena di dalam Model sudah ada fungsi overriding delete()
+            // yang mengeksekusi Storage::delete($this->file_path);
+            // kita cukup memanggil ->delete() saja.
+            $doc->delete();
+            return response()->json(['success' => true, 'message' => 'Dokumen berhasil dihapus']);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Dokumen tidak ditemukan'], 404);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => 'Gagal menghapus dokumen: ' . $e->getMessage()], 500);
+    }
+}
 }
