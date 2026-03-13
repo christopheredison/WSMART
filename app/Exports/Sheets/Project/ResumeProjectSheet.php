@@ -116,7 +116,7 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                     'B10' => ['Label' => 'Biaya Perlakuan Risiko Sesuai RKP:', 'Value' => $this->formatCurrency($biayaRkp)],
                     'B11' => ['Label' => 'Rencana Biaya Perlakuan Risiko:', 'Value' => $this->formatCurrency($rencanaBiayaTotal)],
                     'B12' => ['Label' => 'Realisasi Biaya Perlakuan Risiko:', 'Value' => $this->formatCurrency($realisasiBiayaTotal)],
-                    'B13' => ['Label' => 'Batasan Biaya Perlakuan Risiko:', 'Value' => $this->formatCurrency(0)],
+                    'B13' => ['Label' => 'Batasan Biaya Perlakuan Risiko:', 'Value' => $this->formatCurrency($project->batasan_biaya_perlakuan_risiko ?? 0)],
                 ];
 
                 foreach ($dataResume as $cell => $data) {

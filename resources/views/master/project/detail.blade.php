@@ -47,9 +47,15 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="row mb-2">
-                    <div class="col-md-5 fw-bold text-muted">Nilai Kontrak (NK)</div>
+                    <div class="col-md-5 fw-bold text-muted">Nilai Kontrak (OK Total)</div>
                     <div class="col-md-7 fw-bold text-success">
-                        Rp {{ number_format($project->nk, 0, ',', '.') }}
+                        Rp {{ number_format($project->nk ?? 0, 0, ',', '.') }}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-5 fw-bold text-muted">Nilai OK Porsi</div>
+                    <div class="col-md-7 fw-bold text-success">
+                        Rp {{ number_format($project->nilai_ok_porsi ?? 0, 0, ',', '.') }}
                     </div>
                 </div>
                 <div class="row mb-2">
@@ -73,6 +79,12 @@
                         @if(isset($meta['klasifikasi_id'])) <small>({{ $meta['klasifikasi_id'] }})</small> @endif
                     </div>
                 </div>
+                <div class="row mb-2">
+                    <div class="col-md-5 fw-bold text-muted">Batasan Biaya Risiko</div>
+                    <div class="col-md-7 text-primary fw-bold">
+                        Rp {{ number_format($project->batasan_biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}
+                    </div>
+                </div>
             </div>
             <div class="col-md-6">
                 <div class="row mb-2">
@@ -94,6 +106,18 @@
                 <div class="row mb-2">
                     <div class="col-md-5 fw-bold text-muted">Pembayaran</div>
                     <div class="col-md-7">{{ $meta['pembayaran_name'] ?? '-' }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-5 fw-bold text-muted">Nilai Batasan Risiko</div>
+                    <div class="col-md-7 text-danger fw-bold">
+                        Rp {{ number_format(($project->nk ?? 0) * 0.03, 0, ',', '.') }}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-5 fw-bold text-muted">Biaya Risiko RKP</div>
+                    <div class="col-md-7 text-warning fw-bold">
+                        Rp {{ number_format($project->biaya_perlakuan_risiko_rkp ?? 0, 0, ',', '.') }}
+                    </div>
                 </div>
             </div>
         </div>

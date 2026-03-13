@@ -137,44 +137,77 @@ class ProjectController extends BasicCRUDController
         $csrf = csrf_token();
         $this->extraScripts[] = <<<HTML
             <script>
-            $(function() {
-            $(document).on('click', '#btn-sync-wika', function() {
-                Swal.fire({
-                title: "Apakah Anda yakin?",
-                text: "Sinkronisasi WIKA akan menambah/memperbarui proyek tanpa menghapus data yang tidak ada di API.",
-                icon: "warning",
-                showCancelButton: true,
-                confirmButtonText: "Ya, sinkronisasi!",
-                cancelButtonText: "Batal",
-                buttonsStyling: false,
-                customClass: { confirmButton: 'btn btn-primary border-0', cancelButton: 'btn btn-muted border-0' }
-                }).then((result) => {
-                if (result.isConfirmed) {
-                    Swal.fire({
-                    title: 'Sedang memproses...',
-                    text: 'Mohon tunggu beberapa saat.',
-                    allowOutsideClick: false,
-                    didOpen: () => { Swal.showLoading(); }
+                $(function() {
+                    $(document).on('click', '#btn-sync-wika', function() {
+                        Swal.fire({
+                            title: "Apakah Anda yakin?",
+                            text: "Sinkronisasi WIKA akan menambah/memperbarui proyek tanpa menghapus data yang tidak ada di API.",
+                            icon: "warning",
+                            showCancelButton: true,
+                            confirmButtonText: "Ya, sinkronisasi!",
+                            cancelButtonText: "Batal",
+                            buttonsStyling: false,
+                            customClass: { confirmButton: 'btn btn-primary border-0 me-2', cancelButton: 'btn btn-secondary border-0' }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                Swal.fire({
+                                    title: 'Sedang memproses...',
+                                    text: 'Mohon tunggu, proses ini membutuhkan waktu karena mengecek satu per satu project.',
+                                    allowOutsideClick: false,
+                                    didOpen: () => { Swal.showLoading(); }
+                                });
+
+                                $.ajax({
+                                    url: '$syncUrl',
+                                    type: 'POST',
+                                    data: { _token: '$csrf' },
+                                    success: function (response) {
+                                        Swal.close();
+
+                                        // Jika ada data yang gagal masuk
+                                        if (response.count_failed > 0) {
+                                            let errorHtml = '<div style="max-height: 250px; overflow-y: auto; text-align: left;" class="mt-3">';
+                                            errorHtml += '<table class="table table-sm table-bordered" style="font-size: 13px;">';
+                                            errorHtml += '<thead class="table-light"><tr><th width="15%">Kode SPK</th><th width="35%">Project</th><th>Alasan Gagal</th></tr></thead><tbody>';
+
+                                            response.failed_list.forEach(item => {
+                                                errorHtml += `<tr><td>\${item.kode}</td><td>\${item.nama}</td><td class="text-danger">\${item.alasan}</td></tr>`;
+                                            });
+
+                                            errorHtml += '</tbody></table></div>';
+
+                                            Swal.fire({
+                                                icon: 'warning',
+                                                title: 'Sinkronisasi Selesai Sebagian',
+                                                html: `<p>Berhasil: <b>\${response.count_updated}</b> | Gagal Ditarik: <b class="text-danger">\${response.count_failed}</b></p>\${errorHtml}`,
+                                                width: '800px',
+                                                confirmButtonText: 'Tutup'
+                                            });
+                                        } else {
+                                            // Jika semua berhasil 100%
+                                            Swal.fire({
+                                                icon: 'success',
+                                                title: 'Berhasil',
+                                                text: `\${response.count_updated} Project berhasil disinkronisasi.`
+                                            });
+                                        }
+
+                                        $('.ajax-datatable').DataTable().ajax.reload();
+                                    },
+                                    error: function (xhr) {
+                                        Swal.close();
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error Sistem',
+                                            text: (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Terjadi kesalahan saat menghubungi API.'
+                                        });
+                                    }
+                                });
+                            }
+                        });
                     });
-                    $.ajax({
-                    url: '$syncUrl',
-                    type: 'POST',
-                    data: { _token: '$csrf' },
-                    success: function (response) {
-                        Swal.close();
-                        Swal.fire({ icon: 'success', title: 'Berhasil', text: response.message || 'Sinkronisasi WIKA selesai.' });
-                        $('.ajax-datatable').DataTable().ajax.reload();
-                    },
-                    error: function (xhr) {
-                        Swal.close();
-                        Swal.fire({ icon: 'error', title: 'Error', text: (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Terjadi kesalahan saat sinkronisasi WIKA.' });
-                    }
-                    });
-                }
                 });
-            });
-            });
-            </script>
+                </script>
             HTML;
 
         return parent::index();
@@ -265,61 +298,96 @@ class ProjectController extends BasicCRUDController
             return response()->json(['message' => 'Data Project dari API WIKA kosong.'], 200);
         }
 
-        $currentPeriod = Carbon::now()->format('Ym');
-        $previousPeriod = Carbon::now()->subMonth()->format('Ym');
-
         $countUpdated = 0;
+        $failedProjects = []; // Array penampung project yang gagal
 
         foreach ($projectDatas as $projectData) {
-            $profitCenter = $projectData['profit_center'] ?? null;
+            // Gunakan Transaction per-project agar jika gagal, db tetap bersih
+            \Illuminate\Support\Facades\DB::beginTransaction();
 
-            $nilaiKontrak = ['nk' => 0, 'nilai_ok_porsi' => 0];
+            try {
+                $profitCenter = $projectData['profit_center'] ?? null;
+                $kodeSpk = $projectData['kode_spk'] ?? '-';
+                $namaSpk = $projectData['nama_spk_full'] ?? ($projectData['project_name'] ?? '-');
 
-            if ($profitCenter) {
-                $nilaiKontrak = $this->fetchNilaiKontrakRecursive($apiWika, $profitCenter);
+                // 1. CEK UNIT / DIVISI TERLEBIH DAHULU
+                $divisiUnit = null;
+                $costCenterParent = $projectData['divisisap'] ?? null;
+
+                if (!empty($costCenterParent)) {
+                    $divisiUnit = Unit::where('cost_center', $costCenterParent)->first();
+                }
+
+                // Jika Unit tidak ditemukan, langsung lemparkan exception agar masuk ke blok catch
+                if (!$divisiUnit) {
+                    throw new \Exception("Unit/Divisi dengan Cost Center '{$costCenterParent}' tidak ditemukan di sistem.");
+                }
+
+                $nilaiKontrak = ['nk' => 0, 'nilai_ok_porsi' => 0];
+                if ($profitCenter) {
+                    $nilaiKontrak = $this->fetchNilaiKontrakRecursive($apiWika, $profitCenter);
+                }
+
+                $nkTotal = (float) $nilaiKontrak['nk'];
+
+                $jenisKontrakName = empty($projectData['jenis_kontrak_name']) ? '' : (is_array($projectData['jenis_kontrak_name']) ? implode(', ', $projectData['jenis_kontrak_name']) : $projectData['jenis_kontrak_name']);
+                $pembayaranName = empty($projectData['pembayaran_name']) ? '' : (is_array($projectData['pembayaran_name']) ? implode(', ', $projectData['pembayaran_name']) : $projectData['pembayaran_name']);
+
+                $persentase = $this->hitungPersentaseBatasanBiaya($jenisKontrakName, $pembayaranName);
+                $batasanBiaya = $nkTotal * $persentase;
+
+                // Simpan / Update Project
+                $project = Project::updateOrCreate([
+                    'project_code' => $kodeSpk,
+                ], [
+                    'project_name'   => $namaSpk,
+                    'type'           => Project::TYPE_HAS_RKB_RKN,
+                    'project_status' => 1,
+                    'profit_center'  => $profitCenter,
+                    'nk'             => $nkTotal,
+                    'nilai_ok_porsi' => $nilaiKontrak['nilai_ok_porsi'],
+                    'batasan_biaya_perlakuan_risiko' => $batasanBiaya,
+                    'cost_center_parent' => $costCenterParent,
+                    'masa_pelaksanaan_start' => $projectData['tgl_mulai'] ?? null,
+                    'masa_pelaksanaan_end' => $projectData['tgl_selesai'] ?? null,
+                    'tanggal_mulai' => $projectData['tanggal_mulai'] ?? null,
+                    'meta'           => $projectData,
+                ]);
+
+                // Update Periode List (Karena pengecekan Unit di awal, ini aman dari error Not Null)
+                $projectPeriodeList = ProjectPeriodeList::updateOrCreate([
+                    'project_id' => $project->id,
+                    'periode_id' => null,
+                ], [
+                    'unit_id' => $divisiUnit->id,
+                ]);
+
+                // Recalculate Risks
+                if ($projectPeriodeList) {
+                    $projectPeriodeList->recalculateAllRisks();
+                }
+
+                \Illuminate\Support\Facades\DB::commit();
+                $countUpdated++;
+
+            } catch (\Exception $e) {
+                // Jika terjadi error apapun (Unit null, masalah db, dll)
+                \Illuminate\Support\Facades\DB::rollBack();
+
+                $failedProjects[] = [
+                    'kode' => $projectData['kode_spk'] ?? '-',
+                    'nama' => $projectData['nama_spk_full'] ?? ($projectData['project_name'] ?? '-'),
+                    'alasan' => $e->getMessage()
+                ];
             }
-
-            // Simpan / Update Project
-            $project = Project::updateOrCreate([
-                'project_code' => $projectData['kode_spk'],
-            ], [
-                'project_name'   => $projectData['nama_spk_full'] ?? $projectData['project_name'],
-                'type'           => Project::TYPE_HAS_RKB_RKN,
-                'project_status' => 1,
-                'profit_center'  => $profitCenter,
-                'nk'             => $nilaiKontrak['nk'],
-                'nilai_ok_porsi' => $nilaiKontrak['nilai_ok_porsi'],
-                'cost_center_parent' => $projectData['divisisap'] ?? null,
-                'masa_pelaksanaan_start' => $projectData['tgl_mulai'] ?? null,
-                'masa_pelaksanaan_end' => $projectData['tgl_selesai'] ?? null,
-                'tanggal_mulai' => $projectData['tanggal_mulai'] ?? null,
-                'meta'           => $projectData,
-            ]);
-
-            // Cek Unit / Divisi
-            $divisiUnit = null;
-            if (!empty($projectData['divisisap'])) {
-                $divisiUnit = Unit::where('cost_center', $projectData['divisisap'])->first();
-            }
-
-            // Update Periode List
-            $projectPeriodeList = ProjectPeriodeList::updateOrCreate([
-                'project_id' => $project->id,
-                'periode_id' => null,
-            ], [
-                'unit_id' => $divisiUnit?->id,
-            ]);
-
-            // Recalculate Risks
-            if ($projectPeriodeList) {
-                $projectPeriodeList->recalculateAllRisks();
-            }
-
-            $countUpdated++;
         }
 
         return response()->json([
-            'message' => "Sinkronisasi Berhasil. {$countUpdated} data project diperbarui. (NK menggunakan data bulan {$currentPeriod} atau fallback ke {$previousPeriod})",
+            'success' => true,
+            'count_updated' => $countUpdated,
+            'count_failed' => count($failedProjects),
+            'failed_list' => $failedProjects,
+            'message' => "Sinkronisasi Selesai."
         ]);
     }
 
@@ -340,7 +408,6 @@ class ProjectController extends BasicCRUDController
 
         return 0;
     }
-
 
     private function fetchNilaiKontrakRecursive($apiWika, $profitCenter)
     {
@@ -378,5 +445,51 @@ class ProjectController extends BasicCRUDController
             'nk' => 0,
             'nilai_ok_porsi' => 0
         ];
+    }
+
+    private function hitungPersentaseBatasanBiaya($jenisKontrak, $caraPembayaran)
+    {
+        // Normalisasi input ke huruf kecil agar mudah dicocokkan
+        $kontrak = strtolower(trim($jenisKontrak));
+        $bayar = strtolower(trim($caraPembayaran));
+
+        $persentase = 0.0;
+
+        // Matriks berdasarkan tabel:
+        // Baris: Lumpsum, Mix, Cost-Plus, O & M, Unit Price
+        // Kolom: Monthly, Milestone, CPF (Turn Key)
+
+        // Logika Lumpsum
+        if (str_contains($kontrak, 'lumpsum') || str_contains($kontrak, 'lump sum')) {
+            if (str_contains($bayar, 'monthly')) $persentase = 1.0;
+            elseif (str_contains($bayar, 'milestone')) $persentase = 1.25;
+            elseif (str_contains($bayar, 'cpf') || str_contains($bayar, 'turn key') || str_contains($bayar, 'turnkey')) $persentase = 1.50;
+        }
+        // Logika Mix (Gabungan)
+        elseif (str_contains($kontrak, 'mix') || str_contains($kontrak, 'gabungan')) {
+            if (str_contains($bayar, 'monthly')) $persentase = 0.75;
+            elseif (str_contains($bayar, 'milestone')) $persentase = 1.0;
+            elseif (str_contains($bayar, 'cpf') || str_contains($bayar, 'turn key') || str_contains($bayar, 'turnkey')) $persentase = 1.25;
+        }
+        // Logika Cost-Plus
+        elseif (str_contains($kontrak, 'cost-plus') || str_contains($kontrak, 'cost plus')) {
+            if (str_contains($bayar, 'monthly')) $persentase = 0.13;
+            elseif (str_contains($bayar, 'milestone')) $persentase = 0.25;
+            elseif (str_contains($bayar, 'cpf') || str_contains($bayar, 'turn key') || str_contains($bayar, 'turnkey')) $persentase = 0.50;
+        }
+        // Logika O & M
+        elseif (str_contains($kontrak, 'o & m') || str_contains($kontrak, 'o&m') || str_contains($kontrak, 'operasional')) {
+            if (str_contains($bayar, 'monthly')) $persentase = 0.25;
+            elseif (str_contains($bayar, 'milestone')) $persentase = 0.50;
+            elseif (str_contains($bayar, 'cpf') || str_contains($bayar, 'turn key') || str_contains($bayar, 'turnkey')) $persentase = 0.75;
+        }
+        // Logika Unit Price
+        elseif (str_contains($kontrak, 'unit price') || str_contains($kontrak, 'harga satuan')) {
+            if (str_contains($bayar, 'monthly')) $persentase = 0.25;
+            elseif (str_contains($bayar, 'milestone')) $persentase = 0.50;
+            elseif (str_contains($bayar, 'cpf') || str_contains($bayar, 'turn key') || str_contains($bayar, 'turnkey')) $persentase = 0.75;
+        }
+
+        return $persentase / 100; // Mengubah misalnya 1.25 menjadi 0.0125 untuk pengali
     }
 }

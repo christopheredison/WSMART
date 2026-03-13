@@ -52,6 +52,7 @@ class Project extends Model
         'tanggal_mulai',
         'nilai_ok_porsi',
         'biaya_perlakuan_risiko_rkp',
+        'batasan_biaya_perlakuan_risiko',
     ];
 
     protected $casts = [
@@ -76,6 +77,7 @@ class Project extends Model
         'tanggal_mulai' => 'date:Y-m-d',
         'nilai_ok_porsi' => 'float',
         'biaya_perlakuan_risiko_rkp' => 'float',
+        'batasan_biaya_perlakuan_risiko' => 'float',
     ];
 
     // for autofill project
@@ -117,6 +119,7 @@ class Project extends Model
 
     public $appends = [
         'masa_pelaksanaan',
+        'batasan_biaya_perlakuan_risiko',
     ];
 
     public function projectDivisi()
@@ -204,5 +207,62 @@ class Project extends Model
     public function users()
     {
         return $this->belongsToMany(User::class, 'user_projects', 'project_id', 'user_id');
+    }
+
+    // Tambahkan function ini di bagian bawah dalam class Project
+    public function getBatasanBiayaPerlakuanRisikoAttribute()
+    {
+        $nk = (float) ($this->nk ?? 0);
+
+        // Jika NK kosong, tidak perlu dihitung
+        if ($nk <= 0) return 0;
+
+        $meta = $this->meta ?? [];
+
+        // Ekstrak string Jenis Kontrak (Tangani jika format array)
+        $jenisKontrakName = $meta['jenis_kontrak_name'] ?? '';
+        if (is_array($jenisKontrakName)) {
+            $jenisKontrakName = implode(', ', $jenisKontrakName);
+        }
+        $kontrak = strtolower(trim($jenisKontrakName));
+
+        // Ekstrak string Pembayaran (Tangani jika format array)
+        $pembayaranName = $meta['pembayaran_name'] ?? '';
+        if (is_array($pembayaranName)) {
+            $pembayaranName = implode(', ', $pembayaranName);
+        }
+        $bayar = strtolower(trim($pembayaranName));
+
+        $persentase = 0.0;
+
+        // MATRIKS PERHITUNGAN
+        if (str_contains($kontrak, 'lumpsum') || str_contains($kontrak, 'lump sum')) {
+            if (str_contains($bayar, 'monthly')) $persentase = 1.0;
+            elseif (str_contains($bayar, 'milestone')) $persentase = 1.25;
+            elseif (str_contains($bayar, 'cpf') || str_contains($bayar, 'turn key') || str_contains($bayar, 'turnkey')) $persentase = 1.50;
+        }
+        elseif (str_contains($kontrak, 'mix') || str_contains($kontrak, 'gabungan')) {
+            if (str_contains($bayar, 'monthly')) $persentase = 0.75;
+            elseif (str_contains($bayar, 'milestone')) $persentase = 1.0;
+            elseif (str_contains($bayar, 'cpf') || str_contains($bayar, 'turn key') || str_contains($bayar, 'turnkey')) $persentase = 1.25;
+        }
+        elseif (str_contains($kontrak, 'cost-plus') || str_contains($kontrak, 'cost plus')) {
+            if (str_contains($bayar, 'monthly')) $persentase = 0.13;
+            elseif (str_contains($bayar, 'milestone')) $persentase = 0.25;
+            elseif (str_contains($bayar, 'cpf') || str_contains($bayar, 'turn key') || str_contains($bayar, 'turnkey')) $persentase = 0.50;
+        }
+        elseif (str_contains($kontrak, 'o & m') || str_contains($kontrak, 'o&m') || str_contains($kontrak, 'operasional')) {
+            if (str_contains($bayar, 'monthly')) $persentase = 0.25;
+            elseif (str_contains($bayar, 'milestone')) $persentase = 0.50;
+            elseif (str_contains($bayar, 'cpf') || str_contains($bayar, 'turn key') || str_contains($bayar, 'turnkey')) $persentase = 0.75;
+        }
+        elseif (str_contains($kontrak, 'unit price') || str_contains($kontrak, 'harga satuan')) {
+            if (str_contains($bayar, 'monthly')) $persentase = 0.25;
+            elseif (str_contains($bayar, 'milestone')) $persentase = 0.50;
+            elseif (str_contains($bayar, 'cpf') || str_contains($bayar, 'turn key') || str_contains($bayar, 'turnkey')) $persentase = 0.75;
+        }
+
+        // Contoh: NK 100,000,000 * (0.25 / 100)
+        return $nk * ($persentase / 100);
     }
 }

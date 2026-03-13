@@ -81,7 +81,7 @@
                         </tr>
                         <tr>
                             <td class="fw-bold text-muted">Batasan Biaya Perlakuan Risiko</td>
-                            <td>: Rp 0</td>
+                            <td>: Rp {{ number_format($project->batasan_biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</td>
                         </tr>
                         <td width="45%" class="fw-bold text-muted">Nilai Batasan Risiko</td>
                             <td>: Rp {{ number_format($riskLimit, 2, ',', '.') }}</td>
