@@ -1754,8 +1754,21 @@ class HomeController extends Controller
         $currentYear = Carbon::createFromFormat('Y-m', $selectedPeriod)->year;
         $currentMonth = Carbon::createFromFormat('Y-m', $selectedPeriod)->month;
         $currentQuarter = (int)ceil($currentMonth / 3);
-        $units = Unit::whereIn('unit_type_id', [1])->orderBy('name')->get();
-        $selectedUnit = $selectedUnitId ? Unit::find($selectedUnitId) : null;
+
+        $user = auth()->user();
+        if (Gate::check('view_all_division')) {
+            $units = Unit::where('unit_type_id', 1)->orderBy('name')->get();
+        } else {
+            $units = Unit::where('id', $user->unit_id)->where('unit_type_id', 1)->get();
+        }
+
+        $requestedUnitId = $request->input('unit_id');
+        $selectedUnit = $requestedUnitId ? $units->firstWhere('id', $requestedUnitId) : null;
+        if (!$selectedUnit && $units->isNotEmpty()) {
+            $selectedUnit = $units->first();
+        }
+
+        $selectedUnitId = $selectedUnit ? $selectedUnit->id : null;
 
         $summaryData = [
             'omset_penjualan_sd_bulan'    => 0, // Akan diisi dari penjualan_ri
@@ -1773,9 +1786,11 @@ class HomeController extends Controller
         ];
 
         $isProjectUnit = false;
+        $highImpactRisks = collect();
         $riskMaps = collect();
         $tahunMonitorings = [$currentYear];
         $formattedCurrentRiskMaps = [];
+        $highImpactRisksJs = collect();
         $sortedKriData = collect();
         $closedRisks = collect();
         $efektivitasPerlakuanData = [];
@@ -2023,8 +2038,22 @@ class HomeController extends Controller
         $currentYear = Carbon::createFromFormat('Y-m', $selectedPeriod)->year;
         $currentMonth = Carbon::createFromFormat('Y-m', $selectedPeriod)->month;
         $currentQuarter = (int)ceil($currentMonth / 3);
-        $units = Unit::whereIn('unit_type_id', [2])->orderBy('name')->get();
-        $selectedUnit = $selectedUnitId ? Unit::find($selectedUnitId) : null;
+
+        $user = auth()->user();
+        if (Gate::check('ap_admin')) {
+            $units = Unit::where('unit_type_id', 2)->orderBy('name')->get();
+        } else {
+            $units = Unit::where('id', $user->unit_id)->where('unit_type_id', 2)->get();
+        }
+
+        $requestedUnitId = $request->input('unit_id');
+        $selectedUnit = $requestedUnitId ? $units->firstWhere('id', $requestedUnitId) : null;
+
+        if (!$selectedUnit && $units->isNotEmpty()) {
+            $selectedUnit = $units->first();
+        }
+
+        $selectedUnitId = $selectedUnit ? $selectedUnit->id : null;
 
         $summaryData = [
             'omset_penjualan_sd_bulan'    => 0, // Akan diisi dari penjualan_ri
@@ -2139,9 +2168,29 @@ class HomeController extends Controller
             $unitRisks->each(fn($risk) => $risk->append('currentRiskMapsMonth'));
 
             foreach ($unitRisks as $risk) {
-                foreach ($risk->currentRiskMapsMonth as $month => $mapData) {
-                    if ($month === 'inherent' || !isset($mapData['month'])) continue;
-                    $formattedCurrentRiskMaps[$risk->id][$currentYear][] = $mapData;
+                // Ambil data inherent sebagai fallback awal
+                $currentValue = $risk->currentRiskMapsMonth['inherent'] ?? null;
+
+                // Looping pasti 12 bulan (1 sampai 12) agar array di JS tidak 'undefined' di indeks tertentu
+                for ($month = 1; $month <= 12; $month++) {
+                    // Jika ada data monitoring di bulan tersebut, tumpuk/update nilai currentValue
+                    if ($nextValue = ($risk->currentRiskMapsMonth[$month] ?? null)) {
+                        $currentValue = $nextValue;
+                    }
+
+                    if ($currentValue) {
+                        // Tambahkan properti kuartal dan bulan agar rapi
+                        $currentValue['quarter'] = ceil($month / 3);
+                        $currentValue['month'] = $month;
+
+                        // Siapkan formatted value untuk Javascript
+                        $currentValue['nilai_dampak_formatted'] = 'Rp ' . number_format($currentValue['nilai_dampak'] ?? 0, 0, ',', '.');
+                        $currentValue['nilai_probabilitas_formatted'] = $currentValue['nilai_probabilitas'] ?? '-';
+                        $currentValue['nilai_risiko_formatted'] = $currentValue['skala_risiko'] ?? '-';
+                        $currentValue['level_risiko_formatted'] = $currentValue['level_risiko'] ?? '-';
+
+                        $formattedCurrentRiskMaps[$risk->id][$currentYear][] = $currentValue;
+                    }
                 }
             }
 
