@@ -21,10 +21,14 @@ use Carbon\Carbon;
 class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, ShouldAutoSize, WithEvents
 {
     private $projectId;
+    private $bulan;
+    private $tahun;
 
-    public function __construct($projectId)
+    public function __construct($projectId, $bulan, $tahun)
     {
         $this->projectId = $projectId;
+        $this->bulan = $bulan;
+        $this->tahun = $tahun;
     }
 
     public function title(): string
@@ -317,12 +321,21 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
         $risks = ProjectRisk::with([
             'sasaranProyek',
             'peristiwaRisiko',
-            'kriProjects.kriProjectMonitorings', // Load monitoring KRI
             'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings',
             'perlakuanDampakRisikos.perlakuanDampakMonitorings',
             'dampakRisikoProjects',
             'projectRiskAnalisa',
-            'projectRiskMonitorings',
+            'projectRiskMonitorings' => function($q) {
+                $q->where('month', $this->bulan)
+                  ->where('tahun', $this->tahun)
+                  ->orderBy('id', 'desc');
+            },
+            'kriProjects.kriProjectMonitorings' => function($q) {
+                $q->whereHas('projectMonitoring', function($sq) {
+                    $sq->where('month', $this->bulan)
+                    ->where('tahun', $this->tahun);
+                })->orderBy('id', 'desc');
+            }
         ])
         ->where('project_id', $this->projectId)
         ->get();

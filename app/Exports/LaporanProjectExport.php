@@ -15,10 +15,14 @@ use App\Exports\Sheets\Project\ResumeProjectSheet;
 class LaporanProjectExport implements WithMultipleSheets
 {
     protected $projectIds;
+    protected $bulan;
+    protected $tahun;
 
-    public function __construct(array $projectIds)
+    public function __construct(array $projectIds, $bulan = null, $tahun = null)
     {
         $this->projectIds = $projectIds;
+        $this->bulan = $bulan;
+        $this->tahun = $tahun;
     }
 
     /**
@@ -30,16 +34,16 @@ class LaporanProjectExport implements WithMultipleSheets
 
         if (count($this->projectIds) === 1) {
             $singleProjectId = $this->projectIds[array_key_first($this->projectIds)];
-            $sheets[] = new ResumeProjectSheet($singleProjectId);
+            $sheets[] = new ResumeProjectSheet($singleProjectId, $this->bulan, $this->tahun);
         }
 
-        $sheets[] = new ProfilRisikoSheet($this->projectIds);
-        $sheets[] = new RisikoInherentKuantitatifSheet($this->projectIds);
-        $sheets[] = new RisikoInherentKualitatifSheet($this->projectIds);
-        $sheets[] = new RisikoResidualKuantitatifSheet($this->projectIds);
-        $sheets[] = new RisikoResidualKualitatifSheet($this->projectIds);
-        $sheets[] = new RencanaPerlakuanRisikoSheet($this->projectIds);
-        $sheets[] = new RealisasiResidualSheet($this->projectIds);
+        $sheets[] = new ProfilRisikoSheet($this->projectIds, $this->bulan, $this->tahun);
+        $sheets[] = new RisikoInherentKuantitatifSheet($this->projectIds, $this->bulan, $this->tahun);
+        $sheets[] = new RisikoInherentKualitatifSheet($this->projectIds, $this->bulan, $this->tahun);
+        $sheets[] = new RisikoResidualKuantitatifSheet($this->projectIds, $this->bulan, $this->tahun);
+        $sheets[] = new RisikoResidualKualitatifSheet($this->projectIds, $this->bulan, $this->tahun);
+        $sheets[] = new RencanaPerlakuanRisikoSheet($this->projectIds, $this->bulan, $this->tahun);
+        $sheets[] = new RealisasiResidualSheet($this->projectIds, $this->bulan, $this->tahun);
 
         return $sheets;
     }

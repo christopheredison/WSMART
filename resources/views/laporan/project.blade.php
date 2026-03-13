@@ -21,7 +21,7 @@
         <form id="exportForm">
           @csrf
           <div class="row g-3">
-            <div class="col-md-5">
+            <div class="col-md-4">
               <label for="project_ids" class="form-label">Project</label>
               <select name="project_ids[]" id="project_ids" class="form-select select2" multiple="multiple" data-placeholder="Pilih Project..." required>
                 <option value="all">Pilih Semua Project</option>
@@ -33,11 +33,31 @@
               </select>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="report_type" class="form-label">Jenis Laporan</label>
                 <select name="report_type" id="report_type" class="form-select" required>
                     <option value="risk_register">Risk Register Project</option>
                     <option value="loss_event">Loss Event Project (LED)</option>
+                </select>
+            </div>
+
+            <div class="col-md-2 d-none" id="container_tahun">
+                <label for="tahun" class="form-label">Tahun</label>
+                <select name="tahun" id="tahun" class="form-select">
+                    @foreach(range(date('Y'), date('Y') - 5) as $y)
+                        <option value="{{ $y }}">{{ $y }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2 d-none" id="container_month"> <label for="month" class="form-label">Bulan Monitoring</label>
+                <select name="month" id="month" class="form-select"> @foreach([
+                        1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                        5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                        9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+                    ] as $num => $name)
+                        <option value="{{ $num }}" {{ date('n') == $num ? 'selected' : '' }}>{{ $name }}</option>
+                    @endforeach
                 </select>
             </div>
 
@@ -69,12 +89,26 @@ $(document).ready(function() {
         placeholder: "Pilih Project..."
     });
 
+    $('#report_type').on('change', function() {
+        if ($(this).val() === 'risk_register') {
+            $('#container_tahun, #container_month').removeClass('d-none');
+            $('.col-md-5').removeClass('col-md-5').addClass('col-md-4');
+        } else {
+            $('#container_tahun, #container_month').addClass('d-none');
+            $('.col-md-4').first().removeClass('col-md-4').addClass('col-md-5');
+        }
+    });
+
+    $('#report_type').trigger('change');
+
     $('#exportForm').on('submit', function(e) {
         e.preventDefault();
 
         // 1. Ambil value sebagai Array
         const projectIds = $('#project_ids').val();
         const reportType = $('#report_type').val();
+        const selectedMonth = $('#month').val();
+        const selectedYear = $('#tahun').val();
 
         // Validasi: pastikan array tidak kosong
         if (!projectIds || projectIds.length === 0) {
@@ -95,7 +129,9 @@ $(document).ready(function() {
             data: {
                 _token: $('input[name="_token"]').val(),
                 // Kirim array ID project
-                project_ids: projectIds
+                project_ids: projectIds,
+                month: selectedMonth,
+                tahun: selectedYear,
             },
             xhrFields: {
                 responseType: 'blob'

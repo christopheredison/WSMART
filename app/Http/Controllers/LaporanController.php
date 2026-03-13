@@ -169,6 +169,8 @@ class LaporanController extends Controller
         $request->validate([
             'project_ids'   => 'required|array',
             'project_ids.*' => 'string',
+            'month'         => 'nullable|integer|between:1,12',
+            'tahun'         => 'nullable|integer',
         ]);
 
         try {
@@ -176,6 +178,9 @@ class LaporanController extends Controller
             $inputIds = $request->input('project_ids');
             $finalProjectIds = [];
             $fileNameProject = '';
+
+            $month = $request->input('month');
+            $tahun = $request->input('tahun');
 
             // --- LOGIKA FILTER AKSES (SAMA DENGAN INDEX) ---
             $userProjectIds = $user->projects->pluck('id');
@@ -214,10 +219,10 @@ class LaporanController extends Controller
                 return response()->json(['message' => 'Tidak ada project yang dapat diakses untuk di-export.'], 403);
             }
 
-            $fileName = 'Laporan_Risk_Register_' . $fileNameProject . '.xlsx';
+            $fileName = 'Laporan_Risk_Register_' . $fileNameProject . '_' . $month . '_' . $tahun . '.xlsx';
 
             $fileContents = Excel::raw(
-                new LaporanProjectExport($finalProjectIds),
+                new LaporanProjectExport($finalProjectIds, $month, $tahun),
                 \Maatwebsite\Excel\Excel::XLSX
             );
 

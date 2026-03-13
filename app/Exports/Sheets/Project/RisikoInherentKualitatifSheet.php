@@ -16,11 +16,15 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
-    private $projectIds;
+    protected $projectIds;
+    protected $month;
+    protected $tahun;
 
-    public function __construct(array $projectIds)
+    public function __construct(array $projectIds, $month = null, $tahun = null)
     {
         $this->projectIds = $projectIds;
+        $this->month = $month;
+        $this->tahun = $tahun;
     }
 
     /**
