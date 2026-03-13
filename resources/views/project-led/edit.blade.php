@@ -174,8 +174,19 @@
                         </div>
 
                         <div class="col-12 mt-4">
-                            <a href="{{ route('project-led.index-by-project', ['projectId' => $project->id]) }}" class="btn btn-secondary">Batal</a>
-                            <button type="submit" class="btn btn-primary">Update Data</button>
+                            <div class="row g-2">
+                                <div class="col-auto">
+                                    <a href="{{ route('project-led.index-by-project', ['projectId' => $project->id]) }}" class="btn btn-secondary">Batal</a>
+                                </div>
+                                <div class="col-auto">
+                                    <button type="submit" class="btn btn-primary" id="save-led-button">Update Data</button>
+                                </div>
+                                <div class="col-auto ms-auto">
+                                    @if(empty($lossEvent->project_risk_id))
+                                        <button type="submit" class="btn btn-danger" id="save-led-risiko-button">Update & Jadikan Risiko</button>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -494,22 +505,38 @@ $(document).ready(function() {
         }
     }).trigger('change');
 
-    $('#form-edit-led').on('submit', function(e) {
+    $('#save-led-button').on('click', function(e) {
         e.preventDefault();
-        const form = this;
+        const form = document.getElementById('form-edit-led');
 
-        // Swal.fire({
-        //     title: 'Update Data?',
-        //     text: "Apakah Anda yakin ingin menyimpan perubahan ini?",
-        //     icon: 'warning',
-        //     showCancelButton: true,
-        //     confirmButtonText: 'Ya, Update!',
-        //     cancelButtonText: 'Batal'
-        // }).then((result) => {
-        //     if (result.isConfirmed) {
-        //         form.submit();
-        //     }
-        // });
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        Swal.fire({
+            title: 'Update Data?',
+            text: "Apakah Anda yakin ingin menyimpan perubahan ini?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Update!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $('#create_risk_from_led_input').val('0');
+                form.submit();
+            }
+        });
+    });
+
+    $('#save-led-risiko-button').on('click', function(e) {
+        e.preventDefault();
+        const form = document.getElementById('form-edit-led');
+
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
 
         Swal.fire({
             title: 'Konfirmasi Penyimpanan',
@@ -518,8 +545,7 @@ $(document).ready(function() {
             showDenyButton: true,
             showCancelButton: false,
             confirmButtonText: 'Ya, Jadikan Risiko',
-            denyButtonText: `Tidak, Simpan LED Saja`,
-            cancelButtonText: 'Batal'
+            denyButtonText: 'Tidak, Update LED Saja'
         }).then((result) => {
             if (result.isConfirmed) {
                 $('#create_risk_from_led_input').val('1');
