@@ -183,7 +183,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
         if ($endDateStr) {
             $endDate = Carbon::parse($endDateStr)->startOfDay();
             $today = Carbon::today();
-            $statusProyek = $endDate->gt($today) ? 'Tidak aktif' : 'Aktif';
+            $statusProyek = $endDate->gte($today) ? 'Aktif' : 'Tidak aktif';
         }
 
         return [

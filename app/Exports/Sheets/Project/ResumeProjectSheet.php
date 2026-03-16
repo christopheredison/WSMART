@@ -128,8 +128,7 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                 if ($project && $project->masa_pelaksanaan_end) {
                     $endDate = Carbon::parse($project->masa_pelaksanaan_end)->startOfDay();
                     $today = Carbon::today();
-                    // Jika lebih dari hari ini maka Tidak Aktif, jika kurang atau sama dengan maka Aktif
-                    $statusProyek = $endDate->gt($today) ? 'Tidak aktif' : 'Aktif';
+                    $statusProyek = $endDate->gte($today) ? 'Aktif' : 'Tidak aktif';
                 }
 
                 $dataResume = [
