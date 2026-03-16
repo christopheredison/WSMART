@@ -49,44 +49,47 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                 $sheet->setCellValue('C1', 'Kode BUMN');
                 $sheet->setCellValue('D1', 'Sasaran KBUMN');
                 $sheet->setCellValue('E1', 'Nama Project');
-                $sheet->setCellValue('F1', 'Sasaran Risiko');
-                $sheet->setCellValue('G1', 'No Risiko');
-                $sheet->setCellValue('H1', 'Peristiwa Risiko');
-                $sheet->setCellValue('I1', 'Deskripsi Peristiwa Risiko');
-                $sheet->setCellValue('J1', 'WBS');
-                $sheet->setCellValue('K1', 'No Penyebab Risiko');
-                $sheet->setCellValue('L1', 'Kode Penyebab Risiko');
-                $sheet->setCellValue('M1', 'Penyebab Risiko');
-                $sheet->setCellValue('N1', 'Key Risk Indicator');
-                $sheet->setCellValue('O1', 'Unit Satuan KRI');
-                $sheet->setCellValue('P1', 'Kategori Treshold KRI');
-                $sheet->setCellValue('S1', 'Jenis Eksisting Kontrol');
-                $sheet->setCellValue('T1', 'Kontrol Eksisting');
-                $sheet->setCellValue('U1', 'Penilaian Efektivitas Kontrol');
-                $sheet->setCellValue('V1', 'Kategori Dampak');
 
-                // --- KOLOM BARU DAMPAK ---
-                $sheet->setCellValue('W1', 'No Dampak Risiko');
-                $sheet->setCellValue('X1', 'Kode Dampak Risiko');
-                $sheet->setCellValue('Y1', 'Dampak Risiko');
+                $sheet->setCellValue('F1', 'Status Project');
 
-                $sheet->setCellValue('Z1', 'Perkiraan Waktu Terpapar Risiko');
-                $sheet->setCellValue('AA1', 'Status Risiko');
+                $sheet->setCellValue('G1', 'Sasaran Risiko');
+                $sheet->setCellValue('H1', 'No Risiko');
+                $sheet->setCellValue('I1', 'Peristiwa Risiko');
+                $sheet->setCellValue('J1', 'Deskripsi Peristiwa Risiko');
+                $sheet->setCellValue('K1', 'WBS');
+                $sheet->setCellValue('L1', 'No Penyebab Risiko');
+                $sheet->setCellValue('M1', 'Kode Penyebab Risiko');
+                $sheet->setCellValue('N1', 'Penyebab Risiko');
+                $sheet->setCellValue('O1', 'Key Risk Indicator');
+                $sheet->setCellValue('P1', 'Unit Satuan KRI');
 
-                // Row 2: Sub-header untuk Kategori Treshold KRI
-                $sheet->setCellValue('P2', 'Aman');
-                $sheet->setCellValue('Q2', 'Waspada');
-                $sheet->setCellValue('R2', 'Bahaya');
+                $sheet->setCellValue('Q1', 'Kategori Treshold KRI');
 
-                // Merge sel header (Sampai AA)
-                $mergeColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA'];
+                $sheet->setCellValue('T1', 'Jenis Eksisting Kontrol');
+                $sheet->setCellValue('U1', 'Kontrol Eksisting');
+                $sheet->setCellValue('V1', 'Penilaian Efektivitas Kontrol');
+                $sheet->setCellValue('W1', 'Kategori Dampak');
+                $sheet->setCellValue('X1', 'No Dampak Risiko');
+                $sheet->setCellValue('Y1', 'Kode Dampak Risiko');
+                $sheet->setCellValue('Z1', 'Dampak Risiko');
+
+                $sheet->setCellValue('AA1', 'Perkiraan Waktu Terpapar Risiko');
+                $sheet->setCellValue('AB1', 'Status Risiko');
+
+                // Row 2: Sub-header untuk Kategori Treshold KRI (Geser ke Q, R, S)
+                $sheet->setCellValue('Q2', 'Aman');
+                $sheet->setCellValue('R2', 'Waspada');
+                $sheet->setCellValue('S2', 'Bahaya');
+
+                // Merge sel header
+                $mergeColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB'];
                 foreach ($mergeColumns as $col) {
                     $sheet->mergeCells("{$col}1:{$col}2");
                 }
 
-                $sheet->mergeCells('P1:R1');
+                $sheet->mergeCells('Q1:S1');
 
-                // Style Header (Update range ke AA)
+                // Style Header
                 $headerStyle = [
                     'alignment' => [
                         'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
@@ -104,33 +107,36 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                         ]
                     ]
                 ];
-                $sheet->getStyle('A1:AA2')->applyFromArray($headerStyle);
+                $sheet->getStyle('A1:AB2')->applyFromArray($headerStyle);
 
-                // Warna Treshold
-                $sheet->getStyle('P2')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('92D050');
-                $sheet->getStyle('Q2')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFFF00');
-                $sheet->getStyle('R2')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF0000');
+                // Warna Treshold (Geser ke Q, R, S)
+                $sheet->getStyle('Q2')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('92D050');
+                $sheet->getStyle('R2')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFFF00');
+                $sheet->getStyle('S2')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF0000');
 
                 $highestRow = $sheet->getHighestRow();
                 if ($highestRow > 2) {
-                    $sheet->getStyle('A3:AA' . $highestRow)->applyFromArray([
+                    $sheet->getStyle('A3:AB' . $highestRow)->applyFromArray([
                         'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
                         'alignment' => ['vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP, 'wrapText' => true],
                     ]);
-                    $sheet->getStyle('L3:L' . $highestRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
-                    $sheet->getStyle('X3:X' . $highestRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+
+                    $sheet->getStyle('M3:M' . $highestRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+                    $sheet->getStyle('Y3:Y' . $highestRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+
                     $this->applyThresholdColoring($sheet, $highestRow);
                 }
 
                 foreach (range('A', 'Z') as $column) { $sheet->getColumnDimension($column)->setAutoSize(true); }
                 $sheet->getColumnDimension('AA')->setAutoSize(true);
+                $sheet->getColumnDimension('AB')->setAutoSize(true);
             },
         ];
     }
 
     private function applyThresholdColoring($sheet, $maxRow) {
         for ($row = 3; $row <= $maxRow; $row++) {
-            foreach (['P' => '92D050', 'Q' => 'FFFF00', 'R' => 'FF0000'] as $col => $color) {
+            foreach (['Q' => '92D050', 'R' => 'FFFF00', 'S' => 'FF0000'] as $col => $color) {
                 $val = $sheet->getCell($col . $row)->getValue();
                 if ($val && $val !== '-') {
                     $sheet->getStyle($col . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB($color);
@@ -171,12 +177,24 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
 
     private function createRowData($risiko, $p, $k, $d, $isFirst, $noRisiko, $subNo)
     {
+        // Status Project Logic
+        $statusProyek = '-';
+        $endDateStr = $risiko->projectPeriodeList->project->masa_pelaksanaan_end ?? null;
+        if ($endDateStr) {
+            $endDate = Carbon::parse($endDateStr)->startOfDay();
+            $today = Carbon::today();
+            $statusProyek = $endDate->gt($today) ? 'Tidak aktif' : 'Aktif';
+        }
+
         return [
             'no' => $isFirst ? $noRisiko : '',
             'nama_bumn' => $isFirst ? 'PT Wijaya Karya (Persero) Tbk' : '',
             'kode_bumn' => $isFirst ? '-' : '',
             'sasaran_kbumn' => $isFirst ? '-' : '',
             'nama_project' => $isFirst ? ($risiko->projectPeriodeList->project->project_name ?? '-') : '',
+
+            'status_project' => $isFirst ? $statusProyek : '',
+
             'sasaran_risiko' => $isFirst ? ($risiko->target_capaian_kinerja ?? '-') : '',
             'no_risiko' => $isFirst ? $noRisiko : '',
             'peristiwa' => $isFirst ? ($risiko->peristiwaRisiko->title ?? $risiko->deskripsi_peristiwa_risiko ?? '-') : '',
@@ -195,7 +213,6 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
             'efektivitas' => $isFirst ? (optional($risiko->penilaianEfektivitasKontrolObj)->efektivitas_kontrol ?? '-') : '',
             'kat_dampak' => $isFirst ? ($risiko->projectRiskAnalisa->kategori_dampak ?? '-') : '',
 
-            // --- DATA DAMPAK ---
             'no_dampak' => $d ? $noRisiko : '',
             'kode_dampak' => $d ? "'" . $noRisiko . '.' . $subNo : '',
             'dampak' => $d->dampak_risiko ?? '',

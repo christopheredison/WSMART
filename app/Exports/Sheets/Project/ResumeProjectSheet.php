@@ -5,7 +5,6 @@ namespace App\Exports\Sheets\Project;
 use App\Models\Project;
 use App\Models\ProjectRisk;
 use App\Models\ProjectHasilUsaha;
-use App\Models\KRIProjectMonitoring;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -55,7 +54,7 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                 $biayaRkp = $project->biaya_perlakuan_risiko_rkp ?? 0;
                 $riskLimit = ($project->nk ?? 0) * 0.03;
 
-                $profitCenter = $meta['profit_center'] ?? null;
+                $profitCenter = $project->profit_center ?? ($meta['profit_center'] ?? null);
                 $jenisKontrak = empty($meta['jenis_kontrak_name'])
                                 ? '-'
                                 : (is_array($meta['jenis_kontrak_name']) ? implode(', ', $meta['jenis_kontrak_name']) : $meta['jenis_kontrak_name']);
@@ -71,10 +70,30 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
 
                 // Hitung Rencana dan Realisasi
                 $risks = ProjectRisk::with([
-                            'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings',
-                            'dampakRisikoProjects.perlakuanDampakRisikos.perlakuanDampakMonitorings',
-                            'perlakuanDampakRisikos.perlakuanDampakMonitorings'
-                        ])->where('project_id', $this->projectId)->get();
+                    'sasaranProyek',
+                    'peristiwaRisiko',
+                    'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings',
+                    'perlakuanDampakRisikos.perlakuanDampakMonitorings',
+                    'dampakRisikoProjects',
+                    'projectRiskAnalisa',
+                    'projectRiskMonitorings' => function($q) {
+                        if ($this->bulan && $this->tahun) {
+                            $q->where('month', $this->bulan)
+                              ->where('tahun', $this->tahun);
+                        }
+                        $q->orderBy('id', 'desc');
+                    },
+                    'kriProjects.kriProjectMonitorings' => function($q) {
+                        $q->whereHas('projectMonitoring', function($sq) {
+                            if ($this->bulan && $this->tahun) {
+                                $sq->where('month', $this->bulan)
+                                  ->where('tahun', $this->tahun);
+                            }
+                        })->orderBy('id', 'desc');
+                    }
+                ])
+                ->where('project_id', $this->projectId)
+                ->get();
 
                 $rencanaBiayaTotal = 0;
                 $realisasiBiayaTotal = 0;
@@ -92,13 +111,26 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                     }
                 }
 
-                // Butuh 13 Baris untuk informasi (Tabel digeser ke 16-17)
-                $sheet->insertNewRowBefore(1, 16);
+                // Butuh 16 Baris untuk informasi (Tabel digeser ke 18-19)
+                $sheet->insertNewRowBefore(1, 19);
 
                 // Buat Helper format desimal untuk Risk Limit
                 $formatDecimal = function($value) {
                     return 'Rp ' . number_format((float)$value, 2, ',', '.');
                 };
+
+                // Nama Bulan Helper
+                $bulanNames = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'];
+                $namaBulan = $bulanNames[(int)$this->bulan] ?? '-';
+
+                // Status Proyek Logic
+                $statusProyek = '-';
+                if ($project && $project->masa_pelaksanaan_end) {
+                    $endDate = Carbon::parse($project->masa_pelaksanaan_end)->startOfDay();
+                    $today = Carbon::today();
+                    // Jika lebih dari hari ini maka Tidak Aktif, jika kurang atau sama dengan maka Aktif
+                    $statusProyek = $endDate->gt($today) ? 'Tidak aktif' : 'Aktif';
+                }
 
                 $dataResume = [
                     'B1'  => ['Label' => 'Nama Proyek:', 'Value' => $project->project_name ?? '-'],
@@ -117,6 +149,11 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                     'B11' => ['Label' => 'Rencana Biaya Perlakuan Risiko:', 'Value' => $this->formatCurrency($rencanaBiayaTotal)],
                     'B12' => ['Label' => 'Realisasi Biaya Perlakuan Risiko:', 'Value' => $this->formatCurrency($realisasiBiayaTotal)],
                     'B13' => ['Label' => 'Batasan Biaya Perlakuan Risiko:', 'Value' => $this->formatCurrency($project->batasan_biaya_perlakuan_risiko ?? 0)],
+
+                    // PENAMBAHAN KOLOM BARU DI BAWAH BATASAN BIAYA PERLAKUAN RISIKO
+                    'B14' => ['Label' => 'Kode SAP:', 'Value' => $profitCenter ?? '-'],
+                    'B15' => ['Label' => 'Periode Pelaporan:', 'Value' => $namaBulan . ' ' . $this->tahun],
+                    'B16' => ['Label' => 'Status Project:', 'Value' => $statusProyek],
                 ];
 
                 foreach ($dataResume as $cell => $data) {
@@ -125,68 +162,68 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                     $sheet->getStyle($cell)->getFont()->setBold(true);
                 }
 
-                // --- 3. HEADER TABEL (ROW 15-16) ---
-                $sheet->setCellValue('A15', 'No');
-                $sheet->setCellValue('B15', 'Sasaran');
-                $sheet->setCellValue('C15', 'Peristiwa Risiko');
-                $sheet->setCellValue('D15', 'Deskripsi Peristiwa Risiko');
-                $sheet->setCellValue('E15', 'Deskripsi KRI');
+                // --- 3. HEADER TABEL (ROW 18-19) ---
+                $sheet->setCellValue('A18', 'No');
+                $sheet->setCellValue('B18', 'Sasaran');
+                $sheet->setCellValue('C18', 'Peristiwa Risiko');
+                $sheet->setCellValue('D18', 'Deskripsi Peristiwa Risiko');
+                $sheet->setCellValue('E18', 'Deskripsi KRI');
 
-                $sheet->setCellValue('F15', 'Status KRI (Threshold)');
-                $sheet->mergeCells('F15:H15');
+                $sheet->setCellValue('F18', 'Status KRI (Threshold)');
+                $sheet->mergeCells('F18:H18');
 
-                $sheet->setCellValue('I15', 'Nilai Realisasi KRI');
-                $sheet->setCellValue('J15', 'Status Realisasi KRI');
+                $sheet->setCellValue('I18', 'Nilai Realisasi KRI');
+                $sheet->setCellValue('J18', 'Status Realisasi KRI');
 
-                $sheet->setCellValue('K15', 'Penyebab Risiko');
-                $sheet->setCellValue('L15', 'Penjelasan Dampak Risiko');
+                $sheet->setCellValue('K18', 'Penyebab Risiko');
+                $sheet->setCellValue('L18', 'Penjelasan Dampak Risiko');
 
-                $sheet->setCellValue('M15', 'Analisa Inheren');
-                $sheet->mergeCells('M15:O15');
+                $sheet->setCellValue('M18', 'Analisa Inheren');
+                $sheet->mergeCells('M18:O18');
 
-                $sheet->setCellValue('P15', 'Analisa Residual Rencana');
-                $sheet->mergeCells('P15:Y15');
+                $sheet->setCellValue('P18', 'Analisa Residual Rencana');
+                $sheet->mergeCells('P18:Y18');
 
-                $sheet->setCellValue('Z15', 'Analisa Residual Realisasi');
-                $sheet->mergeCells('Z15:AF15');
+                $sheet->setCellValue('Z18', 'Analisa Residual Realisasi');
+                $sheet->mergeCells('Z18:AF18');
 
-                $sheet->setCellValue('AG15', 'Status');
-                $sheet->setCellValue('AH15', 'Efektivitas Perlakuan Risiko');
+                $sheet->setCellValue('AG18', 'Status');
+                $sheet->setCellValue('AH18', 'Efektivitas Perlakuan Risiko');
 
-                // Merge Vertical Header (Row 15 & 16)
+                // Merge Vertical Header (Row 18 & 19)
                 foreach(['A','B','C','D','E','I','J','K','L','AG','AH'] as $col){
-                    $sheet->mergeCells("{$col}15:{$col}16");
+                    $sheet->mergeCells("{$col}18:{$col}19");
                 }
 
-                $sheet->setCellValue('F16', 'Aman');
-                $sheet->setCellValue('G16', 'Waspada');
-                $sheet->setCellValue('H16', 'Bahaya');
+                $sheet->setCellValue('F19', 'Aman');
+                $sheet->setCellValue('G19', 'Waspada');
+                $sheet->setCellValue('H19', 'Bahaya');
 
                 // Analisa Inheren
-                $sheet->setCellValue('M16', 'Dampak Risiko Kuantitatif Inheren');
-                $sheet->setCellValue('N16', 'Eksposure Risiko Inheren');
-                $sheet->setCellValue('O16', 'Level Risiko Inheren');
+                $sheet->setCellValue('M19', 'Dampak Risiko Kuantitatif Inheren');
+                $sheet->setCellValue('N19', 'Eksposure Risiko Inheren');
+                $sheet->setCellValue('O19', 'Level Risiko Inheren');
 
                 // Analisa Residual Rencana
-                $sheet->setCellValue('P16', 'Perlakuan Risiko Penyebab');
-                $sheet->setCellValue('Q16', 'Perlakuan Risiko Dampak');
-                $sheet->setCellValue('R16', 'Biaya Perlakuan Risiko Penyebab');
-                $sheet->setCellValue('S16', 'Biaya Perlakuan Risiko Dampak');
-                $sheet->setCellValue('T16', 'Dampak Risiko Kuantitatif Rencana');
-                $sheet->setCellValue('U16', 'Eksposure Residual Rencana');
-                $sheet->setCellValue('V16', 'Level Residual Rencana');
-                $sheet->setCellValue('W16', 'Waktu Mulai');
-                $sheet->setCellValue('X16', 'Waktu Selesai');
-                $sheet->setCellValue('Y16', 'Penanggung Jawab');
+                $sheet->setCellValue('P19', 'Perlakuan Risiko Penyebab');
+                $sheet->setCellValue('Q19', 'Perlakuan Risiko Dampak');
+                $sheet->setCellValue('R19', 'Biaya Perlakuan Risiko Penyebab');
+                $sheet->setCellValue('S19', 'Biaya Perlakuan Risiko Dampak');
+                $sheet->setCellValue('T19', 'Dampak Risiko Kuantitatif Rencana');
+                $sheet->setCellValue('U19', 'Eksposure Residual Rencana');
+                $sheet->setCellValue('V19', 'Level Residual Rencana');
+                $sheet->setCellValue('W19', 'Waktu Mulai');
+                $sheet->setCellValue('X19', 'Waktu Selesai');
+                $sheet->setCellValue('Y19', 'Penanggung Jawab');
 
                 // Analisa Residual Realisasi
-                $sheet->setCellValue('Z16', 'Perlakuan Risiko Penyebab');
-                $sheet->setCellValue('AA16', 'Perlakuan Risiko Dampak');
-                $sheet->setCellValue('AB16', 'Realisasi Biaya Perlakuan Risiko Penyebab');
-                $sheet->setCellValue('AC16', 'Realisasi Biaya Perlakuan Risiko Dampak');
-                $sheet->setCellValue('AD16', 'Dampak Risiko Kuantitatif Rupiah');
-                $sheet->setCellValue('AE16', 'Eksposure Residual Realisasi');
-                $sheet->setCellValue('AF16', 'Level Residual Realisasi');
+                $sheet->setCellValue('Z19', 'Perlakuan Risiko Penyebab');
+                $sheet->setCellValue('AA19', 'Perlakuan Risiko Dampak');
+                $sheet->setCellValue('AB19', 'Realisasi Biaya Perlakuan Risiko Penyebab');
+                $sheet->setCellValue('AC19', 'Realisasi Biaya Perlakuan Risiko Dampak');
+                $sheet->setCellValue('AD19', 'Dampak Risiko Kuantitatif Rupiah');
+                $sheet->setCellValue('AE19', 'Eksposure Residual Realisasi');
+                $sheet->setCellValue('AF19', 'Level Residual Realisasi');
 
                 // --- 4. STYLING HEADER COLORS ---
                 $headerBaseStyle = [
@@ -194,7 +231,7 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ];
-                $sheet->getStyle('A15:AH16')->applyFromArray($headerBaseStyle);
+                $sheet->getStyle('A18:AH19')->applyFromArray($headerBaseStyle);
 
                 $setColor = function($range, $colorHex) use ($sheet) {
                     $sheet->getStyle($range)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB($colorHex);
@@ -207,50 +244,50 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                 $cPink   = 'FF99CC';
                 $cWhite  = 'FFFFFF';
 
-                $setColor('A15:A16', $cGrey);
-                $setColor('B15:B16', $cBlue);
-                $setColor('C15:E16', $cGreen); // Merge C, D, E
+                $setColor('A18:A19', $cGrey);
+                $setColor('B18:B19', $cBlue);
+                $setColor('C18:E19', $cGreen);
 
-                $setColor('F16', '92D050');
-                $setColor('G16', 'FFFF00');
-                $setColor('H16', 'FF0000');
+                $setColor('F19', '92D050');
+                $setColor('G19', 'FFFF00');
+                $setColor('H19', 'FF0000');
 
-                $setColor('I15:J16', $cGreen);
+                $setColor('I18:J19', $cGreen);
 
-                $setColor('K15:L16', $cGreen);
-                $setColor('M16', $cOrange);
-                $setColor('N16:O16', $cPink);
+                $setColor('K18:L19', $cGreen);
+                $setColor('M19', $cOrange);
+                $setColor('N19:O19', $cPink);
 
-                $setColor('P15:Y15', $cWhite);
-                $setColor('P16:Q16', $cGreen);
-                $setColor('R16:T16', $cOrange); // Merge R, S, T
-                $setColor('U16:V16', $cPink);
-                $setColor('W16:X16', $cGrey);
-                $setColor('Y16', $cGreen);
+                $setColor('P18:Y18', $cWhite);
+                $setColor('P19:Q19', $cGreen);
+                $setColor('R19:T19', $cOrange);
+                $setColor('U19:V19', $cPink);
+                $setColor('W19:X19', $cGrey);
+                $setColor('Y19', $cGreen);
 
-                $setColor('Z15:AF15', $cWhite);
-                $setColor('Z16:AA16', $cGreen);
-                $setColor('AB16:AD16', $cOrange); // Merge AB, AC, AD
-                $setColor('AE16:AF16', $cPink);
+                $setColor('Z18:AF18', $cWhite);
+                $setColor('Z19:AA19', $cGreen);
+                $setColor('AB19:AD19', $cOrange);
+                $setColor('AE19:AF19', $cPink);
 
-                $setColor('AG15:AG16', $cBlue);
-                $setColor('AH15:AH16', $cPink);
+                $setColor('AG18:AG19', $cBlue);
+                $setColor('AH18:AH19', $cPink);
 
-                // --- 5. STYLING DATA (START FROM ROW 17) ---
+                // --- 5. STYLING DATA (START FROM ROW 20) ---
                 $highestRow = $sheet->getHighestRow();
 
-                if ($highestRow > 16) {
-                    $sheet->getStyle('A17:AH' . $highestRow)->applyFromArray([
+                if ($highestRow > 19) {
+                    $sheet->getStyle('A20:AH' . $highestRow)->applyFromArray([
                         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                         'alignment' => ['vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true],
                     ]);
 
                     $this->applyThresholdColoring($sheet, $highestRow);
 
-                    $this->applyLevelColoring($sheet, 'O', 17, $highestRow);
-                    $this->applyLevelColoring($sheet, 'V', 17, $highestRow);
-                    $this->applyLevelColoring($sheet, 'AF', 17, $highestRow);
-                    $this->applyStatusColoring($sheet, 'AG', 17, $highestRow);
+                    $this->applyLevelColoring($sheet, 'O', 20, $highestRow);
+                    $this->applyLevelColoring($sheet, 'V', 20, $highestRow);
+                    $this->applyLevelColoring($sheet, 'AF', 20, $highestRow);
+                    $this->applyStatusColoring($sheet, 'AG', 20, $highestRow);
                 }
 
                 // Autosize loop
@@ -267,7 +304,7 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
     }
 
     private function applyThresholdColoring($sheet, $maxRow) {
-        for ($row = 16; $row <= $maxRow; $row++) {
+        for ($row = 19; $row <= $maxRow; $row++) {
             foreach (['F' => '92D050', 'G' => 'FFFF00', 'H' => 'FF0000'] as $col => $color) {
                 $val = $sheet->getCell($col . $row)->getValue();
                 if ($val !== null && (string)$val !== '' && trim((string)$val) !== '-') {
@@ -317,7 +354,6 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
 
     public function collection()
     {
-        // PERBAIKAN: Load relasi Monitorings untuk KRI (Nested)
         $risks = ProjectRisk::with([
             'sasaranProyek',
             'peristiwaRisiko',
@@ -354,18 +390,14 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
             $waspadaVal = $risk->kriProjects->map(fn($k) => $k->batas_waspada !== null ? $k->batas_waspada : '-')->implode("\n");
             $bahayaVal = $risk->kriProjects->map(fn($k) => $k->batas_bahaya !== null ? $k->batas_bahaya : '-')->implode("\n");
 
-            // --- LOGIC BARU: REALISASI KRI ---
+            // --- REALISASI KRI ---
             $realisasiNilaiList = [];
             $realisasiStatusList = [];
 
             foreach ($risk->kriProjects as $kri) {
-                // Ambil monitoring terakhir (berdasarkan ID desc)
                 $lastMon = $kri->kriProjectMonitorings->sortByDesc('id')->first();
-
-                // Ambil Nilai
                 $realisasiNilaiList[] = $lastMon->nilai_kri_terkini ?? '-';
 
-                // Mapping Status
                 $statusText = '-';
                 if ($lastMon) {
                     switch ((int)$lastMon->status_kri_terkini) {
@@ -380,7 +412,6 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
 
             $realisasiNilaiStr = implode("\n", $realisasiNilaiList);
             $realisasiStatusStr = implode("\n", $realisasiStatusList);
-            // ---------------------------------
 
             // --- DATA PENYEBAB ---
             $perlakuanPenyebabStr = '';
@@ -445,7 +476,6 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
             $levelInheren = ($analisa->level_risiko ?? '-') . ' - ' . ($analisa->skala_risiko ?? 0);
             $levelResidual = ($analisa->level_risiko_residual ?? '-') . ' - ' . ($analisa->skala_risiko_residual ?? 0);
 
-            // Data Realisasi (Hasil Monitoring)
             $dampakRealisasiRP = $lastMonitoring->nilai_dampak ?? 0;
             $eksposureRealisasi = $lastMonitoring->eksposure_risiko ?? 0;
             $levelRealisasiText = ($lastMonitoring->level_risiko ?? '-') . ' - ' . ($lastMonitoring->skala_risiko ?? 0);
@@ -460,7 +490,6 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                 'waspada' => $waspadaVal === '' ? '-' : $waspadaVal,
                 'bahaya' => $bahayaVal === '' ? '-' : $bahayaVal,
 
-                // DATA BARU DISINI
                 'realisasi_kri_nilai' => $realisasiNilaiStr ?: '-',
                 'realisasi_kri_status' => $realisasiStatusStr ?: '-',
 

@@ -350,7 +350,7 @@
                         @forelse($openRisks as $projectRisk)
                         <tr data-risk-id="{{ $projectRisk->id }}">
                             <td class="text-start fw-bold">
-                              <a href="{{  route('projects.risks.view', ['project' => $projectRisk->project_id, 'risk' => $projectRisk->id]) }}">
+                              <a href="{{  route('projects.risks.view', ['project' => $projectRisk->project_periode_list_id, 'risk' => $projectRisk->id]) }}">
                                 R{{ $projectRisk->nomor_urut }}
                               </a>
                             </td>
@@ -538,7 +538,7 @@
                                 <div class="accordion-body p-0">
                                     <ul class="list-group list-group-flush">
                                         @forelse($efektifRisks as $risk)
-                                            <a href="{{ route('projects.risks.view', ['project' => $risk->project_id, 'risk' => $risk->id]) }}" target="_blank" class="list-group-item list-group-item-action">
+                                            <a href="{{ route('projects.risks.view', ['project' => $risk->project_periode_list_id, 'risk' => $risk->id]) }}" target="_blank" class="list-group-item list-group-item-action">
                                                 <div class="d-flex justify-content-between align-items-center w-100">
                                                     <span>{{ optional($risk->peristiwaRisiko)->title ?? $risk->rencana_kegiatan }} - {{$risk->deskripsi_peristiwa_risiko }}</span>
                                                     <span class="badge bg-light text-dark">Nilai: {{ $risk->efektivitas_perlakuan_risiko ?? 0 }}</span>
@@ -563,7 +563,7 @@
                                 <div class="accordion-body p-0">
                                     <ul class="list-group list-group-flush">
                                         @forelse($tidakEfektifRisks as $risk)
-                                            <a href="{{ route('projects.risks.view', ['project' => $risk->project_id, 'risk' => $risk->id]) }}" target="_blank" class="list-group-item list-group-item-action">
+                                            <a href="{{ route('projects.risks.view', ['project' => $risk->project_periode_list_id, 'risk' => $risk->id]) }}" target="_blank" class="list-group-item list-group-item-action">
                                                 <div class="d-flex justify-content-between align-items-center w-100">
                                                     <span>{{ optional($risk->peristiwaRisiko)->title ?? 'Risiko ID: '.$risk->id }}</span>
                                                     <span class="badge bg-light text-dark">Nilai: {{ $risk->efektivitas_perlakuan_risiko ?? 0 }}</span>
