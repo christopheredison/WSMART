@@ -38,12 +38,12 @@ class LaporanProjectExport implements WithMultipleSheets
         }
 
         $sheets[] = new ProfilRisikoSheet($this->projectIds, $this->bulan, $this->tahun);
-        $sheets[] = new RisikoInherentKuantitatifSheet($this->projectIds, $this->bulan, $this->tahun);
-        $sheets[] = new RisikoInherentKualitatifSheet($this->projectIds, $this->bulan, $this->tahun);
-        $sheets[] = new RisikoResidualKuantitatifSheet($this->projectIds, $this->bulan, $this->tahun);
-        $sheets[] = new RisikoResidualKualitatifSheet($this->projectIds, $this->bulan, $this->tahun);
-        $sheets[] = new RencanaPerlakuanRisikoSheet($this->projectIds, $this->bulan, $this->tahun);
-        $sheets[] = new RealisasiResidualSheet($this->projectIds, $this->bulan, $this->tahun);
+        // $sheets[] = new RisikoInherentKuantitatifSheet($this->projectIds, $this->bulan, $this->tahun);
+        // $sheets[] = new RisikoInherentKualitatifSheet($this->projectIds, $this->bulan, $this->tahun);
+        // $sheets[] = new RisikoResidualKuantitatifSheet($this->projectIds, $this->bulan, $this->tahun);
+        // $sheets[] = new RisikoResidualKualitatifSheet($this->projectIds, $this->bulan, $this->tahun);
+        // $sheets[] = new RencanaPerlakuanRisikoSheet($this->projectIds, $this->bulan, $this->tahun);
+        // $sheets[] = new RealisasiResidualSheet($this->projectIds, $this->bulan, $this->tahun);
 
         return $sheets;
     }
