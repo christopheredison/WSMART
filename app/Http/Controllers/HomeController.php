@@ -1481,6 +1481,7 @@ class HomeController extends Controller
         $tahunMonitorings = [date('Y')];
         $formattedCurrentRiskMaps = [];
         $projectRisksJs = collect();
+        $openRisks = collect();
 
         if ($selectedProjectPeriode) {
             $allowedProjectIds = $user->can('view_all_project') ?
