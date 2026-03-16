@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Models\ProjectRisk;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use App\Exports\Sheets\Project\ProfilRisikoSheet;
 use App\Exports\Sheets\Project\RisikoInherentKuantitatifSheet;
@@ -25,25 +26,66 @@ class LaporanProjectExport implements WithMultipleSheets
         $this->tahun = $tahun;
     }
 
-    /**
-     * @return array
-     */
     public function sheets(): array
     {
         $sheets = [];
 
+        // 1. QUERY MASTER (Ambil semua data dan relasi sekaligus di awal)
+        $semuaRisiko = ProjectRisk::with([
+            'wbsMaster',
+            'projectPeriodeList.project',
+            'peristiwaRisiko',
+            'projectRiskAnalisa.skalaDampakObj',
+            'projectRiskAnalisa.skalaProbabilitas',
+            'projectRiskAnalisa.areaDampakObj',
+            'projectRiskAnalisa.skalaDampakResidualObj',
+            'projectRiskAnalisa.skalaProbabilitasResidual',
+            'penyebabRisikoProjects.perlakuanPenyebabRisiko.lastMonitoring' => function($q) {
+                if ($this->bulan && $this->tahun) {
+                    $q->whereHas('projectMonitoring', function($sq) {
+                        $sq->where('month', $this->bulan)->where('tahun', $this->tahun);
+                    });
+                }
+            },
+            'perlakuanDampakRisikos.lastMonitoring' => function($q) {
+                if ($this->bulan && $this->tahun) {
+                    $q->whereHas('projectMonitoring', function($sq) {
+                        $sq->where('month', $this->bulan)->where('tahun', $this->tahun);
+                    });
+                }
+            },
+            'kriProjects.kriProjectMonitorings',
+            'dampakRisikoProjects',
+            'jenisKontrolEksisting',
+            'projectKontrolEksistings',
+            'penilaianEfektivitasKontrolObj',
+            'projectRiskMonitorings' => function($query) {
+                if ($this->bulan && $this->tahun) {
+                    $query->where('month', $this->bulan)->where('tahun', $this->tahun);
+                }
+                $query->orderBy('tahun', 'desc')->orderBy('month', 'desc')->orderBy('id', 'desc');
+            },
+            'projectRiskMonitorings.skalaProbabilitas',
+            'projectRiskMonitorings.skalaDampakObj'
+        ])
+        ->whereIn('project_id', $this->projectIds)
+        ->get();
+
+        // 2. Sheet Resume Project (Punya query sendiri yang beda jalur, biarkan saja)
         if (count($this->projectIds) === 1) {
             $singleProjectId = $this->projectIds[array_key_first($this->projectIds)];
             $sheets[] = new ResumeProjectSheet($singleProjectId, $this->bulan, $this->tahun);
         }
 
-        $sheets[] = new ProfilRisikoSheet($this->projectIds, $this->bulan, $this->tahun);
-        // $sheets[] = new RisikoInherentKuantitatifSheet($this->projectIds, $this->bulan, $this->tahun);
-        // $sheets[] = new RisikoInherentKualitatifSheet($this->projectIds, $this->bulan, $this->tahun);
-        // $sheets[] = new RisikoResidualKuantitatifSheet($this->projectIds, $this->bulan, $this->tahun);
-        // $sheets[] = new RisikoResidualKualitatifSheet($this->projectIds, $this->bulan, $this->tahun);
-        // $sheets[] = new RencanaPerlakuanRisikoSheet($this->projectIds, $this->bulan, $this->tahun);
-        // $sheets[] = new RealisasiResidualSheet($this->projectIds, $this->bulan, $this->tahun);
+        // 3. Masukkan data ke masing-masing sheet (Oper operan memori)
+        $sheets[] = new ProfilRisikoSheet($semuaRisiko);
+
+        $sheets[] = new RisikoInherentKuantitatifSheet($semuaRisiko);
+        // $sheets[] = new RisikoInherentKualitatifSheet($semuaRisiko);
+        $sheets[] = new RisikoResidualKuantitatifSheet($semuaRisiko);
+        // $sheets[] = new RisikoResidualKualitatifSheet($semuaRisiko);
+        $sheets[] = new RencanaPerlakuanRisikoSheet($semuaRisiko);
+        $sheets[] = new RealisasiResidualSheet($semuaRisiko);
 
         return $sheets;
     }

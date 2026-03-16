@@ -18,15 +18,11 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
-    protected $projectIds;
-    protected $month;
-    protected $tahun;
+    protected $risikos;
 
-    public function __construct(array $projectIds, $month = null, $tahun = null)
+    public function __construct(Collection $risikos)
     {
-        $this->projectIds = $projectIds;
-        $this->month = $month;
-        $this->tahun = $tahun;
+        $this->risikos = $risikos;
     }
 
     /**
@@ -230,22 +226,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
      */
     public function collection()
     {
-        $risikos = ProjectRisk::with([
-            'projectPeriodeList.project',
-            'peristiwaRisiko',
-            'projectRiskAnalisa.skalaProbabilitasResidual',
-            'projectRiskAnalisa.skalaDampakResidualObj',
-            'projectRiskMonitorings' => function($query) {
-                if ($this->month && $this->tahun) {
-                    $query->where('month', $this->month)->where('tahun', $this->tahun);
-                }
-                $query->orderBy('id', 'desc');
-            },
-            'projectRiskMonitorings.skalaProbabilitas'
-        ])
-        ->whereIn('project_id', $this->projectIds)
-        ->get()
-        ->sortByDesc('projectRiskAnalisa.skala_risiko');
+        $risikos = $this->risikos->sortByDesc('projectRiskAnalisa.skala_risiko');
 
         $exportData = new Collection();
         $nomorUrut = 1;

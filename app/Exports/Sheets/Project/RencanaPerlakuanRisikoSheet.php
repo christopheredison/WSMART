@@ -17,39 +17,25 @@ use Carbon\Carbon;
 
 class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
-    private $projectIds;
+    private $risikos;
     private $timelineData = [];
-    private $month;
-    private $tahun;
     private $opsiPerlakuan = [];
     private $startYear;
     private $endYear;
     private $totalMonths;
 
-    public function __construct(array $projectIds, $month = null, $tahun = null)
+    public function __construct(Collection $risikos)
     {
-        $this->projectIds = $projectIds;
-        $this->month = $month;
-        $this->tahun = $tahun;
+        $this->risikos = $risikos;
         $this->opsiPerlakuan = \App\Models\OpsiPerlakuanRisiko::pluck('opsi_perlakuan_risiko', 'id')->toArray();
-
-        // Tentukan Range Tahun di Constructor
         $this->calculateYearRange();
     }
 
     private function calculateYearRange()
     {
-        $query = ProjectRisk::whereIn('project_id', $this->projectIds);
-
-        // Ambil semua tanggal dari perlakuan penyebab dan perlakuan dampak
         $dates = collect();
 
-        $risks = $query->with([
-            'penyebabRisikoProjects.perlakuanPenyebabRisiko',
-            'perlakuanDampakRisikos'
-        ])->get();
-
-        foreach ($risks as $risk) {
+        foreach ($this->risikos as $risk) {
             foreach ($risk->penyebabRisikoProjects as $p) {
                 foreach ($p->perlakuanPenyebabRisiko as $per) {
                     if ($per->timeline_perlakuan_risiko_start) $dates->push(Carbon::parse($per->timeline_perlakuan_risiko_start)->year);
@@ -146,29 +132,11 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
 
     public function collection()
     {
-        $risikos = ProjectRisk::with([
-            'projectPeriodeList.project',
-            'penyebabRisikoProjects.perlakuanPenyebabRisiko.lastMonitoring' => function($q) {
-                if ($this->month && $this->tahun) {
-                    $q->whereHas('projectMonitoring', function($sq) {
-                        $sq->where('month', $this->month)->where('tahun', $this->tahun);
-                    });
-                }
-            },
-            'perlakuanDampakRisikos.lastMonitoring' => function($q) {
-                if ($this->month && $this->tahun) {
-                    $q->whereHas('projectMonitoring', function($sq) {
-                        $sq->where('month', $this->month)->where('tahun', $this->tahun);
-                    });
-                }
-            }
-        ])->whereIn('project_id', $this->projectIds)->get();
-
         $exportData = new Collection();
         $noUrut = 1;
         $currentRow = 0;
 
-        foreach ($risikos as $risiko) {
+        foreach ($this->risikos as $risiko) {
             $projectName = $risiko->projectPeriodeList->project->project_name ?? '-';
 
             // 1. Perlakuan terhadap Penyebab

@@ -15,15 +15,11 @@ use Carbon\Carbon;
 
 class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, ShouldAutoSize, WithEvents
 {
-    protected $projectIds;
-    protected $month;
-    protected $tahun;
+    protected $risikos;
 
-    public function __construct(array $projectIds, $month = null, $tahun = null)
+    public function __construct(Collection $risikos)
     {
-        $this->projectIds = $projectIds;
-        $this->month = $month;
-        $this->tahun = $tahun;
+        $this->risikos = $risikos;
     }
 
     public function title(): string
@@ -147,11 +143,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
 
     public function collection()
     {
-        $risikos = ProjectRisk::with([
-            'wbsMaster', 'projectPeriodeList.project', 'projectRiskAnalisa',
-            'penyebabRisikoProjects', 'kriProjects', 'dampakRisikoProjects',
-            'jenisKontrolEksisting', 'projectKontrolEksistings', 'penilaianEfektivitasKontrolObj',
-        ])->whereIn('project_id', $this->projectIds)->get()->sortByDesc('projectRiskAnalisa.skala_risiko');
+        $risikos = $this->risikos->sortByDesc('projectRiskAnalisa.skala_risiko');
 
         $exportData = new Collection();
         $noRisiko = 1;
