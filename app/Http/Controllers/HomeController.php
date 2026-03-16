@@ -1642,14 +1642,6 @@ class HomeController extends Controller
             //     $risk->nomor_urut = $index + 1;
             //     return [$risk->id => $risk];
             // });
-
-            $projectRisksJs = $selectedProjectPeriode->projectRisks
-                ->where('is_closed', 0)
-                ->values()
-                ->mapWithKeys(function($risk, $index) {
-                    $risk->nomor_urut = $index + 1;
-                    return [$risk->id => $risk];
-                });
         }
 
         $sortedKriData = collect();

@@ -246,12 +246,20 @@
                                 <th rowspan="2" class="align-middle">Deskripsi Peristiwa Risiko</th>
 
                                 <th colspan="6" class="text-center bg-light">Inherent</th>
-                                <th colspan="6" class="text-center" style="background-color: #e8f4fd;">Realisasi / Current</th>
                                 <th colspan="6" class="text-center bg-light">Residual</th>
+                                <th colspan="6" class="text-center" style="background-color: #e8f4fd;">Realisasi / Current</th>
                                 <th rowspan="2" class="align-middle">Status</th>
                             </tr>
                             <tr>
                                 {{-- Inherent --}}
+                                <th class="bg-light">Nilai Dampak</th>
+                                <th class="bg-light">Skala Dampak</th>
+                                <th class="bg-light">Nilai Prob.</th>
+                                <th class="bg-light">Skala Prob.</th>
+                                <th class="bg-light">Nilai Risiko</th>
+                                <th class="bg-light">Level Risiko</th>
+
+                                {{-- Residual --}}
                                 <th class="bg-light">Nilai Dampak</th>
                                 <th class="bg-light">Skala Dampak</th>
                                 <th class="bg-light">Nilai Prob.</th>
@@ -266,14 +274,6 @@
                                 <th style="background-color: #e8f4fd;">Skala Prob.</th>
                                 <th style="background-color: #e8f4fd;">Nilai Risiko</th>
                                 <th style="background-color: #e8f4fd;">Level Risiko</th>
-
-                                {{-- Residual --}}
-                                <th class="bg-light">Nilai Dampak</th>
-                                <th class="bg-light">Skala Dampak</th>
-                                <th class="bg-light">Nilai Prob.</th>
-                                <th class="bg-light">Skala Prob.</th>
-                                <th class="bg-light">Nilai Risiko</th>
-                                <th class="bg-light">Level Risiko</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -295,6 +295,14 @@
                                 <td>{{ $projectRisk->projectRiskAnalisa?->skala_risiko ?? '-' }}</td>
                                 <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko ?? '-' }}</td>
 
+                                {{-- RESIDUAL --}}
+                                <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak_residual ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak_residual, 0, ',', '.') : '-' }}</td>
+                                <td>{{ $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat ? '(' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->deskripsi : '-' }}</td>
+                                <td>{{ $projectRisk->projectRiskAnalisa?->nilai_probabilitas_residual ?? '-' }}</td>
+                                <td>{{ $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat ? '(' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->skala : '-' }}</td>
+                                <td>{{ $projectRisk->projectRiskAnalisa?->skala_risiko_residual ?? '-' }}</td>
+                                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko_residual)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko_residual ?? '-' }}</td>
+
                                 {{-- REALISASI / CURRENT (Diisi via JS) --}}
                                 <td class="realisasi-nilai-dampak">-</td>
                                 <td class="realisasi-skala-dampak">-</td>
@@ -303,13 +311,6 @@
                                 <td class="realisasi-nilai-risiko">-</td>
                                 <td class="realisasi-level-risiko">-</td>
 
-                                {{-- RESIDUAL --}}
-                                <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak_residual ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak_residual, 0, ',', '.') : '-' }}</td>
-                                <td>{{ $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat ? '(' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaDampakResidualObj?->deskripsi : '-' }}</td>
-                                <td>{{ $projectRisk->projectRiskAnalisa?->nilai_probabilitas_residual ?? '-' }}</td>
-                                <td>{{ $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat ? '(' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->tingkat . ') ' . $projectRisk->projectRiskAnalisa?->skalaProbabilitasResidual?->skala : '-' }}</td>
-                                <td>{{ $projectRisk->projectRiskAnalisa?->skala_risiko_residual ?? '-' }}</td>
-                                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko_residual)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko_residual ?? '-' }}</td>
                                 <td>
                                     @if ($projectRisk->is_closed)
                                         <span class="badge bg-danger rounded-pill px-2 mt-auto">Closed</span>

@@ -351,7 +351,7 @@
                         <tr data-risk-id="{{ $projectRisk->id }}">
                             <td class="text-start fw-bold">
                               <a href="{{  route('projects.risks.view', ['project' => $projectRisk->project_periode_list_id, 'risk' => $projectRisk->id]) }}">
-                                R{{ $projectRisk->nomor_urut }}
+                                R{{ $loop->iteration }}
                               </a>
                             </td>
                             <td class="text-start">{{ $projectRisk->peristiwaRisiko?->title ?? '-' }}</td>
@@ -807,7 +807,7 @@ $(document).ready(function() {
                     const cellI = $(`#inherentMap .data-cell[data-matrix="${matrixI}"]`);
                     if (cellI.length) {
                         // Menggunakan nomor urut dari tabel
-                        const riskNumber = $(`.table-strategi tbody tr[data-risk-id="${risk.id}"]`).find('td:first').text();
+                        const riskNumber = $(`.table-strategi tbody tr[data-risk-id="${risk.id}"]`).find('td:first').text().trim();
                         if(riskNumber) {
                           cellI.find('.kode-peristiwa').append(`<span class="box-inherent">${riskNumber}</span>`);
                         }
@@ -817,7 +817,7 @@ $(document).ready(function() {
                     const matrixR = risk.project_risk_analisa.skala_dampak_residual + '-' + risk.project_risk_analisa.skala_probabilitas_residual?.tingkat;
                     const cellR = $(`#inherentMap .data-cell[data-matrix="${matrixR}"]`);
                     if (cellR.length) {
-                        const riskNumber = $(`.table-strategi tbody tr[data-risk-id="${risk.id}"]`).find('td:first').text();
+                        const riskNumber = $(`.table-strategi tbody tr[data-risk-id="${risk.id}"]`).find('td:first').text().trim();
                         if(riskNumber) {
                           cellR.find('.kode-peristiwa').append(`<span class="box-residual">${riskNumber}</span>`);
                         }
@@ -834,7 +834,7 @@ $(document).ready(function() {
             Object.values(risks).forEach(risk => {
                 const riskId = risk.id;
                 const tableRow = $(`.table-strategi tbody tr[data-risk-id="${riskId}"]`);
-                const riskNumber = tableRow.find('td:first').text();
+                const riskNumber = tableRow.find('td:first').text().trim();
 
                 // [FIX] Cek level risiko inheren sebelum menampilkan di peta dan tabel
                 if(risk.project_risk_analisa) {

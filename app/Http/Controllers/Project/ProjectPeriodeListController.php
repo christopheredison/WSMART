@@ -1489,6 +1489,8 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'projectRisks.projectRiskAnalisa.skalaProbabilitas',
                 'projectRisks.projectRiskAnalisa.skalaProbabilitasResidual',
                 'projectRisks.projectRiskMonitorings' => function($query) {
+                    $query->orderBy('tahun', 'desc');
+                    $query->orderBy('month', 'desc');
                     $query->orderBy('id', 'desc');
                     $query->with('skalaProbabilitas');
                 },
@@ -1539,8 +1541,11 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'level_risiko' => $projectRisk->projectRiskAnalisa?->level_risiko,
             ];
 
-            $monitorings = $projectRisk->projectRiskMonitorings->keyBy(function($item) {
+            // 2. Ganti keyBy menjadi groupBy lalu ambil first()
+            $monitorings = $projectRisk->projectRiskMonitorings->groupBy(function($item) {
                 return $item->tahun . '-' . $item->month;
+            })->map(function($group) {
+                return $group->first();
             });
 
             foreach ($tahunMonitorings as $tahun) {

@@ -1709,7 +1709,9 @@ class ProjectRiskController extends BasicCRUDController
                 'projectRiskAnalisa.skalaDampakResidualObj',
                 'projectRiskAnalisa.skalaProbabilitasResidual',
                 'projectRiskMonitorings' => function($query) {
-                    $query->orderBy('id', 'desc')
+                    $query->orderBy('tahun', 'desc')
+                        ->orderBy('month', 'desc')
+                        ->orderBy('id', 'desc')
                         ->with([
                             'skalaProbabilitas',
                             'skalaDampakObj',
@@ -1749,9 +1751,11 @@ class ProjectRiskController extends BasicCRUDController
         $formattedCurrentRiskMaps = [];
         $riskRealisasiData = [];
 
-        // Grouping monitoring berdasarkan tahun-bulan untuk akses cepat
-        $monitorings = $projectRisk->projectRiskMonitorings->keyBy(function($item) {
+        // Karena data sudah diurutkan dari yang terbaru (desc), first() akan mengambil data terakhir/terbaru untuk bulan & tahun tersebut
+        $monitorings = $projectRisk->projectRiskMonitorings->groupBy(function($item) {
             return $item->tahun . '-' . $item->month;
+        })->map(function($group) {
+            return $group->first();
         });
 
         foreach ($tahunMonitorings as $tahun) {
