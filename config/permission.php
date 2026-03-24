@@ -306,5 +306,6 @@ return [
         'risk_map_setting',
 
         'can_access_project_under_division',
+        'report_consolidation',
     ],
 ];

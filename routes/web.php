@@ -608,6 +608,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('ap', [App\Http\Controllers\LaporanController::class, 'apExport'])->name('laporan.ap.export');
     Route::get('project', [App\Http\Controllers\LaporanController::class, 'project'])->name('laporan.project');
     Route::post('project', [App\Http\Controllers\LaporanController::class, 'projectExport'])->name('laporan.project.export');
+    Route::post('/laporan/project/export-konsolidasi', [App\Http\Controllers\LaporanController::class, 'projectKonsolidasiExport'])->name('laporan.project.export_konsolidasi');
     Route::post('project/export-led', [App\Http\Controllers\LaporanController::class, 'projectLedExport'])->name('laporan.project.export_led');
   });
 

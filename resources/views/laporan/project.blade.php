@@ -21,9 +21,9 @@
         <form id="exportForm">
           @csrf
           <div class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-4" id="container_project">
               <label for="project_ids" class="form-label">Project</label>
-              <select name="project_ids[]" id="project_ids" class="form-select select2" multiple="multiple" data-placeholder="Pilih Project..." required>
+              <select name="project_ids[]" id="project_ids" class="form-select select2" multiple="multiple" data-placeholder="Pilih Project...">
                 <option value="all">Pilih Semua Project</option>
                 @if (is_iterable($projects))
                   @foreach ($projects as $project)
@@ -33,42 +33,53 @@
               </select>
             </div>
 
-            <div class="col-md-3">
-                <label for="report_type" class="form-label">Jenis Laporan</label>
-                <select name="report_type" id="report_type" class="form-select" required>
-                    <option value="risk_register">Risk Register Project</option>
-                    <option value="loss_event">Loss Event Project (LED)</option>
+            @can('report_consolidation')
+            <div class="col-md-4 d-none" id="container_divisi">
+                <label for="divisi_ids" class="form-label">Divisi Operasi</label>
+                <select name="divisi_ids[]" id="divisi_ids" class="form-select select2" multiple="multiple" data-placeholder="Pilih Divisi...">
+                    <option value="all">Pilih Semua Divisi</option>
+                    @if (is_iterable($divisis))
+                        @foreach ($divisis as $divisi)
+                            <option value="{{ $divisi->id }}">{{ $divisi->name }}</option>
+                        @endforeach
+                    @endif
                 </select>
+            </div>
+            @endcan
+
+            <div class="col-md-3" id="container_jenis">
+              <label for="report_type" class="form-label">Jenis Laporan</label>
+              <select name="report_type" id="report_type" class="form-select" required>
+                <option value="risk_register">Risk Register Project</option>
+                <option value="loss_event">Loss Event Project (LED)</option>
+                @can('report_consolidation')
+                  <option value="konsolidasi">Laporan Konsolidasi</option>
+                @endcan
+              </select>
             </div>
 
             <div class="col-md-2 d-none" id="container_tahun">
-                <label for="tahun" class="form-label">Tahun</label>
-                <select name="tahun" id="tahun" class="form-select">
-                    @foreach(range(date('Y'), date('Y') - 5) as $y)
-                        <option value="{{ $y }}">{{ $y }}</option>
-                    @endforeach
-                </select>
+              <label for="tahun" class="form-label">Tahun</label>
+              <select name="tahun" id="tahun" class="form-select">
+                @foreach(range(date('Y'), date('Y') - 5) as $y)
+                  <option value="{{ $y }}">{{ $y }}</option>
+                @endforeach
+              </select>
             </div>
 
-            <div class="col-md-2 d-none" id="container_month"> <label for="month" class="form-label">Bulan Monitoring</label>
-                <select name="month" id="month" class="form-select"> @foreach([
-                        1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
-                        5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
-                        9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
-                    ] as $num => $name)
-                        <option value="{{ $num }}" {{ date('n') == $num ? 'selected' : '' }}>{{ $name }}</option>
-                    @endforeach
-                </select>
+            <div class="col-md-2 d-none" id="container_month">
+              <label for="month" class="form-label">Bulan Monitoring</label>
+              <select name="month" id="month" class="form-select">
+                @foreach([1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus', 9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember'] as $num => $name)
+                  <option value="{{ $num }}" {{ date('n') == $num ? 'selected' : '' }}>{{ $name }}</option>
+                @endforeach
+              </select>
             </div>
 
-            <div class="col-md-3 d-flex align-items-end">
+            <div class="col-md-3 d-flex align-items-end" id="container_btn">
               <button type="submit" id="exportBtn" class="btn btn-primary w-100 gap-1 d-flex flex-center">
-                <span id="btnIcon">
-                  <i class="bx bx-spreadsheet"></i>
-                </span>
-                <span id="btnText">
-                  Export Excel
-                </span>
+                <span id="btnIcon"><i class="bx bx-spreadsheet"></i></span>
+                <span id="btnText">Export Excel</span>
               </button>
             </div>
           </div>
@@ -85,17 +96,30 @@ $(document).ready(function() {
     // Inisialisasi Select2 agar support placeholder multiple
     $('.select2').select2({
         width: '100%',
-        closeOnSelect: false, // Opsional: agar dropdown tidak nutup pas pilih banyak
-        placeholder: "Pilih Project..."
+        closeOnSelect: false,
+        placeholder: "Pilih Proyek..."
     });
 
     $('#report_type').on('change', function() {
-        if ($(this).val() === 'risk_register') {
+        const val = $(this).val();
+
+        $('#container_jenis').removeClass('col-md-3 col-md-5').addClass('col-md-3');
+        $('#container_btn').removeClass('col-md-3 col-md-5').addClass('col-md-3');
+
+        if (val === 'risk_register') {
+            $('#container_project').removeClass('d-none');
+            $('#container_divisi').addClass('d-none');
             $('#container_tahun, #container_month').removeClass('d-none');
-            $('.col-md-5').removeClass('col-md-5').addClass('col-md-4');
-        } else {
+        } else if (val === 'loss_event') {
+            $('#container_project').removeClass('d-none');
+            $('#container_divisi').addClass('d-none');
             $('#container_tahun, #container_month').addClass('d-none');
-            $('.col-md-4').first().removeClass('col-md-4').addClass('col-md-5');
+            $('#container_jenis').removeClass('col-md-3').addClass('col-md-5');
+            $('#container_btn').removeClass('col-md-3').addClass('col-md-3'); // adjust as needed
+        } else if (val === 'konsolidasi') {
+            $('#container_project').addClass('d-none');
+            $('#container_divisi').removeClass('d-none');
+            $('#container_tahun, #container_month').removeClass('d-none');
         }
     });
 
@@ -104,35 +128,46 @@ $(document).ready(function() {
     $('#exportForm').on('submit', function(e) {
         e.preventDefault();
 
-        // 1. Ambil value sebagai Array
-        const projectIds = $('#project_ids').val();
         const reportType = $('#report_type').val();
+        const projectIds = $('#project_ids').val();
+        const divisiIds = $('#divisi_ids').val();
         const selectedMonth = $('#month').val();
         const selectedYear = $('#tahun').val();
 
         // Validasi: pastikan array tidak kosong
-        if (!projectIds || projectIds.length === 0) {
+        if (reportType !== 'konsolidasi' && (!projectIds || projectIds.length === 0)) {
             Swal.fire('Perhatian', 'Harap pilih minimal satu project.', 'warning');
+            return;
+        }
+
+        if (reportType === 'konsolidasi' && (!divisiIds || divisiIds.length === 0)) {
+            Swal.fire('Perhatian', 'Harap pilih minimal satu divisi.', 'warning');
             return;
         }
 
         showLoading();
 
         let targetUrl = '{{ route("laporan.project.export") }}';
+        let payload = {
+            _token: $('input[name="_token"]').val(),
+            month: selectedMonth,
+            tahun: selectedYear,
+        };
+
         if (reportType === 'loss_event') {
             targetUrl = '{{ route("laporan.project.export_led") }}';
+            payload.project_ids = projectIds;
+        } else if (reportType === 'konsolidasi') {
+            targetUrl = '{{ route("laporan.project.export_konsolidasi") }}';
+            payload.divisi_ids = divisiIds;
+        } else {
+            payload.project_ids = projectIds;
         }
 
         $.ajax({
             url: targetUrl,
             type: 'POST',
-            data: {
-                _token: $('input[name="_token"]').val(),
-                // Kirim array ID project
-                project_ids: projectIds,
-                month: selectedMonth,
-                tahun: selectedYear,
-            },
+            data: payload,
             xhrFields: {
                 responseType: 'blob'
             },

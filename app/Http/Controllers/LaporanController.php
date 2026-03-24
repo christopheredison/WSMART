@@ -161,7 +161,14 @@ class LaporanController extends Controller
             ->orderBy('project_name', 'asc')
             ->get();
 
-        return view('laporan.project', compact('projects'));
+        $divisis = \App\Models\Project::query()
+            ->join('units', 'projects.cost_center_parent', '=', 'units.cost_center')
+            ->select('units.name', 'units.cost_center', 'units.id')
+            ->distinct()
+            ->orderBy('units.name', 'asc')
+            ->get();
+
+        return view('laporan.project', compact('projects', 'divisis'));
     }
 
     public function projectExport(Request $request)
@@ -254,6 +261,58 @@ class LaporanController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Gagal export laporan project: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal generate laporan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function projectKonsolidasiExport(Request $request)
+    {
+        if (!\Illuminate\Support\Facades\Gate::check('report_consolidation')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk membuat Laporan Konsolidasi.'], 403);
+        }
+
+        $request->validate([
+            'divisi_ids'   => 'required|array',
+            'month'        => 'required|integer|between:1,12',
+            'tahun'        => 'required|integer',
+        ]);
+
+        try {
+            $costCenters = $request->input('divisi_ids');
+            $month = $request->input('month');
+            $tahun = $request->input('tahun');
+
+            $namaBulan = [
+                1 => 'Januari',
+                2 => 'Februari',
+                3 => 'Maret',
+                4 => 'April',
+                5 => 'Mei',
+                6 => 'Juni',
+                7 => 'Juli',
+                8 => 'Agustus',
+                9 => 'September',
+                10 => 'Oktober',
+                11 => 'November',
+                12 => 'Desember'
+            ];
+
+            $monthString = $namaBulan[(int)$month] ?? $month;
+
+            $fileName = 'Laporan_Konsolidasi_Operasi_' . $monthString . '_' . $tahun . '.xlsx';
+
+            $fileContents = \Maatwebsite\Excel\Facades\Excel::raw(
+                new \App\Exports\LaporanKonsolidasiExport($costCenters, $month, $tahun),
+                \Maatwebsite\Excel\Excel::XLSX
+            );
+
+            return response($fileContents, 200, [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            ]);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal export laporan Konsolidasi: ' . $e->getMessage());
             return response()->json(['message' => 'Gagal generate laporan: ' . $e->getMessage()], 500);
         }
     }
