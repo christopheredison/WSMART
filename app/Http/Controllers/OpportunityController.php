@@ -15,7 +15,8 @@ class OpportunityController extends Controller
             'penjelasan' => 'required|string',
             'nilai' => 'required',
             'nilai_peluang_realisasi' => 'required',
-            'identifikasi_risiko_id' => 'required',
+            'identifikasi_risiko_id' => 'nullable|integer',
+            'project_risk_id' => 'nullable|integer',
             'file' => 'nullable|file|max:5120',
         ]);
 
@@ -25,6 +26,7 @@ class OpportunityController extends Controller
         $opportunity->nilai_peluang_rencana = $this->convertToNumeric($request->nilai);
         $opportunity->nilai_peluang_realisasi = $this->convertToNumeric($request->nilai_peluang_realisasi);
         $opportunity->identifikasi_risiko_id = $request->identifikasi_risiko_id;
+        $opportunity->project_risk_id = $request->project_risk_id;
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
@@ -45,7 +47,8 @@ class OpportunityController extends Controller
             'penjelasan' => 'required|string',
             'nilai' => 'required',
             'nilai_peluang_realisasi' => 'required',
-            'identifikasi_risiko_id' => 'required',
+            'identifikasi_risiko_id' => 'nullable|integer',
+            'project_risk_id' => 'nullable|integer',
         ]);
 
         $opportunity = Opportunity::findOrFail($id);
@@ -53,7 +56,9 @@ class OpportunityController extends Controller
         $opportunity->penjelasan_peluang_realisasi = $request->penjelasan;
         $opportunity->nilai_peluang_rencana = $this->convertToNumeric($request->nilai);
         $opportunity->nilai_peluang_realisasi = $this->convertToNumeric($request->nilai_peluang_realisasi);
+
         $opportunity->identifikasi_risiko_id = $request->identifikasi_risiko_id;
+        $opportunity->project_risk_id = $request->project_risk_id;
 
         if ($request->hasFile('file')) {
             if ($opportunity->file_path && Storage::disk('public')->exists($opportunity->file_path)) {
@@ -88,11 +93,17 @@ class OpportunityController extends Controller
         return redirect()->back()->with('success', 'Data peluang berhasil dihapus');
     }
 
-    public function getOpportunities($risikoId)
+    public function getOpportunities(Request $request, $risikoId)
     {
-        $opportunities = Opportunity::where('identifikasi_risiko_id', $risikoId)
-            ->orderBy('id', 'desc')
-            ->get();
+        $query = Opportunity::query();
+
+        if ($request->query('type') === 'project') {
+            $query->where('project_risk_id', $risikoId);
+        } else {
+            $query->where('identifikasi_risiko_id', $risikoId);
+        }
+
+        $opportunities = $query->orderBy('id', 'desc')->get();
 
         return response()->json($opportunities);
     }
@@ -105,7 +116,7 @@ class OpportunityController extends Controller
         $cleanValue = preg_replace('/[^0-9.,]/', '', $value);
         $cleanValue = str_replace('.', '', $cleanValue);
         $cleanValue = str_replace(',', '.', $cleanValue);
-        
+
         return (float) $cleanValue;
     }
 }

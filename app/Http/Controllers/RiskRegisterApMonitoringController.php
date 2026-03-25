@@ -1096,6 +1096,10 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
 
         $files = $risk->lastMonitoringRisiko?->perlakuanPenyebabRisikoDocuments->groupBy('perlakuan_penyebab_risiko_unit_id') ?: [];
 
+        $opportunities = \App\Models\Opportunity::where('identifikasi_risiko_id', $risk->id)
+            ->orderBy('id', 'desc')
+            ->get();
+
         return view('risk-register-ap.monitorings.show', [
             'period' => $period,
             'risk' => $risk,
@@ -1108,6 +1112,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             'riskMaps' => $riskMaps,
             'files' => $files,
             'historyMonitorings' => $historyMonitorings,
+            'opportunities' => $opportunities,
         ]);
     }
 

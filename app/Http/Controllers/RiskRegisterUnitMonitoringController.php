@@ -1308,6 +1308,10 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $monitoringM1 = $risk->monitoringRisikos()->where('month', $dateM1->month)->first();
         $monitoringM2 = $risk->monitoringRisikos()->where('month', $dateM2->month)->first();
 
+        $opportunities = \App\Models\Opportunity::where('identifikasi_risiko_id', $risk->id)
+            ->orderBy('id', 'desc')
+            ->get();
+
         return view('risk-register-unit.monitorings.show', [
             'period' => $period,
             'risk' => $risk,
@@ -1326,6 +1330,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'dateM1' => $dateM1,
             'dateM2' => $dateM2,
             'historyMonitorings' => $historyMonitorings,
+            'opportunities' => $opportunities,
         ]);
     }
 

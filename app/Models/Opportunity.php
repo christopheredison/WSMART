@@ -10,6 +10,7 @@ class Opportunity extends Model
 
     protected $fillable = [
         'identifikasi_risiko_id',
+        'project_risk_id',
         'penjelasan_peluang_rencana',
         'penjelasan_peluang_realisasi',
         'nilai_peluang_rencana',
@@ -23,5 +24,10 @@ class Opportunity extends Model
     public function identifikasiRisiko()
     {
         return $this->belongsTo(IdentifikasiRisiko::class, 'identifikasi_risiko_id');
+    }
+
+    public function projectRisk()
+    {
+        return $this->belongsTo(ProjectRisk::class, 'project_risk_id');
     }
 }

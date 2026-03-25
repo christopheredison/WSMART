@@ -389,6 +389,15 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $this->tableActions = [];
 
+        $this->tableActions[] = [
+            'label' => 'Peluang',
+            'btn_icon' => false,
+            'action' => 'script',
+            'script' => "showPeluangModal($(this).data('id'), '__RISK_TITLE__', '__RISK_DESC__')",
+            'active_state' => '(data, type, row) => true',
+            'extra_attrs' => [ 'style' => 'font-size: 16px; font-weight: 400;', 'data-id' => 'row.id' ]
+        ];
+
         if (Gate::check('project_monitoring_view')) {
             $showRoute = route('projects.monitorings.show', ['project' => request()->route('project'), 'monitoring' => ':id', 'quarter' => ':quarter', 'tahun' => ':tahun', 'month' => ':month']);
             $this->tableActions[] = [
@@ -1334,6 +1343,10 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $monitoringM2 = $projectRisk->projectRiskMonitorings()
             ->where('month', $dateM2->month)->where('tahun', $dateM2->year)->first();
 
+        $opportunities = \App\Models\Opportunity::where('project_risk_id', $projectRisk->id)
+            ->orderBy('id', 'desc')
+            ->get();
+
         return view('project-monitorings.show', [
             'projectPeriode' => $projectPeriode,
             'project' => $projectPeriode->project,
@@ -1358,6 +1371,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'dateM1' => $dateM1,
             'dateM2' => $dateM2,
             'historyMonitorings' => $historyMonitorings,
+            'opportunities' => $opportunities,
         ]);
     }
 

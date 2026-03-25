@@ -267,6 +267,7 @@
     @if (!empty($extraViewData['showCatatanModal']))
         @if (request()->route()->getName() === 'projects.monitorings.index')
             @include('project-monitorings._modal_catatan')
+            @include('risk-register-unit.monitorings._modal_peluang')
         @elseif (request()->route()->getName() === 'risk-register-unit.monitorings.index')
             @include('risk-register-unit.monitorings._modal_catatan')
             @include('risk-register-unit.monitorings._modal_peluang')
@@ -297,19 +298,18 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
+const isProjectPage = {{ request()->route()->getName() === 'projects.monitorings.index' ? 'true' : 'false' }};
 
 function showPeluangModal(monitoringId, riskTitle, riskDesc) {
     console.log('showPeluangModal dipanggil dengan ID:', monitoringId);
     $('#peluang-risk-title').text(riskTitle);
     $('#peluang-risk-desc').text(riskDesc);
 
-    // Pastikan monitoringId tidak 0 atau undefined
     if (monitoringId && monitoringId !== 0) {
         $('#identifikasi-risiko-id').val(monitoringId);
         loadOpportunities(monitoringId);
         console.log('ID Risiko yang digunakan:', monitoringId);
     } else {
-        // Coba ambil dari data-id tombol yang memanggil fungsi ini
         console.error('ID risiko tidak valid:', monitoringId);
         alert('ID risiko tidak valid. Silakan coba lagi.');
         return;
@@ -319,8 +319,9 @@ function showPeluangModal(monitoringId, riskTitle, riskDesc) {
 }
 
 function loadOpportunities(risikoId) {
+    const urlType = isProjectPage ? '?type=project' : '';
     $.ajax({
-        url: `/opportunities/monitoring/${risikoId}`,
+        url: `/opportunities/monitoring/${risikoId}${urlType}`,
         type: 'GET',
         success: function(response) {
             renderOpportunities(response);
@@ -472,27 +473,64 @@ $(document).ready(function() {
 
     // Fungsi untuk menghapus peluang
     $(document).on('click', '.btn-delete-peluang', function() {
-        if (confirm('Apakah Anda yakin ingin menghapus data peluang ini?')) {
-            const id = $(this).data('id');
-            const riskId = $('#identifikasi-risiko-id').val();
+        const id = $(this).data('id');
+        const riskId = $('#identifikasi-risiko-id').val();
 
-            $.ajax({
-                url: `/opportunities/${id}`,
-                type: 'POST',
-                data: {
-                    _token: '{{csrf_token()}}',
-                    _method: 'DELETE',
-                    risk_id: riskId
-                },
-                success: function(response) {
-                    loadOpportunities(riskId);
-                },
-                error: function(error) {
-                    console.error('Error saat menghapus peluang:', error);
-                    alert('Terjadi kesalahan saat menghapus data peluang');
-                }
-            });
-        }
+        Swal.fire({
+            title: "Apakah Anda yakin?",
+            text: "Data peluang yang dihapus tidak dapat dikembalikan!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Ya, hapus!",
+            cancelButtonText: "Tidak, batal",
+            buttonsStyling: false,
+            customClass: {
+                confirmButton: 'btn btn-danger me-2',
+                cancelButton: 'btn btn-secondary'
+            },
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Menghapus...',
+                    text: 'Mohon tunggu sebentar.',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                $.ajax({
+                    url: `/opportunities/${id}`,
+                    type: 'POST',
+                    data: {
+                        _token: '{{csrf_token()}}',
+                        _method: 'DELETE',
+                        risk_id: riskId
+                    },
+                    success: function(response) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil!',
+                            text: response.message || 'Data peluang berhasil dihapus',
+                        });
+                        loadOpportunities(riskId);
+                    },
+                    error: function(xhr) {
+                        console.error('Error saat menghapus peluang:', xhr);
+                        let errorMsg = 'Terjadi kesalahan saat menghapus data peluang.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal!',
+                            text: errorMsg,
+                        });
+                    }
+                });
+            }
+        });
     });
 
 
@@ -514,7 +552,14 @@ $(document).ready(function() {
         }
 
         const formData = new FormData(this);
-        formData.set('identifikasi_risiko_id', risikoId);
+
+        if (isProjectPage) {
+            formData.set('project_risk_id', risikoId);
+            formData.delete('identifikasi_risiko_id');
+        } else {
+            formData.set('identifikasi_risiko_id', risikoId);
+            formData.delete('project_risk_id');
+        }
 
         // Mapping fields
         formData.set('description', formData.get('penjelasan_peluang_rencana'));
