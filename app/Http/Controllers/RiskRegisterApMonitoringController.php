@@ -631,6 +631,14 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             $unitFilterAttributes['disabled'] = true;
         }
 
+        $monthOptions = match((int)$quarter) {
+            1 => ['1' => 'Januari', '2' => 'Februari', '3' => 'Maret'],
+            2 => ['4' => 'April', '5' => 'Mei', '6' => 'Juni'],
+            3 => ['7' => 'Juli', '8' => 'Agustus', '9' => 'September'],
+            4 => ['10' => 'Oktober', '11' => 'November', '12' => 'Desember'],
+            default => []
+        };
+
         $this->availableFilters = [
             'unit_id' => [
                 'label' => 'Anak Perusahaan',
@@ -668,7 +676,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                 'type' => 'select',
                 'parameters' => [
                     'month',
-                    [],
+                    $monthOptions,
                     $month,
                     [
                         'class' => 'form-select select2 js-select-hide-search',
@@ -1667,7 +1675,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                     '4': {'10': 'Oktober', '11': 'November', '12': 'Desember'},
                 };
 
-                function updateMonthDropdown(quarter, selectedMonth = null) {
+                function updateMonthDropdown(quarter, selectedMonth = null, triggerReload = false) {
                     const monthSelect = $('select[name="month"]');
                     monthSelect.empty();
                     if (quarter && allMonths[quarter]) {
@@ -1681,19 +1689,27 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                     if (monthSelect.hasClass('select2-hidden-accessible')) {
                         monthSelect.trigger('change.select2');
                     }
+
+                    if (triggerReload) {
+                        monthSelect.trigger('change');
+                    }
                 }
 
                 const activeQuarter = "$phpQuarter";
                 const activeMonth   = "$phpMonth";
 
-                $('select[name="quarter"]').val(activeQuarter).trigger('change.select2');
-                updateMonthDropdown(activeQuarter, activeMonth);
+                $('select[name="quarter"]').val(activeQuarter);
+                if ($('select[name="quarter"]').hasClass('select2-hidden-accessible')) {
+                    $('select[name="quarter"]').trigger('change.select2');
+                }
+
+                updateMonthDropdown(activeQuarter, activeMonth, false);
 
                 $('select[name="quarter"]').on('change', function() {
                     const newQuarter = $(this).val();
                     let firstMonth = null;
                     if (allMonths[newQuarter]) firstMonth = Object.keys(allMonths[newQuarter])[0];
-                    updateMonthDropdown(newQuarter, firstMonth);
+                    updateMonthDropdown(newQuarter, firstMonth, true);
                 });
 
                 $('select[name="month"]').val(activeMonth).trigger('change');
@@ -1709,7 +1725,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                     window.history.pushState({path: url.href}, '', url.href);
 
                     if (typeof window.LaravelDataTables !== 'undefined') {
-                         $('.ajax-datatable').DataTable().ajax.reload();
+                        $('.ajax-datatable').DataTable().ajax.reload();
                     }
                 });
             });

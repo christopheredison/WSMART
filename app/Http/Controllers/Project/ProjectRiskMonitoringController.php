@@ -62,22 +62,24 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $quarter = request()->input('filters.quarter', request()->query('quarter', 1));
         $tahun   = request()->input('filters.tahun', request()->query('tahun', date('Y')));
 
-        $defaultMonth = match((int)$quarter) {
-            2 => '4', 3 => '7', 4 => '10', default => '1'
-        };
+        $allMonthOptions = [
+            1 => ['1' => 'Januari', '2' => 'Februari', '3' => 'Maret'],
+            2 => ['4' => 'April', '5' => 'Mei', '6' => 'Juni'],
+            3 => ['7' => 'Juli', '8' => 'Agustus', '9' => 'September'],
+            4 => ['10' => 'Oktober', '11' => 'November', '12' => 'Desember'],
+        ];
 
-        $validMonths = match((int)$quarter) {
-            1 => ['1','2','3'], 2 => ['4','5','6'], 3 => ['7','8','9'], 4 => ['10','11','12'], default => []
-        };
 
+        $monthOptions = $allMonthOptions[$quarter] ?? $allMonthOptions[1];
+        $validMonths  = array_keys($monthOptions);
 
         $filterMonth = request()->input('filters.month');
         $queryMonth  = request()->query('month');
-        $monthRaw = $filterMonth ?: ($queryMonth ?: $defaultMonth);
-        $month = (string) $monthRaw;
+        $monthRaw    = $filterMonth ?: ($queryMonth ?: $validMonths[0]);
+        $month       = (string) $monthRaw;
 
         if (!in_array($month, $validMonths)) {
-            $month = (string) ($validMonths[0] ?? '1');
+            $month = (string) $validMonths[0];
         }
 
         request()->merge(['month' => $month, 'quarter' => $quarter, 'tahun' => $tahun]);
@@ -491,6 +493,14 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             $optionTahuns[$i] = $i;
         }
 
+        $monthOptions = match((int)$quarter) {
+            1 => ['1' => 'Januari', '2' => 'Februari', '3' => 'Maret'],
+            2 => ['4' => 'April', '5' => 'Mei', '6' => 'Juni'],
+            3 => ['7' => 'Juli', '8' => 'Agustus', '9' => 'September'],
+            4 => ['10' => 'Oktober', '11' => 'November', '12' => 'Desember'],
+            default => []
+        };
+
         $this->availableFilters = [
             'peristiwa_risiko_id' => [
                 'label' => 'Peristiwa Risiko',
@@ -544,7 +554,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                 'type' => 'select',
                 'parameters' => [
                     'month',
-                    [],
+                    $monthOptions,
                     $month,
                     [
                         'class' => 'form-select select2 js-select-hide-search',
@@ -562,8 +572,8 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $catatanRoute = route('projects.monitorings.notes', ['project' => request()->route('project'), 'riskId' => ':id']);
 
         $csrfToken = csrf_token();
-        $phpQuarter = request()->query('quarter', 1);
-        $phpMonth = request()->query('month', '');
+        $phpQuarter = $quarter;
+        $phpMonth = $month;
 
         // --- 2. EXTRASCRIPTS (GABUNGAN LAMA & BARU) ---
         $this->extraScripts[] = <<<SCRIPT
@@ -784,7 +794,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     '4': {'10': 'Oktober', '11': 'November', '12': 'Desember'},
                 };
 
-                function updateMonthDropdown(quarter, selectedMonth = null) {
+                function updateMonthDropdown(quarter, selectedMonth = null, triggerReload = false) {
                     const monthSelect = $('select[name="month"]');
                     monthSelect.empty();
 
@@ -800,23 +810,32 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     if (monthSelect.hasClass('select2-hidden-accessible')) {
                         monthSelect.trigger('change.select2');
                     }
+
+                    // Hanya reload DataTable jika diminta (user interaction, bukan init)
+                    if (triggerReload) {
+                        monthSelect.trigger('change');
+                    }
                 }
 
                 const activeQuarter = "{$phpQuarter}";
                 const activeMonth   = "{$phpMonth}";
 
-                // Init Dropdown saat halaman load
-                $('select[name="quarter"]').val(activeQuarter).trigger('change.select2');
-                updateMonthDropdown(activeQuarter, activeMonth);
+                $('select[name="quarter"]').val(activeQuarter);
+                if ($('select[name="quarter"]').hasClass('select2-hidden-accessible')) {
+                    $('select[name="quarter"]').trigger('change.select2');
+                }
 
-                // Handler Change Quarter
+                // Panggil updateMonthDropdown dengan triggerReload = false (tidak trigger DataTable reload saat init)
+                updateMonthDropdown(activeQuarter, activeMonth, false);
+
+                // Handler Change Quarter — didaftarkan SETELAH init, aman dari re-trigger
                 $('select[name="quarter"]').on('change', function() {
                     const newQuarter = $(this).val();
                     let firstMonthOfQuarter = null;
                     if (allMonths[newQuarter]) {
                         firstMonthOfQuarter = Object.keys(allMonths[newQuarter])[0];
                     }
-                    updateMonthDropdown(newQuarter, firstMonthOfQuarter);
+                    updateMonthDropdown(newQuarter, firstMonthOfQuarter, true); // true = trigger reload saat user ubah
                 });
 
                 // Handler Update URL
@@ -1923,7 +1942,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
     }
 
-    private function checkUserEligibility($user, $stepInfo)
+    private function checkUserEligibility($user, $stepInfo, $project = null)
     {
         if ($stepInfo['level'] != $user->level_id) return false;
         if (isset($stepInfo['permission']) && !Gate::check($stepInfo['permission'])) return false;
@@ -1931,6 +1950,11 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             $isUserUnitMR = (bool)($user->unit && $user->unit->unit_mr);
             if ($stepInfo['unit_mr'] !== $isUserUnitMR) return false;
         }
+
+        // // Validasi cost_center untuk level 1 (Risk Officer Divisi)
+        // if ($project && $user->level_id == 1 && isset($stepInfo['check_cost_center']) && $stepInfo['check_cost_center']) {
+        //     if (!$user->unit || $user->unit->cost_center != $project->cost_center_parent) return false;
+        // }
         return true;
     }
 
