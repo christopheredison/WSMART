@@ -272,7 +272,7 @@
                                                 {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}
                                             </td>
                                             <td>
-                                                  <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
+                                                  <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File" data-bs-toggle="tooltip">
                                                       <i class='bx bx-file fs-5'></i>
                                                   </button>
                                               </td>
@@ -336,7 +336,7 @@
                                             </td>
                                             <td class="display-timeline">{{ $lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}</td>
                                             <td>
-                                                <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
+                                                <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File" data-bs-toggle="tooltip">
                                                     <i class='bx bx-file fs-5'></i>
                                                 </button>
                                             </td>
@@ -400,6 +400,48 @@
                                         <td colspan="9" class="text-center">Tidak ada data</td>
                                     </tr>
                                 @endif
+                            </tbody>
+                        </table>
+
+                        <h5 class="mt-6 mb-2">Peluang (Opportunity)</h5>
+                        <table class="table table-bordered align-middle" id="table-peluang">
+                            <thead class="bg-light small fw-bold">
+                                <tr>
+                                    <th width="5%">#</th>
+                                    <th>Penjelasan Rencana</th>
+                                    <th width="15%">Nilai Rencana</th>
+                                    <th>Penjelasan Realisasi</th>
+                                    <th width="15%">Nilai Realisasi</th>
+                                    <th width="10%">Dokumen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($opportunities as $peluang)
+                                    <tr>
+                                        <td class="text-center">{{ $loop->iteration }}</td>
+                                        <td>{{ $peluang->penjelasan_peluang_rencana ?: '-' }}</td>
+                                        <td class="fw-medium text-dark">
+                                            {{ $peluang->nilai_peluang_rencana ? 'Rp ' . number_format($peluang->nilai_peluang_rencana, 0, ',', '.') : 'Rp 0' }}
+                                        </td>
+                                        <td>{{ $peluang->penjelasan_peluang_realisasi ?: '-' }}</td>
+                                        <td class="fw-bold text-success">
+                                            {{ $peluang->nilai_peluang_realisasi ? 'Rp ' . number_format($peluang->nilai_peluang_realisasi, 0, ',', '.') : 'Rp 0' }}
+                                        </td>
+                                        <td class="text-center">
+                                            @if($peluang->file_path)
+                                                <a href="{{ asset('storage/' . $peluang->file_path) }}" target="_blank" class="btn btn-sm btn-link lihat-file-btn" data-bs-toggle="tooltip" title="Download Dokumen">
+                                                    <span class="bx bx-download fs-5"></>
+                                                </a>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted fst-italic py-3">Belum ada data peluang yang ditambahkan.</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>

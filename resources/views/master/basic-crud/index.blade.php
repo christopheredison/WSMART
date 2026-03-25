@@ -450,10 +450,13 @@ $(document).ready(function() {
 
         if (filePath) {
             const fileName = filePath.split('/').pop();
+            const fileUrl = `/storage/${filePath}`;
             $('#current-filename').text(fileName);
+            $('#current-file-link').attr('href', fileUrl);
             $('#current-file-display').removeClass('d-none');
         } else {
             $('#current-file-display').addClass('d-none');
+            $('#current-file-link').attr('href', '#');
         }
 
         $('#peluang-form-title').html('<i class="bx bx-edit"></i> Edit Peluang');

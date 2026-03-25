@@ -8,7 +8,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body bg-light">
-                
+
                 <div class="card mb-3 shadow-sm border-0">
                     <div class="card-body py-3">
                         <div class="d-flex align-items-center">
@@ -63,7 +63,7 @@
                                 @csrf
                                 <input type="hidden" id="peluang-id" name="peluang_id">
                                 <input type="hidden" id="identifikasi-risiko-id" name="identifikasi_risiko_id">
-                                
+
                                 <div class="row g-4">
                                     <div class="col-lg-6 border-end">
                                         <h6 class="text-info border-bottom pb-2 mb-3">Data Rencana</h6>
@@ -100,9 +100,9 @@
                                             Maksimal 5MB. Format: PDF, Office, Gambar.
                                         </div>
                                         <div id="current-file-display" class="mt-2 d-none">
-                                            <span class="badge bg-info text-dark text-white fw-normal">
+                                            <a href="#" id="current-file-link" target="_blank" class="badge bg-info text-white text-decoration-none fw-normal p-2">
                                                 <i class="bx bx-file"></i> File saat ini: <span id="current-filename" class="fw-bold"></span>
-                                            </span>
+                                            </a>
                                         </div>
                                     </div>
                                     <div class="col-md-4 text-end mt-3 mt-md-0">
