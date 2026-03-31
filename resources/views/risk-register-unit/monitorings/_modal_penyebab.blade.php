@@ -12,7 +12,7 @@
                     <div class="row g-2">
                         <!-- Hidden Input for penyebab_risiko_id -->
                         {{ Form::hidden('penyebab_risiko_id', '') }}
-                    
+
                         <div class="col-12">
                             <div class="form-floating">
                                 {{ Form::text('penyebab_risiko', null, ['class' => 'form-control', 'disabled' => 'disabled']) }}
@@ -40,7 +40,7 @@
                         <div class="col-12">
                             <h5 class="mt-3 mb-0">Realisasi</h5>
                         </div>
-                        
+
                         <!-- Informasi Realisasi Sebelumnya -->
                         <div class="col-12">
                             <div class="alert alert-info mb-3">
@@ -66,7 +66,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="col-md-6">
                             <div class="form-floating">
                                 {{ Form::text('realisasi_biaya_perlakuan_risiko', null, ['class' => 'form-control inputmask-rupiah', 'required' => 'required']) }}
@@ -75,8 +75,8 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-floating">
-                                {{ Form::number('progress_perlakuan_risiko', null, ['class' => 'form-control', 'required' => 'required', 'max' => 100]) }}
-                                <label>Progress Perlakuan Risiko</label>
+                                {{ Form::number('progress_perlakuan_risiko', null, ['class' => 'form-control', 'required' => 'required', 'max' => 100, 'oninput' => 'if(this.value < 0) this.value = 0; if(this.value > 100) this.value = 100;']) }}
+                                <label>Progress Perlakuan Risiko (%)</label>
                             </div>
                         </div>
                         <div class="col-12">
@@ -93,7 +93,7 @@
                         </div> --}}
                         <div class="col-12">
                             <div class="form-floating">
-                                <input type="text" class="form-control" id="timelineInput" name="timeline_perlakuan_risiko" required>
+                                <input type="text" class="form-control bg-white" id="timelineInput" name="timeline_perlakuan_risiko" required>
                                 <label for="timelineInput">Waktu Perlakuan Risiko</label>
                             </div>
                         </div>
@@ -102,7 +102,7 @@
                         </div>
                         <div class="col-md-3 col-auto text-end justify-content-end d-flex flex-column">
                             <div>
-                                
+
                             </div>
                         </div>
                         <div class="col-12">
@@ -141,60 +141,60 @@
         function validateRealisasiForm() {
             // Ambil nilai biaya perlakuan risiko (dari field yang disabled)
             const biayaPerlakuanRisiko = parseFloat($('input[name="biaya_perlakuan_risiko"]').val().replace(/[^\d]/g, ''));
-            
+
             // Ambil nilai realisasi biaya sebelumnya
             const previousRealisasiBiaya = parseFloat($('#previous_realisasi_biaya_value').val() || 0);
-            
+
             // Ambil nilai realisasi biaya baru yang diinput
             const newRealisasiBiaya = parseFloat($('input[name="realisasi_biaya_perlakuan_risiko"]').val().replace(/[^\d]/g, ''));
-            
+
             // Hitung total realisasi biaya
             const totalRealisasiBiaya = previousRealisasiBiaya + newRealisasiBiaya;
-            
+
             // Ambil nilai progress sebelumnya
             const previousProgress = parseFloat($('#previous_progress_value').val() || 0);
-            
+
             // Ambil nilai progress baru yang diinput
             const newProgress = parseFloat($('input[name="progress_perlakuan_risiko"]').val() || 0);
-            
+
             // Validasi total realisasi biaya tidak melebihi biaya perlakuan risiko
             if (totalRealisasiBiaya > biayaPerlakuanRisiko) {
                 alert('Total realisasi biaya (sebelumnya + baru) tidak boleh melebihi biaya perlakuan risiko yang telah ditetapkan.');
                 return false;
             }
-            
+
             // Validasi progress baru tidak lebih kecil dari progress sebelumnya
             if (newProgress < previousProgress) {
                 alert('Progress realisasi baru tidak boleh lebih kecil dari progress sebelumnya.');
                 return false;
             }
-            
+
             return true;
         }
-        
+
         // Tambahkan event handler untuk tombol simpan
         // $('#btnSimpanUpdateRealisasi').click(function(e) {
         //     e.preventDefault(); // Mencegah form submit secara default
-            
+
         //     if (validateRealisasiForm()) {
         //         // Jika validasi berhasil, ambil data dari form
         //         const penyebabRisikoId = $('input[name="penyebab_risiko_id"]').val();
         //         const realisasiBiaya = $('input[name="realisasi_biaya_perlakuan_risiko"]').val();
         //         const progress = $('input[name="progress_perlakuan_risiko"]').val();
-                
+
         //         // Perbarui tampilan di tabel
         //         const row = $('tr[data-id="' + penyebabRisikoId + '"]');
         //         row.find('.display-progress').text(progress + '%');
         //         row.find('.display-biaya').text(realisasiBiaya);
-                
+
         //         // Tutup modal
         //         $('#modalUpdateRealisasi').modal('hide');
-                
+
         //         // Opsional: Tampilkan pesan sukses
         //         toastr.success('Data realisasi berhasil diperbarui');
         //     }
         // });
-        
+
         $('#btnTambahDokumen').click(function() {
             const penyebabRisikoId = $(this).closest('form').find('input[name="penyebab_risiko_id"]').val();
             const domCell = $('#table-penyebab-risiko tr[data-id="'+penyebabRisikoId+'"] td.column-action');
@@ -209,7 +209,7 @@
                 alert('Maksimal 3 dokumen yang dapat diunggah.');
                 return;
             }
-            
+
             uploadContainer.append('<input type="file" name="document_file_' + penyebabRisikoId + '[' + newId + ']" id="'+newId+'" required>');
 
             tableDokumen.append(`

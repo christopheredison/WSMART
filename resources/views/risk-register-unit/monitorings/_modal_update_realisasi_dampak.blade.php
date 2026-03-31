@@ -58,13 +58,13 @@
                         <div class="col-md-6">
                             <div class="form-floating">
                                 <input type="text" class="form-control inputmask-rupiah" name="realisasi_biaya_dampak" required>
-                                <label>Realisasi Biaya</label>
+                                <label>Realisasi Biaya Perlakuan Risiko</label>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-floating">
-                                <input type="number" class="form-control" name="progress_dampak" required max="100">
-                                <label>Progress (%)</label>
+                                <input type="number" class="form-control" name="progress_dampak" required  min="0" max="100" oninput="if(this.value < 0) this.value = 0; if(this.value > 100) this.value = 100;">
+                                <label>Progress Perlakuan Risiko (%)</label>
                             </div>
                         </div>
                         <div class="col-12">
@@ -75,7 +75,7 @@
                         </div>
                         <div class="col-12">
                             <div class="form-floating">
-                                <input type="text" class="form-control" id="timelineImpactInput" name="timeline_dampak" required>
+                                <input type="text" class="form-control bg-white" id="timelineImpactInput" name="timeline_dampak" required>
                                 <label>Waktu Realisasi</label>
                             </div>
                         </div>
