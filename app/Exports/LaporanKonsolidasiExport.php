@@ -149,10 +149,15 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             }
         ]);
 
+        $query->whereHas('project', function($q) {
+            $q->whereDate('masa_pelaksanaan_end', '>=', \Carbon\Carbon::today())
+
+            // masa_pelaksanaan_end masih kosong dianggap proyek aktif
+            ->orWhereNull('masa_pelaksanaan_end');
+        });
+
         if (!in_array('all', $this->costCenters)) {
-            $query->whereHas('project', function($q) {
-                $q->whereIn('cost_center_parent', $this->costCenters);
-            });
+            $query->whereIn('unit_id', $this->costCenters);
         }
 
         $risks = $query->get();

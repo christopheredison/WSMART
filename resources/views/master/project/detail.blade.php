@@ -94,14 +94,14 @@
                     </div>
                 </div>
                 <div class="row mb-2">
-                    <div class="col-md-5 fw-bold text-muted">Tanggal Selesai</div>
+                    <div class="col-md-5 fw-bold text-muted">Tanggal Pelaksaaan</div>
                     <div class="col-md-7">
-                        {{ $project->masa_pelaksanaan_end ? \Carbon\Carbon::parse($project->masa_pelaksanaan_end)->translatedFormat('d F Y') : '-' }}
+                        {{ $project->masa_pelaksanaan_start ? \Carbon\Carbon::parse($project->masa_pelaksanaan_start)->translatedFormat('d F Y') : '-' }} s/d {{ $project->masa_pelaksanaan_end ? \Carbon\Carbon::parse($project->masa_pelaksanaan_end)->translatedFormat('d F Y') : '-' }}
                     </div>
                 </div>
                 <div class="row mb-2">
                     <div class="col-md-5 fw-bold text-muted">BAST 1</div>
-                    <div class="col-md-7">{{ isset($meta['bast1']) ? \Carbon\Carbon::parse($meta['bast1'])->format('d/m/Y') : '-' }}</div>
+                    <div class="col-md-7">{{ isset($meta['bast1']) ? \Carbon\Carbon::parse($meta['bast1'])->translatedFormat('d F Y') : '-' }}</div>
                 </div>
                 <div class="row mb-2">
                     <div class="col-md-5 fw-bold text-muted">Pembayaran</div>

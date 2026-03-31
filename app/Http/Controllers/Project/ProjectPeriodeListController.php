@@ -69,6 +69,14 @@ class ProjectPeriodeListController extends BasicCRUDController
             'searchable' => true,
             'class' => 'mw-10r',
         ],
+        'status_proyek' => [
+            'label' => 'Status Proyek',
+            'data' => 'status_proyek',
+            'name' => 'projects.masa_pelaksanaan_end',
+            'orderable' => true,
+            'searchable' => false,
+            'class' => 'text-center',
+        ],
         'skala_risiko' => [
             'label' => 'Nilai Risiko',
             'data' => 'skala_risiko',
@@ -183,6 +191,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'projects.cost_center_parent',
                 'projects.nk',
                 'projects.tanggal_mulai',
+                'projects.masa_pelaksanaan_end',
                 'units.name as divisi_name',
             ]);
 
@@ -385,6 +394,26 @@ class ProjectPeriodeListController extends BasicCRUDController
                 return $row->tanggal_mulai ? \Carbon\Carbon::parse($row->tanggal_mulai)->toDateString() : null;
             });
 
+            // Status Proyek
+            $dataTable->addColumn('status_proyek', function ($row) {
+                if (empty($row->masa_pelaksanaan_end)) {
+                    return '<span class="badge bg-danger">Tidak Aktif</span>';
+                }
+
+                $endDate = \Carbon\Carbon::parse($row->masa_pelaksanaan_end)->startOfDay();
+                $today = \Carbon\Carbon::today();
+
+                if ($endDate->greaterThanOrEqualTo($today)) {
+                    return '<span class="badge bg-success">Aktif</span>';
+                } else {
+                    return '<span class="badge bg-danger">Tidak Aktif</span>';
+                }
+            });
+
+            $dataTable->orderColumn('status_proyek', function ($query, $order) {
+                $query->orderBy('projects.masa_pelaksanaan_end', $order);
+            });
+
             // --- SORTING ---
             // 1. Sort Proyek
             $dataTable->orderColumn('projects.project_name', function ($query, $order) {
@@ -483,7 +512,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 return Gate::check('project_risk_recalculate');
             });
 
-            $dataTable->rawColumns(['status_risiko_html', 'status_monitoring_html']);
+            $dataTable->rawColumns(['status_risiko_html', 'status_monitoring_html', 'status_proyek']);
 
             // --- DEFAULT ORDERING (PRIORITAS) ---
             // $dataTable->order(function ($query) use ($user, $levelId, $u_step, $is_mr, $userProjectIds, $allProjectIds) {
@@ -727,7 +756,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             'divisi' => [
                 'label' => 'Filter Divisi',
                 'type' => 'select',
-                'classWrapper' => 'col-md-3',
+                'classWrapper' => 'col-md-2',
                 'parameters' => ['divisi', $divisiOptions, null, ['class' => 'form-select select2', 'placeholder' => 'Semua Divisi']],
                 'handler' => function($query, $key, $value) {
                     if (!empty($value)) {
@@ -735,7 +764,35 @@ class ProjectPeriodeListController extends BasicCRUDController
                     }
                 }
             ],
-            // --- UPDATE FILTER STATUS RISIKO ---
+            'status_proyek' => [
+                'label' => 'Status Proyek',
+                'type' => 'select',
+                'classWrapper' => 'col-md-2',
+                'parameters' => [
+                    'status_proyek',
+                    [
+                        'aktif' => 'Aktif',
+                        'tidak_aktif' => 'Tidak Aktif',
+                    ],
+                    null,
+                    [
+                        'class' => 'form-select select2',
+                        'placeholder' => 'Semua Status Proyek'
+                    ]
+                ],
+                'handler' => function($query, $key, $value) {
+                    if (empty($value)) return;
+
+                    if ($value === 'aktif') {
+                        $query->whereDate('projects.masa_pelaksanaan_end', '>=', \Carbon\Carbon::today());
+                    } elseif ($value === 'tidak_aktif') {
+                        $query->where(function($q) {
+                            $q->whereDate('projects.masa_pelaksanaan_end', '<', \Carbon\Carbon::today())
+                              ->orWhereNull('projects.masa_pelaksanaan_end');
+                        });
+                    }
+                }
+            ],
             'status_risiko' => [
                 'label' => 'Status Risiko',
                 'type' => 'select',
@@ -800,7 +857,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             'status_monitoring' => [
                 'label' => 'Status Monitoring',
                 'type' => 'select',
-                'classWrapper' => 'col-md-3',
+                'classWrapper' => 'col-md-2',
                 'parameters' => [
                     'status_monitoring',
                     [
