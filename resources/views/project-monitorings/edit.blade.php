@@ -1005,7 +1005,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-floating">
-                                    {{ Form::number('progress_perlakuan_risiko', null, ['class' => 'form-control', 'required' => 'required', 'max' => 100]) }}
+                                    {{ Form::number('progress_perlakuan_risiko', null, ['class' => 'form-control', 'required' => 'required', 'min' => 0, 'max' => 100, 'oninput' => 'if(this.value < 0) this.value = 0; if(this.value > 100) this.value = 100;']) }}
                                     <label>Progress Perlakuan Risiko</label>
                                 </div>
                             </div>
@@ -1023,7 +1023,7 @@
                             </div> --}}
                             <div class="col-12">
                                 <div class="form-floating">
-                                    <input type="text" class="form-control" id="timelineInput" name="timeline_perlakuan_risiko" required>
+                                    <input type="text" class="form-control bg-white" id="timelineInput" name="timeline_perlakuan_risiko" required>
                                     <label for="timelineInput">Waktu Perlakuan Risiko</label>
                                 </div>
                             </div>
@@ -1126,13 +1126,13 @@
                             <div class="col-md-6">
                                 <div class="form-floating">
                                     <input type="text" class="form-control inputmask-rupiah" name="realisasi_biaya_dampak" required>
-                                    <label>Realisasi Biaya</label>
+                                    <label>Realisasi Biaya Perlakuan Risiko</label>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-floating">
-                                    <input type="number" class="form-control" name="progress_dampak" required max="100">
-                                    <label>Progress (%)</label>
+                                    <input type="number" class="form-control" name="progress_dampak" required min="0" max="100" oninput="if(this.value < 0) this.value = 0; if(this.value > 100) this.value = 100;">
+                                    <label>Progress Perlakuan Risiko (%)</label>
                                 </div>
                             </div>
                             <div class="col-12">
@@ -1143,7 +1143,7 @@
                             </div>
                             <div class="col-12">
                                 <div class="form-floating">
-                                    <input type="text" class="form-control" id="timelineImpactInput" name="timeline_dampak" required>
+                                    <input type="text" class="form-control bg-white" id="timelineImpactInput" name="timeline_dampak" required>
                                     <label>Waktu Realisasi</label>
                                 </div>
                             </div>
@@ -1363,9 +1363,7 @@ $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
     // Tampilkan dokumen existing dari database
     const savedDocs = existingDampakDocs[id] || [];
     savedDocs.forEach(function(doc) {
-        // Memastikan jika deskripsi null dari database, diubah jadi string kosong agar tidak error "null"
         const descText = doc.description ? doc.description : '';
-
         tableDocument.append(`
             <tr class="existing-doc" data-doc-id="${doc.id}">
                 <td>
@@ -1380,6 +1378,27 @@ $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
                     <button type="button" class="btn btn-sm btn-danger btn-delete-db-doc" data-id="${doc.id}" data-type="dampak">
                         <i class="bx bx-trash"></i> Hapus
                     </button>
+                </td>
+            </tr>
+        `);
+    });
+
+    domEdited.find('input[type=file]').each(function() {
+        const fileName = $(this).prop('files')[0]?.name;
+        const docId = $(this).prop('id');
+        const descInput = domEdited.find(`input.input-file-description-array[data-ref="${docId}"]`);
+        const description = descInput.val() || '';
+
+        tableDocument.append(`
+            <tr data-id="${docId}">
+                <td>
+                    <span class="dokumen-filename text-truncate d-block" style="max-width: 200px;">${fileName}</span>
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm input-desc-impact" value="${description}" placeholder="Keterangan...">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-link btn-sm text-danger btn-delete-doc-impact">Hapus</button>
                 </td>
             </tr>
         `);
@@ -2016,28 +2035,33 @@ $(document).ready(function() {
                 tableDocument.closest('table').find('tfoot').show();
             }
 
-            tableDocument.on('input', '[name="deskripsi_dokumen[]"]', function() {
+            tableDocument.off('input', '[name="deskripsi_dokumen[]"]').on('input', '[name="deskripsi_dokumen[]"]', function() {
                 const value = $(this).val();
-                const id = $(this).closest('tr').data('id');
+                const rowId = $(this).closest('tr').data('id');
                 const penyebabRisikoId = $('#formUpdateRealisasi :input[name="penyebab_risiko_id"]').val();
                 const domCell = $('#table-penyebab-risiko tr[data-id="'+penyebabRisikoId+'"] td.column-action');
                 const domEdited = domCell.find('.dom-edited');
-
-                // console.log(id, domCell);
 
                 const domDeskripsi = domEdited.find('.input-file-description');
                 const deskripsi = domDeskripsi.val() ? JSON.parse(domDeskripsi.val()) : {};
-                deskripsi[id] = value;
+                deskripsi[rowId] = value;
                 domDeskripsi.val(JSON.stringify(deskripsi));
             });
 
-            tableDocument.on('click', '.delete-btn', function() {
-                const id = $(this).closest('tr').data('id');
+            tableDocument.off('click', '.delete-btn').on('click', '.delete-btn', function() {
+                const rowId = $(this).closest('tr').data('id');
                 const penyebabRisikoId = $('#formUpdateRealisasi :input[name="penyebab_risiko_id"]').val();
                 const domCell = $('#table-penyebab-risiko tr[data-id="'+penyebabRisikoId+'"] td.column-action');
                 const domEdited = domCell.find('.dom-edited');
+
                 $(this).closest('tr').remove();
-                domEdited.find(`#${id}`).remove();
+                domEdited.find(`#${rowId}`).remove();
+
+                const domDeskripsi = domEdited.find('.input-file-description');
+                const deskripsi = domDeskripsi.val() ? JSON.parse(domDeskripsi.val()) : {};
+                delete deskripsi[rowId];
+                domDeskripsi.val(JSON.stringify(deskripsi));
+
                 if (tableDocument.find('tr').length < 3) {
                     tableDocument.closest('table').find('tfoot').show();
                 }
