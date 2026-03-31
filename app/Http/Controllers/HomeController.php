@@ -1495,7 +1495,7 @@ class HomeController extends Controller
             }
 
             try {
-                $periodForApi = \Carbon\Carbon::createFromFormat('Y-m', $selectedPeriod)->format('Ym');
+                $periodForApi = \Carbon\Carbon::parse($selectedPeriod)->format('Ym');
                 $profitCenter = $selectedProject->meta['profit_center'] ?? null;
                 $hasilUsahaRecord = null;
 
@@ -1504,31 +1504,32 @@ class HomeController extends Controller
                     $hasilUsahaRecord = ProjectHasilUsaha::where('project_id', $selectedProject->id)->where('period', $periodForApi)->first();
 
                     // 2. Jika tidak ada, panggil API dan simpan hasilnya
-                    if (!$hasilUsahaRecord) {
-                        $apiResponse = (new ApiWika())->getHasilUsahaProject($periodForApi, $profitCenter);
 
-                        if ($apiResponse && $apiResponse['status'] && isset($apiResponse['data']['hasil_usaha'])) {
-                            $apiData = $apiResponse['data']['hasil_usaha'];
+                    // if (!$hasilUsahaRecord) {
+                    // }
+                    $apiResponse = (new ApiWika())->getHasilUsahaProject($periodForApi, $profitCenter);
 
-                            // Buat record baru di DB, dan simpan hasilnya ke $hasilUsahaRecord
-                            $hasilUsahaRecord = ProjectHasilUsaha::updateOrCreate(
-                                ['project_id' => $selectedProject->id, 'period' => $periodForApi],
-                                [
-                                    'profit_center'   => $profitCenter,
-                                    'response_data'   => $apiResponse['data'],
-                                    'kontrak_review'    => $apiData['kontrak_review'] ?? 0,
-                                    'kontrak_review_total'    => $apiData['kontrak_review_total'] ?? 0,
-                                    'progress_fisik_ra' => $apiData['progress_fisik_ra'] ?? 0,
-                                    'progress_fisik_ri' => $apiData['progress_fisik_ri'] ?? 0,
-                                    'penjualan_ra'      => $apiData['penjualan_ra'] ?? 0,
-                                    'penjualan_ri'      => $apiData['penjualan_ri'] ?? 0,
-                                    'lsp_review'        => $apiData['lsp_review'] ?? 0,
-                                    'lsp_ra'            => $apiData['lsp_ra'] ?? 0,
-                                    'lsp_ri'            => $apiData['lsp_ri'] ?? 0,
-                                    'lsp_proyeksi'      => $apiData['lsp_proyeksi'] ?? 0,
-                                ]
-                            );
-                        }
+                    if ($apiResponse && $apiResponse['status'] && isset($apiResponse['data']['hasil_usaha'])) {
+                        $apiData = $apiResponse['data']['hasil_usaha'];
+
+                        // Buat record baru di DB, dan simpan hasilnya ke $hasilUsahaRecord
+                        $hasilUsahaRecord = ProjectHasilUsaha::updateOrCreate(
+                            ['project_id' => $selectedProject->id, 'period' => $periodForApi],
+                            [
+                                'profit_center'   => $profitCenter,
+                                'response_data'   => $apiResponse['data'],
+                                'kontrak_review'    => $apiData['kontrak_review'] ?? 0,
+                                'kontrak_review_total'    => $apiData['kontrak_review_total'] ?? 0,
+                                'progress_fisik_ra' => $apiData['progress_fisik_ra'] ?? 0,
+                                'progress_fisik_ri' => $apiData['progress_fisik_ri'] ?? 0,
+                                'penjualan_ra'      => $apiData['penjualan_ra'] ?? 0,
+                                'penjualan_ri'      => $apiData['penjualan_ri'] ?? 0,
+                                'lsp_review'        => $apiData['lsp_review'] ?? 0,
+                                'lsp_ra'            => $apiData['lsp_ra'] ?? 0,
+                                'lsp_ri'            => $apiData['lsp_ri'] ?? 0,
+                                'lsp_proyeksi'      => $apiData['lsp_proyeksi'] ?? 0,
+                            ]
+                        );
                     }
 
                     // 3. Sekarang, isi $summaryData dari $hasilUsahaRecord (baik dari DB maupun API)
