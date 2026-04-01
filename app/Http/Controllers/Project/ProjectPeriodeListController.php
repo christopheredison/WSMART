@@ -38,6 +38,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             'render' => '(data, type, row) => row.project?.divisi?.name || "-"',
             'orderable' => true,
             'searchable' => true,
+            'class' => 'mw-10r',
         ],
         'project_id' => [
             'label' => 'Proyek',
@@ -46,7 +47,7 @@ class ProjectPeriodeListController extends BasicCRUDController
             'render' => '(data, type, row) => row.project?.project_name || "-"',
             'orderable' => true,
             'searchable' => true,
-            'class' => 'fw-bold',
+            'class' => 'fw-bold mw-15r',
         ],
         'ok' => [
             'label' => 'Nilai OK Total',
@@ -67,7 +68,25 @@ class ProjectPeriodeListController extends BasicCRUDController
             }',
             'orderable' => true,
             'searchable' => true,
-            'class' => 'mw-10r',
+            'class' => 'text-nowrap',
+        ],
+        'tanggal_selesai' => [
+            'label' => 'Tanggal Selesai',
+            'data' => 'tanggal_selesai_display',
+            'name' => 'projects.meta->bast1',
+            'render' => '(data, type, row) => {
+                const bast1 = row.project?.meta?.bast1;
+                if (!bast1 || bast1 === "-" || bast1 === "") return "-";
+
+                // Coba parsing tanggal
+                const date = new Date(bast1 + "T00:00:00");
+                if(isNaN(date.getTime())) return bast1; // Jika bukan format tanggal valid, tampilkan as-is
+
+                return date.toLocaleDateString("id-ID", { day:"numeric", month:"short", year:"numeric" });
+            }',
+            'orderable' => true,
+            'searchable' => true,
+            'class' => 'text-nowrap',
         ],
         'status_proyek' => [
             'label' => 'Status Proyek',
@@ -440,6 +459,12 @@ class ProjectPeriodeListController extends BasicCRUDController
                 $query->orderByRaw("projects.tanggal_mulai::date {$order} NULLS LAST");
             });
 
+            // 3.1 Sort Tanggal Selesai
+            $dataTable->orderColumn('projects.meta->bast1', function ($query, $order) {
+                // Di-cast ke date agar pengurutan waktu akurat
+                $query->orderByRaw("(projects.meta->>'bast1')::date {$order} NULLS LAST");
+            });
+
             // 4. Sort Nilai Risiko (Pastikan merujuk ke tabel utama agar tidak ambigu)
             $dataTable->orderColumn('skala_risiko', function ($query, $order) {
                 $query->orderByRaw("CAST(NULLIF(CAST(project_periode_lists.skala_risiko AS TEXT), '') AS NUMERIC) $order NULLS LAST");
@@ -479,6 +504,11 @@ class ProjectPeriodeListController extends BasicCRUDController
             // Filter untuk Tanggal Mulai - Cast to TEXT for Postgres
             $dataTable->filterColumn('projects.tanggal_mulai', function ($query, $keyword) {
                 $query->whereRaw("projects.tanggal_mulai::text ILIKE ?", ["%{$keyword}%"]);
+            });
+
+            // Filter untuk Tanggal Selesai (Diambil dari meta->bast1)
+            $dataTable->filterColumn('projects.meta->bast1', function ($query, $keyword) {
+                $query->whereRaw("projects.meta->>'bast1' ILIKE ?", ["%{$keyword}%"]);
             });
 
             $dataTable->addColumn('action_needed', function ($row) use ($user, $u_step, $levelId) {

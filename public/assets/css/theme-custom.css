@@ -9487,8 +9487,14 @@ html:not() .rotate-n270 {
 .mw-10r {
   min-width: 10rem;
 }
+.mw-15r {
+  min-width: 15rem;
+}
 .mw-20r {
   min-width: 20rem;
+}
+.mw-25r {
+  min-width: 25rem;
 }
 .mw-30r {
   min-width: 30rem;

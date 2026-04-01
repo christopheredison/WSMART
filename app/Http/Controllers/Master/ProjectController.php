@@ -349,7 +349,7 @@ class ProjectController extends BasicCRUDController
                     'batasan_biaya_perlakuan_risiko' => $batasanBiaya,
                     'cost_center_parent' => $costCenterParent,
                     'masa_pelaksanaan_start' => $projectData['tgl_mulai'] ?? null,
-                    'masa_pelaksanaan_end' => $projectData['tgl_selesai'] ?? null,
+                    'masa_pelaksanaan_end' => $projectData['bast1'] ?? null,
                     'tanggal_mulai' => $projectData['tanggal_mulai'] ?? null,
                     'meta'           => $projectData,
                 ]);
