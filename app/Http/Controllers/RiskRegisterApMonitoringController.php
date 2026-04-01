@@ -1526,7 +1526,12 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
 
             DB::commit();
 
-            $targetLink = route('risk-register-ap.monitorings.index', ['period' => $period->id, 'unit_id' => $unit->id]);
+            $targetLink = route('risk-register-ap.monitorings.index', [
+                'period'  => $period->id,
+                'unit_id' => $unit->id,
+                'quarter' => $validated['quarter'],
+                'month'   => $validated['month']
+            ]);
 
             if ($isFinal) {
                 // Notifikasi Publish
@@ -1569,7 +1574,12 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
 
         // Simpan status sebelum diubah untuk pengecekan notifikasi
         $currentStatus = $monitoring->status;
-        $targetLink = route('risk-register-ap.monitorings.index', ['period' => $period->id, 'unit_id' => $unit->id]);
+        $targetLink = route('risk-register-ap.monitorings.index', [
+            'period'  => $period->id,
+            'unit_id' => $unit->id,
+            'quarter' => $monitoring->quarter,
+            'month'   => $monitoring->month
+        ]);
 
         DB::transaction(function () use ($validated, $monitoring, $isUnitMr) {
             if ($validated['status_verifikasi'] == 'terima') {
@@ -1609,6 +1619,98 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         }
 
         return back()->with('success', 'Verifikasi berhasil disimpan.');
+    }
+
+    public function bulkVerifyMonitoring(Request $request, Periode $period)
+    {
+        // 1. Validasi Input
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:unit_risk_monitorings,id',
+            'status_verifikasi' => 'required|in:terima,tolak',
+            'catatan_verifikasi' => 'required_if:status_verifikasi,tolak|nullable|string|max:2000',
+        ]);
+
+        $user = Auth::user();
+        $count = 0;
+
+        // Ambil info dasar dari baris pertama untuk Notifikasi dan Parameter URL
+        $firstMonitoring = UnitRiskMonitoring::with('identifikasiRisiko.unit')->find($validated['ids'][0]);
+        $currentStatus = $firstMonitoring ? $firstMonitoring->status : null;
+        $unitId = $firstMonitoring ? $firstMonitoring->identifikasiRisiko->unit_id : null;
+        $quarter = $firstMonitoring ? $firstMonitoring->quarter : 1;
+        $month = $firstMonitoring ? $firstMonitoring->month : 1;
+
+        DB::beginTransaction();
+        try {
+            $monitorings = UnitRiskMonitoring::whereIn('id', $validated['ids'])->get();
+
+            foreach ($monitorings as $monitoring) {
+                $isUnitMr = $monitoring->identifikasiRisiko->unit->unit_mr == 1;
+
+                if ($validated['status_verifikasi'] == 'terima') {
+                    // Jika Diterima
+                    $monitoring->update(['is_approved' => true]);
+                } else {
+                    // Jika Ditolak
+                    $targetStatus = UnitRiskMonitoring::getReturnStatus($monitoring->status, $isUnitMr);
+
+                    $monitoring->update([
+                        'status' => $targetStatus,
+                        'is_approved' => false,
+                        'is_revision' => true,
+                    ]);
+                }
+
+                // Buat Catatan Verifikasi
+                RiskMonitoringNote::create([
+                    'risiko_id' => $monitoring->identifikasi_risiko_id,
+                    'type' => 1,
+                    'user_id' => $user->id,
+                    'status' => $validated['status_verifikasi'] == 'terima' ? 1 : 0,
+                    'notes' => $validated['catatan_verifikasi'],
+                    'quarter' => $monitoring->quarter,
+                    'month' => $monitoring->month,
+                    'year' => null,
+                ]);
+
+                $count++;
+            }
+
+            DB::commit();
+
+            $targetLink = route('risk-register-ap.monitorings.index', [
+                'period'  => $period->id,
+                'unit_id' => $unitId,
+                'quarter' => $quarter,
+                'month'   => $month
+            ]);
+
+            if ($validated['status_verifikasi'] == 'tolak' && $currentStatus) {
+                $msg = $count . ' Monitoring Risiko ditolak secara masal. Catatan: ' . $validated['catatan_verifikasi'];
+
+                // 1. Informasikan ke Risk Officer Anak Perusahaan (Drafter)
+                $this->sendNotificationCustom('RO_AP', $unitId, 'Monitoring Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+
+                // 2. Jika yang menolak adalah pihak MR (Status 3 = Officer MR, Status 4 = Owner MR)
+                if ($currentStatus >= 3) {
+                    $msgOwner = "{$count} Monitoring risiko dari Anak Perusahaan Anda ditolak oleh MR secara masal dan dikembalikan ke Drafter. Catatan: " . $validated['catatan_verifikasi'];
+                    $this->sendNotificationCustom('RW_AP', $unitId, 'Monitoring Masal Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil memverifikasi ' . $count . ' data monitoring.'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function getNotes(Request $request, $period, $riskId)

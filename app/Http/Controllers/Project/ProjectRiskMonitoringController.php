@@ -1816,6 +1816,33 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ]);
 
             DB::commit();
+
+            $targetLink = route('projects.monitorings.index', [
+                'project' => $project->id,
+                'quarter' => $validated['quarter'],
+                'tahun'   => $validated['tahun'],
+                'month'   => $validated['month']
+            ]);
+
+            if ($isFinal) {
+                // Notifikasi Publish (Step 5 Accept -> Notif ke RO Proyek & RW Proyek)
+                $msg = 'Monitoring Risiko Proyek telah disetujui penuh & berhasil dipublish.';
+                $this->sendNotificationCustom('RO_PROYEK', $project->id, 'Monitoring Dipublish', $msg, $targetLink, 'bx bx-check-shield');
+                $this->sendNotificationCustom('RW_PROYEK', $project->id, 'Monitoring Dipublish', $msg, $targetLink, 'bx bx-check-shield');
+            } else {
+                // Notifikasi Menunggu Verifikasi
+                $targetNotif = '';
+                if ($targetStatus == 2) $targetNotif = 'RW_PROYEK'; // Ke Step 2
+                elseif ($targetStatus == 3) $targetNotif = 'RO_DIVISI'; // Ke Step 3
+                elseif ($targetStatus == 4) $targetNotif = 'RO_MR'; // Ke Step 4
+                elseif ($targetStatus == 5) $targetNotif = 'RW_MR'; // Ke Step 5
+
+                if ($targetNotif) {
+                    $msg = 'Terdapat pengajuan monitoring risiko yang butuh verifikasi Anda.';
+                    $this->sendNotificationCustom($targetNotif, $project->id, 'Menunggu Verifikasi Monitoring', $msg, $targetLink, 'bx bx-bell');
+                }
+            }
+
             return response()->json(['success' => true, 'message' => 'Berhasil mengirim monitoring.']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1835,6 +1862,12 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
         $user = Auth::user();
         $count = 0;
+
+        $firstMonitoring = ProjectRiskMonitoring::find($validated['ids'][0]);
+        $currentStatus = $firstMonitoring ? $firstMonitoring->status : null;
+        $q  = $firstMonitoring ? $firstMonitoring->quarter : 1;
+        $t  = $firstMonitoring ? $firstMonitoring->tahun : date('Y');
+        $m  = $firstMonitoring ? $firstMonitoring->month : 1;
 
         DB::beginTransaction();
         try {
@@ -1869,6 +1902,28 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             }
 
             DB::commit();
+
+            $targetLink = route('projects.monitorings.index', [
+                'project' => $project->id,
+                'quarter' => $q,
+                'tahun'   => $t,
+                'month'   => $m
+            ]);
+
+            if ($validated['status_verifikasi'] == 'tolak' && $currentStatus) {
+                $msg = $count . ' Monitoring Risiko ditolak secara masal. Catatan: ' . $validated['catatan_verifikasi'];
+
+                if ($currentStatus == 2) {
+                    $this->sendNotificationCustom('RO_PROYEK', $project->id, 'Monitoring Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                } elseif ($currentStatus == 3) {
+                    $this->sendNotificationCustom('RO_PROYEK', $project->id, 'Monitoring Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                    $this->sendNotificationCustom('RW_PROYEK', $project->id, 'Monitoring Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                } elseif ($currentStatus == 4) {
+                    $this->sendNotificationCustom('RO_DIVISI', $project->id, 'Monitoring Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                } elseif ($currentStatus == 5) {
+                    $this->sendNotificationCustom('RO_MR', $project->id, 'Monitoring Masal Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                }
+            }
 
             return response()->json([
                 'success' => true,
@@ -1916,6 +1971,28 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ]);
         });
 
+        $targetLink = route('projects.monitorings.index', [
+            'project' => $project->id,
+            'quarter' => $monitoring->quarter,
+            'tahun'   => $monitoring->tahun,
+            'month'   => $monitoring->month
+        ]);
+
+        if ($validated['status_verifikasi'] == 'tolak') {
+            $msg = 'Monitoring Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $validated['notes'];
+
+            if ($currentStatus == 2) { // Ditolak Owner Project
+                $this->sendNotificationCustom('RO_PROYEK', $project->id, 'Monitoring Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+            } elseif ($currentStatus == 3) { // Ditolak Officer Divisi
+                $this->sendNotificationCustom('RO_PROYEK', $project->id, 'Monitoring Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                $this->sendNotificationCustom('RW_PROYEK', $project->id, 'Monitoring Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+            } elseif ($currentStatus == 4) { // Ditolak Officer MR
+                $this->sendNotificationCustom('RO_DIVISI', $project->id, 'Monitoring Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+            } elseif ($currentStatus == 5) { // Ditolak Owner MR
+                $this->sendNotificationCustom('RO_MR', $project->id, 'Monitoring Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+            }
+        }
+
         return back()->with('success', 'Verifikasi berhasil disimpan.');
     }
 
@@ -1959,30 +2036,82 @@ class ProjectRiskMonitoringController extends BasicCRUDController
     }
 
     public function destroyDocument(Request $request, $project, $monitoring, $documentId)
-{
-    try {
-        $type = $request->query('type'); // Ambil parameter dari request ajax
+    {
+        try {
+            $type = $request->query('type'); // Ambil parameter dari request ajax
 
-        // Pilih model berdasarkan tipe yang dikirim
-        if ($type === 'penyebab') {
-            $doc = PerlakuanPenyebabRisikoDocument::find($documentId);
-        } elseif ($type === 'dampak') {
-            $doc = PerlakuanDampakRisikoDocument::find($documentId);
-        } else {
-            return response()->json(['success' => false, 'message' => 'Tipe dokumen tidak valid'], 400);
+            // Pilih model berdasarkan tipe yang dikirim
+            if ($type === 'penyebab') {
+                $doc = PerlakuanPenyebabRisikoDocument::find($documentId);
+            } elseif ($type === 'dampak') {
+                $doc = PerlakuanDampakRisikoDocument::find($documentId);
+            } else {
+                return response()->json(['success' => false, 'message' => 'Tipe dokumen tidak valid'], 400);
+            }
+
+            if ($doc) {
+                // Karena di dalam Model sudah ada fungsi overriding delete()
+                // yang mengeksekusi Storage::delete($this->file_path);
+                // kita cukup memanggil ->delete() saja.
+                $doc->delete();
+                return response()->json(['success' => true, 'message' => 'Dokumen berhasil dihapus']);
+            }
+
+            return response()->json(['success' => false, 'message' => 'Dokumen tidak ditemukan'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Gagal menghapus dokumen: ' . $e->getMessage()], 500);
         }
-
-        if ($doc) {
-            // Karena di dalam Model sudah ada fungsi overriding delete()
-            // yang mengeksekusi Storage::delete($this->file_path);
-            // kita cukup memanggil ->delete() saja.
-            $doc->delete();
-            return response()->json(['success' => true, 'message' => 'Dokumen berhasil dihapus']);
-        }
-
-        return response()->json(['success' => false, 'message' => 'Dokumen tidak ditemukan'], 404);
-    } catch (\Exception $e) {
-        return response()->json(['success' => false, 'message' => 'Gagal menghapus dokumen: ' . $e->getMessage()], 500);
     }
-}
+
+    /**
+     * Helper untuk mengirim notifikasi berdasarkan Role pada Project
+     * Target: RO_PROYEK, RW_PROYEK, RO_DIVISI, RO_MR, RW_MR
+     */
+    private function sendNotificationCustom($target, $projectPeriodeListId, $title, $message, $link, $icon)
+    {
+        $users = collect();
+
+        $projectPeriodeList = \App\Models\ProjectPeriodeList::with('project')->find($projectPeriodeListId);
+        if (!$projectPeriodeList || !$projectPeriodeList->project) return;
+
+        $project = $projectPeriodeList->project;
+
+        if ($target === 'RO_PROYEK') {
+            // Risk Officer Project (Level 6)
+            $users = \App\Models\User::where('level_id', 6)->get();
+        }
+        elseif ($target === 'RW_PROYEK') {
+            // Risk Owner Project (Level 7)
+            $users = \App\Models\User::where('level_id', 7)->get();
+        }
+        elseif ($target === 'RO_DIVISI') {
+            // Risk Officer Divisi (Level 1) yang menaungi project (relasi via cost_center_parent atau unit_id)
+            $users = \App\Models\User::where('level_id', 1)->whereHas('unit', function($q) use ($project) {
+                $q->where('cost_center', $project->cost_center_parent)->orWhere('id', $project->unit_id);
+            })->get();
+        }
+        elseif ($target === 'RO_MR') {
+            // Risk Officer MR (Level 1, unit_mr = 1)
+            $users = \App\Models\User::where('level_id', 1)->whereHas('unit', function($q) {
+                $q->where('unit_mr', 1);
+            })->get();
+        }
+        elseif ($target === 'RW_MR') {
+            // Risk Owner MR (Level 2, unit_mr = 1)
+            $users = \App\Models\User::where('level_id', 2)->whereHas('unit', function($q) {
+                $q->where('unit_mr', 1);
+            })->get();
+        }
+
+        foreach ($users as $user) {
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'title'   => $title,
+                'message' => $message,
+                'icon'    => $icon,
+                'link'    => $link,
+                'read_at' => null,
+            ]);
+        }
+    }
 }

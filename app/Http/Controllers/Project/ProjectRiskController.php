@@ -3015,6 +3015,18 @@ class ProjectRiskController extends BasicCRUDController
             }
         }
 
+        $targetLink = route('projects.risks.index', ['project' => $projectPeriodeListId]);
+        $msg = 'Risk Officer Proyek telah mengirimkan / memperbaiki risiko untuk diverifikasi.';
+
+        // Jika dikirim dari step awal (Risk Officer ke Risk Owner Project)
+        if ($dataBatch->step_verification == 1) {
+            $this->sendNotificationCustom('RW_PROYEK', $projectPeriodeListId, 'Menunggu Verifikasi', $msg, $targetLink, 'bx bx-bell');
+        }
+        // Bisa tambahkan ElseIf jika Drafter langsung lompat ke step divisi/MR di skenario revisi.
+        elseif ($dataBatch->step_verification == 2) {
+            $this->sendNotificationCustom('RO_DIVISI', $projectPeriodeListId, 'Perbaikan Dikirim', $msg, $targetLink, 'bx bx-bell');
+        }
+
         return redirect()->route('projects.risks.index', ['project' => $projectPeriodeListId])->with('success', 'Pengiriman risiko berhasil dilakukan. Risiko telah dikirim untuk diverifikasi.');
     }
 
@@ -3125,6 +3137,8 @@ class ProjectRiskController extends BasicCRUDController
             // == JIKA DITOLAK ==
             else {
                 // LOGIKA PENGEMBALIAN (REJECTION FLOW)
+                $targetLink = route('projects.risks.index', ['project' => $projectRisk->project_periode_list_id]);
+                $msg = 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $validated['catatan_verifikasi'];
 
                 // Kasus 1: Ditolak oleh Officer MR (Step 3) -> Kembali ke Officer Divisi (Step 2)
                 if ($u_step == 3) {
@@ -3141,6 +3155,9 @@ class ProjectRiskController extends BasicCRUDController
                         'step_verification' => $targetStep,
                         'status' => DataBatch::STATUS_REJECTED_FROM_OFFICER_MR // 9
                     ]);
+
+                    // NOTIFIKASI: Jika Revisi, kasih notif ke Officer Divisi
+                    $this->sendNotificationCustom('RO_DIVISI', $projectRisk->project_periode_list_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
                 }
                 // Kasus 2: Ditolak oleh Owner MR (Step 4) -> Kembali ke Officer MR (Step 3)
                 else if ($u_step == 4) {
@@ -3157,6 +3174,9 @@ class ProjectRiskController extends BasicCRUDController
                         'step_verification' => $targetStep,
                         'status' => DataBatch::STATUS_REJECTED_FROM_OWNER_MR // 10
                     ]);
+
+                    // NOTIFIKASI: Jika Revisi, kasih notif ke Officer MR
+                    $this->sendNotificationCustom('RO_MR', $projectRisk->project_periode_list_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
                 }
                 // Kasus 3: Ditolak oleh Officer Divisi (Step 2) atau Owner Project (Step 1) -> Kembali ke Draft (Step 0/1)
                 else {
@@ -3172,6 +3192,15 @@ class ProjectRiskController extends BasicCRUDController
                         'step_verification' => $targetStep,
                         'status' => DataBatch::STATUS_REVISI // 5
                     ]);
+
+                    if ($u_step == 2) {
+                        // NOTIFIKASI: Tolak dari Officer Divisi, Notif ke Owner Project & Officer Project
+                        $this->sendNotificationCustom('RO_PROYEK', $projectRisk->project_periode_list_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                        $this->sendNotificationCustom('RW_PROYEK', $projectRisk->project_periode_list_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                    } else if ($u_step == 1) {
+                        // NOTIFIKASI: Tolak dari Owner Project, Notif ke Officer Project saja
+                        $this->sendNotificationCustom('RO_PROYEK', $projectRisk->project_periode_list_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                    }
                 }
 
                 $statusNote = 2;
@@ -3252,6 +3281,9 @@ class ProjectRiskController extends BasicCRUDController
         } else {
             // LOGIKA REJECT SAMA DENGAN VERIFIKASI SINGLE
             if ($u_step == 3) {
+                $targetLink = route('projects.risks.index', ['project' => $projectRisk->project_periode_list_id]);
+                $msg = 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $catatan;
+
                 // Reject dari Officer MR -> Ke Officer Divisi (Step 2)
                 $targetStep = 2;
                 $projectRisk->update([
@@ -3266,6 +3298,8 @@ class ProjectRiskController extends BasicCRUDController
                         'status' => DataBatch::STATUS_REJECTED_FROM_OFFICER_MR // 9
                     ]);
                 }
+
+                $this->sendNotificationCustom('RO_DIVISI', $projectRisk->project_periode_list_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
             } else if ($u_step == 4) {
                 // Reject dari Owner MR -> Ke Officer MR (Step 3)
                 $targetStep = 3;
@@ -3281,6 +3315,8 @@ class ProjectRiskController extends BasicCRUDController
                         'status' => DataBatch::STATUS_REJECTED_FROM_OWNER_MR // 10
                     ]);
                 }
+
+                $this->sendNotificationCustom('RO_MR', $projectRisk->project_periode_list_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
             } else {
                 // Reject dari Divisi/Project Owner -> Ke Draft (Step 1)
                 $targetStep = 1;
@@ -3295,6 +3331,13 @@ class ProjectRiskController extends BasicCRUDController
                         'step_verification' => $targetStep,
                         'status' => DataBatch::STATUS_REVISI // 5
                     ]);
+                }
+
+                if ($u_step == 2) {
+                    $this->sendNotificationCustom('RO_PROYEK', $projectRisk->project_periode_list_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                    $this->sendNotificationCustom('RW_PROYEK', $projectRisk->project_periode_list_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
+                } else if ($u_step == 1) {
+                    $this->sendNotificationCustom('RO_PROYEK', $projectRisk->project_periode_list_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
                 }
             }
             $noteStatus = 2;
@@ -3378,6 +3421,12 @@ class ProjectRiskController extends BasicCRUDController
                     ]);
 
                 ProjectRisk::determineMainRisks($project_id, $periode_id);
+
+                // NOTIFIKASI: Saat publish, beritahu Officer Project dan Owner Project
+                $targetLink = route('projects.risks.index', ['project' => $request->input('project_id')]);
+                $msg = 'Risiko Proyek Anda telah dipublish secara penuh oleh Owner Manajemen Risiko.';
+                $this->sendNotificationCustom('RO_PROYEK', $request->input('project_id'), 'Risiko Dipublish', $msg, $targetLink, 'bx bx-check-shield');
+                $this->sendNotificationCustom('RW_PROYEK', $request->input('project_id'), 'Risiko Dipublish', $msg, $targetLink, 'bx bx-check-shield');
             }
             // JIKA STEP BIASA
             else {
@@ -3386,6 +3435,20 @@ class ProjectRiskController extends BasicCRUDController
                     'status' => DataBatch::STATUS_VERIFIKASI, // 4
                     'step_verification' => $next_step
                 ]);
+
+                // NOTIFIKASI ESKALASI
+                $targetLink = route('projects.risks.index', ['project' => $request->input('project_id')]);
+                $msg = 'Terdapat data risiko baru/revisi yang membutuhkan verifikasi Anda.';
+
+                if ($next_step == 1) {
+                    $this->sendNotificationCustom('RW_PROYEK', $request->input('project_id'), 'Menunggu Verifikasi', $msg, $targetLink, 'bx bx-bell');
+                } elseif ($next_step == 2) {
+                    $this->sendNotificationCustom('RO_DIVISI', $request->input('project_id'), 'Menunggu Verifikasi', $msg, $targetLink, 'bx bx-bell');
+                } elseif ($next_step == 3) {
+                    $this->sendNotificationCustom('RO_MR', $request->input('project_id'), 'Menunggu Verifikasi', $msg, $targetLink, 'bx bx-bell');
+                } elseif ($next_step >= 4) {
+                    $this->sendNotificationCustom('RW_MR', $request->input('project_id'), 'Menunggu Verifikasi', $msg, $targetLink, 'bx bx-bell');
+                }
             }
 
             DB::commit();
@@ -3470,5 +3533,61 @@ class ProjectRiskController extends BasicCRUDController
         // Regex ini berarti: GANTI semua karakter YANG BUKAN (^) a-z, A-Z, 0-9, spasi, dan simbol2 standar DENGAN string kosong.
         // Simbol yang dibolehkan: . , - _ ( ) / %
         return preg_replace('/[^a-zA-Z0-9\s\.\,\-\_\(\)\/\%]/', '', $value);
+    }
+
+    /**
+     * Helper untuk mengirim notifikasi berdasarkan Role pada Project
+     * Target: RO_PROYEK, RW_PROYEK, RO_DIVISI, RO_MR, RW_MR
+     */
+    private function sendNotificationCustom($target, $projectPeriodeListId, $title, $message, $link, $icon)
+    {
+        $users = collect();
+
+        // Ambil data project untuk mengetahui unit divisi yang menaungi project ini
+        $projectPeriodeList = \App\Models\ProjectPeriodeList::with('project')->find($projectPeriodeListId);
+        if (!$projectPeriodeList || !$projectPeriodeList->project) return;
+
+        $project = $projectPeriodeList->project;
+        $unitId = $project->unit_id; // Sesuaikan dengan kolom relasi unit di tabel projects (misal: unit_id / cost_center)
+
+        if ($target === 'RO_PROYEK') {
+            // Risk Officer Project (Level 6)
+            // Catatan: Jika user project diikat dengan relasi pivot, ubah query ini.
+            // Asumsi dasar mengambil level_id 6 di project ini:
+            $users = \App\Models\User::where('level_id', 6)->get();
+        }
+        elseif ($target === 'RW_PROYEK') {
+            // Risk Owner Project (Level 7)
+            $users = \App\Models\User::where('level_id', 7)->get();
+        }
+        elseif ($target === 'RO_DIVISI') {
+            // Risk Officer Divisi (Level 1, unit terkait project)
+            if ($unitId) {
+                $users = \App\Models\User::where('level_id', 1)->where('unit_id', $unitId)->get();
+            }
+        }
+        elseif ($target === 'RO_MR') {
+            // Risk Officer MR: level 1, unit_mr = 1
+            $users = \App\Models\User::where('level_id', 1)->whereHas('unit', function($q) {
+                $q->where('unit_mr', 1);
+            })->get();
+        }
+        elseif ($target === 'RW_MR') {
+            // Risk Owner MR: level 2, unit_mr = 1
+            $users = \App\Models\User::where('level_id', 2)->whereHas('unit', function($q) {
+                $q->where('unit_mr', 1);
+            })->get();
+        }
+
+        foreach ($users as $user) {
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'title'   => $title,
+                'message' => $message,
+                'icon'    => $icon,
+                'link'    => $link,
+                'read_at' => null,
+            ]);
+        }
     }
 }
