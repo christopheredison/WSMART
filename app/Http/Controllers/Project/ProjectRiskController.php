@@ -1272,8 +1272,8 @@ class ProjectRiskController extends BasicCRUDController
             //     }
             // }
 
-            $projectRisk->projectRiskAnalisas()->create([]);
-            $projectRisk->projectRiskRencanaPerlakuans()->create([]);
+            $projectRisk->projectRiskAnalisa()->create([]);
+            $projectRisk->projectRiskRencanaPerlakuan()->create([]);
 
             foreach ($request->dampak_risiko as $textDampak) {
                 $projectRisk->dampakRisikoProjects()->create([
@@ -1818,7 +1818,7 @@ class ProjectRiskController extends BasicCRUDController
             $risk_tolerance = 0;
         }
 
-        if($projectRisk->projectRiskAnalisa->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF){
+        if($projectRisk->projectRiskAnalisa?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF){
             $risk_limit = ($project->nk ?? 0) * 0.03;
         } else{
             $risk_limit = 1/100*$risk_tolerance;
@@ -2610,6 +2610,7 @@ class ProjectRiskController extends BasicCRUDController
 
     // Fungsi cleanRupiah diletakkan di dalam controller
     private function cleanRupiah($value) {
+        if (empty($value)) return 0;
         return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
     }
 
@@ -3138,7 +3139,7 @@ class ProjectRiskController extends BasicCRUDController
             else {
                 // LOGIKA PENGEMBALIAN (REJECTION FLOW)
                 $targetLink = route('projects.risks.index', ['project' => $projectRisk->project_periode_list_id]);
-                $msg = 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $validated['catatan_verifikasi'];
+                $msg = 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $request->catatan_verifikasi;
 
                 // Kasus 1: Ditolak oleh Officer MR (Step 3) -> Kembali ke Officer Divisi (Step 2)
                 if ($u_step == 3) {
