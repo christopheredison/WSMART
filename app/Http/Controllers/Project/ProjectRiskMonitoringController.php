@@ -1946,6 +1946,8 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'notes' => 'required_if:status_verifikasi,tolak|nullable|string|max:2000',
         ]);
 
+        $currentStatus = $monitoring->status;
+
         DB::transaction(function () use ($validated, $monitoring) {
             if ($validated['status_verifikasi'] == 'terima') {
                 $monitoring->update(['is_approved' => true]);
