@@ -3281,10 +3281,10 @@ class ProjectRiskController extends BasicCRUDController
             $noteStatus = 1;
         } else {
             // LOGIKA REJECT SAMA DENGAN VERIFIKASI SINGLE
-            if ($u_step == 3) {
-                $targetLink = route('projects.risks.index', ['project' => $projectRisk->project_periode_list_id]);
-                $msg = 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $catatan;
+            $targetLink = route('projects.risks.index', ['project' => $projectRisk->project_periode_list_id]);
+            $msg = 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $catatan;
 
+            if ($u_step == 3) {
                 // Reject dari Officer MR -> Ke Officer Divisi (Step 2)
                 $targetStep = 2;
                 $projectRisk->update([
