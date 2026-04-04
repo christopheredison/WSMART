@@ -322,46 +322,65 @@ class CorporateRiskController extends Controller
             ->with('success', 'Konfirmasi risiko corporate berhasil dilakukan.');
     }
 
-    public function RiskPeriodeList()
+    public function RiskPeriodeList(Request $request)
     {
         $tableLegend = [
-            [
-              'icon' => '<span class="bx bx-show"></span>',
-              'label' => 'View'
-            ],
-            [
-              'icon' => '<span class="bx bx-list-check"></span>',
-              'label' => 'Risk Register'
-            ],
-            [
-              'icon' => '<span class="bx bx-radar"></span>',
-              'label' => 'Monitoring'
-            ],
-            [
-              'icon' => '<span class="bx bx-dock-bottom"></span>',
-              'label' => 'Loss Event'
-            ],
+            ['icon' => '<span class="bx bx-show"></span>', 'label' => 'View'],
+            ['icon' => '<span class="bx bx-list-check"></span>', 'label' => 'Risk Register'],
+            ['icon' => '<span class="bx bx-radar"></span>', 'label' => 'Monitoring'],
+            ['icon' => '<span class="bx bx-dock-bottom"></span>', 'label' => 'Loss Event'],
         ];
-        // Ambil semua data periode
-        $periodes = Periode::orderBy('tahun', 'desc')->get();
 
-        // Ambil periode aktif jika ada
+        $periodes = Periode::orderBy('tahun', 'desc')->get();
         $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
-        $userUnit = auth()->user()->unit;
-        $units = [];
+
+        $selectedPeriodeId = $request->query('pid') ?? ($activePeriode?->id);
+        $selectedPeriode = $selectedPeriodeId ? Periode::find($selectedPeriodeId) : null;
+        $selectedMonth = $request->query('month') ?? date('n');
 
         $dataToDisplay = collect();
+        $displayUnits = Unit::where('unit_type_id', 4)->get();
+        $units = $displayUnits->pluck('name', 'id');
 
-        $units = Unit::where('unit_type_id', 4)
-          // ->where('id', $userUnit->id)
-          ->pluck('name', 'id');
-        $periodes = Periode::orderBy('tahun', 'desc')->get();
+        $user = auth()->user();
+        $levelId = $user->level_id;
 
-        foreach ($units as $unit) {
-            foreach ($periodes as $periode) {
-                $dataToDisplay->push([
+        foreach ($displayUnits as $unit) {
+            if ($selectedPeriode) {
+                // 1. Hitung Total Risiko Korporat
+                $riskCount = IdentifikasiRisiko::where('unit_id', $unit->id)
+                    ->where('periode_id', $selectedPeriode->id)
+                    ->count();
+
+                // 2. Ambil Batch Terakhir
+                $lastBatch = DataBatch::where('unit_id', $unit->id)
+                    ->where('periode_id', $selectedPeriode->id)
+                    ->where('type', 1) // Type 1 jika menggunakan tabel batch divisi/korporat
+                    ->orderBy('batch', 'desc')
+                    ->first();
+
+                // 3. Ambil Monitoring Terakhir berdasarkan bulan
+                $latestMon = \App\Models\UnitRiskMonitoring::whereHas('identifikasiRisiko', function($q) use ($unit, $selectedPeriode) {
+                        $q->where('unit_id', $unit->id)->where('periode_id', $selectedPeriode->id);
+                    })
+                    ->where('month', $selectedMonth)
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                $tmpData = [
                     'unit' => $unit,
-                    'periode' => $periode,
+                    'periode' => $selectedPeriode,
+                    'risk_count' => $riskCount,
+                    'last_batch' => $lastBatch,
+                    'latest_mon' => $latestMon,
+                    'selected_month' => $selectedMonth
+                ];
+
+                $dataToDisplay->push([
+                    'unit' => $unit->name,
+                    'periode' => $selectedPeriode,
+                    'risk_status_html' => $this->generateCorpRiskStatusHtml($tmpData, $levelId),
+                    'mon_status_html' => $this->generateCorpMonStatusHtml($tmpData, $levelId)
                 ]);
             }
         }
@@ -369,10 +388,104 @@ class CorporateRiskController extends Controller
         return view('corporate-risk.risk-period-list', compact(
           'periodes',
           'activePeriode',
+          'selectedPeriode',
+          'selectedMonth',
           'tableLegend',
           'dataToDisplay',
           'units',
         ));
+    }
+
+    private function generateCorpRiskStatusHtml($item, $levelId)
+    {
+        $lastBatch = $item['last_batch'];
+        $unitId = $item['unit']->id;
+        $periodeId = $item['periode']->id;
+
+        if ($item['risk_count'] == 0) {
+            return '<span class="badge bg-light text-dark border border-dark">Belum Ada Risiko</span>';
+        }
+
+        // Cek Published
+        $allRisksStatus = IdentifikasiRisiko::where('unit_id', $unitId)
+            ->where('periode_id', $periodeId)
+            ->pluck('status')
+            ->toArray();
+
+        $totalRisk = count($allRisksStatus);
+        $publishedCount = count(array_filter($allRisksStatus, fn($s) => $s == IdentifikasiRisiko::STATUS_PUBLISHED));
+
+        if (($lastBatch && $lastBatch->finish) || ($totalRisk > 0 && $totalRisk === $publishedCount)) {
+            return '<div class="d-flex flex-column align-items-center">
+                        <span class="badge bg-success" data-bs-toggle="tooltip" title="Status: Published / Selesai">Published</span>
+                        <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Selesai</div>
+                    </div>';
+        }
+
+        $batchStep = $lastBatch ? $lastBatch->step_verification : 0;
+        $batchStatus = $lastBatch ? $lastBatch->status : 1;
+
+        $stepLabels = [
+            0 => 'Draft Korporat',
+            1 => 'Risk Owner Korporat',
+            2 => 'Direksi',
+        ];
+        $currentLabel = $stepLabels[$batchStep] ?? 'Proses Validasi';
+        if ($batchStatus == 5) $currentLabel = 'Dikembalikan / Revisi';
+
+        return '
+        <div class="d-flex flex-column align-items-center">
+            <span class="badge bg-info bg-opacity-10 text-info border border-info" data-bs-toggle="tooltip" title="Posisi saat ini: '.$currentLabel.'">
+                <i class="bx bx-time-five me-1"></i> Sedang Proses
+            </span>
+            <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">'.$currentLabel.'</div>
+        </div>';
+    }
+
+    private function generateCorpMonStatusHtml($item, $levelId)
+    {
+        $unitId = $item['unit']->id;
+        $periodeId = $item['periode']->id;
+        $selectedMonth = $item['selected_month'];
+
+        $rawMonitorings = \App\Models\UnitRiskMonitoring::whereHas('identifikasiRisiko', function($q) use ($unitId, $periodeId) {
+                $q->where('unit_id', $unitId)
+                  ->where('periode_id', $periodeId)
+                  ->where('is_closed', false);
+            })
+            ->where('month', $selectedMonth)
+            ->get();
+
+        if ($rawMonitorings->isEmpty()) {
+            return '<span class="badge bg-light text-dark border border-dark">Belum Dimonitor</span>';
+        }
+
+        $currentMonitorings = $rawMonitorings->groupBy('identifikasi_risiko_id')->map(fn($items) => $items->sortByDesc('id')->first());
+
+        $countTotal = $currentMonitorings->count();
+        $countApproved = $currentMonitorings->where('status', 100)->count();
+
+        $hasDraft = $currentMonitorings->where('status', 1)->isNotEmpty();
+
+        if ($countTotal > 0 && $countTotal === $countApproved) {
+            $namaBulan = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'];
+            $bulanStr = $namaBulan[(int)$selectedMonth] ?? $selectedMonth;
+
+            return '<div class="d-flex flex-column align-items-center">
+                        <span class="badge bg-success">Selesai ('.$bulanStr.')</span>
+                        <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Disetujui</div>
+                    </div>';
+        }
+
+        $labelPosisi = $hasDraft ? 'Draft Monitoring' : 'Proses Verifikasi';
+
+        return '
+        <div class="d-flex flex-column align-items-center">
+            <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                <i class="bx bx-radar me-1"></i> Sedang Proses
+            </span>
+            <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">'.$labelPosisi.'</div>
+        </div>';
     }
 
     public function riskPeriodeDashboard(Request $request, $period)

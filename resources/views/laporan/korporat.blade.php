@@ -30,19 +30,24 @@
                 @endforeach
               </select>
             </div>
-            {{-- <div class="col-md-5">
-              <label for="unit_id" class="form-label">Divisi</label>
-              <select name="unit_id" id="unit_id" class="form-select select2" required>
-                <option value="">Pilih Divisi...</option>
-                @if (is_iterable($units))
-                  @foreach ($units as $unit)
-                    <option value="{{ $unit->id }}">{{ $unit->name }}</option>
-                  @endforeach
-                @else
-                  <option value="{{ $units->id }}" selected>{{ $units->name }}</option>
-                @endif
+
+            <div class="col-md-5">
+              <label for="month" class="form-label">Bulan Monitoring</label>
+              <select name="month" id="month" class="form-select select2">
+                <option value="">Pilih Bulan (Opsional)...</option>
+                @php
+                  $months = [
+                    1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                    5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                    9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+                  ];
+                @endphp
+                @foreach($months as $num => $name)
+                  <option value="{{ $num }}">{{ $name }}</option>
+                @endforeach
               </select>
-            </div> --}}
+            </div>
+
             <div class="col-md-2 d-flex align-items-end">
               <button type="submit" id="exportBtn" class="btn btn-primary w-100 gap-1 d-flex flex-center">
                 <span id="btnIcon">
@@ -85,7 +90,8 @@ $(document).ready(function() {
             data: {
                 _token: $('input[name="_token"]').val(),
                 periode_id: periodeId,
-                unit_id: unitId
+                unit_id: unitId,
+                month: $('#month').val(),
             },
             xhrFields: {
                 responseType: 'blob'

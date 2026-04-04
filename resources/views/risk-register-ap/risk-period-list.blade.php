@@ -32,7 +32,7 @@
       </div>
       <div class="card-body dt-header-true">
         <div class="row g-2">
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label d-none" for="unit_status_filter">Filter Status Anak Perusahaan</label>
             <select id="unit_status_filter" class="form-select select2">
               <option value="Valid">Valid</option>
@@ -40,7 +40,7 @@
             </select>
           </div>
           @if($apAdmin)
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label d-none" for="unit_id_filter">Filter Anak Perusahaan</label>
               <select id="unit_id_filter" class="form-select select2">
                 <option value="">Semua Anak Perusahaan</option>
@@ -50,12 +50,29 @@
               </select>
             </div>
           @endif
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label d-none" for="periode_filter">Filter Periode</label>
             <select id="periode_filter" class="form-select select2">
               @foreach($periodes as $p)
                 <option value="{{ $p->id }}" {{ ($selectedPeriode && $selectedPeriode->id == $p->id) ? 'selected' : '' }}>
                   {{ $p->tahun }} {{ $p->status == 'active' ? '(Aktif)' : '' }}
+                </option>
+              @endforeach
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label d-none" for="month_filter">Filter Bulan</label>
+            <select id="month_filter" class="form-select select2">
+              @php
+                $months = [
+                  1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                  5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                  9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+                ];
+              @endphp
+              @foreach($months as $num => $name)
+                <option value="{{ $num }}" {{ $selectedMonth == $num ? 'selected' : '' }}>
+                  {{ $name }}
                 </option>
               @endforeach
             </select>
@@ -216,10 +233,14 @@
       });
     @endif
 
-    $('#periode_filter').on('change', function() {
-      const pid = $(this).val();
+    $('#periode_filter, #month_filter').on('change', function() {
+      const pid = $('#periode_filter').val();
+      const month = $('#month_filter').val();
+
       const url = new URL(window.location.href);
       url.searchParams.set('pid', pid);
+      url.searchParams.set('month', month);
+
       window.location.href = url.toString();
     });
 

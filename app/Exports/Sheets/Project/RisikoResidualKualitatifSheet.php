@@ -16,15 +16,11 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
-    protected $projectIds;
-    protected $month;
-    protected $tahun;
+    protected $risikos;
 
-    public function __construct(array $projectIds, $month = null, $tahun = null)
+    public function __construct(Collection $risikos)
     {
-        $this->projectIds = $projectIds;
-        $this->month = $month;
-        $this->tahun = $tahun;
+        $this->risikos = $risikos;
     }
 
     /**
@@ -203,20 +199,9 @@ class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, Wit
      */
     public function collection()
     {
-        $risikos = ProjectRisk::with([
-            'projectPeriodeList.project',
-            'projectRiskAnalisa.skalaDampakResidualObj',
-            'projectRiskAnalisa.skalaProbabilitasResidual',
-            'projectRiskAnalisa.areaDampakObj',
-            'peristiwaRisiko'
-        ])
-            // ->where('project_id', $this->projectId)
-            ->whereIn('project_id', $this->projectIds)
-            ->whereHas('projectRiskAnalisa', function ($query) {
-                $query->where('kategori_dampak', 'Kualitatif');
-            })
-            ->get()
-            ->sortByDesc('projectRiskAnalisa.skala_risiko_residual');
+        $risikos = $this->risikos->filter(function ($risiko) {
+            return optional($risiko->projectRiskAnalisa)->kategori_dampak === 'Kualitatif';
+        })->sortByDesc('projectRiskAnalisa.skala_risiko');
 
         $exportData = new Collection();
         $nomorUrut = 1;

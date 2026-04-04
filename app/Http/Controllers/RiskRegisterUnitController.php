@@ -475,6 +475,7 @@ class RiskRegisterUnitController extends Controller
         $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
         $selectedPeriodeId = $request->query('pid') ?? ($activePeriode?->id);
         $selectedPeriode = $selectedPeriodeId ? Periode::find($selectedPeriodeId) : null;
+        $selectedMonth = $request->query('month') ?? date('n');
         $user = auth()->user();
         $levelId = $user->level_id;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
@@ -521,6 +522,7 @@ class RiskRegisterUnitController extends Controller
                 $latestMon = UnitRiskMonitoring::whereHas('identifikasiRisiko', function($q) use ($unit, $selectedPeriode) {
                         $q->where('unit_id', $unit->id)->where('periode_id', $selectedPeriode->id);
                     })
+                    ->where('month', $selectedMonth)
                     ->orderBy('id', 'desc')
                     ->first();
 
@@ -530,6 +532,7 @@ class RiskRegisterUnitController extends Controller
                     'risk_count' => $riskCount,
                     'last_batch' => $lastBatch,
                     'latest_mon' => $latestMon,
+                    'selected_month' => $selectedMonth,
                 ];
 
                 $tmpData['is_my_turn_risk'] = $this->checkIsMyTurnRisk($lastBatch, $u_step, $levelId);
@@ -554,6 +557,7 @@ class RiskRegisterUnitController extends Controller
           'dataToDisplay',
           'viewAllDivision',
           'units',
+          'selectedMonth',
         ));
     }
 
@@ -2993,7 +2997,7 @@ class RiskRegisterUnitController extends Controller
                 if ($batchStatus == 5) {
                     return '
                     <div class="d-flex flex-column align-items-start">
-                        <a href="'.$redirectUrl.'" class="text-decoration-none">
+                        <a href="'.$redirectUrl.'" class="text-decoration-none align-self-center">
                             <span class="badge bg-danger cursor-pointer border border-danger text-white position-relative"
                                   data-bs-toggle="tooltip"
                                   title="Status: Dikembalikan. Mohon perbaiki data risiko sesuai catatan.">
@@ -3008,7 +3012,7 @@ class RiskRegisterUnitController extends Controller
                 else {
                     return '
                     <div class="d-flex flex-column align-items-start">
-                        <a href="'.$redirectUrl.'" class="text-decoration-none">
+                        <a href="'.$redirectUrl.'" class="text-decoration-none align-self-center">
                             <span class="badge bg-info cursor-pointer border border-info text-white position-relative"
                                   data-bs-toggle="tooltip"
                                   title="Status: Draft. Silakan lengkapi dan ajukan.">
@@ -3023,7 +3027,7 @@ class RiskRegisterUnitController extends Controller
                 // --- KONDISI VERIFIKATOR ---
                 return '
                 <div class="d-flex flex-column align-items-start">
-                    <a href="'.$redirectUrl.'" class="text-decoration-none">
+                    <a href="'.$redirectUrl.'" class="text-decoration-none align-self-center">
                         <span class="badge bg-warning text-dark border border-warning shadow-sm cursor-pointer position-relative"
                               data-bs-toggle="tooltip"
                               title="Klik untuk verifikasi: '.$currentLabel.'">
@@ -3069,26 +3073,24 @@ class RiskRegisterUnitController extends Controller
 
     private function generateMonitoringStatusHtml($item, $levelId, $is_mr)
     {
-        // 1. Cari Acuan Periode dari Monitoring Terakhir (Global Last ID di Unit & Periode ini)
-        $referenceMon = $item['latest_mon'];
         $unitId = $item['unit']->id;
         $periodeId = $item['periode']->id;
+        $selectedMonth = $item['selected_month'];
 
-        if (!$referenceMon) {
-            return '<span class="badge bg-light text-dark border border-dark">Belum Dimonitor</span>';
-        }
-
-        // 2. Ambil Raw History pada Quarter & Bulan Tersebut (Hanya untuk Risiko Aktif)
         $rawMonitorings = \App\Models\UnitRiskMonitoring::whereHas('identifikasiRisiko', function($q) use ($unitId, $periodeId) {
                 $q->where('unit_id', $unitId)
                   ->where('periode_id', $periodeId)
-                  ->where('is_closed', false); // Hanya risiko yang masih Open
+                  ->where('is_closed', false);
             })
-            ->where('quarter', $referenceMon->quarter)
-            ->where('month', $referenceMon->month)
+            ->where('month', $selectedMonth)
             ->get();
 
-        // 3. FILTER: Ambil Hanya Data TERBARU per Risiko
+        // Jika tidak ada data sama sekali di bulan tersebut
+        if ($rawMonitorings->isEmpty()) {
+            return '<span class="badge bg-light text-dark border border-dark">Belum Dimonitor</span>';
+        }
+
+        // 2. FILTER: Ambil Hanya Data TERBARU per Risiko di bulan itu
         $currentMonitorings = $rawMonitorings
             ->groupBy('identifikasi_risiko_id')
             ->map(function ($items) {
@@ -3097,20 +3099,19 @@ class RiskRegisterUnitController extends Controller
 
         // --- LOGIKA PENENTUAN STATUS KESELURUHAN ---
         $countTotal = $currentMonitorings->count();
-
-        // STATUS SELESAI HANYA JIKA SEMUA DATA TERBARU STATUSNYA = 100
         $countApproved = $currentMonitorings->where('status', 100)->count();
 
-        // Cek Flag Status Masing-masing Tahap
         $hasDraft = $currentMonitorings->where('status', 1)->isNotEmpty();
-        // Revisi jika statusnya 1 DAN flag is_revision bernilai true
         $hasRevision = $currentMonitorings->where('status', 1)->where('is_revision', true)->isNotEmpty();
-
         $hasVerifROD = $currentMonitorings->where('status', 2)->isNotEmpty();
         $hasVerifROMR = $currentMonitorings->where('status', 3)->isNotEmpty();
         $hasVerifROWMR = $currentMonitorings->where('status', 4)->isNotEmpty();
 
-        $redirectUrl = route('risk-register-unit.monitorings.index', ['period' => $periodeId, 'unit_id' => $unitId]);
+        $redirectUrl = route('risk-register-unit.monitorings.index', [
+            'period' => $periodeId,
+            'unit_id' => $unitId,
+            'month' => $selectedMonth
+        ]);
 
         $pulseDot = '
         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
@@ -3124,13 +3125,12 @@ class RiskRegisterUnitController extends Controller
 
         // --- SKENARIO 1: SELESAI SEMUA ---
         if ($countTotal > 0 && $countTotal === $countApproved) {
-            // Mapping nama bulan agar lebih mudah dibaca
             $namaBulan = [
                 1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
                 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
                 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
             ];
-            $bulanStr = $namaBulan[(int)$referenceMon->month] ?? $referenceMon->month;
+            $bulanStr = $namaBulan[(int)$selectedMonth] ?? $selectedMonth;
 
             $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Selesai</div>';
             return '<div class="d-flex flex-column align-items-start">
@@ -3139,9 +3139,8 @@ class RiskRegisterUnitController extends Controller
                     </div>';
         }
 
-        // --- SKENARIO 2: INPUTTER (Risk Officer Divisi / Officer MR saat input divisi MR) ---
+        // --- SKENARIO 2: INPUTTER ---
         $is_unit_mr = $item['unit']->unit_mr == 1;
-
         if ($levelId == 1 && (!$is_mr || ($is_mr && $is_unit_mr)) && $hasDraft) {
             $isMyMonTurn = true;
             if ($hasRevision) {
@@ -3176,13 +3175,11 @@ class RiskRegisterUnitController extends Controller
             $labelPosisi = 'Risk Owner MR';
         }
 
-        // Set Tooltip default untuk Verifikator jika belum di-set di Inputter
         if ($isMyMonTurn && empty($tooltipText)) {
             $tooltipText = 'Klik untuk verifikasi monitoring: ' . $labelPosisi;
         }
 
         // --- RENDER HTML ---
-        // 1. Tentukan Label Posisi (Jika View Only / Menunggu)
         if (!$isMyMonTurn) {
             if ($hasDraft) $labelPosisi = ($hasRevision) ? 'Dikembalikan ke Risk Officer Divisi' : 'Risk Officer Divisi';
             elseif ($hasVerifROD) $labelPosisi = 'Risk Owner Divisi';
@@ -3194,28 +3191,21 @@ class RiskRegisterUnitController extends Controller
 
         $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: ' . $labelPosisi . '</div>';
 
-        // 2. Jika Giliran User & Punya Akses (Tombol Aktif)
         if ($isMyMonTurn) {
             return '
                 <div class="d-flex flex-column align-items-start">
-                    <a href="'.$redirectUrl.'" class="text-decoration-none">
-                        <span class="badge '.$badgeColor.' cursor-pointer position-relative"
-                              data-bs-toggle="tooltip"
-                              title="'.$tooltipText.'">
+                    <a href="'.$redirectUrl.'" class="text-decoration-none align-self-center">
+                        <span class="badge '.$badgeColor.' cursor-pointer position-relative" data-bs-toggle="tooltip" title="'.$tooltipText.'">
                             <i class="bx bx-radar bx-flashing me-1"></i> '.$statusLabel.'
                             '.$pulseDot.'
                         </span>
                     </a>
                     '.$positionHtml.'
                 </div>';
-        }
-        // 3. Jika Menunggu / View Only (Tombol Pasif)
-        else {
+        } else {
             return '
                 <div class="d-flex flex-column align-items-start">
-                    <div class="d-inline-block position-relative"
-                        data-bs-toggle="tooltip"
-                        title="'.$tooltipText.'">
+                    <div class="d-inline-block position-relative" data-bs-toggle="tooltip" title="'.$tooltipText.'">
                         <span class="badge bg-info bg-opacity-10 text-info border border-info">
                             <i class="bx bx-radar me-1"></i> Proses Monitoring
                         </span>

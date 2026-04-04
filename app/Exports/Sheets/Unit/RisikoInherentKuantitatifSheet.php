@@ -2,7 +2,6 @@
 
 namespace App\Exports\Sheets\Unit;
 
-use App\Models\IdentifikasiRisiko;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -10,45 +9,40 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
 {
-    private $periodeId;
-    private $unitId;
+    private $risikos;
 
-    public function __construct(int $periodeId, int $unitId)
+    public function __construct(Collection $risikos)
     {
-        $this->periodeId = $periodeId;
-        $this->unitId = $unitId;
+        $this->risikos = $risikos;
     }
 
-    /**
-     * @return string
-     */
+    private function getFilteredRisikos()
+    {
+        return $this->risikos->filter(function ($risiko) {
+            return $risiko->riskAnalysis && $risiko->riskAnalysis->kategori_dampak === 'Kuantitatif';
+        })->values();
+    }
+
     public function title(): string
     {
         return 'Risiko Inherent Kuantitatif';
     }
 
-    /**
-     * @return array
-     */
     public function headings(): array
     {
         return [];
     }
 
-    /**
-     * Mendaftarkan event untuk memanipulasi sheet.
-     */
     public function registerEvents(): array
     {
+        $risikosCount = $this->getFilteredRisikos()->count();
+
         return [
-            AfterSheet::class => function (AfterSheet $event) {
+            AfterSheet::class => function (AfterSheet $event) use ($risikosCount) {
                 $sheet = $event->sheet->getDelegate();
                 $sheet->insertNewRowBefore(1, 2);
 
@@ -59,7 +53,7 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 $sheet->setCellValue('D1', 'Peristiwa Risiko');
                 $sheet->setCellValue('E1', 'Risiko Inherent');
 
-                // Row 2: Sub-header untuk Risiko Inherent
+                // Row 2: Sub-header
                 $sheet->setCellValue('E2', 'Asumsi Perhitungan Dampak');
                 $sheet->setCellValue('F2', 'Nilai Dampak');
                 $sheet->setCellValue('G2', 'Skala Dampak BUMN');
@@ -69,16 +63,14 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 $sheet->setCellValue('K2', 'Skala Risiko BUMN');
                 $sheet->setCellValue('L2', 'Level Risiko BUMN');
 
-                // Merge sel header vertikal untuk kolom yang tidak punya sub-header (A-D)
+                // Merge
                 $mergeColumns = ['A', 'B', 'C', 'D'];
                 foreach ($mergeColumns as $col) {
                     $sheet->mergeCells("{$col}1:{$col}2");
                 }
-
-                // Merge sel header "Risiko Inherent" secara horizontal (dari E1 sampai L1)
                 $sheet->mergeCells('E1:L1');
 
-                // Atur style untuk header utama (Row 1) - Biru
+                // Styles
                 $headerStyle = [
                     'alignment' => [
                         'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
@@ -98,49 +90,29 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 ];
                 $sheet->getStyle('A1:L2')->applyFromArray($headerStyle);
 
-                // Style khusus untuk sub-header (row 2 kolom E-L) - Background abu-abu
                 $subHeaderStyle = [
-                    'alignment' => [
-                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-                    ],
-                    'font' => ['bold' => true],
                     'fill' => [
                         'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
                         'startColor' => ['rgb' => 'DBDBDB']
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000']
-                        ]
                     ]
                 ];
                 $sheet->getStyle('E2:L2')->applyFromArray($subHeaderStyle);
 
-                $dataStyle = [
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000']
-                        ]
-                    ]
-                ];
-                
-                // Hitung jumlah data aktual untuk border yang tepat
-                $risikosCount = \App\Models\IdentifikasiRisiko::where('periode_id', $this->periodeId)
-                    ->where('unit_id', $this->unitId)
-                    ->whereHas('riskAnalysis', function ($query) {
-                        $query->where('kategori_dampak', 'Kuantitatif');
-                    })
-                    ->count();
-                
-                // Border hanya untuk row yang berisi data (header + data aktual)
                 if ($risikosCount > 0) {
-                    $maxDataRow = 2 + $risikosCount; // Row 2 (header) + jumlah data aktual
-                    $sheet->getStyle('A3:L' . $maxDataRow)->applyFromArray($dataStyle);
-                    
-                    // Tambahkan pewarnaan background untuk Level Risiko BUMN
+                    $maxDataRow = 2 + $risikosCount;
+                    $sheet->getStyle('A3:L' . $maxDataRow)->applyFromArray([
+                        'borders' => [
+                            'allBorders' => [
+                                'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                                'color' => ['rgb' => '000000']
+                            ]
+                        ],
+                        'alignment' => [
+                            'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP,
+                            'wrapText' => true,
+                        ]
+                    ]);
+
                     $this->applyLevelRisikoColoring($sheet, $maxDataRow);
                 }
 
@@ -151,21 +123,14 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
         ];
     }
 
-    /**
-     * Apply coloring untuk Level Risiko BUMN berdasarkan nilai level risiko
-     */
     private function applyLevelRisikoColoring($sheet, $maxRow)
     {
-        // Kolom Level Risiko BUMN (L)
-        $levelRisikoColumn = 'L';
-        
-        // Mulai dari row 3 (setelah header)
         for ($row = 3; $row <= $maxRow; $row++) {
-            $cellValue = $sheet->getCell($levelRisikoColumn . $row)->getValue();
+            $cellValue = $sheet->getCell('L' . $row)->getValue();
             $backgroundColor = $this->getLevelRisikoBackgroundColor($cellValue);
-            
+
             if ($backgroundColor) {
-                $sheet->getStyle($levelRisikoColumn . $row)->applyFromArray([
+                $sheet->getStyle('L' . $row)->applyFromArray([
                     'fill' => [
                         'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
                         'startColor' => ['rgb' => $backgroundColor]
@@ -175,59 +140,29 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
         }
     }
 
-    /**
-     * Get background color berdasarkan level risiko
-     */
     private function getLevelRisikoBackgroundColor($levelRisiko)
     {
-        if (!$levelRisiko || $levelRisiko === '-') {
-            return null;
-        }
-        
-        $levelRisiko = strtolower(trim($levelRisiko));
-        
-        switch ($levelRisiko) {
-            case 'low':
-                return '92D050'; // Hijau Tua
-            case 'low to moderate':
-                return 'C6E0B4'; // Hijau Muda
-            case 'moderate':
-                return 'FFFF00'; // Kuning
-            case 'moderate to high':
-                return 'FFC000'; // Orange
-            case 'high':
-                return 'FF0000'; // Merah
-            default:
-                return null;
+        if (!$levelRisiko || $levelRisiko === '-') return null;
+
+        switch (strtolower(trim($levelRisiko))) {
+            case 'low': return '92D050';
+            case 'low to moderate': return 'C6E0B4';
+            case 'moderate': return 'FFFF00';
+            case 'moderate to high': return 'FFC000';
+            case 'high': return 'FF0000';
+            default: return null;
         }
     }
 
-    /**
-     * @return Collection
-     */
     public function collection()
     {
-        // Ambil data utama dan urutkan berdasarkan skala risiko tertinggi
-        $risikos = IdentifikasiRisiko::with([
-                'unit',
-                'peristiwaRisiko',
-                'riskAnalysis.skalaDampakObj',
-                'riskAnalysis.skalaProbabilitas'
-            ])
-            ->where('periode_id', $this->periodeId)
-            ->where('unit_id', $this->unitId)
-            ->whereHas('riskAnalysis', function ($query) {
-                $query->where('kategori_dampak', 'Kuantitatif');
-            })
-            ->get()
-            ->sortByDesc('riskAnalysis.skala_risiko');
-
+        $risikos = $this->getFilteredRisikos();
         $exportData = new Collection();
         $nomorUrut = 1;
 
         foreach ($risikos as $risiko) {
             $analisa = $risiko->riskAnalysis;
-            
+
             $rowData = [
                 'no' => $nomorUrut,
                 'nama_bumn' => 'PT Wijaya Karya (Persero) Tbk',
@@ -250,50 +185,20 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
         return $exportData;
     }
 
-    /**
-     * Format currency to Rupiah
-     */
-    private function formatCurrency($value)
-    {
-        if ($value == 0) return 'Rp0';
-        return 'Rp' . number_format($value, 0, ',', '.');
-    }
+    private function formatCurrency($value) { return $value == 0 ? 'Rp0' : 'Rp' . number_format($value, 0, ',', '.'); }
+    private function formatPercentage($value) { return $value . '%'; }
 
-    /**
-     * Format percentage
-     */
-    private function formatPercentage($value)
-    {
-        return $value . '%';
-    }
-
-    /**
-     * Format skala dampak dengan deskripsi
-     */
     private function formatSkalaDampak($analisa)
     {
         $skala = $analisa->skala_dampak ?? '-';
         $deskripsi = optional($analisa->skalaDampakObj)->deskripsi ?? '';
-        
-        if ($skala !== '-' && $deskripsi) {
-            return $skala . ' - ' . $deskripsi;
-        }
-        
-        return $skala;
+        return ($skala !== '-' && $deskripsi) ? $skala . ' - ' . $deskripsi : $skala;
     }
 
-    /**
-     * Format skala probabilitas dengan deskripsi
-     */
     private function formatSkalaProbabilitas($analisa)
     {
         $tingkat = optional($analisa->skalaProbabilitas)->tingkat ?? '-';
         $skala = optional($analisa->skalaProbabilitas)->skala ?? '';
-        
-        if ($tingkat !== '-' && $skala) {
-            return $tingkat . ' - ' . $skala;
-        }
-        
-        return $tingkat;
+        return ($tingkat !== '-' && $skala) ? $tingkat . ' - ' . $skala : $tingkat;
     }
 }

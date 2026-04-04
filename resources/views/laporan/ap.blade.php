@@ -21,7 +21,7 @@
         <form id="exportForm">
           @csrf
           <div class="row g-3">
-            <div class="col-md-5">
+            <div class="col-md-3">
               <label for="periode_id" class="form-label">Periode</label>
               <select name="periode_id" id="periode_id" class="form-select select2" required>
                 <option value="">Pilih Periode...</option>
@@ -30,10 +30,26 @@
                 @endforeach
               </select>
             </div>
-            <div class="col-md-5">
-              <label for="unit_id" class="form-label">Divisi / Unit</label>
+            <div class="col-md-3">
+              <label for="month" class="form-label">Bulan Monitoring</label>
+              <select name="month" id="month" class="form-select select2">
+                <option value="">Pilih Bulan (Opsional)...</option>
+                @php
+                  $months = [
+                    1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                    5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                    9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+                  ];
+                @endphp
+                @foreach($months as $num => $name)
+                  <option value="{{ $num }}">{{ $name }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="unit_id" class="form-label">Anak Perusahaan</label>
               <select name="unit_id" id="unit_id" class="form-select select2" required>
-                <option value="">Pilih Divisi...</option>
+                <option value="">Pilih AP...</option>
                 @if (is_iterable($units))
                   @foreach ($units as $unit)
                     <option value="{{ $unit->id }}">{{ $unit->name }}</option>
@@ -66,38 +82,39 @@
 $(document).ready(function() {
     $('#exportForm').on('submit', function(e) {
         e.preventDefault();
-        
+
         // Validasi form
         const periodeId = $('#periode_id').val();
         const unitId = $('#unit_id').val();
-        
+
         if (!periodeId || !unitId) {
             alert('Harap pilih periode dan unit terlebih dahulu.');
             return;
         }
-        
+
         showLoading();
-        
+
         $.ajax({
             url: '{{ route("laporan.ap.export") }}',
             type: 'POST',
             data: {
                 _token: $('input[name="_token"]').val(),
                 periode_id: periodeId,
-                unit_id: unitId
+                unit_id: unitId,
+                month: $('#month').val(),
             },
             xhrFields: {
                 responseType: 'blob'
             },
             success: function(data, status, xhr) {
                 hideLoading();
-                const blob = new Blob([data], { 
-                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+                const blob = new Blob([data], {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 });
-                
+
                 const disposition = xhr.getResponseHeader('Content-Disposition');
                 let filename = 'Laporan_Risk_Register.xlsx';
-                
+
                 if (disposition && disposition.indexOf('filename=') !== -1) {
                     const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
                     const matches = filenameRegex.exec(disposition);
@@ -105,7 +122,7 @@ $(document).ready(function() {
                         filename = matches[1].replace(/['"]/g, '');
                     }
                 }
-                
+
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.style.display = 'none';
@@ -118,13 +135,13 @@ $(document).ready(function() {
             },
             error: function(xhr, status, error) {
                 hideLoading();
-                
+
                 let errorMsg = 'Gagal membuat laporan Excel. Silakan coba lagi.';
-                
+
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
-                
+
                 Swal.fire({
                     title: 'Error',
                     text: errorMsg,
@@ -134,13 +151,13 @@ $(document).ready(function() {
             }
         });
     });
-    
+
     function showLoading() {
         $('#exportBtn').prop('disabled', true);
         $('#btnIcon').html('<div class="spinner-border spinner-border-sm me-1" role="status"></div>');
         $('#btnText').text('Generating...');
     }
-    
+
     function hideLoading() {
         $('#exportBtn').prop('disabled', false);
         $('#btnIcon').html('<i class="bx bx-spreadsheet"></i>');

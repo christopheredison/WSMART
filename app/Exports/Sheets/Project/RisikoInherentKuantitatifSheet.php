@@ -200,7 +200,7 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
     public function collection()
     {
         $risikos = $this->risikos->filter(function ($risiko) {
-            return optional($risiko->projectRiskAnalisa)->kategori_dampak === 'Kualitatif';
+            return optional($risiko->projectRiskAnalisa)->kategori_dampak === 'Kuantitatif';
         })->sortByDesc('projectRiskAnalisa.skala_risiko');
 
         $exportData = new Collection();

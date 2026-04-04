@@ -29,19 +29,28 @@ class LaporanController extends Controller
         $request->validate([
             'periode_id' => 'required|exists:periodes,id',
             'unit_id'    => 'required|exists:units,id',
+            'month'      => 'nullable|integer|between:1,12',
         ]);
 
         try {
             $periodeId = $request->input('periode_id');
             $unitId    = $request->input('unit_id');
+            $month     = $request->input('month');
 
             $periode = Periode::find($periodeId);
             $unit    = Unit::find($unitId);
 
-            $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . '_' . $periode->tahun . '.xlsx';
+            $namaBulan = [
+                1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+            ];
+            $monthString = $month ? '_' . $namaBulan[(int)$month] : '';
+
+            $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
 
             $fileContents = Excel::raw(
-                new LaporanUnitExport($periodeId, $unitId),
+                new LaporanUnitExport($periodeId, $unitId, $month),
                 \Maatwebsite\Excel\Excel::XLSX
             );
 
@@ -50,8 +59,9 @@ class LaporanController extends Controller
                 'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
             ]);
         } catch (\Exception $e) {
-            Log::error('Gagal export laporan unit: ' . $e->getMessage());
-            return back()->with('error', 'Gagal membuat laporan Excel. Silakan coba lagi.');
+            Log::error('Gagal export laporan korporat: ' . $e->getMessage());
+
+            return response()->json(['message' => 'Gagal membuat laporan Excel: ' . $e->getMessage()], 500);
         }
     }
 
@@ -68,19 +78,28 @@ class LaporanController extends Controller
         $request->validate([
             'periode_id' => 'required|exists:periodes,id',
             'unit_id'    => 'required|exists:units,id',
+            'month'      => 'nullable|integer|between:1,12',
         ]);
 
         try {
             $periodeId = $request->input('periode_id');
             $unitId    = $request->input('unit_id');
+            $month     = $request->input('month');
 
             $periode = Periode::find($periodeId);
             $unit    = Unit::find($unitId);
 
-            $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . '_' . $periode->tahun . '.xlsx';
+            $namaBulan = [
+                1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+            ];
+            $monthString = $month ? '_' . $namaBulan[(int)$month] : '';
+
+            $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
 
             $fileContents = Excel::raw(
-                new LaporanUnitExport($periodeId, $unitId),
+                new LaporanUnitExport($periodeId, $unitId, $month),
                 \Maatwebsite\Excel\Excel::XLSX
             );
 
@@ -90,14 +109,14 @@ class LaporanController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Gagal export laporan unit: ' . $e->getMessage());
-            return back()->with('error', 'Gagal membuat laporan Excel. Silakan coba lagi.');
+            return response()->json(['message' => 'Gagal generate laporan: ' . $e->getMessage()], 500);
         }
     }
 
     public function ap()
     {
         $periodes = Periode::orderBy('tahun', 'desc')->get();
-        $units = Gate::check('risk_register_all_unit') ? Unit::where('unit_type_id', 2)->get() : collect([auth()->user()->unit]);
+        $units = Gate::check('ap_admin') ? Unit::where('unit_type_id', 2)->get() : collect([auth()->user()->unit]);
 
         return view('laporan.ap', compact('periodes', 'units'));
     }
@@ -107,19 +126,28 @@ class LaporanController extends Controller
         $request->validate([
             'periode_id' => 'required|exists:periodes,id',
             'unit_id'    => 'required|exists:units,id',
+            'month'      => 'nullable|integer|between:1,12',
         ]);
 
         try {
             $periodeId = $request->input('periode_id');
             $unitId    = $request->input('unit_id');
+            $month     = $request->input('month');
 
             $periode = Periode::find($periodeId);
             $unit    = Unit::find($unitId);
 
-            $fileName = 'Laporan_Risk_' . str_replace(' ', '_', $unit->name) . '_' . $periode->tahun . '.xlsx';
+            $namaBulan = [
+                1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+            ];
+            $monthString = $month ? '_' . $namaBulan[(int)$month] : '';
+
+            $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
 
             $fileContents = Excel::raw(
-                new LaporanUnitExport($periodeId, $unitId),
+                new LaporanUnitExport($periodeId, $unitId, $month),
                 \Maatwebsite\Excel\Excel::XLSX
             );
 
@@ -128,8 +156,9 @@ class LaporanController extends Controller
                 'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
             ]);
         } catch (\Exception $e) {
-            Log::error('Gagal export laporan unit: ' . $e->getMessage());
-            return back()->with('error', 'Gagal membuat laporan Excel. Silakan coba lagi.');
+            Log::error('Gagal export laporan AP: ' . $e->getMessage());
+
+            return response()->json(['message' => 'Gagal generate laporan: ' . $e->getMessage()], 500);
         }
     }
 
