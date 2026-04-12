@@ -49,7 +49,9 @@ class PerlakuanDampakRisikoUnitDocument extends Model
 
     public function delete()
     {
-        Storage::delete($this->file_path);
+        if ($this->file_path && Storage::disk('public')->exists($this->file_path)) {
+            Storage::disk('public')->delete($this->file_path);
+        }
         return parent::delete();
     }
 }

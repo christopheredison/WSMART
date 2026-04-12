@@ -64,4 +64,9 @@ class PerlakuanDampakRisikoUnit extends Model
     public function lastMonitoring() {
         return $this->hasOne(PerlakuanDampakMonitoringUnit::class, 'perlakuan_dampak_id')->orderBy('id', 'desc');
     }
+
+    public function documents()
+    {
+        return $this->hasMany(PerlakuanDampakRisikoUnitDocument::class, 'perlakuan_dampak_risiko_unit_id', 'id');
+    }
 }

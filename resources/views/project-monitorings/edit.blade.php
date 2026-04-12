@@ -46,6 +46,81 @@
                     <h4 class="mb-0 ff-heading-sm">Nilai Risiko Residual Realisasi</h4>
                 </div>
             </div>
+
+            {{-- PHP Helpers untuk Previous Data --}}
+            @php
+                $prevExists = $previousMonitoring !== null;
+                $monthNamesArray = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+                $prevPeriode = $prevExists ? ($monthNamesArray[(int)$previousMonitoring->month] . ' ' . $previousMonitoring->tahun) : '-';
+                $prevDate = $prevExists ? \Carbon\Carbon::parse($previousMonitoring->created_at)->translatedFormat('d F Y') : '-';
+
+                $prevImpactVal   = $prevExists ? $previousMonitoring->nilai_dampak : 0;
+                $prevImpactScale = $prevExists ? $previousMonitoring->skala_dampak : '-';
+                $prevImpactScaleDesc = $prevExists ? ($previousMonitoring->skalaDampakObj?->deskripsi ?? '-') : '-';
+
+                $prevProbVal     = $prevExists ? $previousMonitoring->nilai_probabilitas : 0;
+                $prevProbScale   = $prevExists ? ($previousMonitoring->skalaProbabilitas?->tingkat ?? '-') : '-';
+                $prevProbScaleDesc= $prevExists ? ($previousMonitoring->skalaProbabilitas?->skala ?? '-') : '-';
+
+                $prevExposure    = $prevExists ? $previousMonitoring->eksposure_risiko : 0;
+                $prevRiskLevel   = $prevExists ? $previousMonitoring->level_risiko : '-';
+                $prevRiskScale   = $prevExists ? $previousMonitoring->skala_risiko : '-';
+            @endphp
+
+            <div class="col-12 mb-4">
+                <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #696cff !important; background: linear-gradient(135deg, #f5f5ff 0%, #eef1ff 100%);">
+                    <div class="card-body py-3 px-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: #696cff;">
+                                <i class='bx bx-history text-white fs-5'></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold" style="color: #696cff;">Realisasi Residual Sebelumnya</h5>
+                                <medium class="text-gray d-block">
+                                    Periode: <strong>{{ $prevPeriode }}</strong> &bull; Diinput: <strong>{{ $prevDate }}</strong>
+                                </medium>
+                            </div>
+                        </div>
+
+                        @if($prevExists)
+                        <div class="row g-3">
+                            <div class="col-md-6 col-lg-4">
+                                <medium class="text-gray d-block">Nilai Dampak</medium>
+                                <span class="fw-semibold text-dark">Rp {{ number_format($prevImpactVal, 0, ',', '.') }}</span>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <medium class="text-gray d-block">Skala Dampak</medium>
+                                <span class="fw-semibold text-dark">{{ $prevImpactScale }} - {{ $prevImpactScaleDesc }}</span>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <medium class="text-gray d-block">Nilai Probabilitas</medium>
+                                <span class="fw-semibold text-dark">{{ $prevProbVal }}%</span>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <medium class="text-gray d-block">Skala Probabilitas</medium>
+                                <span class="fw-semibold text-dark">{{ $prevProbScale }} - {{ $prevProbScaleDesc }}</span>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <medium class="text-gray d-block">Eksposur Risiko</medium>
+                                <span class="fw-semibold text-dark">Rp {{ number_format($prevExposure, 0, ',', '.') }}</span>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <medium class="text-gray d-block">Level Risiko</medium>
+                                <span class="fw-semibold text-dark">
+                                    {{ $prevRiskScale }} - {{ $prevRiskLevel }}
+                                </span>
+                            </div>
+                        </div>
+                        @else
+                        <div class="text-center py-2">
+                            <i class='bx bx-info-circle fs-4 text-gray mb-1'></i>
+                            <p class="text-gray mb-0">Belum ada data realisasi residual dari bulan sebelumnya.</p>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
             <div class="row g-2">
                 <div class="col-md-4">
                     <div class="card btn-reveal-trigger">
@@ -338,7 +413,7 @@
                 <div class="col-12">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="text-muted fw-bold mb-4 small text-uppercase text-center">Nilai Threshold</h5>
+                            <h5 class="text-gray fw-bold mb-4 small text-uppercase text-center">Nilai Threshold</h5>
                             <div class="row text-center g-3 mb-4">
                                 <div class="col-md-4 border-end">
                                     <div class="text-success small fw-bold mb-1">Risk Limit (Aman)</div>
@@ -361,13 +436,13 @@
                                           value="{{ $riskMonitoring->aktual_current ?? 0 }}">
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label text-muted small">Bulan -1 ({{ $dateM1->translatedFormat('F Y') }})</label>
+                                    <label class="form-label text-gray small">Bulan -1 ({{ $dateM1->translatedFormat('F Y') }})</label>
                                     <input type="text" class="form-control inputmask-rupiah border-light bg-light"
                                           name="aktual_month_1"
                                           value="{{ $riskMonitoring->aktual_month_1 ?? ($monitoringM1->aktual_current ?? 0) }}">
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label text-muted small">Bulan -2 ({{ $dateM2->translatedFormat('F Y') }})</label>
+                                    <label class="form-label text-gray small">Bulan -2 ({{ $dateM2->translatedFormat('F Y') }})</label>
                                     <input type="text" class="form-control inputmask-rupiah border-light bg-light"
                                           name="aktual_month_2"
                                           value="{{ $riskMonitoring->aktual_month_2 ?? ($monitoringM2->aktual_current ?? 0) }}">
@@ -452,7 +527,7 @@
             <div class="row mb-3">
                 <div class="col-12">
                     <div class="d-flex align-items-center gap-3">
-                        <span class="text-muted">Keterangan :</span>
+                        <span class="text-gray">Keterangan :</span>
                         <div class="d-flex align-items-center gap-3">
                             <div class="d-flex align-items-center gap-2">
                                 <i class="bx bx-edit-alt text-primary"></i>
@@ -535,7 +610,7 @@
                                                 </div>
                                             </td>
                                         @else
-                                            <td colspan="6" class="text-center text-muted italic">Belum ada rencana perlakuan</td>
+                                            <td colspan="6" class="text-center text-gray italic">Belum ada rencana perlakuan</td>
                                         @endif
                                         </tr>
                                     @endforeach
@@ -773,6 +848,34 @@
                     {{ Form::hidden('kri_project_id', '') }}
                     <div class="modal-body">
                         <div class="row g-2">
+                            <div class="col-12 mb-4">
+                                <div class="card border-0 shadow-sm" style="border-left: 4px solid #696cff !important; background: linear-gradient(135deg, #f5f5ff 0%, #eef1ff 100%); height: fit-content;">
+                                    <div class="card-body py-3 px-4">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div>
+                                                <h5 class="mb-0 fw-bold" style="color: #696cff;">Realisasi KRI Sebelumnya</h5>
+                                                <medium class="text-muted d-block" id="info_prev_kri_period">-</medium>
+                                            </div>
+                                        </div>
+
+                                        <div class="row g-3" id="container_prev_kri_data">
+                                            <div class="col-md-4">
+                                                <medium class="text-muted d-block">Nilai Realisasi KRI</medium>
+                                                <span class="fw-semibold text-dark" id="info_prev_kri_value">-</span>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <medium class="text-muted d-block">Status KRI</medium>
+                                                <span class="fw-semibold text-dark" id="info_prev_kri_status">-</span>
+                                            </div>
+                                        </div>
+
+                                        <div id="container_prev_kri_empty" class="text-center py-2 d-none">
+                                            <i class='bx bx-info-circle fs-3 text-muted mb-1'></i>
+                                            <p class="text-muted mb-0">Belum ada data realisasi KRI sebelumnya.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="col-12">
                                 <div class="form-group form-floating">
                                     <input type="text" class="form-control" name="key_risk_indicator" disabled>
@@ -994,6 +1097,48 @@
                                     <label for="timeline_perlakuan_risiko_end">Waktu Selesai Perlakuan Risiko</label>
                                 </div>
                             </div>
+
+                            <div class="col-12 mt-3">
+                                <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #696cff !important; background: linear-gradient(135deg, #f5f5ff 0%, #eef1ff 100%); height: fit-content;">
+                                    <div class="card-body py-3 px-4">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div>
+                                                <h5 class="mb-0 fw-bold" style="color: #696cff;">Realisasi Sebelumnya</h5>
+                                                <medium class="text-muted d-block" id="info_prev_penyebab_period">-</medium>
+                                            </div>
+                                        </div>
+
+                                        <div class="row g-3" id="container_prev_penyebab_data">
+                                            <div class="col-md-6 col-lg-4">
+                                                <medium class="text-muted d-block">Progress</medium>
+                                                <span class="fw-semibold text-dark" id="info_prev_penyebab_progress">-</span>
+                                            </div>
+                                            <div class="col-md-6 col-lg-4">
+                                                <medium class="text-muted d-block">Biaya Realisasi</medium>
+                                                <span class="fw-semibold text-dark" id="info_prev_penyebab_cost">-</span>
+                                            </div>
+                                            <div class="col-md-6 col-lg-4">
+                                                <medium class="text-muted d-block">Tgl Pelaksanaan</medium>
+                                                <span class="fw-semibold text-dark" id="info_prev_penyebab_date">-</span>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <medium class="text-muted d-block">Catatan</medium>
+                                                <span class="fw-semibold text-dark" id="info_prev_penyebab_notes">-</span>
+                                            </div>
+                                            <div class="col-12 mt-2">
+                                                <medium class="text-muted d-block mb-1">Evidence Sebelumnya</medium>
+                                                <div id="info_prev_penyebab_evidence">-</div>
+                                            </div>
+                                        </div>
+
+                                        <div id="container_prev_penyebab_empty" class="text-center py-2 d-none">
+                                            <i class='bx bx-info-circle fs-3 text-muted mb-1'></i>
+                                            <p class="text-muted mb-0">Belum ada data realisasi mitigasi sebelumnya.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="col-12">
                                 <h5 class="mt-3 mb-0">Realisasi</h5>
                             </div>
@@ -1121,6 +1266,47 @@
                                 </div>
                             </div>
 
+                            <div class="col-12 mt-3">
+                                <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #696cff !important; background: linear-gradient(135deg, #f5f5ff 0%, #eef1ff 100%); height: fit-content;">
+                                    <div class="card-body py-3 px-4">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div>
+                                                <h5 class="mb-0 fw-bold" style="color: #696cff;">Realisasi Sebelumnya</h5>
+                                                <medium class="text-muted d-block" id="info_prev_dampak_period">-</medium>
+                                            </div>
+                                        </div>
+
+                                        <div class="row g-3" id="container_prev_dampak_data">
+                                            <div class="col-md-6 col-lg-4">
+                                                <medium class="text-muted d-block">Progress</medium>
+                                                <span class="fw-semibold text-dark" id="info_prev_dampak_progress">-</span>
+                                            </div>
+                                            <div class="col-md-6 col-lg-4">
+                                                <medium class="text-muted d-block">Biaya Realisasi</medium>
+                                                <span class="fw-semibold text-dark" id="info_prev_dampak_cost">-</span>
+                                            </div>
+                                            <div class="col-md-6 col-lg-4">
+                                                <medium class="text-muted d-block">Tgl Pelaksanaan</medium>
+                                                <span class="fw-semibold text-dark" id="info_prev_dampak_date">-</span>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <medium class="text-muted d-block">Catatan</medium>
+                                                <span class="fw-semibold text-dark" id="info_prev_dampak_notes">-</span>
+                                            </div>
+                                            <div class="col-12 mt-2">
+                                                <medium class="text-muted d-block mb-1">Evidence Sebelumnya</medium>
+                                                <div id="info_prev_dampak_evidence">-</div>
+                                            </div>
+                                        </div>
+
+                                        <div id="container_prev_dampak_empty" class="text-center py-2 d-none">
+                                            <i class='bx bx-info-circle fs-3 text-muted mb-1'></i>
+                                            <p class="text-muted mb-0">Belum ada data realisasi mitigasi sebelumnya.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="col-12"><h5 class="mt-3 mb-0">Realisasi Dampak</h5></div>
 
                             <div class="col-md-6">
@@ -1191,6 +1377,8 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
+const previousMonitoring = @json($previousMonitoring);
+const monthNamesArray = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const routeDeleteDoc = "{{ route('projects.monitorings.document.destroy', ['project' => request()->route('project'), 'monitoring' => request()->route('monitoring'), 'documentId' => ':id']) }}";
 const acceptedFiles = ".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx";
 const maxFileSize = 10 * 1024 * 1024; // 10MB dalam Bytes
@@ -1403,6 +1591,37 @@ $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
             </tr>
         `);
     });
+
+    if (previousMonitoring) {
+        const prevDataDampak = previousMonitoring.perlakuan_dampak_monitorings?.find(m => m.perlakuan_dampak_id == id);
+
+        $('#info_prev_dampak_period').html(`Periode: <strong>${monthNamesArray[previousMonitoring.month]} ${previousMonitoring.tahun}</strong>`);
+
+        if (prevDataDampak) {
+            console.log(prevDataDampak)
+            $('#container_prev_dampak_data').removeClass('d-none');
+            $('#container_prev_dampak_empty').addClass('d-none');
+
+            $('#info_prev_dampak_progress').text((prevDataDampak.progress_rencana_perlakuan_risiko || 0) + '%');
+            $('#info_prev_dampak_cost').text('Rp ' + Intl.NumberFormat('id-ID').format(prevDataDampak.realisasi_biaya_perlakuan_risiko || 0));
+            $('#info_prev_dampak_date').text(prevDataDampak.timeline_perlakuan_risiko_start ? dayjs(prevDataDampak.timeline_perlakuan_risiko_start).format('DD/MM/YYYY') : '-');
+            $('#info_prev_dampak_notes').text(prevDataDampak.deskripsi_perlakuan_risiko || '-');
+
+            // Ambil dan buat list dokumen evidence
+            const prevDocsDampak = previousMonitoring.perlakuan_dampak_risiko_documents?.filter(d => d.perlakuan_dampak_risiko_id == id) || [];
+            let docsHtmlDampak = prevDocsDampak.length > 0
+                ? '<ul class="ps-3 mb-0">' + prevDocsDampak.map(d => `<li><a href="/storage/${d.file_path}" target="_blank" class="text-primary">${d.file_name}</a> <small class="text-muted">(${d.description || '-'})</small></li>`).join('') + '</ul>'
+                : '<em class="text-muted small">Tidak ada dokumen evidence.</em>';
+            $('#info_prev_dampak_evidence').html(docsHtmlDampak);
+        } else {
+            $('#container_prev_dampak_data').addClass('d-none');
+            $('#container_prev_dampak_empty').removeClass('d-none');
+        }
+    } else {
+        $('#info_prev_dampak_period').html(`-`);
+        $('#container_prev_dampak_data').addClass('d-none');
+        $('#container_prev_dampak_empty').removeClass('d-none');
+    }
 
     toggleAddDocButtonDampak();
     $('#modalUpdateRealisasiDampak').modal('show');
@@ -1934,10 +2153,37 @@ $(document).ready(function() {
                 }
             });
         } else if (action === 'update-kri') {
-            const kriProject = kriProjects[$(this).data('id')];
-            //console.log(kriProject);
-            const latestMonitoring = kriProject.kri_project_monitorings
-                ?.sort((a, b) => b.id - a.id)[0];
+            const kriId = $(this).data('id');
+            const kriProject = kriProjects[kriId];
+
+            if (previousMonitoring) {
+                const prevKriData = previousMonitoring.kri_proyek_monitorings?.find(k => k.kri_project_id == kriId);
+
+                $('#info_prev_kri_period').html(`Periode: <strong>${monthNamesArray[previousMonitoring.month]} ${previousMonitoring.tahun}</strong>`);
+
+                if (prevKriData) {
+                    $('#container_prev_kri_data').removeClass('d-none');
+                    $('#container_prev_kri_empty').addClass('d-none');
+
+                    $('#info_prev_kri_value').text(prevKriData.nilai_kri_terkini || '-');
+
+                    // Set Status KRI Badge
+                    let statusLabel = '-';
+                    let badgeClass = 'gray';
+                    if (prevKriData.status_kri_terkini == '1') { statusLabel = 'Aman'; badgeClass = 'success'; }
+                    else if (prevKriData.status_kri_terkini == '2') { statusLabel = 'Waspada'; badgeClass = 'warning'; }
+                    else if (prevKriData.status_kri_terkini == '3') { statusLabel = 'Bahaya'; badgeClass = 'danger'; }
+
+                    $('#info_prev_kri_status').html(`<span class="badge bg-${badgeClass}">${statusLabel}</span>`);
+                } else {
+                    $('#container_prev_kri_data').addClass('d-none');
+                    $('#container_prev_kri_empty').removeClass('d-none');
+                }
+            } else {
+                $('#info_prev_kri_period').html(`-`);
+                $('#container_prev_kri_data').addClass('d-none');
+                $('#container_prev_kri_empty').removeClass('d-none');
+            }
 
             $('#modalUpdateKri input[name="kri_project_id"]').val($(this).data('id'));
             $('#modalUpdateKri input[name="key_risk_indicator"]').val(kriProject.kri);
@@ -2080,7 +2326,38 @@ $(document).ready(function() {
                           </td>
                       </tr>
                   `);
-              });
+            });
+
+            // --- POPULATE PREVIOUS DATA UI ---
+            if (previousMonitoring) {
+                const prevData = previousMonitoring.perlakuan_penyebab_monitorings?.find(m => m.perlakuan_penyebab_id == perlakuanPenyebab.id);
+
+                $('#info_prev_penyebab_period').html(`Periode: <strong>${monthNamesArray[previousMonitoring.month]} ${previousMonitoring.tahun}</strong>`);
+
+                if (prevData) {
+                    $('#container_prev_penyebab_data').removeClass('d-none');
+                    $('#container_prev_penyebab_empty').addClass('d-none');
+
+                    $('#info_prev_penyebab_progress').text((prevData.progress_rencana_perlakuan_risiko || 0) + '%');
+                    $('#info_prev_penyebab_cost').text('Rp ' + Intl.NumberFormat('id-ID').format(prevData.realisasi_biaya_perlakuan_risiko || 0));
+                    $('#info_prev_penyebab_date').text(prevData.timeline_perlakuan_risiko_start ? dayjs(prevData.timeline_perlakuan_risiko_start).format('DD/MM/YYYY') : '-');
+                    $('#info_prev_penyebab_notes').text(prevData.deskripsi_perlakuan_risiko || '-');
+
+                    // Ambil dan buat list dokumen evidence
+                    const prevDocs = previousMonitoring.perlakuan_penyebab_risiko_documents?.filter(d => d.perlakuan_penyebab_risiko_id == perlakuanPenyebab.id) || [];
+                    let docsHtml = prevDocs.length > 0
+                        ? '<ul class="ps-3 mb-0">' + prevDocs.map(d => `<li><a href="/storage/${d.file_path}" target="_blank" class="text-primary">${d.file_name}</a> <small class="text-muted">(${d.description || '-'})</small></li>`).join('') + '</ul>'
+                        : '<em class="text-muted small">Tidak ada dokumen evidence.</em>';
+                    $('#info_prev_penyebab_evidence').html(docsHtml);
+                } else {
+                    $('#container_prev_penyebab_data').addClass('d-none');
+                    $('#container_prev_penyebab_empty').removeClass('d-none');
+                }
+            } else {
+                $('#info_prev_penyebab_period').html(`-`);
+                $('#container_prev_penyebab_data').addClass('d-none');
+                $('#container_prev_penyebab_empty').removeClass('d-none');
+            }
 
             $('#modalUpdateRealisasi').modal('show');
         } else if (action === 'view-details') {

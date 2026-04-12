@@ -27,6 +27,11 @@ class PerlakuanPenyebabRisikoUnitDocument extends Model
         return $this->belongsTo(PerlakuanPenyebabRisikoUnit::class, 'perlakuan_penyebab_risiko_unit_id', 'id');
     }
 
+    public function unitRiskMonitoring()
+    {
+        return $this->belongsTo(UnitRiskMonitoring::class, 'unit_risk_monitoring_id', 'id');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
@@ -34,5 +39,13 @@ class PerlakuanPenyebabRisikoUnitDocument extends Model
 
     public function getUrlAttribute() {
         return Storage::url($this->file_path);
+    }
+
+    public function delete()
+    {
+        if ($this->file_path && Storage::disk('public')->exists($this->file_path)) {
+            Storage::disk('public')->delete($this->file_path);
+        }
+        return parent::delete();
     }
 }

@@ -1238,9 +1238,34 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             $risk_tolerance = 0;
         }
 
-        //$risk_limit = $projectPeriode->risk_limit;
         $risk_limit = ($projectPeriode->project->nk ?? 0) * 0.03;
         // dd($projectRisk->projectRiskMonitoring);
+
+        // Previous monitoring
+        $currentTahun = (int) $tahun;
+        $currentMonth = (int) $month;
+
+        // Query mencari data monitoring paling terakhir sebelum bulan/tahun yang sedang diakses
+        $previousMonitoring = ProjectRiskMonitoring::with([
+            'perlakuanPenyebabMonitorings',
+            'perlakuanDampakMonitorings',
+            'perlakuanPenyebabRisikoDocuments',
+            'perlakuanDampakRisikoDocuments',
+            'skalaDampakObj',
+            'skalaProbabilitas',
+            'kriProyekMonitorings',
+        ])
+        ->where('risiko_id', $projectRisk->id)
+        ->where(function ($query) use ($currentTahun, $currentMonth) {
+            $query->where('tahun', '<', $currentTahun)
+                  ->orWhere(function ($q) use ($currentTahun, $currentMonth) {
+                      $q->where('tahun', $currentTahun)->where('month', '<', $currentMonth);
+                  });
+        })
+        ->orderBy('tahun', 'desc')
+        ->orderBy('month', 'desc')
+        ->orderBy('id', 'desc')
+        ->first();
 
         return view('project-monitorings.edit', [
             'projectPeriode' => $projectPeriode,
@@ -1265,6 +1290,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'risk_limit' => $risk_limit,
             'groupedSkalaParameters' => $groupedSkalaParameters,
             'selectedParameterType' => $selectedParameterType,
+            'previousMonitoring' => $previousMonitoring,
         ]);
     }
 

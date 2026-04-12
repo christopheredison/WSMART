@@ -1124,17 +1124,23 @@ class HomeController extends Controller
 
         if ($selectedPeriode) {
             $kriQuery->whereHas('identifikasiRisiko', function($query) use ($selectedPeriode) {
-                $query->where('periode_id', $selectedPeriode->id);
+                $query->where('periode_id', $selectedPeriode->id)
+                      ->whereNull('deleted_at')
+                      ->where('is_closed', false);
             });
         }
 
         if ($selectedUnitId) {
             $kriQuery->whereHas('identifikasiRisiko', function($query) use ($selectedUnitId) {
-                $query->where('unit_id', $selectedUnitId);
+                $query->where('unit_id', $selectedUnitId)
+                      ->whereNull('deleted_at')
+                      ->where('is_closed', false);
             });
         } elseif (!$isAllUnit) {
             $kriQuery->whereHas('identifikasiRisiko', function($query) use ($user) {
-                $query->where('unit_id', $user->unit_id);
+                $query->where('unit_id', $user->unit_id)
+                      ->whereNull('deleted_at')
+                      ->where('is_closed', false);
             });
         }
 
@@ -1304,7 +1310,9 @@ class HomeController extends Controller
                 })->orderBy('id', 'desc');
             }
         ])
-        ->whereHas('risiko.project');
+        ->whereHas('risiko.project', function($q){
+            $q->whereNull('deleted_at')->where('is_closed', false);
+        });
 
         $kriQuery->when($selectedUnitId, function ($query, $selectedUnitId) {
             $unit = Unit::find($selectedUnitId);
@@ -1317,7 +1325,9 @@ class HomeController extends Controller
 
         $kriQuery->when($selectedProjectId, function ($query, $selectedProjectId) {
             $query->whereHas('risiko', function($q) use ($selectedProjectId) {
-                $q->where('project_id', $selectedProjectId);
+                $q->where('project_id', $selectedProjectId)
+                  ->whereNull('deleted_at')
+                  ->where('is_closed', false);
             });
         });
 
@@ -1559,6 +1569,7 @@ class HomeController extends Controller
 
             $activeRiskIds = \App\Models\ProjectRisk::where('project_id', $selectedProjectId)
                 ->where('is_closed', 0)
+                ->whereNull('deleted_at')
                 ->pluck('id');
 
             // 2. Cari ID monitoring TERAKHIR (MAX id) untuk masing-masing risiko aktif tersebut
@@ -1656,7 +1667,9 @@ class HomeController extends Controller
                           ->orderBy('id', 'desc');
                 }
             ])
-            ->whereHas('risiko', fn($q) => $q->where('project_id', $selectedProject->id));
+            ->whereHas('risiko', fn($q) => $q->where('project_id', $selectedProject->id)
+                ->whereNull('deleted_at')
+                ->where('is_closed', false));
 
             $kriData = $kriQuery->get();
 
@@ -1825,6 +1838,7 @@ class HomeController extends Controller
                 ])
                 ->where('unit_id', $selectedUnit->id)
                 ->where('periode_id', $periode->id)
+                ->whereNull('deleted_at')
                 ->get();
             }
 
@@ -1959,6 +1973,8 @@ class HomeController extends Controller
                     ->join('projects', 'project_risks.project_id', '=', 'projects.id')
                     ->where('projects.cost_center_parent', $selectedUnit->cost_center)
                     ->where('project_risk_monitorings.tahun', $currentYear)
+                    ->whereNull('project_risks.deleted_at')
+                    ->where('project_risks.is_closed', false)
                     ->groupBy('projects.id', 'projects.project_name')
                     ->orderByDesc('max_eksposur')
                     ->take(5)
@@ -1974,6 +1990,8 @@ class HomeController extends Controller
                     ->where('projects.cost_center_parent', $selectedUnit->cost_center)
                     ->where('project_risk_monitorings.tahun', $currentYear)
                     ->where('project_risk_monitorings.quarter', '<=', $currentQuarter)
+                    ->whereNull('project_risks.deleted_at')
+                    ->where('project_risks.is_closed', false)
                     ->groupBy('projects.id', 'projects.project_name')
                     ->orderByDesc('total_eksposur')
                     ->take(5)
@@ -2109,6 +2127,7 @@ class HomeController extends Controller
                 ])
                 ->where('unit_id', $selectedUnit->id)
                 ->where('periode_id', $periode->id)
+                ->whereNull('deleted_at')
                 ->get();
             }
 
@@ -2430,7 +2449,10 @@ class HomeController extends Controller
         if ($periode && $corporateUnitIds->isNotEmpty()) {
             $baseRisks = IdentifikasiRisiko::with([
                 'riskAnalysis.skalaProbabilitas', 'riskAnalysis.skalaDampakObj', 'riskAnalysis.skalaDampakResidualQ1Obj', 'riskAnalysis.skalaDampakResidualQ2Obj', 'riskAnalysis.skalaDampakResidualQ3Obj', 'riskAnalysis.skalaDampakResidualQ4Obj','riskAnalysis.skalaProbabilitasResidualQ1', 'riskAnalysis.skalaProbabilitasResidualQ2', 'riskAnalysis.skalaProbabilitasResidualQ3', 'riskAnalysis.skalaProbabilitasResidualQ4','monitoringRisikos.skalaProbabilitas','peristiwaRisiko','kris.kriUnitMonitorings.unitRiskMonitoring','penyebabRisiko',
-            ])->whereIn('unit_id', $corporateUnitIds)->where('periode_id', $periode->id);
+            ])
+              ->whereIn('unit_id', $corporateUnitIds)
+              ->where('periode_id', $periode->id)
+              ->whereNull('deleted_at');
 
             $highImpactRisks = (clone $baseRisks)->whereHas('riskAnalysis', function ($q) {
                 $q->whereIn('level_risiko', ['High', 'Moderate to High']);
@@ -2745,9 +2767,15 @@ class HomeController extends Controller
         $riskProfileByDivision = [];
 
         foreach ($divisiList as $divisi) {
-            $unitRisks = IdentifikasiRisiko::where('unit_id', $divisi->id)->with('riskAnalysis', 'penyebabRisiko.perlakuanPenyebabRisiko', 'monitoringRisikos')->get();
-            $projectRisks = ProjectRisk::whereHas('project', fn($q) => $q->where('cost_center_parent', $divisi->cost_center))
-                ->with('projectRiskAnalisa', 'penyebabRisikoProjects.perlakuanPenyebabRisiko', 'projectRiskMonitorings')->get();
+            $unitRisks = IdentifikasiRisiko::where('unit_id', $divisi->id)
+              ->whereNull('deleted_at')
+              ->with('riskAnalysis', 'penyebabRisiko.perlakuanPenyebabRisiko', 'monitoringRisikos')
+              ->get();
+
+          $projectRisks = ProjectRisk::whereHas('project', fn($q) => $q->where('cost_center_parent', $divisi->cost_center))
+              ->whereNull('deleted_at')
+              ->with('projectRiskAnalisa', 'penyebabRisikoProjects.perlakuanPenyebabRisiko', 'projectRiskMonitorings')
+              ->get();
 
             $totalRisks = $unitRisks->count() + $projectRisks->count();
             if ($totalRisks === 0) continue;
@@ -2779,8 +2807,14 @@ class HomeController extends Controller
         // 4. HEATMAP RISIKO
         // =========================================================
         $riskMaps = RiskMap::all()->keyBy(fn($item) => $item->skala_dampak . '-' . $item->skala_probabilitas);
-        $allProjectRisks = ProjectRisk::with('projectRiskAnalisa.skalaProbabilitas', 'projectRiskAnalisa.skalaProbabilitasResidual', 'projectRiskMonitorings.skalaProbabilitas', 'peristiwaRisiko')->get();
-        $allUnitRisks = IdentifikasiRisiko::with('riskAnalysis.skalaProbabilitas', 'riskAnalysis.skalaProbabilitasResidual', 'monitoringRisikos.skalaProbabilitas', 'peristiwaRisiko')->get();
+        $allProjectRisks = ProjectRisk::with('projectRiskAnalisa.skalaProbabilitas', 'projectRiskAnalisa.skalaProbabilitasResidual', 'projectRiskMonitorings.skalaProbabilitas', 'peristiwaRisiko')
+            ->whereNull('deleted_at')
+            ->where('is_closed', false)
+            ->get();
+        $allUnitRisks = IdentifikasiRisiko::with('riskAnalysis.skalaProbabilitas', 'riskAnalysis.skalaProbabilitasResidual', 'monitoringRisikos.skalaProbabilitas', 'peristiwaRisiko')
+            ->whereNull('deleted_at')
+            ->where('is_closed', false)
+            ->get();
 
         $heatmapData = [
             'inherent' => [],
