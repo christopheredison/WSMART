@@ -122,6 +122,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                     if ($this->bulan && $this->tahun) {
                         $sq->where('month', $this->bulan)->where('tahun', $this->tahun);
                     }
+                    $sq->where('status', 100);
                 });
             },
             'perlakuanDampakRisikos.perlakuanDampakMonitorings' => function($q) {
@@ -129,6 +130,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                     if ($this->bulan && $this->tahun) {
                         $sq->where('month', $this->bulan)->where('tahun', $this->tahun);
                     }
+                    $sq->where('status', 100);
                 });
             },
             'dampakRisikoProjects',
@@ -138,22 +140,28 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                 if ($this->bulan && $this->tahun) {
                     $q->where('month', $this->bulan)->where('tahun', $this->tahun);
                 }
-                $q->orderBy('id', 'desc');
+                $q->where('status', 100)->orderBy('id', 'desc');
             },
             'kriProjects.kriProjectMonitorings' => function($q) {
                 $q->whereHas('projectMonitoring', function($sq) {
                     if ($this->bulan && $this->tahun) {
                         $sq->where('month', $this->bulan)->where('tahun', $this->tahun);
                     }
+                    $sq->where('status', 100);
                 })->orderBy('id', 'desc');
             }
         ]);
 
+        $query->whereHas('projectRiskMonitorings', function($q) {
+            if ($this->bulan && $this->tahun) {
+                $q->where('month', $this->bulan)->where('tahun', $this->tahun);
+            }
+            $q->where('status', 100);
+        });
+
         $query->whereHas('project', function($q) {
             $q->whereDate('masa_pelaksanaan_end', '>=', \Carbon\Carbon::today())
-
-            // masa_pelaksanaan_end masih kosong dianggap proyek aktif
-            ->orWhereNull('masa_pelaksanaan_end');
+              ->orWhereNull('masa_pelaksanaan_end');
         });
 
         if (!in_array('all', $this->costCenters)) {

@@ -30,7 +30,7 @@ class LaporanProjectExport implements WithMultipleSheets
     {
         $sheets = [];
 
-        // 1. QUERY MASTER (Ambil semua data dan relasi sekaligus di awal)
+        // QUERY MASTER
         $semuaRisiko = ProjectRisk::with([
             'wbsMaster',
             'projectPeriodeList.project',
@@ -43,14 +43,14 @@ class LaporanProjectExport implements WithMultipleSheets
             'penyebabRisikoProjects.perlakuanPenyebabRisiko.lastMonitoring' => function($q) {
                 if ($this->bulan && $this->tahun) {
                     $q->whereHas('projectMonitoring', function($sq) {
-                        $sq->where('month', $this->bulan)->where('tahun', $this->tahun);
+                        $sq->where('month', $this->bulan)->where('tahun', $this->tahun)->where('status', 100);
                     });
                 }
             },
             'perlakuanDampakRisikos.lastMonitoring' => function($q) {
                 if ($this->bulan && $this->tahun) {
                     $q->whereHas('projectMonitoring', function($sq) {
-                        $sq->where('month', $this->bulan)->where('tahun', $this->tahun);
+                        $sq->where('month', $this->bulan)->where('tahun', $this->tahun)->where('status', 100);
                     });
                 }
             },
@@ -63,23 +63,27 @@ class LaporanProjectExport implements WithMultipleSheets
                 if ($this->bulan && $this->tahun) {
                     $query->where('month', $this->bulan)->where('tahun', $this->tahun);
                 }
-                $query->orderBy('tahun', 'desc')->orderBy('month', 'desc')->orderBy('id', 'desc');
+                $query->where('status', 100)
+                      ->orderBy('tahun', 'desc')->orderBy('month', 'desc')->orderBy('id', 'desc');
             },
             'projectRiskMonitorings.skalaProbabilitas',
             'projectRiskMonitorings.skalaDampakObj'
         ])
+        ->whereHas('projectRiskMonitorings', function($query) {
+            if ($this->bulan && $this->tahun) {
+                $query->where('month', $this->bulan)->where('tahun', $this->tahun);
+            }
+            $query->where('status', 100);
+        })
         ->whereIn('project_id', $this->projectIds)
         ->get();
 
-        // 2. Sheet Resume Project (Punya query sendiri yang beda jalur, biarkan saja)
         if (count($this->projectIds) === 1) {
             $singleProjectId = $this->projectIds[array_key_first($this->projectIds)];
             $sheets[] = new ResumeProjectSheet($singleProjectId, $this->bulan, $this->tahun);
         }
 
-        // 3. Masukkan data ke masing-masing sheet (Oper operan memori)
         $sheets[] = new ProfilRisikoSheet($semuaRisiko);
-
         $sheets[] = new RisikoInherentKuantitatifSheet($semuaRisiko);
         // $sheets[] = new RisikoInherentKualitatifSheet($semuaRisiko);
         $sheets[] = new RisikoResidualKuantitatifSheet($semuaRisiko);

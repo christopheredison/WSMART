@@ -18,6 +18,14 @@
         </div>
       </div>
       <div class="card-body">
+        <div class="d-none alert alert-info d-none mb-4" id="info_publish">
+          <div class="d-flex align-items-center">
+            <i class="bx bx-info-circle fs-4 me-2"></i>
+            <div>
+              <strong>Informasi:</strong> Data risiko yang diambil dan ditampilkan pada laporan ini hanyalah data monitoring risiko yang <strong>sudah terpublish</strong> pada bulan tersebut.
+            </div>
+          </div>
+        </div>
         <form id="exportForm">
           @csrf
           <div class="row g-3">
@@ -110,16 +118,22 @@ $(document).ready(function() {
             $('#container_project').removeClass('d-none');
             $('#container_divisi').addClass('d-none');
             $('#container_tahun, #container_month').removeClass('d-none');
+
+            $('#info_publish').removeClass('d-none');
         } else if (val === 'loss_event') {
             $('#container_project').removeClass('d-none');
             $('#container_divisi').addClass('d-none');
             $('#container_tahun, #container_month').addClass('d-none');
             $('#container_jenis').removeClass('col-md-3').addClass('col-md-5');
-            $('#container_btn').removeClass('col-md-3').addClass('col-md-3'); // adjust as needed
+            $('#container_btn').removeClass('col-md-3').addClass('col-md-3');
+
+            $('#info_publish').addClass('d-none');
         } else if (val === 'konsolidasi') {
             $('#container_project').addClass('d-none');
             $('#container_divisi').removeClass('d-none');
             $('#container_tahun, #container_month').removeClass('d-none');
+
+            $('#info_publish').addClass('d-none');
         }
     });
 
