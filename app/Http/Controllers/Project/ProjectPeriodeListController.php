@@ -634,14 +634,12 @@ class ProjectPeriodeListController extends BasicCRUDController
         }
 
         if (Gate::check('project_led_list')) {
-            $ledRoute = route('project-led.index-by-project', ['projectId' => ':id']);
             $this->tableActions[] = [
                 'btn_icon' => true,
                 'label' => '<span class="bx bx-dock-bottom" title="Loss Event"></span>',
-                'action' => 'script',
-                'script' => <<<JS
-                projectData = fetchedData[\$(this).data('id')];window.location.href = "$ledRoute".replace(':id', projectData.project_id);
-                JS,
+                'action' => 'link',
+                'url' => urldecode(route('project-led.index-by-project', ['projectId' => ':project_id'])),
+
                 'title' => 'Loss Event'
             ];
             $this->tableLegend[] = ['icon' => '<span class="bx bx-dock-bottom"></span>', 'label' => 'Loss Event'];
