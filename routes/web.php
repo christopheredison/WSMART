@@ -187,6 +187,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/executive-summary-unit', [HomeController::class, 'executiveSummaryUnit'])->name('executive-summary-unit');
     Route::get('/executive-summary-anper', [HomeController::class, 'executiveSummaryAnper'])->name('executive-summary-anper');
     Route::get('/executive-summary-project', [HomeController::class, 'executiveSummaryProject'])->name('executive-summary-project');
+    Route::get('/executive-summary-konsolidasi', [HomeController::class, 'executiveSummaryKonsolidasi'])->name('executive-summary-konsolidasi');
 
     Route::group(['middleware' => ['can:manajemen_user']],function ()
     {
@@ -424,6 +425,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('project-hasil-usaha/sync-all', [ProjectHasilUsahaController::class, 'syncAll'])->name('project-hasil-usaha.sync-all');
     Route::resource('hasil-usaha-divisi', UnitHasilUsahaController::class)->except(['create', 'show']);
     Route::get('hasil-usaha-divisi/data', [UnitHasilUsahaController::class, 'data'])->name('hasil-usaha-divisi.data');
+    Route::post('/projects/risks/submit-request-edit', [App\Http\Controllers\Project\ProjectRiskController::class, 'submitRequestEdit'])->name('projects.risks.submit-request-edit');
+    Route::post('/projects/risks/approve-request-edit', [App\Http\Controllers\Project\ProjectRiskController::class, 'approveRequestEdit'])->name('projects.risks.approve-request-edit');
     Route::get('projects/{project}/detail', [ProjectController::class, 'detail'])->name('projects.detail');
     Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit', 'destroy']);
     Route::resource('projects/{project}/risks', ProjectRiskController::class)->names('projects.risks');
