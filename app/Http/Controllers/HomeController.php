@@ -2647,6 +2647,248 @@ class HomeController extends Controller
         ));
     }
 
+    public function executiveSummaryKonsolidasi(Request $request)
+    {
+        $selectedUnitId = $request->input('unit_id');
+        $selectedPeriod = $request->input('period', now()->format('Y-m'));
+        $currentYear = Carbon::createFromFormat('Y-m', $selectedPeriod)->year;
+        $currentMonth = Carbon::createFromFormat('Y-m', $selectedPeriod)->month;
+        $endOfSelectedPeriod = Carbon::createFromFormat('Y-m', $selectedPeriod)->endOfMonth();
+
+        $user = auth()->user();
+
+        // 1. FILTER DIVISI OPERASI: Hanya ambil Unit (Tipe 1) yang memiliki relasi Project
+        $units = Unit::where('unit_type_id', 1)
+                     ->whereHas('projects')
+                     ->orderBy('name')
+                     ->get();
+
+        // 2. FILTER PROYEK AKTIF BERDASARKAN DIVISI & PERIODE CUTOFF
+        $projectQuery = Project::query();
+        if ($selectedUnitId) {
+            $selectedUnit = Unit::find($selectedUnitId);
+            if ($selectedUnit) {
+                $projectQuery->where('cost_center_parent', $selectedUnit->cost_center);
+            }
+        }
+
+        // Logika Aktif: masa_pelaksanaan_end masih kosong (NULL) ATAU >= akhir bulan cutoff
+        $projectQuery->where(function($q) use ($endOfSelectedPeriod) {
+            $q->whereNull('masa_pelaksanaan_end')
+              ->orWhereDate('masa_pelaksanaan_end', '>=', $endOfSelectedPeriod);
+        });
+
+        $projects = $projectQuery->get();
+        $activeProjectIds = $projects->pluck('id');
+        $totalProyekAktif = $projects->count();
+
+        // Hitung jumlah proyek aktif per divisi (cost_center_parent) untuk Pie Chart
+        $activeProjectsPerDivisi = $projects->groupBy('cost_center_parent')->map->count();
+
+        // Hitung Total Nilai Kontrak (NK) dari proyek-proyek yang terfilter
+        $totalNilaiKontrak = $projects->sum('nk');
+
+        // 3. AMBIL SEMUA RISIKO PROYEK (Published & Open)
+        $risks = ProjectRisk::with([
+            'project',
+            'projectRiskAnalisa.skalaDampakObj',
+            'projectRiskAnalisa.skalaProbabilitas',
+            'projectRiskAnalisa.skalaDampakResidualObj',
+            'projectRiskAnalisa.skalaProbabilitasResidual',
+            'peristiwaRisiko',
+            'projectRiskMonitorings' => function($q) use ($currentYear, $currentMonth) {
+                $q->where('tahun', $currentYear)
+                  ->where('month', '<=', $currentMonth)
+                  ->where(function($sq) {
+                      $sq->where('status', 100)->orWhere('is_approved', true);
+                  })
+                  ->orderBy('month', 'desc')
+                  ->orderBy('id', 'desc');
+            }
+        ])
+        ->whereIn('project_id', $activeProjectIds)
+        ->where('status', 6) // Published
+        ->where('is_closed', false)
+        ->whereNull('deleted_at')
+        ->get();
+
+        // 4. DATA PIE CHART & KARTU RINGKASAN
+        $divisiExposures = [];
+        $totalEksposurInherentSemua = 0;
+        $totalEksposurResidualSemua = 0;
+        $totalRisikoSemua = $risks->count();
+
+        // 4b. Array untuk Top 10 Proyek
+        $projectExposures = [];
+
+        // INISIALISASI: Masukkan SEMUA proyek aktif agar yang bernilai 0 tetap tampil
+        foreach ($projects as $proj) {
+            $projectExposures[$proj->id] = [
+                'name' => $proj->project_name,
+                'value' => 0
+            ];
+        }
+
+        foreach ($risks as $risk) {
+            if (!$risk->projectRiskAnalisa || $risk->projectRiskAnalisa->kategori_dampak !== 'Kuantitatif') continue;
+
+            $ccParent = $risk->project->cost_center_parent;
+            $divName = $units->where('cost_center', $ccParent)->first()->name ?? 'Divisi Lainnya';
+
+            $eksposurInherent = (float) $risk->projectRiskAnalisa->eksposur_risiko;
+
+            $eksposurResidual = (float) $risk->projectRiskAnalisa->eksposur_risiko_residual;
+
+            // Grup per Divisi (Untuk Pie Chart) - Menggunakan inherent
+            if (!isset($divisiExposures[$divName])) {
+                $divisiExposures[$divName] = ['total_exposure' => 0, 'jumlah_risiko' => 0];
+            }
+            $divisiExposures[$divName]['total_exposure'] += $eksposurInherent;
+            $divisiExposures[$divName]['jumlah_risiko'] += 1;
+
+            // Grup per Project (Untuk Bar Chart) - Menggunakan inherent
+            $projectId = $risk->project_id;
+            if (isset($projectExposures[$projectId])) {
+                $projectExposures[$projectId]['value'] += $eksposurInherent;
+            }
+
+            $totalEksposurInherentSemua += $eksposurInherent;
+            $totalEksposurResidualSemua += $eksposurResidual;
+        }
+
+        // Format Pie Chart
+        $pieChartData = [];
+        foreach ($divisiExposures as $name => $data) {
+            $costCenter = $units->where('name', $name)->first()->cost_center ?? null;
+            $projectCount = $costCenter ? ($activeProjectsPerDivisi[$costCenter] ?? 0) : 0;
+
+            $pieChartData[] = [
+                'name' => $name,
+                'value' => $data['total_exposure'],
+                'project_count' => $projectCount, // Menggunakan total proyek aktif di divisi tersebut
+                'risk_count' => $data['jumlah_risiko']
+            ];
+        }
+
+        // Format Bar Chart (Sort Descending & Ambil 10 Teratas)
+        usort($projectExposures, function($a, $b) {
+            return $b['value'] <=> $a['value']; // Urutkan dari terbesar ke terkecil
+        });
+
+        $top10ProjectsExposure = array_slice($projectExposures, 0, 10);
+        $top10ProjectsExposure = array_reverse($top10ProjectsExposure); // Reverse karena ECharts render bar horizontal dari bawah ke atas
+
+        // 5. DATA TOP 10 RISIKO TERTINGGI (Realisasi)
+        $mappedRisks = $risks->map(function($risk) {
+            $analisa = $risk->projectRiskAnalisa;
+            $latestMon = $risk->projectRiskMonitorings->first();
+
+            $risk->inherent_dampak = $analisa->nilai_dampak ?? 0;
+            $risk->inherent_eksposur = $analisa->eksposur_risiko ?? 0;
+            $risk->inherent_level = $analisa->level_risiko ?? '-';
+            $risk->inherent_skala = $analisa->skala_risiko ?? '-';
+
+            if ($latestMon) {
+                $risk->current_dampak = $latestMon->nilai_dampak ?? 0;
+                $risk->current_eksposur = $latestMon->eksposure_risiko ?? 0;
+                $risk->current_level = $latestMon->level_risiko ?? '-';
+                $risk->current_skala = $latestMon->skala_risiko ?? '-';
+            } else {
+                $risk->current_dampak = $analisa->nilai_dampak ?? 0;
+                $risk->current_eksposur = $analisa->eksposur_risiko ?? 0;
+                $risk->current_level = $analisa->level_risiko ?? '-';
+                $risk->current_skala = $analisa->skala_risiko ?? '-';
+            }
+
+            $risk->current_monitoring = $latestMon;
+            return $risk;
+        });
+
+        $top10Risks = $mappedRisks->sortByDesc('current_eksposur')->take(10)->values();
+        $totalEksposurTop10 = $top10Risks->sum('current_eksposur');
+
+        // 6. PETA RISIKO UNTUK TOP 10
+        $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
+                ->get()->keyBy(fn($item) => $item->skala_dampak . '-' . $item->skala_probabilitas);
+
+        $formattedCurrentRiskMaps = ['inherent' => [], 'residual' => [], 'current' => []];
+
+        foreach ($top10Risks as $idx => $risk) {
+            $riskNumber = 'R' . ($idx + 1);
+            $peristiwa = $risk->peristiwa_risiko_id === 0 ? $risk->rencana_kegiatan : ($risk->peristiwaRisiko->title ?? '-');
+
+            $baseData = [
+                'riskNumber' => $riskNumber,
+                'peristiwa' => $peristiwa,
+                'project_name' => $risk->project->project_name,
+                'risk_id' => $risk->id,
+                'project_periode_list_id' => $risk->project_periode_list_id
+            ];
+
+            if ($risk->projectRiskAnalisa && $risk->projectRiskAnalisa->skala_dampak && $risk->projectRiskAnalisa->skalaProbabilitas) {
+                $formattedCurrentRiskMaps['inherent'][] = array_merge($baseData, [
+                    'skala_dampak' => $risk->projectRiskAnalisa->skala_dampak,
+                    'skala_probabilitas' => $risk->projectRiskAnalisa->skalaProbabilitas->tingkat,
+                    'level_risiko' => $risk->projectRiskAnalisa->level_risiko,
+                ]);
+            }
+
+            if ($risk->projectRiskAnalisa && $risk->projectRiskAnalisa->skala_dampak_residual && $risk->projectRiskAnalisa->skalaProbabilitasResidual) {
+                $formattedCurrentRiskMaps['residual'][] = array_merge($baseData, [
+                    'skala_dampak' => $risk->projectRiskAnalisa->skala_dampak_residual,
+                    'skala_probabilitas' => $risk->projectRiskAnalisa->skalaProbabilitasResidual->tingkat,
+                    'level_risiko' => $risk->projectRiskAnalisa->level_risiko_residual,
+                ]);
+            }
+
+            if ($risk->current_monitoring && $risk->current_monitoring->skala_dampak && $risk->current_monitoring->skalaProbabilitas) {
+                $formattedCurrentRiskMaps['current'][] = array_merge($baseData, [
+                    'skala_dampak' => $risk->current_monitoring->skala_dampak,
+                    'skala_probabilitas' => $risk->current_monitoring->skalaProbabilitas->tingkat,
+                    'level_risiko' => $risk->current_monitoring->level_risiko,
+                ]);
+            } else {
+                if ($risk->projectRiskAnalisa && $risk->projectRiskAnalisa->skala_dampak && $risk->projectRiskAnalisa->skalaProbabilitas) {
+                    $formattedCurrentRiskMaps['current'][] = array_merge($baseData, [
+                        'skala_dampak' => $risk->projectRiskAnalisa->skala_dampak,
+                        'skala_probabilitas' => $risk->projectRiskAnalisa->skalaProbabilitas->tingkat,
+                        'level_risiko' => $risk->projectRiskAnalisa->level_risiko,
+                        'displayMark' => '<sup class="text-danger fw-bold ms-1" style="font-size: 0.8rem; top: -0.3em;" data-bs-toggle="tooltip" title="Belum ada monitoring terpublish">*</sup>'
+                    ]);
+                }
+            }
+        }
+
+        // 7. DATA TOP 10 LOSS EVENT (LED) PROYEK AKTIF
+        $topLedProyek = LossEventProject::whereIn('project_id', $activeProjectIds)
+            ->whereYear('tanggal_kejadian', $currentYear)
+            ->whereMonth('tanggal_kejadian', '<=', $currentMonth)
+            ->orderByRaw('CAST(nilai_kerugian_finansial AS NUMERIC) DESC')
+            ->with(['project', 'peristiwaRisiko', 'kategoriKejadian'])
+            ->take(10)
+            ->get();
+
+        return view('executive-summary-konsolidasi', compact(
+            'units',
+            'selectedUnitId',
+            'selectedPeriod',
+            'currentYear',
+            'pieChartData',
+            'top10ProjectsExposure',
+            'top10Risks',
+            'totalEksposurTop10',
+            'totalEksposurInherentSemua',
+            'totalEksposurResidualSemua',
+            'totalProyekAktif',
+            'totalRisikoSemua',
+            'totalNilaiKontrak',
+            'projects',
+            'formattedCurrentRiskMaps',
+            'riskMaps',
+            'topLedProyek'
+        ));
+    }
+
     private function getStatusPriorityFromKriStatus($statusNumeric)
     {
         switch ((int)$statusNumeric) {

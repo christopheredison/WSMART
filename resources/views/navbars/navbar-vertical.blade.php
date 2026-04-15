@@ -135,6 +135,14 @@
             </li>
             @endcan
 
+            @can('proyek_konsolidasi_dashboard_menu')
+            <li class="nav-item"><a class="nav-link {{ request()->is('executive-summary-project') ? 'active' : '' }}"
+                href="/executive-summary-konsolidasi">
+                <span class="nav-link-text">Proyek Konsolidasi</span>
+              </a>
+            </li>
+            @endcan
+
             @can('proyek_dashboard_menu')
             <li class="nav-item"><a class="nav-link {{ request()->is('executive-summary-project') ? 'active' : '' }}"
                 href="/executive-summary-project">

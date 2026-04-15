@@ -280,6 +280,7 @@ return [
         'corporate_dashboard_menu',
         'unit_dashboard_menu',
         'proyek_dashboard_menu',
+        'proyek_konsolidasi_dashboard_menu',
         'ap_dashboard_menu',
         'kri_dashboard_menu',
         'corporate_menu',
