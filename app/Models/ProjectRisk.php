@@ -48,6 +48,8 @@ class ProjectRisk extends Model
         'threshold_risk_appetite',
         'threshold_risk_tolerance',
         'deskripsi_dampak',
+        'request_edit',
+        'request_edit_reason',
     ];
 
     public const STATUS_INPUT_DATA = 1;

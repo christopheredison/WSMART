@@ -77,7 +77,7 @@ class ProjectRiskController extends BasicCRUDController
             'label' => 'Peristiwa Risiko',
             'data' => 'peristiwaRisiko.title',
             'render' => '(data, type, row) => {
-                return row.peristiwa_risiko?.title ? row.rencana_kegiatan || "-";
+                return row.peristiwa_risiko_id === 0 ? row.rencana_kegiatan : (row.peristiwa_risiko?.title ?? row.peristiwa_risiko ?? "-");
             }',
             'class' => 'mw-10r',
         ],
@@ -284,15 +284,6 @@ class ProjectRiskController extends BasicCRUDController
         $user = request()->user();
         $levelId = $user->level_id;
 
-        // Cari ApprovalFlow untuk unit ini
-        // $approvalFlow = ApprovalFlow::where('project_id', $projectId)
-        //     ->whereNull('unit_id')
-        //     ->first();
-        // $min_verification = 2;
-        // if ($approvalFlow) {
-        //     $min_verification = $approvalFlow->min_verification;
-        // }
-
         $dataBatch = DataBatch::where('project_id', $projectId)
                       ->where('periode_id', $periodeId)
                       ->where('type', 2)
@@ -311,28 +302,14 @@ class ProjectRiskController extends BasicCRUDController
             ]);
         }
         $status = $dataBatch->status;
-        // dd($dataBatch);
 
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
         $verificationData = $this->getUserVerificationStep($levelId, $is_mr);
         $u_step = $verificationData['u_step'];
         $b_step = $dataBatch->step_verification;
 
-        // dd([
-        //     'Level ID' => $levelId,
-        //     'Status Batch' => $status,
-        //     'User Step (u_step)' => $u_step,
-        //     'Batch Step (b_step)' => $b_step
-        // ]);
-
         $this->baseRouteParams = ['project' => request()->route('project')];
         $this->indexSubtitle = $projectPeriodeList->project->project_name;
-
-        // Cek Permission
-        // if (!(Gate::check('project_admin_access') || !$user->hasProject($projectPeriodeList) ||
-        //     ($user->unit && $projectPeriodeList->project && $projectPeriodeList->project->cost_center_parent != $user->unit->cost_center))) {
-        //     abort(403);
-        // }
 
         // Cek sudah ada Risk Context belum
         $riskContext = ProjectRiskContext::where('project_id', $projectId)->first();
@@ -384,6 +361,7 @@ class ProjectRiskController extends BasicCRUDController
             ],
         ];
 
+        // --- BUTTON ACTIONS ---
         if (Gate::check('project_risk_edit')) {
             // Default Action: View
             $this->tableLegend = [['icon' => '<span class="bx bx-show-alt"></span>', 'label' => 'View']];
@@ -391,25 +369,52 @@ class ProjectRiskController extends BasicCRUDController
 
             // CASE 1: RISK OFFICER PROJECT (Draft/Revisi)
             if (($status == DataBatch::STATUS_PROSES || $status == DataBatch::STATUS_REVISI) && $levelId == 6) {
-                $active_state = 'function(id, type, row) { return row.status === 1 || row.status === 5; }';
+                // Edit Info dan Rencana bisa diakses saat Draft/Revisi (1, 5) ATAU jika Unlocked Edit (request_edit == 2)
+                $active_state_edit = 'function(id, type, row) { return row.status === 1 || row.status === 5; }';
+
+                // Analisa HANYA bisa jika tidak dalam mode Unlocked Edit (request_edit != 2)
+                $active_state_analisa = 'function(id, type, row) { return (row.status === 1 || row.status === 5) && row.request_edit != 2; }';
 
                 $this->tableLegend = array_merge($this->tableLegend, [
                     ['icon' => '<span class="bx bx-analyse text-warning"></span>', 'label' => 'Analisa'],
                     ['icon' => '<span class="bx bx-task text-primary"></span>', 'label' => 'Perencanaan'],
                     ['icon' => '<span class="bx bx-edit"></span>', 'label' => 'Edit']
                 ]);
-                $this->tableActions[] = ['label' => '<span class="bx bx-analyse text-warning"></span>', 'btn_icon' => true, 'action' => 'link', 'url' => route('projects.risks.analisa', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Analisa Risiko', 'active_state' => $active_state];
-                $this->tableActions[] = ['label' => '<span class="bx bx-task text-primary"></span>', 'btn_icon' => true, 'action' => 'link', 'url' => route('projects.risks.rencana', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Rencana Perlakuan Risiko', 'active_state' => $active_state];
-                $this->tableActions[] = ['label' => '<span class="bx bx-edit"></span>', 'btn_icon' => true, 'action' => 'edit', 'permissions' => ['project_risk_edit'], 'active_state' => $active_state];
+                $this->tableActions[] = ['label' => '<span class="bx bx-analyse text-warning"></span>', 'btn_icon' => true, 'action' => 'link', 'url' => route('projects.risks.analisa', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Analisa Risiko', 'active_state' => $active_state_analisa];
+                $this->tableActions[] = ['label' => '<span class="bx bx-task text-primary"></span>', 'btn_icon' => true, 'action' => 'link', 'url' => route('projects.risks.rencana', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Rencana Perlakuan Risiko', 'active_state' => $active_state_edit];
+                $this->tableActions[] = ['label' => '<span class="bx bx-edit"></span>', 'btn_icon' => true, 'action' => 'edit', 'permissions' => ['project_risk_edit'], 'active_state' => $active_state_edit];
             }
+
+            // --- TAMBAHAN TOMBOL REQUEST EDIT & APPROVE ---
+            // Tombol Request Edit untuk Risk Officer Project (Level 6) untuk Risiko Published
+            if ($levelId == 6) {
+                $this->tableActions[] = [
+                    'label' => '<span class="bx bx-message-square-edit text-info"></span>',
+                    'btn_icon' => true,
+                    'action' => 'script',
+                    'script' => 'showRequestEditModal($(this).data("id"))',
+                    'title' => 'Request Edit Risiko',
+                    'active_state' => 'function(id, type, row) { return row.status === 6 && row.request_edit != 1 && row.request_edit != 2; }'
+                ];
+                $this->tableLegend[] = ['icon' => '<span class="bx bx-message-square-edit text-info"></span>', 'label' => 'Request Edit Risiko'];
+            }
+
+            // Tombol Approve Request Edit untuk Risk Owner MR (Level 2 + MR)
+            if ($levelId == 2 && $is_mr) {
+                $this->tableActions[] = [
+                    'label' => '<span class="bx bx-check-double text-success"></span>',
+                    'btn_icon' => true,
+                    'action' => 'script',
+                    'script' => 'approveRequestEdit($(this).data("id"))',
+                    'title' => 'Setujui Request Edit',
+                    'active_state' => 'function(id, type, row) { return row.status === 6 && row.request_edit == 1; }'
+                ];
+                $this->tableLegend[] = ['icon' => '<span class="bx bx-check-double text-success"></span>', 'label' => 'Setujui Request Edit'];
+            }
+
+
             // CASE 2: VERIFIKATOR (Termasuk Pengembalian MR)
-            else if (
-                // ($u_step == $b_step) || // Kondisi Normal: Step User == Step Batch
-                // ($u_step == 2 && $status == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR) // Kondisi Rejection: Divisi menerima tolakan MR
-                true
-            ) {
-                // Active State: Status Risiko harus relevan (Dikirim, Tunggu Verif, Ditolak MR)
-                // DAN Step Verifikasi Risiko == u_step
+            else if (true) {
                 $active_state = <<<JS
                     function(id, type, row) {
                         const validStatus = [2, 3, 7, 8];
@@ -431,7 +436,6 @@ class ProjectRiskController extends BasicCRUDController
             $hasDeletePermission = Gate::check('project_risk_delete_admin');
             $deleteJsLogic = $hasDeletePermission ? 'true' : ($isInputter && Gate::check('project_risk_delete') ? 'row.status == 0 || row.status == 1 || row.status == 5' : 'false');
 
-            // dd($deleteJsLogic, $status);
             $this->tableLegend[] = ['icon' => '<span class="bx bx-trash text-danger"></span>', 'label' => 'Hapus'];
             $this->tableActions[] = ['label' => '<span class="bx bx-trash text-danger"></span>', 'btn_icon' => true, 'action' => 'delete', 'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Hapus', 'active_state' => "(data, type, row) => $deleteJsLogic"];
         }
@@ -472,7 +476,6 @@ class ProjectRiskController extends BasicCRUDController
                 ->where('status_progress', 2)->count();
         }
 
-        // Setup Variabel Footer Default
         $routeUrl = route('projects.risks.send');
         $csrfToken = csrf_token();
         $disabledAttr = 'disabled';
@@ -481,7 +484,6 @@ class ProjectRiskController extends BasicCRUDController
         $sendType = 'risiko';
 
         // --- LOGIKA UTAMA TOMBOL FOOTER ---
-        // A. Officer Project (Draft/Revisi)
         if (($status == DataBatch::STATUS_PROSES || $status == DataBatch::STATUS_REVISI) && $levelId == 6) {
             $disabledAttr = '';
             $viewAttr = "";
@@ -491,21 +493,15 @@ class ProjectRiskController extends BasicCRUDController
                 $escalationConfig['parameters']['send_type'] = 'perbaikan';
             }
         }
-
-        // B. Verifikator (Termasuk Risk Owner Project & Pengembalian MR)
-        // Check: Apakah Step User == Step Batch?
         else if ($u_step == $b_step) {
             $escalationConfig['show'] = true;
             $escalationConfig['route'] = route('projects.risks.eskalasi');
 
-            // Update parameter send_type jika perlu
             if ($status == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR) {
                 $escalationConfig['label'] = 'Kirim Perbaikan (Ke MR)';
                 $escalationConfig['parameters']['send_type'] = 'perbaikan';
             }
 
-            // Check: Status Batch Valid? (Kirim, Verifikasi, atau Rejected MR)
-            // Note: STATUS_KIRIM (2) adalah status saat masuk ke Risk Owner Project (Step 1)
             $validBatchStatus = [
                 DataBatch::STATUS_KIRIM, // 2
                 DataBatch::STATUS_VERIFIKASI, // 4
@@ -522,8 +518,6 @@ class ProjectRiskController extends BasicCRUDController
                 }
             }
         }
-
-        // C. Kasus Khusus: Risk Officer Divisi (Step 2) saat Rejected from MR (9)
         else if ($u_step == 2 && $status == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR) {
             $disabledAttr = '';
             $viewAttr = "";
@@ -533,14 +527,12 @@ class ProjectRiskController extends BasicCRUDController
             $escalationConfig['parameters']['send_type'] = 'perbaikan';
         }
 
-        // Hitung Rata-rata (Tampilan Info)
         $projectRiskIds = ProjectRisk::where('project_periode_list_id', $projectPeriodeListId)->pluck('id');
         $averageExposure = (float) ProjectRiskAnalisa::whereIn('risiko_id', $projectRiskIds)
             ->where('kategori_dampak', ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF)
             ->avg('eksposur_risiko');
         $formattedAverageExposure = 'Rp ' . number_format($averageExposure, 0, ',', '.');
 
-        // Render Kolom
         $this->tableLegend[] = [
             'icon' => '<span class="badge bg-primary">!</span>',
             'label' => 'Rekomendasi Risiko'
@@ -553,7 +545,7 @@ class ProjectRiskController extends BasicCRUDController
                 } else if (row.project_risk_analisa?.kategori_dampak === 'Kualitatif' && row.skala_risiko >= 20) {
                     add = '<span class="badge bg-primary" data-bs-toggle="tooltip" title="Rekomendasi Risiko di atas rata-rata Eksposure Risiko">!</span> ';
                 }
-                return add + (row.peristiwa_risiko?.title || row?.rencana_kegiatan || '-');
+                return add + (row.peristiwa_risiko_id === 0 ? row.rencana_kegiatan : (row.peristiwa_risiko?.title || row?.peristiwa_risiko || '-'));
             }
         JS;
         $this->tableColumns['nilai_dampak']['render'] = <<<JS
@@ -567,8 +559,6 @@ class ProjectRiskController extends BasicCRUDController
         JS;
 
         $summaryInfo = null;
-
-        // Definisikan Label Jabatan untuk pesan dinamis
         $stepLabels = [
             1 => 'Risk Owner Project',
             2 => 'Risk Officer Divisi',
@@ -576,15 +566,13 @@ class ProjectRiskController extends BasicCRUDController
             4 => 'Risk Owner MR',
         ];
 
-        // --- A. RISK OFFICER PROJECT (LEVEL 6 - STEP 0) ---
+        // LOGIKA BUTTON FOOTER (INPUTTER)
         if ($levelId == 6) {
             $escalationConfig['show'] = true;
 
-            // Hitung Data
-            $risksDraft = ProjectRisk::where('project_periode_list_id', $projectPeriodeListId)->where('status', 1)->count(); // Input Baru
-            $risksRevised = ProjectRisk::where('project_periode_list_id', $projectPeriodeListId)->where('status', 5)->count(); // Revisi dari Atas
+            $risksDraft = ProjectRisk::where('project_periode_list_id', $projectPeriodeListId)->where('status', 1)->count();
+            $risksRevised = ProjectRisk::where('project_periode_list_id', $projectPeriodeListId)->where('status', 5)->count();
 
-            // Jika Mode Revisi (Batch 5)
             if ($status == DataBatch::STATUS_REVISI) {
                 $escalationConfig['label'] = 'Kirim Perbaikan';
                 $escalationConfig['parameters']['send_type'] = 'perbaikan';
@@ -594,7 +582,6 @@ class ProjectRiskController extends BasicCRUDController
                         'type' => 'danger', 'icon' => 'bx-undo',
                         'message' => "Terdapat <strong>{$risksRevised}</strong> risiko yang <strong>dikembalikan (revisi)</strong>. Mohon perbaiki data."
                     ];
-                    // $escalationConfig['disabled'] = true;
                     $escalationConfig['disabled'] = false;
                 } else {
                     $summaryInfo = [
@@ -604,7 +591,6 @@ class ProjectRiskController extends BasicCRUDController
                     $escalationConfig['disabled'] = false;
                 }
             }
-            // Jika Mode Normal (Batch 1)
             else if ($status == DataBatch::STATUS_PROSES) {
                 if ($risksDraft > 0) {
                     $summaryInfo = [
@@ -620,12 +606,10 @@ class ProjectRiskController extends BasicCRUDController
                     $escalationConfig['disabled'] = true;
                 }
             } else {
-                $escalationConfig['show'] = false; // Sudah dikirim
+                $escalationConfig['show'] = false;
             }
         }
-
-        // --- B. VERIFIKATOR (LEVEL 7, 1, 2) ---
-        // Cek apakah giliran user ini?
+        // LOGIKA BUTTON FOOTER (VERIFIKATOR)
         else if (
             ($u_step == $b_step) ||
             ($u_step == 2 && $status == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR)
@@ -633,8 +617,6 @@ class ProjectRiskController extends BasicCRUDController
             $escalationConfig['show'] = true;
             $escalationConfig['route'] = route('projects.risks.eskalasi');
 
-            // Hitung Risiko Pending di Meja User
-            // Risiko yang step verifikasinya masih di u_step (belum di-approve/reject)
             $pendingRiskCount = ProjectRisk::where('project_periode_list_id', $projectPeriodeListId)
                 ->where('status', '!=', ProjectRisk::STATUS_PUBLISHED)
                 ->where(function($query) use ($u_step) {
@@ -643,16 +625,14 @@ class ProjectRiskController extends BasicCRUDController
                 })
                 ->count();
 
-            // Cek apakah ini mode pengembalian dari MR?
             $isRejectionMode = ($status == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR || $status == DataBatch::STATUS_REJECTED_FROM_OWNER_MR);
             $rejectorLabel = '';
 
             if ($isRejectionMode) {
-                $escalationConfig['label'] = 'Kirim Perbaikan (Ke ' . $status == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR ? 'Risk Officer MR' : 'Risk Owner MR' . ')';
+                $escalationConfig['label'] = 'Kirim Perbaikan (Ke ' . ($status == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR ? 'Risk Officer MR' : 'Risk Owner MR') . ')';
                 $escalationConfig['parameters']['send_type'] = 'perbaikan';
                 $rejectorLabel = $status == DataBatch::STATUS_REJECTED_FROM_OFFICER_MR ? 'Risk Officer Manajemen Risiko' : 'Risk Owner Manajemen Risiko';
             } else {
-                // Label Tombol Normal
                 $nextLabel = $stepLabels[$u_step + 1] ?? 'Selesai';
                 $escalationConfig['label'] = ($u_step == 4) ? 'Publish Risiko' : "Kirim ke {$nextLabel}";
             }
@@ -677,7 +657,6 @@ class ProjectRiskController extends BasicCRUDController
                     }
                 }
             } else {
-                // Semua sudah diverifikasi
                 $escalationConfig['disabled'] = false;
                 $btnName = $escalationConfig['label'];
                 $summaryInfo = [
@@ -689,47 +668,125 @@ class ProjectRiskController extends BasicCRUDController
 
         $this->cardFooter = <<<HTML
             <div class="d-flex flex-column">
-                <!-- <div {$viewAttr}>
-                  {$this->getPendingRiskAlert($pending_risk, $u_step, $dataBatch)}
-                </div> -->
                 <div>
                     <strong>Rata-rata Eksposure Risiko (Kuantitatif):</strong>
                     <span id="average-risk-value">{$formattedAverageExposure}</span>
                 </div>
-                <!-- <div class="mt-3"{$viewAttr}>
-                    <form id="send-form" action="{$routeUrl}" method="POST" class="d-inline-block">
-                        <input type="hidden" name="_token" value="{$csrfToken}">
-                        <input type="hidden" name="project_id" value="{$projectPeriodeListId}">
-                        <input type="hidden" name="send_type" value="{$sendType}">
-                        <button id="send-button" type="button" class="btn btn-submit btn-arrow-right"{$disabledAttr}>{$buttonText}</button>
-                    </form>
-                </div> -->
             </div>
-            <!-- <script>
-                document.getElementById('send-button').addEventListener('click', function(e) {
-                    e.preventDefault();
-                    Swal.fire({
-                        title: 'Konfirmasi',
-                        text: 'Apakah Anda yakin ingin mengirim {$sendType} ini?',
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonText: 'Ya, Kirim',
-                        cancelButtonText: 'Batal',
-                        reverseButtons: true
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            document.getElementById('send-form').submit();
-                        }
-                    });
-                });
-            </script> -->
         HTML;
 
         $catatanRoute = route('projects.risks.notes', ['project' => request()->route('project'), 'risk' => ':id']);
         $bulkRoute = route("projects.risks.bulk-verifikasi", ["project" => $projectPeriodeListId]);
 
+        $submitRequestRoute = route('projects.risks.submit-request-edit');
+        $approveRequestRoute = route('projects.risks.approve-request-edit');
+
+        // INJEKSI SCRIPT JAVASCRIPT & MODAL REQUEST EDIT
         $this->extraScripts[] = <<<SCRIPT
+            <div class="modal fade" id="modalRequestEdit" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-info text-white">
+                            <h5 class="modal-title text-white">Request Edit Risiko</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" id="request_risk_id">
+                            <div class="alert alert-info mb-3">
+                                Risiko ini telah di-Publish. Silakan ajukan request jika perlu melakukan perubahan. Request akan dikirimkan ke <strong>Risk Owner MR</strong>.
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label fw-bold">Alasan Perubahan Data Risiko <span class="text-danger">*</span></label>
+                                <textarea id="request_reason" class="form-control" rows="4" placeholder="Tuliskan alasan yang jelas mengapa risiko ini perlu diubah..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="button" class="btn btn-info" onclick="submitRequestEdit()"><i class="bx bx-send me-1"></i>Kirim Request</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <script>
+            function showRequestEditModal(id) {
+                $('#request_risk_id').val(id);
+                $('#request_reason').val('');
+                $('#modalRequestEdit').modal('show');
+            }
+
+            function submitRequestEdit() {
+                const id = $('#request_risk_id').val();
+                const reason = $('#request_reason').val().trim();
+
+                if(!reason) {
+                    Swal.fire('Peringatan', 'Alasan perubahan wajib diisi!', 'warning');
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Kirim Request?',
+                    text: 'Request edit risiko akan dikirimkan ke Risk Owner MR.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Kirim',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if(result.isConfirmed) {
+                        Swal.fire({title: 'Memproses...', didOpen: () => {Swal.showLoading()}});
+                        $.ajax({
+                            url: '{$submitRequestRoute}',
+                            type: 'POST',
+                            data: {
+                                _token: '{$csrfToken}',
+                                risk_id: id,
+                                reason: reason
+                            },
+                            success: function(res) {
+                                $('#modalRequestEdit').modal('hide');
+                                Swal.fire('Berhasil', res.message, 'success').then(() => {
+                                    $('.ajax-datatable').DataTable().ajax.reload(null, false);
+                                });
+                            },
+                            error: function(err) {
+                                Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                            }
+                        });
+                    }
+                });
+            }
+
+            function approveRequestEdit(id) {
+                Swal.fire({
+                    title: 'Setujui Request Edit?',
+                    text: 'Status risiko akan dikembalikan ke Draft dan dapat diedit oleh Risk Officer Proyek. (Akses Analisa akan dikunci).',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Setujui',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if(result.isConfirmed) {
+                        Swal.fire({title: 'Memproses...', didOpen: () => {Swal.showLoading()}});
+                        $.ajax({
+                            url: '{$approveRequestRoute}',
+                            type: 'POST',
+                            data: {
+                                _token: '{$csrfToken}',
+                                risk_id: id
+                            },
+                            success: function(res) {
+                                Swal.fire('Berhasil', res.message, 'success').then(() => {
+                                    $('.ajax-datatable').DataTable().ajax.reload(null, false);
+                                });
+                            },
+                            error: function(err) {
+                                Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                            }
+                        });
+                    }
+                });
+            }
+
             function submitEskalasiForm(formId, actionText) {
                 Swal.fire({
                     title: 'Konfirmasi',
@@ -741,15 +798,12 @@ class ProjectRiskController extends BasicCRUDController
                     reverseButtons: true
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        // Tampilkan loading
                         Swal.fire({
                             title: 'Memproses...',
                             text: 'Mohon tunggu sebentar.',
                             allowOutsideClick: false,
                             didOpen: () => { Swal.showLoading(); }
                         });
-
-                        // Submit Form
                         $('#' + formId).submit();
                     }
                 });
@@ -760,10 +814,8 @@ class ProjectRiskController extends BasicCRUDController
                 const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
                 const contentDiv = $('#catatan-content');
 
-                // Tampilkan spinner loading
                 contentDiv.html('<div class="d-flex justify-content-center my-4"><div class="spinner-border" role="status"><span class="visually-hidden">Memuat...</span></div></div>');
 
-                // Gunakan route yang sudah di-generate dari PHP
                 const url = "{$catatanRoute}".replace(':id', riskId);
 
                 $.ajax({
@@ -815,9 +867,7 @@ class ProjectRiskController extends BasicCRUDController
             let currentIds = [];
             let isBulkMode = false;
 
-            // 1. Logic Select All & Checkbox Validation
             $(document).on('change', '#check-all-risiko', function() {
-                // Hanya pilih checkbox yang tidak disabled (sesuai wewenang step-nya)
                 $('.row-checkbox:not(:disabled)').prop('checked', this.checked);
                 toggleBulkButton();
             });
@@ -837,7 +887,6 @@ class ProjectRiskController extends BasicCRUDController
                 }
             }
 
-            // 2. Handler Tombol Bulk Click
             function handleBulkVerifikasiClick() {
                 currentIds = [];
                 $('.row-checkbox:checked').each(function() {
@@ -846,7 +895,6 @@ class ProjectRiskController extends BasicCRUDController
 
                 isBulkMode = true;
 
-                // Sembunyikan info single risk, tampilkan info bulk
                 $('#modal-peristiwa-risiko').closest('.mb-4').addClass('d-none');
 
                 if($('#modal-bulk-info').length == 0) {
@@ -862,12 +910,10 @@ class ProjectRiskController extends BasicCRUDController
                 const modal = new bootstrap.Modal(document.getElementById('modalVerifikasiRisiko'));
                 modal.show();
 
-                // Override fungsi tombol di footer modal
                 document.getElementById('btn-terima-risiko').onclick = function() { submitBulk('terima'); };
                 document.getElementById('btn-tolak-risiko').onclick = function() { submitBulk('tolak'); };
             }
 
-            // 3. Submit Bulk
             function submitBulk(status) {
                 const catatan = $('#catatan-verifikasi').val().trim();
 
@@ -913,15 +959,6 @@ class ProjectRiskController extends BasicCRUDController
 
         $this->defaultOrder = [[7, 'desc']];
 
-        // hide import tender
-        // $this->importConfig = [
-        //   'buttonText' => 'Upload Risiko Tender',
-        //   'route' => route('projects.risks.import-tender', ['project' => $projectPeriodeList->id]),
-        //   'title' => 'Upload Risiko Tender dari Excel',
-        //   'instructions' => 'Pastikan file Excel Anda memiliki template yang sesuai.',
-        //   'templateUrl' => route('download-tender-template'),
-        // ];
-
         $this->extraViewData = [
             'status' => $status,
             'levelId' => $levelId,
@@ -935,6 +972,191 @@ class ProjectRiskController extends BasicCRUDController
         ];
 
         return parent::index();
+    }
+
+    public function submitRequestEdit(Request $request)
+    {
+        $request->validate([
+            'risk_id' => 'required',
+            'reason' => 'required'
+        ]);
+
+        $risk = ProjectRisk::findOrFail($request->risk_id);
+        $risk->update([
+            'request_edit' => 1,
+            'request_edit_reason' => $request->reason
+        ]);
+
+        // Notifikasi ke Owner MR
+        $targetLink = route('projects.risks.index', ['project' => $risk->project_periode_list_id]);
+        $this->sendNotificationCustom('RW_MR', $risk->project_periode_list_id, 'Request Edit Risiko', 'Risk Officer Proyek mengajukan request edit risiko (Risk ID: R'.$risk->id.'). Alasan: ' . $request->reason, $targetLink, 'bx bx-message-square-edit');
+
+        return response()->json(['message' => 'Request edit berhasil dikirim']);
+    }
+
+    public function approveRequestEdit(Request $request)
+    {
+        $request->validate(['risk_id' => 'required']);
+
+        $risk = ProjectRisk::findOrFail($request->risk_id);
+        $risk->update([
+            'status' => ProjectRisk::STATUS_INPUT_DATA, // 1
+            'status_progress' => 1,
+            'step_verification' => 0,
+            'request_edit' => 2 // 2 = Approved / Unlocked mode
+        ]);
+
+        // Pastikan ada DataBatch di tahap Draft agar user bisa mengirimnya nanti
+        $dataBatch = DataBatch::where('project_id', $risk->project_id)
+                ->where('type', 2)
+                ->where('finish', false)
+                ->orderBy('batch', 'desc')
+                ->first();
+
+        if (!$dataBatch) {
+            DataBatch::create([
+                'project_id' => $risk->project_id,
+                'periode_id' => $risk->periode_id,
+                'type' => 2,
+                'status' => DataBatch::STATUS_PROSES,
+                'step_verification' => 0,
+                'finish' => false
+            ]);
+        }
+
+        // Notifikasi kembali ke Officer Proyek
+        $targetLink = route('projects.risks.index', ['project' => $risk->project_periode_list_id]);
+        $this->sendNotificationCustom('RO_PROYEK', $risk->project_periode_list_id, 'Request Edit Disetujui', 'Request edit risiko Anda (Risk ID: R'.$risk->id.') telah disetujui. Silahkan lakukan perubahan data yang diperlukan.', $targetLink, 'bx bx-check-double');
+
+        return response()->json(['message' => 'Request edit disetujui, status risiko kembali ke Draft. Akses untuk merubah analisa dikunci.']);
+    }
+
+    private function generateRiskStatus($row, $user, $u_step, $levelId)
+    {
+        if ($row->project_risks_count == 0) {
+            return '<span class="badge bg-light text-dark border border-dark">Tidak Aktif</span>';
+        }
+
+        $lastBatch = $row->project->dataBatches->sortByDesc('id')->first();
+        $allRisks = $row->projectRisks;
+        $totalRisk = $allRisks->count();
+        $publishedCount = $allRisks->where('status', ProjectRisk::STATUS_PUBLISHED)->count();
+
+        // Cek jika status risiko adalah 6 (Published)
+        if ($row->status == 6 || ($lastBatch && $lastBatch->finish) || ($totalRisk > 0 && $totalRisk === $publishedCount)) {
+            $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Selesai</div>';
+
+            // Tambahkan Badge Informasi jika sedang request edit
+            $requestEditHtml = '';
+            if ($row->request_edit == 1) {
+                $requestEditHtml = '<div class="mt-1"><span class="badge bg-warning text-dark border border-warning" data-bs-toggle="tooltip" title="Alasan Request: '.$row->request_edit_reason.'"><i class="bx bx-time-five"></i> Menunggu Approval Edit</span></div>';
+            }
+
+            return '<div class="d-flex flex-column align-items-start">
+                        <span class="badge bg-success" data-bs-toggle="tooltip" title="Status: Published / Selesai">Published</span>
+                        '.$requestEditHtml.'
+                        '.$positionHtml.'
+                    </div>';
+        }
+
+        $batchStep = $lastBatch ? $lastBatch->step_verification : 0;
+        $batchStatus = $lastBatch ? $lastBatch->status : 1;
+
+        $stepLabels = [
+            0 => 'Risk Officer Proyek',
+            1 => 'Risk Owner Proyek',
+            2 => 'Risk Officer Divisi',
+            3 => 'Risk Officer MR',
+            4 => 'Risk Owner MR',
+        ];
+        $currentLabel = $stepLabels[$batchStep] ?? 'Verifikator';
+        if ($batchStatus == 5) $currentLabel = 'Dikembalikan ke Officer Proyek';
+        if ($batchStatus == 9) $currentLabel = 'Dikembalikan ke Officer Divisi';
+        if ($batchStatus == 10) $currentLabel = 'Dikembalikan ke Officer MR';
+
+        $positionHtml = '
+        <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">
+            Posisi: ' . $currentLabel . '
+        </div>';
+
+        $isMyTurn = false;
+        if ($levelId == 6) {
+            if (in_array($batchStatus, [1, 5])) $isMyTurn = true;
+        } else {
+            if (($u_step == $batchStep) || ($u_step == 2 && $batchStatus == 9) || ($u_step == 3 && $batchStatus == 10)) {
+                $isMyTurn = true;
+            }
+        }
+
+        $pulseDot = '
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
+
+        if ($isMyTurn && $this->userHasAccessToProject($user, $row)) {
+            $redirectUrl = route('projects.risks.index', ['project' => $row->id]);
+
+            if ($levelId == 6) {
+                if ($batchStatus == 5) {
+                    return '
+                    <div class="d-flex flex-column align-items-start">
+                        <a href="'.$redirectUrl.'" class="text-decoration-none">
+                            <span class="badge bg-danger cursor-pointer border border-danger text-white position-relative"
+                                  data-bs-toggle="tooltip"
+                                  title="Status: Dikembalikan. Mohon perbaiki data risiko sesuai catatan.">
+                                Perlu Revisi
+                                '.$pulseDot.'
+                            </span>
+                        </a>
+                        '.$positionHtml.'
+                    </div>';
+                }
+                else {
+                    $unlockedHtml = '';
+                    if ($row->request_edit == 2) {
+                        $unlockedHtml = '<div class="mt-1"><span class="badge bg-secondary"><i class="bx bx-lock-open-alt"></i> Unlocked</span></div>';
+                    }
+                    return '
+                    <div class="d-flex flex-column align-items-start">
+                        <a href="'.$redirectUrl.'" class="text-decoration-none">
+                            <span class="badge bg-info cursor-pointer border border-info text-white position-relative"
+                                  data-bs-toggle="tooltip"
+                                  title="Status: Draft. Silakan lengkapi dan ajukan.">
+                                Draft / Input Risiko
+                                '.$pulseDot.'
+                            </span>
+                        </a>
+                        '.$unlockedHtml.'
+                        '.$positionHtml.'
+                    </div>';
+                }
+
+            } else {
+                return '
+                <div class="d-flex flex-column align-items-start">
+                    <a href="'.$redirectUrl.'" class="text-decoration-none">
+                        <span class="badge bg-warning text-dark border border-warning shadow-sm cursor-pointer position-relative"
+                              data-bs-toggle="tooltip"
+                              title="Klik untuk verifikasi: '.$currentLabel.'">
+                            <i class="bx bx-error-circle bx-flashing me-1"></i> Perlu Verifikasi
+                            '.$pulseDot.'
+                        </span>
+                    </a>
+                    '.$positionHtml.'
+                </div>';
+            }
+        } else {
+            return '
+            <div class="d-flex flex-column align-items-start">
+                <div class="d-inline-block position-relative"
+                    data-bs-toggle="tooltip"
+                    title="Posisi saat ini: '.$currentLabel.'">
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                        <i class="bx bx-time-five me-1"></i> Proses Validasi
+                    </span>
+                </div>
+                '.$positionHtml.'
+            </div>';
+        }
     }
 
     public function create() {
