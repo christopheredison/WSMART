@@ -1462,7 +1462,7 @@ class HomeController extends Controller
             $summaryData['led_proyek_total'] = $ledProyekTotal;
             $summaryData['eksposur_risiko_total'] = $eksposurRisikoTotal;
 
-            $summaryData['lsp_realisasi_incl_led'] = $summaryData['lsp_realisasi_sd_bulan'] - $summaryData['led_proyek_total'];
+            $summaryData['potensi_hasil_usaha_sd_bulan'] = $summaryData['lsp_realisasi_sd_bulan'] + $summaryData['led_proyek_total'];
             $summaryData['proyeksi_lsp_incl_eksposur'] = $summaryData['lsp_realisasi_sd_selesai'] - $summaryData['eksposur_risiko_total'];
 
             $selectedProjectPeriode->load([
