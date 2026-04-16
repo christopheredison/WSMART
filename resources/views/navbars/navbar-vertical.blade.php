@@ -136,7 +136,7 @@
             @endcan
 
             @can('proyek_konsolidasi_dashboard_menu')
-            <li class="nav-item"><a class="nav-link {{ request()->is('executive-summary-project') ? 'active' : '' }}"
+            <li class="nav-item"><a class="nav-link {{ request()->is('executive-summary-konsolidasi') ? 'active' : '' }}"
                 href="/executive-summary-konsolidasi">
                 <span class="nav-link-text">Proyek Konsolidasi</span>
               </a>

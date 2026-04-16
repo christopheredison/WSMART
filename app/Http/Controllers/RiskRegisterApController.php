@@ -531,7 +531,8 @@ class RiskRegisterApController extends Controller
             'tableLegend',
             'dataToDisplay',
             'apAdmin',
-            'units'
+            'units',
+            'selectedMonth',
         ));
     }
 
