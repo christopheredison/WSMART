@@ -394,7 +394,9 @@ class ProjectRiskController extends BasicCRUDController
                     'action' => 'script',
                     'script' => 'showRequestEditModal($(this).data("id"))',
                     'title' => 'Request Edit Risiko',
-                    'active_state' => 'function(id, type, row) { return row.status === 6 && row.request_edit != 1 && row.request_edit != 2; }'
+                    // 'active_state' => 'function(id, type, row) { return row.status === 6 && row.request_edit != 1 && row.request_edit != 2; }'
+                    // Tombol muncul jika status Published, DAN request_edit BUKAN 1 (Pending) atau 2 (Approved)
+                    'active_state' => 'function(id, type, row) { return row.status === 6 && row.request_edit !== 1 && row.request_edit !== 2; }'
                 ];
                 $this->tableLegend[] = ['icon' => '<span class="bx bx-message-square-edit text-info"></span>', 'label' => 'Request Edit Risiko'];
             }
@@ -680,12 +682,13 @@ class ProjectRiskController extends BasicCRUDController
 
         $submitRequestRoute = route('projects.risks.submit-request-edit');
         $approveRequestRoute = route('projects.risks.approve-request-edit');
+        $rejectRequestRoute = route('projects.risks.reject-request-edit');
 
         // INJEKSI SCRIPT JAVASCRIPT & MODAL REQUEST EDIT
         $this->extraScripts[] = <<<SCRIPT
             <div class="modal fade" id="modalRequestEdit" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
+                    <div class="modal-content p-0">
                         <div class="modal-header bg-info text-white">
                             <h5 class="modal-title text-white">Request Edit Risiko</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -702,7 +705,7 @@ class ProjectRiskController extends BasicCRUDController
                         </div>
                         <div class="modal-footer bg-light">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                            <button type="button" class="btn btn-info" onclick="submitRequestEdit()"><i class="bx bx-send me-1"></i>Kirim Request</button>
+                            <button type="button" class="btn btn-info" onclick="submitRequestEdit()"><span class="bx bx-send me-1"></span>Kirim Request</button>
                         </div>
                     </div>
                 </div>
@@ -757,30 +760,74 @@ class ProjectRiskController extends BasicCRUDController
             }
 
             function approveRequestEdit(id) {
+                const table = $('.ajax-datatable').DataTable();
+                const rowData = table.rows().data().toArray().find(r => r.id == id);
+                const reason = (rowData && rowData.request_edit_reason)
+                                ? rowData.request_edit_reason
+                                : 'Tidak ada informasi alasan.';
+
                 Swal.fire({
-                    title: 'Setujui Request Edit?',
-                    text: 'Status risiko akan dikembalikan ke Draft dan dapat diedit oleh Risk Officer Proyek. (Akses Analisa akan dikunci).',
-                    icon: 'warning',
+                    title: 'Tindak Lanjut Request Edit',
+                    html: 'Apakah Anda ingin menyetujui atau menolak request ini?<br><br>' +
+                          '<div class="p-3 mt-2 rounded bg-light border border-info text-start">' +
+                              '<strong>Alasan Request Edit:</strong><br>' +
+                              '<span class="text-dark">' + reason + '</span>' +
+                          '</div>',
+                    icon: 'question',
                     showCancelButton: true,
-                    confirmButtonText: 'Ya, Setujui',
-                    cancelButtonText: 'Batal'
+                    showDenyButton: true, // Menampilkan tombol ke-3 (Tolak)
+                    confirmButtonText: '<span class="bx bx-check"></span> Setujui',
+                    denyButtonText: '<span class="bx bx-x"></span> Tolak',
+                    cancelButtonText: 'Batal',
+                    customClass: {
+                        confirmButton: 'btn btn-success me-2',
+                        denyButton: 'btn btn-danger me-2',
+                        cancelButton: 'btn btn-secondary'
+                    },
+                    buttonsStyling: false
                 }).then((result) => {
-                    if(result.isConfirmed) {
-                        Swal.fire({title: 'Memproses...', didOpen: () => {Swal.showLoading()}});
+                    if (result.isConfirmed) {
+                        // AKSI: DISETUJUI
+                        Swal.fire({title: 'Menyetujui...', didOpen: () => {Swal.showLoading()}});
                         $.ajax({
-                            url: '{$approveRequestRoute}',
+                            url: '{$approveRequestRoute}', // Route approve existing
                             type: 'POST',
-                            data: {
-                                _token: '{$csrfToken}',
-                                risk_id: id
-                            },
+                            data: { _token: '{$csrfToken}', risk_id: id },
                             success: function(res) {
                                 Swal.fire('Berhasil', res.message, 'success').then(() => {
-                                    $('.ajax-datatable').DataTable().ajax.reload(null, false);
+                                    table.ajax.reload(null, false);
                                 });
                             },
                             error: function(err) {
                                 Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                            }
+                        });
+                    } else if (result.isDenied) {
+                        // AKSI: DITOLAK
+                        Swal.fire({
+                            title: 'Konfirmasi Penolakan',
+                            text: 'Yakin ingin menolak request ini? Status akan tetap Published.',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Ya, Tolak',
+                            cancelButtonText: 'Batal',
+                            confirmButtonColor: '#dc3545'
+                        }).then((denyResult) => {
+                            if (denyResult.isConfirmed) {
+                                Swal.fire({title: 'Menolak...', didOpen: () => {Swal.showLoading()}});
+                                $.ajax({
+                                    url: '{$rejectRequestRoute}',
+                                    type: 'POST',
+                                    data: { _token: '{$csrfToken}', risk_id: id },
+                                    success: function(res) {
+                                        Swal.fire('Ditolak', res.message, 'info').then(() => {
+                                            table.ajax.reload(null, false);
+                                        });
+                                    },
+                                    error: function(err) {
+                                        Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                                    }
+                                });
                             }
                         });
                     }
@@ -1029,6 +1076,28 @@ class ProjectRiskController extends BasicCRUDController
         $this->sendNotificationCustom('RO_PROYEK', $risk->project_periode_list_id, 'Request Edit Disetujui', 'Request edit risiko Anda (Risk ID: R'.$risk->id.') telah disetujui. Silahkan lakukan perubahan data yang diperlukan.', $targetLink, 'bx bx-check-double');
 
         return response()->json(['message' => 'Request edit disetujui, status risiko kembali ke Draft. Akses untuk merubah analisa dikunci.']);
+    }
+
+    public function rejectRequestEdit(Request $request)
+    {
+        $request->validate(['risk_id' => 'required']);
+
+        $risk = ProjectRisk::findOrFail($request->risk_id);
+        $risk->update([
+            'request_edit' => ProjectRisk::REQ_EDIT_REJECTED,
+        ]);
+
+        $targetLink = route('projects.risks.index', ['project' => $risk->project_periode_list_id]);
+        $this->sendNotificationCustom(
+            'RO_PROYEK',
+            $risk->project_periode_list_id,
+            'Request Edit Ditolak',
+            'Request edit risiko Anda (Risk ID: R'.$risk->id.') telah ditolak oleh Risk Owner MR.',
+            $targetLink,
+            'bx bx-x-circle'
+        );
+
+        return response()->json(['message' => 'Request edit berhasil ditolak. Status risiko tetap Published.']);
     }
 
     private function generateRiskStatus($row, $user, $u_step, $levelId)
@@ -1882,6 +1951,12 @@ class ProjectRiskController extends BasicCRUDController
 
 
             if ($request->action === 'savenext') {
+                if ($projectRisk->request_edit == 2) {
+                    return [
+                        'redirect' => route('projects.risks.rencana', ['project' => $projectPeriodeList->id, 'risk' => $projectRisk->id]),
+                    ];
+                }
+
                 return [
                     'redirect' => route('projects.risks.analisa', ['project' => $projectPeriodeList->id, 'risk' => $projectRisk->id]),
                 ];

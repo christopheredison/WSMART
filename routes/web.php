@@ -427,6 +427,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('hasil-usaha-divisi/data', [UnitHasilUsahaController::class, 'data'])->name('hasil-usaha-divisi.data');
     Route::post('/projects/risks/submit-request-edit', [App\Http\Controllers\Project\ProjectRiskController::class, 'submitRequestEdit'])->name('projects.risks.submit-request-edit');
     Route::post('/projects/risks/approve-request-edit', [App\Http\Controllers\Project\ProjectRiskController::class, 'approveRequestEdit'])->name('projects.risks.approve-request-edit');
+    Route::post('/projects/risks/reject-request-edit', [App\Http\Controllers\Project\ProjectRiskController::class, 'rejectRequestEdit'])->name('projects.risks.reject-request-edit');
     Route::get('projects/{project}/detail', [ProjectController::class, 'detail'])->name('projects.detail');
     Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit', 'destroy']);
     Route::resource('projects/{project}/risks', ProjectRiskController::class)->names('projects.risks');

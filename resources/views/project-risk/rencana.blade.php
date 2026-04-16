@@ -424,9 +424,11 @@
     <div class="col-12">
         <div class="d-flex justify-content-between">
             <div>
-                <a href="{{ route('projects.risks.analisa', ['project' => $projectPeriodeList->id, 'risk' => $projectRisk->id]) }}" class="btn btn-secondary me-2">
-                    <span class="bx bx-chevron-left" style="line-height: 0.8;"></span> Kembali ke Analisa
-                </a>
+                @if($projectRisk->request_edit != 2)
+                    <a href="{{ route('projects.risks.analisa', ['project' => $projectPeriodeList->id, 'risk' => $projectRisk->id]) }}" class="btn btn-secondary me-2">
+                        <span class="bx bx-chevron-left" style="line-height: 0.8;"></span> Kembali ke Analisa
+                    </a>
+                @endif
                 <a href="{{ route('projects.risks.index', ['project' => $projectPeriodeList->id]) }}" class="btn btn-outline-secondary">Selesai</a>
             </div>
             <div>

@@ -61,6 +61,11 @@ class ProjectRisk extends Model
     public const STATUS_REJECTED_FROM_OFFICER_MR = 7;
     public const STATUS_REJECTED_FROM_OWNER_MR = 8;
 
+    public const REQ_EDIT_NONE = 0;
+    public const REQ_EDIT_PENDING = 1;
+    public const REQ_EDIT_APPROVED = 2;
+    public const REQ_EDIT_REJECTED = 3;
+
     public const STEP_VERIFICATION_DRAFT = 0;
     public const STEP_VERIFICATION_RISK_OWNER_PROJECT = 1;
     public const STEP_VERIFICATION_RISK_OFFICER_DIVISI = 2;
