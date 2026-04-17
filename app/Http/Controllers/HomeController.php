@@ -2187,27 +2187,15 @@ class HomeController extends Controller
         $summaryData['hasil_usaha_aktual'] = $summaryData['lsp_realisasi_sd_bulan'] - $total_led;
         $summaryData['proyeksi_hasil_usaha_des'] = $summaryData['proyeksi_lsp_sd_des'] - $summaryData['eksposur_risiko_annual'];
 
-        $highImpactRisks = collect();
+        $openRisks = collect();
         $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')->get()->keyBy(fn($item) => $item->skala_dampak . '-' . $item->skala_probabilitas);
-        $highImpactRisksJs = collect();
+        $openRisksJs = collect();
         $formattedCurrentRiskMaps = [];
         $sortedKriData = collect();
         $efektivitasPerlakuanData = [];
         $efektifRisks = collect();
         $tidakEfektifRisks = collect();
-        $topLossEventsCorporate = collect();
-        $periode = Periode::where('tahun', $currentYear)->first();
-
-        $summaryData['omset_penjualan_sd_bulan'] = 0;
-        $summaryData['omset_penjualan_sd_des'] = 0;
-
-        $summaryData['led_proyek_total'] = LossEventProject::whereYear('tanggal_kejadian', $currentYear)->sum(DB::raw('CAST(nilai_kerugian_finansial AS NUMERIC)'));
-        $summaryData['led_divisi_operasi_total'] = LossEvent::whereIn('unit_id', $operasiUnitIds)->whereYear('tanggal_kejadian', $currentYear)->sum(DB::raw('CAST(nilai_kerugian_finansial AS NUMERIC)'));
-        $summaryData['led_divisi_fungsi_total'] = LossEvent::whereIn('unit_id', $fungsiUnitIds)->whereYear('tanggal_kejadian', $currentYear)->sum(DB::raw('CAST(nilai_kerugian_finansial AS NUMERIC)'));
-
-        $baseEksposurQuery = UnitRiskMonitoring::whereHas('identifikasiRisiko', fn($q) => $q->whereIn('unit_id', $corporateUnitIds)->where('periode_id', optional($periode)->id)->where('is_closed', false));
-        $summaryData['eksposur_risiko_total'] = (clone $baseEksposurQuery)->where('month', '<=', $currentMonth)->sum('eksposure_risiko');
-        $summaryData['eksposur_risiko_annual'] = (clone $baseEksposurQuery)->sum('eksposure_risiko');
+        $tahunMonitorings = [$currentYear];
 
         if ($periode && $corporateUnitIds->isNotEmpty()) {
             $baseRisks = IdentifikasiRisiko::with([
@@ -2215,21 +2203,26 @@ class HomeController extends Controller
             ])
               ->whereIn('unit_id', $corporateUnitIds)
               ->where('periode_id', $periode->id)
+              // ->where('status_risiko', 6)
               ->where('is_closed', false)
               ->whereNull('deleted_at');
 
-            $highImpactRisks = (clone $baseRisks)->whereHas('riskAnalysis', function ($q) {
-                $q->whereIn('level_risiko', ['High', 'Moderate to High']);
-            })->get()->sortByDesc(fn($risk) => optional($risk->riskAnalysis)->skala_risiko ?? -1);
+            $openRisks = (clone $baseRisks)->get()->sortByDesc(fn($risk) => optional($risk->riskAnalysis)->skala_risiko ?? -1);
 
-            $highImpactRisks->each(fn($risk) => $risk->append('currentRiskMapsMonth'));
-            foreach ($highImpactRisks as $risk) {
+            $openRisks->each(fn($risk) => $risk->append('currentRiskMapsMonth'));
+            foreach ($openRisks as $risk) {
                 foreach ($risk->currentRiskMapsMonth as $month => $mapData) {
                     if ($month === 'inherent' || !isset($mapData['month'])) continue;
+
+                    $mapData['nilai_dampak_formatted'] = 'Rp ' . number_format($mapData['nilai_dampak'] ?? 0, 0, ',', '.');
+                    $mapData['nilai_probabilitas_formatted'] = $mapData['nilai_probabilitas'] ?? '-';
+                    $mapData['nilai_risiko_formatted'] = $mapData['skala_risiko'] ?? '-';
+                    $mapData['level_risiko_formatted'] = $mapData['level_risiko'] ?? '-';
+
                     $formattedCurrentRiskMaps[$risk->id][$currentYear][] = $mapData;
                 }
             }
-            $highImpactRisksJs = $highImpactRisks->values()->mapWithKeys(function($risk, $index) {
+            $openRisksJs = $openRisks->values()->mapWithKeys(function($risk, $index) {
                 $risk->nomor_urut_js = $index + 1;
                 return [$risk->id => $risk];
             });
@@ -2249,7 +2242,7 @@ class HomeController extends Controller
                     'identifikasiRisiko.peristiwaRisiko',
                     'identifikasiRisiko.penyebabRisiko',
                 ])
-                ->whereHas('identifikasiRisiko', fn($q) => $q->where('is_closed', false)->whereNull('deleted_at')) // FIX
+                ->whereHas('identifikasiRisiko', fn($q) => $q->where('is_closed', false)->whereNull('deleted_at'))
                 ->get()
                 ->map(function ($kri) use ($latestKriUnitMonitorings) {
                     $monitoringForPeriod = $latestKriUnitMonitorings[$kri->id] ?? null;
@@ -2294,7 +2287,7 @@ class HomeController extends Controller
                     'risiko.peristiwaRisiko',
                     'risiko.penyebabRisikoProjects',
                 ])
-                ->whereHas('risiko', fn($q) => $q->where('is_closed', false)->whereNull('deleted_at')) // FIX
+                ->whereHas('risiko', fn($q) => $q->where('is_closed', false)->whereNull('deleted_at'))
                 ->get()
                 ->map(function ($kri) use ($latestKriProjectMonitorings) {
                     $monitoringForPeriod = $latestKriProjectMonitorings[$kri->id] ?? null;
@@ -2359,12 +2352,13 @@ class HomeController extends Controller
 
         $topLossEventsCorporate = LossEvent::where('unit_id', 1)
             ->whereYear('tanggal_kejadian', $currentYear)
+            ->with(['kategoriKejadian'])
             ->orderByRaw('CAST(nilai_kerugian_finansial AS NUMERIC) DESC')
             ->take(10)
             ->get();
 
         $lossEventsUnit = LossEvent::whereYear('tanggal_kejadian', $currentYear)
-          ->with(['kategoriRisiko', 'jenisRisiko'])
+          ->with(['kategoriKejadian', 'jenisRisiko', 'unit'])
           ->get()
           ->map(function ($event) {
               $event->numeric_value = (int) preg_replace('/[^0-9]/', '', $event->nilai_kerugian_finansial);
@@ -2374,18 +2368,20 @@ class HomeController extends Controller
           ->take(10)
           ->map(function ($led) {
               return [
-                  'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
+                  'id' => $led->id,
+                  'tanggal_kejadian' => date('d M Y', strtotime($led->tanggal_kejadian)),
                   'nama_kejadian' => $led->nama_kejadian ?? '-',
-                  'identifikasi_kejadian' => $led->identifikasi_kejadian ?? '-',
+                  'deskripsi_kejadian' => $led?->identifikasi_kejadian ?? '-',
                   'kategori_kejadian' => $led->kategoriKejadian->kategori_kejadian ?? '-',
                   'nilai_kerugian' => is_numeric($led->nilai_kerugian_finansial) ? 'Rp ' . number_format($led->nilai_kerugian_finansial, 0, ',', '.') : $led->nilai_kerugian_finansial,
-                  'unit_penanggung_jawab' => $led?->unitPenanggungJawabJabatan?->name ?? '-',
+                  'unit_name' => $led->unit->name ?? '-',
               ];
           })
           ->values()
           ->toArray();
 
-        $lossEventsProject = LossEventProject::with(['kategoriRisiko', 'jenisRisiko'])
+        $lossEventsProject = LossEventProject::whereYear('tanggal_kejadian', $currentYear)
+          ->with(['kategoriKejadian', 'jenisRisiko', 'project', 'peristiwaRisiko'])
           ->get()
           ->map(function ($event) {
               $event->numeric_value = (int) preg_replace('/[^0-9]/', '', $event->nilai_kerugian_finansial);
@@ -2395,12 +2391,13 @@ class HomeController extends Controller
           ->take(10)
           ->map(function ($led) {
               return [
-                  'tanggal_kejadian' => date('d/m/Y', strtotime($led->tanggal_kejadian)),
+                  'id' => $led->id,
+                  'tanggal_kejadian' => date('d M Y', strtotime($led->tanggal_kejadian)),
                   'nama_kejadian' => $led->nama_kejadian ?? '-',
-                  'identifikasi_kejadian' => $led->peristiwaRisiko->title ?? '-',
+                  'deskripsi_kejadian' => $led->peristiwa_risiko_id == 0 ? $led->deskripsi_kejadian : ($led->peristiwaRisiko->title ?? '-'),
                   'kategori_kejadian' => $led->kategoriKejadian->kategori_kejadian ?? '-',
                   'nilai_kerugian' => is_numeric($led->nilai_kerugian_finansial) ? 'Rp ' . number_format($led->nilai_kerugian_finansial, 0, ',', '.') : $led->nilai_kerugian_finansial,
-                  'unit_penanggung_jawab' => $led?->unitPenanggungJawabJabatan?->name ?? '-',
+                  'project_name' => $led->project->project_name ?? '-',
               ];
           })
           ->values()
@@ -2412,9 +2409,10 @@ class HomeController extends Controller
             'currentMonth',
             'currentQuarter',
             'summaryData',
-            'highImpactRisks',
+            'openRisks',
             'riskMaps',
-            'highImpactRisksJs',
+            'tahunMonitorings',
+            'openRisksJs',
             'formattedCurrentRiskMaps',
             'kriKorporat',
             'kriProyek',
