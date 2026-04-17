@@ -1649,11 +1649,11 @@ class HomeController extends Controller
         ];
 
         $isProjectUnit = false;
-        $highImpactRisks = collect();
+        $openRisks = collect();
         $riskMaps = collect();
         $tahunMonitorings = [$currentYear];
         $formattedCurrentRiskMaps = [];
-        $highImpactRisksJs = collect();
+        $openRisksJs = collect();
         $sortedKriData = collect();
         $closedRisks = collect();
         $efektivitasPerlakuanData = [];
@@ -1682,6 +1682,11 @@ class HomeController extends Controller
                     'riskAnalysis.skalaProbabilitasResidualQ2',
                     'riskAnalysis.skalaProbabilitasResidualQ3',
                     'riskAnalysis.skalaProbabilitasResidualQ4',
+                    'monitoringRisikos' => function($q) {
+                        $q->where(function($sq) {
+                            $sq->where('status', 100)->orWhere('is_approved', true);
+                        })->orderBy('month', 'desc')->orderBy('id', 'desc');
+                    },
                     'monitoringRisikos.skalaProbabilitas',
                     'monitoringRisikos.skalaDampakObj',
                     'peristiwaRisiko',
@@ -1690,7 +1695,8 @@ class HomeController extends Controller
                 ])
                 ->where('unit_id', $selectedUnit->id)
                 ->where('periode_id', $periode->id)
-                ->where('is_closed', false) // FIX
+                ->where('status_risiko', 6)
+                ->where('is_closed', false)
                 ->whereNull('deleted_at')
                 ->get();
             }
@@ -1727,7 +1733,7 @@ class HomeController extends Controller
             $summaryData['hasil_usaha_sd_bulan'] = $summaryData['lsp_realisasi_sd_bulan'] - $summaryData['led_proyek_total'] - $summaryData['led_divisi_total'];
             $summaryData['proyeksi_hasil_usaha_sd_des'] = $summaryData['proyeksi_lsp_sd_des'] - $summaryData['eksposur_risiko_annual'];
 
-            $highImpactRisks = $unitRisks->filter(fn($risk) => in_array(optional($risk->riskAnalysis)->level_risiko, ['High', 'Moderate to High']))->sortByDesc(fn($risk) => optional($risk->riskAnalysis)->skala_risiko ?? -1);
+            $openRisks = $unitRisks->sortByDesc(fn($risk) => optional($risk->riskAnalysis)->skala_risiko ?? -1);
 
             $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')->get()->keyBy(fn($item) => $item->skala_dampak . '-' . $item->skala_probabilitas);
 
@@ -1748,7 +1754,7 @@ class HomeController extends Controller
                 }
             }
 
-            $highImpactRisksJs = $highImpactRisks->values()->mapWithKeys(function($risk, $index) {
+            $openRisksJs = $openRisks->values()->mapWithKeys(function($risk, $index) {
                 $risk->nomor_urut_js = $index + 1;
                 return [$risk->id => $risk];
             });
@@ -1844,11 +1850,11 @@ class HomeController extends Controller
             'selectedPeriod',
             'summaryData',
             'isProjectUnit',
-            'highImpactRisks',
+            'openRisks',
             'riskMaps',
             'tahunMonitorings',
             'formattedCurrentRiskMaps',
-            'highImpactRisksJs',
+            'openRisksJs',
             'sortedKriData',
             'closedRisks',
             'efektivitasPerlakuanData',
