@@ -1028,6 +1028,69 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $this->extraViewData['currentUserLevel'] = $userLevel;
         $this->extraViewData['showBulkCheckbox'] = true;
 
+        $this->datatableCallback = function ($datatable) use ($summaryInfo, $escalationConfig) {
+            $datatable->with('summaryInfo', $summaryInfo);
+            $datatable->with('escalationConfig', $escalationConfig);
+        };
+
+        // Inject Script Merender Ulang Alert Banner
+        $this->extraScripts[] = <<<SCRIPT
+        <script>
+        $(document).on('xhr.dt', function (e, settings, json, xhr) {
+            // Pastikan respon mengandung variabel yang kita sisipkan dari backend
+            if (json && json.summaryInfo !== undefined) {
+
+                // Targetkan container elemen div yang membungkus alert dan tombol (Berdasarkan HTML view Anda)
+                let container = $('.card-body > .d-flex.align-items-center.justify-content-end.gap-3').first();
+                container.empty();
+
+                // Render Ulang Alert Message
+                if (json.summaryInfo) {
+                    let s = json.summaryInfo;
+                    container.append(`
+                        <div class="alert alert-\${s.type} alert-dismissible fade show d-flex align-items-center mt-0 mb-3 flex-grow-1" role="alert">
+                            <div class="bg-\${s.type} text-white rounded-circle p-0 me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                                <i class="bx \${s.icon} text-white fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1 pe-4">
+                                \${s.message}
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    `);
+                }
+
+                // Render Ulang Tombol Proses/Eskalasi
+                if (json.escalationConfig && json.escalationConfig.show) {
+                    let e = json.escalationConfig;
+                    let disabledAttr = e.disabled ? 'disabled' : '';
+                    let btnClass = e.label.toLowerCase().includes('publish') ? 'btn-success' : 'btn-info';
+
+                    let paramsHtml = '';
+                    if (e.parameters) {
+                        for (const [key, value] of Object.entries(e.parameters)) {
+                            paramsHtml += `<input type="hidden" name="\${key}" value="\${value}">`;
+                        }
+                    }
+
+                    container.append(`
+                        <form id="form-eskalasi-action" action="\${e.route}" method="POST" class="d-inline-block">
+                            <input type="hidden" name="_token" value="{$csrfToken}">
+                            \${paramsHtml}
+                            <button type="button"
+                                class="btn mb-2 \${btnClass} btn-arrow-right"
+                                onclick="submitEskalasiForm('form-eskalasi-action', '\${e.label}')"
+                                \${disabledAttr}>
+                                \${e.label}
+                            </button>
+                        </form>
+                    `);
+                }
+            }
+        });
+        </script>
+        SCRIPT;
+
         return parent::index();
     }
 
