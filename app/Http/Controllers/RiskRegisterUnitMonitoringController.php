@@ -1004,82 +1004,70 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $this->extraViewData['escalationConfig'] = $escalationConfig;
         $this->extraViewData['showVerifikasiModal'] = in_array($userLevel, $verificatorLevels);
         $this->extraViewData['showCatatanModal'] = true;
+        $csrfToken = csrf_token();
 
-        // $this->cardFooter = $this->generateFooter($period, $user, compact('quarter', 'month', 'targetUnitId'));
+        $this->datatableCallback = function ($datatable) use ($summaryInfo, $escalationConfig) {
+            $datatable->with('summaryInfo', $summaryInfo);
+            $datatable->with('escalationConfig', $escalationConfig);
+        };
 
-        // $this->extraViewData['isProjectMonitoringPage'] = true;
-        // $this->extraViewData['currentUserLevel'] = $userLevel;
-        // $this->extraViewData['showVerifikasiModal'] = in_array($userLevel, $verificatorLevels);
-        // $this->extraViewData['showCatatanModal'] = true;
+        // Injeksi Script Render Ulang Alert via AJAX Datatable
+        $this->extraScripts[] = <<<SCRIPT
+        <script>
+        $(document).on('xhr.dt', function (e, settings, json, xhr) {
+            if (json && 'summaryInfo' in json) {
+                // Targetkan container alert dan tombol eskalasi
+                let container = $('.card-body > .d-flex.align-items-center.justify-content-end.gap-3').first();
 
-        // $peristiwaRisikos = $period->identifikasiRisikos->map(function($identifikasiRisiko) {
-        //     return $identifikasiRisiko->peristiwaRisiko;
-        // })->flatten()->unique('id');
+                // KOSONGKAN CONTAINER
+                container.empty();
 
-        // $unitFilterOptions = [];
-        // $unitFilterAttributes = ['class' => 'form-select select2'];
+                // Render Ulang Alert
+                if (json.summaryInfo) {
+                    let s = json.summaryInfo;
+                    container.append(`
+                        <div class="alert alert-\${s.type} alert-dismissible fade show d-flex align-items-center mt-0 mb-3 flex-grow-1" role="alert">
+                            <div class="bg-\${s.type} text-white rounded-circle p-0 me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                                <i class="bx \${s.icon} text-white fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1 pe-4">
+                                \${s.message}
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    `);
+                }
 
-        // if ($viewAllDivision) {
-        //     $unitFilterOptions = Unit::where('unit_type_id', 1)->pluck('name', 'id')->toArray();
-        // } else {
-        //     if ($user->unit) {
-        //         $unitFilterOptions = [$user->unit_id => $user->unit->name];
-        //     }
-        //     $unitFilterAttributes['disabled'] = true;
-        // }
+                // Render Ulang Tombol Proses/Eskalasi
+                if (json.escalationConfig && json.escalationConfig.show) {
+                    let e = json.escalationConfig;
+                    let disabledAttr = e.disabled ? 'disabled' : '';
+                    let btnClass = e.label.toLowerCase().includes('publish') ? 'btn-success' : 'btn-info';
 
-        // $filters = [];
-        // $filters['unit_id'] = [
-        //     'label' => 'Divisi',
-        //     'type' => 'select',
-        //     'parameters' => [
-        //         'unit_id',
-        //         $unitFilterOptions,
-        //         $targetUnitId,
-        //         $unitFilterAttributes,
-        //     ],
-        //     'handler' => function ($query, $key, $value) { /* handled outside */ },
-        // ];
+                    let paramsHtml = '';
+                    if (e.parameters) {
+                        for (const [key, value] of Object.entries(e.parameters)) {
+                            paramsHtml += `<input type="hidden" name="\${key}" value="\${value}">`;
+                        }
+                    }
 
-        // $filters['quarter'] = [
-        //     'label' => 'Quarter',
-        //     'type' => 'select',
-        //     'parameters' => [
-        //         'quarter',
-        //         [
-        //             1 => 'Monitoring Quarter 1',
-        //             2 => 'Monitoring Quarter 2',
-        //             3 => 'Monitoring Quarter 3',
-        //             4 => 'Monitoring Quarter 4',
-        //         ],
-        //         '',
-        //         [
-        //             'class' => 'form-select select2 js-select-hide-search',
-        //         ]
-        //     ],
-        //     'handler' => function ($query, $key, $value) {
-        //         // handled outside
-        //     },
-        // ];
-        // $filters['month'] = [
-        //     'label' => 'Bulan',
-        //     'type' => 'select',
-        //     'parameters' => [
-        //         'month',
-        //         [],
-        //         '',
-        //         [
-        //             'class' => 'form-select select2 js-select-hide-search',
-        //         ]
-        //     ],
-        //     'handler' => function ($query, $key, $value) {
-        //         // handled outside
-        //     },
-        // ];
-
-        // $this->availableFilters = $filters;
-
-        // $this->extraScripts[] = $this->getFilterScripts();
+                    container.append(`
+                        <form id="form-eskalasi-action" action="\${e.route}" method="POST" class="d-inline-block">
+                            <input type="hidden" name="_token" value="{$csrfToken}">
+                            \${paramsHtml}
+                            <button type="button"
+                                class="btn mb-2 \${btnClass} btn-arrow-right"
+                                onclick="submitEskalasiForm('form-eskalasi-action', '\${e.label}')"
+                                \${disabledAttr}>
+                                \${e.label}
+                            </button>
+                        </form>
+                    `);
+                }
+            }
+        });
+        </script>
+        SCRIPT;
 
         return parent::index();
     }
