@@ -2,7 +2,6 @@
 
 namespace App\Exports\Sheets\Unit;
 
-use App\Models\IdentifikasiRisiko;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -11,18 +10,15 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
-
 use Carbon\Carbon;
 
 class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, ShouldAutoSize, WithEvents
 {
-    private $periodeId;
-    private $unitId;
+    private $risikos;
 
-    public function __construct(int $periodeId, int $unitId)
+    public function __construct(Collection $risikos)
     {
-        $this->periodeId = $periodeId;
-        $this->unitId = $unitId;
+        $this->risikos = $risikos;
     }
 
     /**
@@ -193,15 +189,13 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
 
                     // Set format text untuk kolom Kode Penyebab Risiko (Kolom L)
                     $sheet->getStyle('L3:L' . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
-                    
-                    // Set rata tengah horizontal untuk kolom-kolom tertentu
+
                     $centerCols = ['A', 'C', 'H', 'K', 'L', 'O', 'P', 'Q', 'R', 'S', 'U', 'V'];
                     foreach ($centerCols as $col) {
                         $sheet->getStyle("{$col}3:{$col}{$lastRow}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
                     }
 
                     // Tambahkan pewarnaan background untuk kolom Kategori Threshold KRI
-                    // Gunakan $lastRow, bukan $maxDataRow
                     $this->applyThresholdColoring($sheet, $lastRow);
                 }
 
@@ -229,7 +223,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                     ]
                 ]);
             }
-            
+
             // Kolom Q (Waspada) - Kuning
             $waspadaValue = $sheet->getCell('Q' . $row)->getValue();
             if ($waspadaValue !== null && $waspadaValue !== '-') {
@@ -240,7 +234,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                     ]
                 ]);
             }
-            
+
             // Kolom R (Bahaya) - Merah
             $bahayaValue = $sheet->getCell('R' . $row)->getValue();
             if ($bahayaValue !== null && $bahayaValue !== '-') {
@@ -259,29 +253,16 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
      */
     public function collection()
     {
-        // Ambil data utama dan urutkan berdasarkan skala risiko tertinggi
-        $risikos = IdentifikasiRisiko::with([
-                'unit',
-                'riskAnalysis',
-                'kategoriRisiko',
-                'jenisRisiko',
-                'peristiwaRisiko',
-                'penyebabRisiko',
-                'kris',
-                'penilaianEfektifitasKontrol',
-            ])
-            ->where('periode_id', $this->periodeId)
-            ->where('unit_id', $this->unitId)
-            ->get()
-            ->sortByDesc('riskAnalysis.skala_risiko');
-
         $exportData = new Collection();
         $nomorUrutRisiko = 1;
 
-        foreach ($risikos as $risiko) {
-            $jumlahPenyebab = $risiko->penyebabRisiko->count();
-            $jumlahKRI = $risiko->kris->count();
-            
+        foreach ($this->risikos as $risiko) {
+            $penyebabList = $risiko->penyebabRisiko ?? collect();
+            $kriList = $risiko->kris ?? collect();
+
+            $jumlahPenyebab = $penyebabList->count();
+            $jumlahKRI = $kriList->count();
+
             if ($jumlahPenyebab === 0 && $jumlahKRI === 0) {
                 $rowData = [
                     'no' => $nomorUrutRisiko,
@@ -290,7 +271,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                     'sasaran_bumn' => $risiko->target_capaian_kinerja ?? '-',
                     'sasaran_kbumn' => '',
                     'kategori_risiko_bumn' => optional($risiko->kategoriRisiko)->title ?? '-',
-                    'kategori_risiko_t2_t3' => $risiko->kategoriRisiko->title . ' - ' . $risiko->jenisRisiko->title,
+                    'kategori_risiko_t2_t3' => optional($risiko->kategoriRisiko)->title . ' - ' . optional($risiko->jenisRisiko)->title,
                     'no_risiko' => $nomorUrutRisiko,
                     'peristiwa_risiko' => $risiko->peristiwa_risiko ?? '-',
                     'deskripsi_peristiwa_risiko' => $risiko->deskripsi_peristiwa_risiko ?? '-',
@@ -309,15 +290,15 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                     'deskripsi_dampak' => $risiko->deskripsi_dampak ?? '-',
                     'perkiraan_waktu_terpapar' => $this->formatWaktuTerpapar($risiko),
                 ];
-                
+
                 $exportData->push($rowData);
             } else {
                 // Buat kombinasi penyebab risiko dengan KRI
                 $isFirstRowOfGroup = true;
-                
+
                 if ($jumlahPenyebab === 0) {
                     // Jika tidak ada penyebab tapi ada KRI
-                    foreach ($risiko->kris as $kri) {
+                    foreach ($kriList as $kri) {
                         $rowData = $this->createRowData($risiko, null, $kri, collect(), $isFirstRowOfGroup, $nomorUrutRisiko, 0, true);
                         $exportData->push($rowData);
                         $isFirstRowOfGroup = false;
@@ -325,7 +306,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                 } elseif ($jumlahKRI === 0) {
                     // Jika ada penyebab tapi tidak ada KRI
                     $nomorUrutPenyebab = 1;
-                    foreach ($risiko->penyebabRisiko as $penyebab) {
+                    foreach ($penyebabList as $penyebab) {
                         $rowData = $this->createRowData($risiko, $penyebab, null, collect(), $isFirstRowOfGroup, $nomorUrutRisiko, $nomorUrutPenyebab, true);
                         $exportData->push($rowData);
                         $isFirstRowOfGroup = false;
@@ -334,13 +315,13 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                 } else {
                     // Jika ada penyebab dan ada KRI - buat kombinasi
                     $nomorUrutPenyebab = 1;
-                    foreach ($risiko->penyebabRisiko as $penyebab) {
+                    foreach ($penyebabList as $penyebab) {
                         $isFirstKRIOfPenyebab = true;
-                        
-                        foreach ($risiko->kris as $kri) {
+
+                        foreach ($kriList as $kri) {
                             $rowData = $this->createRowData($risiko, $penyebab, $kri, collect(), $isFirstRowOfGroup, $nomorUrutRisiko, $nomorUrutPenyebab, $isFirstKRIOfPenyebab);
                             $exportData->push($rowData);
-                            
+
                             $isFirstRowOfGroup = false;
                             $isFirstKRIOfPenyebab = false;
                         }
@@ -348,7 +329,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
                     }
                 }
             }
-            
+
             $nomorUrutRisiko++;
         }
 
@@ -369,7 +350,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
             'sasaran_bumn' => $isFirstRowOfGroup ? ($risiko->target_capaian_kinerja ?? '-') : '',
             'sasaran_kbumn' => '',
             'kategori_risiko_bumn' => $isFirstRowOfGroup ? $kategoriT2T3 : '',
-            'kategori_risiko_t2_t3' => $isFirstRowOfGroup ? ($risiko->jenisRisiko->title ?? '-') : '',
+            'kategori_risiko_t2_t3' => $isFirstRowOfGroup ? (optional($risiko->jenisRisiko)->title ?? '-') : '',
             'no_risiko' => $isFirstRowOfGroup ? $nomorUrutRisiko : '',
             'peristiwa_risiko' => $isFirstRowOfGroup ? ($risiko->peristiwa_risiko ?? '-') : '',
             'deskripsi_peristiwa_risiko' => $isFirstRowOfGroup ? ($risiko->deskripsi_peristiwa_risiko ?? '-') : '',
@@ -397,13 +378,13 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
     {
         $awal = $risiko->perkiraan_waktu_terpapar_risiko_mulai;
         $akhir = $risiko->perkiraan_waktu_terpapar_risiko_akhir;
-        
+
         if ($awal && $akhir) {
             $awalFormatted = Carbon::parse($awal)->format('j F Y');
             $akhirFormatted = Carbon::parse($akhir)->format('j F Y');
             return $awalFormatted . ' - ' . $akhirFormatted;
         }
-        
+
         return $awal ?: ($akhir ?: '-');
     }
 }

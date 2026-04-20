@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Exports\Sheets\Unit;
+namespace App\Exports\Sheets\Project;
 
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -161,11 +161,10 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
         $nomorUrutRisiko = 1;
 
         foreach ($this->risikos as $risiko) {
-            $penyebabList = $risiko->penyebabRisiko;
-            $kriList = $risiko->kris;
-            $dampakList = $risiko->dampakRisikos; // Sesuaikan dengan nama relasi di Model Unit
+            $penyebabList = $risiko->penyebabRisiko ?? collect();
+            $kriList = $risiko->kris ?? collect();
+            $dampakList = $risiko->dampakRisikos ?? collect();
 
-            // Ambil jumlah max agar semua baris untuk risiko ini ke-print
             $maxRows = max($penyebabList->count(), $kriList->count(), $dampakList->count(), 1);
 
             for ($i = 0; $i < $maxRows; $i++) {
