@@ -939,6 +939,13 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             if ($risksInMyStep->isEmpty()) {
                 $this->extraViewData['summaryInfo'] = null;
                 $this->extraViewData['escalationConfig'] = ['show' => false, 'label' => '', 'disabled' => true];
+
+                // Tambahkan datatableCallback di sini agar JSON merespons dengan nilai null
+                $this->datatableCallback = function ($datatable) {
+                    $datatable->with('summaryInfo', null);
+                    $datatable->with('escalationConfig', ['show' => false, 'label' => '', 'disabled' => true]);
+                };
+
                 return parent::index();
             }
             // ======================================
@@ -1037,14 +1044,16 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $this->extraScripts[] = <<<SCRIPT
         <script>
         $(document).on('xhr.dt', function (e, settings, json, xhr) {
-            // Pastikan respon mengandung variabel yang kita sisipkan dari backend
-            if (json && json.summaryInfo !== undefined) {
+            // Gunakan 'in' untuk mendeteksi apakah key dikirim dari backend (termasuk jika isinya null)
+            if (json && 'summaryInfo' in json) {
 
-                // Targetkan container elemen div yang membungkus alert dan tombol (Berdasarkan HTML view Anda)
+                // Targetkan container alert dan tombol
                 let container = $('.card-body > .d-flex.align-items-center.justify-content-end.gap-3').first();
+
+                // KOSONGKAN CONTAINER SECARA PAKSA SETIAP KALI FILTER BERUBAH
                 container.empty();
 
-                // Render Ulang Alert Message
+                // Render Ulang Alert Message HANYA JIKA ADA DATANYA (Tidak null)
                 if (json.summaryInfo) {
                     let s = json.summaryInfo;
                     container.append(`
@@ -1060,7 +1069,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     `);
                 }
 
-                // Render Ulang Tombol Proses/Eskalasi
+                // Render Ulang Tombol Proses/Eskalasi HANYA JIKA HARUS MUNCUL
                 if (json.escalationConfig && json.escalationConfig.show) {
                     let e = json.escalationConfig;
                     let disabledAttr = e.disabled ? 'disabled' : '';
