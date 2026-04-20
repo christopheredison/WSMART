@@ -96,15 +96,13 @@ class ProjectPeriodeListController extends BasicCRUDController
             'searchable' => false,
             'class' => 'text-center',
         ],
-        'skala_risiko' => [
-            'label' => 'Nilai Risiko',
-            'data' => 'skala_risiko',
-            'name' => 'skala_risiko',
-            'render' => <<<JS
-                (data) => data ? Intl.NumberFormat('id-ID').format(data) : '-'
-                JS,
+        'kategori_mth_high' => [
+            'label' => 'Moderate to High & High',
+            'data' => 'jumlah_risiko_khusus',
+            'name' => 'jumlah_risiko_khusus',
             'orderable' => true,
-            'searchable' => true,
+            'searchable' => false,
+            'class' => 'text-center',
         ],
         'project_risks_count' => [
             'label' => 'Jumlah Risiko',
@@ -221,6 +219,14 @@ class ProjectPeriodeListController extends BasicCRUDController
                   ->whereNull('deleted_at')
                   ->selectRaw('count(*)');
             }, 'project_risks_count');
+
+            $query->selectSub(function ($q) {
+                $q->from('project_risks')
+                  ->whereColumn('project_periode_lists.id', 'project_risks.project_periode_list_id')
+                  ->whereNull('deleted_at')
+                  ->whereIn('level_risiko', ['Moderate to High', 'High'])
+                  ->selectRaw('count(*)');
+            }, 'jumlah_risiko_khusus');
 
             if (!Gate::check('project_admin_access')) {
                 if (Gate::check('can_access_project_under_division')) {
@@ -473,6 +479,10 @@ class ProjectPeriodeListController extends BasicCRUDController
             // 5. Sort Jumlah Risiko (Subquery alias)
             $dataTable->orderColumn('project_risks_count', function ($query, $order) {
                 $query->orderBy('project_risks_count', $order);
+            });
+
+            $dataTable->orderColumn('jumlah_risiko_khusus', function ($query, $order) {
+                $query->orderBy('jumlah_risiko_khusus', $order);
             });
 
             // --- Filtering Kolom Global/Spesifik ---
