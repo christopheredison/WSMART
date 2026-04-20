@@ -275,6 +275,7 @@
                                   {{-- {{ $projectRiskAnalisa->kategori_dampak == 'Kuantitatif' ? 'max=' . $projectRiskAnalisa->nilai_dampak : '' }} --}}
                                   min="0"
                                   {{-- oninput="if(this.value > {{ $projectRiskAnalisa->nilai_dampak }} && '{{ $projectRiskAnalisa->kategori_dampak }}' === 'Kuantitatif') this.value = {{ $projectRiskAnalisa->nilai_dampak }};" --}}
+                                  autocomplete="off"
                                   required
                                 >
                                 <label for="">Realisasi Nilai Dampak</label>
@@ -973,7 +974,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-floating">
-                                    {{ Form::text('realisasi_biaya_perlakuan_risiko', null, ['class' => 'form-control inputmask-rupiah', 'disabled' => 'disabled']) }}
+                                    {{ Form::text('realisasi_biaya_perlakuan_risiko', null, ['class' => 'form-control inputmask-rupiah', 'disabled' => 'disabled', 'autocomplete' => 'off']) }}
                                     <label>Realisasi Biaya Perlakuan Risiko</label>
                                 </div>
                             </div>
@@ -1383,8 +1384,8 @@ const routeDeleteDoc = "{{ route('projects.monitorings.document.destroy', ['proj
 const acceptedFiles = ".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx";
 const maxFileSize = 10 * 1024 * 1024; // 10MB dalam Bytes
 const maxFilesCount = 10; // Maksimal 10 file
-const existingPenyebabDocs = @json($projectRisk->projectRiskMonitoring?->perlakuanPenyebabRisikoDocuments->groupBy('perlakuan_penyebab_risiko_id') ?? []);
-const existingDampakDocs = @json($projectRisk->projectRiskMonitoring?->perlakuanDampakRisikoDocuments->groupBy('perlakuan_dampak_risiko_id') ?? []);
+const existingPenyebabDocs = @json($filesPenyebab ?? []);
+const existingDampakDocs = @json($filesDampak ?? []);
 
 const projectRisk = @json($projectRisk);
 const penyebabRisikoProjects = @json($penyebabRisikoProjects->keyBy('id'));
@@ -1403,6 +1404,45 @@ const perlakuanPenyebabRisikos = Object.fromEntries(
         ];
     })
 );
+
+// Trigger untuk klik file input tersembunyi
+$(document).on('click', '.btn-trigger-file', function() {
+    const targetId = $(this).data('target');
+    $(`#${targetId}`).click();
+});
+
+$(document).on('change', '.hidden-file-input', function() {
+    const fileId = $(this).attr('id');
+
+    // UBAH BARIS INI: dari data-doc-ref menjadi data-id
+    const tr = $(`tr[data-id="${fileId}"]`);
+
+    if (this.files && this.files[0]) {
+        const file = this.files[0];
+        const maxSizeLimit = 10 * 1024 * 1024; // 10MB
+        if (file.size > maxSizeLimit) {
+            Swal.fire({ icon: 'error', title: 'Terlalu Besar', text: 'Maksimal 10 MB.' });
+            $(this).val('');
+            tr.find('.dokumen-filename').text('Belum ada file');
+        } else {
+            tr.find('.dokumen-filename').text(file.name);
+        }
+    } else {
+        tr.find('.dokumen-filename').text('Belum ada file');
+    }
+});
+
+$(document).on('input', '.input-desc-sync', function() {
+    const targetId = $(this).data('target');
+    $(`input[data-ref="${targetId}"]`).val($(this).val());
+});
+
+$(document).on('click', '.btn-delete-doc-temp', function() {
+    const targetId = $(this).data('target');
+    $(`#${targetId}`).remove();
+    $(`input[data-ref="${targetId}"]`).remove(); // Hapus hidden input deskripsi
+    $(this).closest('tr').remove(); // Hapus baris tabel di modal
+});
 
 function validateFormSweetAlert(formId) {
     let isValid = true;
@@ -1527,7 +1567,7 @@ $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
         impactFlatpickr.clear();
     }
 
-    // Copy elemen file sementara dari tabel utama ke Modal
+    // PROSES COPY DATA SEMENTARA
     const trImpact = $(`#table-dampak-risiko tr[data-id="${id}"]`);
     const domCell = trImpact.find('td.column-action-impact');
     const domSaved = domCell.find('.dom-saved-impact');
@@ -1535,7 +1575,6 @@ $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
 
     const domEdited = domSaved.clone().addClass('dom-edited-impact').removeClass('dom-saved-impact');
 
-    // Copy native files dari clone
     const originalFileInputs = domSaved.find('input[type="file"]');
     domEdited.find('input[type="file"]').each(function(index) {
         if (originalFileInputs[index].files && originalFileInputs[index].files.length > 0) {
@@ -1544,43 +1583,38 @@ $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
     });
     domCell.append(domEdited);
 
-    // Tampilkan Tabel File
     const tableDocument = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
     tableDocument.empty();
 
-    // Tampilkan dokumen existing dari database
+    // -- Tampilkan Dokumen DB Existing (Jika Ada Kode Sebelumnya, Biarkan) --
     const savedDocs = existingDampakDocs[id] || [];
     savedDocs.forEach(function(doc) {
         const descText = doc.description ? doc.description : '';
         tableDocument.append(`
             <tr class="existing-doc" data-doc-id="${doc.id}">
-                <td>
-                    <span class="text-primary text-truncate d-block" style="max-width: 200px;">
-                        <a href="${doc.url}" target="_blank">${doc.file_name}</a>
-                    </span>
-                </td>
-                <td>
-                    <input type="text" class="form-control form-control-sm" value="${descText}" placeholder="Tidak ada deskripsi" disabled>
-                </td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-danger btn-delete-db-doc" data-id="${doc.id}" data-type="dampak">
-                        <i class="bx bx-trash"></i> Hapus
-                    </button>
-                </td>
+                <td><span class="text-primary text-truncate d-block" style="max-width: 200px;"><a href="${doc.url}" target="_blank">${doc.file_name}</a></span></td>
+                <td><input type="text" class="form-control form-control-sm" value="${descText}" disabled></td>
+                <td><button type="button" class="btn btn-sm btn-danger btn-delete-db-doc" data-id="${doc.id}" data-type="dampak"><i class="bx bx-trash"></i> Hapus</button></td>
             </tr>
         `);
     });
 
+    // -- Tampilkan Dokumen Sementara --
     domEdited.find('input[type=file]').each(function() {
-        const fileName = $(this).prop('files')[0]?.name;
-        const docId = $(this).prop('id');
+        const fileInput = $(this);
+        const docId = fileInput.prop('id');
+        const fileName = fileInput.prop('files').length > 0 ? fileInput.prop('files')[0].name : 'Belum ada file';
+
         const descInput = domEdited.find(`input.input-file-description-array[data-ref="${docId}"]`);
         const description = descInput.val() || '';
 
         tableDocument.append(`
             <tr data-id="${docId}">
                 <td>
-                    <span class="dokumen-filename text-truncate d-block" style="max-width: 200px;">${fileName}</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-secondary btn-trigger-file" data-target="${docId}">Pilih File</button>
+                        <span class="dokumen-filename text-truncate d-block" style="max-width: 150px;">${fileName}</span>
+                    </div>
                 </td>
                 <td>
                     <input type="text" class="form-control form-control-sm input-desc-impact" value="${description}" placeholder="Keterangan...">
@@ -1636,64 +1670,32 @@ $('#btnTambahDokumenDampak').click(function() {
     const uploadContainer = domEdited.find('.upload-container');
     const tableDokumen = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
 
-    // if (tableDokumen.find('tr').length >= 3) {
-    //    Swal.fire({ icon: 'error', title: 'Gagal', text: 'Maksimal 3 dokumen yang dapat diunggah.' });
-    //    return;
-    // }
+    const newId = 'dokumen-dampak-' + Date.now();
 
-    const newId = 'dokumen-dampak-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-
-    // Bikin input file array biasa []
-    uploadContainer.append(`<input type="file" style="display:none;" name="document_dampak_file_${dampakRisikoId}[]" id="${newId}" required>`);
-
-    // Bikin hidden input untuk array description
-    uploadContainer.append(`<input type="hidden" class="input-file-description-array" name="document_description_${dampakRisikoId}[]" data-ref="${newId}">`);
+    uploadContainer.append(`
+        <input type="file" class="hidden-file-input" style="display:none;"
+               accept="${acceptedFiles}" name="document_dampak_file_${dampakRisikoId}[]" id="${newId}" required>
+        <input type="hidden" name="document_description_${dampakRisikoId}[]" data-ref="${newId}">
+    `);
 
     tableDokumen.append(`
         <tr data-id="${newId}">
-            <td><span class="dokumen-filename text-truncate d-block" style="max-width: 200px;">Pilih file...</span></td>
             <td>
-                <input type="text" class="form-control form-control-sm input-desc-impact" placeholder="Keterangan...">
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-secondary btn-trigger-file" data-target="${newId}">Pilih File</button>
+                    <span class="dokumen-filename text-truncate d-block" style="max-width: 150px;">Belum ada file</span>
+                </div>
             </td>
             <td>
-                <button type="button" class="btn btn-link btn-sm text-danger btn-delete-doc-impact">Hapus</button>
+                <input type="text" class="form-control form-control-sm input-desc-impact-sync" data-target="${newId}" placeholder="Keterangan...">
+            </td>
+            <td>
+                <button type="button" class="btn btn-link btn-sm text-danger btn-delete-doc-temp" data-target="${newId}">Hapus</button>
             </td>
         </tr>
     `);
 
-    const appended = tableDokumen.find(`tr[data-id="${newId}"]`);
-    const fileInput = domEdited.find(`#${newId}`);
-
-    // Event on Change FIle
-    fileInput.change(function() {
-        if (this.files && this.files[0]) {
-            appended.find(`.dokumen-filename`).text(this.files[0].name);
-
-            let totalSize = 0;
-            domEdited.find('input[type="file"]').each(function() {
-                if (this.files && this.files[0]) totalSize += this.files[0].size;
-            });
-
-            const maxSizeLimit = {{ config('filesystems.max_upload_size', 10) }} * 1024 * 1024;
-            if (totalSize > maxSizeLimit) {
-                Swal.fire({ icon: 'error', title: 'File Terlalu Besar', text: 'Total ukuran maksimal ' + (maxSizeLimit / (1024 * 1024)) + ' MB.' });
-                appended.find('.btn-delete-doc-impact').click();
-            }
-        }
-    });
-
-    // Deteksi Cancel File Explorer
-    window.addEventListener('focus', function detectCancel() {
-        setTimeout(function() {
-            if (fileInput.length && fileInput[0].files.length === 0) {
-                appended.find('.btn-delete-doc-impact').click();
-            }
-        }, 300);
-        window.removeEventListener('focus', detectCancel);
-    }, { once: true });
-
-    fileInput.click();
-    toggleAddDocButtonDampak();
+    domEdited.find(`#${newId}`).click();
 });
 
 // 4. Update Realtime Text Deskripsi ke input hidden
@@ -2239,13 +2241,13 @@ $(document).ready(function() {
             $('#modalUpdateRealisasi').modal('show');
 
             const tableDocument = $('#modalUpdateRealisasi .table-dokumen');
-
             tableDocument.empty();
 
             const domCell = $('#table-penyebab-risiko tr[data-id="'+$(this).data('id')+'"] td.column-action');
             const domSaved = domCell.find('.dom-saved');
             domCell.find('.dom-edited').remove();
             const domEdited = domSaved.clone().addClass('dom-edited').removeClass('dom-saved');
+
             const originalFileInputs = domSaved.find('input[type="file"]');
             domEdited.find('input[type="file"]').each(function(index) {
                 if (originalFileInputs[index].files && originalFileInputs[index].files.length > 0) {
@@ -2255,25 +2257,52 @@ $(document).ready(function() {
 
             domCell.append(domEdited);
 
-            const documentDescriptions = domEdited.find('.input-file-description').val() ? JSON.parse(domEdited.find('.input-file-description').val()) : {};
+            const domDeskripsi = domEdited.find('.input-file-description');
+            const documentDescriptions = domDeskripsi.val() ? JSON.parse(domDeskripsi.val()) : {};
+
             domEdited.find('input[type=file]').each(function() {
-                const fileName = $(this).prop('files')[0]?.name;
-                const id = $(this).prop('id');
+                const fileInput = $(this);
+                const id = fileInput.prop('id');
+                const fileName = fileInput.prop('files').length > 0 ? fileInput.prop('files')[0].name : 'Belum ada file';
                 const description = documentDescriptions[id] || '';
-                const appended = tableDocument.append(`
+
+                tableDocument.append(`
                     <tr data-id="${id}">
-                    <td>
-                        <span class="dokumen-filename">${fileName}</span>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control" name="deskripsi_dokumen[]" placeholder="Deskripsi dokumen" value="${description}">
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-link btn-sm text-danger delete-btn">Hapus</button>
-                    </td>
-                </tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-secondary btn-trigger-file" data-target="${id}">Pilih File</button>
+                                <span class="dokumen-filename text-truncate d-block" style="max-width: 150px;">${fileName}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <input type="text" class="form-control" name="deskripsi_dokumen[]" placeholder="Deskripsi dokumen" value="${description}">
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-link btn-sm text-danger delete-btn">Hapus</button>
+                        </td>
+                    </tr>
                 `);
             });
+
+            // const documentDescriptions = domEdited.find('.input-file-description').val() ? JSON.parse(domEdited.find('.input-file-description').val()) : {};
+            // domEdited.find('input[type=file]').each(function() {
+            //     const fileName = $(this).prop('files')[0]?.name;
+            //     const id = $(this).prop('id');
+            //     const description = documentDescriptions[id] || '';
+            //     const appended = tableDocument.append(`
+            //         <tr data-id="${id}">
+            //         <td>
+            //             <span class="dokumen-filename">${fileName}</span>
+            //         </td>
+            //         <td>
+            //             <input type="text" class="form-control" name="deskripsi_dokumen[]" placeholder="Deskripsi dokumen" value="${description}">
+            //         </td>
+            //         <td>
+            //             <button type="button" class="btn btn-link btn-sm text-danger delete-btn">Hapus</button>
+            //         </td>
+            //     </tr>
+            //     `);
+            // });
 
             if (tableDocument.find('tr').length > 2) {
                 tableDocument.closest('table').find('tfoot').hide();
@@ -2447,46 +2476,38 @@ $(document).ready(function() {
     // --- PENYEBAB RISIKO LOGIC ---
     $('#btnTambahDokumen').click(function() {
         const penyebabRisikoId = $('#formUpdateRealisasi :input[name="penyebab_risiko_id"]').val();
-        const domEdited = $('#table-penyebab-risiko tr[data-id="'+penyebabRisikoId+'"] td.column-action .dom-edited');
+        const domCell = $('#table-penyebab-risiko tr[data-id="'+penyebabRisikoId+'"] td.column-action');
+        const domEdited = domCell.find('.dom-edited');
         const uploadContainer = domEdited.find('.upload-container');
         const tableDokumen = $('#modalUpdateRealisasi .table-dokumen');
 
-        // Poin 2: Batasan 10 Dokumen
-        const currentCount = tableDokumen.find('tr').length;
-        if (currentCount >= maxFilesCount) {
-            Swal.fire({ icon: 'error', title: 'Gagal', text: `Maksimal ${maxFilesCount} dokumen yang dapat diunggah.` });
-            return;
-        }
+        const newId = 'dokumen-' + Date.now();
 
-        const newId = 'dokumen-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-        // Poin 2: Filter Accept extension
-        uploadContainer.append(`<input type="file" style="display:none;" accept="${acceptedFiles}" name="document_file_${penyebabRisikoId}[${newId}]" id="${newId}" required>`);
+        // PERBAIKAN: Tambahkan deskripsi sebagai array [] agar index-nya sama dengan file
+        uploadContainer.append(`
+            <input type="file" class="hidden-file-input" style="display:none;"
+                  accept="${acceptedFiles}" name="document_file_${penyebabRisikoId}[]" id="${newId}" required>
+            <input type="hidden" name="document_description_${penyebabRisikoId}[]" data-ref="${newId}">
+        `);
 
         tableDokumen.append(`
             <tr data-id="${newId}">
-                <td><span class="dokumen-filename text-truncate d-block" style="max-width: 200px;">Pilih file...</span></td>
-                <td><input type="text" class="form-control" name="deskripsi_dokumen[]" placeholder="Deskripsi dokumen"></td>
-                <td><button type="button" class="btn btn-sm btn-danger delete-btn"><i class="bx bx-trash"></i> Batal</button></td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-secondary btn-trigger-file" data-target="${newId}">Pilih File</button>
+                        <span class="dokumen-filename text-truncate d-block" style="max-width: 150px;">Belum ada file</span>
+                    </div>
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm input-desc-sync" data-target="${newId}" placeholder="Deskripsi dokumen">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-link btn-sm text-danger btn-delete-doc-temp" data-target="${newId}"><i class="bx bx-trash"></i> Hapus</button>
+                </td>
             </tr>
         `);
 
-        const fileInput = domEdited.find(`#${newId}`);
-
-        fileInput.change(function() {
-            if (this.files && this.files[0]) {
-                const file = this.files[0];
-                // Poin 2: Batasan Ukuran 10MB
-                if (file.size > maxFileSize) {
-                    Swal.fire({ icon: 'error', title: 'File Terlalu Besar', text: 'Ukuran file maksimal adalah 10 MB.' });
-                    tableDokumen.find(`tr[data-id="${newId}"]`).remove();
-                    $(this).remove();
-                    return;
-                }
-                tableDokumen.find(`tr[data-id="${newId}"] .dokumen-filename`).text(file.name);
-            }
-        });
-
-        fileInput.click();
+        $(`#${newId}`).click();
     });
 
     $('#btnSimpanUpdateRealisasi').on('click', function() {

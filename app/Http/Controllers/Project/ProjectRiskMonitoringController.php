@@ -1374,6 +1374,17 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $currentTahun = (int) $tahun;
         $currentMonth = (int) $month;
 
+        $allPenyebabIds = $projectRisk->penyebabRisikoProjects->flatMap->perlakuanPenyebabRisiko->pluck('id');
+        $allDampakIds = $projectRisk->perlakuanDampakRisikos->pluck('id');
+
+        $filesPenyebab = \App\Models\PerlakuanPenyebabRisikoDocument::whereIn('perlakuan_penyebab_risiko_id', $allPenyebabIds)
+            ->get()
+            ->groupBy('perlakuan_penyebab_risiko_id');
+
+        $filesDampak = \App\Models\PerlakuanDampakRisikoDocument::whereIn('perlakuan_dampak_risiko_id', $allDampakIds)
+            ->get()
+            ->groupBy('perlakuan_dampak_risiko_id');
+
         // Query mencari data monitoring paling terakhir sebelum bulan/tahun yang sedang diakses
         $previousMonitoring = ProjectRiskMonitoring::with([
             'perlakuanPenyebabMonitorings',
@@ -1420,6 +1431,8 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'groupedSkalaParameters' => $groupedSkalaParameters,
             'selectedParameterType' => $selectedParameterType,
             'previousMonitoring' => $previousMonitoring,
+            'filesPenyebab' => $filesPenyebab,
+            'filesDampak' => $filesDampak,
         ]);
     }
 
@@ -1504,9 +1517,17 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             ->with(['perlakuanPenyebabRisikoDocuments', 'perlakuanDampakRisikoDocuments'])
             ->first();
 
-        // Pisahkan file berdasarkan tipenya
-        $filesPenyebab = $projectMonitoring?->perlakuanPenyebabRisikoDocuments->groupBy('perlakuan_penyebab_risiko_id') ?: collect();
-        $filesDampak = $projectMonitoring?->perlakuanDampakRisikoDocuments->groupBy('perlakuan_dampak_risiko_id') ?: collect();
+        $allPenyebabIds = $projectRisk->penyebabRisikoProjects->flatMap->perlakuanPenyebabRisiko->pluck('id');
+        $allDampakIds = $projectRisk->perlakuanDampakRisikos->pluck('id');
+
+        // Grouping semua file berdasarkan perlakuan_id
+        $filesPenyebab = \App\Models\PerlakuanPenyebabRisikoDocument::whereIn('perlakuan_penyebab_risiko_id', $allPenyebabIds)
+            ->get()
+            ->groupBy('perlakuan_penyebab_risiko_id');
+
+        $filesDampak = \App\Models\PerlakuanDampakRisikoDocument::whereIn('perlakuan_dampak_risiko_id', $allDampakIds)
+            ->get()
+            ->groupBy('perlakuan_dampak_risiko_id');
 
         $currentDate = \Carbon\Carbon::create($tahun, $month, 1);
         $dateM1 = $currentDate->copy()->subMonth();
@@ -1717,7 +1738,8 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             $projectMonitoring->perlakuanPenyebabMonitorings()->create($toCreate);
 
             if ($documentFiles = $request->{'document_file_' . $id}) {
-                $documentDescriptions = json_decode($request->input('document_description_' . $id, '[]'), true) ?: [];
+                $documentDescriptions = (array) $request->input('document_description_' . $id, []);
+
                 foreach ($documentFiles as $idx => $documentFile) {
                     $storeFile = $documentFile->store('project-monitoring-documents', 'public');
                     $projectMonitoring->perlakuanPenyebabRisikoDocuments()->create([
@@ -2257,7 +2279,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             // Risk Owner MR (Level 2, unit_mr = 1)
             $users = \App\Models\User::where('level_id', 2)->whereHas('unit', function($q) {
                 $q->where('unit_mr', 1);
-            })->get();
+          })->get();
         }
 
         foreach ($users as $user) {
