@@ -416,7 +416,7 @@ class ProjectRiskController extends BasicCRUDController
 
 
             // CASE 2: VERIFIKATOR (Termasuk Pengembalian MR)
-            else if (true) {
+            if (true) {
                 $active_state = <<<JS
                     function(id, type, row) {
                         const validStatus = [2, 3, 7, 8];
