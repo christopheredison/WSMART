@@ -9,11 +9,14 @@
         $user = auth()->user();
         $isRiskOfficer = ($user->level_id == 6 || is_null($user->level_id));
         $isRiskOwner = ($user->level_id == 7);
+
+        $thClass = "table-light text-dark fw-semibold align-middle";
+        $tdClass = "align-middle text-pre-wrap text-gray-700";
     @endphp
 
     <div class="row g-5 mb-5">
         <div class="col-12">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm border-0">
 
                 <div class="card-header d-flex align-items-center gap-3 py-4">
                     <div class="bg-info-subtle p-2 rounded-4">
@@ -89,7 +92,7 @@
                 <div class="card-body p-lg-4">
                     {{-- ALERT REVISI --}}
                     @if($context && ($status == 'Revision' || $status == 'Draft') && $context->catatan_perbaikan)
-                    <div class="alert alert-danger d-flex align-items-center mt-0 mb-4" role="alert">
+                    <div class="alert alert-danger d-flex align-items-center mt-0 mb-4 border-dashed" role="alert">
                         <div class="svg-icon svg-icon-danger me-3">
                             @include('partials.icon-alert')
                         </div>
@@ -120,42 +123,36 @@
                         </div>
                     @else
 
-                        @php
-                            $thClass = "bg-light text-dark fw-bold align-middle";
-                            $tdClass = "align-middle text-pre-wrap";
-                        @endphp
-
                         {{-- SECTION I --}}
                         <div class="mb-5">
                             <h5 class="text-dark fw-bold mb-3">I. Informasi Umum</h5>
-                            <div class="rounded border">
+                            <div class="table-responsive rounded border">
                                 <table class="table table-bordered mb-0 align-middle">
                                     <tbody>
                                         <tr>
-                                            <td class="{{ $thClass }}" style="width: 5%; text-align:center;">1</td>
+                                            <td class="{{ $thClass }} text-center" style="width: 5%;">1</td>
                                             <td class="{{ $thClass }}" style="width: 30%;">Nama Proyek</td>
                                             <td class="{{ $tdClass }} fw-bold">{{ $project->project_name }}</td>
                                         </tr>
                                         <tr>
-                                            <td class="{{ $thClass }}" style="text-align:center;">2</td>
+                                            <td class="{{ $thClass }} text-center">2</td>
                                             <td class="{{ $thClass }}">Nilai</td>
                                             <td class="{{ $tdClass }}">{{ $context->nilai ?? '-' }}</td>
                                         </tr>
                                         <tr>
-                                            <td class="{{ $thClass }}" style="text-align:center;">3</td>
+                                            <td class="{{ $thClass }} text-center">3</td>
                                             <td class="{{ $thClass }}">Pimpinan Tertinggi Proyek</td>
                                             <td class="{{ $tdClass }}">{{ $context->pimpinanTertinggi->name ?? '-' }}</td>
                                         </tr>
                                         <tr>
-                                            <td class="{{ $thClass }}" style="text-align:center;">4</td>
-                                            <td class="{{ $thClass }}">Anggota Proyek</td>
-                                            <td class="">
-                                                @if($context->members->count() > 0)
+                                            <td class="{{ $thClass }} text-center">4</td>
+                                            <td class="{{ $thClass }}">Anggota</td>
+                                            <td class="align-middle text-gray-700"> @if($context->members->count() > 0)
                                                     <ul class="mb-0 ps-3 text-gray-700">
                                                         @foreach($context->members as $member)
                                                             <li>
-                                                                {{ $member->nama }}
-                                                                <span class="text-muted fst-italic small">({{ $member->jabatan->name ?? '-' }})</span>
+                                                                {{ $member->nama ?? $member->user->name ?? '-' }}
+                                                                <span class="text-muted small fst-italic">({{ $member->jabatan->name ?? '-' }})</span>
                                                             </li>
                                                         @endforeach
                                                     </ul>
@@ -165,7 +162,7 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="{{ $thClass }}" style="text-align:center;">5</td>
+                                            <td class="{{ $thClass }} text-center">5</td>
                                             <td class="{{ $thClass }}">Sponsor</td>
                                             <td class="{{ $tdClass }}">{{ $context->sponsor ?? '-' }}</td>
                                         </tr>
@@ -177,26 +174,26 @@
                         {{-- SECTION II --}}
                         <div class="mb-5">
                             <h5 class="text-dark fw-bold mb-3">II. Ruang Lingkup</h5>
-                            <div class="rounded border">
+                            <div class="table-responsive rounded border">
                                 <table class="table table-bordered mb-0">
                                     <tbody>
                                         <tr>
-                                            <td class="{{ $thClass }}" style="width: 5%; text-align:center;">6</td>
+                                            <td class="{{ $thClass }} text-center" style="width: 5%;">6</td>
                                             <td class="{{ $thClass }}" style="width: 30%;">Deskripsi</td>
                                             <td class="{{ $tdClass }}">{{ $context->deskripsi ?? '-' }}</td>
                                         </tr>
                                         <tr>
-                                            <td class="{{ $thClass }}" style="text-align:center;">7</td>
+                                            <td class="{{ $thClass }} text-center">7</td>
                                             <td class="{{ $thClass }}">Tujuan</td>
                                             <td class="{{ $tdClass }}">{{ $context->tujuan ?? '-' }}</td>
                                         </tr>
                                         <tr>
-                                            <td class="{{ $thClass }}" style="text-align:center;">8</td>
+                                            <td class="{{ $thClass }} text-center">8</td>
                                             <td class="{{ $thClass }}">Lingkup Pekerjaan</td>
                                             <td class="{{ $tdClass }}">{{ $context->lingkup_pekerjaan ?? '-' }}</td>
                                         </tr>
                                         <tr>
-                                            <td class="{{ $thClass }}" style="text-align:center;">9</td>
+                                            <td class="{{ $thClass }} text-center">9</td>
                                             <td class="{{ $thClass }}">Pekerjaan di luar lingkup</td>
                                             <td class="{{ $tdClass }}">{{ $context->pekerjaan_luar_lingkup ?? '-' }}</td>
                                         </tr>
@@ -208,21 +205,21 @@
                         {{-- SECTION III --}}
                         <div class="mb-5">
                             <h5 class="text-dark fw-bold mb-3">III. Konteks</h5>
-                            <div class="rounded border">
+                            <div class="table-responsive rounded border">
                                 <table class="table table-bordered mb-0">
                                     <tbody>
                                         <tr>
-                                            <td class="{{ $thClass }}" style="width: 5%; text-align:center;">10</td>
+                                            <td class="{{ $thClass }} text-center" style="width: 5%;">10</td>
                                             <td class="{{ $thClass }}" style="width: 30%;">Sasaran</td>
                                             <td class="{{ $tdClass }}">{{ $context->sasaran ?? '-' }}</td>
                                         </tr>
                                         <tr>
-                                            <td class="{{ $thClass }}" style="text-align:center;">11</td>
+                                            <td class="{{ $thClass }} text-center">11</td>
                                             <td class="{{ $thClass }}">Batasan</td>
                                             <td class="{{ $tdClass }}">{{ $context->batasan ?? '-' }}</td>
                                         </tr>
                                         <tr>
-                                            <td class="{{ $thClass }}" style="text-align:center;">12</td>
+                                            <td class="{{ $thClass }} text-center">12</td>
                                             <td class="{{ $thClass }}">Asumsi Dasar</td>
                                             <td class="{{ $tdClass }}">{{ $context->asumsi_dasar ?? '-' }}</td>
                                         </tr>
@@ -235,11 +232,11 @@
                         <div class="mb-5">
                             <h5 class="text-dark fw-bold mb-3">IV. Stakeholder</h5>
 
-                            <div class="mb-3">
-                                <h6 class="fw-bold">Stakeholder Internal</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-bordered">
-                                        <thead>
+                            <div class="mb-4">
+                                <h6 class="fw-semibold text-secondary mb-2"><i class="bx bx-buildings me-1"></i>Stakeholder Internal</h6>
+                                <div class="table-responsive rounded border">
+                                    <table class="table table-bordered mb-0 align-middle">
+                                        <thead class="table-light text-dark">
                                             <tr>
                                                 <th>Nama Stakeholder</th>
                                                 <th>Peran / Fungsi</th>
@@ -250,14 +247,14 @@
                                             @if($riskContexts->first() && $riskContexts->first()->stakeholderInternals->count() > 0)
                                                 @foreach($riskContexts->first()->stakeholderInternals as $internal)
                                                 <tr>
-                                                    <td>{{ $internal->stakeholder ?? '-' }}</td>
-                                                    <td>{{ $internal->peran ?? '-' }}</td>
-                                                    <td>{{ $internal->komunikasi ?? '-' }}</td>
+                                                    <td class="{{ $tdClass }}">{{ $internal->stakeholder ?? '-' }}</td>
+                                                    <td class="{{ $tdClass }}">{{ $internal->peran ?? '-' }}</td>
+                                                    <td class="{{ $tdClass }}">{{ $internal->komunikasi ?? '-' }}</td>
                                                 </tr>
                                                 @endforeach
                                             @else
                                                 <tr>
-                                                    <td colspan="3" class="text-center text-muted">-</td>
+                                                    <td colspan="3" class="text-center text-muted py-3">- Belum ada data -</td>
                                                 </tr>
                                             @endif
                                         </tbody>
@@ -266,10 +263,10 @@
                             </div>
 
                             <div class="mb-3">
-                                <h6 class="fw-bold">Stakeholder Eksternal</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-bordered">
-                                        <thead>
+                                <h6 class="fw-semibold text-secondary mb-2"><i class="bx bx-globe me-1"></i>Stakeholder Eksternal</h6>
+                                <div class="table-responsive rounded border">
+                                    <table class="table table-bordered mb-0 align-middle">
+                                        <thead class="table-light text-dark">
                                             <tr>
                                                 <th>Nama Stakeholder</th>
                                                 <th>Peran / Fungsi</th>
@@ -280,14 +277,14 @@
                                             @if($riskContexts->first() && $riskContexts->first()->stakeholderExternals->count() > 0)
                                                 @foreach($riskContexts->first()->stakeholderExternals as $external)
                                                 <tr>
-                                                    <td>{{ $external->stakeholder ?? '-' }}</td>
-                                                    <td>{{ $external->peran ?? '-' }}</td>
-                                                    <td>{{ $external->komunikasi ?? '-' }}</td>
+                                                    <td class="{{ $tdClass }}">{{ $external->stakeholder ?? '-' }}</td>
+                                                    <td class="{{ $tdClass }}">{{ $external->peran ?? '-' }}</td>
+                                                    <td class="{{ $tdClass }}">{{ $external->komunikasi ?? '-' }}</td>
                                                 </tr>
                                                 @endforeach
                                             @else
                                                 <tr>
-                                                    <td colspan="3" class="text-center text-muted">-</td>
+                                                    <td colspan="3" class="text-center text-muted py-3">- Belum ada data -</td>
                                                 </tr>
                                             @endif
                                         </tbody>
@@ -318,7 +315,6 @@
                             <i class="bx bx-error-circle fs-3 text-warning me-3"></i>
                             <div class="text-dark">Status dokumen akan berubah menjadi <strong>Perlu Perbaikan</strong>.</div>
                         </div>
-
                         <div class="mb-3">
                             <label class="form-label fw-bold required">Catatan Perbaikan</label>
                             <textarea name="catatan_perbaikan" class="form-control" rows="4" required placeholder="Tuliskan instruksi perbaikan secara jelas..."></textarea>
