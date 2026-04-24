@@ -233,7 +233,7 @@
                             <h5 class="text-dark fw-bold mb-3">IV. Stakeholder</h5>
 
                             <div class="mb-4">
-                                <h6 class="fw-semibold text-secondary mb-2"><i class="bx bx-buildings me-1"></i>Stakeholder Internal</h6>
+                                <h6 class="fw-semibold mb-2">Stakeholder Internal</h6>
                                 <div class="table-responsive rounded border">
                                     <table class="table table-bordered mb-0 align-middle">
                                         <thead class="table-light text-dark">
@@ -263,7 +263,7 @@
                             </div>
 
                             <div class="mb-3">
-                                <h6 class="fw-semibold text-secondary mb-2"><i class="bx bx-globe me-1"></i>Stakeholder Eksternal</h6>
+                                <h6 class="fw-semibold mb-2">Stakeholder Eksternal</h6>
                                 <div class="table-responsive rounded border">
                                     <table class="table table-bordered mb-0 align-middle">
                                         <thead class="table-light text-dark">
