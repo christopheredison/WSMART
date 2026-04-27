@@ -33,8 +33,11 @@
           </li>
         </ul>
 
-        <form action="{{ route('penilaian-rmi.aspek-kinerja.store', $period->id) }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('penilaian-rmi.aspek-kinerja.store', $period->id) }}" method="POST" enctype="multipart/form-data" id="formAspekKinerja">
           @csrf
+
+          <input type="hidden" name="action" id="formAction" value="">
+
           <div class="tab-content">
 
             {{-- STEP 1: Capaian Kinerja --}}
@@ -79,7 +82,7 @@
                         <div class="mt-3 text-end">
                           <button
                             type="button"
-                            class="btn btn-sm btn-outline-primary" 
+                            class="btn btn-sm btn-outline-primary"
                             onclick="openEvidenceModal({{ $param->id }}, '{{ $param->code }}. {{ $param->name }}')"
                           >
                             <span class="bx bx-paperclip me-1"></span> Upload Bukti Dukung
@@ -120,7 +123,7 @@
                               <div class="mt-3 text-end">
                                 <button
                                   type="button"
-                                  class="btn btn-sm btn-outline-primary" 
+                                  class="btn btn-sm btn-outline-primary"
                                   onclick="openEvidenceModal({{ $child->id }}, '{{ $child->code }}. {{ $child->name }}')"
                                 >
                                   <span class="bx bx-paperclip me-1"></span> Upload Bukti Dukung
@@ -136,7 +139,7 @@
               @endforeach
 
               <div class="d-flex justify-content-end">
-                <button type="submit" name="action" value="save_capaian" formnovalidate class="btn btn-primary">
+                <button type="button" id="btn-save-capaian" class="btn btn-primary">
                   Simpan Capaian & Lanjut <span class="bx bx-chevron-right ms-1"></span>
                 </button>
               </div>
@@ -146,17 +149,16 @@
             <div class="tab-pane fade {{ session('active_tab')=='kpmr' ? 'show active' : '' }}" id="kpmr">
               <div class="d-flex justify-content-between align-items-center mb-3">
                   <h4 class="mb-0">Penilaian Kualitas Penerapan Manajemen Risiko (KPMR)</h4>
-                  
+
                   <div class="btn-group">
                       <button type="button" class="btn btn-info text-white py-2" onclick="openRiskModal('eksposur')">
                           <span class="bx bx-table me-1"></span> Data Eksposur Risiko
                       </button>
-                      <button type="button" class="btn btn-primary text-white py-2" data-bs-toggle="modal" onclick="openRiskModal('progress')">
+                      <button type="button" class="btn btn-primary text-white py-2" onclick="openRiskModal('progress')">
                           <span class="bx bx-task me-1"></span> Progress Perlakuan
                       </button>
                   </div>
               </div>
-              {{-- <h4 class="mb-3">Penilaian Kualitas Penerapan Manajemen Risiko (KPMR)</h4> --}}
 
               @foreach($paramsKpmr as $param)
                 <div class="card mb-4">
@@ -230,10 +232,10 @@
               @endforeach
 
               <div class="d-flex justify-content-between">
-                <button type="submit" name="action" value="back_to_capaian" formnovalidate class="btn btn-outline-secondary">
+                <button type="button" id="btn-back-capaian" class="btn btn-outline-secondary">
                   <span class="bx bx-chevron-left me-1"></span> Kembali ke Capaian
                 </button>
-                <button type="submit" name="action" value="save_kpmr" formnovalidate class="btn btn-primary">
+                <button type="button" id="btn-save-kpmr" class="btn btn-primary">
                   Simpan KPMR & Lanjut <span class="bx bx-chevron-right ms-1"></span>
                 </button>
               </div>
@@ -250,7 +252,7 @@
                 <div class="card-body">
                   @php
                     $existingFinalRatingId = $finalRatingPeriod->final_rating_id ?? old('final_rating_id');
-                    
+
                     // Default to rating 3 if no existing data
                     if (!$existingFinalRatingId) {
                         $existingFinalRatingId = 3;
@@ -324,10 +326,10 @@
               </div>
 
               <div class="d-flex justify-content-between">
-                <button type="submit" name="action" value="back_to_kpmr" formnovalidate class="btn btn-outline-secondary">
+                <button type="button" id="btn-back-kpmr" class="btn btn-outline-secondary">
                   <span class="bx bx-chevron-left me-1"></span> Kembali ke KPMR
                 </button>
-                <button type="submit" name="action" value="finish_final_rating" class="btn btn-success">
+                <button type="button" id="btn-finish-rating" class="btn btn-success">
                   Selesai & Simpan <span class="bx bx-save ms-1"></span>
                 </button>
               </div>
@@ -349,7 +351,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-0 mb-3">
-                {{-- Filter Unit --}}
                 <div class="card mb-3">
                     <div class="card-body py-2">
                         <div class="row align-items-center">
@@ -369,7 +370,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="card">
                   <div class="card-body p-0">
                     <div class="table-responsive p-0">
@@ -407,7 +407,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-0 mb-3">
-                {{-- Filter Unit --}}
                 <div class="card mb-3">
                     <div class="card-body py-2">
                         <div class="row align-items-center">
@@ -427,7 +426,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="card">
                   <div class="card-body p-0">
                     <div class="table-responsive p-0">
@@ -468,14 +467,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-0">
-                {{-- Form Upload --}}
                 <div class="card mb-3 bg-light border-0">
                     <div class="card-body">
                         <form id="formUploadEvidence" enctype="multipart/form-data">
                             @csrf
                             <input type="hidden" name="period_id" value="{{ $period->id }}">
                             <input type="hidden" name="parameter_id" id="evParamId">
-                            
+
                             <div class="row g-2 align-items-end">
                                 <div class="col-md-5">
                                     <label class="form-label small mb-1">Pilih File (Max 5MB)</label>
@@ -496,7 +494,6 @@
                     </div>
                 </div>
 
-                {{-- Tabel List Evidence --}}
                 <div class="table-responsive">
                     <table class="table table-bordered table-striped text-sm">
                         <thead class="table-light">
@@ -516,8 +513,95 @@
         </div>
     </div>
 </div>
+
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
+  // Script untuk handling proses konfirmasi dan submit form
+  $(document).ready(function() {
+
+    // Fungsi Reusable untuk proses action Form
+    function processForm(actionValue, showConfirmation, title = '', text = '', confirmText = '', confirmColor = '') {
+      const form = document.getElementById('formAspekKinerja');
+      const actionInput = document.getElementById('formAction');
+
+      if (showConfirmation) {
+        Swal.fire({
+          title: title,
+          text: text,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: confirmColor,
+          cancelButtonColor: '#6c757d',
+          confirmButtonText: confirmText,
+          cancelButtonText: 'Batal'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            submitFormWithLoading(form, actionInput, actionValue);
+          }
+        });
+      } else {
+        // Jika tidak perlu konfirmasi (seperti tombol Kembali)
+        submitFormWithLoading(form, actionInput, actionValue);
+      }
+    }
+
+    // Fungsi trigger Loading dan Submit
+    function submitFormWithLoading(form, actionInput, actionValue) {
+      Swal.fire({
+        title: 'Memproses Data...',
+        html: 'Mohon tunggu sebentar.',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+      actionInput.value = actionValue;
+      form.submit();
+    }
+
+    // Event Listener untuk Tombol-tombol navigasi
+    $('#btn-save-capaian').click(function() {
+      processForm('save_capaian', true, 'Simpan Capaian Kinerja?', 'Progres penilaian capaian kinerja akan disimpan dan Anda akan lanjut ke tab KPMR.', 'Ya, Simpan & Lanjut!', '#0d6efd');
+    });
+
+    $('#btn-back-capaian').click(function() {
+      // Kembali tanpa confirmasi panjang, langsung loading
+      processForm('back_to_capaian', false);
+    });
+
+    $('#btn-save-kpmr').click(function() {
+      processForm('save_kpmr', true, 'Simpan Penilaian KPMR?', 'Penilaian KPMR akan disimpan dan Anda akan lanjut ke tahap Final Rating.', 'Ya, Simpan & Lanjut!', '#0d6efd');
+    });
+
+    $('#btn-back-kpmr').click(function() {
+      // Kembali tanpa confirmasi
+      processForm('back_to_kpmr', false);
+    });
+
+    $('#btn-finish-rating').click(function() {
+      // Validasi khusus Final Rating
+      const finalRating = $('#final_rating_id').val();
+      if (!finalRating) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Perhatian!',
+          text: 'Mohon pilih Final Rating terlebih dahulu sebelum menyelesaikan penilaian.',
+          confirmButtonColor: '#198754'
+        });
+        return;
+      }
+      processForm('finish_final_rating', true, 'Selesai & Simpan?', 'Pastikan semua penilaian dari Capaian Kinerja hingga Final Rating sudah terisi dengan benar. Data akan diproses secara keseluruhan.', 'Ya, Selesaikan!', '#198754');
+    });
+
+  });
+</script>
+
+<script>
+  // -- Script original bawaan Blade (Tab Handling, Perhitungan Final Rating, dll) tetap di bawah --
   const tabCapaian = new bootstrap.Tab(document.querySelector('#tab-capaian'));
   const tabKpmr    = new bootstrap.Tab(document.querySelector('#tab-kpmr'));
   const tabFinalRating = new bootstrap.Tab(document.querySelector('#tab-final-rating'));
@@ -639,9 +723,9 @@
 </script>
 
 <script>
-    // Global variable untuk menyimpan data cache sementara (opsional)
+    // -- Script Modal Data Risiko & API --
     let currentPeriodId = "{{ $period->id }}";
-    
+
     // Sinkronisasi kedua dropdown (agar jika ubah di modal 1, modal 2 ikut berubah)
     const unitSelectors = document.querySelectorAll('.risk-unit-selector');
     unitSelectors.forEach(sel => {
@@ -659,7 +743,7 @@
         const modalId = type === 'eksposur' ? '#modalEksposurRisiko' : '#modalProgressPerlakuan';
         const myModal = new bootstrap.Modal(document.querySelector(modalId));
         myModal.show();
-        
+
         // Load data pertama kali jika belum ada isi atau refresh
         const unitId = unitSelectors[0].value;
         fetchRiskData(unitId);
@@ -670,7 +754,7 @@
         // Tampilkan spinner
         document.getElementById('loading-spinner-1').classList.remove('d-none');
         document.getElementById('loading-spinner-2').classList.remove('d-none');
-        
+
         // URL API
         const url = `{{ route('penilaian-rmi.get-risk-data', ':pid') }}?unit_id=${unitId}`.replace(':pid', currentPeriodId);
 
@@ -692,11 +776,7 @@
 
     function formatCurrency(value) {
         if (value === null || value === undefined || value === '') return '-';
-        
-        return 'Rp ' + new Intl.NumberFormat('id-ID', {
-            // minimumFractionDigits: 2,
-            // maximumFractionDigits: 2
-        }).format(value);
+        return 'Rp ' + new Intl.NumberFormat('id-ID').format(value);
     }
 
     // Render Tabel 1: Eksposur
@@ -714,8 +794,8 @@
             risk.penyebab.forEach(p => { penyebabList += `<li>${p}</li>`; });
             penyebabList += '</ul>';
 
-            let realisasiBadge = risk.realisasi !== null 
-                ? `<span class="badge bg-primary mb-1">Q${risk.realisasi_quarter}</span><br>${formatCurrency(risk.realisasi)}` 
+            let realisasiBadge = risk.realisasi !== null
+                ? `<span class="badge bg-primary mb-1">Q${risk.realisasi_quarter}</span><br>${formatCurrency(risk.realisasi)}`
                 : '<span class="text-muted">-</span>';
 
             const row = `
@@ -755,7 +835,6 @@
         let no = 1;
         risks.forEach(risk => {
             if(risk.perlakuans.length === 0) {
-                // Jika tidak ada perlakuan, tampilkan baris kosong/info
                 const row = `
                     <tr>
                         <td class="text-center">${no++}</td>
@@ -793,11 +872,11 @@
                                 </p>
                                 <div class="d-flex align-items-center justify-content-center">
                                     <div class="progress w-100" style="height: 20px;">
-                                        <div class="progress-bar bg-${perlakuan.progress >= 100 ? 'success' : 'info'}" 
-                                            role="progressbar" 
-                                            style="width: ${perlakuan.progress}%;" 
-                                            aria-valuenow="${perlakuan.progress}" 
-                                            aria-valuemin="0" 
+                                        <div class="progress-bar bg-${perlakuan.progress >= 100 ? 'success' : 'info'}"
+                                            role="progressbar"
+                                            style="width: ${perlakuan.progress}%;"
+                                            aria-valuenow="${perlakuan.progress}"
+                                            aria-valuemin="0"
                                             aria-valuemax="100">
                                             ${perlakuan.progress}%
                                         </div>
@@ -814,6 +893,7 @@
 </script>
 
 <script>
+    // -- Script Upload Evidence Modal --
     const modalEvidence = new bootstrap.Modal(document.getElementById('modalEvidence'));
     const formUpload = document.getElementById('formUploadEvidence');
     const tbodyEv = document.getElementById('tbodyEvidence');
@@ -821,12 +901,12 @@
 
     // 1. Fungsi Buka Modal
     function openEvidenceModal(paramId, paramName) {
-        document.getElementById('evidenceParamName').innerHTML = paramName; 
-        
+        document.getElementById('evidenceParamName').innerHTML = paramName;
+
         document.getElementById('evParamId').value = paramId;
         document.getElementById('uploadError').classList.add('d-none');
         formUpload.reset();
-        
+
         modalEvidence.show();
         fetchEvidences(paramId);
     }
@@ -834,7 +914,7 @@
     // 2. Load List Evidence via AJAX
     function fetchEvidences(paramId) {
         tbodyEv.innerHTML = '<tr><td colspan="4" class="text-center">Memuat data...</td></tr>';
-        
+
         const url = `{{ route('penilaian-rmi.evidence.list', [':pid', ':parId']) }}`
                     .replace(':pid', periodId)
                     .replace(':parId', paramId);
@@ -880,12 +960,12 @@
     // 3. Handle Upload
     formUpload.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         const btn = document.getElementById('btnUploadEv');
         const originalText = btn.innerHTML;
         const errorDiv = document.getElementById('uploadError');
         const paramId = document.getElementById('evParamId').value;
-        
+
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Loading...';
         errorDiv.classList.add('d-none');

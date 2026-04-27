@@ -81,7 +81,7 @@
             <dt class="col-sm-4">Tanggal Update</dt><dd class="col-sm-8">{{ $period->updated_at->format('d M Y H:i') }}</dd>
             <dt class="col-sm-4">Penilai</dt>
             <dd class="col-sm-8">
-              {{ $period->penilaian ?? '-' }} 
+              {{ $period->penilaian ?? '-' }}
               @if($period->tipe_penilaian)
                 <span class="">
                   @if($period->tipe_penilaian == 1)
@@ -124,7 +124,7 @@
             <dl class="row mb-0 align-items-center px-3">
                 <dt class="col-sm-6 px-0 text-muted">Tahun RMI</dt>
                 <dd class="col-sm-6 px-0 fw-bold">{{ $period->year }}</dd>
-                
+
                 <dt class="col-sm-6 px-0 text-muted">Tahun Dinilai</dt>
                 <dd class="col-sm-6 px-0 fw-bold">{{ $period->tahun_dinilai ?? '-' }}</dd>
 
@@ -409,7 +409,7 @@
                           {{ $param->name }}<br>
                           <small class="text-muted">
                             @foreach($param->options as $opt)
-                              {{ $opt->code }}. {{ $opt->description }}; 
+                              {{ $opt->code }}. {{ $opt->description }};
                             @endforeach
                           </small>
                         </td>
@@ -432,7 +432,7 @@
                             {{ $child->name }}<br>
                             <small class="text-muted">
                               @foreach($child->options as $opt)
-                                {{ $opt->code }}. {{ $opt->description }}; 
+                                {{ $opt->code }}. {{ $opt->description }};
                               @endforeach
                             </small>
                           </td>
@@ -478,7 +478,7 @@
                           {{ $param->name }}<br>
                           <small class="text-muted">
                             @foreach($param->options as $opt)
-                              {{ $opt->code }}. {{ $opt->description }}; 
+                              {{ $opt->code }}. {{ $opt->description }};
                             @endforeach
                           </small>
                         </td>
@@ -500,7 +500,7 @@
                             {{ $child->name }}<br>
                             <small class="text-muted">
                               @foreach($child->options as $opt)
-                                {{ $opt->code }}. {{ $opt->description }}; 
+                                {{ $opt->code }}. {{ $opt->description }};
                               @endforeach
                             </small>
                           </td>
@@ -760,6 +760,39 @@
                 });
             }
         });
+    });
+
+    $(document).on('click', '.btn-delete-dim-doc', function(e) {
+      e.preventDefault();
+
+      const formId = $(this).data('form-id'); // Mengambil ID form yang disembunyikan
+
+      Swal.fire({
+        title: 'Hapus Dokumen?',
+        text: "Dokumen yang dihapus tidak dapat dikembalikan!",
+        icon: 'warning',
+        showCancelButton: true,
+        // confirmButtonColor: '#dc3545', // Warna merah danger
+        // cancelButtonColor: '#6c757d',  // Warna abu-abu cancel
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+
+          Swal.fire({
+            title: 'Menghapus...',
+            text: 'Mohon tunggu sebentar',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+
+          document.getElementById(formId).submit();
+        }
+      });
     });
   });
 </script>

@@ -15,41 +15,38 @@
         </div>
       </div>
       <div class="card-body">
-        <form action="{{ route('penilaian-rmi.save-aspek-dinamis', $period->id) }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('penilaian-rmi.save-aspek-dinamis', $period->id) }}" method="POST" enctype="multipart/form-data" id="formPenilaian">
           @csrf
-          
+          <input type="hidden" name="action" id="formAction" value="save">
+
           @foreach($dimensions as $dimension)
-          <!-- Dimensi -->
           <div class="card mb-4">
             <div class="card-header bg-primary text-white">
               <h5 class="mb-0">Dimensi : {{ $dimension->name }}</h5>
             </div>
             <div class="card-body">
-              
+
               @foreach($dimension->subDimensions as $subDimension)
-              <!-- Sub-Dimensi -->
               <div class="card mb-3">
                 <div class="card-header bg-info text-white">
                   <h6 class="mb-0">Sub-Dimensi : {{ $subDimension->name }}</h6>
                 </div>
                 <div class="card-body">
-                  
+
                   @foreach($subDimension->measurementParameters as $parameter)
                   @if($parameter->criteria && $parameter->criteria->count() > 0)
-                  <!-- Parameter -->
                   <div class="card mb-3">
                     <div class="card-header">
                       <strong>Parameter {{ $loop->iteration }}: {{ $parameter->statement }}</strong>
                     </div>
                     <div class="card-body">
-                      
+
                       @foreach($parameter->criteria as $criteria)
-                      <!-- Kriteria -->
                       <div class="mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                           <strong>Kriteria {{ $loop->iteration }}</strong>
                           <div class="d-flex gap-2">
-                            <select class="form-select form-select-sm w-auto" 
+                            <select class="form-select form-select-sm w-auto"
                                     name="scores[{{ $criteria->id }}]">
                               <option value="" disabled {{ !isset($scores[$criteria->id]) ? 'selected' : '' }}>Score</option>
                               @for($i = $criteria->min_score; $i <= $criteria->max_score; $i++)
@@ -58,7 +55,7 @@
                                 </option>
                               @endfor
                             </select>
-                            <button type="button" 
+                            <button type="button"
                                     class="btn btn-sm btn-outline-primary"
                                     data-bs-toggle="modal"
                                     data-bs-target="#modalKriteria{{ $criteria->id }}">
@@ -97,8 +94,7 @@
                           @endforeach
                         </div>
                       </div>
-                      
-                      <!-- Modal untuk masing-masing kriteria -->
+
                       <div class="modal fade" id="modalKriteria{{ $criteria->id }}" tabindex="-1" aria-labelledby="modalLabelKriteria{{ $criteria->id }}" aria-hidden="true">
                         <div class="modal-dialog modal-lg">
                           <div class="modal-content">
@@ -131,29 +127,29 @@
                         </div>
                       </div>
                       @endforeach
-                      
+
                     </div>
                   </div>
                   @endif
                   @endforeach
-                  
+
                 </div>
               </div>
               @endforeach
-              
+
             </div>
           </div>
           @endforeach
-          
+
           <div class="d-flex justify-content-between mt-4">
             <a href="{{ route('penilaian-rmi.index') }}" class="btn btn-outline-secondary">
               <span class="bx bx-arrow-back me-1"></span> Kembali
             </a>
             <div>
-              <button type="submit" name="action" value="save" class="btn btn-primary me-2">
+              <button type="button" id="btn-save" class="btn btn-primary me-2">
                 <span class="bx bx-save me-1"></span> Simpan Sementara
               </button>
-              <button type="submit" name="action" value="finish" class="btn btn-success" id="finish-btn">
+              <button type="button" id="btn-finish" class="btn btn-success">
                 <span class="bx bx-check-circle me-1"></span> Selesai
               </button>
             </div>
@@ -189,7 +185,7 @@
     background-color: rgba(255, 255, 255, 0.9);
     transition: opacity 0.3s ease;
   }
-  
+
   .floating-buttons.hidden {
     opacity: 0;
     pointer-events: none;
@@ -200,50 +196,107 @@
 @push('scripts')
 <script>
   $(document).ready(function() {
-    // Validasi sebelum submit form dengan action finish
-    $('#finish-btn, #floatingFinishBtn').click(function(e) {
-      if (this.id === 'floatingFinishBtn') {
-        e.preventDefault();
-      }
-      
+    const form = $('#formPenilaian');
+
+    // Fungsi Reusable untuk Konfirmasi Swal & Loading Submit
+    function submitWithLoadingAndConfirmation(actionValue, title, text, confirmText, confirmColor) {
+      Swal.fire({
+        title: title,
+        text: text,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: confirmColor,
+        confirmButtonText: confirmText,
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+
+          // Memunculkan Loading overlay
+          Swal.fire({
+            title: 'Memproses Data...',
+            html: 'Mohon tunggu sebentar, data sedang disimpan.',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+
+          // 1. Ubah value dari input hidden sesuai tombol yang diklik ('save' atau 'finish')
+          document.getElementById('formAction').value = actionValue;
+
+          // 2. Submit form menggunakan native Javascript form.submit()
+          document.getElementById('formPenilaian').submit();
+        }
+      });
+    }
+
+    // Action SELESAI (Berlaku untuk button form & floating)
+    $('#btn-finish, #floatingFinishBtn').click(function(e) {
+      e.preventDefault();
+
       const emptyScores = $('select[name^="scores"]').filter(function() {
         return $(this).val() === null || $(this).val() === '';
       });
-      
+
       if (emptyScores.length > 0) {
-        e.preventDefault();
-        alert('Mohon lengkapi semua penilaian parameter sebelum menyelesaikan.');
-        $('html, body').animate({
-          scrollTop: $(emptyScores[0]).offset().top - 100
-        }, 500);
-        $(emptyScores[0]).focus();
-      } else if (this.id === 'floatingFinishBtn') {
-        // Jika tidak ada yang kosong dan tombol yang diklik adalah floating button
-        $('button[name="action"][value="finish"]').click();
+        // Ganti alert bawaan menjadi SweetAlert error
+        Swal.fire({
+          icon: 'error',
+          title: 'Penilaian Belum Lengkap!',
+          text: 'Mohon lengkapi semua penilaian parameter sebelum menyelesaikan.',
+          confirmButtonColor: '#0d6efd'
+        }).then(() => {
+          $('html, body').animate({
+            scrollTop: $(emptyScores[0]).offset().top - 100
+          }, 500);
+          $(emptyScores[0]).focus();
+        });
+        return; // Hentikan eksekusi script disini
       }
+
+      // Jika lolos validasi, munculkan konfirmasi
+      submitWithLoadingAndConfirmation(
+        'finish',
+        'Selesaikan Penilaian?',
+        'Pastikan semua data dan gap analysis sudah benar. Data yang diselesaikan akan diproses ke tahap selanjutnya.',
+        'Ya, Selesaikan!',
+        '#198754' // Hijau success
+      );
     });
-    
-    // Floating Save Button
-    $('#floatingSaveBtn').click(function() {
-      $('button[name="action"][value="save"]').click();
+
+    // Action SIMPAN SEMENTARA (Berlaku untuk button form & floating)
+    $('#btn-save, #floatingSaveBtn').click(function(e) {
+      e.preventDefault();
+
+      submitWithLoadingAndConfirmation(
+        'save',
+        'Simpan Sementara?',
+        'Progres pengisian Anda akan disimpan agar bisa dilanjutkan kembali nanti.',
+        'Ya, Simpan!',
+        '#0d6efd' // Biru primary
+      );
     });
-    
-    // Tampilkan/sembunyikan floating buttons berdasarkan scroll
+
+    // Logic untuk Tampilkan/sembunyikan floating buttons berdasarkan scroll (tetap sama)
     const formButtons = $('.d-flex.justify-content-between.mt-4');
     const floatingButtons = $('#floatingButtons');
-    
+
     $(window).scroll(function() {
+      // Guarding jika element tidak ditemukan
+      if(formButtons.length === 0) return;
+
       const formButtonsPosition = formButtons.offset().top;
       const scrollPosition = $(window).scrollTop() + $(window).height();
-      
-      // Jika tombol form sudah terlihat, sembunyikan floating buttons
+
       if (scrollPosition > formButtonsPosition) {
         floatingButtons.addClass('hidden');
       } else {
         floatingButtons.removeClass('hidden');
       }
     });
-    
+
     // Trigger scroll event pada awal load untuk set status awal
     $(window).scroll();
 

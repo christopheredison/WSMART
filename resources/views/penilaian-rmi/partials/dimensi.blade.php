@@ -21,21 +21,7 @@
                   aria-controls="dimension-content-{{ $dimension->id }}"
                   aria-selected="{{ $index == 0 ? 'true' : 'false' }}">
             {{ $dimension->name }}
-            {{--
-            <span class="badge bg-primary ms-2">
-              @php
-                $dimScore = 0;
-                $dimCount = 0;
-                foreach($dimension->subDimensions as $subDim) {
-                  if(isset($dimensionScores[$subDim->id])) {
-                    $dimScore += $dimensionScores[$subDim->id]->score_dimension;
-                    $dimCount++;
-                  }
-                }
-                echo $dimCount > 0 ? number_format($dimScore / $dimCount, 2) : '-';
-              @endphp
-            </span>
-            --}}
+
             <span class="badge bg-primary ms-2">
               @php
                 // Cari skor dimensi langsung dari tabel DimensionAspectEvaluation
@@ -72,11 +58,6 @@
                         aria-controls="sub-content-{{ $subDimension->id }}"
                         aria-selected="{{ $subIndex == 0 ? 'true' : 'false' }}">
                   {{ $subDimension->name }}
-                  {{--
-                  <span class="badge bg-info ms-2">
-                    {{ isset($dimensionScores[$subDimension->id]) ? number_format($dimensionScores[$subDimension->id]->score_dimension, 2) : '-' }}
-                  </span>
-                  --}}
                 </button>
               </li>
             @endforeach
@@ -111,22 +92,23 @@
                         </div>
                       </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-0">
                       {{-- Tabel Kriteria --}}
                       <div class="table-responsive">
-                        <table class="table table-bordered table-striped mb-0">
+                        <table class="table table-bordered table-hover mb-0">
                           <thead class="table-light">
                             <tr>
-                              <th>Kriteria</th>
-                              <th width="80">Score</th>
-                              <th>Gap Analysis</th>
-                              <th width="150">Dokumen</th>
+                              <th class="align-middle">Kriteria</th>
+                              <th class="text-center align-middle" width="80">Score</th>
+                              <th class="align-middle">Gap Analysis</th>
+                              <th class="align-middle" width="250">Dokumen Pendukung</th>
                             </tr>
                           </thead>
                           <tbody>
                             @foreach($parameter->criteria as $criteria)
-                              <tr>
-                                <td>
+                              {{-- Menerapkan selang-seling warna menggunakan $loop->even dari Laravel Blade --}}
+                              <tr class="{{ $loop->even ? 'table-light' : 'bg-white' }}">
+                                <td class="align-middle">
                                   @if(isset($criteriaScores[$criteria->id]))
                                     @php
                                       $sel = $criteriaScores[$criteria->id]->score;
@@ -134,43 +116,48 @@
                                     @endphp
                                     {{ $det?->criteria ?? $criteria->criteria_statement }}
                                   @else
-                                    <span class="text-muted">Belum dinilai</span>
+                                    <span class="text-muted fst-italic">Belum dinilai</span>
                                   @endif
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center align-middle">
                                   @if(isset($criteriaScores[$criteria->id]))
-                                    <span class="badge bg-primary">{{ $criteriaScores[$criteria->id]->score }}</span>
+                                    <span class="badge bg-primary fs-6">{{ $criteriaScores[$criteria->id]->score }}</span>
                                   @else
                                     -
                                   @endif
                                 </td>
-                                <td>
+                                <td class="align-middle">
                                   @if(isset($criteriaScores[$criteria->id]))
-                                    <div class="gap-analysis-text">{{ $criteriaScores[$criteria->id]->gap_analysis }}</div>
+                                    <div class="text-break">{{ $criteriaScores[$criteria->id]->gap_analysis }}</div>
                                   @else
                                     -
                                   @endif
                                 </td>
-                                <td>
+                                <td class="align-middle">
                                   @if(isset($criteriaScores[$criteria->id]) && $criteriaScores[$criteria->id]->documents->count())
-                                    <div class="d-flex flex-column gap-1">
+                                    <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
                                       @foreach($criteriaScores[$criteria->id]->documents as $doc)
-                                        <div class="d-flex align-items-center">
-                                          <a href="{{ asset('storage/' . $doc->path) }}" target="_blank" class="btn btn-sm btn-info me-1" title="{{ $doc->filename }}">
-                                            <i class="bx bx-file"></i>
-                                          </a>
-                                          <form action="{{ route('penilaian-rmi.delete-document', $doc->id) }}" method="POST" class="d-inline">
+                                        {{-- Kotak dokumen tetap putih agar menonjol (pop-up) di atas warna abu-abu --}}
+                                        <li class="d-flex align-items-center justify-content-between p-2 bg-white border border-secondary-subtle rounded shadow-sm">
+                                          <div class="d-flex align-items-center text-truncate pe-2">
+                                            <i class="bx bxs-file text-primary fs-5 me-2"></i>
+                                            <a href="{{ asset('storage/' . $doc->path) }}" target="_blank" class="text-truncate text-decoration-none small text-dark fw-medium" title="{{ $doc->filename }}">
+                                              {{ $doc->filename }}
+                                            </a>
+                                          </div>
+
+                                          <button type="button" class="btn btn-sm btn-outline-danger border-0 p-1 btn-delete-dim-doc" data-form-id="form-delete-doc-{{ $doc->id }}" title="Hapus Dokumen">
+                                            <i class="bx bx-trash fs-6"></i>
+                                          </button>
+
+                                          <form id="form-delete-doc-{{ $doc->id }}" action="{{ route('penilaian-rmi.delete-document', $doc->id) }}" method="POST" class="d-none">
                                             @csrf @method('DELETE')
-                                            <button class="btn btn-sm btn-danger" onclick="return confirm('Yakin hapus dokumen?')">
-                                              <i class="bx bx-trash"></i>
-                                            </button>
                                           </form>
-                                          <small class="text-truncate ms-1" style="max-width: 80px;" title="{{ $doc->filename }}">{{ $doc->filename }}</small>
-                                        </div>
+                                        </li>
                                       @endforeach
-                                    </div>
+                                    </ul>
                                   @else
-                                    <span class="text-muted">Tidak ada dokumen</span>
+                                    <span class="text-muted small fst-italic"><i class="bx bx-info-circle"></i> Tidak ada dokumen</span>
                                   @endif
                                 </td>
                               </tr>
