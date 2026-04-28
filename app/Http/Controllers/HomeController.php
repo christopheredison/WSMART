@@ -2732,7 +2732,8 @@ class HomeController extends Controller
 
             // Jika ada monitoring ter-publish, gunakan nilai realisasinya.
             // Jika tidak, fallback ke nilai inherent agar tidak bernilai 0 di awal proyek
-            $eksposurRealisasi = $latestMon ? (float) $latestMon->eksposure_risiko : $eksposurInherent;
+            // $eksposurRealisasi = $latestMon ? (float) $latestMon->eksposure_risiko : $eksposurInherent;
+            $eksposurRealisasi = $latestMon ? (float) $latestMon->eksposure_risiko : 0;
 
             // Grup per Divisi (Untuk Pie Chart) - MENGGUNAKAN REALISASI
             if (!isset($divisiExposures[$divName])) {
@@ -2779,28 +2780,33 @@ class HomeController extends Controller
             $analisa = $risk->projectRiskAnalisa;
             $latestMon = $risk->publishedMonitoring;
 
+            if (!$latestMon) {
+                return null;
+            }
+
+            // Data Inherent (untuk pembanding di tabel)
             $risk->inherent_dampak = $analisa->nilai_dampak ?? 0;
             $risk->inherent_eksposur = $analisa->eksposur_risiko ?? 0;
             $risk->inherent_level = $analisa->level_risiko ?? '-';
             $risk->inherent_skala = $analisa->skala_risiko ?? '-';
 
-            if ($latestMon) {
-                $risk->current_dampak = $latestMon->nilai_dampak ?? 0;
-                $risk->current_eksposur = $latestMon->eksposure_risiko ?? 0;
-                $risk->current_level = $latestMon->level_risiko ?? '-';
-                $risk->current_skala = $latestMon->skala_risiko ?? '-';
-            } else {
-                $risk->current_dampak = $analisa->nilai_dampak ?? 0;
-                $risk->current_eksposur = $analisa->eksposur_risiko ?? 0;
-                $risk->current_level = $analisa->level_risiko ?? '-';
-                $risk->current_skala = $analisa->skala_risiko ?? '-';
-            }
+            // Data Realisasi (diambil dari monitoring periode terkait)
+            $risk->current_dampak = $latestMon->nilai_dampak ?? 0;
+            $risk->current_eksposur = $latestMon->eksposure_risiko ?? 0;
+            $risk->current_level = $latestMon->level_risiko ?? '-';
+            $risk->current_skala = $latestMon->skala_risiko ?? '-';
 
             $risk->current_monitoring = $latestMon;
             return $risk;
-        });
+        })
+        ->filter() // MENGHAPUS RISIKO YANG TIDAK PUNYA MONITORING (NULL)
+        ->sortByDesc('current_eksposur') // URUTKAN BERDASARKAN REALISASI TERTINGGI
+        ->take(10) // AMBIL 10 TERATAS
+        ->values();
 
-        $top10Risks = $mappedRisks->sortByDesc('current_eksposur')->take(10)->values();
+        $top10Risks = $mappedRisks;
+
+        // HITUNG TOTAL EKSPOSUR UNTUK CARD (Berdasarkan Top 10 yang sudah difilter di atas)
         $totalEksposurTop10 = $top10Risks->sum('current_eksposur');
 
         // 6. PETA RISIKO UNTUK TOP 10
