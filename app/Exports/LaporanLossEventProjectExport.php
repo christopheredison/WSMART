@@ -23,6 +23,7 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
 
     public function collection()
     {
+        // Eager loading semua relasi agar performa cepat
         return LossEventProject::with([
             'project',
             'peristiwaRisiko',
@@ -40,59 +41,76 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
     {
         $this->rowNumber++;
 
-        $sumberPenyebab = match ($row->sumber_penyebab_kejadian) {
+        // 1. Mapping Sumber Penyebab
+        $sumberPenyebab = match ((string)$row->sumber_penyebab_kejadian) {
             '1' => 'Internal',
             '2' => 'Eksternal',
-            default => $row->sumber_penyebab_kejadian,
+            default => '-',
         };
 
-        $penyebabArr = $row->penyebabRisikoProjectLeds->pluck('penyebab_risiko')->toArray();
-        $penyebabString = implode("\n- ", $penyebabArr);
-        if(count($penyebabArr) > 0) $penyebabString = "- " . $penyebabString;
+        // 2. Mapping Identifikasi Kejadian
+        $identifikasiKejadian = $row->peristiwa_risiko_id == 0
+            ? $row->deskripsi_kejadian
+            : (optional($row->peristiwaRisiko)->title ?? '-');
 
-        $penangananArr = $row->penyebabRisikoProjectLeds->map(function($item) {
-            return optional($item->perlakuanPenyebabRisiko)->rencana_perlakuan_risiko ?? '-';
-        })->toArray();
-        $penangananString = implode("\n- ", $penangananArr);
-        if(count($penangananArr) > 0) $penangananString = "- " . $penangananString;
+        // 3. Mapping Penyebab & Penanganan (Multi-line String)
+        $penyebabList = [];
+        $penangananList = [];
 
-        $kategoriBumn = match ($row->kategori_risiko_bumn) {
+        foreach ($row->penyebabRisikoProjectLeds as $index => $penyebab) {
+            $num = $index + 1;
+            $penyebabList[] = "{$num}. " . $penyebab->penyebab_risiko;
+
+            if ($penyebab->perlakuanPenyebabRisiko->isNotEmpty()) {
+                foreach ($penyebab->perlakuanPenyebabRisiko as $p) {
+                    $penangananList[] = "- (Penyebab {$num}) " . ($p->rencana_perlakuan_risiko ?? '-');
+                }
+            }
+        }
+        $penyebabString = implode("\n", $penyebabList);
+        $penangananString = implode("\n", $penangananList);
+
+        // 4. Mapping Kejadian Berulang & Frekuensi
+        $kejadianBerulang = $row->kejadian_berulang == 1 ? 'Ya' : 'Tidak';
+        $frekuensi = '-';
+        if ($row->kejadian_berulang == 1) {
+            $frekuensi = $row->frekuensi_kejadian == 6
+                ? '6 kali atau lebih per tahun'
+                : ($row->frekuensi_kejadian ? $row->frekuensi_kejadian . ' kali per tahun' : '-');
+        }
+
+        // 5. Mapping Status Asuransi
+        $statusAsuransi = $row->status_asuransi == 1 ? 'Ya' : 'Tidak';
+
+        // 6. Kategori Risiko BUMN
+        $kategoriBumn = match ((string)$row->kategori_risiko_bumn) {
             '1' => 'Financial',
             '2' => 'Operational',
             '3' => 'Public & Legal',
             default => '-',
         };
 
-        $kategoriT2T3 = (optional($row->kategoriRisiko)->title ?? '-') . ' - ' . (optional($row->jenisRisiko)->title ?? '-');
-
         return [
             $this->rowNumber,
             optional($row->project)->project_name ?? '-',
-            $row->nama_kejadian,
-            optional($row->peristiwaRisiko)->title,
-            optional($row->kategoriKejadian)->kategori_kejadian,
+            $row->nama_kejadian ?? '-',
+            $identifikasiKejadian,
+            optional($row->kategoriKejadian)->kategori_kejadian ?? '-',
             $sumberPenyebab,
-            $penyebabString,
-            $penangananString,
-            $row->deskripsi_kejadian,
+            $penyebabString ?: '-',
+            $penangananString ?: '-',
+            $row->deskripsi_kejadian ?? '-',
             $kategoriBumn,
-            $kategoriT2T3,
-            $row->penjelasan_kerugian,
-            $row->nilai_kerugian_finansial,
-            $row->kejadian_berulang,
-            $row->frekuensi_kejadian,
-            $row->rencana_mitigasi,
-            $row->realisasi_mitigasi,
-            $row->perbaikan_mendatang,
-            $row->unit_penanggung_jawab,
-            $row->status_asuransi,
-            $row->nilai_premi,
-            $row->nilai_klaim,
+            (optional($row->kategoriRisiko)->title ?? '-') . ' - ' . (optional($row->jenisRisiko)->title ?? '-'),
+            $row->penjelasan_kerugian ?? '-',
+            $row->nilai_kerugian_finansial ?? 0,
+            $kejadianBerulang,
+            $frekuensi,
+            $statusAsuransi,
+            $row->nilai_premi ?? 0,
+            $row->nilai_klaim ?? 0,
             $row->project_risk_id ? 'Yes (ID: '.$row->project_risk_id.')' : 'No',
-            $row->no_urut_risiko,
             optional(optional($row->risiko)->projectRiskAnalisa)->nilai_dampak ?? 0,
-            $row->biaya_upaya_perbaikan,
-            $row->hasil_perbaikan,
         ];
     }
 
@@ -100,7 +118,7 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
     {
         return [
             'No',
-            'Nama Proyek', // Tambahan Header
+            'Nama Proyek',
             'Nama Kejadian',
             'Identifikasi Kejadian',
             'Kategori Kejadian',
@@ -114,45 +132,40 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
             'Nilai Kerugian',
             'Kejadian Berulang',
             'Frekuensi Kejadian',
-            'Mitigasi yang Direncanakan',
-            'Realisasi Mitigasi',
-            'Perbaikan Mendatang',
-            'Pihak Terkait',
             'Status Asuransi',
             'Nilai Premi',
             'Nilai Klaim',
             'Teridentifikasi di Risk Register',
-            'No Urut Risiko',
-            'Biaya Risiko Inheren',
-            'Biaya Upaya Perbaikan',
-            'Hasil dari Perbaikan'
+            'Biaya Risiko Inheren'
         ];
     }
 
     public function columnFormats(): array
     {
-        // Format Currency digeser huruf kolomnya karena ada tambahan 1 kolom di depan
-        // L -> M (Nilai Kerugian)
-        // T -> U (Nilai Premi)
-        // U -> V (Nilai Klaim)
-        // X -> Y (Biaya Risiko Inheren)
-        // Y -> Z (Biaya Upaya Perbaikan)
-        // Z -> AA (Hasil Perbaikan)
+        // Penyesuaian huruf kolom karena ada penghapusan kolom di tengah:
+        // M -> Nilai Kerugian
+        // Q -> Nilai Premi (Sebelumnya U)
+        // R -> Nilai Klaim (Sebelumnya V)
+        // T -> Biaya Risiko Inheren (Sebelumnya Y)
 
         $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
 
         return [
-            'M' => $currencyFormat, // Sebelumnya L
-            'U' => $currencyFormat, // Sebelumnya T
-            'V' => $currencyFormat, // Sebelumnya U
-            'Y' => $currencyFormat, // Sebelumnya X
-            'Z' => $currencyFormat, // Sebelumnya Y
-            'AA' => $currencyFormat, // Sebelumnya Z
+            'M' => $currencyFormat,
+            'Q' => $currencyFormat,
+            'R' => $currencyFormat,
+            'T' => $currencyFormat,
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
-        return [ 1 => ['font' => ['bold' => true]] ];
+        // Heading Bold
+        $sheet->getStyle('1')->getFont()->setBold(true);
+
+        // Agar teks yang ada \n (newline) bisa tampil rapi (wrap text)
+        $sheet->getStyle('G:H')->getAlignment()->setWrapText(true);
+
+        return [];
     }
 }
