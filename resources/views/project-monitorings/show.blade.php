@@ -818,7 +818,7 @@
     @foreach($historyMonitorings as $monitoring)
         <div class="modal fade" id="modalDetailMonitoring{{ $monitoring->id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-xl">
-                <div class="modal-content">
+                <div class="modal-content p-0 overflow-hidden">
                     <div class="modal-header border-bottom">
                         <h5 class="modal-title">
                             Detail Realisasi: @lang('basic.month.' . $monitoring->month) {{ $monitoring->tahun }}

@@ -1378,10 +1378,12 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $allDampakIds = $projectRisk->perlakuanDampakRisikos->pluck('id');
 
         $filesPenyebab = \App\Models\PerlakuanPenyebabRisikoDocument::whereIn('perlakuan_penyebab_risiko_id', $allPenyebabIds)
+            ->orderBy('id', 'desc')
             ->get()
             ->groupBy('perlakuan_penyebab_risiko_id');
 
         $filesDampak = \App\Models\PerlakuanDampakRisikoDocument::whereIn('perlakuan_dampak_risiko_id', $allDampakIds)
+            ->orderBy('id', 'desc')
             ->get()
             ->groupBy('perlakuan_dampak_risiko_id');
 
@@ -1699,8 +1701,10 @@ class ProjectRiskMonitoringController extends BasicCRUDController
                     foreach ($documentFiles as $idx => $documentFile) {
                         if ($documentFile) {
                             $storeFile = $documentFile->store('project-monitoring-documents', 'public');
-                            $projectMonitoring->perlakuanDampakRisikoDocuments()->create([
+
+                            \App\Models\PerlakuanDampakRisikoDocument::create([
                                 'perlakuan_dampak_risiko_id' => $id,
+                                'project_monitoring_id' => $projectMonitoring->id,
                                 'user_id' => request()->user()->id,
                                 'file_name' => $documentFile->getClientOriginalName(),
                                 'file_path' => $storeFile,
@@ -1737,13 +1741,15 @@ class ProjectRiskMonitoringController extends BasicCRUDController
 
             $projectMonitoring->perlakuanPenyebabMonitorings()->create($toCreate);
 
-            if ($documentFiles = $request->{'document_file_' . $id}) {
+            if ($documentFiles = $request->file('document_file_' . $id)) {
                 $documentDescriptions = (array) $request->input('document_description_' . $id, []);
 
                 foreach ($documentFiles as $idx => $documentFile) {
                     $storeFile = $documentFile->store('project-monitoring-documents', 'public');
-                    $projectMonitoring->perlakuanPenyebabRisikoDocuments()->create([
+
+                    \App\Models\PerlakuanPenyebabRisikoDocument::create([
                         'perlakuan_penyebab_risiko_id' => $id,
+                        'project_monitoring_id' => $projectMonitoring->id,
                         'user_id' => request()->user()->id,
                         'file_name' => $documentFile->getClientOriginalName(),
                         'file_path' => $storeFile,
