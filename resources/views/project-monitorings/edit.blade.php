@@ -1372,18 +1372,32 @@
     .hover-underline:hover {
         text-decoration: underline;
     }
+    .file-input-hidden {
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        overflow: hidden;
+    }
 </style>
 @endpush
 
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
+// =====================================================================
+// VARIABEL GLOBAL
+// =====================================================================
 const previousMonitoring = @json($previousMonitoring);
 const monthNamesArray = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const routeDeleteDoc = "{{ route('projects.monitorings.document.destroy', ['project' => request()->route('project'), 'monitoring' => request()->route('monitoring'), 'documentId' => ':id']) }}";
 const acceptedFiles = ".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx";
-const maxFileSize = 10 * 1024 * 1024; // 10MB dalam Bytes
-const maxFilesCount = 10; // Maksimal 10 file
+const maxFileSize = 10 * 1024 * 1024;
+const maxFilesCount = 10;
+
+// Dokumen existing langsung dari relasi perlakuan (bukan per monitoring)
 const existingPenyebabDocs = @json($filesPenyebab ?? []);
 const existingDampakDocs = @json($filesDampak ?? []);
 
@@ -1392,126 +1406,157 @@ const penyebabRisikoProjects = @json($penyebabRisikoProjects->keyBy('id'));
 const jsonPerlakuanPenyebabRisikos = @json($penyebabRisikoProjects->pluck('perlakuanPenyebabRisiko')->flatten()->keyBy('id'));
 const perlakuanPenyebabRisikos = Object.fromEntries(
     Object.entries(jsonPerlakuanPenyebabRisikos).map(([key, value]) => {
-        return [
-            key,
-            {
-                ...value,
-                "realisasi_biaya_perlakuan_risiko": value?.last_monitoring?.realisasi_biaya_perlakuan_risiko ? parseFloat(value?.last_monitoring?.realisasi_biaya_perlakuan_risiko) : 0.00,
-                "progress_rencana_perlakuan_risiko": value?.last_monitoring?.progress_rencana_perlakuan_risiko ?? 0,
-                "deskripsi_perlakuan_risiko": value?.last_monitoring?.deskripsi_perlakuan_risiko ?? "",
-                "timeline_perlakuan_risiko": value?.last_monitoring?.timeline_perlakuan_risiko_start ?? ""
-            }
-        ];
+        return [key, {
+            ...value,
+            "realisasi_biaya_perlakuan_risiko": value?.last_monitoring?.realisasi_biaya_perlakuan_risiko
+                ? parseFloat(value?.last_monitoring?.realisasi_biaya_perlakuan_risiko) : 0.00,
+            "progress_rencana_perlakuan_risiko": value?.last_monitoring?.progress_rencana_perlakuan_risiko ?? 0,
+            "deskripsi_perlakuan_risiko": value?.last_monitoring?.deskripsi_perlakuan_risiko ?? "",
+            "timeline_perlakuan_risiko": value?.last_monitoring?.timeline_perlakuan_risiko_start ?? ""
+        }];
     })
 );
 
-// Trigger untuk klik file input tersembunyi
-$(document).on('click', '.btn-trigger-file', function() {
-    const targetId = $(this).data('target');
-    $(`#${targetId}`).click();
-});
+const jsonPerlakuanDampakRisikos = @json($projectRisk->perlakuanDampakRisikos->keyBy('id'));
+const perlakuanDampakRisikos = Object.fromEntries(
+    Object.entries(jsonPerlakuanDampakRisikos).map(([key, value]) => {
+        return [key, {
+            ...value,
+            "realisasi_biaya_perlakuan_risiko": value?.last_monitoring?.realisasi_biaya_perlakuan_risiko
+                ? parseFloat(value?.last_monitoring?.realisasi_biaya_perlakuan_risiko) : 0.00,
+            "progress_rencana_perlakuan_risiko": value?.last_monitoring?.progress_rencana_perlakuan_risiko ?? 0,
+            "deskripsi_perlakuan_risiko": value?.last_monitoring?.deskripsi_perlakuan_risiko ?? "",
+            "timeline_perlakuan_risiko": value?.last_monitoring?.timeline_perlakuan_risiko_start ?? ""
+        }];
+    })
+);
 
-$(document).on('change', '.hidden-file-input', function() {
-    const fileId = $(this).attr('id');
+const kriProjects = @json($kriProjects->keyBy('id'));
+const quarter = {{ $quarter }};
+const namaRisiko = @json($projectRisk->peristiwa_risiko_id ? $peristiwaRisiko->title : $projectRisk->rencana_kegiatan);
+const month = @json($month);
+const year = @json($tahun);
 
-    // UBAH BARIS INI: dari data-doc-ref menjadi data-id
-    const tr = $(`tr[data-id="${fileId}"]`);
+// =====================================================================
+// STATE MANAGEMENT: Dokumen Baru (belum diupload ke server)
+// Menyimpan { perlakuanId: [ { tempId, file, description } ] }
+// =====================================================================
+const newDocsPenyebab = {}; // { perlakuan_id: [{tempId, file, desc}] }
+const newDocsDampak  = {}; // { perlakuan_id: [{tempId, file, desc}] }
 
-    if (this.files && this.files[0]) {
-        const file = this.files[0];
-        const maxSizeLimit = 10 * 1024 * 1024; // 10MB
-        if (file.size > maxSizeLimit) {
-            Swal.fire({ icon: 'error', title: 'Terlalu Besar', text: 'Maksimal 10 MB.' });
-            $(this).val('');
-            tr.find('.dokumen-filename').text('Belum ada file');
-        } else {
-            tr.find('.dokumen-filename').text(file.name);
-        }
-    } else {
-        tr.find('.dokumen-filename').text('Belum ada file');
-    }
-});
-
-$(document).on('input', '.input-desc-sync', function() {
-    const targetId = $(this).data('target');
-    $(`input[data-ref="${targetId}"]`).val($(this).val());
-});
-
-$(document).on('click', '.btn-delete-doc-temp', function() {
-    const targetId = $(this).data('target');
-    $(`#${targetId}`).remove();
-    $(`input[data-ref="${targetId}"]`).remove(); // Hapus hidden input deskripsi
-    $(this).closest('tr').remove(); // Hapus baris tabel di modal
-});
-
-function validateFormSweetAlert(formId) {
-    let isValid = true;
-    $(`#${formId} [required]`).each(function() {
-        if ($(this).val() === '' || $(this).val() === null) {
-            isValid = false;
-            $(this).addClass('is-invalid');
-        } else {
-            $(this).removeClass('is-invalid');
-        }
-    });
-
-    if (!isValid) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Peringatan',
-            text: 'Harap lengkapi semua field yang wajib diisi!',
-        });
-    }
-    return isValid;
+// =====================================================================
+// HELPER: Buat file input yang compatible dengan semua browser
+// Solusi: input tidak pakai display:none, tapi posisi absolute off-screen
+// =====================================================================
+function createFileInput(inputId, nameAttr) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.id = inputId;
+    input.name = nameAttr;
+    input.accept = acceptedFiles;
+    input.className = 'file-input-hidden'; // CSS: position absolute, left -9999px
+    input.multiple = false;
+    document.body.appendChild(input); // Append ke body, bukan container tersembunyi
+    return input;
 }
 
-function renderExistingDocuments(docs, tbodyElement) {
-    tbodyElement.empty();
-    if(docs && docs.length > 0) {
-        docs.forEach(function(doc) {
-            tbodyElement.append(`
-                <tr class="existing-doc" data-doc-id="${doc.id}">
-                    <td><span class="text-primary text-truncate d-block" style="max-width: 200px;"><a href="${doc.file_path}" target="_blank">${doc.file_name}</a></span></td>
-                    <td><input type="text" class="form-control form-control-sm" value="${doc.description || ''}" disabled></td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-danger btn-delete-db-doc" data-id="${doc.id}">
-                            <i class="bx bx-trash"></i> Hapus
-                        </button>
-                    </td>
-                </tr>
-            `);
-        });
+// =====================================================================
+// HELPER: Trigger file dialog (compatible Edge/Safari)
+// Kuncinya: harus dipanggil SYNCHRONOUS dari user click event
+// =====================================================================
+function triggerFileDialog(inputElement) {
+    // Gunakan dispatchEvent untuk memastikan kompatibilitas
+    try {
+        inputElement.click();
+    } catch(e) {
+        // Fallback untuk browser lama
+        const event = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+        inputElement.dispatchEvent(event);
     }
 }
 
-// Event Hapus File dari Database (Poin 1)
-$(document).on('click', '.btn-delete-db-doc', function() {
+// =====================================================================
+// HELPER: Render baris dokumen di tabel modal
+// =====================================================================
+function renderDocRow(tempId, fileName, description, type) {
+    return `
+        <tr data-temp-id="${tempId}" data-type="${type}">
+            <td>
+                <div class="d-flex align-items-center gap-2">
+                    <i class='bx bx-file text-secondary fs-5'></i>
+                    <span class="dokumen-filename text-truncate d-block" style="max-width:180px;" title="${fileName}">${fileName}</span>
+                    <button type="button" class="btn btn-xs btn-outline-secondary btn-ganti-file px-1 py-0"
+                            data-temp-id="${tempId}" data-type="${type}" title="Ganti File">
+                        <i class='bx bx-refresh'></i>
+                    </button>
+                </div>
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm input-desc-new"
+                       data-temp-id="${tempId}" data-type="${type}"
+                       value="${description}" placeholder="Keterangan...">
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-hapus-doc-baru"
+                        data-temp-id="${tempId}" data-type="${type}">
+                    <i class='bx bx-trash'></i>
+                </button>
+            </td>
+        </tr>`;
+}
+
+function renderExistingDocRow(doc, type) {
+    return `
+        <tr data-doc-id="${doc.id}" data-type="${type}" class="existing-doc-row">
+            <td>
+                <div class="d-flex align-items-center gap-2">
+                    <i class='bx bx-file-blank text-primary fs-5'></i>
+                    <a href="${doc.url}" target="_blank" class="text-truncate d-block text-primary" style="max-width:180px;" title="${doc.file_name}">
+                        ${doc.file_name}
+                    </a>
+                </div>
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm" value="${doc.description || ''}" disabled>
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-hapus-doc-db"
+                        data-id="${doc.id}" data-type="${type}">
+                    <i class='bx bx-trash'></i>
+                </button>
+            </td>
+        </tr>`;
+}
+
+// =====================================================================
+// HAPUS DOKUMEN DARI DATABASE (AJAX)
+// =====================================================================
+$(document).on('click', '.btn-hapus-doc-db, .btn-delete-db-doc', function() {
     const docId = $(this).data('id');
-    const docType = $(this).data('type'); // Ambil tipe dari atribut HTML
+    const docType = $(this).data('type');
     const tr = $(this).closest('tr');
 
     Swal.fire({
         title: 'Hapus Dokumen?',
-        text: "Dokumen yang dihapus dari server tidak dapat dikembalikan!",
+        text: "Dokumen yang dihapus tidak dapat dikembalikan!",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Ya, Hapus!'
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
     }).then((result) => {
         if (result.isConfirmed) {
-            Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-
+            Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
             $.ajax({
-                // Sertakan parameter type ke URL
                 url: routeDeleteDoc.replace(':id', docId) + '?type=' + docType,
                 type: 'DELETE',
                 data: { _token: '{{ csrf_token() }}' },
                 success: function(res) {
-                    Swal.fire('Terhapus!', res.message, 'success');
-                    tr.remove(); // Hapus baris tabel jika berhasil
+                    tr.fadeOut(300, function() { $(this).remove(); });
+                    Swal.fire({ icon: 'success', title: 'Terhapus!', text: res.message, timer: 1500, showConfirmButton: false });
                 },
-                error: function(xhr) {
+                error: function() {
                     Swal.fire('Gagal!', 'Terjadi kesalahan saat menghapus.', 'error');
                 }
             });
@@ -1519,28 +1564,318 @@ $(document).on('click', '.btn-delete-db-doc', function() {
     });
 });
 
-const jsonPerlakuanDampakRisikos = @json($projectRisk->perlakuanDampakRisikos->keyBy('id'));
-const perlakuanDampakRisikos = Object.fromEntries(
-    Object.entries(jsonPerlakuanDampakRisikos).map(([key, value]) => {
-        return [
-            key,
-            {
-                ...value,
-                "realisasi_biaya_perlakuan_risiko": value?.last_monitoring?.realisasi_biaya_perlakuan_risiko ? parseFloat(value?.last_monitoring?.realisasi_biaya_perlakuan_risiko) : 0.00,
-                "progress_rencana_perlakuan_risiko": value?.last_monitoring?.progress_rencana_perlakuan_risiko ?? 0,
-                "deskripsi_perlakuan_risiko": value?.last_monitoring?.deskripsi_perlakuan_risiko ?? "",
-                "timeline_perlakuan_risiko": value?.last_monitoring?.timeline_perlakuan_risiko_start ?? ""
-            }
-        ];
-    })
-);
+// =====================================================================
+// HAPUS DOKUMEN BARU (BELUM UPLOAD - HANYA DARI STATE)
+// =====================================================================
+$(document).on('click', '.btn-hapus-doc-baru', function() {
+    const tempId = $(this).data('temp-id');
+    const type = $(this).data('type');
+    const perlakuanId = type === 'penyebab'
+        ? $('#formUpdateRealisasi input[name="penyebab_risiko_id"]').val()
+        : $('#impact_id').val();
 
-// 2. Buka Modal Update Dampak
+    const store = type === 'penyebab' ? newDocsPenyebab : newDocsDampak;
+    if (store[perlakuanId]) {
+        store[perlakuanId] = store[perlakuanId].filter(d => d.tempId !== tempId);
+    }
+    $(this).closest('tr').remove();
+
+    // Tampilkan kembali tombol tambah jika batas belum tercapai
+    checkAddDocButton(type);
+
+    // Cleanup: hapus file input dari DOM
+    $(`#file-input-${tempId}`).remove();
+});
+
+// =====================================================================
+// GANTI FILE (untuk dokumen baru yang belum diupload)
+// =====================================================================
+$(document).on('click', '.btn-ganti-file', function() {
+    const tempId = $(this).data('temp-id');
+    const type = $(this).data('type');
+    const perlakuanId = type === 'penyebab'
+        ? $('#formUpdateRealisasi input[name="penyebab_risiko_id"]').val()
+        : $('#impact_id').val();
+
+    // Buat input baru untuk ganti file - SYNCHRONOUS dari click event
+    const newInput = createFileInput(`file-input-${tempId}-new`, `replace_${tempId}`);
+
+    newInput.onchange = function() {
+        if (!this.files || !this.files[0]) return;
+        const file = this.files[0];
+        if (file.size > maxFileSize) {
+            Swal.fire({ icon: 'error', title: 'File Terlalu Besar', text: 'Maksimal ukuran file 10MB.' });
+            document.body.removeChild(newInput);
+            return;
+        }
+
+        const store = type === 'penyebab' ? newDocsPenyebab : newDocsDampak;
+        if (store[perlakuanId]) {
+            const docEntry = store[perlakuanId].find(d => d.tempId === tempId);
+            if (docEntry) {
+                docEntry.file = file;
+            }
+        }
+
+        // Update tampilan nama file di baris
+        const tr = $(`tr[data-temp-id="${tempId}"]`);
+        tr.find('.dokumen-filename').text(file.name).attr('title', file.name);
+
+        document.body.removeChild(newInput);
+    };
+
+    // PENTING: trigger SYNCHRONOUS dari event handler ini
+    triggerFileDialog(newInput);
+});
+
+// =====================================================================
+// UPDATE DESKRIPSI DOKUMEN BARU
+// =====================================================================
+$(document).on('input', '.input-desc-new', function() {
+    const tempId = $(this).data('temp-id');
+    const type = $(this).data('type');
+    const perlakuanId = type === 'penyebab'
+        ? $('#formUpdateRealisasi input[name="penyebab_risiko_id"]').val()
+        : $('#impact_id').val();
+
+    const store = type === 'penyebab' ? newDocsPenyebab : newDocsDampak;
+    if (store[perlakuanId]) {
+        const docEntry = store[perlakuanId].find(d => d.tempId === tempId);
+        if (docEntry) docEntry.description = $(this).val();
+    }
+});
+
+// =====================================================================
+// CEK BATAS TOMBOL TAMBAH DOKUMEN
+// =====================================================================
+function checkAddDocButton(type) {
+    if (type === 'penyebab') {
+        const tbody = $('#modalUpdateRealisasi .table-dokumen');
+        const count = tbody.find('tr').length;
+        $('#btnTambahDokumen').closest('tfoot').toggle(count < maxFilesCount);
+    } else {
+        const tbody = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
+        const count = tbody.find('tr').length;
+        $('#btnTambahDokumenDampak').closest('tfoot').toggle(count < maxFilesCount);
+    }
+}
+
+// =====================================================================
+// RENDER SEMUA DOKUMEN KE TABEL MODAL
+// =====================================================================
+function renderDocsToTable(tableSel, perlakuanId, type) {
+    const tbody = $(tableSel);
+    tbody.empty();
+
+    // 1. Tampilkan dokumen existing dari database
+    const existingDocs = type === 'penyebab'
+        ? (existingPenyebabDocs[perlakuanId] || [])
+        : (existingDampakDocs[perlakuanId] || []);
+
+    existingDocs.forEach(doc => {
+        tbody.append(renderExistingDocRow(doc, type));
+    });
+
+    // 2. Tampilkan dokumen baru yang belum diupload (dari state)
+    const store = type === 'penyebab' ? newDocsPenyebab : newDocsDampak;
+    const newDocs = store[perlakuanId] || [];
+    newDocs.forEach(doc => {
+        tbody.append(renderDocRow(doc.tempId, doc.file.name, doc.description, type));
+    });
+
+    checkAddDocButton(type);
+}
+
+// =====================================================================
+// TAMBAH DOKUMEN BARU - PENYEBAB
+// PENTING: onclick harus SYNCHRONOUS - tidak boleh async sebelum triggerFileDialog
+// =====================================================================
+$('#btnTambahDokumen').on('click', function() {
+    const perlakuanId = $('#formUpdateRealisasi input[name="penyebab_risiko_id"]').val();
+    if (!perlakuanId) return;
+
+    const tempId = 'doc-' + Date.now() + '-' + Math.random().toString(36).substr(2,5);
+    const inputId = `file-input-${tempId}`;
+
+    // Buat file input dan append ke body
+    const fileInput = createFileInput(inputId, `document_file_${perlakuanId}[]`);
+
+    fileInput.onchange = function() {
+        if (!this.files || !this.files[0]) {
+            document.body.removeChild(fileInput);
+            return;
+        }
+        const file = this.files[0];
+        if (file.size > maxFileSize) {
+            Swal.fire({ icon: 'error', title: 'File Terlalu Besar', text: 'Maksimal 10MB.' });
+            document.body.removeChild(fileInput);
+            return;
+        }
+
+        // Simpan ke state
+        if (!newDocsPenyebab[perlakuanId]) newDocsPenyebab[perlakuanId] = [];
+        newDocsPenyebab[perlakuanId].push({ tempId, file, description: '' });
+
+        // Render baris baru ke tabel
+        const tbody = $('#modalUpdateRealisasi .table-dokumen');
+        tbody.append(renderDocRow(tempId, file.name, '', 'penyebab'));
+        checkAddDocButton('penyebab');
+
+        // Simpan referensi input ke DOM (untuk FormData nanti)
+        fileInput.id = inputId;
+        fileInput.dataset.perlakuanId = perlakuanId;
+        fileInput.dataset.tempId = tempId;
+    };
+
+    // SYNCHRONOUS trigger — harus dipanggil langsung di sini
+    triggerFileDialog(fileInput);
+});
+
+// =====================================================================
+// TAMBAH DOKUMEN BARU - DAMPAK
+// =====================================================================
+$('#btnTambahDokumenDampak').on('click', function() {
+    const perlakuanId = $('#impact_id').val();
+    if (!perlakuanId) return;
+
+    const tempId = 'doc-' + Date.now() + '-' + Math.random().toString(36).substr(2,5);
+    const inputId = `file-input-${tempId}`;
+
+    const fileInput = createFileInput(inputId, `document_dampak_file_${perlakuanId}[]`);
+
+    fileInput.onchange = function() {
+        if (!this.files || !this.files[0]) {
+            document.body.removeChild(fileInput);
+            return;
+        }
+        const file = this.files[0];
+        if (file.size > maxFileSize) {
+            Swal.fire({ icon: 'error', title: 'File Terlalu Besar', text: 'Maksimal 10MB.' });
+            document.body.removeChild(fileInput);
+            return;
+        }
+
+        if (!newDocsDampak[perlakuanId]) newDocsDampak[perlakuanId] = [];
+        newDocsDampak[perlakuanId].push({ tempId, file, description: '' });
+
+        const tbody = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
+        tbody.append(renderDocRow(tempId, file.name, '', 'dampak'));
+        checkAddDocButton('dampak');
+
+        fileInput.id = inputId;
+        fileInput.dataset.perlakuanId = perlakuanId;
+        fileInput.dataset.tempId = tempId;
+    };
+
+    triggerFileDialog(fileInput);
+});
+
+// =====================================================================
+// MODAL OPEN: UPDATE REALISASI PENYEBAB
+// =====================================================================
+$(document).on('click', '[data-action="update-realisasi"]', function() {
+    const id = $(this).data('id');
+    const perlakuanPenyebab = perlakuanPenyebabRisikos[id];
+    if (!perlakuanPenyebab) {
+        Swal.fire('Error', 'Data perlakuan penyebab risiko tidak ditemukan', 'error');
+        return;
+    }
+    const penyebabRisiko = penyebabRisikoProjects[perlakuanPenyebab.penyebab_risiko_id];
+
+    // Isi form
+    $('#modalUpdateRealisasi input[name="penyebab_risiko_id"]').val(id);
+    $('#modalUpdateRealisasi [name="penyebab_risiko"]').val(penyebabRisiko?.penyebab_risiko);
+
+    if (projectRisk.perkiraan_waktu_terpapar_risiko_mulai) {
+        timeline1.setDate(dayjs(projectRisk.perkiraan_waktu_terpapar_risiko_mulai).format('DD/MM/YYYY'));
+    }
+    if (projectRisk.perkiraan_waktu_terpapar_risiko_akhir) {
+        timeline2.setDate(dayjs(projectRisk.perkiraan_waktu_terpapar_risiko_akhir).format('DD/MM/YYYY'));
+    }
+    if (perlakuanPenyebab.timeline_perlakuan_risiko_start) {
+        perlakuanWaktu1.setDate(dayjs(perlakuanPenyebab.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
+    }
+    if (perlakuanPenyebab.timeline_perlakuan_risiko_end) {
+        perlakuanWaktu2.setDate(dayjs(perlakuanPenyebab.timeline_perlakuan_risiko_end).format('DD/MM/YYYY'));
+    }
+
+    $('#modalUpdateRealisasi [name="rencana_perlakuan_risiko"]').val(perlakuanPenyebab.rencana_perlakuan_risiko);
+    $('#modalUpdateRealisasi [name="biaya_perlakuan_risiko"]').val(perlakuanPenyebab.biaya_perlakuan_risiko);
+    $('#modalUpdateRealisasi [name="pic"]').val(perlakuanPenyebab.pic);
+    $('#modalUpdateRealisasi [name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab.realisasi_biaya_perlakuan_risiko ?? 0);
+    $('#modalUpdateRealisasi [name="progress_perlakuan_risiko"]').val(perlakuanPenyebab.progress_rencana_perlakuan_risiko);
+    $('#modalUpdateRealisasi [name="deskripsi_perlakuan_risiko"]').val(perlakuanPenyebab.deskripsi_perlakuan_risiko);
+
+    if (perlakuanPenyebab.timeline_perlakuan_risiko) {
+        if (perlakuanPenyebab.timeline_perlakuan_risiko.includes('-')) {
+            flatpickrIns.setDate(dayjs(perlakuanPenyebab.timeline_perlakuan_risiko).format('DD/MM/YYYY'));
+        } else {
+            flatpickrIns.setDate(perlakuanPenyebab.timeline_perlakuan_risiko, true, "d/m/Y");
+        }
+    } else {
+        flatpickrIns.clear();
+    }
+
+    // Render dokumen (existing + baru dari state)
+    renderDocsToTable('#modalUpdateRealisasi .table-dokumen', id, 'penyebab');
+
+    // Previous monitoring data
+    if (previousMonitoring) {
+        const prevData = previousMonitoring.perlakuan_penyebab_monitorings?.find(m => m.perlakuan_penyebab_id == id);
+        $('#info_prev_penyebab_period').html(`Periode: <strong>${monthNamesArray[previousMonitoring.month]} ${previousMonitoring.tahun}</strong>`);
+        if (prevData) {
+            $('#container_prev_penyebab_data').removeClass('d-none');
+            $('#container_prev_penyebab_empty').addClass('d-none');
+            $('#info_prev_penyebab_progress').text((prevData.progress_rencana_perlakuan_risiko || 0) + '%');
+            $('#info_prev_penyebab_cost').text('Rp ' + Intl.NumberFormat('id-ID').format(prevData.realisasi_biaya_perlakuan_risiko || 0));
+            $('#info_prev_penyebab_date').text(prevData.timeline_perlakuan_risiko_start ? dayjs(prevData.timeline_perlakuan_risiko_start).format('DD/MM/YYYY') : '-');
+            $('#info_prev_penyebab_notes').text(prevData.deskripsi_perlakuan_risiko || '-');
+            const prevDocs = previousMonitoring.perlakuan_penyebab_risiko_documents?.filter(d => d.perlakuan_penyebab_risiko_id == id) || [];
+            let docsHtml = prevDocs.length > 0
+                ? '<ul class="ps-3 mb-0">' + prevDocs.map(d => `<li><a href="/storage/${d.file_path}" target="_blank" class="text-primary">${d.file_name}</a> <small class="text-muted">(${d.description || '-'})</small></li>`).join('') + '</ul>'
+                : '<em class="text-muted small">Tidak ada dokumen evidence.</em>';
+            $('#info_prev_penyebab_evidence').html(docsHtml);
+        } else {
+            $('#container_prev_penyebab_data').addClass('d-none');
+            $('#container_prev_penyebab_empty').removeClass('d-none');
+        }
+    } else {
+        $('#info_prev_penyebab_period').html('-');
+        $('#container_prev_penyebab_data').addClass('d-none');
+        $('#container_prev_penyebab_empty').removeClass('d-none');
+    }
+
+    $('#modalUpdateRealisasi').modal('show');
+});
+
+// =====================================================================
+// SIMPAN REALISASI PENYEBAB
+// =====================================================================
+$('#btnSimpanUpdateRealisasi').on('click', function() {
+    if (!validateFormSweetAlert('formUpdateRealisasi')) return;
+
+    const id = $('#formUpdateRealisasi input[name="penyebab_risiko_id"]').val();
+    perlakuanPenyebabRisikos[id]['realisasi_biaya_perlakuan_risiko'] = $('#formUpdateRealisasi [name="realisasi_biaya_perlakuan_risiko"]').inputmask('unmaskedvalue') || 0;
+    perlakuanPenyebabRisikos[id]['progress_rencana_perlakuan_risiko'] = $('#formUpdateRealisasi [name="progress_perlakuan_risiko"]').val();
+    perlakuanPenyebabRisikos[id]['deskripsi_perlakuan_risiko'] = $('#formUpdateRealisasi [name="deskripsi_perlakuan_risiko"]').val();
+    perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko'] = $('#timelineInput').val();
+
+    const tr = $('#table-penyebab-risiko tr[data-id="' + id + '"]');
+    tr.find('.display-biaya').text('Rp ' + Intl.NumberFormat('id-ID').format(perlakuanPenyebabRisikos[id]['realisasi_biaya_perlakuan_risiko']));
+    tr.find('.display-progress').text(perlakuanPenyebabRisikos[id]['progress_rencana_perlakuan_risiko']);
+    tr.find('.display-timeline').text(perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko']);
+
+    $('#modalUpdateRealisasi').modal('hide');
+    Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Data realisasi sementara disimpan. Jangan lupa klik tombol Simpan utama.', timer: 2000, showConfirmButton: false });
+});
+
+// =====================================================================
+// MODAL OPEN: UPDATE REALISASI DAMPAK
+// =====================================================================
 $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
     const id = $(this).data('id');
     const perlakuan = perlakuanDampakRisikos[id];
     const dampakText = $(this).data('dampak-text');
-
     if (!perlakuan) return;
 
     $('#impact_id').val(id);
@@ -1548,7 +1883,6 @@ $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
     $('#impact_plan').val(perlakuan.rencana_perlakuan_risiko);
     $('#impact_cost').val('Rp ' + Intl.NumberFormat('id-ID').format(perlakuan.biaya_perlakuan_risiko));
     $('#impact_pic').val(perlakuan?.pic_jabatan?.name);
-
     $('#timeline_perlakuan_risiko_dampak_start').val(dayjs(perlakuan.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
     $('#timeline_perlakuan_risiko_dampak_end').val(dayjs(perlakuan.timeline_perlakuan_risiko_end).format('DD/MM/YYYY'));
 
@@ -1567,81 +1901,20 @@ $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
         impactFlatpickr.clear();
     }
 
-    // PROSES COPY DATA SEMENTARA
-    const trImpact = $(`#table-dampak-risiko tr[data-id="${id}"]`);
-    const domCell = trImpact.find('td.column-action-impact');
-    const domSaved = domCell.find('.dom-saved-impact');
-    domCell.find('.dom-edited-impact').remove();
+    // Render dokumen (existing + baru dari state)
+    renderDocsToTable('#modalUpdateRealisasiDampak .table-dokumen-dampak', id, 'dampak');
 
-    const domEdited = domSaved.clone().addClass('dom-edited-impact').removeClass('dom-saved-impact');
-
-    const originalFileInputs = domSaved.find('input[type="file"]');
-    domEdited.find('input[type="file"]').each(function(index) {
-        if (originalFileInputs[index].files && originalFileInputs[index].files.length > 0) {
-            this.files = originalFileInputs[index].files;
-        }
-    });
-    domCell.append(domEdited);
-
-    const tableDocument = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
-    tableDocument.empty();
-
-    // -- Tampilkan Dokumen DB Existing (Jika Ada Kode Sebelumnya, Biarkan) --
-    const savedDocs = existingDampakDocs[id] || [];
-    savedDocs.forEach(function(doc) {
-        const descText = doc.description ? doc.description : '';
-        tableDocument.append(`
-            <tr class="existing-doc" data-doc-id="${doc.id}">
-                <td><span class="text-primary text-truncate d-block" style="max-width: 200px;"><a href="${doc.url}" target="_blank">${doc.file_name}</a></span></td>
-                <td><input type="text" class="form-control form-control-sm" value="${descText}" disabled></td>
-                <td><button type="button" class="btn btn-sm btn-danger btn-delete-db-doc" data-id="${doc.id}" data-type="dampak"><i class="bx bx-trash"></i> Hapus</button></td>
-            </tr>
-        `);
-    });
-
-    // -- Tampilkan Dokumen Sementara --
-    domEdited.find('input[type=file]').each(function() {
-        const fileInput = $(this);
-        const docId = fileInput.prop('id');
-        const fileName = fileInput.prop('files').length > 0 ? fileInput.prop('files')[0].name : 'Belum ada file';
-
-        const descInput = domEdited.find(`input.input-file-description-array[data-ref="${docId}"]`);
-        const description = descInput.val() || '';
-
-        tableDocument.append(`
-            <tr data-id="${docId}">
-                <td>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-secondary btn-trigger-file" data-target="${docId}">Pilih File</button>
-                        <span class="dokumen-filename text-truncate d-block" style="max-width: 150px;">${fileName}</span>
-                    </div>
-                </td>
-                <td>
-                    <input type="text" class="form-control form-control-sm input-desc-impact" value="${description}" placeholder="Keterangan...">
-                </td>
-                <td>
-                    <button type="button" class="btn btn-link btn-sm text-danger btn-delete-doc-impact">Hapus</button>
-                </td>
-            </tr>
-        `);
-    });
-
+    // Previous monitoring
     if (previousMonitoring) {
         const prevDataDampak = previousMonitoring.perlakuan_dampak_monitorings?.find(m => m.perlakuan_dampak_id == id);
-
         $('#info_prev_dampak_period').html(`Periode: <strong>${monthNamesArray[previousMonitoring.month]} ${previousMonitoring.tahun}</strong>`);
-
         if (prevDataDampak) {
-            console.log(prevDataDampak)
             $('#container_prev_dampak_data').removeClass('d-none');
             $('#container_prev_dampak_empty').addClass('d-none');
-
             $('#info_prev_dampak_progress').text((prevDataDampak.progress_rencana_perlakuan_risiko || 0) + '%');
             $('#info_prev_dampak_cost').text('Rp ' + Intl.NumberFormat('id-ID').format(prevDataDampak.realisasi_biaya_perlakuan_risiko || 0));
             $('#info_prev_dampak_date').text(prevDataDampak.timeline_perlakuan_risiko_start ? dayjs(prevDataDampak.timeline_perlakuan_risiko_start).format('DD/MM/YYYY') : '-');
             $('#info_prev_dampak_notes').text(prevDataDampak.deskripsi_perlakuan_risiko || '-');
-
-            // Ambil dan buat list dokumen evidence
             const prevDocsDampak = previousMonitoring.perlakuan_dampak_risiko_documents?.filter(d => d.perlakuan_dampak_risiko_id == id) || [];
             let docsHtmlDampak = prevDocsDampak.length > 0
                 ? '<ul class="ps-3 mb-0">' + prevDocsDampak.map(d => `<li><a href="/storage/${d.file_path}" target="_blank" class="text-primary">${d.file_name}</a> <small class="text-muted">(${d.description || '-'})</small></li>`).join('') + '</ul>'
@@ -1652,89 +1925,19 @@ $(document).on('click', '[data-action="update-realisasi-dampak"]', function() {
             $('#container_prev_dampak_empty').removeClass('d-none');
         }
     } else {
-        $('#info_prev_dampak_period').html(`-`);
+        $('#info_prev_dampak_period').html('-');
         $('#container_prev_dampak_data').addClass('d-none');
         $('#container_prev_dampak_empty').removeClass('d-none');
     }
 
-    toggleAddDocButtonDampak();
     $('#modalUpdateRealisasiDampak').modal('show');
 });
 
-
-// 3. Tambah Dokumen Dampak
-$('#btnTambahDokumenDampak').click(function() {
-    const dampakRisikoId = $('#impact_id').val();
-    const domCell = $(`#table-dampak-risiko tr[data-id="${dampakRisikoId}"] td.column-action-impact`);
-    const domEdited = domCell.find('.dom-edited-impact');
-    const uploadContainer = domEdited.find('.upload-container');
-    const tableDokumen = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
-
-    const newId = 'dokumen-dampak-' + Date.now();
-
-    uploadContainer.append(`
-        <input type="file" class="hidden-file-input" style="display:none;"
-               accept="${acceptedFiles}" name="document_dampak_file_${dampakRisikoId}[]" id="${newId}" required>
-        <input type="hidden" name="document_description_${dampakRisikoId}[]" data-ref="${newId}">
-    `);
-
-    tableDokumen.append(`
-        <tr data-id="${newId}">
-            <td>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-sm btn-secondary btn-trigger-file" data-target="${newId}">Pilih File</button>
-                    <span class="dokumen-filename text-truncate d-block" style="max-width: 150px;">Belum ada file</span>
-                </div>
-            </td>
-            <td>
-                <input type="text" class="form-control form-control-sm input-desc-impact-sync" data-target="${newId}" placeholder="Keterangan...">
-            </td>
-            <td>
-                <button type="button" class="btn btn-link btn-sm text-danger btn-delete-doc-temp" data-target="${newId}">Hapus</button>
-            </td>
-        </tr>
-    `);
-
-    domEdited.find(`#${newId}`).click();
-});
-
-// 4. Update Realtime Text Deskripsi ke input hidden
-$(document).on('input', '.input-desc-impact', function() {
-    const tr = $(this).closest('tr');
-    const fileId = tr.data('id');
-    const dampakId = $('#impact_id').val();
-    const val = $(this).val();
-
-    const domEdited = $(`#table-dampak-risiko tr[data-id="${dampakId}"] td.column-action-impact .dom-edited-impact`);
-    domEdited.find(`input.input-file-description-array[data-ref="${fileId}"]`).val(val);
-});
-
-// 5. Hapus Baris Dokumen
-$(document).on('click', '.btn-delete-doc-impact', function() {
-    const tr = $(this).closest('tr');
-    const fileId = tr.data('id');
-    const dampakId = $('#impact_id').val();
-
-    const domEdited = $(`#table-dampak-risiko tr[data-id="${dampakId}"] td.column-action-impact .dom-edited-impact`);
-    domEdited.find(`#${fileId}`).remove(); // hapus input file
-    domEdited.find(`input.input-file-description-array[data-ref="${fileId}"]`).remove(); // hapus input deskripsi
-    tr.remove();
-
-    toggleAddDocButtonDampak();
-});
-
-function toggleAddDocButtonDampak() {
-    const rowCount = $('#modalUpdateRealisasiDampak .table-dokumen-dampak tr').length;
-    if (rowCount >= 3) {
-        $('#modalUpdateRealisasiDampak table tfoot').hide();
-    } else {
-        $('#modalUpdateRealisasiDampak table tfoot').show();
-    }
-}
-
-// 6. Simpan Form Realisasi Dampak
+// =====================================================================
+// SIMPAN REALISASI DAMPAK
+// =====================================================================
 $('#btnSimpanUpdateRealisasiDampak').on('click', function() {
-    if (!validateFormSweetAlert('formUpdateRealisasiDampak')) return; // Poin 5
+    if (!validateFormSweetAlert('formUpdateRealisasiDampak')) return;
 
     const id = $('#impact_id').val();
     let realisasiBiaya = $('#formUpdateRealisasiDampak [name="realisasi_biaya_dampak"]').inputmask('unmaskedvalue') || 0;
@@ -1749,192 +1952,22 @@ $('#btnSimpanUpdateRealisasiDampak').on('click', function() {
     tr.find('.display-progress').text(perlakuanDampakRisikos[id]['progress_rencana_perlakuan_risiko']);
     tr.find('.display-timeline').text(perlakuanDampakRisikos[id]['timeline_perlakuan_risiko']);
 
-    tr.find('.dom-saved-impact').remove();
-    tr.find('.dom-edited-impact').removeClass('dom-edited-impact').addClass('dom-saved-impact');
-
     $('#modalUpdateRealisasiDampak').modal('hide');
     Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Data realisasi sementara disimpan. Jangan lupa klik tombol Simpan utama.', timer: 2000, showConfirmButton: false });
 });
 
-const kriProjects = @json($kriProjects->keyBy('id'));
-const quarter = {{ $quarter }};
-const namaRisiko = @json($projectRisk->peristiwa_risiko_id ? $peristiwaRisiko->title : $projectRisk->rencana_kegiatan);
-const month = @json($month);
-const year = @json($tahun);
-
-var flatpickrIns = flatpickr("#timelineInput", {
-    mode: "single",
-    altInput: true,
-    altFormat: "j F Y",
-    dateFormat: "d/m/Y",
-    minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
-    // maxDate: dayjs().toDate(),
-    // maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
-    disableMobile: true
-});
-
-$("#timelineInput").data('_flatpickr', flatpickrIns);
-
-var timeline1 = flatpickr("#perkiraan_waktu_terpapar_risiko_mulai", {
-    mode: "single",
-    altInput: true,
-    altFormat: "j F Y",
-    dateFormat: "d/m/Y",
-    //maxDate: endOfYear,
-    disableMobile: true
-});
-var timeline2 = flatpickr("#perkiraan_waktu_terpapar_risiko_akhir", {
-    mode: "single",
-    altInput: true,
-    altFormat: "j F Y",
-    dateFormat: "d/m/Y",
-    //maxDate: endOfYear,
-    disableMobile: true
-});
-var perlakuanWaktu1 = flatpickr("#timeline_perlakuan_risiko_start", {
-    mode: "single",
-    altInput: true,
-    altFormat: "j F Y",
-    dateFormat: "d/m/Y",
-    //maxDate: endOfYear,
-    disableMobile: true
-});
-var perlakuanWaktu2 = flatpickr("#timeline_perlakuan_risiko_end", {
-    mode: "single",
-    altInput: true,
-    altFormat: "j F Y",
-    dateFormat: "d/m/Y",
-    //maxDate: endOfYear,
-    disableMobile: true
-});
-
-// Flatpickr untuk Dampak
-var impactFlatpickr = flatpickr("#timelineImpactInput", {
-    altInput: true,
-    altFormat: "j F Y",
-    dateFormat: "d/m/Y",
-    // minDate: minDateString,
-    minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
-    // maxDate: dayjs().toDate(),
-    // maxDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_akhir, 'YYYY-MM-DD').toDate() : null,
-    disableMobile: true
-});
-
-function getSkalaProbabilitasByValue(value) {
-    const skalaProbabilitases = @json($skalaProbabilitas);
-    for (index in skalaProbabilitases) {
-        skalaProbabilitas = skalaProbabilitases[index];
-        if (value >= skalaProbabilitas.min) {
-            return skalaProbabilitas;
-        }
-    }
-}
-
-function refreshSkalaAndLevelRisiko() {
-    const riskMaps = @json($riskMaps);
-
-    // 1. Ambil Skala Dampak (Input Dropdown)
-    const skalaDampak = parseInt($('#realisasi_skala_dampak').val());
-
-    // 2. Ambil Skala Probabilitas (Input Dropdown) - PERBAIKAN DISINI
-    // Kita ambil langsung valuenya (tingkat), bukan hitung dari persen
-    const skalaProbabilitas = parseInt($('#realisasi_skala_probabilitas').val());
-
-    // Update Hidden Input untuk keperluan submit form
-    $('#realisasi_skala_probabilitas_hidden').val(skalaProbabilitas);
-    $('#realisasi_skala_dampak_hidden').val(skalaDampak);
-
-    const domSkalaRisiko = $('#realisasi_skala_risiko');
-    const domLevelRisiko = $('#realisasi_level_risiko');
-
-    // Validasi jika belum dipilih
-    if (!skalaDampak || !skalaProbabilitas) {
-        domSkalaRisiko.val('');
-        domLevelRisiko.val('');
-        $('#realisasi_skala_risiko_hidden').val('');
-        $('#realisasi_level_risiko_hidden').val('');
-        return;
-    }
-
-    // 3. Mapping Risk Map (Kunci: "SkalaDampak-SkalaProbabilitas")
-    const key = skalaDampak + '-' + skalaProbabilitas;
-    const riskMap = riskMaps[key];
-
-    // console.log('Mapping Key:', key, 'Result:', riskMap); // Debugging
-
-    if (riskMap) {
-        domSkalaRisiko.val(riskMap.nilai_risiko);
-        domLevelRisiko.val(riskMap.level_risiko);
-        $('#realisasi_skala_risiko_hidden').val(riskMap.nilai_risiko);
-        $('#realisasi_level_risiko_hidden').val(riskMap.level_risiko);
-    } else {
-        domSkalaRisiko.val('');
-        domLevelRisiko.val('');
-        $('#realisasi_skala_risiko_hidden').val('');
-        $('#realisasi_level_risiko_hidden').val('');
-    }
-}
-
-function validateRealisasiForm() {
-    let isValid = true;
-    let firstErrorField = null;
-
-    const fieldsToValidate = [
-        '#realisasi_nilai_dampak',
-        '#realisasi_skala_dampak',
-        '#realisasi_nilai_probabilitas'
-    ];
-
-    fieldsToValidate.forEach(function(fieldSelector) {
-        const field = $(fieldSelector);
-
-        if (field.is(':disabled')) {
-            // Hapus error sebelumnya jika ada
-            field.removeClass('is-invalid');
-            field.closest('.form-floating').find('.invalid-feedback').remove();
-            return; // Lanjut ke field berikutnya
-        }
-
-        field.removeClass('is-invalid');
-        field.closest('.form-floating').find('.invalid-feedback').remove();
-
-        if (field.val() === '' || field.val() === null) {
-            isValid = false;
-            field.addClass('is-invalid');
-            field.closest('.form-floating').append('<div class="invalid-feedback d-block">Field ini wajib diisi.</div>');
-
-            if (firstErrorField === null) {
-                firstErrorField = field;
-            }
-        }
-
-    });
-
-    if (!isValid && firstErrorField) {
-    $('html, body').animate({
-            scrollTop: firstErrorField.offset().top - 150
-        }, 500);
-
-        firstErrorField.focus();
-    }
-
-    return isValid;
-}
-
+// =====================================================================
+// SUBMIT FORM UTAMA - dengan dokumen dari state (newDocsPenyebab / newDocsDampak)
+// =====================================================================
 function submitForm(isClosed) {
-    if (!validateRealisasiForm()) return; // Pastikan validasi utama sukses
+    if (!validateRealisasiForm()) return;
 
     Swal.fire({
         title: 'Menyimpan Data...',
         text: 'Mohon tunggu, sedang mengupload dokumen dan menyimpan data.',
         allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
+        didOpen: () => { Swal.showLoading(); }
     });
-
-    $('.dom-edited').remove();
-    $('.dom-edited-impact').remove();
 
     const formData = new FormData($('#main-form')[0]);
     formData.append('perlakuan_penyebab_risikos', JSON.stringify(perlakuanPenyebabRisikos));
@@ -1943,6 +1976,27 @@ function submitForm(isClosed) {
     formData.append('quarter', quarter);
     formData.append('_method', 'PUT');
     formData.append('is_closed', isClosed);
+
+    // Append file dari state newDocsPenyebab
+    // Format: document_file_{perlakuanId}[] dan document_description_{perlakuanId}[]
+    Object.entries(newDocsPenyebab).forEach(([perlakuanId, docs]) => {
+        docs.forEach((doc, idx) => {
+            if (doc.file) {
+                formData.append(`document_file_${perlakuanId}[]`, doc.file);
+                formData.append(`document_description_${perlakuanId}[]`, doc.description || '');
+            }
+        });
+    });
+
+    // Append file dari state newDocsDampak
+    Object.entries(newDocsDampak).forEach(([perlakuanId, docs]) => {
+        docs.forEach((doc, idx) => {
+            if (doc.file) {
+                formData.append(`document_dampak_file_${perlakuanId}[]`, doc.file);
+                formData.append(`document_description_${perlakuanId}[]`, doc.description || '');
+            }
+        });
+    });
 
     $.ajax({
         url: '{{ route('projects.monitorings.update', ['project' => request()->route('project'), 'monitoring' => request()->route('monitoring')]) }}',
@@ -1958,8 +2012,7 @@ function submitForm(isClosed) {
                 confirmButtonText: 'OK',
             }).then(() => {
                 let baseUrl = '{{ route('projects.monitorings.index', ['project' => request()->route('project')]) }}';
-                const redirectUrl = `${baseUrl}?quarter={{ $quarter }}&tahun={{ $tahun }}&month={{ $month }}`;
-                window.location.href = redirectUrl;
+                window.location.href = `${baseUrl}?quarter={{ $quarter }}&tahun={{ $tahun }}&month={{ $month }}`;
             });
         },
         error: function(xhr) {
@@ -1967,227 +2020,148 @@ function submitForm(isClosed) {
             if (xhr.responseJSON && xhr.responseJSON.message) {
                 errorMessage = xhr.responseJSON.message;
             }
-            Swal.fire({
-                title: 'Error',
-                text: errorMessage,
-                icon: 'error',
-                confirmButtonText: 'OK',
-            });
+            Swal.fire({ title: 'Error', text: errorMessage, icon: 'error', confirmButtonText: 'OK' });
         }
     });
 }
 
-$(document).ready(function() {
-    const thresholds = {
-        limit: parseFloat("{{ $projectRisk->threshold_risk_limit }}") || 0,
-        appetite: parseFloat("{{ $projectRisk->threshold_risk_appetite }}") || 0,
-        tolerance: parseFloat("{{ $projectRisk->threshold_risk_tolerance }}") || 0
-    };
+// =====================================================================
+// FLATPICKR INSTANCES
+// =====================================================================
+var flatpickrIns = flatpickr("#timelineInput", {
+    mode: "single", altInput: true, altFormat: "j F Y", dateFormat: "d/m/Y",
+    minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+    disableMobile: true
+});
+$("#timelineInput").data('_flatpickr', flatpickrIns);
 
-    function updateMonitoringStatus() {
-        const val = $('#aktual_current').val();
-        // Bersihkan mask jika perlu (atau gunakan autoUnmask dari inputmask)
-        const aktual = parseFloat(val) || 0;
+var timeline1 = flatpickr("#perkiraan_waktu_terpapar_risiko_mulai", {
+    mode: "single", altInput: true, altFormat: "j F Y", dateFormat: "d/m/Y", disableMobile: true
+});
+var timeline2 = flatpickr("#perkiraan_waktu_terpapar_risiko_akhir", {
+    mode: "single", altInput: true, altFormat: "j F Y", dateFormat: "d/m/Y", disableMobile: true
+});
+var perlakuanWaktu1 = flatpickr("#timeline_perlakuan_risiko_start", {
+    mode: "single", altInput: true, altFormat: "j F Y", dateFormat: "d/m/Y", disableMobile: true
+});
+var perlakuanWaktu2 = flatpickr("#timeline_perlakuan_risiko_end", {
+    mode: "single", altInput: true, altFormat: "j F Y", dateFormat: "d/m/Y", disableMobile: true
+});
+var impactFlatpickr = flatpickr("#timelineImpactInput", {
+    altInput: true, altFormat: "j F Y", dateFormat: "d/m/Y",
+    minDate: projectRisk ? dayjs(projectRisk?.perkiraan_waktu_terpapar_risiko_mulai, 'YYYY-MM-DD').toDate() : null,
+    disableMobile: true
+});
 
-        let status = "Aman";
-        let colorClass = "border-success text-success bg-success-subtle";
-
-        if (aktual > thresholds.tolerance) {
-            status = "Bahaya";
-            colorClass = "border-danger text-danger bg-danger-subtle";
-        } else if (aktual >= thresholds.appetite) {
-            status = "Siaga";
-            colorClass = "border-warning text-warning bg-warning-subtle";
-        }
-
-        // Update Tampilan Badge Status
-        $('#status-badge-container').text(status).removeClass().addClass('p-2 rounded text-center fw-bold fs-6 border ' + colorClass);
-        $('#aktual_status_hidden').val(status);
-
-        // Tampilkan tabel pengendalian jika status Siaga/Bahaya
-        if (status === "Siaga" || status === "Bahaya") {
-            $('#pengendalian-section').removeClass('d-none').addClass('animate__animated animate__fadeIn');
+// =====================================================================
+// FUNGSI UTILS (tidak berubah)
+// =====================================================================
+function validateFormSweetAlert(formId) {
+    let isValid = true;
+    $(`#${formId} [required]`).each(function() {
+        if ($(this).val() === '' || $(this).val() === null) {
+            isValid = false;
+            $(this).addClass('is-invalid');
         } else {
-            $('#pengendalian-section').addClass('d-none');
+            $(this).removeClass('is-invalid');
         }
+    });
+    if (!isValid) {
+        Swal.fire({ icon: 'warning', title: 'Peringatan', text: 'Harap lengkapi semua field yang wajib diisi!' });
     }
+    return isValid;
+}
 
-    // Trigger saat input aktual berubah
-    $('#aktual_current').on('change keyup', updateMonitoringStatus);
+function getSkalaProbabilitasByValue(value) {
+    const skalaProbabilitases = @json($skalaProbabilitas);
+    for (let index in skalaProbabilitases) {
+        let skalaProbabilitas = skalaProbabilitases[index];
+        if (value >= skalaProbabilitas.min) return skalaProbabilitas;
+    }
+}
 
-    // Jalankan saat pertama load
-    updateMonitoringStatus();
+function refreshSkalaAndLevelRisiko() {
+    const riskMaps = @json($riskMaps);
+    const skalaDampak = parseInt($('#realisasi_skala_dampak').val());
+    const skalaProbabilitas = parseInt($('#realisasi_skala_probabilitas').val());
+    $('#realisasi_skala_probabilitas_hidden').val(skalaProbabilitas);
+    $('#realisasi_skala_dampak_hidden').val(skalaDampak);
+    const domSkalaRisiko = $('#realisasi_skala_risiko');
+    const domLevelRisiko = $('#realisasi_level_risiko');
+    if (!skalaDampak || !skalaProbabilitas) {
+        domSkalaRisiko.val(''); domLevelRisiko.val('');
+        $('#realisasi_skala_risiko_hidden').val(''); $('#realisasi_level_risiko_hidden').val('');
+        return;
+    }
+    const key = skalaDampak + '-' + skalaProbabilitas;
+    const riskMap = riskMaps[key];
+    if (riskMap) {
+        domSkalaRisiko.val(riskMap.nilai_risiko); domLevelRisiko.val(riskMap.level_risiko);
+        $('#realisasi_skala_risiko_hidden').val(riskMap.nilai_risiko); $('#realisasi_level_risiko_hidden').val(riskMap.level_risiko);
+    } else {
+        domSkalaRisiko.val(''); domLevelRisiko.val('');
+        $('#realisasi_skala_risiko_hidden').val(''); $('#realisasi_level_risiko_hidden').val('');
+    }
+}
 
-    // Simpan nilai skala dampak inherent dan probabilitas inherent
-    const skalaDampakInherent = {{ $projectRiskAnalisa->skalaDampakObj?->tingkat ?? 0 }};
-    const nilaiProbabilitasInherent = {{ $projectRiskAnalisa->nilai_probabilitas ?? 0 }};
-
-    // Validasi saat memilih skala dampak
-    $('#realisasi_skala_dampak').on('change', function(e) {
-        // Skip validasi jika perubahan dari hitungRealisasiSkalaDampak()
-        if (e.originalEvent === undefined) return;
-
-        const selectedValue = parseInt($(this).val());
-        if (selectedValue > skalaDampakInherent) {
-            Swal.fire({
-                title: 'Peringatan',
-                text: 'Nilai skala dampak realisasi tidak boleh lebih besar dari skala dampak inherent',
-                icon: 'warning',
-                confirmButtonText: 'OK'
-            });
-            $(this).val('').trigger('change');
+function validateRealisasiForm() {
+    let isValid = true;
+    let firstErrorField = null;
+    const fieldsToValidate = ['#realisasi_nilai_dampak', '#realisasi_skala_dampak', '#realisasi_nilai_probabilitas'];
+    fieldsToValidate.forEach(function(fieldSelector) {
+        const field = $(fieldSelector);
+        if (field.is(':disabled')) { field.removeClass('is-invalid'); field.closest('.form-floating').find('.invalid-feedback').remove(); return; }
+        field.removeClass('is-invalid'); field.closest('.form-floating').find('.invalid-feedback').remove();
+        if (field.val() === '' || field.val() === null) {
+            isValid = false; field.addClass('is-invalid');
+            field.closest('.form-floating').append('<div class="invalid-feedback d-block">Field ini wajib diisi.</div>');
+            if (firstErrorField === null) firstErrorField = field;
         }
     });
+    if (!isValid && firstErrorField) {
+        $('html, body').animate({ scrollTop: firstErrorField.offset().top - 150 }, 500);
+        firstErrorField.focus();
+    }
+    return isValid;
+}
 
-    // // Validasi nilai probabilitas
-    // $('#realisasi_nilai_probabilitas').on('change', function() {
-    //     const value = parseFloat($(this).val());
-    //     if (value > nilaiProbabilitasInherent) {
-    //         Swal.fire({
-    //             title: 'Peringatan',
-    //             text: 'Nilai probabilitas realisasi tidak boleh lebih besar dari nilai probabilitas inherent',
-    //             icon: 'warning',
-    //             confirmButtonText: 'OK'
-    //         });
-    //         $(this).val(nilaiProbabilitasInherent).trigger('change');
-    //     }
-    // });
-
-    $('#realisasi_skala_probabilitas').on('change', function() {
-        const $selectedOption = $(this).find('option:selected');
-        const min = parseFloat($selectedOption.data('min'));
-        const max = parseFloat($selectedOption.data('max'));
-        const $inputProb = $('#realisasi_nilai_probabilitas');
-
-        if (!isNaN(min) && !isNaN(max)) {
-            // Set atribut biar user tau (optional)
-            $inputProb.attr('min', min);
-            $inputProb.attr('max', max);
-
-            // Trigger validasi nilai jika sudah ada isinya
-            if ($inputProb.val() !== '') {
-                $inputProb.trigger('blur');
-            }
-        }
-    });
-
-    $('#realisasi_skala_dampak, #realisasi_skala_probabilitas').on('change', function() {
-        refreshSkalaAndLevelRisiko();
-    });
-
-    // 2. Validasi Nilai Probabilitas saat diketik/blur
-    $('#realisasi_nilai_probabilitas').on('keyup change', function() {
-        const val = parseFloat($(this).val());
-        const skalaProbabilitas = getSkalaProbabilitasByValue(val);
-
-        if (skalaProbabilitas) {
-            // Set value dropdown
-            $('#realisasi_skala_probabilitas').val(skalaProbabilitas.tingkat).trigger('change');
-            // Isi hidden input
-            $('#realisasi_skala_probabilitas_hidden').val(skalaProbabilitas.tingkat);
-        }
-
-        // const $input = $(this);
-        // let currentValue = parseFloat($input.val());
-        // if (isNaN(currentValue)) return;
-
-        // const $scaleSelect = $('#realisasi_skala_probabilitas');
-        // const $selectedOption = $scaleSelect.find('option:selected');
-
-        // // Jika belum pilih parameter, skip validasi range spesifik (atau paksa user pilih dulu)
-        // if (!$selectedOption.val()) return;
-
-        // const min = parseFloat($selectedOption.data('min'));
-        // const max = parseFloat($selectedOption.data('max'));
-
-        // let correctedValue = null;
-
-        // if (!isNaN(min) && currentValue < min) correctedValue = min;
-        // if (!isNaN(max) && currentValue > max) correctedValue = max;
-
-        // if (correctedValue !== null) {
-        //     Swal.fire({
-        //         title: 'Peringatan!',
-        //         text: `Nilai probabilitas untuk parameter ini harus berada di antara ${min}% dan ${max}%. Nilai otomatis disesuaikan.`,
-        //         icon: 'warning',
-        //         confirmButtonText: 'OK'
-        //     });
-        //     $input.val(correctedValue).trigger('change');
-        // }
-    });
-
-    $('#section-realisasi').on('change', '.update-trigger', function() {
-        refreshSkalaAndLevelRisiko();
-    }).change();
-
-    // Toggle logic for log section
-    $('#logPerlakuanRisiko').on('show.bs.collapse', function () {
-        const toggle = $(this).prev('.divider').find('.toggle-text');
-        toggle.html("<i class='bx bx-chevron-up'></i> Hide Log");
-    }).on('hide.bs.collapse', function () {
-        const toggle = $(this).prev('.divider').find('.toggle-text');
-        toggle.html("<i class='bx bx-chevron-down'></i> Show Log");
-    });
-
+// =====================================================================
+// DOCUMENT READY
+// =====================================================================
+$(document).ready(function() {
+    // Tombol Simpan / Simpan & Close
     $('.btn-action').on('click', function() {
         const action = $(this).data('action');
         if (action === 'save' || action === 'save-and-close') {
-            // validasi terlebih dahulu
-            if (!validateRealisasiForm()) {
-                return;
-            }
-
+            if (!validateRealisasiForm()) return;
             const isClosing = (action === 'save-and-close');
-            const swalConfig = {
+            Swal.fire({
                 title: 'Konfirmasi',
-                text: isClosing
-                    ? `Apakah Anda yakin ingin menyimpan dan menutup risiko "${namaRisiko}" ini?`
-                    : 'Apakah Anda yakin ingin menyimpan data ini?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Ya, Lanjutkan',
-                cancelButtonText: 'Batal',
-            };
-
-            Swal.fire(swalConfig).then((result) => {
-                if (result.isConfirmed) {
-                    submitForm(isClosing ? 1 : 0);
-                }
-            });
+                text: isClosing ? `Apakah Anda yakin ingin menyimpan dan menutup risiko "${namaRisiko}" ini?` : 'Apakah Anda yakin ingin menyimpan data ini?',
+                icon: 'question', showCancelButton: true,
+                confirmButtonText: 'Ya, Lanjutkan', cancelButtonText: 'Batal',
+            }).then((result) => { if (result.isConfirmed) submitForm(isClosing ? 1 : 0); });
         } else if (action === 'update-kri') {
             const kriId = $(this).data('id');
             const kriProject = kriProjects[kriId];
-
             if (previousMonitoring) {
                 const prevKriData = previousMonitoring.kri_proyek_monitorings?.find(k => k.kri_project_id == kriId);
-
                 $('#info_prev_kri_period').html(`Periode: <strong>${monthNamesArray[previousMonitoring.month]} ${previousMonitoring.tahun}</strong>`);
-
                 if (prevKriData) {
-                    $('#container_prev_kri_data').removeClass('d-none');
-                    $('#container_prev_kri_empty').addClass('d-none');
-
+                    $('#container_prev_kri_data').removeClass('d-none'); $('#container_prev_kri_empty').addClass('d-none');
                     $('#info_prev_kri_value').text(prevKriData.nilai_kri_terkini || '-');
-
-                    // Set Status KRI Badge
-                    let statusLabel = '-';
-                    let badgeClass = 'gray';
+                    let statusLabel = '-', badgeClass = 'gray';
                     if (prevKriData.status_kri_terkini == '1') { statusLabel = 'Aman'; badgeClass = 'success'; }
                     else if (prevKriData.status_kri_terkini == '2') { statusLabel = 'Waspada'; badgeClass = 'warning'; }
                     else if (prevKriData.status_kri_terkini == '3') { statusLabel = 'Bahaya'; badgeClass = 'danger'; }
-
                     $('#info_prev_kri_status').html(`<span class="badge bg-${badgeClass}">${statusLabel}</span>`);
                 } else {
-                    $('#container_prev_kri_data').addClass('d-none');
-                    $('#container_prev_kri_empty').removeClass('d-none');
+                    $('#container_prev_kri_data').addClass('d-none'); $('#container_prev_kri_empty').removeClass('d-none');
                 }
             } else {
-                $('#info_prev_kri_period').html(`-`);
-                $('#container_prev_kri_data').addClass('d-none');
-                $('#container_prev_kri_empty').removeClass('d-none');
+                $('#info_prev_kri_period').html('-'); $('#container_prev_kri_data').addClass('d-none'); $('#container_prev_kri_empty').removeClass('d-none');
             }
-
-            $('#modalUpdateKri input[name="kri_project_id"]').val($(this).data('id'));
+            $('#modalUpdateKri input[name="kri_project_id"]').val(kriId);
             $('#modalUpdateKri input[name="key_risk_indicator"]').val(kriProject.kri);
             $('#modalUpdateKri input[name="batas_aman"]').val(kriProject.batas_aman);
             $('#modalUpdateKri input[name="batas_waspada"]').val(kriProject.batas_waspada);
@@ -2195,442 +2169,92 @@ $(document).ready(function() {
             $('#modalUpdateKri input[name="nilai_kri"]').val(kriProject.nilai_kri_terkini);
             $('#modalUpdateKri :input[name="status_kri"]').val(kriProject.status_kri_terkini);
             $('#modalUpdateKri').modal('show');
-        } else if (action === 'update-realisasi') {
-            const perlakuanPenyebab = perlakuanPenyebabRisikos[$(this).data('id')];
-            if (!perlakuanPenyebab) {
-                Swal.fire('Error', 'Data perlakuan penyebab risiko tidak ditemukan', 'error');
-                return;
-            }
-            const penyebabRisiko = penyebabRisikoProjects[perlakuanPenyebab.penyebab_risiko_id];
-            $('#modalUpdateRealisasi :input[name="penyebab_risiko_id"]').val($(this).data('id'));
-            $('#modalUpdateRealisasi :input[name="penyebab_risiko"]').val(penyebabRisiko.penyebab_risiko);
-
-            if (projectRisk.perkiraan_waktu_terpapar_risiko_mulai) {
-              timeline1.setDate(dayjs(projectRisk.perkiraan_waktu_terpapar_risiko_mulai).format('DD/MM/YYYY'));
-            }
-
-            if (projectRisk.perkiraan_waktu_terpapar_risiko_akhir) {
-              timeline2.setDate(dayjs(projectRisk.perkiraan_waktu_terpapar_risiko_akhir).format('DD/MM/YYYY'));
-            }
-
-            if (perlakuanPenyebab.timeline_perlakuan_risiko_start) {
-              perlakuanWaktu1.setDate(dayjs(perlakuanPenyebab.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
-            }
-
-            if (perlakuanPenyebab.timeline_perlakuan_risiko_end) {
-              perlakuanWaktu2.setDate(dayjs(perlakuanPenyebab.timeline_perlakuan_risiko_end).format('DD/MM/YYYY'));
-            }
-
-            $('#modalUpdateRealisasi :input[name="rencana_perlakuan_risiko"]').val(perlakuanPenyebab.rencana_perlakuan_risiko);
-            $('#modalUpdateRealisasi :input[name="biaya_perlakuan_risiko"]').val(perlakuanPenyebab.biaya_perlakuan_risiko);
-            $('#modalUpdateRealisasi :input[name="pic"]').val(perlakuanPenyebab.pic);
-            // $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab.realisasi_biaya_perlakuan_risiko === null || perlakuanPenyebab.realisasi_biaya_perlakuan_risiko === '' ? perlakuanPenyebab.biaya_perlakuan_risiko : perlakuanPenyebab.realisasi_biaya_perlakuan_risiko);
-            $('#modalUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanPenyebab.realisasi_biaya_perlakuan_risiko ?? 0);
-            $('#modalUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val(perlakuanPenyebab.progress_rencana_perlakuan_risiko);
-            // $('#modalUpdateRealisasi :input[name="jenis_program_rkap"]').val(perlakuanPenyebab.jenis_program_rkap);
-            // $('#modalUpdateRealisasi :input[name="jenis_program_rkap_id"]').val(perlakuanPenyebab.jenis_program_rkap_id);
-            $('#modalUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val(perlakuanPenyebab.deskripsi_perlakuan_risiko);
-            if (perlakuanPenyebab.timeline_perlakuan_risiko?.length === 2) {
-                $("#timelineInput").data('_flatpickr').setDate(perlakuanPenyebab.timeline_perlakuan_risiko[0]);
-            } else if (perlakuanPenyebab.timeline_perlakuan_risiko) {
-                $("#timelineInput").data('_flatpickr').setDate(perlakuanPenyebab.timeline_perlakuan_risiko);
-            } else {
-                $("#timelineInput").data('_flatpickr').clear();
-            }
-
-            $('#modalUpdateRealisasi').modal('show');
-
-            const tableDocument = $('#modalUpdateRealisasi .table-dokumen');
-            tableDocument.empty();
-
-            const domCell = $('#table-penyebab-risiko tr[data-id="'+$(this).data('id')+'"] td.column-action');
-            const domSaved = domCell.find('.dom-saved');
-            domCell.find('.dom-edited').remove();
-            const domEdited = domSaved.clone().addClass('dom-edited').removeClass('dom-saved');
-
-            const originalFileInputs = domSaved.find('input[type="file"]');
-            domEdited.find('input[type="file"]').each(function(index) {
-                if (originalFileInputs[index].files && originalFileInputs[index].files.length > 0) {
-                    this.files = originalFileInputs[index].files;
-                }
-            });
-
-            domCell.append(domEdited);
-
-            const domDeskripsi = domEdited.find('.input-file-description');
-            const documentDescriptions = domDeskripsi.val() ? JSON.parse(domDeskripsi.val()) : {};
-
-            domEdited.find('input[type=file]').each(function() {
-                const fileInput = $(this);
-                const id = fileInput.prop('id');
-                const fileName = fileInput.prop('files').length > 0 ? fileInput.prop('files')[0].name : 'Belum ada file';
-                const description = documentDescriptions[id] || '';
-
-                tableDocument.append(`
-                    <tr data-id="${id}">
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <button type="button" class="btn btn-sm btn-secondary btn-trigger-file" data-target="${id}">Pilih File</button>
-                                <span class="dokumen-filename text-truncate d-block" style="max-width: 150px;">${fileName}</span>
-                            </div>
-                        </td>
-                        <td>
-                            <input type="text" class="form-control" name="deskripsi_dokumen[]" placeholder="Deskripsi dokumen" value="${description}">
-                        </td>
-                        <td>
-                            <button type="button" class="btn btn-link btn-sm text-danger delete-btn">Hapus</button>
-                        </td>
-                    </tr>
-                `);
-            });
-
-            // const documentDescriptions = domEdited.find('.input-file-description').val() ? JSON.parse(domEdited.find('.input-file-description').val()) : {};
-            // domEdited.find('input[type=file]').each(function() {
-            //     const fileName = $(this).prop('files')[0]?.name;
-            //     const id = $(this).prop('id');
-            //     const description = documentDescriptions[id] || '';
-            //     const appended = tableDocument.append(`
-            //         <tr data-id="${id}">
-            //         <td>
-            //             <span class="dokumen-filename">${fileName}</span>
-            //         </td>
-            //         <td>
-            //             <input type="text" class="form-control" name="deskripsi_dokumen[]" placeholder="Deskripsi dokumen" value="${description}">
-            //         </td>
-            //         <td>
-            //             <button type="button" class="btn btn-link btn-sm text-danger delete-btn">Hapus</button>
-            //         </td>
-            //     </tr>
-            //     `);
-            // });
-
-            if (tableDocument.find('tr').length > 2) {
-                tableDocument.closest('table').find('tfoot').hide();
-            } else {
-                tableDocument.closest('table').find('tfoot').show();
-            }
-
-            tableDocument.off('input', '[name="deskripsi_dokumen[]"]').on('input', '[name="deskripsi_dokumen[]"]', function() {
-                const value = $(this).val();
-                const rowId = $(this).closest('tr').data('id');
-                const penyebabRisikoId = $('#formUpdateRealisasi :input[name="penyebab_risiko_id"]').val();
-                const domCell = $('#table-penyebab-risiko tr[data-id="'+penyebabRisikoId+'"] td.column-action');
-                const domEdited = domCell.find('.dom-edited');
-
-                const domDeskripsi = domEdited.find('.input-file-description');
-                const deskripsi = domDeskripsi.val() ? JSON.parse(domDeskripsi.val()) : {};
-                deskripsi[rowId] = value;
-                domDeskripsi.val(JSON.stringify(deskripsi));
-            });
-
-            tableDocument.off('click', '.delete-btn').on('click', '.delete-btn', function() {
-                const rowId = $(this).closest('tr').data('id');
-                const penyebabRisikoId = $('#formUpdateRealisasi :input[name="penyebab_risiko_id"]').val();
-                const domCell = $('#table-penyebab-risiko tr[data-id="'+penyebabRisikoId+'"] td.column-action');
-                const domEdited = domCell.find('.dom-edited');
-
-                $(this).closest('tr').remove();
-                domEdited.find(`#${rowId}`).remove();
-
-                const domDeskripsi = domEdited.find('.input-file-description');
-                const deskripsi = domDeskripsi.val() ? JSON.parse(domDeskripsi.val()) : {};
-                delete deskripsi[rowId];
-                domDeskripsi.val(JSON.stringify(deskripsi));
-
-                if (tableDocument.find('tr').length < 3) {
-                    tableDocument.closest('table').find('tfoot').show();
-                }
-            });
-
-            const savedPenyebabDocs = existingPenyebabDocs[perlakuanPenyebab.id] || [];
-              savedPenyebabDocs.forEach(function(doc) {
-                  tableDocument.append(`
-                      <tr class="existing-doc" data-doc-id="${doc.id}">
-                          <td><span class="text-primary text-truncate d-block" style="max-width: 200px;"><a href="${doc.url}" target="_blank">${doc.file_name}</a></span></td>
-                          <td><input type="text" class="form-control form-control-sm" value="${doc.description || ''}" disabled></td>
-                          <td>
-                              <button type="button" class="btn btn-sm btn-danger btn-delete-db-doc" data-id="${doc.id}" data-type="penyebab">
-                                  <i class="bx bx-trash"></i> Hapus
-                              </button>
-                          </td>
-                      </tr>
-                  `);
-            });
-
-            // --- POPULATE PREVIOUS DATA UI ---
-            if (previousMonitoring) {
-                const prevData = previousMonitoring.perlakuan_penyebab_monitorings?.find(m => m.perlakuan_penyebab_id == perlakuanPenyebab.id);
-
-                $('#info_prev_penyebab_period').html(`Periode: <strong>${monthNamesArray[previousMonitoring.month]} ${previousMonitoring.tahun}</strong>`);
-
-                if (prevData) {
-                    $('#container_prev_penyebab_data').removeClass('d-none');
-                    $('#container_prev_penyebab_empty').addClass('d-none');
-
-                    $('#info_prev_penyebab_progress').text((prevData.progress_rencana_perlakuan_risiko || 0) + '%');
-                    $('#info_prev_penyebab_cost').text('Rp ' + Intl.NumberFormat('id-ID').format(prevData.realisasi_biaya_perlakuan_risiko || 0));
-                    $('#info_prev_penyebab_date').text(prevData.timeline_perlakuan_risiko_start ? dayjs(prevData.timeline_perlakuan_risiko_start).format('DD/MM/YYYY') : '-');
-                    $('#info_prev_penyebab_notes').text(prevData.deskripsi_perlakuan_risiko || '-');
-
-                    // Ambil dan buat list dokumen evidence
-                    const prevDocs = previousMonitoring.perlakuan_penyebab_risiko_documents?.filter(d => d.perlakuan_penyebab_risiko_id == perlakuanPenyebab.id) || [];
-                    let docsHtml = prevDocs.length > 0
-                        ? '<ul class="ps-3 mb-0">' + prevDocs.map(d => `<li><a href="/storage/${d.file_path}" target="_blank" class="text-primary">${d.file_name}</a> <small class="text-muted">(${d.description || '-'})</small></li>`).join('') + '</ul>'
-                        : '<em class="text-muted small">Tidak ada dokumen evidence.</em>';
-                    $('#info_prev_penyebab_evidence').html(docsHtml);
-                } else {
-                    $('#container_prev_penyebab_data').addClass('d-none');
-                    $('#container_prev_penyebab_empty').removeClass('d-none');
-                }
-            } else {
-                $('#info_prev_penyebab_period').html(`-`);
-                $('#container_prev_penyebab_data').addClass('d-none');
-                $('#container_prev_penyebab_empty').removeClass('d-none');
-            }
-
-            $('#modalUpdateRealisasi').modal('show');
         } else if (action === 'view-details') {
             const id = $(this).data('id');
             const perlakuanId = $(this).data('perlakuan-id');
             const perlakuanPenyebab = perlakuanPenyebabRisikos[perlakuanId];
-            const penyebabRisiko = penyebabRisikoProjects[perlakuanPenyebab.penyebab_risiko_id];
+            const penyebabRisiko = penyebabRisikoProjects[perlakuanPenyebab?.penyebab_risiko_id];
             const perlakuanMonitoring = perlakuanPenyebab?.perlakuan_penyebab_monitorings?.find(m => m.id == id);
-
-            if (!perlakuanMonitoring) {
-                Swal.fire('Error', 'Data perlakuan penyebab risiko tidak ditemukan', 'error');
-                return;
-            }
-
-            $('#modalMitigasi :input[name="penyebab_risiko_id"]').val(perlakuanPenyebab.id);
-            $('#modalMitigasi :input[name="penyebab_risiko"]').val(penyebabRisiko.penyebab_risiko);
-            $('#modalMitigasi :input[name="rencana_perlakuan_risiko"]').val(perlakuanPenyebab.rencana_perlakuan_risiko);
-            $('#modalMitigasi :input[name="biaya_perlakuan_risiko"]').val(perlakuanPenyebab.biaya_perlakuan_risiko);
-            $('#modalMitigasi :input[name="pic"]').val(perlakuanPenyebab.pic);
-
-            $('#modalMitigasi :input[name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanMonitoring.realisasi_biaya_perlakuan_risiko);
-            $('#modalMitigasi :input[name="progress_perlakuan_risiko"]').val(perlakuanMonitoring.progress_rencana_perlakuan_risiko);
-            $('#modalMitigasi :input[name="deskripsi_perlakuan_risiko"]').val(perlakuanMonitoring.deskripsi_perlakuan_risiko);
-            // $('#modalMitigasi :input[name="jenis_program_rkap_id"]').val(perlakuanMonitoring.jenis_program_rkap_id).change();
-            $('#modalMitigasi :input[name="timeline_perlakuan_risiko"]').val(perlakuanMonitoring.timeline_perlakuan_risiko_start ? Intl.DateTimeFormat('id-ID', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            }).format(new Date(perlakuanMonitoring.timeline_perlakuan_risiko_start)) : '');
-
-            const perlakuanDocuments = perlakuanPenyebab.documents.filter(d => d.project_monitoring_id == perlakuanMonitoring.project_monitoring_id);
-
+            if (!perlakuanMonitoring) { Swal.fire('Error', 'Data tidak ditemukan', 'error'); return; }
+            $('#modalMitigasi input[name="penyebab_risiko_id"]').val(perlakuanPenyebab.id);
+            $('#modalMitigasi [name="penyebab_risiko"]').val(penyebabRisiko?.penyebab_risiko);
+            $('#modalMitigasi [name="rencana_perlakuan_risiko"]').val(perlakuanPenyebab.rencana_perlakuan_risiko);
+            $('#modalMitigasi [name="biaya_perlakuan_risiko"]').val(perlakuanPenyebab.biaya_perlakuan_risiko);
+            $('#modalMitigasi [name="pic"]').val(perlakuanPenyebab.pic);
+            $('#modalMitigasi [name="realisasi_biaya_perlakuan_risiko"]').val(perlakuanMonitoring.realisasi_biaya_perlakuan_risiko);
+            $('#modalMitigasi [name="progress_perlakuan_risiko"]').val(perlakuanMonitoring.progress_rencana_perlakuan_risiko);
+            $('#modalMitigasi [name="deskripsi_perlakuan_risiko"]').val(perlakuanMonitoring.deskripsi_perlakuan_risiko);
+            $('#modalMitigasi [name="timeline_perlakuan_risiko"]').val(perlakuanMonitoring.timeline_perlakuan_risiko_start ? Intl.DateTimeFormat('id-ID', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(perlakuanMonitoring.timeline_perlakuan_risiko_start)) : '');
+            const perlakuanDocuments = perlakuanPenyebab.documents?.filter(d => d.project_monitoring_id == perlakuanMonitoring.project_monitoring_id) || [];
             $('.tabel-dokumen-mitigasi tbody').empty();
-            perlakuanDocuments.forEach(function(document) {
-                const appended = $('.tabel-dokumen-mitigasi tbody').append(`
-                    <tr>
-                        <td>
-                            ${document.file_name}
-                        </td>
-                        <td>
-                            ${document.description || '-'}
-                        </td>
-                        <td>
-                            <a href="${document.url}" download="${document.file_name}">Download</a>
-                        </td>
-                    </tr>
-                `);
-            });
-
             if (perlakuanDocuments.length === 0) {
-                $('.tabel-dokumen-mitigasi tbody').append(`
-                    <tr>
-                        <td colspan="3" class="text-center">Tidak ada dokumen</td>
-                    </tr>
-                `);
+                $('.tabel-dokumen-mitigasi tbody').append('<tr><td colspan="3" class="text-center">Tidak ada dokumen</td></tr>');
+            } else {
+                perlakuanDocuments.forEach(function(document) {
+                    $('.tabel-dokumen-mitigasi tbody').append(`<tr><td>${document.file_name}</td><td>${document.description || '-'}</td><td><a href="${document.url}" download="${document.file_name}">Download</a></td></tr>`);
+                });
             }
-
             $('#modalMitigasi').modal('show');
-        } else if (action === 'update-realisasi-dampak') {
-            // // 1. Ambil ID perlakuan dampak dari tombol yang diklik
-            // const id = $(this).data('id');
-
-            // // 2. Definisikan elemen tabel tempat dokumen akan di-render
-            // const tableDocument = $('#modalUpdateRealisasiDampak .table-dokumen-dampak');
-
-            // // Kosongkan tabel dulu jika sebelumnya ada isinya (mencegah duplikat saat buka-tutup modal)
-            // tableDocument.empty();
-
-            // // 3. Render dokumen dari database
-            // const savedDocs = existingDampakDocs[id] || [];
-            // savedDocs.forEach(function(doc) {
-            //     tableDocument.append(`
-            //         <tr class="existing-doc" data-doc-id="${doc.id}">
-            //             <td><span class="text-primary text-truncate d-block" style="max-width: 200px;"><a href="${doc.url}" target="_blank">${doc.file_name}</a></span></td>
-            //             <td><input type="text" class="form-control form-control-sm" value="${doc.description || ''}" disabled></td>
-            //             <td>
-            //                 <button type="button" class="btn btn-sm btn-danger btn-delete-db-doc" data-id="${doc.id}" data-type="dampak">
-            //                     <i class="bx bx-trash"></i> Hapus
-            //                 </button>
-            //             </td>
-            //         </tr>
-            //     `);
-            // });
         }
-    });
-
-    // --- PENYEBAB RISIKO LOGIC ---
-    $('#btnTambahDokumen').click(function() {
-        const penyebabRisikoId = $('#formUpdateRealisasi :input[name="penyebab_risiko_id"]').val();
-        const domCell = $('#table-penyebab-risiko tr[data-id="'+penyebabRisikoId+'"] td.column-action');
-        const domEdited = domCell.find('.dom-edited');
-        const uploadContainer = domEdited.find('.upload-container');
-        const tableDokumen = $('#modalUpdateRealisasi .table-dokumen');
-
-        const newId = 'dokumen-' + Date.now();
-
-        // PERBAIKAN: Tambahkan deskripsi sebagai array [] agar index-nya sama dengan file
-        uploadContainer.append(`
-            <input type="file" class="hidden-file-input" style="display:none;"
-                  accept="${acceptedFiles}" name="document_file_${penyebabRisikoId}[]" id="${newId}" required>
-            <input type="hidden" name="document_description_${penyebabRisikoId}[]" data-ref="${newId}">
-        `);
-
-        tableDokumen.append(`
-            <tr data-id="${newId}">
-                <td>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-secondary btn-trigger-file" data-target="${newId}">Pilih File</button>
-                        <span class="dokumen-filename text-truncate d-block" style="max-width: 150px;">Belum ada file</span>
-                    </div>
-                </td>
-                <td>
-                    <input type="text" class="form-control form-control-sm input-desc-sync" data-target="${newId}" placeholder="Deskripsi dokumen">
-                </td>
-                <td>
-                    <button type="button" class="btn btn-link btn-sm text-danger btn-delete-doc-temp" data-target="${newId}"><i class="bx bx-trash"></i> Hapus</button>
-                </td>
-            </tr>
-        `);
-
-        $(`#${newId}`).click();
-    });
-
-    $('#btnSimpanUpdateRealisasi').on('click', function() {
-        if (!validateFormSweetAlert('formUpdateRealisasi')) return; // Poin 5
-
-        const id = $('#formUpdateRealisasi :input[name="penyebab_risiko_id"]').val();
-
-        // Set data ke memory
-        perlakuanPenyebabRisikos[id]['realisasi_biaya_perlakuan_risiko'] = $('#formUpdateRealisasi :input[name="realisasi_biaya_perlakuan_risiko"]').inputmask('unmaskedvalue') || 0;
-        perlakuanPenyebabRisikos[id]['progress_rencana_perlakuan_risiko'] = $('#formUpdateRealisasi :input[name="progress_perlakuan_risiko"]').val();
-        perlakuanPenyebabRisikos[id]['deskripsi_perlakuan_risiko'] = $('#formUpdateRealisasi :input[name="deskripsi_perlakuan_risiko"]').val();
-        perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko'] = $('#timelineInput').val();
-
-        // Update DOM table belakang
-        const tr = $('#table-penyebab-risiko tr[data-id="' + id + '"]');
-        tr.find('.display-biaya').text('Rp ' + Intl.NumberFormat('id-ID').format(perlakuanPenyebabRisikos[id]['realisasi_biaya_perlakuan_risiko']));
-        tr.find('.display-progress').text(perlakuanPenyebabRisikos[id]['progress_rencana_perlakuan_risiko']);
-        tr.find('.display-timeline').text(perlakuanPenyebabRisikos[id]['timeline_perlakuan_risiko']);
-
-        tr.find('.dom-saved').remove();
-        tr.find('.dom-edited').removeClass('dom-edited').addClass('dom-saved');
-
-        $('#modalUpdateRealisasi').modal('hide');
-        Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Data realisasi sementara disimpan. Jangan lupa klik tombol Simpan utama.', timer: 2000, showConfirmButton: false });
     });
 
     $('#btnSimpanUpdateKri').on('click', function() {
-        if (!$('#formUpdateKri')[0].checkValidity()) {
-            $('#formUpdateKri')[0].reportValidity();
-            return;
-        }
-
-        const id = $('#formUpdateKri :input[name="kri_project_id"]').val();
-        const nilaiKri = $('#formUpdateKri :input[name="nilai_kri"]').val();
+        if (!$('#formUpdateKri')[0].checkValidity()) { $('#formUpdateKri')[0].reportValidity(); return; }
+        const id = $('#formUpdateKri input[name="kri_project_id"]').val();
+        const nilaiKri = $('#formUpdateKri input[name="nilai_kri"]').val();
         const statusKri = $('#formUpdateKri :input[name="status_kri"]').val();
-        const statusMap = {
-            '1': 'Aman',
-            '2': 'Waspada',
-            '3': 'Bahaya'
-        };
-        const statusText = statusMap[statusKri] || '-';
-
-        // update kri
+        const statusMap = { '1': 'Aman', '2': 'Waspada', '3': 'Bahaya' };
         kriProjects[id]['nilai_kri_terkini'] = nilaiKri;
         kriProjects[id]['status_kri_terkini'] = statusKri;
-
-        // update DOM
         const tr = $('#table-kri tr[data-id="' + id + '"]');
         tr.find('.display-nilai-kri').text(nilaiKri);
-        tr.find('.display-kondisi').text(statusText);
-
+        tr.find('.display-kondisi').text(statusMap[statusKri] || '-');
         $('#modalUpdateKri').modal('hide');
     });
 
-    const inputmaskFixeds = $('.inputmask-fixed');
-    inputmaskFixeds.each(function() {
-        if (!isNaN($(this).text())) {
-            $(this).inputmask({
-                alias: 'numeric',
-                groupSeparator: '.',
-                autoGroup: true,
-                digits: 0,
-                digitsOptional: false,
-                placeholder: '0',
-                rightAlign: false,
-                min: 0,
-                allowMinus: false,
-                onKeyDown: function(e) {
-                if (e.key === 'Backspace' || e.keyCode === 8) {
-                    // tunda eksekusi sampai mask selesai di-apply
-                    setTimeout(() => {
-                        const unmasked = this.inputmask.unmaskedvalue();
-                        // kalau masih ada angka tersisa
-                        if (unmasked.length > 0) {
-                        // cek posisi cursor
-                        const pos = this.selectionStart;
-                        if (pos === 0) {
-                            // pindahkan ke paling kanan
-                            const end = this.value.length;
-                            this.setSelectionRange(end, end);
-                        }
-                        }
-                    }, 0);
-                    }
-                }
-            });
+    // Skala Dampak & Probabilitas
+    const skalaDampakInherent = {{ $projectRiskAnalisa->skalaDampakObj?->tingkat ?? 0 }};
+    $('#realisasi_skala_dampak').on('change', function(e) {
+        if (e.originalEvent === undefined) return;
+        const selectedValue = parseInt($(this).val());
+        if (selectedValue > skalaDampakInherent) {
+            Swal.fire({ title: 'Peringatan', text: 'Nilai skala dampak realisasi tidak boleh lebih besar dari skala dampak inherent', icon: 'warning', confirmButtonText: 'OK' });
+            $(this).val('').trigger('change');
         }
     });
 
+    $('#realisasi_nilai_probabilitas').on('keyup change', function() {
+        const val = parseFloat($(this).val());
+        const skalaProbabilitas = getSkalaProbabilitasByValue(val);
+        if (skalaProbabilitas) {
+            $('#realisasi_skala_probabilitas').val(skalaProbabilitas.tingkat).trigger('change');
+            $('#realisasi_skala_probabilitas_hidden').val(skalaProbabilitas.tingkat);
+        }
+    });
+
+    $('#realisasi_skala_dampak, #realisasi_skala_probabilitas').on('change', function() {
+        refreshSkalaAndLevelRisiko();
+    });
+
+    $('#section-realisasi').on('change', '.update-trigger', function() {
+        refreshSkalaAndLevelRisiko();
+    }).change();
+
+    // Log toggle
+    $('#logPerlakuanRisiko').on('show.bs.collapse', function() {
+        $(this).prev('.divider').find('.toggle-text').html("<i class='bx bx-chevron-up'></i> Hide Log");
+    }).on('hide.bs.collapse', function() {
+        $(this).prev('.divider').find('.toggle-text').html("<i class='bx bx-chevron-down'></i> Show Log");
+    });
+
+    // Inputmask
     $('.inputmask-rupiah').inputmask({
-        alias: 'numeric',
-        groupSeparator: '.',
-        autoGroup: true,
-        digits: 0,
-        digitsOptional: false,
-        prefix: 'Rp ',
-        placeholder: '0',
-        rightAlign: false,
-        autoUnmask: true,
-        removeMaskOnSubmit: true,
-        min: 0,
-        allowMinus: false,
-        onKeyDown: function(e) {
-        if (e.key === 'Backspace' || e.keyCode === 8) {
-            // tunda eksekusi sampai mask selesai di-apply
-            setTimeout(() => {
-                const unmasked = this.inputmask.unmaskedvalue();
-                // kalau masih ada angka tersisa
-                if (unmasked.length > 0) {
-                // cek posisi cursor
-                const pos = this.selectionStart;
-                if (pos === 0) {
-                    // pindahkan ke paling kanan
-                    const end = this.value.length;
-                    this.setSelectionRange(end, end);
-                }
-                }
-            }, 0);
-            }
-        }
+        alias: 'numeric', groupSeparator: '.', autoGroup: true, digits: 0, digitsOptional: false,
+        prefix: 'Rp ', placeholder: '0', rightAlign: false, autoUnmask: true, removeMaskOnSubmit: true,
+        min: 0, allowMinus: false
     });
 
-    // Fungsi untuk menghitung skala dampak berdasarkan persentase
+    // Hitung skala dampak otomatis (Kuantitatif)
     function hitungSkalaDampak(percentage) {
         if (percentage <= 20) return 1;
         if (percentage <= 40) return 2;
@@ -2639,134 +2263,46 @@ $(document).ready(function() {
         return 5;
     }
 
-    // Fungsi untuk menghitung dan mengatur realisasi_skala_dampak
     function hitungRealisasiSkalaDampak() {
         const kategoriDampak = '{{ $projectRiskAnalisa->kategori_dampak }}';
-
-        // const nilaiDampak = parseFloat($('#realisasi_nilai_dampak').val()) || 0;
         let rawValue = $('#realisasi_nilai_dampak').inputmask('unmaskedvalue');
-        // Fallback jika inputmask belum init atau kosong, replace karakter non-digit manual
-        if (!rawValue && rawValue !== 0) {
-            rawValue = $('#realisasi_nilai_dampak').val().replace(/[^0-9,-]+/g,"").replace(",",".");
-        }
+        if (!rawValue && rawValue !== 0) rawValue = $('#realisasi_nilai_dampak').val().replace(/[^0-9,-]+/g,"").replace(",",".");
         const nilaiDampak = parseFloat(rawValue) || 0;
-
         const riskLimit = parseFloat('{{ $risk_limit }}') || 0;
         const skalaDampakSelect = $('#realisasi_skala_dampak');
         const skalaDampakHidden = $('#realisasi_skala_dampak_hidden');
-
         if (kategoriDampak === 'Kuantitatif') {
-            // console.log("risk limit : " + riskLimit);
-            var percentage = 100;
-            var skala = 5;
-
-            if(riskLimit>0){
-                // Hitung persentase
-                percentage = (nilaiDampak / riskLimit) * 100;
-                // Hitung skala berdasarkan persentase
-                skala = hitungSkalaDampak(percentage);
-
-                // console.log("percentage : " + percentage);
-                // console.log("skala : " + skala);
-            }
-
-            // Set nilai skala dampak dan trigger change event
+            let percentage = 100, skala = 5;
+            if (riskLimit > 0) { percentage = (nilaiDampak / riskLimit) * 100; skala = hitungSkalaDampak(percentage); }
             skalaDampakSelect.val(skala).trigger('change');
-            // Disable select dan pindahkan nilai ke hidden input
-            // skalaDampakSelect.prop('disabled', true);
             skalaDampakSelect.prop('disabled', false);
             skalaDampakHidden.val(skala);
         } else {
-            // Enable select jika bukan Kuantitatif
             skalaDampakSelect.prop('disabled', false);
-            // Kosongkan hidden input
             skalaDampakHidden.val('0');
         }
     }
 
-    // Event listener untuk perubahan nilai dampak
     $('#realisasi_nilai_dampak').on('keyup change', function() {
-        // console.log("hitung skala dampak");
         hitungRealisasiSkalaDampak();
         refreshSkalaAndLevelRisiko();
     });
 
+    // DataTable
     $('.datatable').DataTable({
-        paging: true,
-        info: false,
-        searching: false,
-        ordering: true,
-        autoWidth: true,
+        paging: true, info: false, searching: false, ordering: true, autoWidth: true,
         order: [[2, 'desc']],
-        rowCallback: function(row, data, index) {
-            $('td:eq(0)', row).html(index + 1); // Assign row index
-        },
+        rowCallback: function(row, data, index) { $('td:eq(0)', row).html(index + 1); },
         columnDefs: [
-            {
-                width: '5%',
-                targets: 0,
-                render: function(data, type, row, meta) {
-                    if (type !== 'display') {
-                        return data;
-                    }
-                    return meta.row + 1;
-                }
-            },
-            {
-                width: '15%',
-                targets: 2,
-                render: function(data, type, row, meta) {
-                    if (type !== 'display') {
-                        return data;
-                    }
-                    return data ? new Date(data).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-';
-                }
-            },
-            {
-                width: '15%',
-                targets: 3,
-                render: function(data, type, row, meta) {
-                    if (type !== 'display') {
-                        return data;
-                    }
-                    return data ? new Date(data).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-';
-                }
-            },
-            {
-                width: '10%',
-                targets: 6,
-                render: function(data, type, row, meta) {
-                    if (type !== 'display') {
-                        return data;
-                    }
-                    return 'Rp' + Intl.NumberFormat('id-ID').format(data);
-                }
-            },
-            {
-                width: '10%',
-                targets: 8,
-                render: function(data, type, row, meta) {
-                    if (type !== 'display') {
-                        return data;
-                    }
-                    return 'Rp' + Intl.NumberFormat('id-ID').format(data);
-                }
-            },
-            {
-                width: '10%',
-                targets: 9,
-                render: function(data, type, row, meta) {
-                    if (type !== 'display') {
-                        return data;
-                    }
-                    return Intl.NumberFormat('id-ID').format(data);
-                }
-            },
+            { width: '5%', targets: 0 },
+            { width: '15%', targets: 2, render: function(data) { return data ? new Date(data).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'; } },
+            { width: '15%', targets: 3, render: function(data) { return data ? new Date(data).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'; } },
+            { width: '10%', targets: 6, render: function(data) { return 'Rp' + Intl.NumberFormat('id-ID').format(data); } },
+            { width: '10%', targets: 8, render: function(data) { return 'Rp' + Intl.NumberFormat('id-ID').format(data); } },
+            { width: '10%', targets: 9, render: function(data) { return Intl.NumberFormat('id-ID').format(data); } },
         ],
     });
 
-    // Panggil fungsi saat halaman dimuat
-    // hitungRealisasiSkalaDampak();
     refreshSkalaAndLevelRisiko();
 });
 </script>
