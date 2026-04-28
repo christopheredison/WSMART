@@ -45,7 +45,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             'Waktu Mulai', 'Waktu Selesai', 'Penanggung Jawab', 'Realisasi Perlakuan Risiko',
             'Realisasi Biaya Perlakuan Risiko', 'Dampak Risiko Realisasi',
             'Eksposur Risiko Residual Realisasi', 'Level Residual Realisasi',
-            'Status', 'Efektivitas Perlakuan Risiko'
+            'Status', 'Efektivitas Perlakuan Risiko', 'Periode Realisasi Monitoring'
         ];
     }
 
@@ -54,7 +54,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $lastCol = 'AN';
+                $lastCol = 'AO';
                 $highestRow = $sheet->getHighestRow();
 
                 $headerStyle = [
@@ -92,6 +92,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                 $setColor('AK1:AL1', $cViolet);
                 $setColor('AM1', $cBlue);
                 $setColor('AN1', $cViolet);
+                $setColor('AO1', $cGrey);
 
                 if ($highestRow > 1) {
                     $sheet->getStyle('A2:'.$lastCol.$highestRow)->applyFromArray([
@@ -101,7 +102,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                 }
 
                 foreach (range('A', 'Z') as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
-                foreach (['AA','AB','AC','AD','AE','AF','AG','AH','AI','AJ','AK','AL','AM','AN'] as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
+                foreach (['AA','AB','AC','AD','AE','AF','AG','AH','AI','AJ','AK','AL','AM','AN', 'AO'] as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
 
                 $longCols = ['B', 'P', 'R', 'S', 'T', 'X', 'Y', 'AH', 'AG'];
                 foreach ($longCols as $col) {
@@ -113,51 +114,47 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
 
     public function collection()
     {
+        // 1. Buat Closure untuk logika: "Ambil monitoring sampai dengan bulan & tahun yang dipilih, status = 100"
+        $filterUpToPeriod = function($q) {
+            if ($this->bulan && $this->tahun) {
+                $q->where(function($query) {
+                    // Ambil tahun-tahun sebelumnya, ATAU tahun yang sama tapi bulan <= bulan terpilih
+                    $query->where('tahun', '<', $this->tahun)
+                          ->orWhere(function($subQuery) {
+                              $subQuery->where('tahun', $this->tahun)
+                                      ->where('month', '<=', $this->bulan);
+                          });
+                });
+            }
+            $q->where('status', 100);
+        };
+
+        // 2. Terapkan closure tersebut ke dalam eager loading
         $query = ProjectRisk::with([
             'project',
             'sasaranProyek',
             'peristiwaRisiko',
-            'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings' => function($q) {
-                $q->whereHas('projectMonitoring', function($sq) {
-                    if ($this->bulan && $this->tahun) {
-                        $sq->where('month', $this->bulan)->where('tahun', $this->tahun);
-                    }
-                    $sq->where('status', 100);
-                });
+            'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings' => function($q) use ($filterUpToPeriod) {
+                $q->whereHas('projectMonitoring', $filterUpToPeriod);
             },
-            'perlakuanDampakRisikos.perlakuanDampakMonitorings' => function($q) {
-                $q->whereHas('projectMonitoring', function($sq) {
-                    if ($this->bulan && $this->tahun) {
-                        $sq->where('month', $this->bulan)->where('tahun', $this->tahun);
-                    }
-                    $sq->where('status', 100);
-                });
+            'perlakuanDampakRisikos.perlakuanDampakMonitorings' => function($q) use ($filterUpToPeriod) {
+                $q->whereHas('projectMonitoring', $filterUpToPeriod);
             },
             'dampakRisikoProjects',
             'projectRiskAnalisa.skalaDampakObj',
             'projectRiskAnalisa.skalaProbabilitas',
-            'projectRiskMonitorings' => function($q) {
-                if ($this->bulan && $this->tahun) {
-                    $q->where('month', $this->bulan)->where('tahun', $this->tahun);
-                }
-                $q->where('status', 100)->orderBy('id', 'desc');
+            'projectRiskMonitorings' => function($q) use ($filterUpToPeriod) {
+                $filterUpToPeriod($q);
+                // Urutkan ke yang paling baru agar saat di-first() dapat data terakhir
+                $q->orderBy('tahun', 'desc')->orderBy('month', 'desc')->orderBy('id', 'desc');
             },
-            'kriProjects.kriProjectMonitorings' => function($q) {
-                $q->whereHas('projectMonitoring', function($sq) {
-                    if ($this->bulan && $this->tahun) {
-                        $sq->where('month', $this->bulan)->where('tahun', $this->tahun);
-                    }
-                    $sq->where('status', 100);
-                })->orderBy('id', 'desc');
+            'kriProjects.kriProjectMonitorings' => function($q) use ($filterUpToPeriod) {
+                $q->whereHas('projectMonitoring', $filterUpToPeriod)->orderBy('id', 'desc');
             }
         ]);
 
-        $query->whereHas('projectRiskMonitorings', function($q) {
-            if ($this->bulan && $this->tahun) {
-                $q->where('month', $this->bulan)->where('tahun', $this->tahun);
-            }
-            $q->where('status', 100);
-        });
+        // 3. Pastikan Risk yang tampil adalah yang memiliki monitoring ter-publish sampai periode tersebut
+        $query->whereHas('projectRiskMonitorings', $filterUpToPeriod);
 
         $query->whereHas('project', function($q) {
             $q->whereDate('masa_pelaksanaan_end', '>=', \Carbon\Carbon::today())
@@ -196,6 +193,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                 foreach ($r->penyebabRisikoProjects as $p) {
                     foreach ($p->perlakuanPenyebabRisiko as $plk) {
                         $rencanaBiayaTotal += $plk->biaya_perlakuan_risiko ?? 0;
+                        // sortByDesc('id')->first() akan aman karena mengambil data terbaru dari list yang sudah terfilter sampai bulan yang dipilih
                         $realisasiBiayaTotal += $plk->perlakuanPenyebabMonitorings->sortByDesc('id')->first()->realisasi_biaya_perlakuan_risiko ?? 0;
                     }
                 }
@@ -237,6 +235,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                 foreach($penyebab->perlakuanPenyebabRisiko as $i => $plk) {
                     $noItem = ($idx+1).'.'.($i+1);
                     $perlakuanPenyebabStr .= $noItem . ' ' . $plk->rencana_perlakuan_risiko . "\n";
+
                     $lastMon = $plk->perlakuanPenyebabMonitorings->sortByDesc('id')->first();
                     $realisasiPerlakuanStr .= "Penyebab $noItem: " . ($lastMon->deskripsi_perlakuan_risiko ?? '-') . "\n";
                     if($plk->pic) $picStr[] = "Penyebab $noItem: " . $plk->pic;
@@ -249,6 +248,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             foreach($risk->perlakuanDampakRisikos as $idx => $pd) {
                 $noList = $idx + 1;
                 $perlakuanDampakStr .= $noList . '. ' . $pd->rencana_perlakuan_risiko . "\n";
+
                 $lastMon = $pd->perlakuanDampakMonitorings->sortByDesc('id')->first();
                 $realisasiPerlakuanStr .= "Dampak $noList: " . ($lastMon->deskripsi_perlakuan_risiko ?? '-') . "\n";
                 if($pd->pic) $picStr[] = "Dampak $noList: " . $pd->pic;
@@ -261,11 +261,23 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             $dampakList = $risk->dampakRisikoProjects->map(fn($item, $k) => ($k + 1) . '. ' . $item->dampak_risiko)->implode("\n");
 
             $analisa = $risk->projectRiskAnalisa;
-            $lastMonitoring = $risk->projectRiskMonitorings->sortByDesc('id')->first();
+
+            // Mengambil monitoring terakhir (karena di query sudah orderBy descending id/tahun/month)
+            $lastMonitoring = $risk->projectRiskMonitorings->first();
 
             $levelResidualRealisasi = '-';
-            if ($lastMonitoring && $lastMonitoring->level_risiko) {
-                $levelResidualRealisasi = $lastMonitoring->level_risiko . ' - ' . ($lastMonitoring->skala_risiko ?? 0);
+            $periodeMonitoringText = '-';
+
+            if ($lastMonitoring) {
+                if ($lastMonitoring->level_risiko) {
+                    $levelResidualRealisasi = $lastMonitoring->level_risiko . ' - ' . ($lastMonitoring->skala_risiko ?? 0);
+                }
+
+                // Set text "Bulan Tahun" (Contoh: "Februari 2024")
+                if ($lastMonitoring->month && $lastMonitoring->tahun) {
+                    $bulanStr = $namaBulan[(int)$lastMonitoring->month] ?? $lastMonitoring->month;
+                    $periodeMonitoringText = $bulanStr . ' ' . $lastMonitoring->tahun;
+                }
             }
 
             $row = [
@@ -319,6 +331,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
 
                 $risk->is_closed ? 'Closed' : 'Open',
                 ((float) $risk->efektivitas_perlakuan_risiko > 0) ? 'Efektif' : 'Tidak Efektif',
+                $periodeMonitoringText,
             ];
 
             $data->push($row);
