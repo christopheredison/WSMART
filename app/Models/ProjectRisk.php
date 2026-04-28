@@ -439,4 +439,14 @@ class ProjectRisk extends Model
             }
         }
     }
+
+    public function publishedMonitoring()
+    {
+        return $this->hasOne(ProjectRiskMonitoring::class, 'risiko_id')
+            ->where(function($query) {
+                $query->where('status', 100)
+                      ->orWhere('is_approved', true);
+            })
+            ->orderBy('id', 'desc');
+    }
 }

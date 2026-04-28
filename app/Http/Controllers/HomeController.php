@@ -2657,7 +2657,7 @@ class HomeController extends Controller
 
         $user = auth()->user();
 
-        // 1. FILTER DIVISI OPERASI: Hanya ambil Unit (Tipe 1) yang memiliki relasi Project
+        // 1. FILTER DIVISI OPERASI
         $units = Unit::where('unit_type_id', 1)
                      ->whereHas('projects')
                      ->orderBy('name')
@@ -2672,7 +2672,6 @@ class HomeController extends Controller
             }
         }
 
-        // Logika Aktif: masa_pelaksanaan_end masih kosong (NULL) ATAU >= akhir bulan cutoff
         $projectQuery->where(function($q) use ($endOfSelectedPeriod) {
             $q->whereNull('masa_pelaksanaan_end')
               ->orWhereDate('masa_pelaksanaan_end', '>=', $endOfSelectedPeriod);
@@ -2681,11 +2680,7 @@ class HomeController extends Controller
         $projects = $projectQuery->get();
         $activeProjectIds = $projects->pluck('id');
         $totalProyekAktif = $projects->count();
-
-        // Hitung jumlah proyek aktif per divisi (cost_center_parent) untuk Pie Chart
         $activeProjectsPerDivisi = $projects->groupBy('cost_center_parent')->map->count();
-
-        // Hitung Total Nilai Kontrak (NK) dari proyek-proyek yang terfilter
         $totalNilaiKontrak = $projects->sum('nk');
 
         // 3. AMBIL SEMUA RISIKO PROYEK (Published & Open)
@@ -2696,14 +2691,9 @@ class HomeController extends Controller
             'projectRiskAnalisa.skalaDampakResidualObj',
             'projectRiskAnalisa.skalaProbabilitasResidual',
             'peristiwaRisiko',
-            'projectRiskMonitorings' => function($q) use ($currentYear, $currentMonth) {
+            'publishedMonitoring' => function($q) use ($currentYear, $currentMonth) {
                 $q->where('tahun', $currentYear)
-                  ->where('month', '<=', $currentMonth)
-                  ->where(function($sq) {
-                      $sq->where('status', 100)->orWhere('is_approved', true);
-                  })
-                  ->orderBy('month', 'desc')
-                  ->orderBy('id', 'desc');
+                  ->where('month', $currentMonth);
             }
         ])
         ->whereIn('project_id', $activeProjectIds)
@@ -2717,11 +2707,8 @@ class HomeController extends Controller
         $totalEksposurInherentSemua = 0;
         $totalEksposurResidualSemua = 0;
         $totalRisikoSemua = $risks->count();
-
-        // 4b. Array untuk Top 10 Proyek
         $projectExposures = [];
 
-        // INISIALISASI: Masukkan SEMUA proyek aktif agar yang bernilai 0 tetap tampil
         foreach ($projects as $proj) {
             $projectExposures[$proj->id] = [
                 'name' => $proj->project_name,
@@ -2736,22 +2723,31 @@ class HomeController extends Controller
             $divName = $units->where('cost_center', $ccParent)->first()->name ?? 'Divisi Lainnya';
 
             $eksposurInherent = (float) $risk->projectRiskAnalisa->eksposur_risiko;
-
             $eksposurResidual = (float) $risk->projectRiskAnalisa->eksposur_risiko_residual;
+            // ========================================================
+            // AMBIL EKSPOSUR REALISASI DARI MONITORING TERPUBLISH
+            // SESUAI BULAN CUTOFF
+            // ========================================================
+            $latestMon = $risk->publishedMonitoring;
 
-            // Grup per Divisi (Untuk Pie Chart) - Menggunakan inherent
+            // Jika ada monitoring ter-publish, gunakan nilai realisasinya.
+            // Jika tidak, fallback ke nilai inherent agar tidak bernilai 0 di awal proyek
+            $eksposurRealisasi = $latestMon ? (float) $latestMon->eksposure_risiko : $eksposurInherent;
+
+            // Grup per Divisi (Untuk Pie Chart) - MENGGUNAKAN REALISASI
             if (!isset($divisiExposures[$divName])) {
                 $divisiExposures[$divName] = ['total_exposure' => 0, 'jumlah_risiko' => 0];
             }
-            $divisiExposures[$divName]['total_exposure'] += $eksposurInherent;
+            $divisiExposures[$divName]['total_exposure'] += $eksposurRealisasi;
             $divisiExposures[$divName]['jumlah_risiko'] += 1;
 
-            // Grup per Project (Untuk Bar Chart) - Menggunakan inherent
+            // Grup per Project (Untuk Bar Chart) - MENGGUNAKAN REALISASI
             $projectId = $risk->project_id;
             if (isset($projectExposures[$projectId])) {
-                $projectExposures[$projectId]['value'] += $eksposurInherent;
+                $projectExposures[$projectId]['value'] += $eksposurRealisasi;
             }
 
+            // Tetap simpan hitungan total Inherent dan Residual untuk Kartu Statistik Atas
             $totalEksposurInherentSemua += $eksposurInherent;
             $totalEksposurResidualSemua += $eksposurResidual;
         }
@@ -2765,23 +2761,23 @@ class HomeController extends Controller
             $pieChartData[] = [
                 'name' => $name,
                 'value' => $data['total_exposure'],
-                'project_count' => $projectCount, // Menggunakan total proyek aktif di divisi tersebut
+                'project_count' => $projectCount,
                 'risk_count' => $data['jumlah_risiko']
             ];
         }
 
         // Format Bar Chart (Sort Descending & Ambil 10 Teratas)
         usort($projectExposures, function($a, $b) {
-            return $b['value'] <=> $a['value']; // Urutkan dari terbesar ke terkecil
+            return $b['value'] <=> $a['value'];
         });
 
         $top10ProjectsExposure = array_slice($projectExposures, 0, 10);
-        $top10ProjectsExposure = array_reverse($top10ProjectsExposure); // Reverse karena ECharts render bar horizontal dari bawah ke atas
+        $top10ProjectsExposure = array_reverse($top10ProjectsExposure);
 
         // 5. DATA TOP 10 RISIKO TERTINGGI (Realisasi)
         $mappedRisks = $risks->map(function($risk) {
             $analisa = $risk->projectRiskAnalisa;
-            $latestMon = $risk->projectRiskMonitorings->first();
+            $latestMon = $risk->publishedMonitoring;
 
             $risk->inherent_dampak = $analisa->nilai_dampak ?? 0;
             $risk->inherent_eksposur = $analisa->eksposur_risiko ?? 0;

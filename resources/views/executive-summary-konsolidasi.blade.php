@@ -80,8 +80,8 @@
     <div class="col-lg-6">
         <div class="card shadow-sm h-100">
             <div class="card-header border-0 pb-0">
-                <h4 class="fw-bold mb-0">Distribusi Total Eksposur Inherent</h4>
-                <small class="text-muted">Per Divisi | Berdasarkan Risiko Kuantitatif</small>
+                <h4 class="fw-bold mb-0">Distribusi Total Eksposur Realisasi</h4>
+                <small class="text-muted">Per Divisi | Berdasarkan Risiko Kuantitatif Ter-update</small>
             </div>
             <div class="card-body min-vh-25">
                 <div id="pieChartEksposur" style="height: 400px;"></div>
@@ -93,7 +93,7 @@
     <div class="col-lg-6">
         <div class="card shadow-sm h-100">
             <div class="card-header border-0 pb-0">
-                <h4 class="fw-bold mb-0">10 Proyek Eksposur Inherent Tertinggi</h4>
+                <h4 class="fw-bold mb-0">10 Proyek Eksposur Realisasi Tertinggi</h4>
                 <small class="text-muted">
                   {{-- Di bulan {{ $formattedPeriod }} |  --}}
                   Berdasarkan Proyek dan Risiko Aktif
@@ -118,7 +118,7 @@
                 <small class="text-muted mt-1">Hanya menampilkan 10 risiko dengan nilai eksposur realisasi tertinggi di bulan {{ $formattedPeriod }}.</small>
             </div>
             <button type="button" class="btn btn-sm btn-outline-primary shadow-sm" id="btnFullscreenMap">
-                <i class="bx bx-fullscreen me-1"></i> Perbesar Peta
+                <span class="bx bx-fullscreen me-1"></span> Perbesar Peta
             </button>
         </div>
     </div>
@@ -324,10 +324,10 @@
 {{-- MODAL DETAIL PETA RISIKO --}}
 <div class="modal fade" id="modalPetaRisiko" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content p-0  border-0 shadow">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title text-white">
-                    <i class="bx bx-list-ul me-2"></i>Daftar Risiko - Tingkat <span id="modalRiskLevel" class="fw-bold"></span>
+                  Daftar Risiko - Tingkat <span id="modalRiskLevel" class="fw-bold"></span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -347,7 +347,7 @@
                 </div>
             </div>
             <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Tutup</button>
             </div>
         </div>
     </div>
@@ -476,7 +476,7 @@ $(document).ready(function() {
                 }
             },
             series: [{
-                name: 'Eksposur Inherent',
+                name: 'Eksposur Realisasi',
                 type: 'pie',
                 radius: ['40%', '70%'],
                 avoidLabelOverlap: false,
@@ -565,7 +565,7 @@ $(document).ready(function() {
                 }
             },
             series: [{
-                name: 'Eksposur Inherent',
+                name: 'Eksposur Realisasi',
                 type: 'bar',
                 // MENGATASI TIPIS VERTIKAL: Kunci ketebalan bar ke 22px
                 barWidth: 22,
@@ -605,10 +605,10 @@ $(document).ready(function() {
         const mapContainer = $('#mapCardContainer');
         mapContainer.toggleClass('fullscreen-container');
         if (mapContainer.hasClass('fullscreen-container')) {
-            $(this).html('<i class="bx bx-exit-fullscreen me-1"></i> Tutup Layar Penuh').removeClass('btn-outline-primary').addClass('btn-danger');
+            $(this).html('<span class="bx bx-exit-fullscreen me-1"></span> Tutup Layar Penuh').removeClass('btn-outline-primary').addClass('btn-danger');
             $('body').css('overflow', 'hidden');
         } else {
-            $(this).html('<i class="bx bx-fullscreen me-1"></i> Perbesar Peta').removeClass('btn-danger').addClass('btn-outline-primary');
+            $(this).html('<span class="bx bx-fullscreen me-1"></span> Perbesar Peta').removeClass('btn-danger').addClass('btn-outline-primary');
             $('body').css('overflow', '');
         }
     });
@@ -684,14 +684,14 @@ $(document).ready(function() {
 
         const createModalRow = (r, type) => {
             let route = `${baseUrl}/${r.project_periode_list_id}/risks/${r.risk_id}/view`;
-            let badgeClass = type === 'Inherent' ? 'bg-light text-dark border' : (type === 'Residual' ? 'bg-dark text-white' : 'bg-primary text-white');
+            let badgeClass = type === 'Inherent' ? 'bg-white text-dark border border-dark' : (type === 'Residual' ? 'bg-dark text-white' : 'bg-primary text-white');
             return `
                 <tr>
                     <td class="text-center">
                         <div class="fw-bold mb-1">${r.riskNumber}</div>
                         <span class="badge ${badgeClass} w-100">${type}</span>
                     </td>
-                    <td><span class="badge bg-info text-dark w-100 text-wrap text-start">${r.project_name}</span></td>
+                    <td><span class="text-dark w-100 text-wrap text-start">${r.project_name}</span></td>
                     <td>${r.peristiwa}</td>
                     <td class="text-center">
                         <a href="${route}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bx bx-link-external me-1"></i>Detail</a>
