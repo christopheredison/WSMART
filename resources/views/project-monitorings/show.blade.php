@@ -829,123 +829,367 @@
 
                         <ul class="nav nav-tabs nav-line-tabs mb-4">
                             <li class="nav-item">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#tab_penyebab_{{ $monitoring->id }}">Perlakuan Penyebab</a>
+                                <a class="nav-link active" data-bs-toggle="tab" href="#tab_penyebab_{{ $monitoring->id }}">
+                                    Perlakuan Penyebab
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#tab_dampak_{{ $monitoring->id }}">Perlakuan Dampak</a>
+                                <a class="nav-link" data-bs-toggle="tab" href="#tab_dampak_{{ $monitoring->id }}">
+                                    Perlakuan Dampak
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#tab_kri_{{ $monitoring->id }}">Realisasi KRI</a>
+                                <a class="nav-link" data-bs-toggle="tab" href="#tab_kri_{{ $monitoring->id }}">
+                                    Realisasi KRI
+                                </a>
                             </li>
                         </ul>
 
                         <div class="tab-content">
+
+                            {{-- ===== TAB PENYEBAB ===== --}}
                             <div class="tab-pane fade show active" id="tab_penyebab_{{ $monitoring->id }}" role="tabpanel">
                                 @php
                                     $groupedPenyebab = $monitoring->perlakuanPenyebabMonitorings->groupBy(function($item) {
                                         return $item->perlakuanPenyebab->penyebabRisikoProject->penyebab_risiko ?? 'Lainnya';
                                     });
                                 @endphp
-                                @foreach($groupedPenyebab as $penyebabName => $items)
+
+                                @forelse($groupedPenyebab as $penyebabName => $items)
                                     <div class="card mb-3 border-0 shadow-sm">
                                         <div class="card-body p-4">
                                             <div class="mb-3 border-bottom pb-2">
                                                 <label class="text-muted fw-bold small text-uppercase">Penyebab Risiko</label>
                                                 <div class="fw-bold text-dark">{{ $penyebabName }}</div>
                                             </div>
-                                            <table class="table table-bordered align-top small">
-                                                <thead class="bg-light fw-bold text-muted">
-                                                    <tr>
-                                                        <th width="45%">Rencana Perlakuan</th>
-                                                        <th width="55%">Realisasi & Dokumen</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach($items as $realisasi)
-                                                        <tr>
-                                                            <td>
-                                                                <strong class="text-primary">{{ $realisasi->perlakuanPenyebab->rencana_perlakuan_risiko ?? '-' }}</strong>
-                                                                <div class="mt-3 small">
-                                                                    <div class="text-muted">Anggaran: <span class="text-dark fw-bold">Rp {{ number_format($realisasi->perlakuanPenyebab->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</span></div>
-                                                                    <div class="text-muted">PIC: <span class="text-dark">{{ $realisasi->perlakuanPenyebab->pic ?? '-' }}</span></div>
+
+                                            @foreach($items as $realisasi)
+                                                @php
+                                                    // Ambil dokumen berdasarkan perlakuan_penyebab_risiko_id
+                                                    // yang tersimpan di monitoring ini (via project_monitoring_id)
+                                                    $docsForThis = $monitoring->perlakuanPenyebabRisikoDocuments
+                                                        ->where('perlakuan_penyebab_risiko_id', $realisasi->perlakuan_penyebab_id);
+
+                                                    // Fallback: ambil dari $filesPenyebab jika relasi via monitoring kosong
+                                                    if ($docsForThis->isEmpty()) {
+                                                        $docsForThis = collect($filesPenyebab[$realisasi->perlakuan_penyebab_id] ?? []);
+                                                    }
+
+                                                    $accordionId = 'acc-penyebab-' . $monitoring->id . '-' . $realisasi->id;
+                                                @endphp
+
+                                                <div class="border rounded mb-3 overflow-hidden">
+                                                    {{-- Header Info Rencana --}}
+                                                    <div class="d-flex align-items-start gap-3 p-3 bg-white">
+                                                        <div class="flex-grow-1">
+                                                            <div class="fw-bold text-primary mb-1">
+                                                                {{ $realisasi->perlakuanPenyebab->rencana_perlakuan_risiko ?? '-' }}
+                                                            </div>
+                                                            <div class="d-flex gap-3 flex-wrap small text-muted">
+                                                                <span>
+                                                                    <i class='bx bx-money me-1'></i>
+                                                                    Anggaran: <strong class="text-dark">Rp {{ number_format($realisasi->perlakuanPenyebab->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</strong>
+                                                                </span>
+                                                                <span>
+                                                                    <i class='bx bx-user me-1'></i>
+                                                                    PIC: <strong class="text-dark">{{ $realisasi->perlakuanPenyebab->pic ?? '-' }}</strong>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- Realisasi Stats --}}
+                                                    <div class="bg-light border-top border-bottom px-3 py-2">
+                                                        <div class="row text-center small g-0">
+                                                            <div class="col-4 border-end py-2">
+                                                                <div class="text-muted mb-1">Progress</div>
+                                                                <div class="fw-bold fs-6">
+                                                                    {{ $realisasi->progress_rencana_perlakuan_risiko ?? 0 }}%
                                                                 </div>
-                                                            </td>
-                                                            <td>
-                                                                <div class="mb-2"><strong>Deskripsi:</strong> {{ $realisasi->deskripsi_perlakuan_risiko ?? '-' }}</div>
-                                                                <div class="bg-light p-2 border rounded mb-2">
-                                                                    <div class="row text-center">
-                                                                        <div class="col-4">Progress: <strong>{{ $realisasi->progress_rencana_perlakuan_risiko }}%</strong></div>
-                                                                        <div class="col-4">Biaya: <strong>Rp {{ number_format($realisasi->realisasi_biaya_perlakuan_risiko, 0, ',', '.') }}</strong></div>
-                                                                        <div class="col-4">Tgl Realisasi: <strong>{{ $realisasi->timeline_perlakuan_risiko_start ? \Carbon\Carbon::parse($realisasi->timeline_perlakuan_risiko_start)->format('d/m/Y') : '-' }}</strong></div>
+                                                                {{-- Progress Bar --}}
+                                                                <div class="progress mt-1" style="height: 4px;">
+                                                                    <div class="progress-bar bg-primary" role="progressbar"
+                                                                        style="width: {{ $realisasi->progress_rencana_perlakuan_risiko ?? 0 }}%">
                                                                     </div>
                                                                 </div>
-                                                                @php $docs = $monitoring->perlakuanPenyebabRisikoDocuments->where('perlakuan_penyebab_risiko_id', $realisasi->perlakuan_penyebab_id); @endphp
-                                                                @if($docs->isNotEmpty())
-                                                                    <div class="small mt-2"><strong>Dokumen:</strong>
-                                                                        @foreach($docs as $doc)
-                                                                            <a href="{{ asset('storage/' . $doc->file_path) }}" target="_blank" class="badge bg-secondary text-primary text-decoration-none mt-1 mr-1 p-2"><i class="bx bx-paperclip"></i> {{ $doc->file_name }}</a>
-                                                                        @endforeach
-                                                                    </div>
-                                                                @endif
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
+                                                            </div>
+                                                            <div class="col-4 border-end py-2">
+                                                                <div class="text-muted mb-1">Realisasi Biaya</div>
+                                                                <div class="fw-bold text-success">
+                                                                    Rp {{ number_format($realisasi->realisasi_biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-4 py-2">
+                                                                <div class="text-muted mb-1">Tgl Realisasi</div>
+                                                                <div class="fw-bold">
+                                                                    {{ $realisasi->timeline_perlakuan_risiko_start
+                                                                        ? \Carbon\Carbon::parse($realisasi->timeline_perlakuan_risiko_start)->format('d/m/Y')
+                                                                        : '-' }}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- Deskripsi --}}
+                                                    <div class="px-3 py-2 bg-white small">
+                                                        <span class="text-muted">Deskripsi:</span>
+                                                        {{ $realisasi->deskripsi_perlakuan_risiko ?? '-' }}
+                                                    </div>
+
+                                                    {{-- Accordion Dokumen --}}
+                                                    <div class="accordion accordion-flush border-top" id="{{ $accordionId }}">
+                                                        <div class="accordion-item border-0">
+                                                            <h2 class="accordion-header">
+                                                                <button class="accordion-button collapsed py-2 px-3 small fw-semibold bg-white"
+                                                                        type="button"
+                                                                        data-bs-toggle="collapse"
+                                                                        data-bs-target="#collapse-{{ $accordionId }}"
+                                                                        aria-expanded="false">
+                                                                    <i class='bx bx-paperclip me-2 text-secondary'></i>
+                                                                    Dokumen Evidence
+                                                                    @if($docsForThis->count() > 0)
+                                                                        <span class="badge bg-primary ms-2 rounded-pill">{{ $docsForThis->count() }}</span>
+                                                                    @endif
+                                                                </button>
+                                                            </h2>
+                                                            <div id="collapse-{{ $accordionId }}"
+                                                                class="accordion-collapse collapse"
+                                                                data-bs-parent="#{{ $accordionId }}">
+                                                                <div class="accordion-body pt-0 px-3 pb-3">
+                                                                    @if($docsForThis->count() > 0)
+                                                                        <div class="d-flex flex-wrap gap-2 pt-2">
+                                                                            @foreach($docsForThis as $doc)
+                                                                                @php
+                                                                                    $ext = strtolower(pathinfo($doc->file_name, PATHINFO_EXTENSION));
+                                                                                    $iconClass = match($ext) {
+                                                                                        'pdf' => 'bxs-file-pdf text-danger',
+                                                                                        'doc', 'docx' => 'bxs-file-doc text-primary',
+                                                                                        'xls', 'xlsx' => 'bxs-file text-success',
+                                                                                        'jpg', 'jpeg', 'png' => 'bxs-image text-info',
+                                                                                        default => 'bxs-file-blank text-secondary'
+                                                                                    };
+                                                                                @endphp
+                                                                                <a href="{{ asset('storage/' . $doc->file_path) }}"
+                                                                                  target="_blank"
+                                                                                  class="text-decoration-none"
+                                                                                  title="{{ $doc->description ?: $doc->file_name }}">
+                                                                                    <div class="border rounded p-2 bg-light d-flex align-items-center gap-2"
+                                                                                        style="max-width: 220px; min-width: 160px;">
+                                                                                        <i class='bx {{ $iconClass }} fs-4 flex-shrink-0'></i>
+                                                                                        <div class="overflow-hidden">
+                                                                                            <div class="text-dark small fw-semibold text-truncate"
+                                                                                                style="max-width: 150px;">
+                                                                                                {{ $doc->file_name }}
+                                                                                            </div>
+                                                                                            @if($doc->description)
+                                                                                                <div class="text-muted" style="font-size: 0.7rem;">
+                                                                                                    {{ Str::limit($doc->description, 30) }}
+                                                                                                </div>
+                                                                                            @endif
+                                                                                        </div>
+                                                                                        <i class='bx bx-download text-muted ms-auto flex-shrink-0'></i>
+                                                                                    </div>
+                                                                                </a>
+                                                                            @endforeach
+                                                                        </div>
+                                                                    @else
+                                                                        <div class="text-center py-3 text-muted small fst-italic">
+                                                                            <i class='bx bx-folder-open fs-4 d-block mb-1'></i>
+                                                                            Tidak ada dokumen yang dilampirkan.
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                </div>{{-- end .border.rounded --}}
+                                            @endforeach
+
                                         </div>
                                     </div>
-                                @endforeach
+                                @empty
+                                    <div class="text-center py-4 text-muted fst-italic">
+                                        <i class='bx bx-info-circle fs-3 d-block mb-2'></i>
+                                        Tidak ada data perlakuan penyebab pada periode ini.
+                                    </div>
+                                @endforelse
                             </div>
 
+                            {{-- ===== TAB DAMPAK ===== --}}
                             <div class="tab-pane fade" id="tab_dampak_{{ $monitoring->id }}" role="tabpanel">
                                 @php
                                     $groupedDampak = $monitoring->perlakuanDampakMonitorings->groupBy(function($item) {
                                         return $item->perlakuanDampak->dampakRisikoProject->dampak_risiko ?? 'Lainnya';
                                     });
                                 @endphp
-                                @foreach($groupedDampak as $dampakName => $items)
+
+                                @forelse($groupedDampak as $dampakName => $items)
                                     <div class="card mb-3 border-0 shadow-sm">
                                         <div class="card-body p-4">
                                             <div class="mb-3 border-bottom pb-2">
                                                 <label class="text-muted fw-bold small text-uppercase">Dampak Risiko</label>
                                                 <div class="fw-bold text-dark">{{ $dampakName }}</div>
                                             </div>
-                                            <table class="table table-bordered align-top small">
-                                                <thead class="bg-light fw-bold text-muted">
-                                                    <tr>
-                                                        <th width="45%">Rencana Perlakuan</th>
-                                                        <th width="55%">Realisasi</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach($items as $realisasi)
-                                                        <tr>
-                                                            <td>
-                                                                <strong class="text-warning text-dark">{{ $realisasi->perlakuanDampak->rencana_perlakuan_risiko ?? '-' }}</strong>
-                                                                <div class="mt-3 small">
-                                                                    <div class="text-muted">Anggaran: <span class="text-dark fw-bold">Rp {{ number_format($realisasi->perlakuanDampak->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</span></div>
-                                                                    <div class="text-muted">PIC: <span class="text-dark">{{ $realisasi->perlakuanDampak->pic ?? '-' }}</span></div>
+
+                                            @foreach($items as $realisasi)
+                                                @php
+                                                    // Ambil dokumen berdasarkan perlakuan_dampak_risiko_id
+                                                    // yang tersimpan di monitoring ini
+                                                    $docsForThisDampak = $monitoring->perlakuanDampakRisikoDocuments
+                                                        ->where('perlakuan_dampak_risiko_id', $realisasi->perlakuan_dampak_id);
+
+                                                    // Fallback: ambil dari $filesDampak jika kosong
+                                                    if ($docsForThisDampak->isEmpty()) {
+                                                        $docsForThisDampak = collect($filesDampak[$realisasi->perlakuan_dampak_id] ?? []);
+                                                    }
+
+                                                    $accordionIdDampak = 'acc-dampak-' . $monitoring->id . '-' . $realisasi->id;
+                                                @endphp
+
+                                                <div class="border rounded mb-3 overflow-hidden">
+                                                    {{-- Header Info Rencana --}}
+                                                    <div class="d-flex align-items-start gap-3 p-3 bg-white">
+                                                        <div class="flex-grow-1">
+                                                            <div class="fw-bold text-warning-emphasis mb-1">
+                                                                {{ $realisasi->perlakuanDampak->rencana_perlakuan_risiko ?? '-' }}
+                                                            </div>
+                                                            <div class="d-flex gap-3 flex-wrap small text-muted">
+                                                                <span>
+                                                                    <i class='bx bx-money me-1'></i>
+                                                                    Anggaran: <strong class="text-dark">Rp {{ number_format($realisasi->perlakuanDampak->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</strong>
+                                                                </span>
+                                                                <span>
+                                                                    <i class='bx bx-user me-1'></i>
+                                                                    PIC: <strong class="text-dark">{{ $realisasi->perlakuanDampak->pic ?? '-' }}</strong>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- Realisasi Stats --}}
+                                                    <div class="bg-light border-top border-bottom px-3 py-2">
+                                                        <div class="row text-center small g-0">
+                                                            <div class="col-4 border-end py-2">
+                                                                <div class="text-muted mb-1">Progress</div>
+                                                                <div class="fw-bold fs-6">
+                                                                    {{ $realisasi->progress_rencana_perlakuan_risiko ?? 0 }}%
                                                                 </div>
-                                                            </td>
-                                                            <td>
-                                                                <div class="mb-2"><strong>Deskripsi:</strong> {{ $realisasi->deskripsi_perlakuan_risiko ?? '-' }}</div>
-                                                                <div class="bg-light p-2 border rounded mb-2">
-                                                                    <div class="row text-center">
-                                                                        <div class="col-4">Progress: <strong>{{ $realisasi->progress_rencana_perlakuan_risiko }}%</strong></div>
-                                                                        <div class="col-4">Biaya: <strong>Rp {{ number_format($realisasi->realisasi_biaya_perlakuan_risiko, 0, ',', '.') }}</strong></div>
-                                                                        <div class="col-4">Tgl Realisasi: <strong>{{ $realisasi->timeline_perlakuan_risiko_start ? \Carbon\Carbon::parse($realisasi->timeline_perlakuan_risiko_start)->format('d/m/Y') : '-' }}</strong></div>
+                                                                <div class="progress mt-1" style="height: 4px;">
+                                                                    <div class="progress-bar bg-warning" role="progressbar"
+                                                                        style="width: {{ $realisasi->progress_rencana_perlakuan_risiko ?? 0 }}%">
                                                                     </div>
                                                                 </div>
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
+                                                            </div>
+                                                            <div class="col-4 border-end py-2">
+                                                                <div class="text-muted mb-1">Realisasi Biaya</div>
+                                                                <div class="fw-bold text-success">
+                                                                    Rp {{ number_format($realisasi->realisasi_biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-4 py-2">
+                                                                <div class="text-muted mb-1">Tgl Realisasi</div>
+                                                                <div class="fw-bold">
+                                                                    {{ $realisasi->timeline_perlakuan_risiko_start
+                                                                        ? \Carbon\Carbon::parse($realisasi->timeline_perlakuan_risiko_start)->format('d/m/Y')
+                                                                        : '-' }}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- Deskripsi --}}
+                                                    <div class="px-3 py-2 bg-white small">
+                                                        <span class="text-muted">Deskripsi:</span>
+                                                        {{ $realisasi->deskripsi_perlakuan_risiko ?? '-' }}
+                                                    </div>
+
+                                                    {{-- Accordion Dokumen --}}
+                                                    <div class="accordion accordion-flush border-top" id="{{ $accordionIdDampak }}">
+                                                        <div class="accordion-item border-0">
+                                                            <h2 class="accordion-header">
+                                                                <button class="accordion-button collapsed py-2 px-3 small fw-semibold bg-white"
+                                                                        type="button"
+                                                                        data-bs-toggle="collapse"
+                                                                        data-bs-target="#collapse-{{ $accordionIdDampak }}"
+                                                                        aria-expanded="false">
+                                                                    <i class='bx bx-paperclip me-2 text-secondary'></i>
+                                                                    Dokumen Evidence
+                                                                    @if($docsForThisDampak->count() > 0)
+                                                                        <span class="badge bg-warning ms-2 rounded-pill text-dark">{{ $docsForThisDampak->count() }}</span>
+                                                                    @endif
+                                                                </button>
+                                                            </h2>
+                                                            <div id="collapse-{{ $accordionIdDampak }}"
+                                                                class="accordion-collapse collapse"
+                                                                data-bs-parent="#{{ $accordionIdDampak }}">
+                                                                <div class="accordion-body pt-0 px-3 pb-3">
+                                                                    @if($docsForThisDampak->count() > 0)
+                                                                        <div class="d-flex flex-wrap gap-2 pt-2">
+                                                                            @foreach($docsForThisDampak as $doc)
+                                                                                @php
+                                                                                    $ext = strtolower(pathinfo($doc->file_name ?? '', PATHINFO_EXTENSION));
+                                                                                    $iconClass = match($ext) {
+                                                                                        'pdf' => 'bxs-file-pdf text-danger',
+                                                                                        'doc', 'docx' => 'bxs-file-doc text-primary',
+                                                                                        'xls', 'xlsx' => 'bxs-file text-success',
+                                                                                        'jpg', 'jpeg', 'png' => 'bxs-image text-info',
+                                                                                        default => 'bxs-file-blank text-secondary'
+                                                                                    };
+                                                                                    // Handle jika $doc adalah array (dari $filesDampak) atau object (dari relasi)
+                                                                                    $fileName = is_array($doc) ? $doc['file_name'] : $doc->file_name;
+                                                                                    $filePath = is_array($doc) ? $doc['file_path'] : $doc->file_path;
+                                                                                    $fileDesc = is_array($doc) ? ($doc['description'] ?? '') : ($doc->description ?? '');
+                                                                                    $fileUrl   = is_array($doc) ? ($doc['url'] ?? asset('storage/' . $filePath)) : $doc->url;
+                                                                                @endphp
+                                                                                <a href="{{ $fileUrl }}"
+                                                                                  target="_blank"
+                                                                                  class="text-decoration-none"
+                                                                                  title="{{ $fileDesc ?: $fileName }}">
+                                                                                    <div class="border rounded p-2 bg-light d-flex align-items-center gap-2"
+                                                                                        style="max-width: 220px; min-width: 160px;">
+                                                                                        <i class='bx {{ $iconClass }} fs-4 flex-shrink-0'></i>
+                                                                                        <div class="overflow-hidden">
+                                                                                            <div class="text-dark small fw-semibold text-truncate"
+                                                                                                style="max-width: 150px;">
+                                                                                                {{ $fileName }}
+                                                                                            </div>
+                                                                                            @if($fileDesc)
+                                                                                                <div class="text-muted" style="font-size: 0.7rem;">
+                                                                                                    {{ Str::limit($fileDesc, 30) }}
+                                                                                                </div>
+                                                                                            @endif
+                                                                                        </div>
+                                                                                        <i class='bx bx-download text-muted ms-auto flex-shrink-0'></i>
+                                                                                    </div>
+                                                                                </a>
+                                                                            @endforeach
+                                                                        </div>
+                                                                    @else
+                                                                        <div class="text-center py-3 text-muted small fst-italic">
+                                                                            <i class='bx bx-folder-open fs-4 d-block mb-1'></i>
+                                                                            Tidak ada dokumen yang dilampirkan.
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                </div>{{-- end .border.rounded --}}
+                                            @endforeach
+
                                         </div>
                                     </div>
-                                @endforeach
+                                @empty
+                                    <div class="text-center py-4 text-muted fst-italic">
+                                        <i class='bx bx-info-circle fs-3 d-block mb-2'></i>
+                                        Tidak ada data perlakuan dampak pada periode ini.
+                                    </div>
+                                @endforelse
                             </div>
 
+                            {{-- ===== TAB KRI (tidak berubah) ===== --}}
                             <div class="tab-pane fade" id="tab_kri_{{ $monitoring->id }}" role="tabpanel">
                                 <div class="card card-body shadow-sm border-0">
                                     <table class="table table-bordered align-middle">
@@ -963,7 +1207,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach($monitoring->kriProyekMonitorings as $realisasiKri)
+                                            @forelse($monitoring->kriProyekMonitorings as $realisasiKri)
                                                 <tr>
                                                     <td>
                                                         <div class="fw-bold">{{ $realisasiKri->kriProject->kri ?? '-' }}</div>
@@ -984,12 +1228,19 @@
                                                         </span>
                                                     </td>
                                                 </tr>
-                                            @endforeach
+                                            @empty
+                                                <tr>
+                                                    <td colspan="6" class="text-center py-3 text-muted fst-italic">
+                                                        Tidak ada data KRI pada periode ini.
+                                                    </td>
+                                                </tr>
+                                            @endforelse
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
-                        </div>
+
+                        </div>{{-- end .tab-content --}}
                     </div>
                 </div>
             </div>
