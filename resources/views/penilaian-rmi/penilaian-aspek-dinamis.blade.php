@@ -42,53 +42,62 @@
                     <div class="card-body">
 
                       @foreach($parameter->criteria as $criteria)
-                      <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                          <strong>Kriteria {{ $loop->iteration }}</strong>
+                      <div class="mb-4 border-bottom pb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                          <strong class="text-primary">Kriteria {{ $loop->iteration }}</strong>
                           <div class="d-flex gap-2">
-                            <select class="form-select form-select-sm w-auto"
-                                    name="scores[{{ $criteria->id }}]">
-                              <option value="" disabled {{ !isset($scores[$criteria->id]) ? 'selected' : '' }}>Score</option>
+                            <select class="form-select form-select-sm w-auto" name="scores[{{ $criteria->id }}]" data-fieldname="Score: Parameter {{ $loop->parent->iteration }}, Kriteria {{ $loop->iteration }}">
+                              <option value="" disabled {{ !isset($scores[$criteria->id]) ? 'selected' : '' }}>Pilih Score</option>
                               @for($i = $criteria->min_score; $i <= $criteria->max_score; $i++)
                                 <option value="{{ $i }}" {{ isset($scores[$criteria->id]) && $scores[$criteria->id] == $i ? 'selected' : '' }}>
                                   {{ $i }}
                                 </option>
                               @endfor
                             </select>
+
+                            @php
+                              $isGapFilled = !empty($gapAnalysis[$criteria->id]);
+                              $btnClass = $isGapFilled ? 'btn-primary' : 'btn-outline-primary';
+                              $btnIcon = $isGapFilled ? 'bx-check-circle' : 'bx-file';
+                            @endphp
                             <button type="button"
-                                    class="btn btn-sm btn-outline-primary"
+                                    class="btn btn-sm {{ $btnClass }} btn-gap-modal"
                                     data-bs-toggle="modal"
                                     data-bs-target="#modalKriteria{{ $criteria->id }}">
-                              <i class="bx bx-file"></i>
+                              <span class="bx {{ $btnIcon }} me-1"></span> Gap Analysis
                             </button>
                           </div>
                         </div>
-                        <div class="d-flex gap-2">
+
+                        <div class="row g-2 align-items-stretch">
                           @foreach($criteria->details->sortBy('level') as $detail)
-                          <div class="flex-fill">
-                            @php
-                              $bgClass = match($detail->level) {
-                                1 => 'bg-primary',
-                                2 => 'bg-info',
-                                3 => 'bg-success',
-                                4 => 'bg-warning',
-                                5 => 'bg-info',
-                                default => 'bg-light'
-                              };
-                              $levelText = match($detail->level) {
-                                1 => 'Initial Phase',
-                                2 => 'Emerging State',
-                                3 => 'Good Practice',
-                                4 => 'Strong Practice',
-                                5 => 'Best Practice',
-                                default => 'Level ' . $detail->level
-                              };
-                            @endphp
-                            <div class="p-2 text-center {{ $bgClass }} text-white">
-                              <strong>{{ $detail->level }} {{ $levelText }}</strong>
-                            </div>
-                            <div class="p-3 border text-start">
-                              <small>{{ $detail->criteria }}</small>
+                          @php
+                            $bgClass = match($detail->level) {
+                              1 => 'bg-primary',
+                              2 => 'bg-info',
+                              3 => 'bg-success',
+                              4 => 'bg-warning text-dark',
+                              5 => 'bg-danger',
+                              default => 'bg-secondary'
+                            };
+                            $levelText = match($detail->level) {
+                              1 => 'Initial Phase',
+                              2 => 'Emerging State',
+                              3 => 'Good Practice',
+                              4 => 'Strong Practice',
+                              5 => 'Best Practice',
+                              default => 'Level ' . $detail->level
+                            };
+                          @endphp
+                          <div class="col-md">
+                            <div class="card h-100 border shadow-none">
+                              <div class="card-header p-2 text-center {{ $bgClass }} {{ $detail->level == 4 ? '' : 'text-white' }}">
+                                <small class="fw-bold d-block">{{ $detail->level }}</small>
+                                <small>{{ $levelText }}</small>
+                              </div>
+                              <div class="card-body p-2 text-start bg-white">
+                                <small class="text-dark">{{ $detail->criteria }}</small>
+                              </div>
                             </div>
                           </div>
                           @endforeach
@@ -104,8 +113,8 @@
                             </div>
                             <div class="modal-body">
                               <div class="mb-3">
-                                <label class="form-label">Gap Analysis</label>
-                                <textarea name="gap_analysis[{{ $criteria->id }}]" class="form-control" rows="4">{{ old('gap_analysis.' . $criteria->id, $gapAnalysis[$criteria->id] ?? '') }}</textarea>
+                                <label class="form-label">Gap Analysis <span class="text-danger">*</span></label>
+                                <textarea name="gap_analysis[{{ $criteria->id }}]" class="form-control" rows="4" data-fieldname="Gap Analysis: Parameter {{ $loop->parent->iteration }}, Kriteria {{ $loop->iteration }}">{{ old('gap_analysis.' . $criteria->id, $gapAnalysis[$criteria->id] ?? '') }}</textarea>
                               </div>
                               <div class="mb-3">
                                 <label class="form-label">Upload Dokumen 1</label>
@@ -236,35 +245,107 @@
     $('#btn-finish, #floatingFinishBtn').click(function(e) {
       e.preventDefault();
 
-      const emptyScores = $('select[name^="scores"]').filter(function() {
-        return $(this).val() === null || $(this).val() === '';
+      let isValid = true;
+      let firstInvalidElement = null;
+      let errorMessages = []; // Array untuk menampung nama field yang kosong
+
+      // 1. Reset semua styling error
+      $('select[name^="scores"]').removeClass('is-invalid');
+      $('textarea[name^="gap_analysis"]').removeClass('is-invalid');
+      $('.btn-gap-modal').removeClass('btn-danger text-white');
+
+      // 2. Validasi Score
+      $('select[name^="scores"]').each(function() {
+        if ($(this).val() === null || $(this).val() === '') {
+          isValid = false;
+          $(this).addClass('is-invalid');
+
+          // Ambil nama dari data-fieldname dan masukkan ke array
+          errorMessages.push('<li>' + $(this).data('fieldname') + '</li>');
+
+          if (!firstInvalidElement) firstInvalidElement = $(this);
+        }
       });
 
-      if (emptyScores.length > 0) {
-        // Ganti alert bawaan menjadi SweetAlert error
+      // 3. Validasi Gap Analysis
+      $('textarea[name^="gap_analysis"]').each(function() {
+        if ($(this).val().trim() === '') {
+          isValid = false;
+          $(this).addClass('is-invalid');
+
+          let modalId = $(this).closest('.modal').attr('id');
+          let triggerBtn = $('button[data-bs-target="#' + modalId + '"]');
+          triggerBtn.removeClass('btn-primary btn-outline-primary').addClass('btn-danger text-white');
+
+          // Ambil nama dari data-fieldname dan masukkan ke array
+          errorMessages.push('<li>' + $(this).data('fieldname') + '</li>');
+
+          if (!firstInvalidElement) firstInvalidElement = triggerBtn;
+        }
+      });
+
+      // 4. Jika ada error, tampilkan List Error spesifik di SweetAlert
+      if (!isValid) {
+        // Bungkus array errorMessages menjadi HTML ul/li
+        let errorHtml = '<div class="text-start" style="max-height: 250px; overflow-y: auto;">' +
+                          '<p class="mb-2 text-dark">Mohon lengkapi bagian berikut:</p>' +
+                          '<ul class="text-danger ps-3 mb-0" style="font-size: 0.95rem;">' +
+                            errorMessages.join('') +
+                          '</ul>' +
+                        '</div>';
+
         Swal.fire({
           icon: 'error',
           title: 'Penilaian Belum Lengkap!',
-          text: 'Mohon lengkapi semua penilaian parameter sebelum menyelesaikan.',
+          html: errorHtml, // Menggunakan param html, bukan text
           confirmButtonColor: '#0d6efd'
         }).then(() => {
-          $('html, body').animate({
-            scrollTop: $(emptyScores[0]).offset().top - 100
-          }, 500);
-          $(emptyScores[0]).focus();
+          if (firstInvalidElement) {
+            $('html, body').animate({
+              scrollTop: firstInvalidElement.offset().top - 150
+            }, 500);
+
+            if (firstInvalidElement.is('select')) {
+                firstInvalidElement.focus();
+            }
+          }
         });
-        return; // Hentikan eksekusi script disini
+        return;
       }
 
-      // Jika lolos validasi, munculkan konfirmasi
+      // Lolos validasi -> Submit
       submitWithLoadingAndConfirmation(
         'finish',
         'Selesaikan Penilaian?',
         'Pastikan semua data dan gap analysis sudah benar. Data yang diselesaikan akan diproses ke tahap selanjutnya.',
         'Ya, Selesaikan!',
-        '#198754' // Hijau success
+        '#198754'
       );
     });
+
+    // EVENT LISTENER: Hapus border merah saat user memilih Score
+    $(document).on('change', 'select[name^="scores"]', function() {
+      $(this).removeClass('is-invalid');
+    });
+
+// EVENT LISTENER: Ubah warna dan icon (Check) tombol Modal secara LIVE
+$(document).on('input', 'textarea[name^="gap_analysis"]', function() {
+  $(this).removeClass('is-invalid');
+
+  let modalId = $(this).closest('.modal').attr('id');
+  let triggerBtn = $('button[data-bs-target="#' + modalId + '"]');
+  let icon = triggerBtn.find('i');
+
+  if ($(this).val().trim() !== '') {
+    // Jika terisi -> Tombol Solid Biru, icon Check Circle
+    triggerBtn.removeClass('btn-danger btn-outline-primary').addClass('btn-primary text-white');
+    icon.removeClass('bx-file').addClass('bx-check-circle');
+  } else {
+    // Jika kosong -> Tombol Outline Biru, icon File
+    triggerBtn.removeClass('btn-danger btn-primary text-white').addClass('btn-outline-primary');
+    icon.removeClass('bx-check-circle').addClass('bx-file');
+  }
+});
 
     // Action SIMPAN SEMENTARA (Berlaku untuk button form & floating)
     $('#btn-save, #floatingSaveBtn').click(function(e) {
