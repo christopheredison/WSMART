@@ -283,7 +283,8 @@
             </div>
         </div>
 
-        {{-- <div class="col-12">
+        @if($risk->taksonomiRisiko)
+        <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
                     <h4 class="mb-0 ff-heading-sm">Informasi Taksonomi & Paramter</h4>
@@ -415,7 +416,8 @@
                 </div>
             </div>
         </div>
-        @endif --}}
+        @endif
+        @endif
 
         <div class="col-12">
             <div class="divider my-3 my-md-5">

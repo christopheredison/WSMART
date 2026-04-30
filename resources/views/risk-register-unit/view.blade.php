@@ -284,14 +284,16 @@
                             </div>
                         </div>
                     </div>
-                    {{-- <div class="col-md-12">
+                    @if ($risiko->taksonomiRisiko)
+                    <div class="col-md-12">
                         <div class="form-group">
                             <label class="form-label fw-bold">Taksonomi Danantara</label>
                             <div class="p-3 bg-light rounded">
                               {{ $risiko->taksonomiRisiko?->nama ?? '-' }}
                             </div>
                         </div>
-                    </div> --}}
+                    </div>
+                    @endif
                     {{-- <div class="col-12">
                         <div class="form-group">
                             <label class="form-label fw-bold">Jenis Risiko T2 & T3 KBUMN</label>
@@ -330,7 +332,8 @@
     </div>
     <!-- ::DataRisiko End -->
 
-    {{-- <div class="col-12 mb-4">
+    @if($risiko->parameterRisikos && $risiko->parameterRisikos->isNotEmpty())
+    <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
@@ -366,7 +369,9 @@
             </div>
         </div>
     </div>
+    @endif
 
+    @if($risiko->threshold_risk_limit > 0 || $risiko->threshold_risk_appetite > 0 || $risiko->threshold_risk_tolerance > 0)
     <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header stepper border-0 pb-0">
@@ -398,7 +403,8 @@
                 </div>
             </div>
         </div>
-    </div> --}}
+    </div>
+    @endif
 
     <!-- ::DampakRisiko Start -->
     <div class="col-12 mb-4">

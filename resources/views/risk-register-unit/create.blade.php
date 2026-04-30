@@ -60,8 +60,9 @@
                                 </div>
                             </div>
                         </div>
+                        @if($danantara)
                         {{-- Hide Danantara --}}
-                        {{-- <div class="col-md-12">
+                        <div class="col-md-12">
                             <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Danantara</label>
                                 <div class="w-100">
@@ -75,7 +76,8 @@
                                     </select>
                                 </div>
                             </div>
-                        </div> --}}
+                        </div>
+                        @endif
                         {{-- <div class="col-12">
                             <div class="form-group d-lg-flex">
                                 <div class="form-floating flex-grow-1">
@@ -130,8 +132,9 @@
         </div>
         <!-- ::DataRisiko End -->
 
+        @if($danantara)
         {{-- Hide Danantara --}}
-        {{-- <!-- ::ParameeterRisiko Start -->
+        <!-- ::ParameeterRisiko Start -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
@@ -205,7 +208,8 @@
                 </div>
             </div>
         </div>
-        <!-- ::Threshold End --> --}}
+        <!-- ::Threshold End -->
+        @endif
 
         <!-- ::DampakRisiko Start -->
         <div class="col-12">
