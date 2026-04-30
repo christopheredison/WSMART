@@ -668,13 +668,18 @@ $(document).ready(function() {
                 const batchStep = {{ $extraViewData['b_step'] ?? 0 }};
 
                 // Validasi: Risiko bisa dicentang jika status 2/3/5/7/8 dan step-nya cocok dengan user + batch
-                const canVerify = (row.status == 2 ||
+                let canVerify = (row.status == 2 ||
                     row.status == 3 ||
                     row.status == 5 ||
                     row.status == 7 ||
                     row.status == 8) &&
                     row.step_verification == userStep &&
                     userStep == batchStep;
+
+                const isOwnerMR = {{ (!empty($extraViewData['levelId']) && $extraViewData['levelId'] == 2) ? 'true' : 'false' }};
+                if (isOwnerMR && row.request_edit == 1) {
+                    canVerify = true;
+                }
 
                 return `
                     <div class="form-check mb-0">
