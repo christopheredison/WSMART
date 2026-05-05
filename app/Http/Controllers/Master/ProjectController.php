@@ -412,7 +412,7 @@ class ProjectController extends BasicCRUDController
     private function fetchNilaiKontrakRecursive($apiWika, $profitCenter)
     {
         $dateCheck = Carbon::now();
-        $maxRetries = 5;
+        $maxRetries = 10;
 
         for ($i = 0; $i < $maxRetries; $i++) {
             $currentPeriod = $dateCheck->format('Ym');
