@@ -1,0 +1,112 @@
+image: ubuntu:22.04
+
+stages:
+  - deploy
+
+deploy_to_dev:
+  stage: deploy
+  only:
+    - EUT-DEV
+
+  variables:
+    SERVER_USER: "webmin"
+    SERVER_IP: "10.4.0.60"
+    SSH_PRIVATE_KEY: "-----BEGIN OPENSSH PRIVATE KEY-----
+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
+-----END OPENSSH PRIVATE KEY-----"
+    TARGET_PATH: "/vhosts/rwi/https"
+    VPN_ADDRESS: "172.16.17.1"
+    VPN_USER: "vendor-rms"
+    VPN_PASSWORD: "LyGqY8x39VCQuJN"
+    VPN_PORT: "8422"
+
+  before_script:
+    - echo "⚙️  Setup Environment..."
+    # 1. Install OpenConnect (mendukung Fortinet) dan SSH Client
+    - apt-get update -y && apt-get install -y openconnect openssh-client git
+
+    # 2. Setup SSH Key (id_rsa)
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    # Matikan verifikasi host key agar tidak ditanya "Are you sure?"
+    - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+
+    # 3. KONEKSI KE FORTINET VPN (Port 8422)
+    - echo "🔌 Menghubungkan ke Fortinet VPN..."
+
+    # Penjelasan Command:
+    # --protocol=fortinet : Wajib untuk FortiClient
+    # --background : Jalan di latar belakang
+    # --servercert : Mencegah error "Certificate untrusted".
+    #                (Nanti saya jelaskan cara dapat hash-nya di bawah script ini)
+
+    - echo "yes" | openconnect --protocol=fortinet "$VPN_ADDRESS:$VPN_PORT" --user="$VPN_USER" --passwd-on-stdin <<< "$VPN_PASSWORD" --background --no-cert-check || true
+    - sleep 15
+    - ip addr show
+  script:
+    - echo "🚀 Deploying ke Server ($SERVER_IP)..."
+    - ssh $SERVER_USER@$SERVER_IP "
+        echo '✅ Login Sukses!';
+        cd /vhosts/rwi/https;
+        echo '🔄 Git Pull EUT-DEV...';
+        git fetch origin EUT-DEV;
+        git reset --hard origin/EUT-DEV;
+        echo '📦 Composer Install...';
+        composer install --optimize-autoloader;
+        echo '🗄️ Migrasi Database...';
+        php artisan migrate --force;
+        echo '🧹 Clear Cache...';
+        php artisan optimize:clear;
+        php artisan config:cache;
+        php artisan route:cache;
+        php artisan view:cache;
+        echo '🎉 Deployment Selesai!';
+      "
