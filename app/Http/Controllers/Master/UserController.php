@@ -22,7 +22,23 @@ class UserController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $users = User::with(['roles', 'unit', 'level'])->withTrashed()->select('users.*');
+            $users = User::with(['roles', 'unit', 'level', 'projects'])->withTrashed()->select('users.*');
+
+            // --- LOGIKA FILTER ---
+
+            // Filter by Unit/Divisi
+            if ($request->filled('filter_unit')) {
+                $users->where('unit_id', $request->filter_unit);
+            }
+
+            // Filter by Project
+            if ($request->filled('filter_project')) {
+                $projectId = $request->filter_project;
+                $users->whereHas('projects', function($q) use ($projectId) {
+                    $q->where('projects.id', $projectId);
+                });
+            }
+            // ---------------------
 
             return DataTables::of($users)
                 ->addIndexColumn()
@@ -35,10 +51,13 @@ class UserController extends Controller
                     return $row?->level?->name ? $row?->level?->name : '-';
                 })
                 ->addColumn('role_names', function($row) {
-                    // Map roles to a string
                     return $row->roles->map(function($role) {
                         return ucwords(str_replace('_', ' ', $role->name));
                     })->implode(', ');
+                })
+                // Tambahkan kolom untuk menampilkan project & unit jika perlu di tabel
+                ->addColumn('unit_name', function($row) {
+                     return $row->unit ? $row->unit->name : '-';
                 })
                 ->addColumn('action', function($row) {
                     $btn = '';
@@ -62,7 +81,11 @@ class UserController extends Controller
         $roless = Role::with('permissions')->get();
         $roles = Role::pluck('name', 'id');
 
-        return view('master.users.index', compact('roles', 'roless'));
+        // Data untuk Dropdown Filter
+        $units = Unit::orderBy('name', 'asc')->pluck('name', 'id');
+        $projects = Project::select('id', 'project_name', 'profit_center')->orderBy('project_name', 'asc')->get();
+
+        return view('master.users.index', compact('roles', 'roless', 'units', 'projects'));
     }
 
     public function create()
