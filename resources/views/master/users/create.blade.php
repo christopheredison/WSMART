@@ -29,9 +29,7 @@
                     <td>
                       @foreach ($role->permissions as $permission)
                       {{ ucwords(str_replace('_', ' ', $permission->name)) }}
-                      @if (!$loop->last)
-                      ,
-                      @endif
+                      @if (!$loop->last) , @endif
                       @endforeach
                     </td>
                   </tr>
@@ -44,6 +42,7 @@
       </div>
     </div>
   </div>
+
   <!--===================== Create User =====================-->
   <div class="col-12">
     <form class="needs-validation" novalidate="" method="POST" action="{{ route('users.store') }}" id="form-add-user">
@@ -51,11 +50,6 @@
       <div class="card">
         <div class="card-header d-flex flex-between-center">
           <h2 class="h4">Buat User Baru</h2>
-          <div class="lead__icon lead__icon_sm">
-            <div class="svg-icon svg-icon-secondary">
-              @include('partials.icon-tool')
-            </div>
-          </div>
         </div>
         <div class="card-body">
           @if($errors->any())
@@ -67,24 +61,27 @@
             </ul>
           </div>
           @endif
+
           <div class="row g-3">
             <div class="form-group col-12 col-md-7 d-flex">
-              <label class="form-label label-md-start col-md-4">Cari</label>
+              <label class="form-label label-md-start col-md-4">Cari Pegawai</label>
               <div class="input-group">
                 <input class="form-control" name="search" type="text" placeholder="Masukkan NIP / Email"
                   value="{{ old('search') }}" autocomplete="off" style="border-top-right-radius: 0; border-bottom-right-radius: 0;" onkeydown="if(event.key === 'Enter') { event.preventDefault(); document.getElementById('search-button').click(); }"/>
                 <button class="btn btn-primary py-2" type="button" id="search-button">
-                  <i class="bx bx-search"></i>
+                  <span class="bx bx-search"></span> Cari
                 </button>
               </div>
             </div>
           </div>
           <hr>
+
           <div class="row g-3">
+            <!-- Unit -->
             <div class="form-group col-12 col-md-7 d-flex">
               <label class="form-label label-md-start col-md-4">Unit</label>
               <div class="input-group has-validation">
-                <select class="form-select select2" name="unit_id" required data-placeholder="Unit">
+                <select class="form-select select2" name="unit_id" required data-placeholder="Pilih Unit">
                   <option></option>
                   @foreach($unit as $id => $name)
                   <option value="{{ $id }}" {{ old('unit_id') == $id ? 'selected' : '' }}>{{ $name }}</option>
@@ -93,14 +90,18 @@
                 <div class="invalid-feedback">Silakan pilih unit.</div>
               </div>
             </div>
+
+            <!-- Nama -->
             <div class="form-group col-12 col-md-7 d-flex">
-              <label class="form-label label-md-start col-md-4" for="name">Nama</label>
+              <label class="form-label label-md-start col-md-4" for="name">Nama Lengkap</label>
               <div class="input-group has-validation">
                 <input class="form-control" id="name" name="name" type="text" placeholder="Masukkan Nama"
                   value="{{ old('name') }}" required />
                 <div class="invalid-feedback">Silakan isi nama.</div>
               </div>
             </div>
+
+            <!-- NIP -->
             <div class="form-group col-12 col-md-7 d-flex">
               <label class="form-label label-md-start col-md-4" for="nip">NIP</label>
               <div class="input-group has-validation">
@@ -109,31 +110,49 @@
                 <div class="invalid-feedback">Silakan isi NIP.</div>
               </div>
             </div>
+
+            <!-- Jabatan -->
             <div class="form-group col-12 col-md-7 d-flex">
               <label class="form-label label-md-start col-md-4">Jabatan</label>
               <div class="input-group has-validation">
-                <select class="form-select select2" name="jabatan_id" data-placeholder="Jabatan">
+                <select class="form-select select2" name="jabatan_id" data-placeholder="Pilih Jabatan">
                   <option></option>
                   @foreach($jabatans as $jabatan)
-                  <option value="{{ $jabatan->id }}" {{ old('jabatan_id') == $jabatan->id ? 'selected' : '' }}">{{ $jabatan->name }}</option>
+                  <option value="{{ $jabatan->id }}" {{ old('jabatan_id') == $jabatan->id ? 'selected' : '' }}>{{ $jabatan->name }}</option>
                   @endforeach
                 </select>
-                <div class="invalid-feedback">Silakan pilih jabatan.</div>
               </div>
             </div>
+
+            <!-- Level -->
             <div class="form-group col-12 col-md-7 d-flex">
               <label class="form-label label-md-start col-md-4">Level</label>
               <div class="input-group has-validation">
-                <select class="form-select select2" name="level_id" required data-placeholder="Level">
+                <select class="form-select select2" name="level_id" required data-placeholder="Pilih Level">
                   <option></option>
                   @foreach($levels as $level)
                   <option value="{{ $level->id }}" {{ old('level_id') == $level->id ? 'selected' : '' }}>{{ $level->name }}</option>
                   @endforeach
                 </select>
-                <div class="invalid-feedback">Silakan pilih level.</div>
               </div>
             </div>
+
+            <!-- User Projects dengan Profit Center -->
             <div class="form-group col-12 col-md-7 d-flex">
+              <label class="form-label label-md-start col-md-4" for="roles">User Projects</label>
+              <div class="input-group col-auto">
+                <select name="user_projects[]" class="form-select select2" multiple data-placeholder="Pilih Project">
+                  @foreach ($projects as $project)
+                      <option value="{{ $project->id }}" @if (in_array($project->id, old('user_projects', []))) selected @endif>
+                          {{ $project->profit_center ? '['.$project->profit_center.'] ' : '' }}{{ ucwords(str_replace('_', ' ', $project->project_name)) }}
+                      </option>
+                  @endforeach
+                </select>
+              </div>
+            </div>
+
+            <!-- Email, Password, Konfirmasi diletakkan di bawah -->
+            <div class="form-group col-12 col-md-7 d-flex mt-4">
               <label class="form-label label-md-start col-md-4" for="email">Email</label>
               <div class="input-group has-validation">
                 <input class="form-control" id="email" name="email" type="email" placeholder="Masukkan Email"
@@ -141,52 +160,39 @@
                 <div class="invalid-feedback">Silakan isi email.</div>
               </div>
             </div>
-            <div class="form-group col-12 col-md-7 d-flex">
+
+            <div class="form-group col-12 col-md-7 d-flex" id="div-password">
               <label class="form-label label-md-start col-md-4" for="password">Password</label>
               <div class="input-group password-input-col has-validation">
                 <input class="form-control form_password" id="password" name="password" type="password"
                   placeholder="Masukkan Password" required />
                 <i id="pass" class='bx bx-show-alt'></i>
-                <div class="invalid-feedback">Silakan isi password.</div>
               </div>
             </div>
-            <div class="form-group col-12 col-md-7 d-flex">
-              <label class="form-label label-md-start col-md-4" for="password_confirmation">Konfirmasi
-                Password</label>
+
+            <div class="form-group col-12 col-md-7 d-flex" id="div-password-confirm">
+              <label class="form-label label-md-start col-md-4" for="password_confirmation">Konfirmasi Password</label>
               <div class="input-group password-input-col has-validation">
                 <input class="form-control form_confirmation" id="password_confirmation" name="password_confirmation"
                   type="password" placeholder="Konfirmasi Password" required />
                 <i id="conf_pass" class='bx bx-show-alt'></i>
-                <div class="invalid-feedback">Silakan isi password.</div>
               </div>
             </div>
-            <div class="form-group col-12 col-md-7 d-flex">
-              <label class="form-label label-md-start col-md-4" for="roles">User Projects</label>
-              <div class="input-group col-auto">
-                <select name="user_projects[]" class="form-select select2" multiple>
-                  @foreach ($projects as $key => $value)
-                      <option value="{{ $key }}"
-                              @if (in_array($key, old('user_projects', []))) selected @endif>
-                          {{ ucwords(str_replace('_', ' ', $value)) }}
-                      </option>
-                  @endforeach
-                </select>
-              </div>
-            </div>
-            <div class="col-12 col-md-10 col-lg-12">
-              <div class="row justify-content-between pt-3 gx-lg-0">
+
+            <!-- Roles -->
+            <div class="col-12 col-md-10 col-lg-12 border-top pt-3 mt-4">
+              <div class="row justify-content-between gx-lg-0">
                 <div class="col-md-3 col-lg-2">
-                  <label class="form-label">Roles</label>
+                  <label class="form-label fw-bold">Pilih Roles Akun:</label>
                 </div>
                 <div class="col-md-9 me-lg-7 me-xxl-8">
                   <div class="row gx-2 gx-md-4">
                     @foreach ($roles as $key => $value)
-                    <div class="col-6 col-md-6 col-lg-3">
+                    <div class="col-6 col-md-6 col-lg-3 mb-2">
                       <div class="form-check form-switch">
                         <input id="roles{{ $key }}" class="form-check-input" role="switch" type="checkbox" name="roles[]"
                           value="{{ $value }}" @if (in_array($value, old('roles', []))) checked @endif>
-                        </input>
-                        <label class="form-check-label" for="roles{{ $key }}">{{ ucwords(str_replace('_', ' ', $value)) }}</label>
+                        <label class="form-check-label" style="cursor:pointer;" for="roles{{ $key }}">{{ ucwords(str_replace('_', ' ', $value)) }}</label>
                       </div>
                     </div>
                     @endforeach
@@ -197,7 +203,7 @@
           </div>
         </div>
         <div class="card-footer border-none">
-          <button type="submit" class="btn btn-submit">Simpan</button>
+          <button type="submit" class="btn btn-primary">Simpan</button>
           <a href="{{ route('users.index') }}" class="btn btn-outline-secondary">Batal</a>
         </div>
     </form>
@@ -207,17 +213,11 @@
 
 @push('scripts')
 <script>
-// Force cache refresh - version 2.0
   $('#search-button').click(function() {
     Swal.fire({
       title: 'Mencari user...',
       allowOutsideClick: false,
-      allowEscapeKey: false,
-      allowEnterKey: false,
-      showConfirmButton: false,
-      didOpen: () => {
-        Swal.showLoading()
-      }
+      didOpen: () => { Swal.showLoading() }
     });
     $.ajax({
       url: '{{ route('users.search-remote-user') }}',
@@ -228,48 +228,31 @@
       },
       success: function(response) {
         const data = response.data;
-        $('#name').val(data.nm_peg);
-        $('#name').prop('readonly', true);
-        $('#nip').val(data.nip);
-        $('#nip').prop('readonly', true);
+        $('#name').val(data.nm_peg).prop('readonly', true);
+        $('#nip').val(data.nip).prop('readonly', true);
+
         if (data.email) {
-          $('#email').val(data.email);
-          $('#email').prop('readonly', true);
+          $('#email').val(data.email).prop('readonly', true);
         } else {
-          $('#email').val('');
-          $('#email').prop('readonly', false);
+          $('#email').val('').prop('readonly', false);
         }
 
-        // $('#div-password').hide();
-        // $('#div-password-confirm').hide();
-
-        $('#password').removeAttr('required');
-        $('#password_confirmation').removeAttr('required');
-
-        $('#password').val('');
-        $('#password_confirmation').val('');
-
+        $('#password').removeAttr('required').val('');
+        $('#password_confirmation').removeAttr('required').val('');
 
         $('select[name="unit_id"] option').each(function() {
-          if (this.value && isNaN(this.value)) {
-            $(this).remove();
-          }
+          if (this.value && isNaN(this.value)) $(this).remove();
         });
 
-        // Handle unit selection based on resolved_unit from backend
-        console.log('Debug info:', response.debug);
         if (response.resolved_unit && response.resolved_unit.id) {
-          // Unit found based on cost_center_parent, select it
           $('select[name="unit_id"]').val(response.resolved_unit.id).change();
-          console.log('Unit selected:', response.resolved_unit);
         } else {
-          // No matching unit found, clear selection and show message
           $('select[name="unit_id"]').val('').change();
           if (data.nm_unit) {
             Swal.fire({
               icon: 'info',
               title: 'Unit tidak ditemukan',
-              text: `Unit "${data.nm_unit}" (Cost Center Parent: ${response.debug?.cost_center_parent || 'N/A'}) tidak ditemukan di database. Silakan pilih unit secara manual.`,
+              text: `Unit "${data.nm_unit}" tidak otomatis ditemukan. Silakan pilih unit manual.`,
               confirmButtonText: 'OK'
             });
           }
@@ -277,21 +260,14 @@
         $('select[name="jabatan_id"]').val(response.jabatan?.id || '').change();
         Swal.close();
       },
-      error: function(xhr, status, error) {
+      error: function(xhr) {
         $('#form-add-user :input:not([type="hidden"]):not([name="search"])').val('').change();
-        $('#name').prop('readonly', false);
-        $('#nip').prop('readonly', false);
-        $('#email').prop('readonly', false);
-
-        $('#div-password').show();
-        $('#div-password-confirm').show();
-
-        $('#password').attr('required', true);
-        $('#password_confirmation').attr('required', true);
+        $('#name, #nip, #email').prop('readonly', false);
+        $('#password, #password_confirmation').attr('required', true);
         Swal.close();
         Swal.fire({
           title: 'Error',
-          text: xhr.responseJSON.message || 'Terjadi kesalahan saat mencari user',
+          text: xhr.responseJSON.message || 'Terjadi kesalahan',
           icon: 'error',
           confirmButtonText: 'OK'
         });
@@ -299,15 +275,6 @@
     });
   });
 
-  if ($('#form-add-user :input[name="search"]').val()) {
-    $('#search-button').click();
-  }
-
-  $(document).ready(function() {
-    // $('select[name="jabatan_id"]').change(function() {
-    //   const level = $(this).find('option:selected').data('level');
-    //   $('input[name="level"]').val(level);
-    // });
-  });
+  if ($('#form-add-user :input[name="search"]').val()) { $('#search-button').click(); }
 </script>
 @endpush

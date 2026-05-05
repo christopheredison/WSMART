@@ -67,11 +67,12 @@ class UserController extends Controller
 
     public function create()
     {
-        $roles = Role::orderBy('name', 'asc')->pluck('name', 'id'); // Get roles for select dropdown
+        $roles = Role::orderBy('name', 'asc')->pluck('name', 'id');
         $roless = Role::with('permissions')->orderBy('name', 'asc')->get();
         $unit = Unit::pluck('name','id');
 
-        $projects = Project::pluck('project_name','id');
+        $projects = Project::select('id', 'project_name', 'profit_center')->orderBy('project_name', 'asc')->get();
+
         $jabatans = Jabatan::get();
         $levels = Level::get();
 
@@ -142,12 +143,13 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        $roles = Role::orderBy('name', 'asc')->pluck('name', 'id'); // Get roles for select dropdown
-        $userRoles = $user->roles->pluck('id')->toArray(); // Get user's current roles
+        $roles = Role::orderBy('name', 'asc')->pluck('name', 'id');
+        $userRoles = $user->roles->pluck('id')->toArray();
         $roless = Role::with('permissions')->orderBy('name', 'asc')->get();
         $unit = Unit::pluck('name','id');
-        // dd($unit);
-        $projects = Project::pluck('project_name','id');
+
+        $projects = Project::select('id', 'project_name', 'profit_center')->orderBy('project_name', 'asc')->get();
+
         $jabatans = Jabatan::get();
         $levels = Level::get();
 
