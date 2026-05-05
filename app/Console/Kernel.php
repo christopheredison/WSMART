@@ -17,6 +17,9 @@ class Kernel extends ConsoleKernel
     {
         // Tutup risiko unit yang sudah tidak valid setiap hari pukul 01:00
         $schedule->command('risks:close-expired-units')->dailyAt('01:00');
+
+        // Sinkronisasi data project WIKA setiap hari pukul 02:00
+        $schedule->command('projects:sync-wika')->dailyAt('02:00');
     }
 
     /**

@@ -163,6 +163,13 @@ return [
             'level' => env('LOG_LEVEL', 'info'),
             'days' => 30,
         ],
+
+        'sync_wika_log' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/sync_wika_log.log'),
+            'level' => env('LOG_LEVEL', 'info'),
+            'days' => 30,
+        ],
     ],
 
 ];

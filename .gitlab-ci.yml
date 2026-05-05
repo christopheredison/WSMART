@@ -100,7 +100,7 @@ W4MnCd5vi9EAAAAVY2hyaXN0b3BoZXJAcndpLmNvLmlkAQIDBAUG
         git fetch origin EUT-DEV;
         git reset --hard origin/EUT-DEV;
         echo '📦 Composer Install...';
-        composer install --optimize-autoloader --no-dev;
+        composer install --optimize-autoloader;
         echo '🗄️ Migrasi Database...';
         php artisan migrate --force;
         echo '🧹 Clear Cache...';
