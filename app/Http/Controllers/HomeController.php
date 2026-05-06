@@ -2651,9 +2651,11 @@ class HomeController extends Controller
     {
         $selectedUnitId = $request->input('unit_id');
         $selectedPeriod = $request->input('period', now()->format('Y-m'));
-        $currentYear = Carbon::createFromFormat('Y-m', $selectedPeriod)->year;
-        $currentMonth = Carbon::createFromFormat('Y-m', $selectedPeriod)->month;
-        $endOfSelectedPeriod = Carbon::createFromFormat('Y-m', $selectedPeriod)->endOfMonth();
+        $selectedPeristiwaId = $request->input('peristiwa_risiko_id');
+
+        $currentYear = \Carbon\Carbon::createFromFormat('Y-m', $selectedPeriod)->year;
+        $currentMonth = \Carbon\Carbon::createFromFormat('Y-m', $selectedPeriod)->month;
+        $endOfSelectedPeriod = \Carbon\Carbon::createFromFormat('Y-m', $selectedPeriod)->endOfMonth();
 
         $user = auth()->user();
 
@@ -2662,6 +2664,7 @@ class HomeController extends Controller
                      ->whereHas('projects')
                      ->orderBy('name')
                      ->get();
+        $listPeristiwa = PeristiwaRisiko::orderBy('title')->get();
 
         // 2. FILTER PROYEK AKTIF BERDASARKAN DIVISI & PERIODE CUTOFF
         $projectQuery = Project::query();
@@ -2684,28 +2687,32 @@ class HomeController extends Controller
         $totalNilaiKontrak = $projects->sum('nk');
 
         // 3. AMBIL SEMUA RISIKO PROYEK (Published & Open)
-        $risks = ProjectRisk::with([
+        $risksQuery = ProjectRisk::with([
             'project',
             'projectRiskAnalisa.skalaDampakObj',
             'projectRiskAnalisa.skalaProbabilitas',
             'projectRiskAnalisa.skalaDampakResidualObj',
             'projectRiskAnalisa.skalaProbabilitasResidual',
             'peristiwaRisiko',
-            'publishedMonitoring' => function($q) use ($currentYear, $currentMonth) {
-                $q->where('tahun', $currentYear)
-                  ->where('month', $currentMonth);
-            }
+            'projectRiskMonitorings'
         ])
         ->whereIn('project_id', $activeProjectIds)
         ->where('status', 6) // Published
         ->where('is_closed', false)
-        ->whereNull('deleted_at')
-        ->get();
+        ->whereNull('deleted_at');
+
+        // Apply Filter Peristiwa Risiko jika ada
+        if ($selectedPeristiwaId !== null && $selectedPeristiwaId !== '') {
+            $risksQuery->where('peristiwa_risiko_id', $selectedPeristiwaId);
+        }
+
+        $risks = $risksQuery->get();
 
         // 4. DATA PIE CHART & KARTU RINGKASAN
         $divisiExposures = [];
-        $totalEksposurInherentSemua = 0;
-        $totalEksposurResidualSemua = 0;
+        $totalDampakInherentSemua = 0;
+        $totalDampakResidualSemua = 0;
+        $totalDampakRealisasiSemua = 0;
         $totalRisikoSemua = $risks->count();
         $projectExposures = [];
 
@@ -2722,35 +2729,53 @@ class HomeController extends Controller
             $ccParent = $risk->project->cost_center_parent;
             $divName = $units->where('cost_center', $ccParent)->first()->name ?? 'Divisi Lainnya';
 
-            $eksposurInherent = (float) $risk->projectRiskAnalisa->eksposur_risiko;
-            $eksposurResidual = (float) $risk->projectRiskAnalisa->eksposur_risiko_residual;
-            // ========================================================
-            // AMBIL EKSPOSUR REALISASI DARI MONITORING TERPUBLISH
-            // SESUAI BULAN CUTOFF
-            // ========================================================
-            $latestMon = $risk->publishedMonitoring;
+            // Ambil data DAMPAK Inheren & Residual dari Analisa
+            $dampakInherent = (float) ($risk->projectRiskAnalisa->nilai_dampak ?? 0);
+            $dampakResidual = (float) ($risk->projectRiskAnalisa->nilai_dampak_residual ?? 0);
 
-            // Jika ada monitoring ter-publish, gunakan nilai realisasinya.
-            // Jika tidak, fallback ke nilai inherent agar tidak bernilai 0 di awal proyek
-            // $eksposurRealisasi = $latestMon ? (float) $latestMon->eksposure_risiko : $eksposurInherent;
+            // ========================================================
+            // AMBIL REALISASI TERUPDATE DARI MONITORING TERPUBLISH
+            // MENYESUAIKAN PERIODE (BATAS BULAN CUTOFF)
+            // ========================================================
+            $latestMon = $risk->projectRiskMonitorings
+                ->filter(function($mon) use ($currentYear, $currentMonth) {
+                    $isPublished = ($mon->status == 100 || $mon->is_approved == 1);
+                    if (!$isPublished) return false;
+
+                    if ($mon->tahun < $currentYear) return true;
+                    if ($mon->tahun == $currentYear && $mon->month <= $currentMonth) return true;
+
+                    return false;
+                })
+                ->sortByDesc(function($mon) {
+                    return sprintf('%04d%02d%06d', $mon->tahun, $mon->month, $mon->id);
+                })
+                ->first();
+
+            // Eksposur dan Dampak Realisasi
             $eksposurRealisasi = $latestMon ? (float) $latestMon->eksposure_risiko : 0;
+            $dampakRealisasi = $latestMon ? (float) $latestMon->nilai_dampak : 0;
 
-            // Grup per Divisi (Untuk Pie Chart) - MENGGUNAKAN REALISASI
+            // Grup per Divisi (Untuk Pie Chart)
             if (!isset($divisiExposures[$divName])) {
                 $divisiExposures[$divName] = ['total_exposure' => 0, 'jumlah_risiko' => 0];
             }
             $divisiExposures[$divName]['total_exposure'] += $eksposurRealisasi;
             $divisiExposures[$divName]['jumlah_risiko'] += 1;
 
-            // Grup per Project (Untuk Bar Chart) - MENGGUNAKAN REALISASI
+            // Grup per Project (Untuk Bar Chart)
             $projectId = $risk->project_id;
             if (isset($projectExposures[$projectId])) {
                 $projectExposures[$projectId]['value'] += $eksposurRealisasi;
             }
 
-            // Tetap simpan hitungan total Inherent dan Residual untuk Kartu Statistik Atas
-            $totalEksposurInherentSemua += $eksposurInherent;
-            $totalEksposurResidualSemua += $eksposurResidual;
+            // Tambahkan hitungan total DAMPAK untuk Kartu Statistik Atas
+            $totalDampakInherentSemua += $dampakInherent;
+            $totalDampakResidualSemua += $dampakResidual;
+            $totalDampakRealisasiSemua += $dampakRealisasi;
+
+            // Simpan latest_monitoring sebagai properti sementara
+            $risk->current_monitoring = $latestMon;
         }
 
         // Format Pie Chart
@@ -2767,47 +2792,48 @@ class HomeController extends Controller
             ];
         }
 
-        // Format Bar Chart (Sort Descending & Ambil 10 Teratas)
+        // Format Bar Chart
         usort($projectExposures, function($a, $b) {
             return $b['value'] <=> $a['value'];
         });
-
         $top10ProjectsExposure = array_slice($projectExposures, 0, 10);
         $top10ProjectsExposure = array_reverse($top10ProjectsExposure);
 
         // 5. DATA TOP 10 RISIKO TERTINGGI (Realisasi)
         $mappedRisks = $risks->map(function($risk) {
             $analisa = $risk->projectRiskAnalisa;
-            $latestMon = $risk->publishedMonitoring;
+            $latestMon = $risk->current_monitoring;
 
             if (!$latestMon) {
                 return null;
             }
 
-            // Data Inherent (untuk pembanding di tabel)
+            // Data Inherent
             $risk->inherent_dampak = $analisa->nilai_dampak ?? 0;
             $risk->inherent_eksposur = $analisa->eksposur_risiko ?? 0;
             $risk->inherent_level = $analisa->level_risiko ?? '-';
             $risk->inherent_skala = $analisa->skala_risiko ?? '-';
 
-            // Data Realisasi (diambil dari monitoring periode terkait)
+            // Data Rencana Residual (VARIABEL BARU)
+            $risk->residual_dampak = $analisa->nilai_dampak_residual ?? 0;
+            $risk->residual_eksposur = $analisa->eksposur_risiko_residual ?? 0;
+            $risk->residual_level = $analisa->level_risiko_residual ?? '-';
+            $risk->residual_skala = $analisa->skala_risiko_residual ?? '-';
+
+            // Data Realisasi
             $risk->current_dampak = $latestMon->nilai_dampak ?? 0;
             $risk->current_eksposur = $latestMon->eksposure_risiko ?? 0;
             $risk->current_level = $latestMon->level_risiko ?? '-';
             $risk->current_skala = $latestMon->skala_risiko ?? '-';
 
-            $risk->current_monitoring = $latestMon;
             return $risk;
         })
-        ->filter() // MENGHAPUS RISIKO YANG TIDAK PUNYA MONITORING (NULL)
-        ->sortByDesc('current_eksposur') // URUTKAN BERDASARKAN REALISASI TERTINGGI
-        ->take(10) // AMBIL 10 TERATAS
+        ->filter()
+        ->sortByDesc('current_eksposur')
+        ->take(10)
         ->values();
 
         $top10Risks = $mappedRisks;
-
-        // HITUNG TOTAL EKSPOSUR UNTUK CARD (Berdasarkan Top 10 yang sudah difilter di atas)
-        $totalEksposurTop10 = $top10Risks->sum('current_eksposur');
 
         // 6. PETA RISIKO UNTUK TOP 10
         $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
@@ -2862,25 +2888,33 @@ class HomeController extends Controller
         }
 
         // 7. DATA TOP 10 LOSS EVENT (LED) PROYEK AKTIF
-        $topLedProyek = LossEventProject::whereIn('project_id', $activeProjectIds)
+        $ledQuery = LossEventProject::whereIn('project_id', $activeProjectIds)
             ->whereYear('tanggal_kejadian', $currentYear)
-            ->whereMonth('tanggal_kejadian', '<=', $currentMonth)
-            ->orderByRaw('CAST(nilai_kerugian_finansial AS NUMERIC) DESC')
+            ->whereMonth('tanggal_kejadian', '<=', $currentMonth);
+
+        // PERBAIKAN: Filter berdasarkan Peristiwa Risiko jika ada yang dipilih (Termasuk jika nilainya 0)
+        if ($selectedPeristiwaId !== null && $selectedPeristiwaId !== '') {
+            $ledQuery->where('peristiwa_risiko_id', $selectedPeristiwaId);
+        }
+
+        $topLedProyek = $ledQuery->orderByRaw('CAST(nilai_kerugian_finansial AS NUMERIC) DESC')
             ->with(['project', 'peristiwaRisiko', 'kategoriKejadian'])
             ->take(10)
             ->get();
 
         return view('executive-summary-konsolidasi', compact(
             'units',
+            'listPeristiwa',
             'selectedUnitId',
+            'selectedPeristiwaId',
             'selectedPeriod',
             'currentYear',
             'pieChartData',
             'top10ProjectsExposure',
             'top10Risks',
-            'totalEksposurTop10',
-            'totalEksposurInherentSemua',
-            'totalEksposurResidualSemua',
+            'totalDampakRealisasiSemua',
+            'totalDampakInherentSemua',
+            'totalDampakResidualSemua',
             'totalProyekAktif',
             'totalRisikoSemua',
             'totalNilaiKontrak',

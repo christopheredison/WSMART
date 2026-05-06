@@ -18,11 +18,11 @@
     <div class="col-12">
         <div class="card p-3 shadow-sm">
             <div class="row g-3 align-items-end">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label for="period_selector" class="form-label fw-bold">Pilih Periode Cutoff</label>
                     <input type="text" name="period" id="period_selector" class="form-control" placeholder="Pilih Bulan & Tahun" value="{{ $selectedPeriod }}">
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label for="unit_selector" class="form-label fw-bold">Filter Divisi Operasi</label>
                     <select name="unit_id" id="unit_selector" class="form-select select2">
                         <option value="" selected>Semua Divisi Operasi</option>
@@ -31,6 +31,18 @@
                                 {{ $unit->name }}
                             </option>
                         @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="peristiwa_selector" class="form-label fw-bold">Filter Peristiwa Risiko</label>
+                    <select name="peristiwa_risiko_id" id="peristiwa_selector" class="form-select select2">
+                        <option value="" selected>Semua Peristiwa Risiko</option>
+                        @foreach ($listPeristiwa as $pr)
+                            <option value="{{ $pr->id }}" {{ $pr->id == $selectedPeristiwaId ? 'selected' : '' }}>
+                                {{ $pr->title }}
+                            </option>
+                        @endforeach
+                        <option value="0" {{ (string)$selectedPeristiwaId === '0' ? 'selected' : '' }}>Lainnya</option>
                     </select>
                 </div>
             </div>
@@ -44,7 +56,6 @@
 
 {{-- CARD RINGKASAN STATISTIK --}}
 <div class="row g-4 mb-4">
-    {{-- CARD YANG BARU: Eksposur Residual Total --}}
     <div class="col-md-3">
         <div class="card card-body h-100 shadow-sm border-start border-4 border-info">
             <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Total Risiko Terpublish</p>
@@ -54,23 +65,23 @@
     </div>
     <div class="col-md-3">
         <div class="card card-body h-100 shadow-sm border-start border-4 border-warning">
-            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Eksposur Inheren Total</p>
-            <h4 class="fw-bold text-dark mb-0">Rp {{ number_format($totalEksposurInherentSemua, 0, ',', '.') }}</h4>
+            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Total Dampak Inheren</p>
+            <h4 class="fw-bold text-dark mb-0">Rp {{ number_format($totalDampakInherentSemua, 0, ',', '.') }}</h4>
             <small class="text-muted mt-2">Dari {{ $totalProyekAktif }} proyek aktif</small>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card card-body h-100 shadow-sm border-start border-4 border-success">
-            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Eksposur Residual Total</p>
-            <h4 class="fw-bold text-dark mb-0">Rp {{ number_format($totalEksposurResidualSemua, 0, ',', '.') }}</h4>
+            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Total Dampak Residual (Rencana)</p>
+            <h4 class="fw-bold text-dark mb-0">Rp {{ number_format($totalDampakResidualSemua, 0, ',', '.') }}</h4>
             <small class="text-muted mt-2">Dari {{ $totalProyekAktif }} proyek aktif</small>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card card-body h-100 shadow-sm border-start border-4 border-danger">
-            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Eksposur Realisasi Top 10</p>
-            <h4 class="fw-bold text-danger mb-0">Rp {{ number_format($totalEksposurTop10, 0, ',', '.') }}</h4>
-            <small class="text-muted mt-2">Dari 10 risiko tertinggi</small>
+            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Total Dampak Realisasi</p>
+            <h4 class="fw-bold text-danger mb-0">Rp {{ number_format($totalDampakRealisasiSemua, 0, ',', '.') }}</h4>
+            <small class="text-muted mt-2">Dari {{ $totalProyekAktif }} proyek aktif</small>
         </div>
     </div>
 </div>
@@ -95,7 +106,6 @@
             <div class="card-header border-0 pb-0">
                 <h4 class="fw-bold mb-0">10 Proyek Eksposur Realisasi Tertinggi</h4>
                 <small class="text-muted">
-                  {{-- Di bulan {{ $formattedPeriod }} |  --}}
                   Berdasarkan Proyek dan Risiko Aktif
                 </small>
             </div>
@@ -115,7 +125,7 @@
         <div class="d-flex justify-content-between align-items-start w-100">
             <div class="d-flex flex-column">
                 <span class="h3 mb-0">Peta 10 Risiko Tertinggi Lintas Proyek</span>
-                <small class="text-muted mt-1">Hanya menampilkan 10 risiko dengan nilai eksposur realisasi tertinggi di bulan {{ $formattedPeriod }}.</small>
+                <small class="text-muted mt-1">Hanya menampilkan 10 risiko dengan nilai eksposur realisasi tertinggi berdasarkan cutoff bulan {{ $formattedPeriod }}.</small>
             </div>
             <button type="button" class="btn btn-sm btn-outline-primary shadow-sm" id="btnFullscreenMap">
                 <span class="bx bx-fullscreen me-1"></span> Perbesar Peta
@@ -209,13 +219,18 @@
                         <th rowspan="2" width="15%">Nama Proyek</th>
                         <th rowspan="2" width="20%">Peristiwa Risiko</th>
                         <th colspan="3" class="bg-gray">Inherent</th>
-                        <th colspan="3" class="bg-primary-subtle">Realisasi (Terpublish)</th>
+                        <th colspan="3" class="bg-warning-subtle text-dark">Rencana Residual</th>
+                        <th colspan="3" class="bg-primary-subtle">Realisasi</th>
                         <th rowspan="2" width="5%">Aksi</th>
                     </tr>
                     <tr>
                         <th class="bg-gray" style="min-width: 110px;">Nilai Dampak</th>
                         <th class="bg-gray" style="min-width: 110px;">Eksposur</th>
                         <th class="bg-gray" style="min-width: 130px;">Level Risiko</th>
+
+                        <th class="bg-warning-subtle text-dark" style="min-width: 100px;">Nilai Dampak</th>
+                        <th class="bg-warning-subtle text-dark" style="min-width: 100px;">Eksposur</th>
+                        <th class="bg-warning-subtle text-dark" style="min-width: 110px;">Level Risiko</th>
 
                         <th class="bg-primary-subtle" style="min-width: 110px;">Nilai Dampak</th>
                         <th class="bg-primary-subtle" style="min-width: 110px;">Eksposur</th>
@@ -229,6 +244,7 @@
                             $routeDetail = url('projects/' . $risk->project_periode_list_id . '/risks/' . $risk->id . '/view');
 
                             $inherentClass = strtolower(str_replace(' ', '-', str_replace('to ', '', $risk->inherent_level)));
+                            $residualClass = strtolower(str_replace(' ', '-', str_replace('to ', '', $risk->residual_level)));
                             $currentClass = strtolower(str_replace(' ', '-', str_replace('to ', '', $risk->current_level)));
                         @endphp
                         <tr>
@@ -243,6 +259,13 @@
                                 <span class="badge bg-{{ $inherentClass }} w-100">{{ $risk->inherent_level }} - {{ $risk->inherent_skala }}</span>
                             </td>
 
+                            {{-- RESIDUAL --}}
+                            <td class="text-end">Rp {{ number_format($risk->residual_dampak, 0, ',', '.') }}</td>
+                            <td class="text-end">Rp {{ number_format($risk->residual_eksposur, 0, ',', '.') }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-{{ $residualClass }} text-white w-100">{{ $risk->residual_level }} - {{ $risk->residual_skala }}</span>
+                            </td>
+
                             {{-- REALISASI --}}
                             <td class="text-end fw-bold">Rp {{ number_format($risk->current_dampak, 0, ',', '.') }}</td>
                             <td class="text-end fw-bold text-danger">Rp {{ number_format($risk->current_eksposur, 0, ',', '.') }}</td>
@@ -255,7 +278,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" class="text-center p-4">Tidak ada data risiko terpublish di periode ini.</td></tr>
+                        <tr><td colspan="13" class="text-center p-4">Tidak ada data risiko terpublish di periode ini.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -417,11 +440,16 @@ $(document).ready(function() {
     function applyFilterAndRefresh() {
         var unitId = $('#unit_selector').val();
         var period = $('#period_selector').val();
+        var peristiwaId = $('#peristiwa_selector').val();
+
         let baseUrl = '{{ route("executive-summary-konsolidasi") }}';
         let params = new URLSearchParams();
 
         if (unitId) params.append('unit_id', unitId);
         if (period) params.append('period', period);
+        if (peristiwaId !== "" && peristiwaId !== null) {
+            params.append('peristiwa_risiko_id', peristiwaId);
+        }
 
         window.location.href = `${baseUrl}?${params.toString()}`;
     }
@@ -440,7 +468,7 @@ $(document).ready(function() {
         onChange: function(selectedDates, dateStr, instance) { applyFilterAndRefresh(); }
     });
 
-    $('#unit_selector').on('change', function() { applyFilterAndRefresh(); });
+    $('#unit_selector, #peristiwa_selector').on('change', function() { applyFilterAndRefresh(); });
 
     // ============================================
     // PIE CHART EKSPOSUR DIVISI
@@ -479,17 +507,42 @@ $(document).ready(function() {
                 name: 'Eksposur Realisasi',
                 type: 'pie',
                 radius: ['40%', '70%'],
-                avoidLabelOverlap: false,
+                avoidLabelOverlap: true,
                 itemStyle: {
                     borderRadius: 10,
                     borderColor: '#fff',
                     borderWidth: 2
                 },
-                label: { show: false, position: 'center' },
-                emphasis: {
-                    label: { show: true, fontSize: 16, fontWeight: 'bold' }
+                label: {
+                    show: true,
+                    position: 'outside',
+                    formatter: function(params) {
+                        let val = params.value;
+                        let compactVal = val;
+                        if (val >= 1e12) compactVal = (val / 1e12).toFixed(1) + ' T';
+                        else if (val >= 1e9) compactVal = (val / 1e9).toFixed(1) + ' M';
+                        else if (val >= 1e6) compactVal = (val / 1e6).toFixed(1) + ' Jt';
+                        else compactVal = 'Rp ' + val.toLocaleString('id-ID');
+
+                        return `${params.name}\n${compactVal} (${params.percent}%)`;
+                    },
+                    fontSize: 11,
+                    fontWeight: '600',
+                    lineHeight: 16
                 },
-                labelLine: { show: false },
+                labelLine: {
+                    show: true,
+                    length: 15,
+                    length2: 15,
+                    smooth: true
+                },
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                },
                 data: pieData
             }]
         };
