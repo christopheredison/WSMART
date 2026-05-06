@@ -69,7 +69,7 @@
                                     <select class="form-select select2" name="taksonomi_risiko_id" required>
                                         <option value="">Pilih Taksonomi</option>
                                         @foreach($taksonomiRisikos as $tax)
-                                            <option value="{{ $tax->id }}" {{ old('taksonomi_risiko_id', $projectRisk->taksonomi_risiko_id ?? '') == $tax->id ? 'selected' : '' }}>
+                                            <option value="{{ $tax->id }}">
                                                 {{ $tax->nama }}
                                             </option>
                                         @endforeach
@@ -217,7 +217,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">2</span>
+                            <span class="nav-item-circle">{{ $danantara ? '4' : '2' }}</span>
                         </span>
                         <span class="h3 mb-0">Dampak Risiko</span>
                     </div>
@@ -257,7 +257,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">3</span>
+                            <span class="nav-item-circle">{{ $danantara ? '5' : '3' }}</span>
                         </span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
@@ -301,7 +301,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">4</span>
+                            <span class="nav-item-circle">{{ $danantara ? '6' : '4' }}</span>
                         </span>
                         <span class="h3 mb-0">Key Risk Indicator</span>
                     </div>
@@ -372,7 +372,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">5</span>
+                            <span class="nav-item-circle">{{ $danantara ? '7' : '5' }}</span>
                         </span>
                         <span class="h3 mb-0">Kontrol</span>
                     </div>
@@ -468,7 +468,7 @@
                     <div class="card-header stepper border-0 pb-0">
                         <div class="nav-link active d-flex align-items-center p-0">
                             <span class="nav-item-circle-parent">
-                                <span class="nav-item-circle">6</span>
+                                <span class="nav-item-circle">{{ $danantara ? '8' : '6' }}</span>
                             </span>
                             <span class="h3 mb-0">Risiko Proyek Terkait</span>
                         </div>

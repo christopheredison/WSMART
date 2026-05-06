@@ -1627,7 +1627,7 @@ class RiskRegisterUnitController extends Controller
             }
         }
 
-        $danatara = $unit ? $unit->unit_mr == 1 : false;
+        $danantara = $unit ? $unit->unit_mr == 1 : false;
 
         return view('risk-register-unit.edit', compact(
             'identifikasiRisiko',
@@ -1644,7 +1644,7 @@ class RiskRegisterUnitController extends Controller
             'projects',
             'projectRisks',
             'taksonomiRisikos',
-            'danatara',
+            'danantara',
         ));
     }
 
