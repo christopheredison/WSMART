@@ -19,136 +19,171 @@
           @csrf
           <input type="hidden" name="action" id="formAction" value="save">
 
-          @foreach($dimensions as $dimension)
-          <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-              <h5 class="mb-0">Dimensi : {{ $dimension->name }}</h5>
-            </div>
-            <div class="card-body">
+          @php
+            // Inisiasi variabel untuk penomoran Parameter yang tidak ter-reset
+            $paramIndex = 1;
+          @endphp
 
-              @foreach($dimension->subDimensions as $subDimension)
-              <div class="card mb-3">
-                <div class="card-header bg-info text-white">
-                  <h6 class="mb-0">Sub-Dimensi : {{ $subDimension->name }}</h6>
-                </div>
-                <div class="card-body">
+          <div class="accordion" id="accordionDimensi">
+            @foreach($dimensions as $dimension)
+            <div class="accordion-item mb-4 border-0 shadow-sm">
+              <h6 class="accordion-header" id="headingDimensi{{ $dimension->id }}">
+                <button class="accordion-button bg-primary text-white rounded" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDimensi{{ $dimension->id }}" aria-expanded="true" aria-controls="collapseDimensi{{ $dimension->id }}">
+                  <h6 class="mb-0">Dimensi : {{ $dimension->name }}</h6>
+                </button>
+              </h6>
+              <div id="collapseDimensi{{ $dimension->id }}" class="accordion-collapse collapse show" aria-labelledby="headingDimensi{{ $dimension->id }}">
+                <div class="accordion-body border border-top-0 border-primary rounded-bottom p-4">
 
-                  @foreach($subDimension->measurementParameters as $parameter)
-                  @if($parameter->criteria && $parameter->criteria->count() > 0)
-                  <div class="card mb-3">
-                    <div class="card-header">
-                      <strong>Parameter {{ $loop->iteration }}: {{ $parameter->statement }}</strong>
-                    </div>
-                    <div class="card-body">
+                  <div class="accordion" id="accordionSubDimensi{{ $dimension->id }}">
+                    @foreach($dimension->subDimensions as $subDimension)
+                    <div class="accordion-item mb-3 border-0">
+                      <h6 class="accordion-header" id="headingSubDimensi{{ $subDimension->id }}">
+                        <button class="accordion-button bg-info text-white rounded" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSubDimensi{{ $subDimension->id }}" aria-expanded="true" aria-controls="collapseSubDimensi{{ $subDimension->id }}">
+                          <h6 class="mb-0">Sub-Dimensi : {{ $subDimension->name }}</h6>
+                        </button>
+                      </h6>
+                      <div id="collapseSubDimensi{{ $subDimension->id }}" class="accordion-collapse collapse show" aria-labelledby="headingSubDimensi{{ $subDimension->id }}">
+                        <div class="accordion-body border border-top-0 border-info rounded-bottom p-3">
 
-                      @foreach($parameter->criteria as $criteria)
-                      <div class="mb-4 border-bottom pb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                          <strong class="text-primary">Kriteria {{ $loop->iteration }}</strong>
-                          <div class="d-flex gap-2">
-                            <select class="form-select form-select-sm w-auto" name="scores[{{ $criteria->id }}]" data-fieldname="Score: Parameter {{ $loop->parent->iteration }}, Kriteria {{ $loop->iteration }}">
-                              <option value="" disabled {{ !isset($scores[$criteria->id]) ? 'selected' : '' }}>Pilih Score</option>
-                              @for($i = $criteria->min_score; $i <= $criteria->max_score; $i++)
-                                <option value="{{ $i }}" {{ isset($scores[$criteria->id]) && $scores[$criteria->id] == $i ? 'selected' : '' }}>
-                                  {{ $i }}
-                                </option>
-                              @endfor
-                            </select>
+                          <div class="accordion" id="accordionParameter{{ $subDimension->id }}">
+                            @foreach($subDimension->measurementParameters as $parameter)
+                            @if($parameter->criteria && $parameter->criteria->count() > 0)
+                            <div class="accordion-item mb-3">
+                              <h6 class="accordion-header" id="headingParameter{{ $parameter->id }}">
+                                <button class="accordion-button bg-light text-dark fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseParameter{{ $parameter->id }}" aria-expanded="true" aria-controls="collapseParameter{{ $parameter->id }}">
+                                  <!-- Menggunakan $paramIndex agar nomor tidak reset -->
+                                  Parameter {{ $paramIndex }}: {{ $parameter->statement }}
+                                </button>
+                              </h6>
+                              <div id="collapseParameter{{ $parameter->id }}" class="accordion-collapse collapse show" aria-labelledby="headingParameter{{ $parameter->id }}">
+                                <div class="accordion-body">
 
+                                  @foreach($parameter->criteria as $criteria)
+                                  <div class="mb-4 border-bottom pb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                      <strong class="text-primary">Kriteria {{ $loop->iteration }}</strong>
+                                      <div class="d-flex gap-2">
+                                        <!-- Menggunakan $paramIndex pada data-fieldname untuk validasi js -->
+                                        <select class="form-select form-select-sm w-auto" name="scores[{{ $criteria->id }}]" data-fieldname="Score: Parameter {{ $paramIndex }}, Kriteria {{ $loop->iteration }}">
+                                          <option value="" disabled {{ !isset($scores[$criteria->id]) ? 'selected' : '' }}>Pilih Score</option>
+                                          @for($i = $criteria->min_score; $i <= $criteria->max_score; $i++)
+                                            <option value="{{ $i }}" {{ isset($scores[$criteria->id]) && $scores[$criteria->id] == $i ? 'selected' : '' }}>
+                                              {{ $i }}
+                                            </option>
+                                          @endfor
+                                        </select>
+
+                                        @php
+                                          $isGapFilled = !empty($gapAnalysis[$criteria->id]);
+                                          $btnClass = $isGapFilled ? 'btn-primary' : 'btn-outline-primary';
+                                          $btnIcon = $isGapFilled ? 'bx-check-circle' : 'bx-file';
+                                        @endphp
+                                        <button type="button"
+                                                class="btn btn-sm {{ $btnClass }} btn-gap-modal"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalKriteria{{ $criteria->id }}">
+                                          <span class="bx {{ $btnIcon }} me-1"></span> Gap Analysis
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    <div class="row g-2 align-items-stretch">
+                                      @foreach($criteria->details->sortBy('level') as $detail)
+                                      @php
+                                        $bgClass = match($detail->level) {
+                                          1 => 'bg-primary',
+                                          2 => 'bg-info',
+                                          3 => 'bg-success',
+                                          4 => 'bg-warning text-dark',
+                                          5 => 'bg-danger',
+                                          default => 'bg-secondary'
+                                        };
+                                        $levelText = match($detail->level) {
+                                          1 => 'Initial Phase',
+                                          2 => 'Emerging State',
+                                          3 => 'Good Practice',
+                                          4 => 'Strong Practice',
+                                          5 => 'Best Practice',
+                                          default => 'Level ' . $detail->level
+                                        };
+                                      @endphp
+                                      <div class="col-md">
+                                        <div class="card h-100 border shadow-none">
+                                          <div class="card-header p-2 text-center {{ $bgClass }} {{ $detail->level == 4 ? '' : 'text-white' }}" style="font-size: 12px;">
+                                            <span class="fw-bold d-block">{{ $detail->level }}</span>
+                                            <span>{{ $levelText }}</span>
+                                          </div>
+                                          <div class="card-body p-2 text-start bg-white">
+                                            <div class="text-dark" style="font-size: 12px;">
+                                              {!! $detail?->criteria ? nl2br(e($detail->criteria)) : '-' !!}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      @endforeach
+                                    </div>
+                                  </div>
+
+                                  <!-- Modal Gap Analysis -->
+                                  <div class="modal fade" id="modalKriteria{{ $criteria->id }}" tabindex="-1" aria-labelledby="modalLabelKriteria{{ $criteria->id }}" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg">
+                                      <div class="modal-content">
+                                        <div class="modal-header">
+                                          <h5 class="modal-title" id="modalLabelKriteria{{ $criteria->id }}">Gap Analysis & Upload Dokumen - Kriteria {{ $loop->iteration }}</h5>
+                                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                          <div class="mb-3">
+                                            <label class="form-label">Gap Analysis <span class="text-danger">*</span></label>
+                                            <!-- Menggunakan $paramIndex pada data-fieldname -->
+                                            <textarea name="gap_analysis[{{ $criteria->id }}]" class="form-control" rows="4" data-fieldname="Gap Analysis: Parameter {{ $paramIndex }}, Kriteria {{ $loop->iteration }}">{{ old('gap_analysis.' . $criteria->id, $gapAnalysis[$criteria->id] ?? '') }}</textarea>
+                                          </div>
+                                          <div class="mb-3">
+                                            <label class="form-label">Upload Dokumen 1</label>
+                                            <input type="file" class="form-control" name="files[{{ $criteria->id }}][0]">
+                                          </div>
+                                          <div class="mb-3">
+                                            <label class="form-label">Upload Dokumen 2</label>
+                                            <input type="file" class="form-control" name="files[{{ $criteria->id }}][1]">
+                                          </div>
+                                          <div class="mb-3">
+                                            <label class="form-label">Upload Dokumen 3</label>
+                                            <input type="file" class="form-control" name="files[{{ $criteria->id }}][2]">
+                                          </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  @endforeach
+
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Increment variabel setelah tag parameter selesai -->
                             @php
-                              $isGapFilled = !empty($gapAnalysis[$criteria->id]);
-                              $btnClass = $isGapFilled ? 'btn-primary' : 'btn-outline-primary';
-                              $btnIcon = $isGapFilled ? 'bx-check-circle' : 'bx-file';
+                              $paramIndex++;
                             @endphp
-                            <button type="button"
-                                    class="btn btn-sm {{ $btnClass }} btn-gap-modal"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#modalKriteria{{ $criteria->id }}">
-                              <span class="bx {{ $btnIcon }} me-1"></span> Gap Analysis
-                            </button>
-                          </div>
-                        </div>
 
-                        <div class="row g-2 align-items-stretch">
-                          @foreach($criteria->details->sortBy('level') as $detail)
-                          @php
-                            $bgClass = match($detail->level) {
-                              1 => 'bg-primary',
-                              2 => 'bg-info',
-                              3 => 'bg-success',
-                              4 => 'bg-warning text-dark',
-                              5 => 'bg-danger',
-                              default => 'bg-secondary'
-                            };
-                            $levelText = match($detail->level) {
-                              1 => 'Initial Phase',
-                              2 => 'Emerging State',
-                              3 => 'Good Practice',
-                              4 => 'Strong Practice',
-                              5 => 'Best Practice',
-                              default => 'Level ' . $detail->level
-                            };
-                          @endphp
-                          <div class="col-md">
-                            <div class="card h-100 border shadow-none">
-                              <div class="card-header p-2 text-center {{ $bgClass }} {{ $detail->level == 4 ? '' : 'text-white' }}">
-                                <small class="fw-bold d-block">{{ $detail->level }}</small>
-                                <small>{{ $levelText }}</small>
-                              </div>
-                              <div class="card-body p-2 text-start bg-white">
-                                <small class="text-dark">{{ $detail->criteria }}</small>
-                              </div>
-                            </div>
+                            @endif
+                            @endforeach
                           </div>
-                          @endforeach
+
                         </div>
                       </div>
-
-                      <div class="modal fade" id="modalKriteria{{ $criteria->id }}" tabindex="-1" aria-labelledby="modalLabelKriteria{{ $criteria->id }}" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                          <div class="modal-content">
-                            <div class="modal-header">
-                              <h5 class="modal-title" id="modalLabelKriteria{{ $criteria->id }}">Gap Analysis & Upload Dokumen - Kriteria {{ $loop->iteration }}</h5>
-                              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                              <div class="mb-3">
-                                <label class="form-label">Gap Analysis <span class="text-danger">*</span></label>
-                                <textarea name="gap_analysis[{{ $criteria->id }}]" class="form-control" rows="4" data-fieldname="Gap Analysis: Parameter {{ $loop->parent->iteration }}, Kriteria {{ $loop->iteration }}">{{ old('gap_analysis.' . $criteria->id, $gapAnalysis[$criteria->id] ?? '') }}</textarea>
-                              </div>
-                              <div class="mb-3">
-                                <label class="form-label">Upload Dokumen 1</label>
-                                <input type="file" class="form-control" name="files[{{ $criteria->id }}][0]">
-                              </div>
-                              <div class="mb-3">
-                                <label class="form-label">Upload Dokumen 2</label>
-                                <input type="file" class="form-control" name="files[{{ $criteria->id }}][1]">
-                              </div>
-                              <div class="mb-3">
-                                <label class="form-label">Upload Dokumen 3</label>
-                                <input type="file" class="form-control" name="files[{{ $criteria->id }}][2]">
-                              </div>
-                            </div>
-                            <div class="modal-footer">
-                              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      @endforeach
-
                     </div>
+                    @endforeach
                   </div>
-                  @endif
-                  @endforeach
 
                 </div>
               </div>
-              @endforeach
-
             </div>
+            @endforeach
           </div>
-          @endforeach
 
           <div class="d-flex justify-content-between mt-4">
             <a href="{{ route('penilaian-rmi.index') }}" class="btn btn-outline-secondary">
@@ -198,6 +233,11 @@
   .floating-buttons.hidden {
     opacity: 0;
     pointer-events: none;
+  }
+
+  .accordion-button.bg-primary::after,
+  .accordion-button.bg-info::after {
+      filter: invert(1) grayscale(100%) brightness(200%);
   }
 </style>
 @endpush

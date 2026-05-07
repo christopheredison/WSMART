@@ -2,6 +2,9 @@
 @php
   // Variabel yang tersedia:
   // $dimensions, $parameterScores, $criteriaScores, $dimensionScores
+
+  // 1. INISIASI COUNTER PARAMETER GLOBAL
+  $paramIndex = 1;
 @endphp
 
 <div class="card">
@@ -73,15 +76,18 @@
 
                 {{-- Parameter Pengukuran --}}
                 @foreach($subDimension->measurementParameters as $parameter)
-                  <div class="card mb-3">
+                  <div class="card mb-3 border-secondary">
                     <div class="card-header bg-light">
                       <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">{{ $parameter->statement }}</h6>
+
+                        {{-- 2. UBAH HEADER PARAMETER AGAR MENAMPILKAN NOMOR --}}
+                        <h6 class="mb-0 fw-bold text-dark">Parameter {{ $paramIndex }}: {{ $parameter->statement }}</h6>
+
                         <div>
                           <span class="badge bg-success">
                             Score: {{ isset($parameterScores[$parameter->id]) ? number_format($parameterScores[$parameter->id]->score, 2) : '-' }}
                           </span>
-                          <span class="badge bg-warning ms-2">
+                          <span class="badge bg-warning text-dark ms-2">
                             {{ isset($parameterScores[$parameter->id]) ? $parameterScores[$parameter->id]->score_parameter_desc : '-' }}
                           </span>
                           @if(isset($parameterScores[$parameter->id]) && $parameterScores[$parameter->id]->parameter_wawancara)
@@ -98,6 +104,9 @@
                         <table class="table table-bordered table-hover mb-0">
                           <thead class="table-light">
                             <tr>
+                              {{-- 3. TAMBAHKAN KOLOM NOMOR --}}
+                              <th class="text-center align-middle" width="5%">No</th>
+
                               <th class="align-middle">Kriteria</th>
                               <th class="text-center align-middle" width="80">Score</th>
                               <th class="align-middle">Gap Analysis</th>
@@ -108,20 +117,46 @@
                             @foreach($parameter->criteria as $criteria)
                               {{-- Menerapkan selang-seling warna menggunakan $loop->even dari Laravel Blade --}}
                               <tr class="{{ $loop->even ? 'table-light' : 'bg-white' }}">
+
+                                {{-- 4. CETAK NOMOR ITERASI UNTUK KRITERIA --}}
+                                <td class="text-center align-middle fw-bold text-muted">{{ $loop->iteration }}</td>
+
                                 <td class="align-middle">
                                   @if(isset($criteriaScores[$criteria->id]))
                                     @php
                                       $sel = $criteriaScores[$criteria->id]->score;
                                       $det = $criteria->details->where('level', $sel)->first();
                                     @endphp
-                                    {{ $det?->criteria ?? $criteria->criteria_statement }}
+                                    {!! $det?->criteria ? nl2br(e($det->criteria)) :
+                                    '-' !!}
                                   @else
                                     <span class="text-muted fst-italic">Belum dinilai</span>
                                   @endif
                                 </td>
-                                <td class="text-center align-middle">
+                                {{-- <td class="text-center align-middle">
                                   @if(isset($criteriaScores[$criteria->id]))
                                     <span class="badge bg-primary fs-6">{{ $criteriaScores[$criteria->id]->score }}</span>
+                                  @else
+                                    -
+                                  @endif
+                                </td> --}}
+                                <td class="text-center align-middle">
+                                  @if(isset($criteriaScores[$criteria->id]))
+                                    @php
+                                      $scoreVal = (int) $criteriaScores[$criteria->id]->score;
+                                      $badgeClass = match($scoreVal) {
+                                        1 => 'bg-primary',
+                                        2 => 'bg-info',
+                                        3 => 'bg-success',
+                                        4 => 'bg-warning text-dark',
+                                        5 => 'bg-danger',
+                                        0 => 'bg-secondary text-white',
+                                        default => 'bg-secondary'
+                                      };
+                                    @endphp
+                                    <small class="badge {{ $badgeClass }} px-2 py-1">
+                                      {{ $scoreVal === 0 ? '-' : $scoreVal }}
+                                    </small>
                                   @else
                                     -
                                   @endif
@@ -167,6 +202,9 @@
                       </div>
                     </div>
                   </div>
+
+                  @php $paramIndex++; @endphp
+
                 @endforeach
 
               </div>
