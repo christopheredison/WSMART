@@ -304,6 +304,7 @@ class LaporanController extends Controller
             'divisi_ids'   => 'required|array',
             'month'        => 'required|integer|between:1,12',
             'tahun'        => 'required|integer',
+            'status_publish' => 'nullable|string|in:published,unpublished,all'
         ]);
 
         try {
@@ -311,19 +312,13 @@ class LaporanController extends Controller
             $month = $request->input('month');
             $tahun = $request->input('tahun');
 
+            // Sewaktu-waktu bisa diganti menjadi 'published' atau 'unpublished'
+            $statusPublish = $request->input('status_publish', 'all');
+
             $namaBulan = [
-                1 => 'Januari',
-                2 => 'Februari',
-                3 => 'Maret',
-                4 => 'April',
-                5 => 'Mei',
-                6 => 'Juni',
-                7 => 'Juli',
-                8 => 'Agustus',
-                9 => 'September',
-                10 => 'Oktober',
-                11 => 'November',
-                12 => 'Desember'
+                1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
             ];
 
             $monthString = $namaBulan[(int)$month] ?? $month;
@@ -331,7 +326,7 @@ class LaporanController extends Controller
             $fileName = 'Laporan_Konsolidasi_Operasi_' . $monthString . '_' . $tahun . '.xlsx';
 
             $fileContents = \Maatwebsite\Excel\Facades\Excel::raw(
-                new \App\Exports\LaporanKonsolidasiExport($costCenters, $month, $tahun),
+                new \App\Exports\LaporanKonsolidasiExport($costCenters, $month, $tahun, $statusPublish),
                 \Maatwebsite\Excel\Excel::XLSX
             );
 
