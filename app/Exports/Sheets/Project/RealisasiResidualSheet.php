@@ -340,7 +340,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
     private function calculateEfektifitasVal($nilaiEfektivitas)
     {
         $nilai = (float) $nilaiEfektivitas;
-        return $nilai > 0 ? 'Efektif' : 'Tidak Efektif';
+        return $nilai >= 0 ? 'Efektif' : 'Tidak Efektif';
     }
 
     /**

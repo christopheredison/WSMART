@@ -50,9 +50,9 @@ class KamusRisikoApController extends Controller
 
                 $q->when($request->filled('efektivitas'), function ($subQ) use ($request) {
                     if ($request->efektivitas == 'efektif') {
-                        $subQ->where('efektivitas_perlakuan_risiko', '>', 0);
+                        $subQ->where('efektivitas_perlakuan_risiko', '>=', 0);
                     } elseif ($request->efektivitas == 'tidak_efektif') {
-                        $subQ->where('efektivitas_perlakuan_risiko', '<=', 0);
+                        $subQ->where('efektivitas_perlakuan_risiko', '<', 0);
                     }
                 });
             });
@@ -166,7 +166,7 @@ class KamusRisikoApController extends Controller
                         return '-';
                     }
 
-                    $class = $efektivitas > 0 ? 'text-success' : ($efektivitas < 0 ? 'text-danger' : 'text-warning');
+                    $class = $efektivitas >= 0 ? 'text-success' : 'text-danger';
 
                     return '<span class="fw-bold ' . $class . '">' . $efektivitas . '%</span>';
                 })

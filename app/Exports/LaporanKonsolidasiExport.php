@@ -340,7 +340,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                 $levelResidualRealisasi,
 
                 $risk->is_closed ? 'Closed' : 'Open',
-                ((float) $risk->efektivitas_perlakuan_risiko > 0) ? 'Efektif' : 'Tidak Efektif',
+                ((float) $risk->efektivitas_perlakuan_risiko >= 0) ? 'Efektif' : 'Tidak Efektif',
                 $periodeMonitoringText,
             ];
 

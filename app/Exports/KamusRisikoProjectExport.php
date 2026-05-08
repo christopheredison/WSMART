@@ -55,9 +55,9 @@ class KamusRisikoProjectExport implements FromQuery, WithHeadings, WithMapping, 
         if (!empty($this->filters['efektivitas'])) {
             $query->whereHas('projectRisk', function ($q) {
                 if ($this->filters['efektivitas'] == 'efektif') {
-                    $q->where('efektivitas_perlakuan_risiko', '>', 0);
+                    $q->where('efektivitas_perlakuan_risiko', '>=', 0);
                 } elseif ($this->filters['efektivitas'] == 'tidak_efektif') {
-                    $q->where('efektivitas_perlakuan_risiko', '<=', 0);
+                    $q->where('efektivitas_perlakuan_risiko', '<', 0);
                 }
             });
         }

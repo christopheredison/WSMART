@@ -531,7 +531,7 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
     private function calculateEfektifitas($risk)
     {
         $nilai = (float) $risk->efektivitas_perlakuan_risiko;
-        return $nilai > 0 ? 'Efektif' : 'Tidak Efektif';
+        return $nilai >= 0 ? 'Efektif' : 'Tidak Efektif';
     }
 
     private function formatCurrency($value)
