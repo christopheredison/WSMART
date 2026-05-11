@@ -1185,7 +1185,8 @@ class ProjectRiskController extends BasicCRUDController
             'reason' => 'required'
         ]);
 
-        $risk = ProjectRisk::with('peristiwaRisiko')->findOrFail($request->risk_id);
+        $risk = ProjectRisk::with(['peristiwaRisiko', 'project'])->findOrFail($request->risk_id);
+
         $risk->update([
             'request_edit' => 1,
             'request_edit_reason' => $request->reason
@@ -1204,13 +1205,15 @@ class ProjectRiskController extends BasicCRUDController
             ? $risk->rencana_kegiatan
             : ($risk->peristiwaRisiko->title ?? 'Risiko Proyek');
 
+        $projectName = $risk->project->project_name ?? 'Proyek Tidak Diketahui';
+
         $targetLink = route('projects.risks.index', ['project' => $risk->project_periode_list_id]) . '?verify_request_edit=' . $risk->id;
 
         $this->sendNotificationCustom(
             'RW_MR',
             $risk->project_periode_list_id,
             'Request Edit Risiko',
-            'Risk Officer Proyek mengajukan request edit untuk risiko (' . $riskName . '). Alasan: ' . $request->reason,
+            'Risk Officer Proyek mengajukan request edit untuk risiko (' . $riskName . ') pada proyek ' . $projectName . '. Alasan: ' . $request->reason,
             $targetLink,
             'bx bx-message-square-edit'
         );
