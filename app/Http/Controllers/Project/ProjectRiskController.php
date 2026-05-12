@@ -4086,14 +4086,18 @@ class ProjectRiskController extends BasicCRUDController
         $unitId = $project->unit_id; // Sesuaikan dengan kolom relasi unit di tabel projects (misal: unit_id / cost_center)
 
         if ($target === 'RO_PROYEK') {
-            // Risk Officer Project (Level 6)
-            // Catatan: Jika user project diikat dengan relasi pivot, ubah query ini.
-            // Asumsi dasar mengambil level_id 6 di project ini:
-            $users = \App\Models\User::where('level_id', 6)->get();
+            // Risk Officer Project (Level 6) YANG di-assign ke project ini
+            $users = \App\Models\User::where('level_id', 6)
+                ->whereHas('projects', function ($q) use ($project) {
+                    $q->where('projects.id', $project->id);
+                })->get();
         }
         elseif ($target === 'RW_PROYEK') {
-            // Risk Owner Project (Level 7)
-            $users = \App\Models\User::where('level_id', 7)->get();
+            // Risk Owner Project (Level 7) YANG di-assign ke project ini
+            $users = \App\Models\User::where('level_id', 7)
+                ->whereHas('projects', function ($q) use ($project) {
+                    $q->where('projects.id', $project->id);
+                })->get();
         }
         elseif ($target === 'RO_DIVISI') {
             // Risk Officer Divisi (Level 1, unit terkait project)

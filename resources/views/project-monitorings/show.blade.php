@@ -183,7 +183,7 @@
                                                 </td>
                                                 <td class="display-timeline text-center">{{ $perlakuan?->last_monitoring?->waktu_perlakuan_risiko?: '-' }}</td>
                                                 <td>
-                                                    <button type="button" class="btn btn-sm btn-link lihat-file-btn" title="Lihat File">
+                                                    <button type="button" class="btn btn-sm btn-link lihat-file-btn" data-type="penyebab" title="Lihat File" data-bs-toggle="tooltip">
                                                         <i class='bx bx-file fs-5'></i>
                                                     </button>
                                                 </td>
@@ -939,19 +939,19 @@
                                                     {{-- Accordion Dokumen --}}
                                                     <div class="accordion accordion-flush border-top" id="{{ $accordionId }}">
                                                         <div class="accordion-item border-0">
-                                                            <h2 class="accordion-header">
+                                                            <h6 class="accordion-header">
                                                                 <button class="accordion-button collapsed py-2 px-3 small fw-semibold bg-white"
                                                                         type="button"
                                                                         data-bs-toggle="collapse"
                                                                         data-bs-target="#collapse-{{ $accordionId }}"
                                                                         aria-expanded="false">
-                                                                    <i class='bx bx-paperclip me-2 text-secondary'></i>
+                                                                    <span class="bx bx-paperclip me-2"></span>
                                                                     Dokumen Evidence
                                                                     @if($docsForThis->count() > 0)
                                                                         <span class="badge bg-primary ms-2 rounded-pill">{{ $docsForThis->count() }}</span>
                                                                     @endif
                                                                 </button>
-                                                            </h2>
+                                                            </h6>
                                                             <div id="collapse-{{ $accordionId }}"
                                                                 class="accordion-collapse collapse"
                                                                 data-bs-parent="#{{ $accordionId }}">
@@ -1107,19 +1107,19 @@
                                                     {{-- Accordion Dokumen --}}
                                                     <div class="accordion accordion-flush border-top" id="{{ $accordionIdDampak }}">
                                                         <div class="accordion-item border-0">
-                                                            <h2 class="accordion-header">
+                                                            <h6 class="accordion-header">
                                                                 <button class="accordion-button collapsed py-2 px-3 small fw-semibold bg-white"
                                                                         type="button"
                                                                         data-bs-toggle="collapse"
                                                                         data-bs-target="#collapse-{{ $accordionIdDampak }}"
                                                                         aria-expanded="false">
-                                                                    <i class='bx bx-paperclip me-2 text-secondary'></i>
+                                                                    <span class='bx bx-paperclip me-2'></span>
                                                                     Dokumen Evidence
                                                                     @if($docsForThisDampak->count() > 0)
                                                                         <span class="badge bg-warning ms-2 rounded-pill text-dark">{{ $docsForThisDampak->count() }}</span>
                                                                     @endif
                                                                 </button>
-                                                            </h2>
+                                                            </h6>
                                                             <div id="collapse-{{ $accordionIdDampak }}"
                                                                 class="accordion-collapse collapse"
                                                                 data-bs-parent="#{{ $accordionIdDampak }}">
@@ -1577,16 +1577,20 @@ $(document).ready(function() {
         tbody.empty();
 
         if (filteredFiles && filteredFiles.length > 0) {
+            const storageUrl = "{{ asset('storage') }}/";
+
             for (let i in filteredFiles) {
                 const file = filteredFiles[i];
                 const tr = $('<tr></tr>');
+
+                const fileUrl = file.url ? file.url : (storageUrl + file.file_path);
+
                 tr.append('<td>' + file.file_name + '</td>');
                 tr.append('<td>' + (file.description || '-') + '</td>');
-                tr.append('<td><a href="' + file.url + '" download="' + file.file_name + '" class="btn btn-sm btn-primary"><i class="bx bx-download"></i> Download</a></td>');
+                tr.append('<td><a href="' + fileUrl + '" download="' + file.file_name + '" class="btn btn-sm btn-primary"><span class="bx bx-download"></sp> Download</a></td>');
                 tbody.append(tr);
             }
         } else {
-            // Diperbaiki colspan jadi 3 menyesuaikan jumlah kolom di tabel modal
             tbody.append('<tr><td colspan="3" class="text-center text-muted fst-italic">Tidak ada file yang dilampirkan</td></tr>');
         }
 

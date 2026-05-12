@@ -2262,12 +2262,18 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         $project = $projectPeriodeList->project;
 
         if ($target === 'RO_PROYEK') {
-            // Risk Officer Project (Level 6)
-            $users = \App\Models\User::where('level_id', 6)->get();
+            // Risk Officer Project (Level 6) YANG di-assign ke project ini
+            $users = \App\Models\User::where('level_id', 6)
+                ->whereHas('projects', function ($q) use ($project) {
+                    $q->where('projects.id', $project->id);
+                })->get();
         }
         elseif ($target === 'RW_PROYEK') {
-            // Risk Owner Project (Level 7)
-            $users = \App\Models\User::where('level_id', 7)->get();
+            // Risk Owner Project (Level 7) YANG di-assign ke project ini
+            $users = \App\Models\User::where('level_id', 7)
+                ->whereHas('projects', function ($q) use ($project) {
+                    $q->where('projects.id', $project->id);
+                })->get();
         }
         elseif ($target === 'RO_DIVISI') {
             // Risk Officer Divisi (Level 1) yang menaungi project (relasi via cost_center_parent atau unit_id)
