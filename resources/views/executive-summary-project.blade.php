@@ -1001,7 +1001,12 @@ $(document).ready(function() {
                 const riskNumber = tableRow.find('td:first').text().trim();
 
                 const riskMonitorings = risk.project_risk_monitorings || [];
-                const hasMonitoringThisMonth = riskMonitorings.some(m => parseInt(m.tahun) === selectedYear && parseInt(m.month) === selectedMonth);
+                /* const hasMonitoringThisMonth = riskMonitorings.some(m => parseInt(m.tahun) === selectedYear && parseInt(m.month) === selectedMonth); */
+                const hasMonitoringThisMonth = riskMonitorings.some(m =>
+                    parseInt(m.tahun) === selectedYear &&
+                    parseInt(m.month) === selectedMonth &&
+                    (parseInt(m.status) === 100 || m.is_approved == 1 || m.is_approved === true)
+                );
 
                 let displayMark = '';
                 if (!hasMonitoringThisMonth && riskNumber) {

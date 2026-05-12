@@ -1500,15 +1500,75 @@ class HomeController extends Controller
                 $tahunMonitorings = range($allYears->min(), $allYears->max());
             }
 
+            // foreach ($selectedProjectPeriode->projectRisks as $projectRisk) {
+            //     $riskMapData = $projectRisk->currentRiskMapsMonth;
+            //     foreach ($tahunMonitorings as $tahun) {
+            //         for ($month = 1; $month <= 12; $month++) {
+            //             $currentValue = $riskMapData[$tahun . '-' . $month] ?? null;
+            //             if (!$currentValue) {
+            //                 $currentValue = $riskMapData['inherent'];
+            //             }
+            //             $currentValue['nilai_dampak_formatted'] = 'Rp ' . number_format($currentValue['nilai_dampak'] ?? 0, 0, ',', '.');
+            //             $formattedCurrentRiskMaps[$projectRisk->id][$tahun][] = $currentValue;
+            //         }
+            //     }
+            // }
+
             foreach ($selectedProjectPeriode->projectRisks as $projectRisk) {
-                $riskMapData = $projectRisk->currentRiskMapsMonth;
+                // 1. Ambil data Inheren sebagai fallback paling dasar
+                $inherentData = null;
+                if ($projectRisk->projectRiskAnalisa) {
+                    $inherentData = [
+                        'skala_dampak' => $projectRisk->projectRiskAnalisa->skala_dampak,
+                        'skala_probabilitas' => $projectRisk->projectRiskAnalisa->skalaProbabilitas->tingkat ?? null,
+                        'skala_probabilitas_obj' => $projectRisk->projectRiskAnalisa->skalaProbabilitas,
+                        'skala_dampak_obj' => $projectRisk->projectRiskAnalisa->skalaDampakObj,
+                        'level_risiko' => $projectRisk->projectRiskAnalisa->level_risiko,
+                        'nilai_risiko' => $projectRisk->projectRiskAnalisa->skala_risiko,
+                        'nilai_dampak' => $projectRisk->projectRiskAnalisa->nilai_dampak,
+                        'nilai_probabilitas' => $projectRisk->projectRiskAnalisa->nilai_probabilitas,
+                    ];
+                }
+
+                // 2. Filter HANYA monitoring yang sudah Published (status 100 / approved)
+                $publishedMonitorings = $projectRisk->projectRiskMonitorings
+                    ->filter(function($mon) {
+                        return $mon->status == 100 || $mon->is_approved == 1;
+                    })
+                    ->sortBy(function($mon) {
+                        // Urutkan dari yang terlama ke terbaru
+                        return sprintf('%04d%02d', $mon->tahun, $mon->month);
+                    });
+
                 foreach ($tahunMonitorings as $tahun) {
                     for ($month = 1; $month <= 12; $month++) {
-                        $currentValue = $riskMapData[$tahun . '-' . $month] ?? null;
-                        if (!$currentValue) {
-                            $currentValue = $riskMapData['inherent'];
+                        // 3. Cari monitoring Published terakhir sampai pada target bulan/tahun
+                        $latestPublishedMon = $publishedMonitorings->filter(function($mon) use ($tahun, $month) {
+                            if ($mon->tahun < $tahun) return true;
+                            if ($mon->tahun == $tahun && $mon->month <= $month) return true;
+                            return false;
+                        })->last();
+
+                        $currentValue = $inherentData; // Default ke Inheren
+
+                        if ($latestPublishedMon) {
+                            // Replace dengan data monitoring yang valid
+                            $currentValue = [
+                                'skala_dampak' => $latestPublishedMon->skala_dampak,
+                                'skala_probabilitas' => $latestPublishedMon->skalaProbabilitas->tingkat ?? null,
+                                'skala_probabilitas_obj' => $latestPublishedMon->skalaProbabilitas,
+                                'skala_dampak_obj' => $latestPublishedMon->skalaDampakObj,
+                                'level_risiko' => $latestPublishedMon->level_risiko,
+                                'nilai_risiko' => $latestPublishedMon->skala_risiko,
+                                'nilai_dampak' => $latestPublishedMon->nilai_dampak,
+                                'nilai_probabilitas' => $latestPublishedMon->nilai_probabilitas,
+                            ];
                         }
-                        $currentValue['nilai_dampak_formatted'] = 'Rp ' . number_format($currentValue['nilai_dampak'] ?? 0, 0, ',', '.');
+
+                        if ($currentValue) {
+                            $currentValue['nilai_dampak_formatted'] = 'Rp ' . number_format($currentValue['nilai_dampak'] ?? 0, 0, ',', '.');
+                        }
+
                         $formattedCurrentRiskMaps[$projectRisk->id][$tahun][] = $currentValue;
                     }
                 }
