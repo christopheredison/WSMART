@@ -385,7 +385,7 @@
                             <td class="text-center">{{ optional($projectRisk->projectRiskAnalisa)->nilai_probabilitas ? optional($projectRisk->projectRiskAnalisa)->nilai_probabilitas . '%' : '-' }}</td>
                             <td class="text-center fw-bold">{{ optional(optional($projectRisk->projectRiskAnalisa)->skalaProbabilitas)->tingkat ?? '-' }}</td>
                             <td class="text-center fw-bold">{{ optional($projectRisk->projectRiskAnalisa)->skala_risiko ?? '-' }}</td>
-                            <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko)))}} fw-bold">{{ $projectRisk->projectRiskAnalisa?->level_risiko ?? '-' }}</td>
+                            <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko ?? '-' }}</td>
 
                             {{-- =================== Residual Risk Data =================== --}}
                             <td>{{ $projectRisk->projectRiskAnalisa?->nilai_dampak_residual ? 'Rp ' . number_format($projectRisk->projectRiskAnalisa->nilai_dampak_residual, 0, ',', '.') : 'Rp 0' }}</td>
@@ -393,7 +393,7 @@
                             <td class="text-center">{{ optional($projectRisk->projectRiskAnalisa)->nilai_probabilitas_residual ? optional($projectRisk->projectRiskAnalisa)->nilai_probabilitas_residual . '%' : '-' }}</td>
                             <td class="text-center fw-bold">{{ optional(optional($projectRisk->projectRiskAnalisa)->skalaProbabilitasResidual)->tingkat ?? '-' }}</td>
                             <td class="text-center fw-bold">{{ optional($projectRisk->projectRiskAnalisa)->skala_risiko_residual ?? '-' }}</td>
-                            <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko_residual)))}} fw-bold">{{ $projectRisk->projectRiskAnalisa?->level_risiko_residual ?? '-' }}</td>
+                            <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($projectRisk->projectRiskAnalisa?->level_risiko_residual)))}}">{{ $projectRisk->projectRiskAnalisa?->level_risiko_residual ?? '-' }}</td>
 
                             {{-- =================== Realisasi (Current) - Diisi oleh JavaScript =================== --}}
                             <td class="realisasi-nilai-dampak">-</td>
@@ -401,7 +401,7 @@
                             <td class="realisasi-nilai-probabilitas text-center">-</td>
                             <td class="realisasi-skala-probabilitas text-center fw-bold">-</td>
                             <td class="realisasi-nilai-risiko text-center fw-bold">-</td>
-                            <td class="realisasi-level-risiko fw-bold">-</td>
+                            <td class="realisasi-level-risiko">-</td>
                         </tr>
                         @empty
                         <tr>
