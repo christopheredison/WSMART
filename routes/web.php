@@ -82,6 +82,7 @@ use App\Http\Controllers\RiskRegisterCorporateMonitoringController;
 use App\Http\Controllers\RMI\KuesionerPublikController;
 use App\Http\Controllers\RMI\KuesionerRespondenController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\ReleaseNotesController;
 
 /*
 |--------------------------------------------------------------------------
@@ -884,5 +885,7 @@ Route::prefix('my-tasks')->middleware(['auth'])->group(function () {
     Route::get('/', [TaskController::class, 'index'])->name('tasks.index');
     Route::get('/count', [TaskController::class, 'getCount'])->name('tasks.count');
 });
+
+Route::get('/release-notes', [ReleaseNotesController::class, 'index'])->middleware(['auth'])->name('release-notes.index');
 
 Route::get('/logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index'])->middleware(['auth']);
