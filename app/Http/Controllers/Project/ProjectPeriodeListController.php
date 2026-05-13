@@ -632,11 +632,14 @@ class ProjectPeriodeListController extends BasicCRUDController
         }
 
         if (Gate::check('project_monitoring_list')) {
+            $monitoringRouteBase = route('projects.monitorings.index', ['project' => ':id']);
+            $script = "let elT=document.querySelector('#table-filter [name=tahun]'),elM=document.querySelector('#table-filter [name=month]'),t=elT?elT.value:new Date().getFullYear(),m=elM?elM.value:(new Date().getMonth()+1),q=Math.ceil(m/3);window.location.href='{$monitoringRouteBase}?tahun='+t+'&quarter='+q+'&month='+m;";
+
             $this->tableActions[] = [
                 'btn_icon' => true,
                 'label' => '<span class="bx bx-radar" title="Monitoring"></span>',
-                'action' => 'link',
-                'url' => route('projects.monitorings.index', ['project' => ':id']),
+                'action' => 'script',
+                'script' => $script,
                 'active_state' => '(data, type, row) => row.has_monitoring',
                 'title' => 'Monitoring'
             ];
