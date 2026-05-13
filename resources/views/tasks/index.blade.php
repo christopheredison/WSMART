@@ -5,8 +5,8 @@
     {{-- 1. HEADER HALAMAN --}}
     <div class="mb-4 d-flex justify-content-between align-items-center">
         <div class="">
-            <h2 class="h3 mb-0 text-gray-800 fw-bold">Task Approval</h2>
-            <p class="text-black small">Ringkasan status persetujuan dan monitoring risiko.</p>
+            <h2 class="h3 mb-1 text-gray-800 fw-bold">Task Approval</h2>
+            <p class="text-black mb-0">Ringkasan status persetujuan dan monitoring risiko.</p>
         </div>
 
         {{-- Summary Badges --}}
