@@ -668,16 +668,22 @@ Route::group(['middleware' => ['auth']], function () {
 
 // Route untuk Measurement Parameter
 Route::group(['prefix' => 'master', 'middleware' => ['auth']], function () {
-    // Resource route untuk measurement-parameter
-    Route::resource('measurement-parameter', 'App\Http\Controllers\Master\MeasurementParameterController');
+    Route::get('dimension/data', [App\Http\Controllers\Master\DimensionController::class, 'data'])->name('dimension.data');
+    Route::resource('dimension', App\Http\Controllers\Master\DimensionController::class);
 
-    // Route tambahan untuk measurement-parameter
-    Route::post('measurement-parameter/{id}/restore', 'App\Http\Controllers\Master\MeasurementParameterController@restore')
-        ->name('measurement-parameter.restore');
-    Route::get('measurement-parameter/{id}/set-criteria', 'App\Http\Controllers\Master\MeasurementParameterController@setCriteria')
-        ->name('measurement-parameter.set-criteria');
-    Route::post('measurement-parameter/{id}/store-criteria', 'App\Http\Controllers\Master\MeasurementParameterController@storeCriteria')
+    Route::get('sub-dimension/data', [App\Http\Controllers\Master\SubDimensionController::class, 'data'])->name('sub-dimension.data');
+    Route::resource('sub-dimension', App\Http\Controllers\Master\SubDimensionController::class);
+
+    Route::get('measurement-parameter/data', [App\Http\Controllers\Master\MeasurementParameterController::class, 'data'])->name('measurement-parameter.data');
+    Route::resource('measurement-parameter', App\Http\Controllers\Master\MeasurementParameterController::class);
+    Route::get('measurement-parameter/{parameterId}/create-criteria', 'App\Http\Controllers\Master\MeasurementParameterController@createCriteria')
+        ->name('measurement-parameter.create-criteria');
+    Route::post('measurement-parameter/{parameterId}/store-criteria', 'App\Http\Controllers\Master\MeasurementParameterController@storeCriteria')
         ->name('measurement-parameter.store-criteria');
+    Route::get('measurement-parameter/{parameterId}/edit-criteria/{criteriaId}', 'App\Http\Controllers\Master\MeasurementParameterController@editCriteria')
+        ->name('measurement-parameter.edit-criteria');
+    Route::put('measurement-parameter/{parameterId}/update-criteria/{criteriaId}', 'App\Http\Controllers\Master\MeasurementParameterController@updateCriteria')
+        ->name('measurement-parameter.update-criteria');
     Route::get('measurement-parameter/{parameterId}/delete-criteria/{criteriaId}', 'App\Http\Controllers\Master\MeasurementParameterController@deleteCriteria')
         ->name('measurement-parameter.delete-criteria');
 });

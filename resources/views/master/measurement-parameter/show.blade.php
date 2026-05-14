@@ -1,7 +1,7 @@
 @extends('layouts.default')
 @section('dashboard')
 <div class="row justify-content-center">
-  <div class="col-12 col-lg-10">
+  <div class="col-12 col-lg-12">
     <div class="card">
       <div class="card-header d-flex flex-between-center">
         <h2 class="h3">Detail Parameter Pengukuran</h2>
@@ -30,26 +30,36 @@
             <div class="col-md-9">{{ $criteriaCount }}</div>
           </div>
         </div>
-        
-        <h4 class="mb-3">Kriteria Penilaian</h4>
-        
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="mb-0">Kriteria Penilaian</h4>
+          <a href="{{ route('measurement-parameter.create-criteria', $parameter->id) }}" class="btn btn-primary btn-sm">
+            <span class="bx bx-plus"></span> Tambah Kriteria Baru
+          </a>
+        </div>
+
         <div class="table-responsive">
           <table class="table table-bordered">
             <thead class="bg-light">
               <tr>
-                <th width="5%">No</th>
-                <th width="19%">Kriteria Initial Phase</th>
-                <th width="19%">Kriteria Emerging State</th>
-                <th width="19%">Kriteria Good Practice</th>
-                <th width="19%">Kriteria Strong Practice</th>
-                <th width="19%">Kriteria Best Practice</th>
-                <th width="5%">Action</th>
+                <th width="5%" class="text-center">No</th>
+                <th width="10%" class="text-center">Score</th>
+                <th width="15%">Kriteria Initial Phase</th>
+                <th width="15%">Kriteria Emerging State</th>
+                <th width="15%">Kriteria Good Practice</th>
+                <th width="15%">Kriteria Strong Practice</th>
+                <th width="15%">Kriteria Best Practice</th>
+                <th width="10%" class="text-center">Action</th>
               </tr>
             </thead>
             <tbody>
               @forelse($parameterCriterias as $index => $criteria)
               <tr>
                 <td class="text-center">{{ $index + 1 }}</td>
+                <td class="text-center">
+                  <span class="badge bg-success mb-1">Min: {{ $criteria->min_score }}</span><br>
+                  <span class="badge bg-danger">Max: {{ $criteria->max_score }}</span>
+                </td>
                 <td>
                   @if($criteria->details->where('level', 1)->first())
                     {{ $criteria->details->where('level', 1)->first()->criteria }}
@@ -85,17 +95,22 @@
                     <span class="text-muted fst-italic">Tidak ada kriteria</span>
                   @endif
                 </td>
-                <td class="text-center">
-                  <button type="button" class="btn btn-sm btn-danger delete-criteria" 
-                          data-id="{{ $criteria->id }}" 
-                          data-parameter-id="{{ $parameter->id }}">
-                    <i class="bx bx-trash"></i>
+                <!-- Aksi dimasukkan ke dalam baris/loop -->
+                <td class="text-center white-space-nowrap">
+                  <a href="{{ route('measurement-parameter.edit-criteria', ['parameterId' => $parameter->id, 'criteriaId' => $criteria->id]) }}"
+                     class="btn btn-sm btn-warning text-dark me-1" title="Edit Kriteria">
+                    <span class="bx bx-edit"></span>
+                  </a>
+                  <button type="button" class="btn btn-sm btn-danger delete-criteria"
+                          data-id="{{ $criteria->id }}"
+                          data-parameter-id="{{ $parameter->id }}" title="Hapus Kriteria">
+                    <span class="bx bx-trash"></span>
                   </button>
                 </td>
               </tr>
               @empty
               <tr>
-                <td colspan="7" class="text-center">Belum ada kriteria yang ditambahkan</td>
+                <td colspan="8" class="text-center">Belum ada kriteria yang ditambahkan</td>
               </tr>
               @endforelse
             </tbody>
@@ -106,13 +121,11 @@
         <a href="{{ route('measurement-parameter.index') }}" class="btn btn-outline-secondary me-2">
           <i class="bx bx-arrow-back"></i> Kembali
         </a>
-        <a href="{{ route('measurement-parameter.set-criteria', $parameter->id) }}" class="btn btn-primary">
-          <i class="bx bx-edit"></i> Set Kriteria
-        </a>
       </div>
     </div>
   </div>
 </div>
+
 @section('scripts')
 <script>
   $(document).ready(function() {
@@ -120,7 +133,7 @@
     $('.delete-criteria').on('click', function() {
       const criteriaId = $(this).data('id');
       const parameterId = $(this).data('parameter-id');
-      
+
       Swal.fire({
         title: 'Apakah Anda yakin?',
         text: "Kriteria yang dihapus tidak dapat dikembalikan!",
@@ -137,6 +150,16 @@
         }
       });
     });
+
+    @if(session('success'))
+      Swal.fire({
+        title: 'Berhasil!',
+        text: '{{ session("success") }}',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    @endif
   });
 </script>
 @endsection

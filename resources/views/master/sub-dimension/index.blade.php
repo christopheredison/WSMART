@@ -1,8 +1,5 @@
 @extends('layouts.default')
-
 @section('dashboard')
-    @include('partials.success-message')
-
     <div class="card">
         <div class="card-header">
             <div class="d-flex align-items-center gap-3">
@@ -12,25 +9,24 @@
                     </div>
                 </div>
                 <div>
-                    <h2 class="h3">Master Data WBS</h2>
+                    <h2 class="h3">Master Sub Dimensi</h2>
                 </div>
                 <div class="ms-auto d-flex align-items-center gap-2">
                     <button id="btn-tambah" class="btn btn-outline-primary btn-sm">
                         <span class="bx bx-plus"></span>
-                        <span class="ms-1">Tambah WBS</span>
+                        <span class="ms-1">Tambah Sub Dimensi</span>
                     </button>
                 </div>
             </div>
         </div>
         <div class="card-body">
-            <table class="table table-hover w-100" id="wbsTable">
-                <thead>
+            <table class="table table-hover w-100" id="subDimensionTable">
+                <thead class="bg-light">
                     <tr>
-                        <th width="5%">#</th>
-                        <th width="15%">Kode</th>
-                        <th>WBS / Deskripsi</th>
-                        <th width="15%">Status</th>
-                        <th width="10%">Action</th>
+                        <th width="5%" class="text-center">#</th>
+                        <th width="30%">Dimensi</th>
+                        <th>Nama Sub Dimensi</th>
+                        <th width="15%" class="text-center">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -40,17 +36,29 @@
     </div>
 
     {{-- Modal Tambah & Edit --}}
-    <div class="modal fade" id="dataModal" tabindex="-1" aria-labelledby="dataModalLabel" aria-hidden="true">
+    <div class="modal fade" id="dataModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="dataModalLabel">Form Master WBS</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="dataModalLabel">Form Sub Dimensi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="dataForm">
                     <div class="modal-body">
                         <input type="hidden" name="id" id="id">
-                        @include('master.wbs._form')
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Dimensi</label>
+                            <select class="form-select" name="dimension_id" id="dimension_id" required>
+                                <option value="" disabled selected>-- Pilih Dimensi --</option>
+                                @foreach($dimensions as $dim)
+                                    <option value="{{ $dim->id }}">{{ $dim->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nama Sub Dimensi</label>
+                            <input type="text" class="form-control" name="name" id="name" required placeholder="Masukkan Nama Sub Dimensi">
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -65,72 +73,60 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // 1. Init DataTables
-    const table = $('#wbsTable').DataTable({
+    const table = $('#subDimensionTable').DataTable({
         processing: true,
         serverSide: true,
-        ajax: "{{ route('wbs.data') }}",
+        ajax: "{{ route('sub-dimension.data') }}",
         columns: [
-            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-            { data: 'code', name: 'code' },
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center' },
+            { data: 'dimension_name', name: 'dimension.name' },
             { data: 'name', name: 'name' },
-            { data: 'status', name: 'is_active' },
-            { data: 'action', name: 'action', orderable: false, searchable: false },
-        ]
+            { data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-center' },
+        ],
+        drawCallback: function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function(tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
+        }
     });
 
-    // 2. Tombol Tambah
     $('#btn-tambah').click(function() {
         $('#dataForm').trigger("reset");
-        $('#dataModalLabel').text("Tambah Data WBS");
+        $('#dataModalLabel').text("Tambah Sub Dimensi");
         $('#id').val('');
-        // Default Active Checked saat tambah baru
-        $('#is_active').prop('checked', true);
         $('#dataModal').modal('show');
     });
 
-    // 3. Tombol Edit
     $('body').on('click', '.btn-edit', function() {
         const id = $(this).data('id');
-        $.get("{{ url('wbs') }}/" + id + "/edit", function(data) {
-            $('#dataModalLabel').text("Edit Data WBS");
+        $.get("{{ url('master/sub-dimension') }}/" + id + "/edit", function(data) {
+            $('#dataModalLabel').text("Edit Sub Dimensi");
             $('#dataModal').modal('show');
             $('#id').val(data.id);
-            $('[name="code"]').val(data.code);
-            $('[name="name"]').val(data.name);
-
-            // Set Checkbox Active
-            if(data.is_active == 1) {
-                $('#is_active').prop('checked', true);
-            } else {
-                $('#is_active').prop('checked', false);
-            }
+            $('#dimension_id').val(data.dimension_id);
+            $('#name').val(data.name);
         });
     });
 
-    // 4. Simpan Data
     $('#dataForm').submit(function(e) {
         e.preventDefault();
         $('#btn-save').html('Menyimpan...').prop('disabled', true);
+
         const id = $('#id').val();
-        const url = id ? "{{ url('wbs') }}/" + id : "{{ route('wbs.store') }}";
+        const url = id ? "{{ url('master/sub-dimension') }}/" + id : "{{ route('sub-dimension.store') }}";
         const method = id ? 'PUT' : 'POST';
 
         $.ajax({
-            data: $(this).serialize(), url: url, type: method, dataType: 'json',
+            data: $(this).serialize(),
+            url: url,
+            type: method,
+            dataType: 'json',
             success: function(response) {
                 $('#dataModal').modal('hide');
                 table.ajax.reload(null, false);
                 Swal.fire("Sukses!", response.success, "success");
             },
             error: function(xhr) {
-                let errors = xhr.responseJSON.errors;
-                let errorMsg = '';
-                if(errors) {
-                    errorMsg = Object.values(errors).join('<br>');
-                } else {
-                    errorMsg = 'Terjadi kesalahan pada server.';
-                }
+                let errorMsg = xhr.responseJSON.errors ? Object.values(xhr.responseJSON.errors).join('<br>') : 'Terjadi kesalahan server.';
                 Swal.fire("Error!", errorMsg, "error");
             },
             complete: function() {
@@ -139,16 +135,22 @@ $(document).ready(function() {
         });
     });
 
-    // 5. Hapus Data
     $('body').on('click', '.btn-delete', function() {
         const id = $(this).data('id');
         Swal.fire({
-            title: "Anda yakin?", text: "Data akan dihapus (Soft Delete)!", icon: "warning",
-            showCancelButton: true, confirmButtonText: "Ya, hapus!",
+            title: "Anda yakin?",
+            text: "Data sub dimensi akan dihapus!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: "Ya, hapus!"
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    type: "DELETE", url: "{{ url('wbs') }}/" + id,
+                    type: "DELETE",
+                    url: "{{ url('master/sub-dimension') }}/" + id,
+                    data: { "_token": "{{ csrf_token() }}" },
                     success: function(response) {
                         table.ajax.reload(null, false);
                         Swal.fire("Dihapus!", response.success, "success");

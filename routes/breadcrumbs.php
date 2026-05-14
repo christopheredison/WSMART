@@ -586,3 +586,50 @@ Breadcrumbs::for('ict.report', function (BreadcrumbTrail $trail, $ictPlan) {
     $trail->parent('ict.show', $ictPlan);
     $trail->push('Report', route('ict.report', $ictPlan));
 });
+
+// Master Dimensi
+Breadcrumbs::for('dimension.index', function (BreadcrumbTrail $trail) {
+    $trail->push('Master Dimensi', route('dimension.index'));
+});
+
+// Master Sub Dimensi
+Breadcrumbs::for('sub-dimension.index', function (BreadcrumbTrail $trail) {
+    $trail->push('Master Sub Dimensi', route('sub-dimension.index'));
+});
+
+// Parameter Pengukuran
+Breadcrumbs::for('measurement-parameter.index', function (BreadcrumbTrail $trail) {
+    $trail->push('Parameter Pengukuran', route('measurement-parameter.index'));
+});
+
+// Parameter Pengukuran > Tambah Parameter
+Breadcrumbs::for('measurement-parameter.create', function (BreadcrumbTrail $trail) {
+    $trail->parent('measurement-parameter.index');
+    $trail->push('Tambah Parameter', route('measurement-parameter.create'));
+});
+
+// Parameter Pengukuran > Edit Parameter
+Breadcrumbs::for('measurement-parameter.edit', function (BreadcrumbTrail $trail, $parameter) {
+    $trail->parent('measurement-parameter.index');
+    $trail->push('Edit Parameter', route('measurement-parameter.edit', $parameter));
+});
+
+// Parameter Pengukuran > Detail Parameter
+Breadcrumbs::for('measurement-parameter.show', function (BreadcrumbTrail $trail, $parameter) {
+    $trail->parent('measurement-parameter.index');
+    $trail->push('Detail Parameter', route('measurement-parameter.show', $parameter));
+});
+
+// Parameter Pengukuran > Detail Parameter > Tambah Kriteria
+Breadcrumbs::for('measurement-parameter.create-criteria', function (BreadcrumbTrail $trail, $parameter) {
+    // Parentnya adalah halaman Detail Parameter (Show)
+    $trail->parent('measurement-parameter.show', $parameter);
+    $trail->push('Tambah Kriteria', route('measurement-parameter.create-criteria', $parameter));
+});
+
+// Parameter Pengukuran > Detail Parameter > Edit Kriteria
+Breadcrumbs::for('measurement-parameter.edit-criteria', function (BreadcrumbTrail $trail, $parameterId, $criteriaId) {
+    // Parentnya adalah halaman Detail Parameter (Show)
+    $trail->parent('measurement-parameter.show', $parameterId);
+    $trail->push('Edit Kriteria', route('measurement-parameter.edit-criteria', [$parameterId, $criteriaId]));
+});
