@@ -35,6 +35,7 @@
             <thead>
               <tr>
                 <th class="white-space-nowrap">#</th>
+                <th class="sort" data-sort="tahun_pelaporan">Tahun Pelaporan</th>
                 <th class="sort" data-sort="sasaran_bumn">Sasaran BUMN</th>
                 <th class="sort" data-sort="peristiwa_risiko">Peristiwa Risiko</th>
                 <th class="sort" data-sort="lokasi_risiko">Lokasi Risiko</th>
@@ -49,6 +50,7 @@
               @foreach ($data as $index => $item)
               <tr>
                 <td class="index-number">{{ $index + 1 }}</td>
+                <td class="tahun_pelaporan">{{ $item['tahun_pelaporan'] }}</td>
                 <td class="sasaran_bumn">{{ $item['sasaran_bumn'] }}</td>
                 <td class="peristiwa_risiko">{{ $item['peristiwa_risiko'] }}</td>
                 <td class="lokasi_risiko">{{ $item['lokasi_risiko'] }}</td>

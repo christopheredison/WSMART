@@ -35,6 +35,10 @@
                 <div class="row">
                   <div class="col-md-6">
                     <div class="mb-3">
+                      <label class="form-label fw-bold">Tahun Pelaporan</label>
+                      <p>{{ $ictPlan->tahun_pelaporan ?? '-' }}</p>
+                    </div>
+                    <div class="mb-3">
                       <label class="form-label fw-bold">Sasaran BUMN</label>
                       <p>{{ $ictPlan->sasaran_bumn }}</p>
                     </div>
@@ -214,7 +218,7 @@
   .table th, .table td {
     vertical-align: middle;
   }
-  
+
   .badge {
     font-size: 0.85em;
     padding: 0.35em 0.65em;
