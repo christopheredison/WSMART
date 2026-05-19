@@ -70,21 +70,21 @@ class ApiWika
     public function getProjects()
     {
         $processData = function ($apiResult) {
-        $data = $apiResult['data'] ?? [];
+            $data = $apiResult['data'] ?? [];
 
-        return collect($data)
+            return collect($data)
                 // 1. Pastikan kode_spk ada dan tidak null
                 ->whereNotNull('kode_spk')
                 // 2. Pastikan kode_spk adalah String atau Angka (bukan Array)
                 ->filter(function ($item) {
                     return is_string($item['kode_spk']) || is_numeric($item['kode_spk']);
                 })
-                // 3. Baru lakukan keyBy
-                ->keyBy('kode_spk')
+                // PERBAIKAN: Hapus ->keyBy('kode_spk') agar urutan indeks array numerik murni
+                // sehingga urutan periodenya tetap konsisten saat digabungkan
                 ->toArray();
         };
 
-        // Ambil Data -2 Bulan
+        // Ambil Data -2 Bulan (Paling Lama)
         $result2 = $this->apiRequest('GET', 'proyek', [
             'period' => date('Ym', strtotime('-2 month')),
         ]);
@@ -96,20 +96,34 @@ class ApiWika
         ]);
         $result1 = $processData($result1);
 
-        // // Ambil Data Bulan Ini
+        // Ambil Data Bulan Ini (Paling Baru)
         $result0 = $this->apiRequest('GET', 'proyek', [
             'period' => date('Ym'),
         ]);
         $result0 = $processData($result0);
 
-        // Gabungkan
-        $result = array_merge(
-          $result2,
-          $result1,
-          $result0
+        // Gabungkan berurutan secara flat (urutan: terlama ke terbaru)
+        $allData = array_merge(
+            $result2,
+            $result1,
+            $result0
         );
 
-        return array_values($result);
+        $finalResult = collect($allData)
+            ->groupBy(function ($item) {
+                // Jika profit_center tidak kosong, group berdasarkan profit_center.
+                // Jika kosong/null, group berdasarkan kode_spk unik agar tidak saling menggulung data kosong.
+                return !empty($item['profit_center']) ? $item['profit_center'] : 'EMPTY_' . $item['kode_spk'];
+            })
+            ->map(function ($group) {
+                // Karena data digabung dari bulan terlama ke terbaru, maka data di urutan
+                // paling akhir (.last()) dari grup ini dipastikan adalah data proyek yang paling ter-update.
+                return $group->last();
+            })
+            ->values()
+            ->toArray();
+
+        return $finalResult;
     }
 
     public function getKPI($period)
