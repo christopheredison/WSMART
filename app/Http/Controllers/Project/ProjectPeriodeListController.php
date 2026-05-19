@@ -1632,11 +1632,15 @@ class ProjectPeriodeListController extends BasicCRUDController
                 },
                 'projectRisks.projectRiskMonitorings.skalaDampakObj',
                 'projectRisks.projectRiskMonitorings.skalaProbabilitas',
+                'projectRisks.penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings',
+                'projectRisks.perlakuanDampakRisikos.perlakuanDampakMonitorings',
             ])
             ->findOrFail($resource);
 
         $status = request()->query('status');
-        $risks = $projectPeriode->projectRisks;
+
+        $allRisks = $projectPeriode->projectRisks;
+        $risks = $allRisks;
 
         if ($status === 'open') {
             $risks = $risks->where('is_closed', false);
@@ -1677,7 +1681,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'level_risiko' => $projectRisk->projectRiskAnalisa?->level_risiko,
             ];
 
-            // 2. Ganti keyBy menjadi groupBy lalu ambil first()
+            // Ganti keyBy menjadi groupBy lalu ambil first()
             $monitorings = $projectRisk->projectRiskMonitorings->groupBy(function($item) {
                 return $item->tahun . '-' . $item->month;
             })->map(function($group) {
@@ -1727,17 +1731,17 @@ class ProjectPeriodeListController extends BasicCRUDController
         $rencanaBiayaTotal = 0;
         $realisasiBiayaTotal = 0;
 
-        foreach ($projectPeriode->projectRisks as $risk) {
+        foreach ($allRisks as $risk) {
             foreach ($risk->penyebabRisikoProjects as $penyebab) {
                 foreach ($penyebab->perlakuanPenyebabRisiko as $perlakuan) {
                     $rencanaBiayaTotal += $perlakuan->biaya_perlakuan_risiko ?? 0;
-                    $lastMon = $perlakuan->perlakuanPenyebabMonitorings()->orderBy('id', 'desc')->first();
+                    $lastMon = $perlakuan->perlakuanPenyebabMonitorings->sortByDesc('id')->first();
                     $realisasiBiayaTotal += $lastMon->realisasi_biaya_perlakuan_risiko ?? 0;
                 }
             }
             foreach ($risk->perlakuanDampakRisikos as $perlakuanDampak) {
                 $rencanaBiayaTotal += $perlakuanDampak->biaya_perlakuan_risiko ?? 0;
-                $lastMon = $perlakuanDampak->perlakuanDampakMonitorings()->orderBy('id', 'desc')->first();
+                $lastMon = $perlakuanDampak->perlakuanDampakMonitorings->sortByDesc('id')->first();
                 $realisasiBiayaTotal += $lastMon->realisasi_biaya_perlakuan_risiko ?? 0;
             }
         }
