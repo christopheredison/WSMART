@@ -271,10 +271,10 @@
     <div class="col-12">
         <div class="row g-2 justify-content-between">
             <div class="col-auto">
-                <a href="{{ route('risk-register-unit.edit', $identifikasiRisiko->id) }}" class="btn btn-secondary me-2">
+                <a href="{{ route('corporate-risk.edit', $identifikasiRisiko->id) }}" class="btn btn-secondary me-2">
                     <span class="bx bx-chevron-left" style="line-height: 0.8;"></span> Kembali ke Identifikasi
                 </a>
-                <a href="{{ route('risk-register-unit.index', ['pid' => $identifikasiRisiko->periode_id]) }}" class="btn btn-outline-secondary">Batal</a>
+                <a href="{{ route('corporate-risk.index', ['pid' => $identifikasiRisiko->periode_id]) }}" class="btn btn-outline-secondary">Batal</a>
             </div>
 
             <div class="col-auto">
@@ -891,7 +891,7 @@ $(document).ready(function() {
 
                 formData.append('action', action); // Tambahkan action ke formData
 
-                const url = "{{ route('risk-register-unit.do-analisa', $identifikasiRisiko->id) }}";
+                const url = "{{ route('corporate-risk.do-analisa', $identifikasiRisiko->id) }}";
 
                 $.ajax({
                     url: url,
@@ -909,9 +909,9 @@ $(document).ready(function() {
                             if (result.isConfirmed) {
                                 // Redirect sesuai action
                                 if (action === 'savenext') {
-                                    window.location.href = "{{ route('risk-register-unit.perencanaan', $identifikasiRisiko->id) }}";
+                                    window.location.href = "{{ route('corporate-risk.perencanaan', $identifikasiRisiko->id) }}";
                                 } else {
-                                    window.location.href = "{{ route('risk-register-unit.index') }}";
+                                    window.location.href = "{{ route('corporate-risk.index') }}";
                                 }
                             }
                         });

@@ -386,13 +386,13 @@
                             </div>
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker2">Perkiraan Waktu Mulai Terpapar Risiko</label>
-                                <input class="form-control datetimepicker" name="perkiraan_waktu_mulai_terpapar_risiko"
+                                <input class="form-control datetimepicker bg-white" name="perkiraan_waktu_mulai_terpapar_risiko"
                                     id="timepicker2" type="text" placeholder="d/m/y"
                                     value="{{ old('perkiraan_waktu_mulai_terpapar_risiko') }}" />
                             </div>
                             <div class="form-group d-lg-flex mb-4">
                                 <label class="form-label label-lg-start col-lg-5 col-xl-4" for="timepicker3">Perkiraan Waktu Selesai Terpapar Risiko</label>
-                                <input class="form-control datetimepicker" name="perkiraan_waktu_selesai_terpapar_risiko"
+                                <input class="form-control datetimepicker bg-white" name="perkiraan_waktu_selesai_terpapar_risiko"
                                     id="timepicker3" type="text" placeholder="d/m/y"
                                     value="{{ old('perkiraan_waktu_selesai_terpapar_risiko') }}" />
                             </div>

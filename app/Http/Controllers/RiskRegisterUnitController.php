@@ -1239,6 +1239,8 @@ class RiskRegisterUnitController extends Controller
 
         $tingkatSkalaProbabilitasResiduals = [];
         for ($i = 1; $i <= 4; $i++) {
+            $riskMapResidual = null;
+
             $tingkatSkalaProbabilitasResiduals[$i] = SkalaProbabilitas::getSkalaByValue($request->{'nilai_probabilitas_residual_q' . $i});
             $toUpdate['skala_probabilitas_residual_id_q' . $i] = optional($tingkatSkalaProbabilitasResiduals[$i])->id;
             $toUpdate['nilai_probabilitas_residual_q' . $i] = $request->{'nilai_probabilitas_residual_q' . $i};

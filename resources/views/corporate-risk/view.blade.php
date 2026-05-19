@@ -270,20 +270,30 @@
                 <div class="row g-3 gx-md-5">
                     <div class="col-12">
                         <div class="form-group">
-                            <label class="form-label fw-bold">Sasaran</label>
+                            <label class="form-label fw-bold">Sasaran Risiko</label>
                             <div class="p-3 bg-light rounded">
                                 {{ $risiko->target_capaian_kinerja ?? '-' }}
                             </div>
                         </div>
                     </div>
-                    <div class="col-12">
+                    @if ($risiko->taksonomiRisiko)
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Taksonomi Danantara</label>
+                            <div class="p-3 bg-light rounded">
+                              {{ $risiko->taksonomiRisiko?->nama ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                    {{-- <div class="col-12">
                         <div class="form-group">
                             <label class="form-label fw-bold">Jenis Risiko T2 & T3 KBUMN</label>
                             <div class="p-3 bg-light rounded">
                                 {{ optional($risiko->jenisRisiko->kategoriRisiko)->title ?? '-' }} - {{ optional($risiko->jenisRisiko)->title ?? '-' }}
                             </div>
                         </div>
-                    </div>
+                    </div> --}}
                     <div class="col-12">
                         <div class="form-group">
                             <label class="form-label fw-bold">Peristiwa Risiko</label>
@@ -313,8 +323,82 @@
         </div>
     </div>
     <!-- ::DataRisiko End -->
-    
-    <!-- ::DataRisiko Divisi Terkait -->                    
+
+    @if($risiko->parameterRisikos && $risiko->parameterRisikos->isNotEmpty())
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent"><span class="nav-item-circle">1a</span></span>
+                    <span class="h3 mb-0">Parameter Risiko</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">No.</th>
+                                <th>Nama Parameter</th>
+                                <th>Formula</th>
+                                <th>Satuan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($risiko->parameterRisikos as $param)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $param->nama ?? '-' }}</td>
+                                <td>{{ $param->formula ?? '-' }}</td>
+                                <td>{{ $param->satuan ?? '-' }}</td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="4" class="text-center text-muted">Tidak ada parameter risiko</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    @if($risiko->threshold_risk_limit > 0 || $risiko->threshold_risk_appetite > 0 || $risiko->threshold_risk_tolerance > 0)
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent"><span class="nav-item-circle">1b</span></span>
+                    <span class="h3 mb-0">Threshold</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 text-center">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Risk Limit</label>
+                        <div class="p-3 border border-success rounded fw-bold text-success bg-light">
+                            Rp {{ number_format($risiko->threshold_risk_limit, 0, ',', '.') }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Risk Appetite</label>
+                        <div class="p-3 border border-warning rounded fw-bold text-warning bg-light">
+                            Rp {{ number_format($risiko->threshold_risk_appetite, 0, ',', '.') }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Risk Tolerance</label>
+                        <div class="p-3 border border-danger rounded fw-bold text-danger bg-light">
+                            Rp {{ number_format($risiko->threshold_risk_tolerance, 0, ',', '.') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- ::DataRisiko Divisi Terkait -->
     <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header stepper border-0 pb-0">
@@ -329,7 +413,7 @@
                 @php
                     $divisiRisks = $risiko->divisiRisks;
                 @endphp
-                
+
                 @if($divisiRisks && $divisiRisks->isNotEmpty())
                     <div class="table-responsive scrollbar">
                         <table class="table table-bordered table-striped align-middle">
@@ -347,7 +431,7 @@
                                     <td>{{ $divisiRisk->unit->name ?? '-' }}</td>
                                     <td>
                                         <a href="{{ route('risk-register-unit.view', $divisiRisk->id) }}" target="_blank" class="text-primary fw-bold text-decoration-underline" title="Klik untuk melihat detail">
-                                            {{ $divisiRisk->peristiwa_risiko ?? '-' }} 
+                                            {{ $divisiRisk->peristiwa_risiko ?? '-' }}
                                             <i class='bx bx-link-external small ms-1'></i>
                                         </a>
                                     </td>
@@ -384,7 +468,7 @@
                 @php
                     $apRisks = $risiko->apRisks;
                 @endphp
-                
+
                 @if($apRisks && $apRisks->isNotEmpty())
                     <div class="table-responsive scrollbar">
                         <table class="table table-bordered table-striped align-middle">
@@ -402,7 +486,7 @@
                                     <td>{{ $apRisk->unit->name ?? '-' }}</td>
                                     <td>
                                         <a href="{{ route('risk-register-ap.view', $apRisk->id) }}" target="_blank" class="text-primary fw-bold text-decoration-underline" title="Klik untuk melihat detail">
-                                            {{ $apRisk->peristiwa_risiko ?? '-' }} 
+                                            {{ $apRisk->peristiwa_risiko ?? '-' }}
                                             <i class='bx bx-link-external small ms-1'></i>
                                         </a>
                                     </td>
@@ -423,8 +507,8 @@
             </div>
         </div>
     </div>
-    
-    <!-- ::Peristiwa Risiko Start -->
+
+    <!-- ::DampakRisiko Start -->
     <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header stepper border-0 pb-0">
@@ -432,93 +516,134 @@
                     <span class="nav-item-circle-parent">
                         <span class="nav-item-circle">4</span>
                     </span>
-                    <span class="h3 mb-0">Peristiwa Risiko</span>
+                    <span class="h3 mb-0">Dampak Risiko</span>
                 </div>
             </div>
             <div class="card-body">
-                <div class="row gy-3 gx-xxl-6">
-                    <div class="col-md-6">
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Peristiwa Risiko</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ $risiko->peristiwa_risiko ?? '-' }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Deskripsi Peristiwa Risiko</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- ::Peristiwa Risiko End -->
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">#</th>
+                                <th width="20%">Dampak Risiko</th>
+                                <th width="25%">Rencana Perlakuan Risiko</th>
+                                <th width="20%">Output Perlakuan Risiko</th>
+                                <th width="20%">Biaya Perlakuan Risiko</th>
+                                <th width="10%" class="text-center">Detail</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php $totalBiaya = 0; @endphp
+                            @forelse($risiko->dampakRisikos as $dampak)
+                                @if($dampak->perlakuanDampakRisikos && $dampak->perlakuanDampakRisikos->isNotEmpty())
+                                    @foreach($dampak->perlakuanDampakRisikos as $perlakuan)
+                                        @php $totalBiaya += $perlakuan->biaya_perlakuan_risiko ?? 0; @endphp
+                                        <tr>
+                                            @if($loop->first)
+                                                <td rowspan="{{ $dampak->perlakuanDampakRisikos->count() }}">{{ $loop->parent->iteration }}</td>
+                                                <td rowspan="{{ $dampak->perlakuanDampakRisikos->count() }}">{{ $dampak->dampak_risiko }}</td>
+                                            @endif
+                                            <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
+                                            <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
+                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailDampak{{ $perlakuan->id }}" title="Lihat Detail">
+                                                    <span class='bx bx-show'></span>
+                                                </button>
 
-    <!-- ::Kontrol Start -->
-    <div class="col-12 mb-4">
-        <div class="card">
-            <div class="card-header stepper border-0 pb-0">
-                <div class="nav-link active d-flex align-items-center p-0">
-                    <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">5</span>
-                    </span>
-                    <span class="h3 mb-0">Kontrol</span>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="row gy-3 gx-xxl-6">
-                    <div class="col-md-6">
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Jenis Kontrol Eksisting</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ optional($risiko->jenisKontrolEksisting)->jenis_kontrol ?? '-' }}
-                            </div>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Kontrol Eksisting</label>
-                            @if($risiko->kontrolEksistings && $risiko->kontrolEksistings->isNotEmpty())
-                                @foreach($risiko->kontrolEksistings as $key=>$kontrol)
-                                    <div class="p-3 bg-light rounded mb-2">
-                                      {{$key + 1}}. {{ $kontrol->kontrol_eksisting }}
-                                    </div>
-                                @endforeach
-                            @else
-                                <div class="p-3 bg-light rounded">
-                                    Tidak ada kontrol eksisting
-                                </div>
+                                                <div class="modal fade text-start" id="modalDetailDampak{{ $perlakuan->id }}" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                                                        <div class="modal-content border-0 shadow p-0">
+                                                            <div class="modal-header border-bottom bg-light">
+                                                                <h5 class="modal-title fw-bold">Detail Perlakuan Dampak Risiko</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body p-4">
+                                                                <div class="row g-4">
+                                                                    <div class="col-12">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Dampak Risiko</span>
+                                                                        <div class="text-dark fs-6">{{ $dampak->dampak_risiko ?? '-' }}</div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-6">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Rencana Perlakuan Risiko</span>
+                                                                        <div class="text-dark">{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-6">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Output Perlakuan Risiko</span>
+                                                                        <div class="text-dark">{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</div>
+                                                                    </div>
+
+                                                                    <div class="col-12">
+                                                                        <hr class="my-2 text-muted">
+                                                                    </div>
+
+                                                                    <div class="col-12 col-md-6">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Opsi Perlakuan Risiko</span>
+                                                                        <div class="text-dark">
+                                                                            {{ $perlakuan->opsiPerlakuan->opsi_perlakuan_risiko ?? $perlakuan->opsi_perlakuan_risiko ?? '-' }}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-6">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">PIC</span>
+                                                                        <div class="text-dark">{{ $perlakuan->picJabatan->name ?? $perlakuan->pic ?? '-' }}</div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-4">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Biaya Perlakuan</span>
+                                                                        <div class="text-primary fw-bold">
+                                                                            {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-4">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Mulai</span>
+                                                                        <div class="text-dark">
+                                                                            <i class='bx bx-calendar-event me-1 text-muted'></i>
+                                                                            {{ $perlakuan->timeline_perlakuan_risiko_start ? $perlakuan->timeline_perlakuan_risiko_start->format('d F Y') : '-' }}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-12 col-md-4">
+                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Selesai</span>
+                                                                        <div class="text-dark">
+                                                                            <i class='bx bx-calendar-check me-1 text-muted'></i>
+                                                                            {{ $perlakuan->timeline_perlakuan_risiko_end ? $perlakuan->timeline_perlakuan_risiko_end->format('d F Y') : '-' }}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer bg-light border-top-0">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                </td>
+                                        </tr>
+                                    @endforeach
+                                @else
+                                    <tr>
+                                        <td>{{ $loop->iteration }}</td>
+                                        <td>{{ $dampak->dampak_risiko }}</td>
+                                        <td colspan="4" class="text-center text-muted">Belum ada rencana perlakuan</td>
+                                    </tr>
+                                @endif
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">Tidak ada dampak risiko</td>
+                                </tr>
+                            @endforelse
+                            @if($totalBiaya > 0)
+                                <tr class="table-warning">
+                                    <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
+                                    <td colspan="2" class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                                </tr>
                             @endif
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Penilaian Efektivitas Kontrol</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ optional($risiko->penilaianEfektifitasKontrol)->efektivitas_kontrol ?? '-' }}
-                            </div>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Perkiraan Waktu Mulai Terpapar Risiko</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ $risiko->perkiraan_waktu_terpapar_risiko_mulai ? \Carbon\Carbon::parse($risiko->perkiraan_waktu_terpapar_risiko_mulai)->format('d F Y') : '-' }}
-                            </div>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label class="form-label fw-bold">Perkiraan Waktu Selesai Terpapar Risiko</label>
-                            <div class="p-3 bg-light rounded">
-                                {{ $risiko->perkiraan_waktu_terpapar_risiko_akhir ? \Carbon\Carbon::parse($risiko->perkiraan_waktu_terpapar_risiko_akhir)->format('d F Y') : '-' }}
-                            </div>
-                        </div>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
-    <!-- ::Kontrol End -->
+    <!-- ::DampakRisiko End -->
+
 
     <!-- ::PenyebabRisiko Start -->
     <div class="col-12 mb-4">
@@ -526,7 +651,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">6</span>
+                        <span class="nav-item-circle">5</span>
                     </span>
                     <span class="h3 mb-0">Penyebab Risiko</span>
                 </div>
@@ -591,7 +716,7 @@
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
                     <span class="nav-item-circle-parent">
-                        <span class="nav-item-circle">7</span>
+                        <span class="nav-item-circle">6</span>
                     </span>
                     <span class="h3 mb-0">Key Risk Indicator</span>
                 </div>
@@ -637,6 +762,67 @@
         </div>
     </div>
     <!-- ::KeyRiskIndicator End -->
+
+    <!-- ::Kontrol Start -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header stepper border-0 pb-0">
+                <div class="nav-link active d-flex align-items-center p-0">
+                    <span class="nav-item-circle-parent">
+                        <span class="nav-item-circle">7</span>
+                    </span>
+                    <span class="h3 mb-0">Kontrol</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row gy-3 gx-xxl-6">
+                    <div class="col-md-6">
+                        {{-- <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Jenis Kontrol Eksisting</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ optional($risiko->jenisKontrolEksisting)->jenis_kontrol ?? '-' }}
+                            </div>
+                        </div> --}}
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Kontrol Eksisting</label>
+                            @if($risiko->kontrolEksistings && $risiko->kontrolEksistings->isNotEmpty())
+                                @foreach($risiko->kontrolEksistings as $key=>$kontrol)
+                                    <div class="p-3 bg-light rounded mb-2">
+                                      {{$key + 1}}. {{ $kontrol->kontrol_eksisting }}
+                                    </div>
+                                @endforeach
+                            @else
+                                <div class="p-3 bg-light rounded">
+                                    Tidak ada kontrol eksisting
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        {{-- <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Penilaian Efektivitas Kontrol</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ optional($risiko->penilaianEfektifitasKontrol)->efektivitas_kontrol ?? '-' }}
+                            </div>
+                        </div> --}}
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Perkiraan Waktu Mulai Terpapar Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko->perkiraan_waktu_terpapar_risiko_mulai ? \Carbon\Carbon::parse($risiko->perkiraan_waktu_terpapar_risiko_mulai)->format('d F Y') : '-' }}
+                            </div>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Perkiraan Waktu Selesai Terpapar Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                                {{ $risiko->perkiraan_waktu_terpapar_risiko_akhir ? \Carbon\Carbon::parse($risiko->perkiraan_waktu_terpapar_risiko_akhir)->format('d F Y') : '-' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ::Kontrol End -->
 
     <!-- ::AnalisaRisiko Start -->
     <div class="col-12 mb-4">
