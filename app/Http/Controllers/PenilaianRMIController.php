@@ -36,14 +36,10 @@ class PenilaianRMIController extends Controller
      */
     public function index()
     {
-        // Ambil data periode RMI
-        //$periods = RMIPeriod::orderBy('year', 'desc')->get();
-        $periods = RMIPeriod::orderBy('year', 'desc')
-              ->paginate(10);
+        $periods = RMIPeriod::orderBy('year', 'desc')->get();
 
         // Tambahkan status untuk setiap periode
         foreach ($periods as $period) {
-            // Tentukan status periode berdasarkan field status di model
             if ($period->status == 1) {
                 $period->status_text = 'Dalam Proses';
             } else {
@@ -53,8 +49,26 @@ class PenilaianRMIController extends Controller
 
         $skalaKinerjas = SkalaKinerja::orderBy('id', 'asc')->get();
         $skalaKpmrs    = SkalaKPMR::orderBy('id', 'asc')->get();
+        $tableLegend = [
+            [
+              'icon' => '<span class="bx bx-show"></span>',
+              'label' => 'Detail'
+            ],
+            [
+              'icon' => '<span class="bx bx-bar-chart-alt-2 text-primary"></span>',
+              'label' => 'Penilaian Aspek Dimensi'
+            ],
+            [
+              'icon' => '<span class="bx bx-analyse text-success"></span>',
+              'label' => 'Penilaian Aspek Kinerja'
+            ],
+            [
+              'icon' => '<span class="bx bxs-edit-alt text-warning"></span>',
+              'label' => 'Atur Data Penilaian'
+            ],
+        ];
 
-        return view('penilaian-rmi.index', compact('periods', 'skalaKinerjas', 'skalaKpmrs'));
+        return view('penilaian-rmi.index', compact('periods', 'skalaKinerjas', 'skalaKpmrs', 'tableLegend'));
     }
 
     /**

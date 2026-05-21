@@ -212,7 +212,7 @@
                       <label class="form-label">Batas Waktu Penyelesaian Tindak Lanjut <span class="text-danger">*</span></label>
                       <input
                         type="text"
-                        class="form-control flatpickr-date"
+                        class="form-control flatpickr-date bg-white"
                         name="batas_waktu_penyelesaian[]"
                         placeholder="Pilih Tanggal"
                         value="{{ old('batas_waktu_penyelesaian.'.$index, $do?->batas_waktu_penyelesaian ? $do->batas_waktu_penyelesaian->format('Y-m-d') : '') }}"
