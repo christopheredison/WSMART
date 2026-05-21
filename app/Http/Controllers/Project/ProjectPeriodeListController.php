@@ -1801,13 +1801,13 @@ class ProjectPeriodeListController extends BasicCRUDController
                 foreach ($penyebab->perlakuanPenyebabRisiko as $perlakuan) {
                     $rencanaBiayaTotal += $perlakuan->biaya_perlakuan_risiko ?? 0;
                     $lastMon = $perlakuan->perlakuanPenyebabMonitorings->sortByDesc('id')->first();
-                    $realisasiBiayaTotal += $lastMon->realisasi_biaya_perlakuan_risiko ?? 0;
+                    $realisasiBiayaTotal += $lastMon?->realisasi_biaya_perlakuan_risiko ?? 0;
                 }
             }
             foreach ($risk->perlakuanDampakRisikos as $perlakuanDampak) {
                 $rencanaBiayaTotal += $perlakuanDampak->biaya_perlakuan_risiko ?? 0;
                 $lastMon = $perlakuanDampak->perlakuanDampakMonitorings->sortByDesc('id')->first();
-                $realisasiBiayaTotal += $lastMon->realisasi_biaya_perlakuan_risiko ?? 0;
+                $realisasiBiayaTotal += $lastMon?->realisasi_biaya_perlakuan_risiko ?? 0;
             }
         }
 

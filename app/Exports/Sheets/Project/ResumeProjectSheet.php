@@ -68,30 +68,43 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                                 ->first();
                 $lspValue = $hasilUsaha ? $hasilUsaha->lsp_review : 0;
 
-                // Hitung Rencana dan Realisasi
+                // 1. FILTER CLOSURE
+                $filterUpToPeriod = function($q) {
+                    if ($this->bulan && $this->tahun) {
+                        $q->where(function($query) {
+                            $query->where('tahun', '<', $this->tahun)
+                                  ->orWhere(function($subQuery) {
+                                      $subQuery->where('tahun', $this->tahun)
+                                              ->where('month', '<=', $this->bulan);
+                                  });
+                        });
+                    }
+                    $q->where(function($sq) {
+                        $sq->where('status', 100)->orWhere('is_approved', 1)->orWhere('is_approved', true);
+                    });
+                };
+
+                // 2. QUERY RISK
                 $risks = ProjectRisk::with([
                     'sasaranProyek',
                     'peristiwaRisiko',
-                    'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings',
-                    'perlakuanDampakRisikos.perlakuanDampakMonitorings',
+                    'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings' => function($q) use ($filterUpToPeriod) {
+                        $q->whereHas('projectMonitoring', $filterUpToPeriod);
+                    },
+                    'perlakuanDampakRisikos.perlakuanDampakMonitorings' => function($q) use ($filterUpToPeriod) {
+                        $q->whereHas('projectMonitoring', $filterUpToPeriod);
+                    },
                     'dampakRisikoProjects',
                     'projectRiskAnalisa',
-                    'projectRiskMonitorings' => function($q) {
-                        if ($this->bulan && $this->tahun) {
-                            $q->where('month', $this->bulan)
-                              ->where('tahun', $this->tahun);
-                        }
-                        $q->orderBy('id', 'desc');
+                    'projectRiskMonitorings' => function($q) use ($filterUpToPeriod) {
+                        $filterUpToPeriod($q);
+                        $q->orderBy('tahun', 'desc')->orderBy('month', 'desc')->orderBy('id', 'desc');
                     },
-                    'kriProjects.kriProjectMonitorings' => function($q) {
-                        $q->whereHas('projectMonitoring', function($sq) {
-                            if ($this->bulan && $this->tahun) {
-                                $sq->where('month', $this->bulan)
-                                  ->where('tahun', $this->tahun);
-                            }
-                        })->orderBy('id', 'desc');
+                    'kriProjects.kriProjectMonitorings' => function($q) use ($filterUpToPeriod) {
+                        $q->whereHas('projectMonitoring', $filterUpToPeriod)->orderBy('id', 'desc');
                     }
                 ])
+                ->whereHas('projectRiskMonitorings', $filterUpToPeriod)
                 ->where('project_id', $this->projectId)
                 ->get();
 
@@ -102,12 +115,13 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                     foreach ($risk->penyebabRisikoProjects as $penyebab) {
                         foreach ($penyebab->perlakuanPenyebabRisiko as $perlakuan) {
                             $rencanaBiayaTotal += $perlakuan->biaya_perlakuan_risiko ?? 0;
-                            $realisasiBiayaTotal += $perlakuan->perlakuanPenyebabMonitorings->sortByDesc('id')->first()->realisasi_biaya_perlakuan_risiko ?? 0;
+                            // Tambahkan fallback jika tidak ada relasi agar tidak error
+                            $realisasiBiayaTotal += $perlakuan->perlakuanPenyebabMonitorings->sortByDesc('id')->first()?->realisasi_biaya_perlakuan_risiko ?? 0;
                         }
                     }
                     foreach ($risk->perlakuanDampakRisikos as $perlakuanDampak) {
                         $rencanaBiayaTotal += $perlakuanDampak->biaya_perlakuan_risiko ?? 0;
-                        $realisasiBiayaTotal += $perlakuanDampak->perlakuanDampakMonitorings->sortByDesc('id')->first()->realisasi_biaya_perlakuan_risiko ?? 0;
+                        $realisasiBiayaTotal += $perlakuanDampak->perlakuanDampakMonitorings->sortByDesc('id')->first()?->realisasi_biaya_perlakuan_risiko ?? 0;
                     }
                 }
 
@@ -161,7 +175,7 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
                     $sheet->getStyle($cell)->getFont()->setBold(true);
                 }
 
-                // --- 3. HEADER TABEL (ROW 18-19) ---
+                // Header & Styling Logic (Tetap sama, disingkat visualisasi)
                 $sheet->setCellValue('A18', 'No');
                 $sheet->setCellValue('B18', 'Sasaran');
                 $sheet->setCellValue('C18', 'Peristiwa Risiko');
@@ -353,25 +367,41 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
 
     public function collection()
     {
+        $filterUpToPeriod = function($q) {
+            if ($this->bulan && $this->tahun) {
+                $q->where(function($query) {
+                    $query->where('tahun', '<', $this->tahun)
+                          ->orWhere(function($subQuery) {
+                              $subQuery->where('tahun', $this->tahun)
+                                      ->where('month', '<=', $this->bulan);
+                          });
+                });
+            }
+            $q->where(function($sq) {
+                $sq->where('status', 100)->orWhere('is_approved', 1)->orWhere('is_approved', true);
+            });
+        };
+
         $risks = ProjectRisk::with([
             'sasaranProyek',
             'peristiwaRisiko',
-            'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings',
-            'perlakuanDampakRisikos.perlakuanDampakMonitorings',
+            'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings' => function($q) use ($filterUpToPeriod) {
+                $q->whereHas('projectMonitoring', $filterUpToPeriod);
+            },
+            'perlakuanDampakRisikos.perlakuanDampakMonitorings' => function($q) use ($filterUpToPeriod) {
+                $q->whereHas('projectMonitoring', $filterUpToPeriod);
+            },
             'dampakRisikoProjects',
             'projectRiskAnalisa',
-            'projectRiskMonitorings' => function($q) {
-                $q->where('month', $this->bulan)
-                  ->where('tahun', $this->tahun)
-                  ->orderBy('id', 'desc');
+            'projectRiskMonitorings' => function($q) use ($filterUpToPeriod) {
+                $filterUpToPeriod($q);
+                $q->orderBy('tahun', 'desc')->orderBy('month', 'desc')->orderBy('id', 'desc');
             },
-            'kriProjects.kriProjectMonitorings' => function($q) {
-                $q->whereHas('projectMonitoring', function($sq) {
-                    $sq->where('month', $this->bulan)
-                    ->where('tahun', $this->tahun);
-                })->orderBy('id', 'desc');
+            'kriProjects.kriProjectMonitorings' => function($q) use ($filterUpToPeriod) {
+                $q->whereHas('projectMonitoring', $filterUpToPeriod)->orderBy('id', 'desc');
             }
         ])
+        ->whereHas('projectRiskMonitorings', $filterUpToPeriod)
         ->where('project_id', $this->projectId)
         ->get();
 
@@ -394,7 +424,8 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
             $realisasiStatusList = [];
 
             foreach ($risk->kriProjects as $kri) {
-                $lastMon = $kri->kriProjectMonitorings->sortByDesc('id')->first();
+                // Relasi sudah menerapkan fallback order desc dan batasan periode terpilih
+                $lastMon = $kri->kriProjectMonitorings->first();
                 $realisasiNilaiList[] = $lastMon->nilai_kri_terkini ?? '-';
 
                 $statusText = '-';
@@ -431,7 +462,7 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
 
                     if($perlakuan->pic) $picPenyebabStr[] = $noHierarki . ' ' . $perlakuan->pic;
 
-                    $biayaPenyebab += $perlakuan->biaya_perlakuan_risiko;
+                    $biayaPenyebab += $perlakuan->biaya_perlakuan_risiko ?? 0;
                     $realBiayaPenyebab += $lastMon->realisasi_biaya_perlakuan_risiko ?? 0;
                 }
             }
@@ -453,7 +484,7 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
 
                 if($pd->pic) $picDampakStr[] = $noList . '. ' . $pd->pic;
 
-                $biayaDampak += $pd->biaya_perlakuan_risiko;
+                $biayaDampak += $pd->biaya_perlakuan_risiko ?? 0;
                 $realBiayaDampak += $lastMon->realisasi_biaya_perlakuan_risiko ?? 0;
             }
 
@@ -470,14 +501,22 @@ class ResumeProjectSheet implements FromCollection, WithTitle, WithHeadings, Sho
             $penyebabList = $risk->penyebabRisikoProjects->map(fn($item, $k) => ($k + 1) . '. ' . $item->penyebab_risiko)->implode("\n");
             $dampakList = $risk->dampakRisikoProjects->map(fn($item, $k) => ($k + 1) . '. ' . $item->dampak_risiko)->implode("\n");
 
-            $lastMonitoring = $risk->projectRiskMonitorings->sortByDesc('id')->first();
+            // Mengambil fallback data (realisasi bulan tersebut atau sebelumnya) dari method first
+            $lastMonitoring = $risk->projectRiskMonitorings->first();
             $analisa = $risk->projectRiskAnalisa;
+
             $levelInheren = ($analisa->level_risiko ?? '-') . ' - ' . ($analisa->skala_risiko ?? 0);
             $levelResidual = ($analisa->level_risiko_residual ?? '-') . ' - ' . ($analisa->skala_risiko_residual ?? 0);
 
-            $dampakRealisasiRP = $lastMonitoring->nilai_dampak ?? 0;
-            $eksposureRealisasi = $lastMonitoring->eksposure_risiko ?? 0;
-            $levelRealisasiText = ($lastMonitoring->level_risiko ?? '-') . ' - ' . ($lastMonitoring->skala_risiko ?? 0);
+            // Karena fallback data, pastikan memberikan default '0' atau teks fallback
+            // Hal ini untuk menjaga integritas value "0" pada kasus dimana realization missing secara keseluruhan
+            $dampakRealisasiRP = $lastMonitoring?->nilai_dampak ?? 0;
+            $eksposureRealisasi = $lastMonitoring?->eksposure_risiko ?? 0;
+
+            $levelRealisasiText = '-';
+            if ($lastMonitoring) {
+                $levelRealisasiText = ($lastMonitoring->level_risiko ?? '-') . ' - ' . ($lastMonitoring->skala_risiko ?? 0);
+            }
 
             $row = [
                 'no' => $no++,
