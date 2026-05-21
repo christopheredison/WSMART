@@ -312,8 +312,8 @@ class LaporanController extends Controller
             $month = $request->input('month');
             $tahun = $request->input('tahun');
 
-            // Sewaktu-waktu bisa diganti menjadi 'published' atau 'unpublished'
-            $statusPublish = $request->input('status_publish', 'all');
+            // Sewaktu-waktu bisa diganti menjadi 'all', 'published' atau 'unpublished'
+            $statusPublish = $request->input('status_publish', 'published');
 
             $namaBulan = [
                 1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
