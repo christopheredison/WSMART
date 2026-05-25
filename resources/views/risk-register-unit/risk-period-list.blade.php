@@ -92,6 +92,10 @@
                 <th class="no-sort white-space-nowrap" data-sort="action">Action</th>
               </tr>
             </thead>
+            @php
+                $monMonth = $selectedMonth ?? date('n');
+                $monQuarter = ceil($monMonth / 3);
+            @endphp
             <tbody class="list" id="bulk-select-body">
               @forelse ($dataToDisplay as $index => $item)
               @php
@@ -124,7 +128,7 @@
                     <a href="{{ route('risk-register-unit.index', ['pid' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
                       <span class="bx bx-list-check"></span>
                     </a>
-                    <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
+                    <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id, 'unit_id' => $unit->id, 'quarter' => $monQuarter, 'month' => $monMonth]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
                       <span class="bx bx-radar"></span>
                     </a>
                     <a href="{{ route('unit-led.index-by-periode', ['periode' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
@@ -140,9 +144,9 @@
                       <span class="bx bx-show"></span>
                     </a>
                     <a href="{{ route('risk-register-unit.index', ['pid' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
-                       <span class="bx bx-list-check"></span>
-                     </a>
-                    <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
+                      <span class="bx bx-list-check"></span>
+                    </a>
+                    <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id, 'quarter' => $monQuarter, 'month' => $monMonth]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
                       <span class="bx bx-radar"></span>
                     </a>
                     <a href="{{ route('unit-led.index-by-periode', ['periode' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
