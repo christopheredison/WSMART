@@ -21,14 +21,14 @@
         <form id="ictPlanForm" action="{{ route('ict.update', $ictPlan->id) }}" method="POST">
           @csrf
           @method('PUT')
-          
+
           <div class="row mb-4">
             <div class="col-12 mb-3">
-              <label for="sasaran_bumn" class="form-label">Sasaran BUMN</label>
+              <label for="sasaran_bumn" class="form-label">Sasaran BUMN  <span class="text-danger">*</span></label>
               <textarea class="form-control" id="sasaran_bumn" name="sasaran_bumn" rows="3" required>{{ old('sasaran_bumn', $ictPlan->sasaran_bumn) }}</textarea>
             </div>
-            
-            <div class="col-md-6 mb-3">
+
+            {{-- <div class="col-md-6 mb-3">
               <label for="type" class="form-label">Type</label>
               <select class="form-select" id="type" name="type" required>
                 <option value="" disabled>Pilih Type</option>
@@ -36,40 +36,40 @@
                   <option value="{{ $key }}" {{ old('type', $ictPlan->type) == $key ? 'selected' : '' }}>{{ $value }}</option>
                 @endforeach
               </select>
-            </div>
-            
+            </div> --}}
+
             <div class="col-md-6 mb-3">
-              <label for="risiko_id" class="form-label">Peristiwa Risiko</label>
-              <select class="form-select select2" id="risiko_id" name="risiko_id" required>
-                <option value="" disabled>Pilih Peristiwa Risiko</option>
-                @if($ictPlan->type == 1)
-                    @foreach($identifikasiRisikos as $risiko)
-                        <option value="{{ $risiko->id }}" {{ $ictPlan->risiko_id == $risiko->id ? 'selected' : '' }}>
-                            {{ $risiko->peristiwa_risiko }}
-                        </option>
-                    @endforeach
-                @elseif($ictPlan->type == 2)
-                    @foreach($projectRisks as $risiko)
-                        @if($risiko->peristiwaRisiko)
-                            <option value="{{ $risiko->id }}" {{ $ictPlan->risiko_id == $risiko->id ? 'selected' : '' }}>
-                                {{ $risiko->peristiwaRisiko->title }}
-                            </option>
-                        @endif
-                    @endforeach
-                @endif
+              <label for="tahun_pelaporan" class="form-label">Tahun Pelaporan <span class="text-danger">*</span></label>
+              <select class="form-select select2-general" id="tahun_pelaporan" name="tahun_pelaporan" required>
+                <option value="" disabled>Pilih Tahun Pelaporan</option>
+                @for($i = 2025; $i <= (date('Y') + 5); $i++)
+                  <option value="{{ $i }}" {{ old('tahun_pelaporan', $ictPlan->tahun_pelaporan) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                @endfor
               </select>
             </div>
-            
+
+            <div class="col-md-6 mb-3">
+              <label for="risiko_id" class="form-label">Peristiwa Risiko <span class="text-danger">*</span></label>
+              <select class="form-select select2" id="risiko_id" name="risiko_id" required>
+                <option value="" disabled>Pilih Peristiwa Risiko</option>
+                @foreach($identifikasiRisikos as $risiko)
+                    <option value="{{ $risiko->id }}" {{ $ictPlan->risiko_id == $risiko->id ? 'selected' : '' }}>
+                        {{ $risiko->peristiwa_risiko }}
+                    </option>
+                @endforeach
+              </select>
+            </div>
+
             <div class="col-12 mb-3">
-              <label for="business_process" class="form-label">Business Process</label>
+              <label for="business_process" class="form-label">Business Process <span class="text-danger">*</span></label>
               <textarea class="form-control" id="business_process" name="business_process" rows="3" required>{{ old('business_process', $ictPlan->business_process) }}</textarea>
             </div>
-            
+
             <div class="col-12 mb-3">
-              <label for="metode_pengujian" class="form-label">Metode Pengujian</label>
+              <label for="metode_pengujian" class="form-label">Metode Pengujian <span class="text-danger">*</span></label>
               <textarea class="form-control" id="metode_pengujian" name="metode_pengujian" rows="3" required>{{ old('metode_pengujian', $ictPlan->metode_pengujian) }}</textarea>
             </div>
-            
+
             <div class="col-12 mb-3">
               <label class="form-label">Key Control</label>
               <div class="table-responsive">
@@ -86,7 +86,7 @@
                         <td>
                             <input type="hidden" name="key_control_id[]" value="{{ $control->key_control_id }}">
                             <input type="hidden" name="ict_plan_control_id[]" value="{{ $control->id }}">
-                            
+
                             <input type="text" class="form-control" name="key_control[]" value="{{ $control->key_control }}" readonly required>
                         </td>
                     </tr>
@@ -96,7 +96,7 @@
               </div>
             </div>
           </div>
-          
+
           <div class="d-flex justify-content-end gap-2">
             <a href="{{ route('ict.show', $ictPlan->id) }}" class="btn btn-secondary">Batal</a>
             <button type="submit" class="btn btn-info" id="btnSubmit">Update</button>
@@ -116,59 +116,28 @@
       allowClear: true,
       width: '100%'
     });
-    
+
     // Simpan nilai awal risiko_id untuk mendeteksi perubahan
     let initialRisikoId = '{{ $ictPlan->risiko_id }}';
     let initialType = '{{ $ictPlan->type }}';
 
-    // Handler Type Change (Sama seperti create)
-    $('#type').on('change', function() {
-      const type = $(this).val();
-      const risikoSelect = $('#risiko_id');
-      
-      risikoSelect.empty().append('<option value="" selected disabled>Pilih Peristiwa Risiko</option>');
-      
-      // Jika user mengubah Type kembali ke awal, kembalikan data awal (opsional)
-      // Tapi biasanya user ingin ganti total, jadi kita load ulang list
-      
-      if (type == 1) { 
-        @foreach($identifikasiRisikos as $risiko)
-          risikoSelect.append(new Option('{{ $risiko->peristiwa_risiko }}', '{{ $risiko->id }}'));
-        @endforeach
-      } else if (type == 2) { 
-        @foreach($projectRisks as $risiko)
-          @if($risiko->peristiwaRisiko)
-            risikoSelect.append(new Option('{{ $risiko->peristiwaRisiko->title }}', '{{ $risiko->id }}'));
-          @endif
-        @endforeach
-      }
-      
-      // Jika type sama dengan initial, set selected risiko kembali
-      if(type == initialType) {
-         risikoSelect.val(initialRisikoId).trigger('change.select2'); // Jangan trigger 'change' biasa agar tabel tidak terhapus dulu
-      } else {
-         $('#keyControlTable tbody').empty(); // Type beda, pasti kontrol beda -> hapus tabel
-        risikoSelect.trigger('change');
-      }
-    });
-    
     // Handler Peristiwa Risiko Change
     $('#risiko_id').on('change', function() {
       const risikoId = $(this).val();
       const type = $('#type').val();
-      
+
       if (!risikoId) return;
 
       // CEK: Apakah risiko_id yang dipilih SAMA dengan yang ada di database saat load?
       if (risikoId == initialRisikoId && type == initialType) {
          // Jika sama, JANGAN load dari API. Biarkan tabel yang dirender server-side (Blade) tetap ada.
          // Ini penting agar ID ict_plan_control_id tidak hilang.
-        return; 
+        return;
       }
-      
+
       // Jika BEDA, baru kita wipe tabel dan ambil dari API (karena struktur berubah)
       $('#keyControlTable tbody').empty();
-      
+
       $.ajax({
         url: '/api/key-controls',
         type: 'GET',
@@ -187,7 +156,7 @@
         }
       });
     });
-    
+
     // Fungsi Add Row (Tanpa ID existing, karena ini baru dari API)
     function addKeyControlRow(id, text) {
       const row = `

@@ -8,13 +8,28 @@
       </span>
     </button>
     <div class="row justify-content-between g-0 w-100">
-      <div class="col-6 col-md-auto d-flex align-items-center">
+      <div class="col-4 col-md-auto d-flex align-items-center">
         <h5 class="mb-0">WIKA Sistem MAnagement Risiko Terintegrasi (W-SMART)</h5>
       </div>
       <div class="col-auto">
         <ul class="navbar-nav navbar-nav-icons ms-auto flex-row align-items-center">
           <li class="nav-item me-3">
-            <a class="nav-link px-0 position-relative" href="{{ route('tasks.index') }}" title="Tugas Saya">
+            <a class="nav-link px-0 position-relative"
+              href="{{ route('release-notes.index') }}"
+              data-bs-toggle="tooltip"
+              data-bs-placement="bottom"
+              data-bs-container="body"
+              title="Info Update"
+            >
+              <span class="bx bx-history fs-4"></span>
+              <span class="position-absolute top-0 start-100 translate-middle p-1 bg-info border border-light rounded-circle" style="margin-top: 8px; margin-left: -1px;">
+                <span class="visually-hidden">New updates</span>
+              </span>
+            </a>
+          </li>
+
+          <li class="nav-item me-3">
+            <a class="nav-link px-0 position-relative" href="{{ route('tasks.index') }}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Tugas Saya">
               <span class="bx bx-task fs-4"></span>
 
               <span id="navbar-task-count" class="position-absolute start-100 translate-middle badge rounded-pill bg-danger border border-light d-flex justify-content-center align-items-center" style="display: none; font-size: 0.6rem; height: 1rem; width: 1rem; top: 4px;">
@@ -117,3 +132,16 @@
     </div>
   </div>
 </nav>
+
+@push('styles')
+<style>
+.tooltip {
+    z-index: 9999999 !important;
+}
+
+.navbar-top .nav-item {
+    position: relative;
+    z-index: 1050;
+}
+</style>
+@endpush

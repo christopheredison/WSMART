@@ -632,11 +632,14 @@ class ProjectPeriodeListController extends BasicCRUDController
         }
 
         if (Gate::check('project_monitoring_list')) {
+            $monitoringRouteBase = route('projects.monitorings.index', ['project' => ':id']);
+            $script = "let elT=document.querySelector('#table-filter [name=tahun]'),elM=document.querySelector('#table-filter [name=month]'),t=elT?elT.value:new Date().getFullYear(),m=elM?elM.value:(new Date().getMonth()+1),q=Math.ceil(m/3);window.location.href='{$monitoringRouteBase}?tahun='+t+'&quarter='+q+'&month='+m;";
+
             $this->tableActions[] = [
                 'btn_icon' => true,
                 'label' => '<span class="bx bx-radar" title="Monitoring"></span>',
-                'action' => 'link',
-                'url' => route('projects.monitorings.index', ['project' => ':id']),
+                'action' => 'script',
+                'script' => $script,
                 'active_state' => '(data, type, row) => row.has_monitoring',
                 'title' => 'Monitoring'
             ];
@@ -855,43 +858,48 @@ class ProjectPeriodeListController extends BasicCRUDController
                     // Subquery Batch Terakhir (Untuk Draft, Revisi, Verifikasi)
                     $latestBatchSql = "(SELECT MAX(db2.id) FROM data_batches db2 WHERE db2.project_id = project_periode_lists.project_id AND db2.type = 2)";
 
-                    if ($value === 'active') {
-                        // LOGIKA BARU: Selesai jika punya risiko DAN tidak ada satupun risiko yang statusnya BUKAN 6
-                        $query->whereRaw("
+                    // Pengecekan absolut apakah sebuah Project sudah SELESAI
+                    $isSelesaiSql = "(
+                        EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchSql AND db.finish IS TRUE)
+                        OR (
                             (SELECT COUNT(*) FROM project_risks pr WHERE pr.project_periode_list_id = project_periode_lists.id AND pr.deleted_at IS NULL) > 0
                             AND
                             (SELECT COUNT(*) FROM project_risks pr WHERE pr.project_periode_list_id = project_periode_lists.id AND pr.status != 6 AND pr.deleted_at IS NULL) = 0
-                        ");
+                        )
+                    )";
+
+                    if ($value === 'active') {
+                        // Hanya Selesai
+                        $query->whereRaw($isSelesaiSql);
                     } elseif ($value === 'draft') {
-                        // LOGIKA BARU: Batch Status 1 ATAU 0, TAPI Kecualikan yang sudah 'Selesai' (semua status 6)
-                        // Menggunakan kondisi: Masih ada minimal 1 risiko yang statusnya BUKAN 6
-                        $query->whereRaw("EXISTS (
-                            SELECT 1 FROM data_batches db
-                            WHERE db.id = $latestBatchSql
-                            AND db.finish IS FALSE
-                            AND db.status IN (0, 1)
-                        )")
-                        ->whereRaw("(SELECT COUNT(*) FROM project_risks pr WHERE pr.project_periode_list_id = project_periode_lists.id AND pr.status != 6 AND pr.deleted_at IS NULL) > 0");
+                        // Draft TAPI Bukan Selesai
+                        $query->whereRaw("NOT $isSelesaiSql")
+                              ->whereRaw("(
+                                  NOT EXISTS (SELECT 1 FROM data_batches db WHERE db.project_id = project_periode_lists.project_id AND db.type = 2)
+                                  OR EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchSql AND db.finish IS FALSE AND db.status IN (0, 1))
+                              )")
+                              ->whereRaw("(SELECT COUNT(*) FROM project_risks pr WHERE pr.project_periode_list_id = project_periode_lists.id AND pr.deleted_at IS NULL) > 0");
                     } elseif ($value === 'revisi') {
-                        // Logic Batch: Status 5, 9, 10
-                        $query->whereRaw("EXISTS (
-                            SELECT 1 FROM data_batches db
-                            WHERE db.id = $latestBatchSql
-                            AND db.finish IS FALSE
-                            AND db.status IN (5, 9, 10)
-                        )");
+                        // Revisi TAPI Bukan Selesai
+                        $query->whereRaw("NOT $isSelesaiSql")
+                              ->whereRaw("EXISTS (
+                                  SELECT 1 FROM data_batches db
+                                  WHERE db.id = $latestBatchSql
+                                  AND db.finish IS FALSE
+                                  AND db.status IN (5, 9, 10)
+                              )");
                     } elseif ($value === 'verification') {
-                        // Logic Batch: Status 2, 3, 4, 7, 8
-                        $query->whereRaw("EXISTS (
-                            SELECT 1 FROM data_batches db
-                            WHERE db.id = $latestBatchSql
-                            AND db.finish IS FALSE
-                            AND db.status IN (2, 3, 4, 7, 8)
-                        )");
+                        // Verifikasi TAPI Bukan Selesai
+                        $query->whereRaw("NOT $isSelesaiSql")
+                              ->whereRaw("EXISTS (
+                                  SELECT 1 FROM data_batches db
+                                  WHERE db.id = $latestBatchSql
+                                  AND db.finish IS FALSE
+                                  AND db.status IN (2, 3, 4, 7, 8)
+                              )");
                     }
                 }
             ],
-            // --- UPDATE FILTER STATUS MONITORING ---
             'status_monitoring' => [
                 'label' => 'Status Monitoring',
                 'type' => 'select',
@@ -900,9 +908,9 @@ class ProjectPeriodeListController extends BasicCRUDController
                     'status_monitoring',
                     [
                         'empty' => 'Belum Dimonitor',
-                        'draft' => 'Draft / Input Monitoring', // Status 1
-                        'verification' => 'Proses Verifikasi',     // Status 2, 3, 4, 5
-                        'active' => 'Selesai',           // Status 100 atau is_approved
+                        'draft' => 'Draft / Input Monitoring',
+                        'verification' => 'Proses Verifikasi',
+                        'active' => 'Selesai',
                     ],
                     null,
                     [
@@ -910,41 +918,139 @@ class ProjectPeriodeListController extends BasicCRUDController
                         'placeholder' => 'Semua Status Monitoring'
                     ]
                 ],
-                // Old Code
-                // 'handler' => function($query, $key, $value) {
-                //     if (empty($value)) return;
-                //     $latestMonSql = "(SELECT MAX(prm2.id) FROM project_risk_monitorings prm2 JOIN project_risks pr2 ON pr2.id = prm2.risiko_id WHERE pr2.project_periode_list_id = project_periode_lists.id)";
-
-                //     if ($value === 'empty') {
-                //         // Tidak ada data monitoring
-                //         $query->whereRaw("NOT EXISTS (SELECT 1 FROM project_risk_monitorings prm JOIN project_risks pr ON pr.id = prm.risiko_id WHERE pr.project_periode_list_id = project_periode_lists.id)");
-                //     } elseif ($value === 'active') {
-                //         // Status 100 ATAU is_approved = true
-                //         $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND (prm.status = 100 OR prm.is_approved IS TRUE))");
-                //     } elseif ($value === 'draft') {
-                //         // Status 1 (Drafting) dan belum approved
-                //         $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status = 1 AND prm.is_approved IS FALSE)");
-                //     } elseif ($value === 'verification') {
-                //         // Status 2, 3, 4, 5 dan belum approved
-                //         $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status IN (2, 3, 4, 5) AND prm.is_approved IS FALSE)");
-                //     }
-                // }
                 'handler' => function($query, $key, $value) use ($tahun, $month) {
                     if (empty($value)) return;
 
-                    $latestMonSql = "(SELECT MAX(prm2.id) FROM project_risk_monitorings prm2 JOIN project_risks pr2 ON pr2.id = prm2.risiko_id WHERE pr2.project_periode_list_id = project_periode_lists.id AND prm2.tahun = '{$tahun}' AND prm2.month = '{$month}')";
+                    // Query dasar untuk memfilter monitoring pada project, tahun, dan bulan terkait
+                    // Hanya melihat risiko yang masih OPEN (is_closed = false) dan belum dihapus
+                    $baseJoinAndCondition = "
+                        FROM project_risk_monitorings prm
+                        JOIN project_risks pr ON pr.id = prm.risiko_id
+                        WHERE pr.project_periode_list_id = project_periode_lists.id
+                          AND pr.is_closed = false
+                          AND pr.deleted_at IS NULL
+                          AND prm.tahun = '{$tahun}'
+                          AND prm.month = '{$month}'
+                    ";
+
+                    // Filter untuk mengambil data monitoring TERAKHIR per masing-masing risiko
+                    $latestPerRiskCondition = "
+                        AND prm.id = (
+                            SELECT MAX(sub.id)
+                            FROM project_risk_monitorings sub
+                            WHERE sub.risiko_id = prm.risiko_id
+                              AND sub.tahun = '{$tahun}'
+                              AND sub.month = '{$month}'
+                        )
+                    ";
 
                     if ($value === 'empty') {
-                        $query->whereRaw("NOT EXISTS (SELECT 1 FROM project_risk_monitorings prm JOIN project_risks pr ON pr.id = prm.risiko_id WHERE pr.project_periode_list_id = project_periode_lists.id AND prm.tahun = '{$tahun}' AND prm.month = '{$month}')");
-                    } elseif ($value === 'active') {
-                        $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND (prm.status = 100 OR prm.is_approved IS TRUE))");
+                        // Belum dimonitor: TIDAK ADA data monitoring sama sekali untuk bulan/tahun ini
+                        $query->whereRaw("NOT EXISTS (SELECT 1 $baseJoinAndCondition)");
                     } elseif ($value === 'draft') {
-                        $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status = 1 AND prm.is_approved IS FALSE)");
+                        // Draft: Ada MINIMAL 1 risiko yang latest monitoring-nya berstatus Draft (1)
+                        $query->whereRaw("EXISTS (SELECT 1 $baseJoinAndCondition $latestPerRiskCondition AND prm.status = 1)");
                     } elseif ($value === 'verification') {
-                        $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status IN (2, 3, 4, 5) AND prm.is_approved IS FALSE)");
+                        // Proses Verifikasi: Ada MINIMAL 1 risiko yang latest monitoring-nya berstatus Verifikasi (2, 3, 4, 5)
+                        $query->whereRaw("EXISTS (SELECT 1 $baseJoinAndCondition $latestPerRiskCondition AND prm.status IN (2, 3, 4, 5))");
+                    } elseif ($value === 'active') {
+                        // Selesai: ADA monitoring, DAN TIDAK ADA SATUPUN monitoring (terakhir per risiko) yang belum disetujui (status bukan 100)
+                        $query->whereRaw("EXISTS (SELECT 1 $baseJoinAndCondition)")
+                              ->whereRaw("NOT EXISTS (SELECT 1 $baseJoinAndCondition $latestPerRiskCondition AND prm.status != 100)");
                     }
                 }
             ],
+            // 'status_monitoring' => [
+            //     'label' => 'Status Monitoring',
+            //     'type' => 'select',
+            //     'classWrapper' => 'col-md-2',
+            //     'parameters' => [
+            //         'status_monitoring',
+            //         [
+            //             'empty' => 'Belum Dimonitor',
+            //             'draft' => 'Draft / Input Monitoring', // Status 1
+            //             'verification' => 'Proses Verifikasi',     // Status 2, 3, 4, 5
+            //             'active' => 'Selesai',           // Status 100 atau is_approved
+            //         ],
+            //         null,
+            //         [
+            //             'class' => 'form-select',
+            //             'placeholder' => 'Semua Status Monitoring'
+            //         ]
+            //     ],
+            //     // Old Code
+            //     // 'handler' => function($query, $key, $value) {
+            //     //     if (empty($value)) return;
+            //     //     $latestMonSql = "(SELECT MAX(prm2.id) FROM project_risk_monitorings prm2 JOIN project_risks pr2 ON pr2.id = prm2.risiko_id WHERE pr2.project_periode_list_id = project_periode_lists.id)";
+
+            //     //     if ($value === 'empty') {
+            //     //         // Tidak ada data monitoring
+            //     //         $query->whereRaw("NOT EXISTS (SELECT 1 FROM project_risk_monitorings prm JOIN project_risks pr ON pr.id = prm.risiko_id WHERE pr.project_periode_list_id = project_periode_lists.id)");
+            //     //     } elseif ($value === 'active') {
+            //     //         // Status 100 ATAU is_approved = true
+            //     //         $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND (prm.status = 100 OR prm.is_approved IS TRUE))");
+            //     //     } elseif ($value === 'draft') {
+            //     //         // Status 1 (Drafting) dan belum approved
+            //     //         $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status = 1 AND prm.is_approved IS FALSE)");
+            //     //     } elseif ($value === 'verification') {
+            //     //         // Status 2, 3, 4, 5 dan belum approved
+            //     //         $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status IN (2, 3, 4, 5) AND prm.is_approved IS FALSE)");
+            //     //     }
+            //     // }
+            //     'handler' => function($query, $key, $value) use ($tahun, $month) {
+            //         if (empty($value)) return;
+
+            //         // $latestMonSql = "(SELECT MAX(prm2.id) FROM project_risk_monitorings prm2 JOIN project_risks pr2 ON pr2.id = prm2.risiko_id WHERE pr2.project_periode_list_id = project_periode_lists.id AND prm2.tahun = '{$tahun}' AND prm2.month = '{$month}')";
+
+            //         // if ($value === 'empty') {
+            //         //     $query->whereRaw("NOT EXISTS (SELECT 1 FROM project_risk_monitorings prm JOIN project_risks pr ON pr.id = prm.risiko_id WHERE pr.project_periode_list_id = project_periode_lists.id AND prm.tahun = '{$tahun}' AND prm.month = '{$month}')");
+            //         // } elseif ($value === 'active') {
+            //         //     $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND (prm.status = 100 OR prm.is_approved IS TRUE))");
+            //         // } elseif ($value === 'draft') {
+            //         //     $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status = 1 AND prm.is_approved IS FALSE)");
+            //         // } elseif ($value === 'verification') {
+            //         //     $query->whereRaw("EXISTS (SELECT 1 FROM project_risk_monitorings prm WHERE prm.id = $latestMonSql AND prm.status IN (2, 3, 4, 5) AND prm.is_approved IS FALSE)");
+            //         // }
+
+            //         // Query dasar untuk memfilter monitoring pada project, tahun, dan bulan terkait
+            //         // Hanya melihat risiko yang masih OPEN (is_closed = false) dan belum dihapus
+            //         $baseJoinAndCondition = "
+            //             FROM project_risk_monitorings prm
+            //             JOIN project_risks pr ON pr.id = prm.risiko_id
+            //             WHERE pr.project_periode_list_id = project_periode_lists.id
+            //               AND pr.is_closed = false
+            //               AND pr.deleted_at IS NULL
+            //               AND prm.tahun = '{$tahun}'
+            //               AND prm.month = '{$month}'
+            //         ";
+
+            //         // Filter untuk mengambil data monitoring TERAKHIR per masing-masing risiko
+            //         $latestPerRiskCondition = "
+            //             AND prm.id = (
+            //                 SELECT MAX(sub.id)
+            //                 FROM project_risk_monitorings sub
+            //                 WHERE sub.risiko_id = prm.risiko_id
+            //                   AND sub.tahun = '{$tahun}'
+            //                   AND sub.month = '{$month}'
+            //             )
+            //         ";
+
+            //         if ($value === 'empty') {
+            //             // Belum dimonitor: TIDAK ADA data monitoring sama sekali untuk bulan/tahun ini
+            //             $query->whereRaw("NOT EXISTS (SELECT 1 $baseJoinAndCondition)");
+            //         } elseif ($value === 'draft') {
+            //             // Draft: Ada MINIMAL 1 risiko yang latest monitoring-nya berstatus Draft (1)
+            //             $query->whereRaw("EXISTS (SELECT 1 $baseJoinAndCondition $latestPerRiskCondition AND prm.status = 1 AND prm.is_approved IS FALSE)");
+            //         } elseif ($value === 'verification') {
+            //             // Proses Verifikasi: Ada MINIMAL 1 risiko yang latest monitoring-nya berstatus Verifikasi (2, 3, 4, 5)
+            //             $query->whereRaw("EXISTS (SELECT 1 $baseJoinAndCondition $latestPerRiskCondition AND prm.status IN (2, 3, 4, 5) AND prm.is_approved IS FALSE)");
+            //         } elseif ($value === 'active') {
+            //             // Selesai: ADA monitoring, DAN TIDAK ADA SATUPUN monitoring (terakhir per risiko) yang belum di-approve (status != 100)
+            //             $query->whereRaw("EXISTS (SELECT 1 $baseJoinAndCondition)")
+            //                   ->whereRaw("NOT EXISTS (SELECT 1 $baseJoinAndCondition $latestPerRiskCondition AND (prm.status != 100 AND prm.is_approved IS FALSE))");
+            //         }
+            //     }
+            // ],
             // FILTER TAHUN BARU
             'tahun' => [
                 'label' => 'Tahun Monitoring',
@@ -1591,11 +1697,15 @@ class ProjectPeriodeListController extends BasicCRUDController
                 },
                 'projectRisks.projectRiskMonitorings.skalaDampakObj',
                 'projectRisks.projectRiskMonitorings.skalaProbabilitas',
+                'projectRisks.penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings',
+                'projectRisks.perlakuanDampakRisikos.perlakuanDampakMonitorings',
             ])
             ->findOrFail($resource);
 
         $status = request()->query('status');
-        $risks = $projectPeriode->projectRisks;
+
+        $allRisks = $projectPeriode->projectRisks;
+        $risks = $allRisks;
 
         if ($status === 'open') {
             $risks = $risks->where('is_closed', false);
@@ -1636,7 +1746,7 @@ class ProjectPeriodeListController extends BasicCRUDController
                 'level_risiko' => $projectRisk->projectRiskAnalisa?->level_risiko,
             ];
 
-            // 2. Ganti keyBy menjadi groupBy lalu ambil first()
+            // Ganti keyBy menjadi groupBy lalu ambil first()
             $monitorings = $projectRisk->projectRiskMonitorings->groupBy(function($item) {
                 return $item->tahun . '-' . $item->month;
             })->map(function($group) {
@@ -1686,18 +1796,18 @@ class ProjectPeriodeListController extends BasicCRUDController
         $rencanaBiayaTotal = 0;
         $realisasiBiayaTotal = 0;
 
-        foreach ($projectPeriode->projectRisks as $risk) {
+        foreach ($allRisks as $risk) {
             foreach ($risk->penyebabRisikoProjects as $penyebab) {
                 foreach ($penyebab->perlakuanPenyebabRisiko as $perlakuan) {
                     $rencanaBiayaTotal += $perlakuan->biaya_perlakuan_risiko ?? 0;
-                    $lastMon = $perlakuan->perlakuanPenyebabMonitorings()->orderBy('id', 'desc')->first();
-                    $realisasiBiayaTotal += $lastMon->realisasi_biaya_perlakuan_risiko ?? 0;
+                    $lastMon = $perlakuan->perlakuanPenyebabMonitorings->sortByDesc('id')->first();
+                    $realisasiBiayaTotal += $lastMon?->realisasi_biaya_perlakuan_risiko ?? 0;
                 }
             }
             foreach ($risk->perlakuanDampakRisikos as $perlakuanDampak) {
                 $rencanaBiayaTotal += $perlakuanDampak->biaya_perlakuan_risiko ?? 0;
-                $lastMon = $perlakuanDampak->perlakuanDampakMonitorings()->orderBy('id', 'desc')->first();
-                $realisasiBiayaTotal += $lastMon->realisasi_biaya_perlakuan_risiko ?? 0;
+                $lastMon = $perlakuanDampak->perlakuanDampakMonitorings->sortByDesc('id')->first();
+                $realisasiBiayaTotal += $lastMon?->realisasi_biaya_perlakuan_risiko ?? 0;
             }
         }
 

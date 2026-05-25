@@ -22,32 +22,24 @@ class ICTController extends Controller
 {
     public function index()
     {
-        // Ambil data ICTPlan dengan relasi planControls
         $query = ICTPlan::with(['planControls']);
 
-        // Cek permission
         if (Gate::denies('ict_approval')) {
-            // User 'ict_input' hanya melihat data draft atau yang di-reject
             $query->whereIn('status', ['draft', 'rejected']);
         }
 
         $ictPlans = $query->get();
-
-        // Cek status keseluruhan untuk logika tombol di view
         $hasPendingApproval = ICTPlan::where('status', 'pending_approval')->exists();
         $hasDrafts = ICTPlan::where('status', 'draft')->exists();
         $hasRejected = ICTPlan::where('status', 'rejected')->exists();
 
-        // Data untuk tampilan
         $data = [];
-
         foreach ($ictPlans as $plan) {
             $peristiwaRisiko = '-';
             $lokasiRisiko = '-';
 
-            // Tentukan peristiwa risiko berdasarkan type
+            // Kita biarkan deteksi type untuk jaga-jaga old data, walau kedepannya semua type = 1
             if ($plan->type == 1) {
-                // Ambil dari IdentifikasiRisiko
                 $identifikasiRisiko = IdentifikasiRisiko::find($plan->risiko_id);
                 if ($identifikasiRisiko) {
                     $peristiwaRisiko = $identifikasiRisiko->peristiwa_risiko;
@@ -55,21 +47,20 @@ class ICTController extends Controller
                     $lokasiRisiko = $unit ? $unit->name : '-';
                 }
             } elseif ($plan->type == 2) {
-                // Ambil dari ProjectRisk
-                $projectRisk = ProjectRisk::find($plan->risiko_id);
+                $projectRisk = \App\Models\ProjectRisk::find($plan->risiko_id);
                 if ($projectRisk) {
-                    $peristiwaRisikoObj = PeristiwaRisiko::find($projectRisk->peristiwa_risiko_id);
+                    $peristiwaRisikoObj = \App\Models\PeristiwaRisiko::find($projectRisk->peristiwa_risiko_id);
                     $peristiwaRisiko = $peristiwaRisikoObj ? $peristiwaRisikoObj->title : '-';
-                    $project = Project::find($projectRisk->project_id);
+                    $project = \App\Models\Project::find($projectRisk->project_id);
                     $lokasiRisiko = $project ? $project->name : '-';
                 }
             }
 
-            // Ambil key controls
             $keyControls = $plan->planControls->pluck('key_control')->implode(', ');
 
             $data[] = [
                 'id' => $plan->id,
+                'tahun_pelaporan' => $plan->tahun_pelaporan ?? '-', // TAMBAHAN
                 'sasaran_bumn' => $plan->sasaran_bumn,
                 'peristiwa_risiko' => $peristiwaRisiko,
                 'lokasi_risiko' => $lokasiRisiko,
@@ -88,32 +79,22 @@ class ICTController extends Controller
     {
         $this->authorize('ict_input');
 
-        // Tambahan: Cegah penambahan data jika ada yang sedang menunggu approval
         if (ICTPlan::where('status', 'pending_approval')->exists()) {
             return redirect()->route('ict.index')->with('error', 'Tidak dapat menambah data baru. Terdapat data yang sedang menunggu persetujuan.');
         }
 
-        // Data untuk dropdown type
-        $types = [
-            1 => 'Unit',
-            2 => 'Proyek'
-        ];
+        // HANYA AMBIL DARI RISK REGISTER KORPORAT (Unit = 1)
+        $identifikasiRisikos = IdentifikasiRisiko::select('id', 'peristiwa_risiko')
+                                ->where('unit_id', 1)->get();
 
-        // Data untuk dropdown peristiwa risiko unit
-        $identifikasiRisikos = IdentifikasiRisiko::select('id', 'peristiwa_risiko')->get();
-
-        // Data untuk dropdown peristiwa risiko proyek
-        $projectRisks = ProjectRisk::with('peristiwaRisiko')->get();
-
-        return view('ict.create', compact('types', 'identifikasiRisikos', 'projectRisks'));
+        return view('ict.create', compact('identifikasiRisikos'));
     }
 
     public function store(Request $request)
     {
-        // Validasi input
         $request->validate([
+            'tahun_pelaporan' => 'required|numeric|min:2025',
             'sasaran_bumn' => 'required',
-            'type' => 'required|in:1,2',
             'risiko_id' => 'required',
             'business_process' => 'required',
             'metode_pengujian' => 'required',
@@ -121,16 +102,15 @@ class ICTController extends Controller
             'key_control' => 'required|array',
         ]);
 
-        // Simpan data ICTPlan
         $ictPlan = ICTPlan::create([
+            'tahun_pelaporan' => $request->tahun_pelaporan,
             'sasaran_bumn' => $request->sasaran_bumn,
             'risiko_id' => $request->risiko_id,
-            'type' => $request->type,
+            'type' => 1, // KUNCI KE TYPE 1 (Korporat)
             'business_process' => $request->business_process,
             'metode_pengujian' => $request->metode_pengujian,
         ]);
 
-        // Simpan data ICTPlanControl
         foreach ($request->key_control_id as $index => $keyControlId) {
             ICTPlanControl::create([
                 'ict_plan_id' => $ictPlan->id,
@@ -145,61 +125,55 @@ class ICTController extends Controller
     public function edit($id)
     {
         $this->authorize('ict_input');
-
         $ictPlan = ICTPlan::with('planControls')->findOrFail($id);
 
         if (!in_array($ictPlan->status, ['draft', 'rejected'])) {
             return redirect()->route('ict.index')->with('error', 'Data ini tidak dapat diedit karena statusnya sudah diproses.');
         }
 
-        $types = [1 => 'Unit', 2 => 'Proyek'];
-        $identifikasiRisikos = IdentifikasiRisiko::select('id', 'peristiwa_risiko')->get();
-        $projectRisks = ProjectRisk::with('peristiwaRisiko')->get();
+        // HANYA AMBIL DARI RISK REGISTER KORPORAT (Unit = 1)
+        $identifikasiRisikos = IdentifikasiRisiko::select('id', 'peristiwa_risiko')
+                                ->where('unit_id', 1)->get();
 
-        return view('ict.edit', compact('ictPlan', 'types', 'identifikasiRisikos', 'projectRisks'));
+        return view('ict.edit', compact('ictPlan', 'identifikasiRisikos'));
     }
 
     public function update(Request $request, $id)
     {
         $this->authorize('ict_input');
-
         $ictPlan = ICTPlan::findOrFail($id);
 
-        // Validasi input
         $request->validate([
+            'tahun_pelaporan' => 'required|numeric|min:2025',
             'sasaran_bumn' => 'required',
-            'type' => 'required|in:1,2',
             'risiko_id' => 'required',
             'business_process' => 'required',
             'metode_pengujian' => 'required',
             'key_control_id' => 'required|array',
             'key_control' => 'required|array',
-            // 'ict_plan_control_id' => 'array'
         ]);
 
         try {
             DB::beginTransaction();
 
-            $riskChanged = ($ictPlan->risiko_id != $request->risiko_id) || ($ictPlan->type != $request->type);
+            $riskChanged = ($ictPlan->risiko_id != $request->risiko_id) || ($ictPlan->type != 1);
 
             $ictPlan->update([
+                'tahun_pelaporan' => $request->tahun_pelaporan,
                 'sasaran_bumn' => $request->sasaran_bumn,
                 'risiko_id' => $request->risiko_id,
-                'type' => $request->type,
+                'type' => 1, // KUNCI KE TYPE 1 (Korporat)
                 'business_process' => $request->business_process,
                 'metode_pengujian' => $request->metode_pengujian,
                 'status' => ($ictPlan->status == 'rejected') ? 'draft' : $ictPlan->status,
             ]);
 
             if ($riskChanged) {
-                // KASUS A: Risiko Berubah Total
-                // Hapus semua kontrol lama & testing terkait, buat baru
                 foreach($ictPlan->planControls as $control) {
                     $control->dos()->delete();
                     $control->delete();
                 }
 
-                // Buat baru
                 foreach ($request->key_control_id as $index => $keyControlId) {
                     ICTPlanControl::create([
                         'ict_plan_id' => $ictPlan->id,
@@ -208,11 +182,7 @@ class ICTController extends Controller
                     ]);
                 }
             } else {
-                // KASUS B: Risiko Sama (Hanya update teks atau susunan)
-                // Ambil semua ID yang ada di form (hidden input)
                 $submittedIds = array_filter($request->ict_plan_control_id ?? []);
-
-                // Hapus control yang ada di DB tapi TIDAK ada di form submission (artinya user menghapus baris)
                 $controlsToDelete = ICTPlanControl::where('ict_plan_id', $ictPlan->id)
                                     ->whereNotIn('id', $submittedIds)
                                     ->get();
@@ -222,18 +192,15 @@ class ICTController extends Controller
                     $delControl->delete();
                 }
 
-                // Loop inputan user
                 foreach ($request->key_control_id as $index => $masterKeyId) {
                     $currentId = isset($request->ict_plan_control_id[$index]) ? $request->ict_plan_control_id[$index] : null;
 
                     if ($currentId) {
-                        // Update Existing
                         ICTPlanControl::where('id', $currentId)->update([
                             'key_control_id' => $masterKeyId,
                             'key_control' => $request->key_control[$index],
                         ]);
                     } else {
-                        // Create New
                         ICTPlanControl::create([
                             'ict_plan_id' => $ictPlan->id,
                             'key_control_id' => $masterKeyId,

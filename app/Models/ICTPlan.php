@@ -20,6 +20,7 @@ class ICTPlan extends Model
         'metode_pengujian',
         'status',
         'rejection_reason',
+        'tahun_pelaporan',
     ];
 
     /**

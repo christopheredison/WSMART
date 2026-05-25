@@ -229,7 +229,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
     private function getNilaiDampak($analisa, $quarter) { return $analisa->kategori_dampak === 'Kualitatif' ? 'Rp0' : $this->formatCurrency($analisa->{'nilai_dampak_residual_' . $quarter} ?? 0); }
 
     private function calculateEfektifitas($risiko) {
-        return ((float) $risiko->efektivitas_perlakuan_risiko > 0) ? 'Efektif' : 'Tidak Efektif';
+        return ((float) $risiko->efektivitas_perlakuan_risiko >= 0) ? 'Efektif' : 'Tidak Efektif';
     }
 
     private function formatCurrency($value) { return $value == 0 ? 'Rp0' : 'Rp' . number_format($value, 0, ',', '.'); }

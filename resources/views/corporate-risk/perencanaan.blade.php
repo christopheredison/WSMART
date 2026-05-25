@@ -270,13 +270,13 @@
     <div class="col-12">
         <div class="d-flex justify-content-between">
             <div>
-                <a href="{{ route('risk-register-unit.analisa', $identifikasiRisiko->id) }}" class="btn btn-secondary me-2">
+                <a href="{{ route('corporate-risk.analisa', $identifikasiRisiko->id) }}" class="btn btn-secondary me-2">
                     <span class="bx bx-chevron-left" style="line-height: 0.8;"></span> Kembali ke Analisa
                 </a>
-                <a href="{{ route('risk-register-unit.index') }}" class="btn btn-outline-secondary">Selesai</a>
+                <a href="{{ route('corporate-risk.index') }}" class="btn btn-outline-secondary">Selesai</a>
             </div>
             <div>
-                <a href="{{ route('risk-register-unit.create') }}" class="btn btn-primary btn-action">Lanjut Ke Pengisian Risiko Baru</a>
+                <a href="{{ route('corporate-risk.create') }}" class="btn btn-primary btn-action">Lanjut Ke Pengisian Risiko Baru</a>
             </div>
         </div>
     </div>
@@ -522,7 +522,7 @@ $(document).ready(function() {
 
         // Ambil data rencana dari server
         $.ajax({
-            url: `{{ route('risk-register-unit.edit-rencana-perlakuan', ['riskRegister' => $identifikasiRisiko->id, 'id' => ':id']) }}`.replace(':id', rencanaId),
+            url: `{{ route('corporate-risk.edit-rencana-perlakuan', ['riskRegister' => $identifikasiRisiko->id, 'id' => ':id']) }}`.replace(':id', rencanaId),
             type: 'GET',
             success: function(response) {
                 // Isi data ke dalam modal

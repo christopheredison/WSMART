@@ -46,7 +46,7 @@
               </select>
             </div>
 
-            <div class="col-12 col-sm-4">
+            {{-- <div class="col-12 col-sm-4">
               <label for="filter-risk-t2t3" class="form-label d-none">T2 & T3 KBUMN</label>
               <select id="filter-risk-t2t3" class="form-select select2">
                 <option value="" selected>T2 & T3 KBUMN</option>
@@ -60,7 +60,7 @@
                     </option>
                 @endforeach
               </select>
-            </div>
+            </div> --}}
 
             <div class="col-5 col-sm-2" style="display:none;">
               <label for="filter-risk-level" class="form-label d-none">Level Risiko</label>
@@ -111,10 +111,10 @@
                 <th class="white-space-nowrap">#</th>
                 <th class="sort" data-sort="unit">Unit</th>
                 <th class="sort" data-sort="unit_type">Sasaran</th>
-                <th class="sort mw-20r" data-sort="kategori_jenis_risiko">T2 & T3 KBUMN</th>
+                {{-- <th class="sort mw-20r" data-sort="kategori_jenis_risiko">T2 & T3 KBUMN</th> --}}
                 <th class="sort mw-10r" data-sort="peristiwa_risiko">Peristiwa Risiko</th>
                 <th class="sort mw-10r" data-sort="deskripsi_peristiwa_risiko">Deskripsi Peristiwa Risiko</th>
-                <th class="sort mw-10r" data-sort="kontrol_eksisting">Jenis Kontrol Eksisting</th>
+                {{-- <th class="sort mw-10r" data-sort="kontrol_eksisting">Jenis Kontrol Eksisting</th> --}}
                 <th class="sort mw-10r" data-sort="kategori dampak">Kategori Dampak</th>
                 <th class="sort mw-10r" data-sort="nilai_risiko_inherent">Nilai Risiko</th>
                 <th class="sort mw-10r" data-sort="eksposure_risiko_inherent">Eksposure Risiko</th>
@@ -147,7 +147,7 @@
                   {{ $item->unit->name ?? '-' }}
                 </td>
                 <td class="unit_type">{{ $item->target_capaian_kinerja ?? '-' }}</td>
-                <td class="kategori_jenis_risiko">{{ $item->kategoriRisiko->title ?? '-' }} - {{ $item->jenisRisiko->title ?? '-' }}</td>
+                {{-- <td class="kategori_jenis_risiko">{{ $item->kategoriRisiko->title ?? '-' }} - {{ $item->jenisRisiko->title ?? '-' }}</td> --}}
                 <td class="peristiwa_risiko">
                   @php
                     $add = '';
@@ -162,7 +162,7 @@
                   {!! $add !!}{{ $item->peristiwa_risiko ?? '-' }}
                 </td>
                 <td class="deskripsi_peristiwa_risiko">{{ $item->deskripsi_peristiwa_risiko }}</td>
-                <td class="kontrol_eksisting">{{ $item->jenisKontrolEksisting->jenis_kontrol ?? '-' }}</td>
+                {{-- <td class="kontrol_eksisting">{{ $item->jenisKontrolEksisting->jenis_kontrol ?? '-' }}</td> --}}
                 <td class="kategori_dampak">{{ $item->riskAnalysis->kategori_dampak ?? '-' }}</td>
                 <td class="nilai_risiko" @if($item->riskAnalysis && $item->riskAnalysis->level_risiko)
                     style="background-color:

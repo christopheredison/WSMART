@@ -36,14 +36,10 @@ class PenilaianRMIController extends Controller
      */
     public function index()
     {
-        // Ambil data periode RMI
-        //$periods = RMIPeriod::orderBy('year', 'desc')->get();
-        $periods = RMIPeriod::orderBy('year', 'desc')
-              ->paginate(10);
+        $periods = RMIPeriod::orderBy('year', 'desc')->get();
 
         // Tambahkan status untuk setiap periode
         foreach ($periods as $period) {
-            // Tentukan status periode berdasarkan field status di model
             if ($period->status == 1) {
                 $period->status_text = 'Dalam Proses';
             } else {
@@ -53,8 +49,26 @@ class PenilaianRMIController extends Controller
 
         $skalaKinerjas = SkalaKinerja::orderBy('id', 'asc')->get();
         $skalaKpmrs    = SkalaKPMR::orderBy('id', 'asc')->get();
+        $tableLegend = [
+            [
+              'icon' => '<span class="bx bx-show"></span>',
+              'label' => 'Detail'
+            ],
+            [
+              'icon' => '<span class="bx bx-bar-chart-alt-2 text-primary"></span>',
+              'label' => 'Penilaian Aspek Dimensi'
+            ],
+            [
+              'icon' => '<span class="bx bx-analyse text-success"></span>',
+              'label' => 'Penilaian Aspek Kinerja'
+            ],
+            [
+              'icon' => '<span class="bx bxs-edit-alt text-warning"></span>',
+              'label' => 'Atur Data Penilaian'
+            ],
+        ];
 
-        return view('penilaian-rmi.index', compact('periods', 'skalaKinerjas', 'skalaKpmrs'));
+        return view('penilaian-rmi.index', compact('periods', 'skalaKinerjas', 'skalaKpmrs', 'tableLegend'));
     }
 
     /**
@@ -221,8 +235,6 @@ class PenilaianRMIController extends Controller
      */
     public function saveAspekDinamis(Request $request, $periodId)
     {
-        //\Log::info('Request files: ' . json_encode($request->allFiles()));
-        //dd($request);
         // Validasi input berdasarkan action
         if ($request->action === 'finish') {
             $request->validate([
@@ -245,28 +257,32 @@ class PenilaianRMIController extends Controller
         // Ambil periode
         $period = RMIPeriod::findOrFail($periodId);
 
-        // Simpan skor kriteria dan gap analysis
+        // 1. Simpan skor kriteria dan gap analysis
         if ($request->has('scores')) {
             \Log::info('masuk ke dalam blok hasScores');
             foreach ($request->scores as $criteriaId => $score) {
                 $gap = $request->gap_analysis[$criteriaId] ?? null;
-                // Ambil data lama
+
+                // Jika score null (belum diisi) dan action save, biarkan saja tersimpan null / di-skip
+                if ($score === null && $request->action === 'save') {
+                    continue;
+                }
+
                 $existing = ScoreCriteria::where('period_id', $periodId)
                     ->where('parameter_criteria_id', $criteriaId)
                     ->first();
 
                 // Cek apakah ada perubahan
                 if ($existing && $existing->score == $score && $existing->gap_analysis == $gap) {
-                    // Tidak ada perubahan, skip proses hapus dan insert
                     continue;
                 }
 
-                // Jika ada, hapus data lama
+                // Hapus data lama
                 ScoreCriteria::where('period_id', $periodId)
                     ->where('parameter_criteria_id', $criteriaId)
                     ->delete();
 
-                // Buat skor baru dengan gap analysis
+                // Buat skor baru
                 ScoreCriteria::create([
                     'period_id' => $periodId,
                     'parameter_criteria_id' => $criteriaId,
@@ -276,7 +292,7 @@ class PenilaianRMIController extends Controller
             }
         }
 
-        // Handle upload dokumen jika ada
+        // 2. Handle upload dokumen jika ada
         if ($request->has('files')) {
             \Log::info('masuk ke dalam blok has files');
             foreach ($request->file('files') as $criteriaId => $fileArray) {
@@ -288,6 +304,7 @@ class PenilaianRMIController extends Controller
                             ->where('parameter_criteria_id', $criteriaId)
                             ->whereNull('deleted_at')
                             ->first();
+
                         if ($scoreCriteria) {
                             ScoreCriteriaDoc::create([
                                 'score_criteria_id' => $scoreCriteria->id,
@@ -300,65 +317,54 @@ class PenilaianRMIController extends Controller
             }
         }
 
-        // Jika action adalah finish
-        if ($request->action === 'finish') {
-            // Ambil semua parameter
-            $parameters = MeasurementParameter::all();
+        // =========================================================================
+        // 3. KALKULASI PARAMETER, DIMENSI, & RMI (Berlaku untuk Save & Finish)
+        // =========================================================================
+        $parameters = MeasurementParameter::all();
 
-            // Hitung skor untuk setiap parameter
-            foreach ($parameters as $parameter) {
-                // Ambil semua kriteria untuk parameter ini
-                $criterias = ParameterCriteria::where('parameter_id', $parameter->id)->get();
+        foreach ($parameters as $parameter) {
+            $criterias = ParameterCriteria::where('parameter_id', $parameter->id)->get();
 
-                // Jika parameter tidak memiliki kriteria, set skor parameter menjadi null
-                if ($criterias->isEmpty()) {
-                    // Soft delete skor parameter lama jika ada
-                    ScoreParameter::where('period_id', $periodId)
-                        ->where('parameter_id', $parameter->id)
-                        ->delete();
+            if ($criterias->isEmpty()) {
+                ScoreParameter::where('period_id', $periodId)->where('parameter_id', $parameter->id)->delete();
+                ScoreParameter::create([
+                    'period_id' => $periodId,
+                    'parameter_id' => $parameter->id,
+                    'sub_dimension_id' => $parameter->sub_dimension_id,
+                    'score' => null,
+                    'score_parameter_desc' => null,
+                    'parameter_wawancara' => null,
+                ]);
+                continue;
+            }
 
-                    // Buat skor parameter baru
-                    ScoreParameter::create([
-                        'period_id' => $periodId,
-                        'parameter_id' => $parameter->id,
-                        'sub_dimension_id' => $parameter->sub_dimension_id,
-                        'score' => null,
-                        'score_parameter_desc' => null,
-                        'parameter_wawancara' => null,
-                    ]);
-                    continue;
-                }
+            $lowestScore = null;
+            $isAllCriteriaFilled = true; // Flag untuk memastikan kriteria lengkap
 
-                // Ambil skor terendah dari semua kriteria parameter
-                $lowestScore = null;
+            foreach ($criterias as $criteria) {
+                $criteriaScore = ScoreCriteria::where('period_id', $periodId)
+                    ->where('parameter_criteria_id', $criteria->id)
+                    ->whereNull('deleted_at')
+                    ->first();
 
-                foreach ($criterias as $criteria) {
-                    $criteriaScore = ScoreCriteria::where('period_id', $periodId)
-                        ->where('parameter_criteria_id', $criteria->id)
-                        ->whereNull('deleted_at')
-                        ->first();
-
-                    if ($criteriaScore) {
-                        if ($lowestScore === null || $criteriaScore->score < $lowestScore) {
-                            $lowestScore = $criteriaScore->score;
-                        }
+                // Cek apakah kriteria ini sudah diberi nilai
+                if ($criteriaScore && $criteriaScore->score !== null) {
+                    if ($lowestScore === null || $criteriaScore->score < $lowestScore) {
+                        $lowestScore = $criteriaScore->score;
                     }
+                } else {
+                    $isAllCriteriaFilled = false; // Ada kriteria yang belum diisi
                 }
+            }
 
-                // Jika ada skor terendah, simpan ke score_parameters
+            // Eksekusi kalkulasi jika Action FINISH ATAU jika kriteria parameter ini sudah LENGKAP diisi
+            if ($request->action === 'finish' || ($request->action === 'save' && $isAllCriteriaFilled)) {
                 if ($lowestScore !== null) {
-                    // Tentukan deskripsi skor parameter
                     $scoreDesc = $this->getScoreParameterDesc($lowestScore);
-
-                    // Tentukan prioritas wawancara
                     $prioritasWawancara = $this->getPrioritasWawancara($lowestScore);
 
-                    // Soft delete skor parameter lama jika ada
-                    ScoreParameter::where('period_id', $periodId)
-                        ->where('parameter_id', $parameter->id)
-                        ->delete();
+                    ScoreParameter::where('period_id', $periodId)->where('parameter_id', $parameter->id)->delete();
 
-                    // Buat skor parameter baru
                     ScoreParameter::create([
                         'period_id' => $periodId,
                         'parameter_id' => $parameter->id,
@@ -368,17 +374,24 @@ class PenilaianRMIController extends Controller
                         'parameter_wawancara' => $prioritasWawancara,
                     ]);
                 }
+            } else {
+                // (Opsional) Jika action Save dan kriteria belum lengkap, hapus nilai parameter sementara yang sebelumnya pernah ada agar tidak bias
+                ScoreParameter::where('period_id', $periodId)->where('parameter_id', $parameter->id)->delete();
             }
+        }
 
-            // Hitung skor dimensi
-            $this->calculateDimensionScores($periodId);
+        // Kalkulasi Skor Dimensi dan Skor RMI berjalan tiap kali ada simpan data
+        $this->calculateDimensionScores($periodId);
+        $this->calculateRMIScore($periodId);
 
-            // Hitung skor RMI
-            $this->calculateRMIScore($periodId);
+        // =========================================================================
+        // 4. RESPON BERDASARKAN ACTION
+        // =========================================================================
 
+        if ($request->action === 'finish') {
             // Update status periode menjadi selesai
             $period->update([
-                'status' => 2, // Selesai
+                'status' => 2,
             ]);
 
             if ($request->ajax()) {
@@ -392,11 +405,11 @@ class PenilaianRMIController extends Controller
                 ->with('success', 'Penilaian Aspek Dimensi berhasil diselesaikan.');
         }
 
-        // Untuk simpan sementara
+        // Response untuk simpan sementara
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Data berhasil disimpan sementara'
+                'message' => 'Data berhasil disimpan sementara.'
             ]);
         }
 

@@ -92,6 +92,10 @@
                 <th class="no-sort white-space-nowrap" data-sort="action">Action</th>
               </tr>
             </thead>
+            @php
+                $monMonth = $selectedMonth ?? date('n');
+                $monQuarter = ceil($monMonth / 3);
+            @endphp
             <tbody class="list" id="bulk-select-body">
               @foreach ($dataToDisplay as $index => $item)
               @php
@@ -124,8 +128,8 @@
                     <a href="{{ route('risk-register-ap.index', ['pid' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
                       <span class="bx bx-list-check"></span>
                     </a>
-                    <a href="{{ route('risk-register-ap.monitorings.index', ['period' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
-                      <span class="bx bx-radar"></span>
+                    <a href="{{ route('risk-register-ap.monitorings.index', ['period' => $periode->id, 'unit_id' => $unit->id, 'quarter' => $monQuarter, 'month' => $monMonth]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
+                    <span class="bx bx-radar"></span>
                     </a>
                     <a href="{{ route('ap-led.index-by-periode', ['periode' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
                       title="Loss Event">
@@ -142,7 +146,7 @@
                     <a href="{{ route('risk-register-ap.index', ['pid' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
                       <span class="bx bx-list-check"></span>
                     </a>
-                    <a href="{{ route('risk-register-ap.monitorings.index', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
+                    <a href="{{ route('risk-register-ap.monitorings.index', ['period' => $periode->id, 'quarter' => $monQuarter, 'month' => $monMonth]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
                       <span class="bx bx-radar"></span>
                     </a>
                     <a href="{{ route('ap-led.index-by-periode', ['periode' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"

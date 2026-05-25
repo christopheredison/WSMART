@@ -220,6 +220,13 @@
             $('#jabatan_id').val(response.jabatan.id).trigger('change');
           }
 
+          // Update Project
+          if (response.resolved_projects && response.resolved_projects.length > 0) {
+            $('select[name="user_projects[]"]').val(response.resolved_projects).trigger('change');
+          } else {
+            $('select[name="user_projects[]"]').val([]).trigger('change');
+          }
+
           Swal.close();
           Swal.fire({
             icon: 'success',

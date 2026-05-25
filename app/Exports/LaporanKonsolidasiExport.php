@@ -21,12 +21,14 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
     private $costCenters;
     private $bulan;
     private $tahun;
+    private $statusPublish;
 
-    public function __construct(array $costCenters, $bulan, $tahun)
+    public function __construct(array $costCenters, $bulan, $tahun, $statusPublish = 'all')
     {
         $this->costCenters = $costCenters;
         $this->bulan = $bulan;
         $this->tahun = $tahun;
+        $this->statusPublish = $statusPublish;
     }
 
     public function headings(): array
@@ -129,14 +131,24 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                     $query->where('tahun', '<', $this->tahun)
                           ->orWhere(function($subQuery) {
                               $subQuery->where('tahun', $this->tahun)
-                                       ->where('month', '<=', $this->bulan);
+                                      ->where('month', '<=', $this->bulan);
                           });
                 });
             }
-            // Pastikan status publish / disetujui
-            $q->where(function($sq) {
-                $sq->where('status', 100)->orWhere('is_approved', 1)->orWhere('is_approved', true);
-            });
+
+            // FILTER STATE DINAMIS (published, unpublished, atau all)
+            if ($this->statusPublish === 'published') {
+                $q->where(function($sq) {
+                    $sq->where('status', 100)->orWhere('is_approved', 1)->orWhere('is_approved', true);
+                });
+            } elseif ($this->statusPublish === 'unpublished') {
+                $q->where(function($sq) {
+                    $sq->where('status', '!=', 100)
+                      ->where(function($sub) {
+                          $sub->where('is_approved', 0)->orWhere('is_approved', false)->orWhereNull('is_approved');
+                      });
+                });
+            }
         };
 
         // 2. Terapkan closure ke dalam eager loading
@@ -340,7 +352,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                 $levelResidualRealisasi,
 
                 $risk->is_closed ? 'Closed' : 'Open',
-                ((float) $risk->efektivitas_perlakuan_risiko > 0) ? 'Efektif' : 'Tidak Efektif',
+                ((float) $risk->efektivitas_perlakuan_risiko >= 0) ? 'Efektif' : 'Tidak Efektif',
                 $periodeMonitoringText,
             ];
 

@@ -44,9 +44,9 @@ class KamusRisikoUnitExport implements FromQuery, WithHeadings, WithMapping, Sho
         if (!empty($this->filters['efektivitas'])) {
             $query->whereHas('identifikasiRisiko', function ($q) {
                 if ($this->filters['efektivitas'] == 'efektif') {
-                    $q->where('efektivitas_perlakuan_risiko', '>', 0);
+                    $q->where('efektivitas_perlakuan_risiko', '>=', 0);
                 } elseif ($this->filters['efektivitas'] == 'tidak_efektif') {
-                    $q->where('efektivitas_perlakuan_risiko', '<=', 0);
+                    $q->where('efektivitas_perlakuan_risiko', '<', 0);
                 }
             });
         }
@@ -80,7 +80,7 @@ class KamusRisikoUnitExport implements FromQuery, WithHeadings, WithMapping, Sho
     {
         $risiko = $row->identifikasiRisiko;
         $analisa = $risiko?->riskAnalysis;
-        
+
         $kategori = $risiko?->jenisRisiko?->kategoriRisiko?->title ?? 'N/A';
         $jenis = $risiko?->jenisRisiko?->title ?? 'N/A';
 

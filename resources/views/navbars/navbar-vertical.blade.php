@@ -544,7 +544,19 @@
             </li>
             @endcan
             <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('measurement-parameter.index') ? 'active' : '' }}"
+              <a class="nav-link {{ request()->routeIs('dimension.*') ? 'active' : '' }}"
+                href="{{ route('dimension.index') }}">
+                <span class="nav-link-text">Dimensi</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('sub-dimension.*') ? 'active' : '' }}"
+                href="{{ route('sub-dimension.index') }}">
+                <span class="nav-link-text">Sub Dimensi</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('measurement-parameter.*') ? 'active' : '' }}"
                 href="{{ route('measurement-parameter.index') }}">
                 <span class="nav-link-text">Parameter Pengukuran</span>
               </a>

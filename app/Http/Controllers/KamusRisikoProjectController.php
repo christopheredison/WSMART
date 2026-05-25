@@ -63,9 +63,9 @@ class KamusRisikoProjectController extends Controller
                 }
                 if ($request->filled('efektivitas')) {
                     if ($request->efektivitas == 'efektif') {
-                        $q->where('efektivitas_perlakuan_risiko', '>', 0);
+                        $q->where('efektivitas_perlakuan_risiko', '>=', 0);
                     } elseif ($request->efektivitas == 'tidak_efektif') {
-                        $q->where('efektivitas_perlakuan_risiko', '<=', 0);
+                        $q->where('efektivitas_perlakuan_risiko', '<', 0);
                     }
                 }
             });
@@ -218,7 +218,7 @@ class KamusRisikoProjectController extends Controller
                     if (is_null($efektivitas)) {
                         return '-';
                     }
-                    $class = $efektivitas > 0 ? 'text-success' : ($efektivitas < 0 ? 'text-danger' : 'text-warning');
+                    $class = $efektivitas >= 0 ? 'text-success' : 'text-danger';
                     return '<span class="fw-bold ' . $class . '">' . $efektivitas . '%</span>';
                 })
                 ->rawColumns([

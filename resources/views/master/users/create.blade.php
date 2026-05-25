@@ -258,6 +258,11 @@
           }
         }
         $('select[name="jabatan_id"]').val(response.jabatan?.id || '').change();
+        if (response.resolved_projects && response.resolved_projects.length > 0) {
+          $('select[name="user_projects[]"]').val(response.resolved_projects).trigger('change');
+        } else {
+          $('select[name="user_projects[]"]').val([]).trigger('change');
+        }
         Swal.close();
       },
       error: function(xhr) {

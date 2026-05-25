@@ -1,253 +1,130 @@
 <?php
-
 namespace App\Http\Controllers\Master;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\MeasurementParameter;
 use App\Models\ParameterCriteria;
-use App\Models\SubDimension;
-use Illuminate\Support\Facades\Validator;
 use App\Models\ParameterCriteriaDetail;
+use App\Models\Dimension;
+use DataTables;
 
 class MeasurementParameterController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index(Request $request)
+    public function index()
     {
-        $query = MeasurementParameter::with([
-            'criteria' => function($query) {
-                $query->orderBy('id', 'asc');
-            }, 
-            'subDimension',
-            'subDimension.dimension'
-        ]);
-    
-        // Filter berdasarkan kata kunci
-        if ($request->has('keyword') && !empty($request->keyword)) {
-            $keyword = $request->keyword;
-            $query->where('statement', 'like', "%{$keyword}%")
-                ->orWhereHas('criteria', function($q) use ($keyword) {
-                    $q->where('criteria_statement', 'like', "%{$keyword}%");
-                })
-                ->orWhereHas('subDimension', function($q) use ($keyword) {
-                    $q->where('name', 'like', "%{$keyword}%");
-                })
-                ->orWhereHas('subDimension.dimension', function($q) use ($keyword) {
-                    $q->where('name', 'like', "%{$keyword}%");
-                });
-        }
-    
-        //$parameters = $query->get();
-        $parameters = $query->orderBy('id', 'desc')->get();
-    
-        // Ambil data SubDimension untuk dropdown di modal
-        $subDimensions = \App\Models\SubDimension::all();
-    
-        return view('master.measurement-parameter.index', compact('parameters', 'subDimensions'));
+        $dimensions = Dimension::with('subDimensions')->orderBy('name', 'asc')->get();
+        return view('master.measurement-parameter.index', compact('dimensions'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
+    public function data()
     {
-        return view('master.measurement-parameter.create');
+        $query = MeasurementParameter::select('measurement_parameters.*')
+            ->join('sub_dimensions', 'measurement_parameters.sub_dimension_id', '=', 'sub_dimensions.id')
+            ->join('dimensions', 'sub_dimensions.dimension_id', '=', 'dimensions.id')
+            ->with(['subDimension.dimension'])
+            ->withCount('criteria')
+            ->orderBy('dimensions.id', 'asc')
+            ->orderBy('sub_dimensions.id', 'asc')
+            ->orderBy('measurement_parameters.id', 'asc');
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('dimensi', function($row){
+                return $row->subDimension->dimension->name ?? '-';
+            })
+            ->addColumn('sub_dimensi', function($row){
+                return $row->subDimension->name ?? '-';
+            })
+            ->addColumn('criteria_count', function($row){
+                $badgeColor = $row->criteria_count > 0 ? 'bg-success' : 'bg-secondary';
+                return '<span class="badge ' . $badgeColor . '">' . $row->criteria_count . ' Kriteria</span>';
+            })
+            ->addColumn('action', function($row){
+                $showBtn = '<a href="'.route('measurement-parameter.show', $row->id).'" class="btn-input-icon btn-show text-info" data-bs-toggle="tooltip" title="Lihat Detail & Set Kriteria"><i class="bx bx-list-check"></i></a>';
+                $editBtn = '<button class="btn-input-icon btn-edit text-warning ms-1" data-id="'.$row->id.'" data-bs-toggle="tooltip" title="Edit Parameter"><i class="bx bx-edit"></i></button>';
+                $deleteBtn = '<button class="btn-input-icon text-danger btn-delete ms-1" data-id="'.$row->id.'" data-bs-toggle="tooltip" title="Hapus Parameter"><i class="bx bx-trash"></i></button>';
+
+                return $showBtn . $editBtn . $deleteBtn;
+            })
+            ->rawColumns(['criteria_count', 'action'])
+            ->make(true);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function store(Request $request)
     {
-        // Validasi input
         $request->validate([
             'sub_dimension_id' => 'required|exists:sub_dimensions,id',
             'statement' => 'required|string'
         ]);
-        
-        // Buat parameter baru
-        $parameter = new MeasurementParameter();
-        $parameter->sub_dimension_id = $request->sub_dimension_id;
-        $parameter->statement = $request->statement;
-        $parameter->min_score = null; // Awalnya null, akan diisi dari criteria
-        $parameter->max_score = null; // Awalnya null, akan diisi dari criteria
-        $parameter->save();
-        
-        // Jika request AJAX, kembalikan response JSON
-        if ($request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Parameter berhasil ditambahkan',
-                'data' => $parameter
-            ]);
-        }
-        
-        // Jika bukan AJAX, redirect dengan pesan sukses
-        return redirect()->route('measurement-parameter.index')
-            ->with('success', 'Parameter berhasil ditambahkan');
+
+        MeasurementParameter::create($request->only('sub_dimension_id', 'statement'));
+        return response()->json(['success' => 'Parameter Pengukuran berhasil disimpan.']);
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
+    public function edit($id)
+    {
+        $data = MeasurementParameter::with('subDimension')->findOrFail($id);
+        $data->dimension_id = $data->subDimension->dimension_id ?? null;
+        return response()->json($data);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'sub_dimension_id' => 'required|exists:sub_dimensions,id',
+            'statement' => 'required|string'
+        ]);
+
+        MeasurementParameter::findOrFail($id)->update($request->only('sub_dimension_id', 'statement'));
+        return response()->json(['success' => 'Parameter Pengukuran berhasil diperbarui.']);
+    }
+
+    public function destroy($id)
+    {
+        MeasurementParameter::findOrFail($id)->delete();
+        return response()->json(['success' => 'Parameter Pengukuran berhasil dihapus.']);
+    }
+
     public function show($id)
     {
-        $parameter = MeasurementParameter::with([
-            'criteria' => function($query) {
-                $query->orderBy('id', 'asc');
-            },
-            'subDimension',
-            'subDimension.dimension'
-        ])->findOrFail($id);
-    
-        // Hitung jumlah kriteria
-        $criteriaCount = $parameter->criteria->count();
-        
-        // Ambil semua kriteria parameter
+        $parameter = MeasurementParameter::with('subDimension.dimension')->findOrFail($id);
+        $criteriaCount = ParameterCriteria::where('parameter_id', $id)->count();
         $parameterCriterias = ParameterCriteria::where('parameter_id', $id)
-            ->with(['details' => function($query) {
-                $query->orderBy('level', 'asc');
-            }])
+            ->with(['details' => function($query) { $query->orderBy('level', 'asc'); }])
             ->get();
-    
+
         return view('master.measurement-parameter.show', compact('parameter', 'criteriaCount', 'parameterCriterias'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        $parameter = MeasurementParameter::with(['criteria' => function($query) {
-            $query->orderBy('level', 'asc');
-        }])->findOrFail($id);
-
-        return view('master.measurement-parameter.edit', compact('parameter'));
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, $id)
-    {
-        // Implementasi update data
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
+    public function createCriteria($id)
     {
         $parameter = MeasurementParameter::findOrFail($id);
-        $parameter->delete();
-
-        return redirect()->route('measurement-parameter.index')
-            ->with('success', 'Parameter berhasil dihapus');
-    }
-
-    /**
-     * Restore the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function restore($id)
-    {
-        $parameter = MeasurementParameter::withTrashed()->findOrFail($id);
-        $parameter->restore();
-
-        return redirect()->route('measurement-parameter.index')
-            ->with('success', 'Parameter berhasil dipulihkan');
-    }
-
-    /**
-     * Menampilkan form untuk mengatur kriteria parameter
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function setCriteria($id)
-    {
-        $parameter = MeasurementParameter::findOrFail($id);
-        
-        // Ambil parameter criteria jika sudah ada
-        $parameterCriteria = ParameterCriteria::where('parameter_id', $id)->first();
-        
-        // Siapkan array untuk menyimpan kriteria berdasarkan level
+        $parameterCriteria = null;
         $criteriaByLevel = [];
-        
-        // Jika parameter criteria sudah ada, ambil detailnya
-        if ($parameterCriteria) {
-            // Ambil semua detail kriteria
-            $criteriaDetails = $parameterCriteria->details()->orderBy('level', 'asc')->get();
-            
-            // Susun berdasarkan level
-            foreach ($criteriaDetails as $detail) {
-                $criteriaByLevel[$detail->level] = $detail;
-            }
-        }
-        
         return view('master.measurement-parameter.set-criteria', compact('parameter', 'parameterCriteria', 'criteriaByLevel'));
     }
 
-    /**
-     * Menyimpan kriteria parameter
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
     public function storeCriteria(Request $request, $parameterId)
     {
-        // Validasi input
-        $validated = $request->validate([
-            'min_score' => 'required|numeric|min:1', // Minimal 1
-            'max_score' => 'required|numeric|gt:min_score',
-            'criteria_statement.5' => 'required|string', // Level 5 wajib diisi
+        $request->validate([
+            'min_score' => 'required|numeric|min:1',
+            'max_score' => 'required|numeric|gte:min_score',
+            'criteria_statement.5' => 'required|string',
             'criteria_statement.*' => 'nullable|string',
         ]);
-        
-        // Cari parameter
+
         $parameter = MeasurementParameter::findOrFail($parameterId);
-        
-        // Hitung jumlah kriteria yang sudah ada untuk parameter ini
         $criteriaCount = ParameterCriteria::where('parameter_id', $parameterId)->count();
-        
-        // Buat format increment untuk kriteria baru (0001, 0002, dst)
         $incrementNumber = str_pad($criteriaCount + 1, 4, '0', STR_PAD_LEFT);
-        
-        // Buat kriteria baru (tidak menggunakan updateOrCreate)
+
         $parameterCriteria = ParameterCriteria::create([
             'parameter_id' => $parameterId,
             'criteria_statement' => $parameter->statement . '_' . $incrementNumber,
-            'min_score' => $validated['min_score'],
-            'max_score' => $validated['max_score'],
+            'min_score' => $request->min_score,
+            'max_score' => $request->max_score,
         ]);
-        
-        // Simpan detail untuk setiap level
+
         foreach ($request->criteria_statement as $level => $criteria) {
             if (!empty($criteria)) {
                 ParameterCriteriaDetail::create([
@@ -257,36 +134,58 @@ class MeasurementParameterController extends Controller
                 ]);
             }
         }
-        
-        return redirect()->route('measurement-parameter.index')
-            ->with('success', 'Kriteria parameter berhasil disimpan.');
+
+        return redirect()->route('measurement-parameter.show', $parameterId)->with('success', 'Kriteria berhasil ditambahkan.');
     }
 
-    /**
-     * Menghapus kriteria parameter
-     *
-     * @param  int  $parameterId
-     * @param  int  $criteriaId
-     * @return \Illuminate\Http\Response
-     */
+    public function editCriteria($parameterId, $criteriaId)
+    {
+        $parameter = MeasurementParameter::findOrFail($parameterId);
+        $parameterCriteria = ParameterCriteria::where('parameter_id', $parameterId)->findOrFail($criteriaId);
+
+        $criteriaByLevel = [];
+        foreach ($parameterCriteria->details()->get() as $detail) {
+            $criteriaByLevel[$detail->level] = $detail;
+        }
+
+        return view('master.measurement-parameter.set-criteria', compact('parameter', 'parameterCriteria', 'criteriaByLevel'));
+    }
+
+    public function updateCriteria(Request $request, $parameterId, $criteriaId)
+    {
+        $request->validate([
+            'min_score' => 'required|numeric|min:1',
+            'max_score' => 'required|numeric|gte:min_score',
+            'criteria_statement.5' => 'required|string',
+            'criteria_statement.*' => 'nullable|string',
+        ]);
+
+        $parameterCriteria = ParameterCriteria::where('parameter_id', $parameterId)->findOrFail($criteriaId);
+        $parameterCriteria->update([
+            'min_score' => $request->min_score,
+            'max_score' => $request->max_score,
+        ]);
+
+        foreach ($request->criteria_statement as $level => $criteria) {
+            if (!empty($criteria)) {
+                ParameterCriteriaDetail::updateOrCreate(
+                    ['parameter_criteria_id' => $parameterCriteria->id, 'level' => $level],
+                    ['criteria' => $criteria]
+                );
+            } else {
+                ParameterCriteriaDetail::where('parameter_criteria_id', $parameterCriteria->id)->where('level', $level)->delete();
+            }
+        }
+
+        return redirect()->route('measurement-parameter.show', $parameterId)->with('success', 'Kriteria berhasil diperbarui.');
+    }
+
     public function deleteCriteria($parameterId, $criteriaId)
     {
-        // Cari kriteria
         $criteria = ParameterCriteria::findOrFail($criteriaId);
-        
-        // Pastikan kriteria milik parameter yang dimaksud
-        if ($criteria->parameter_id != $parameterId) {
-            return redirect()->route('measurement-parameter.show', $parameterId)
-                ->with('error', 'Kriteria tidak ditemukan untuk parameter ini.');
-        }
-        
-        // Hapus detail kriteria terlebih dahulu
         $criteria->details()->delete();
-        
-        // Hapus kriteria
         $criteria->delete();
-        
-        return redirect()->route('measurement-parameter.show', $parameterId)
-            ->with('success', 'Kriteria parameter berhasil dihapus.');
+
+        return redirect()->back()->with('success', 'Kriteria berhasil dihapus.');
     }
 }

@@ -295,12 +295,24 @@ class UserController extends Controller
             }
         }
 
+        $resolvedProjects = [];
+        $costCenter = $dataUser['cost_center'] ?? null;
+        if ($costCenter) {
+            // Antisipasi jika cost_center berupa array atau string (misal: "PC01, PC02")
+            $costCentersArray = is_array($costCenter) ? $costCenter : array_map('trim', explode(',', (string) $costCenter));
+
+            // Ambil ID dari table projects yang profit_center-nya cocok dengan response API
+            $resolvedProjects = Project::whereIn('profit_center', $costCentersArray)->pluck('id')->toArray();
+        }
+
         return response()->json([
             'data' => $dataUser,
             'jabatan' => $jabatan,
             'resolved_unit' => $resolvedUnit,
+            'resolved_projects' => $resolvedProjects,
             'debug' => [
                 'cost_center_parent' => $ccParent,
+                'cost_center' => $costCenter,
                 'unit_found' => $resolvedUnit ? true : false,
                 'nm_unit' => $dataUser['nm_unit'] ?? null
             ]

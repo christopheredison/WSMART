@@ -243,9 +243,8 @@
         </div>
 
         @php
-            use Carbon\Carbon;
             // Asumsi $month dan $tahun dikirim dari controller
-            $dateCurrent = Carbon::create($tahun, $month, 1);
+            $dateCurrent = \Carbon\Carbon::create($tahun, $month, 1);
             $dateM1 = $dateCurrent->copy()->subMonth();
             $dateM2 = $dateCurrent->copy()->subMonths(2);
         @endphp
