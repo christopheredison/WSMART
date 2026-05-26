@@ -242,13 +242,13 @@
             </div>
         </div>
 
-        @if($risk->taksonomiRisiko)
         @php
             // Asumsi $month dan $tahun dikirim dari controller
             $dateCurrent = \Carbon\Carbon::create($tahun, $month, 1);
             $dateM1 = $dateCurrent->copy()->subMonth();
             $dateM2 = $dateCurrent->copy()->subMonths(2);
         @endphp
+        @if($risk->taksonomiRisiko)
         <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
