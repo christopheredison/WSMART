@@ -278,8 +278,6 @@
                 </div>
             </div>
         </div>
-        @endif
-
         <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
@@ -340,6 +338,7 @@
         </div>
 
         <div id="pengendalian-section" class="col-12 d-none">
+
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
                     <h4 class="mb-0 ff-heading-sm text-danger">Rencana Pengendalian Risiko</h4>
@@ -393,6 +392,7 @@
                 </div>
             </div>
         </div>
+        @endif
 
         <div class="col-12">
             <div class="divider my-3 my-md-5">
