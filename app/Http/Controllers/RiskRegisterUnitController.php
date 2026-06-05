@@ -2147,6 +2147,7 @@ class RiskRegisterUnitController extends Controller
                     // Jika revisi dari tahap awal, kirim balik ke status Dikirim
                     $dataBatch->update([
                         'status' => DataBatch::STATUS_KIRIM,
+                        'step_verification' => 1,
                         'finish' => false
                     ]);
                     $update_status = IdentifikasiRisiko::STATUS_DIKIRIM;
@@ -2154,6 +2155,7 @@ class RiskRegisterUnitController extends Controller
                     // Jika revisi dari tahap tengah, kirim ke status Tunggu Verifikasi
                     $dataBatch->update([
                         'status' => DataBatch::STATUS_VERIFIKASI,
+                        'step_verification' => 1,
                         'finish' => false
                     ]);
                     $update_status = IdentifikasiRisiko::STATUS_TUNGGU_VERIFIKASI;
