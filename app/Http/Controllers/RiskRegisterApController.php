@@ -452,7 +452,7 @@ class RiskRegisterApController extends Controller
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
 
         // Ambil data step verifikasi (Pastikan method ini ada di controller/trait Anda)
-        $verificationData = $this->getUserVerificationStep($levelId, $is_mr);
+        $verificationData = $this->getUserVerificationStep($levelId, $is_mr, false);
         $u_step = $verificationData['u_step'];
 
         $apAdmin = Gate::check('ap_admin');
@@ -1858,12 +1858,14 @@ class RiskRegisterApController extends Controller
                 if ($dataBatch->step_verification == 1) {
                     $dataBatch->update([
                         'status' => DataBatch::STATUS_KIRIM,
+                        'step_verification' => 1,
                         'finish' => false
                     ]);
                     $update_status = IdentifikasiRisiko::STATUS_DIKIRIM;
                 } else {
                     $dataBatch->update([
                         'status' => DataBatch::STATUS_VERIFIKASI,
+                        'step_verification' => 1,
                         'finish' => false
                     ]);
                     $update_status = IdentifikasiRisiko::STATUS_TUNGGU_VERIFIKASI;
@@ -2099,7 +2101,7 @@ class RiskRegisterApController extends Controller
         ->first();
 
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
-        $verificationData = $this->getUserVerificationStep($level_id, $is_mr);
+        $verificationData = $this->getUserVerificationStep($level_id, $is_mr, false);
         $u_step = $verificationData['u_step'];
         $user_verification = $verificationData['user_verification'];
         $step_order = $u_step;
