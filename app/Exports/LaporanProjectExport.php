@@ -81,6 +81,7 @@ class LaporanProjectExport implements WithMultipleSheets
         ])
         ->whereHas('projectRiskMonitorings', $filterUpToPeriod)
         ->whereIn('project_id', $this->projectIds)
+        ->whereNull('deleted_at')
         ->get();
 
         if (count($this->projectIds) === 1) {

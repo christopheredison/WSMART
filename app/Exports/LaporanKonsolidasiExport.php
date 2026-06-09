@@ -152,6 +152,10 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
         };
 
         // 2. Terapkan closure ke dalam eager loading
+        $startOfSelectedPeriod = Carbon::create($this->tahun, $this->bulan, 1)
+            ->startOfMonth()
+            ->toDateString();
+
         $query = ProjectRisk::with([
             'project',
             'sasaranProyek',
@@ -175,12 +179,17 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             }
         ]);
 
+        $query->whereNull('deleted_at');
+
         // 3. Menampilkan yang memiliki laporan publish sampai batas bulan.
         $query->whereHas('projectRiskMonitorings', $filterUpToPeriod);
 
-        $query->whereHas('project', function($q) {
-            $q->whereDate('masa_pelaksanaan_end', '>=', \Carbon\Carbon::today())
-              ->orWhereNull('masa_pelaksanaan_end');
+        // Project aktif pada periode export, bukan aktif berdasarkan tanggal cut off
+        $query->whereHas('project', function($q) use ($startOfSelectedPeriod) {
+            $q->where(function($sub) use ($startOfSelectedPeriod) {
+                $sub->whereNull('masa_pelaksanaan_end')
+                    ->orWhereDate('masa_pelaksanaan_end', '>=', $startOfSelectedPeriod);
+            });
         });
 
         if (!in_array('all', $this->costCenters)) {
