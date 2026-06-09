@@ -1424,7 +1424,7 @@ class HomeController extends Controller
                     }
 
                     if ($hasilUsahaRecord) {
-                        $summaryData['omset_kontrak_total'] = $hasilUsahaRecord->kontrak_review_total;
+                        $summaryData['omset_kontrak_total'] = $hasilUsahaRecord->kontrak_review;
                         $summaryData['omset_penjualan_sd_bulan'] = $hasilUsahaRecord->penjualan_ri;
                         $summaryData['lsp_rencana_sd_bulan'] = $hasilUsahaRecord->lsp_ra;
                         $summaryData['lsp_realisasi_sd_bulan'] = $hasilUsahaRecord->lsp_ri;
