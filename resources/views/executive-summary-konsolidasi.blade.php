@@ -54,34 +54,53 @@
     $formattedPeriod = \Carbon\Carbon::createFromFormat('Y-m', $selectedPeriod)->translatedFormat('F Y');
 @endphp
 
-{{-- CARD RINGKASAN STATISTIK --}}
+{{-- CARD RINGKASAN EKSPOSUR & DAMPAK --}}
 <div class="row g-4 mb-4">
     <div class="col-md-3">
-        <div class="card card-body h-100 shadow-sm border-start border-4 border-info">
-            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Total Risiko Terpublish</p>
-            <h4 class="fw-bold text-dark mb-0">{{ number_format($totalRisikoSemua, 0, ',', '.') }} Risiko</h4>
-            <small class="text-muted mt-2">Masih berstatus Open</small>
+        <div class="card card-body h-100 shadow-sm border-start border-4 border-success">
+            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Total Risiko Open</p>
+            <h4 class="fw-bold text-dark mb-0">
+                {{ number_format($totalRisikoSemua ?? 0, 0, ',', '.') }} Risiko
+            </h4>
+            <small class="text-muted mt-2">
+                {{ number_format($totalProyekAktif ?? 0, 0, ',', '.') }} Proyek Aktif
+            </small>
         </div>
     </div>
+
+    <div class="col-md-3">
+        <div class="card card-body h-100 shadow-sm border-start border-4 border-info">
+            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Total Eksposur Inheren</p>
+            <h4 class="fw-bold text-dark mb-0">
+                Rp {{ number_format($totalEksposurInherentSemua ?? 0, 0, ',', '.') }}
+            </h4>
+            <small class="text-muted mt-2">
+                Dampak inheren: Rp {{ number_format($totalDampakInherentSemua ?? 0, 0, ',', '.') }}
+            </small>
+        </div>
+    </div>
+
     <div class="col-md-3">
         <div class="card card-body h-100 shadow-sm border-start border-4 border-warning">
-            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Total Dampak Inheren</p>
-            <h4 class="fw-bold text-dark mb-0">Rp {{ number_format($totalDampakInherentSemua, 0, ',', '.') }}</h4>
-            <small class="text-muted mt-2">Dari {{ $totalProyekAktif }} proyek aktif</small>
+            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Total Eksposur Residual</p>
+            <h4 class="fw-bold text-dark mb-0">
+                Rp {{ number_format($totalEksposurResidualSemua ?? 0, 0, ',', '.') }}
+            </h4>
+            <small class="text-muted mt-2">
+                Dampak residual: Rp {{ number_format($totalDampakResidualSemua ?? 0, 0, ',', '.') }}
+            </small>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card card-body h-100 shadow-sm border-start border-4 border-success">
-            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Total Dampak Residual (Rencana)</p>
-            <h4 class="fw-bold text-dark mb-0">Rp {{ number_format($totalDampakResidualSemua, 0, ',', '.') }}</h4>
-            <small class="text-muted mt-2">Dari {{ $totalProyekAktif }} proyek aktif</small>
-        </div>
-    </div>
+
     <div class="col-md-3">
         <div class="card card-body h-100 shadow-sm border-start border-4 border-danger">
-            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Total Dampak Realisasi</p>
-            <h4 class="fw-bold text-danger mb-0">Rp {{ number_format($totalDampakRealisasiSemua, 0, ',', '.') }}</h4>
-            <small class="text-muted mt-2">Dari {{ $totalProyekAktif }} proyek aktif</small>
+            <p class="text-muted text-uppercase mb-1" style="font-size: 0.8rem">Total Eksposur Realisasi</p>
+            <h4 class="fw-bold text-danger mb-0">
+                Rp {{ number_format($totalEksposurRealisasiSemua ?? 0, 0, ',', '.') }}
+            </h4>
+            <small class="text-muted mt-2">
+                Dampak realisasi: Rp {{ number_format($totalDampakRealisasiSemua ?? 0, 0, ',', '.') }}
+            </small>
         </div>
     </div>
 </div>
@@ -92,7 +111,9 @@
         <div class="card shadow-sm h-100">
             <div class="card-header border-0 pb-0">
                 <h4 class="fw-bold mb-0">Distribusi Total Eksposur Realisasi</h4>
-                <small class="text-muted">Per Divisi | Berdasarkan Risiko Kuantitatif Ter-update</small>
+                <small class="text-muted">
+                    Per Divisi | Berdasarkan Risiko Kuantitatif Periode Cutoff {{ $formattedPeriod }}
+                </small>
             </div>
             <div class="card-body min-vh-25">
                 <div id="pieChartEksposur" style="height: 400px;"></div>
@@ -208,16 +229,16 @@
 {{-- TABEL TOP 10 RISIKO --}}
 <div class="card shadow-sm mb-5">
     <div class="card-header bg-light">
-        <h5 class="mb-0 fw-bold">Daftar 10 Risiko Teratas</h5>
+        <h5 class="mb-0 fw-bold">Daftar 10 Risiko Berdasarkan Eksposure Realisasi Tertinggi</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover table-bordered table-sm mb-0 align-middle">
+            <table class="table table-hover table-sm mb-0 align-middle">
                 <thead class="text-center bg-secondary text-white align-middle">
                     <tr>
                         <th rowspan="2" width="5%">Kode</th>
-                        <th rowspan="2" width="15%">Nama Proyek</th>
-                        <th rowspan="2" width="20%">Peristiwa Risiko</th>
+                        <th rowspan="2">Nama Proyek</th>
+                        <th rowspan="2">Peristiwa Risiko</th>
                         <th colspan="3" class="bg-gray">Inherent</th>
                         <th colspan="3" class="bg-warning-subtle text-dark">Rencana Residual</th>
                         <th colspan="3" class="bg-primary-subtle">Realisasi</th>
@@ -249,28 +270,28 @@
                         @endphp
                         <tr>
                             <td class="text-center fw-bold">R{{ $idx + 1 }}</td>
-                            <td>{{ $risk->project->project_name }}</td>
-                            <td>{{ $namaPeristiwa }}</td>
+                            <td class="white-space-nowrap">{{ $risk->project->project_name }}</td>
+                            <td class="mw-10r">{{ $namaPeristiwa }}</td>
 
                             {{-- INHERENT --}}
-                            <td class="text-end">Rp {{ number_format($risk->inherent_dampak, 0, ',', '.') }}</td>
-                            <td class="text-end">Rp {{ number_format($risk->inherent_eksposur, 0, ',', '.') }}</td>
-                            <td class="text-center">
-                                <span class="badge bg-{{ $inherentClass }} w-100">{{ $risk->inherent_level }} - {{ $risk->inherent_skala }}</span>
+                            <td class="text-end white-space-nowrap">Rp {{ number_format($risk->inherent_dampak, 0, ',', '.') }}</td>
+                            <td class="text-end white-space-nowrap">Rp {{ number_format($risk->inherent_eksposur, 0, ',', '.') }}</td>
+                            <td class="text-white text-center align-middle white-space-nowrap bg-{{ $inherentClass }}">
+                                {{ $risk->inherent_level }} - {{ $risk->inherent_skala }}
                             </td>
 
                             {{-- RESIDUAL --}}
-                            <td class="text-end">Rp {{ number_format($risk->residual_dampak, 0, ',', '.') }}</td>
-                            <td class="text-end">Rp {{ number_format($risk->residual_eksposur, 0, ',', '.') }}</td>
-                            <td class="text-center">
-                                <span class="badge bg-{{ $residualClass }} text-white w-100">{{ $risk->residual_level }} - {{ $risk->residual_skala }}</span>
+                            <td class="text-end white-space-nowrap">Rp {{ number_format($risk->residual_dampak, 0, ',', '.') }}</td>
+                            <td class="text-end white-space-nowrap">Rp {{ number_format($risk->residual_eksposur, 0, ',', '.') }}</td>
+                            <td class="text-white text-center align-middle white-space-nowrap bg-{{ $residualClass }}">
+                                {{ $risk->residual_level }} - {{ $risk->residual_skala }}
                             </td>
 
                             {{-- REALISASI --}}
-                            <td class="text-end fw-bold">Rp {{ number_format($risk->current_dampak, 0, ',', '.') }}</td>
-                            <td class="text-end fw-bold text-danger">Rp {{ number_format($risk->current_eksposur, 0, ',', '.') }}</td>
-                            <td class="text-center">
-                                <span class="badge bg-{{ $currentClass }} w-100">{{ $risk->current_level }} - {{ $risk->current_skala }}</span>
+                            <td class="text-end fw-bold white-space-nowrap">Rp {{ number_format($risk->current_dampak, 0, ',', '.') }}</td>
+                            <td class="text-end fw-bold white-space-nowrap text-danger">Rp {{ number_format($risk->current_eksposur, 0, ',', '.') }}</td>
+                            <td class="text-white text-center align-middle white-space-nowrap bg-{{ $currentClass }}">
+                                {{ $risk->current_level }} - {{ $risk->current_skala }}
                             </td>
 
                             <td class="text-center">
@@ -298,7 +319,7 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover table-sm table-bordered mb-0 align-middle">
+                    <table class="table table-hover table-sm mb-0 align-middle">
                         <thead class="bg-light text-center">
                             <tr>
                                 <th>#</th>
@@ -356,7 +377,7 @@
             </div>
             <div class="modal-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover table-bordered mb-0" id="tableModalRisiko">
+                    <table class="table table-hover mb-0" id="tableModalRisiko">
                         <thead class="bg-light text-center">
                             <tr>
                                 <th width="15%">Kode & Tipe</th>
@@ -482,13 +503,21 @@ $(document).ready(function() {
             tooltip: {
                 trigger: 'item',
                 formatter: function (params) {
-                    let val = 'Rp ' + params.data.value.toLocaleString('id-ID');
-                    let proy = params.data.project_count;
-                    let risk = params.data.risk_count;
+                    let totalEksposur = 'Rp ' + Number(params.data.value || 0).toLocaleString('id-ID');
+                    let totalDampakRealisasi = 'Rp ' + Number(params.data.total_dampak_realisasi || 0).toLocaleString('id-ID');
+
+                    let totalProyekAktif = params.data.project_count || 0;
+                    let proyekDenganRisikoOpen = params.data.project_with_open_risk || 0;
+                    let proyekTanpaRisikoOpen = params.data.project_without_open_risk || 0;
+                    let riskOpen = params.data.risk_count_open || 0;
+
                     return `<b>${params.name}</b><br/>
-                            Total Eksposur: ${val}<br/>
-                            Total Risiko: ${risk} (${params.percent}%)<br/>
-                            Proyek Aktif: ${proy}`;
+                            Total Eksposur Realisasi: ${totalEksposur}<br/>
+                            Total Dampak Realisasi: ${totalDampakRealisasi}<br/>
+                            Total Risiko Open: ${riskOpen} Risiko (${params.percent}%)<br/>
+                            Total Proyek Aktif: ${totalProyekAktif}<br/>
+                            Proyek dengan Risiko Open: ${proyekDenganRisikoOpen}<br/>
+                            Proyek tanpa Risiko Open: ${proyekTanpaRisikoOpen}`;
                 }
             },
             legend: {

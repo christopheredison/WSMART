@@ -2718,7 +2718,7 @@ class ProjectRiskController extends BasicCRUDController
             'level_risiko' => $toUpdate['level_risiko'],
         ]);
 
-        $projectPeriodeList->recalculateAnalisa($risk_limit);
+        // $projectPeriodeList->recalculateAnalisa($risk_limit);
         $projectPeriodeList->refreshNilai();
 
         return [
