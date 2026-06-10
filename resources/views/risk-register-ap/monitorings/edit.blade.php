@@ -187,7 +187,7 @@
                                 <select
                                   class="form-select js-select-hide-search update-trigger"
                                   name="realisasi_skala_dampak"
-                                  id="realisasi_skala_dampak" {{ $riskAnalysis->kategori_dampak == 'Kuantitatif' ? 'disabled' : '' }}
+                                  id="realisasi_skala_dampak"
                                 >
                                   <option selected disabled>Skala Dampak</option>
                                   @foreach($skalaDampaks as $tingkat => $deskripsi)
@@ -1400,7 +1400,7 @@ $(document).ready(function() {
             // Set nilai skala dampak dan trigger change event
             skalaDampakSelect.val(skala).trigger('change');
             // Disable select dan pindahkan nilai ke hidden input
-            skalaDampakSelect.prop('disabled', true);
+            skalaDampakSelect.prop('disabled', false);
             skalaDampakHidden.val(skala);
         } else {
             // Enable select jika bukan Kuantitatif
@@ -1512,7 +1512,7 @@ $(document).ready(function() {
     });
 
     // Panggil fungsi saat halaman dimuat
-    hitungRealisasiSkalaDampak();
+    // hitungRealisasiSkalaDampak();
     refreshSkalaAndLevelRisiko();
 });
 </script>
