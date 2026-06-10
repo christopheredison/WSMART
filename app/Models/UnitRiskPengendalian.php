@@ -17,4 +17,9 @@ class UnitRiskPengendalian extends Model
     {
         return $this->belongsTo(ParameterRisikoUnit::class, 'parameter_id');
     }
+
+    public function kri()
+    {
+        return $this->belongsTo(KRI::class, 'kri_id', 'id');
+    }
 }

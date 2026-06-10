@@ -440,7 +440,7 @@ class RiskRegisterUnitController extends Controller
             }
         }
 
-        $danantara = $unit ? $unit->unit_mr == 1 : false;
+        $danantara = false;
 
         return view('risk-register-unit.create',compact('kategoriRisiko','peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings','areaDampak','jenisRisiko','tck','selectedPeriode', 'projects', 'projectRisks', 'taksonomiRisikos', 'danantara'));
     }
@@ -709,6 +709,11 @@ class RiskRegisterUnitController extends Controller
             // Validasi KRI (Array)
             'key_risk_indicator' => 'required|array|min:1',
             'key_risk_indicator.*' => 'required|string',
+
+            // Danantara
+            'tren_parameter.*' => 'required|string',
+            'metode_pengukuran.*' => 'required|string',
+
             'satuan_kri.*' => 'required|string',
             'batas_aman.*' => 'required',
             'batas_waspada.*' => 'required',
@@ -891,13 +896,15 @@ class RiskRegisterUnitController extends Controller
                 for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
                     if (!empty($request->key_risk_indicator[$i])) {
                         $identifikasiRisiko->kris()->create([
-                            'kri_id' => 0, // Karena tidak menggunakan master_kri_id lagi
+                            'kri_id' => 0, 
                             'risiko_id' => $identifikasiRisiko->id,
                             'kri' => $this->cleanInput($request->key_risk_indicator[$i]),
                             'satuan_kri' => $request->satuan_kri[$i] ?? null,
-                            'batas_aman' => $request->batas_aman[$i] ?? null,
-                            'batas_waspada' => $request->batas_waspada[$i] ?? null,
-                            'batas_bahaya' => $request->batas_bahaya[$i] ?? null,
+                            'tren_parameter' => $request->tren_parameter[$i] ?? null,
+                            'metode_pengukuran' => $request->metode_pengukuran[$i] ?? null,
+                            'batas_aman' => $this->cleanDecimal($request->batas_aman[$i] ?? 0),
+                            'batas_waspada' => $this->cleanDecimal($request->batas_waspada[$i] ?? 0),
+                            'batas_bahaya' => $this->cleanDecimal($request->batas_bahaya[$i] ?? 0),
                         ]);
                     }
                 }
@@ -1629,7 +1636,7 @@ class RiskRegisterUnitController extends Controller
             }
         }
 
-        $danantara = $unit ? $unit->unit_mr == 1 : false;
+        $danantara = false;
 
         return view('risk-register-unit.edit', compact(
             'identifikasiRisiko',
@@ -1846,26 +1853,33 @@ class RiskRegisterUnitController extends Controller
             $identifikasiRisiko->penyebabRisiko()->whereNotIn('id', $penyebabRisikoIds)->delete();
 
             $savedKriIds = [];
-            foreach ($request->key_risk_indicator as $key => $kri) {
-                $kriData = [
-                    'kri_id' => 0,
-                    'kri' => $kri,
-                    'satuan_kri' => $request->satuan_kri[$key] ?? '',
-                    'batas_aman' => $request->batas_aman[$key] ?? '',
-                    'batas_waspada' => $request->batas_waspada[$key] ?? '',
-                    'batas_bahaya' => $request->batas_bahaya[$key] ?? '',
-                ];
+            if ($request->has('key_risk_indicator') && is_array($request->key_risk_indicator)) {
+                foreach ($request->key_risk_indicator as $key => $kri) {
+                    $kriId = $request->kri_ids[$key] ?? null;
 
-                $existKri = $identifikasiRisiko->kris()->find($key);
+                    $kriData = [
+                        'kri_id' => 0,
+                        'kri' => $kri,
+                        'satuan_kri' => $request->satuan_kri[$key] ?? '',
+                        'tren_parameter' => $request->tren_parameter[$key] ?? null,
+                        'metode_pengukuran' => $request->metode_pengukuran[$key] ?? null,
+                        'batas_aman' => $this->cleanDecimal($request->batas_aman[$key] ?? 0),
+                        'batas_waspada' => $this->cleanDecimal($request->batas_waspada[$key] ?? 0),
+                        'batas_bahaya' => $this->cleanDecimal($request->batas_bahaya[$key] ?? 0),
+                    ];
 
-                if ($existKri) {
-                    $existKri->update($kriData);
-                    $savedKriIds[] = $existKri->id;
-                } else {
-                    $newKri = $identifikasiRisiko->kris()->create($kriData);
-                    $savedKriIds[] = $newKri->id;
+                    $existKri = $identifikasiRisiko->kris()->find($kriId);
+
+                    if ($existKri) {
+                        $existKri->update($kriData);
+                        $savedKriIds[] = $existKri->id;
+                    } else {
+                        $newKri = $identifikasiRisiko->kris()->create($kriData);
+                        $savedKriIds[] = $newKri->id;
+                    }
                 }
             }
+            // Hapus yang diclear/trash oleh user
             $identifikasiRisiko->kris()->whereNotIn('id', $savedKriIds)->delete();
 
             // Hapus relasi project risk lama dan buat yang baru
@@ -3309,5 +3323,15 @@ class RiskRegisterUnitController extends Controller
                 'read_at' => null,
             ]);
         }
+    }
+
+    private function cleanDecimal($value) {
+        if(empty($value)) return "0";
+        // Hapus pemisah ribuan (titik), dan ganti koma menjadi titik untuk DB.
+        $val = str_replace('.', '', $value);
+        $val = str_replace(',', '.', $val);
+        
+        // Return sebagai string agar sesuai dengan tipe data kolom batas_aman dkk
+        return (string) (float) $val;
     }
 }

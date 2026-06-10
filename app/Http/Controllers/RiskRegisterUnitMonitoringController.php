@@ -1155,6 +1155,9 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $historicalPengendalians = $lastEntry ? $lastEntry->pengendalians->keyBy('parameter_id') : collect();
 
+        // Ambil data pengendalian KRI (dimana kri_id tidak null)
+        $kriPengendalians = $risk->lastMonitoringRisiko ? $risk->lastMonitoringRisiko->pengendalians->whereNotNull('kri_id')->keyBy('kri_id') : collect();
+
         $analisa = $risk->riskAnalysis;
         $namaRisikoLengkap = $risk->peristiwa_risiko;
         if (!empty($risk->deskripsi_peristiwa_risiko)) {
@@ -1240,6 +1243,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'monitoringM1' => $monitoringM1,
             'monitoringM2' => $monitoringM2,
             'historicalPengendalians' => $historicalPengendalians,
+            'kriPengendalians' => $kriPengendalians,
             'skalaDampaks' => $skalaDampaks,
             'skalaProbabilitas' => $skalaProbabilitas,
             'riskMaps' => $riskMaps,
@@ -1292,7 +1296,8 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'perlakuanDampakMonitorings.perlakuanDampak.dampakRisikoUnit',
                 'perlakuanPenyebabRisikoDocuments',
                 // 'perlakuanDampakRisikoDocuments',
-                'kriUnitMonitorings.keyRiskIndicator'
+                'kriUnitMonitorings.keyRiskIndicator',
+                'kriUnitMonitorings.keyRiskIndicator.unitRiskPengendalians',
             ])
             ->orderBy('id', 'desc')
             ->get();
@@ -1505,12 +1510,26 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $kriProjectRequests = json_decode($request->kri_projects, true);
         foreach ($kriProjectRequests as $id => $kriProjectRequest) {
+            $statusKriVal = $kriProjectRequest['status_kri_terkini_q' . $quarter];
+            
             $toCreate = [
                 'key_risk_indicator_id' => $kriProjectRequest['id'],
-                'status_kri_terkini' => $kriProjectRequest['status_kri_terkini_q' . $quarter],
+                'status_kri_terkini' => $statusKriVal,
                 'nilai_kri_terkini' => $kriProjectRequest['nilai_kri_terkini_q' . $quarter],
             ];
             $projectMonitoring->kriUnitMonitorings()->create($toCreate);
+
+            // SIMPAN PENGENDALIAN KRI JIKA STATUS WASPADA (2) ATAU BAHAYA (3)
+            if (in_array($statusKriVal, [2, 3])) {
+                $projectMonitoring->pengendalians()->create([
+                    'parameter_id' => null,
+                    'kri_id' => $kriProjectRequest['id'],
+                    'rencana_pengendalian' => $kriProjectRequest['rencana_pengendalian'] ?? null,
+                    'biaya_rencana_pengendalian' => $this->cleanRupiah($kriProjectRequest['biaya_rencana_pengendalian'] ?? 0),
+                    'realisasi_pengendalian' => $kriProjectRequest['realisasi_pengendalian'] ?? null,
+                    'biaya_realisasi_pengendalian' => $this->cleanRupiah($kriProjectRequest['biaya_realisasi_pengendalian'] ?? 0), 
+                ]);
+            }
         }
 
         $risk->refreshRealisasi();

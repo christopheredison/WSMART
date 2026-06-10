@@ -300,7 +300,7 @@
         {{-- <div class="col-12">
             <div class="divider my-3 my-md-5">
                 <div class="divider-text">
-                    <h4 class="mb-0 ff-heading-sm">Informasi Taksonomi & Paramter</h4>
+                    <h4 class="mb-0 ff-heading-sm">Informasi Taksonomi & Parameter</h4>
                 </div>
             </div>
             <div class="col-12 mt-4">

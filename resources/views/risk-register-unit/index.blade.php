@@ -287,7 +287,7 @@
                     ; color: @if(in_array(strtolower($item->riskAnalysis->level_risiko), ['low', 'low to moderate', 'moderate'])) #000000 @else #FFFFFF @endif;"
                 @endif
                 >{{ $item->riskAnalysis->skala_risiko ?? '-' }}</td>
-                <td class="eksposure_risiko">{{ $item->riskAnalysis && $item->riskAnalysis->eksposur_risiko ? 'Rp ' . number_format($item->riskAnalysis->eksposur_risiko, 0, ',', '.') : '-' }}</td>
+                <td class="eksposure_risiko">{{ $item->riskAnalysis && $item->riskAnalysis->eksposur_risiko ? 'Rp ' . number_format($item->riskAnalysis->eksposur_risiko, 0, ',', '.') : 'Rp 0' }}</td>
                 <td class="total_biaya_rencana_perlakuan">
                   @php
                     $totalBiaya = 0;
@@ -299,7 +299,7 @@
                       }
                     }
                   @endphp
-                  {{ $totalBiaya > 0 ? 'Rp ' . number_format($totalBiaya, 0, ',', '.') : '-' }}
+                  {{ $totalBiaya > 0 ? 'Rp ' . number_format($totalBiaya, 0, ',', '.') : 'Rp 0' }}
                 </td>
                 <td class="waktu_terpapar">
                   {{ \Carbon\Carbon::parse($item->perkiraan_waktu_terpapar_risiko_mulai)->format('d/m/Y') }} -

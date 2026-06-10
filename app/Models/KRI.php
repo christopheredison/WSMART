@@ -25,4 +25,9 @@ class KRI extends Model
     {
         return $this->hasMany(KRIUnitMonitoring::class, 'key_risk_indicator_id', 'id');
     }
+
+    public function unitRiskPengendalians()
+    {
+        return $this->hasMany(UnitRiskPengendalian::class, 'kri_id', 'id');
+    }
 }
