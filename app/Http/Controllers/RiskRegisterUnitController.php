@@ -2644,7 +2644,7 @@ class RiskRegisterUnitController extends Controller
 
         $risiko = $risikos->first();
 
-        $historyMonitorings = $risiko->monitoringRisikos->sortByDesc('id');
+        $historyMonitorings = $risiko?->monitoringRisikos?->sortByDesc('id');
 
         $currentRiskMaps = $risikos->pluck('currentRiskMaps');
         $formattedCurrentRiskMaps = [];
@@ -2671,7 +2671,7 @@ class RiskRegisterUnitController extends Controller
                     return $risk->current_risk_maps['inherent'];
                 }
 
-                if ($risk->riskAnalysis) {
+                if ($risk?->riskAnalysis) {
                     return [
                         'skala_dampak' => $risk->riskAnalysis->skala_dampak,
                         'skala_probabilitas' => $risk->riskAnalysis->skala_probabilitas->tingkat ?? null,
@@ -2705,7 +2705,7 @@ class RiskRegisterUnitController extends Controller
         $risk_limit = 0;
         $risiko = $risikos->first();
 
-        if ($risiko->riskAnalysis && $risiko->riskAnalysis->kategori_dampak == 'Kuantitatif') {
+        if ($risiko?->riskAnalysis && $risiko?->riskAnalysis?->kategori_dampak == 'Kuantitatif') {
             $unit = $risiko->unit;
             $periode = $risiko->periode;
 

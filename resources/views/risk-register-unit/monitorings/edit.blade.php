@@ -1,4 +1,17 @@
 @extends('layouts.default')
+@php
+if (!function_exists('formatKriBatas')) {
+    function formatKriBatas($value) {
+        if ($value === null || $value === '') return '-';
+        // Cek apakah data murni angka atau desimal dari DB (contoh: 100, 15.50)
+        if (preg_match('/^-?\d+(\.\d+)?$/', trim($value))) {
+            return number_format((float)$value, 2, ',', '.');
+        }
+        // Jika ada huruf/simbol, kembalikan string aslinya
+        return $value;
+    }
+}
+@endphp
 @section('dashboard')
     <div class="row mb-5">
         <div class="col-12 d-flex align-items-center gap-3 position-relative">
@@ -612,9 +625,9 @@
                                         <td>
                                             {{ $kriProject->metode_pengukuran ?? '-' }}
                                         </td>
-                                        <td class="text-center text-nowrap">{{ $kriProject->batas_aman ? number_format((float) $kriProject->batas_aman, 2, ',', '.') : '-' }} {{ $kriProject->satuan_kri ?: '-' }}</td>
-                                        <td class="text-center text-nowrap">{{ $kriProject->batas_waspada ? number_format((float) $kriProject->batas_waspada, 2, ',', '.') : '-' }} {{ $kriProject->satuan_kri ?: '-' }}</td>
-                                        <td class="text-center text-nowrap">{{ $kriProject->batas_bahaya ? number_format((float) $kriProject->batas_bahaya, 2, ',', '.') : '-' }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap">{{ formatKriBatas($kriProject->batas_aman) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap">{{ formatKriBatas($kriProject->batas_waspada) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap">{{ formatKriBatas($kriProject->batas_bahaya) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
                                         
                                         <td class="display-nilai-kri fw-bold text-center text-primary">
                                             {{ $lastMonitoring?->nilai_kri_terkini ?? '-' }} {{ $kriProject->satuan_kri ?: '-' }}
@@ -857,6 +870,16 @@ var impactFlatpickr = flatpickr("#timelineImpactInput", {
     // maxDate: dayjs().toDate(),
     disableMobile: true
 });
+
+function formatKriBatas($value) {
+    if ($value === null || $value === '') return '-';
+    // Cek apakah data murni angka atau desimal dari DB (contoh: 100, 15.50)
+    if (preg_match('/^-?\d+(\.\d+)?$/', trim($value))) {
+        return number_format((float)$value, 2, ',', '.');
+    }
+    // Jika ada huruf/simbol, kembalikan string aslinya
+    return $value;
+}
 
 function getSkalaProbabilitasByValue(value) {
     const skalaProbabilitases = @json($skalaProbabilitas);
@@ -1140,9 +1163,9 @@ $(document).ready(function() {
 
             $('#modalUpdateKri input[name="kri_project_id"]').val($(this).data('id'));
             $('#modalUpdateKri input[name="key_risk_indicator"]').val(kriProject.kri);
-            $('#modalUpdateKri input[name="batas_aman"]').val(kriProject.batas_aman + satuan);
-            $('#modalUpdateKri input[name="batas_waspada"]').val(kriProject.batas_waspada + satuan);
-            $('#modalUpdateKri input[name="batas_bahaya"]').val(kriProject.batas_bahaya + satuan);
+            $('#modalUpdateKri input[name="batas_aman"]').val(formatKriBatasJS(kriProject.batas_aman) + satuan);
+            $('#modalUpdateKri input[name="batas_waspada"]').val(formatKriBatasJS(kriProject.batas_waspada) + satuan);
+            $('#modalUpdateKri input[name="batas_bahaya"]').val(formatKriBatasJS(kriProject.batas_bahaya) + satuan);
 
             // Populate Tren & Metode
             $('#modalUpdateKri input[name="kri_tren_parameter"]').val(kriProject.tren_parameter || '-');
@@ -1164,6 +1187,11 @@ $(document).ready(function() {
             // Set Data Monitoring Sebelumnya
             let valKri = kriProject['nilai_kri_terkini_q' + quarter] || latestMonitoring?.nilai_kri_terkini || '';
             let statusVal = kriProject['status_kri_terkini_q' + quarter] || latestMonitoring?.status_kri_terkini || '';
+            $('#modal_satuan_addon').text(kriProject.satuan_kri || '-');
+
+            if (valKri) {
+                valKri = valKri.toString().replace('.', ',');
+            }
             
             $('#modalUpdateKri input[name="nilai_kri"]').val(valKri);
             $('#modalUpdateKri select[name="status_kri"]').val(statusVal).trigger('change');
@@ -1541,9 +1569,10 @@ $(document).ready(function() {
         const statusText = statusMap[statusKri] || '-';
         const colorClass = colorMap[statusKri] || 'secondary';
 
+        const satuanTeks = kriProjects[id]['satuan_kri'] ? ' ' + kriProjects[id]['satuan_kri'] : '';
         const tr = $('#table-kri tr[data-id="' + id + '"]');
         tr.find('.display-nilai-kri').text(nilaiKri);
-        tr.find('.display-kondisi').html(`<span class="badge bg-${colorClass} p-2">${statusText}</span>`);
+        tr.find('.display-kondisi').html(`<span class="badge bg-${colorClass} p-2">${statusText} ${satuanTeks}</span>`);
 
         $('#modalUpdateKri').modal('hide');
     });

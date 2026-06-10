@@ -84,9 +84,12 @@
                             <h6 class="text-primary text-uppercase mb-3">Input Realisasi</h6>
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <div class="form-group form-floating">
-                                        <input type="text" class="form-control border-primary" name="nilai_kri" required>
-                                        <label>Nilai Realisasi KRI <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <div class="form-floating flex-grow-1">
+                                            <input type="text" class="form-control decimal-input border-primary" name="nilai_kri" placeholder="0" required>
+                                            <label>Nilai Realisasi KRI <span class="text-danger">*</span></label>
+                                        </div>
+                                        <span class="input-group-text border-primary bg-primary-subtle text-primary fw-bold" id="modal_satuan_addon">-</span>
                                     </div>
                                 </div>
                                 <div class="col-md-6">

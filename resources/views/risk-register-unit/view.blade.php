@@ -1,11 +1,24 @@
 @extends('layouts.default')
+@php
+if (!function_exists('formatKriBatas')) {
+    function formatKriBatas($value) {
+        if ($value === null || $value === '') return '-';
+        // Cek apakah data murni angka atau desimal dari DB (contoh: 100, 15.50)
+        if (preg_match('/^-?\d+(\.\d+)?$/', trim($value))) {
+            return number_format((float)$value, 2, ',', '.');
+        }
+        // Jika ada huruf/simbol, kembalikan string aslinya
+        return $value;
+    }
+}
+@endphp
 @section('dashboard')
     <div class="row mb-5">
         <div class="col-12 d-flex align-items-center gap-3 position-relative">
             <div class="svg-icon svg-icon-secondary">
                 @include('partials.icon-tool')
             </div>
-            <h3 class="mb-0">Data Risiko: {{ $risikos->first()->peristiwa_risiko }}</h3>
+            <h3 class="mb-0">Data Risiko: {{ $risikos?->first()?->peristiwa_risiko ?? '-' }}</h3>
             {{-- <div class="ms-auto">
                 <button id="exportPdfBtn" class="btn btn-sm btn-danger ms-auto d-flex align-items-center gap-1">
                     <i class='bx bxs-file-pdf'></i> Export PDF
@@ -243,7 +256,7 @@
 
     @php
         $risiko = $risikos->first();
-        $analisa = $risiko->riskAnalysis;
+        $analisa = $risiko?->riskAnalysis ?? null;
     @endphp
 
     <!-- ::DataRisiko Start -->
@@ -262,7 +275,7 @@
                     <div class="col-12">
                         <div class="divider mb-3 mb-md-5 mt-0">
                             <div class="divider-text">
-                                <h5 class="mb-0 ff-heading-sm">Periode Tahun {{ $risiko->periode->tahun ?? '-' }}</h5>
+                                <h5 class="mb-0 ff-heading-sm">Periode Tahun {{ $risiko?->periode?->tahun ?? '-' }}</h5>
                             </div>
                         </div>
                     </div>
@@ -280,7 +293,7 @@
                         <div class="form-group">
                             <label class="form-label fw-bold">Sasaran Risiko</label>
                             <div class="p-3 bg-light rounded">
-                                {{ $risiko->target_capaian_kinerja ?? '-' }}
+                                {{ $risiko?->target_capaian_kinerja ?? '-' }}
                             </div>
                         </div>
                     </div>
@@ -288,7 +301,7 @@
                         <div class="form-group">
                             <label class="form-label fw-bold">Taksonomi Risiko</label>
                             <div class="p-3 bg-light rounded">
-                              {{ $risiko->taksonomiRisiko?->nama ?? '-' }}
+                              {{ $risiko?->taksonomiRisiko?->nama ?? '-' }}
                             </div>
                         </div>
                     </div>
@@ -330,7 +343,7 @@
     </div>
     <!-- ::DataRisiko End -->
 
-    @if($risiko->parameterRisikos && $risiko->parameterRisikos->isNotEmpty())
+    @if($risiko?->parameterRisikos && $risiko?->parameterRisikos->isNotEmpty())
     <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header stepper border-0 pb-0">
@@ -369,7 +382,7 @@
     </div>
     @endif
 
-    @if($risiko->threshold_risk_limit > 0 || $risiko->threshold_risk_appetite > 0 || $risiko->threshold_risk_tolerance > 0)
+    @if($risiko?->threshold_risk_limit > 0 || $risiko?->threshold_risk_appetite > 0 || $risiko?->threshold_risk_tolerance > 0)
     <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header stepper border-0 pb-0">
@@ -564,7 +577,7 @@
                         </thead>
                         <tbody>
                             @php $totalBiaya = 0; @endphp
-                            @forelse($risiko->penyebabRisiko as $penyebab)
+                            @forelse($risiko?->penyebabRisiko as $penyebab)
                                 @if($penyebab->perlakuanPenyebabRisiko && $penyebab->perlakuanPenyebabRisiko->isNotEmpty())
                                     @foreach($penyebab->perlakuanPenyebabRisiko as $perlakuan)
                                         @php $totalBiaya += $perlakuan->biaya_perlakuan_risiko ?? 0; @endphp
@@ -692,6 +705,7 @@
                                 <th rowspan="2" class="align-middle" width="20%">Parameter / Key Risk Indicator</th>
                                 <th rowspan="2" class="align-middle" width="15%">Tren Parameter</th>
                                 <th rowspan="2" class="align-middle" width="15%">Metode Pengukuran</th>
+                                <th rowspan="2" class="align-middle" width="15%">Satuan</th>
                                 <th colspan="3">Ambang Batas / Threshold</th>
                             </tr>
                             <tr>
@@ -701,7 +715,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($risiko->kris as $kri)
+                            @forelse($risiko?->kris as $kri)
                                 <tr>
                                     <td class="text-center">{{ $loop->iteration }}</td>
                                     <td>
@@ -717,17 +731,17 @@
                                     <td>
                                         {{ $kri->metode_pengukuran ?? '-' }}
                                     </td>
-                                    <td class="text-center text-nowrap">
-                                        {{ $kri->batas_aman ? number_format((float) $kri->batas_aman, 2, ',', '.') : '-' }} 
-                                        <span class="text-dark">{{ $kri->satuan_kri }}</span>
+                                    <td class="text-center">
+                                        {{ $kri->satuan_kri ?? '-' }}
                                     </td>
                                     <td class="text-center text-nowrap">
-                                        {{ $kri->batas_waspada ? number_format((float) $kri->batas_waspada, 2, ',', '.') : '-' }} 
-                                        <span class="text-dark">{{ $kri->satuan_kri }}</span>
+                                        {{ formatKriBatas($kri->batas_aman) }} 
                                     </td>
                                     <td class="text-center text-nowrap">
-                                        {{ $kri->batas_bahaya ? number_format((float) $kri->batas_bahaya, 2, ',', '.') : '-' }} 
-                                        <span class="text-dark">{{ $kri->satuan_kri }}</span>
+                                        {{ formatKriBatas($kri->batas_waspada) }} 
+                                    </td>
+                                    <td class="text-center text-nowrap">
+                                        {{ formatKriBatas($kri->batas_bahaya) }} 
                                     </td>
                                     <!-- <td class="text-center">
                                         <span class="badge bg-success">{{ $kri->batas_aman ?? '-' }}</span>
@@ -774,7 +788,7 @@
                         </div> --}}
                         <div class="form-group mb-4">
                             <label class="form-label fw-bold">Kontrol Eksisting</label>
-                            @if($risiko->kontrolEksistings && $risiko->kontrolEksistings->isNotEmpty())
+                            @if($risiko?->kontrolEksistings && $risiko->kontrolEksistings->isNotEmpty())
                                 @foreach($risiko->kontrolEksistings as $key=>$kontrol)
                                     <div class="p-3 bg-light rounded mb-2">
                                       {{$key + 1}}. {{ $kontrol->kontrol_eksisting }}
@@ -826,7 +840,7 @@
             </div>
             <div class="card-body">
                 @php
-                    $projectRisks = $risiko->projectRisks;
+                    $projectRisks = $risiko?->projectRisks;
                 @endphp
 
                 @if($projectRisks && $projectRisks->isNotEmpty())

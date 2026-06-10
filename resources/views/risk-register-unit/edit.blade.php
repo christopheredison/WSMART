@@ -327,6 +327,16 @@
                                     <div class="col-12 mt-2 mb-1">
                                         <span class="text-muted fw-bold">Ambang Batas / Threshold KRI</span>
                                     </div>
+                                    @php
+                                        // Logic pengecekan: Jika angka murni/desimal maka format, jika teks biarkan
+                                        $isNumAman = !$kri || empty($kri->batas_aman) || preg_match('/^-?\d+(\.\d+)?$/', trim($kri->batas_aman));
+                                        $isNumWaspada = !$kri || empty($kri->batas_waspada) || preg_match('/^-?\d+(\.\d+)?$/', trim($kri->batas_waspada));
+                                        $isNumBahaya = !$kri || empty($kri->batas_bahaya) || preg_match('/^-?\d+(\.\d+)?$/', trim($kri->batas_bahaya));
+
+                                        $valAman = $kri ? ($isNumAman && $kri->batas_aman !== '' ? str_replace('.', ',', $kri->batas_aman) : $kri->batas_aman) : '';
+                                        $valWaspada = $kri ? ($isNumWaspada && $kri->batas_waspada !== '' ? str_replace('.', ',', $kri->batas_waspada) : $kri->batas_waspada) : '';
+                                        $valBahaya = $kri ? ($isNumBahaya && $kri->batas_bahaya !== '' ? str_replace('.', ',', $kri->batas_bahaya) : $kri->batas_bahaya) : '';
+                                    @endphp
                                     <div class="col-3">
                                         <div class="form-group form-floating">
                                             <input type="text" class="form-control satuan-kri-input" name="satuan_kri[]" value="{{ $kri ? $kri->satuan_kri : '' }}" required>
@@ -335,19 +345,19 @@
                                     </div>
                                     <div class="col-3">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control decimal-input border-success" name="batas_aman[]" value="{{ $kri ? str_replace('.', ',', (float) $kri->batas_aman) : '' }}" placeholder="0">
+                                            <input type="text" class="form-control {{ $isNumAman ? 'decimal-input' : '' }} border-success" name="batas_aman[]" value="{{ $valAman }}" placeholder="0" required>
                                             <label>Risk Limit <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                     <div class="col-3">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control decimal-input border-warning" name="batas_waspada[]" value="{{ $kri ? str_replace('.', ',', (float) $kri->batas_waspada) : '' }}" placeholder="0">
+                                            <input type="text" class="form-control {{ $isNumWaspada ? 'decimal-input' : '' }} border-warning" name="batas_waspada[]" value="{{ $valWaspada }}" placeholder="0" required>
                                             <label>Risk Appetite <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                     <div class="col-3">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control decimal-input border-danger" name="batas_bahaya[]" value="{{ $kri ? str_replace('.', ',', (float) $kri->batas_bahaya) : '' }}" placeholder="0">
+                                            <input type="text" class="form-control {{ $isNumBahaya ? 'decimal-input' : '' }} border-danger" name="batas_bahaya[]" value="{{ $valBahaya }}" placeholder="0" required>
                                             <label>Risk Tolerance <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
