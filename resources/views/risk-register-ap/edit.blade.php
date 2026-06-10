@@ -87,6 +87,9 @@
                                     <i class="bx bx-trash"></i>
                                 </button>
                             </div>
+                            <div class="col-12 mt-0">
+                                <hr>
+                            </div>
                         </div>
                         @empty
                         <div class="row g-2 mb-3 dampak-row-item">
@@ -100,6 +103,9 @@
                                 <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
                                     <i class="bx bx-trash"></i>
                                 </button>
+                            </div>
+                            <div class="col-12 mt-0">
+                                <hr>
                             </div>
                         </div>
                         @endforelse
@@ -128,7 +134,7 @@
                         <div class="row g-2 mb-3">
                             <div class="col">
                                 <div class="form-floating">
-                                    <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]" value="{{ $penyebab->penyebab_risiko }}" placeholder="Masukkan Penyebab Risiko">
+                                    <textarea class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko" required>{{ $penyebab->penyebab_risiko }}</textarea>
                                     <label>Penyebab Risiko <span class="text-danger">*</span></label>
                                 </div>
                             </div>
@@ -142,7 +148,7 @@
                         <div class="row g-2 mb-3">
                             <div class="col">
                                 <div class="form-floating">
-                                    <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko">
+                                    <textarea class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko" required></textarea>
                                     <label>Penyebab Risiko <span class="text-danger">*</span></label>
                                 </div>
                             </div>
@@ -485,6 +491,9 @@
                         <i class="bx bx-trash"></i>
                     </button>
                 </div>
+                <div class="col-12 mt-0">
+                    <hr>
+                </div>
             </div>`;
             $('#dampak-risiko-body').append(html);
         });
@@ -498,7 +507,7 @@
                 <div class="col">
                 <div class="form-floating">
                     <input type="hidden" name="penyebab_risiko_id[]" value="">
-                    <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko">
+                    <textarea class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko" required></textarea>
                     <label>Penyebab Risiko <span class="text-danger">*</span></label>
                 </div>
                 </div>
@@ -508,7 +517,7 @@
                 </button>
                 </div>
                 <div class="col-12 mt-0">
-                <hr>
+                    <hr>
                 </div>
             </div>
             `;

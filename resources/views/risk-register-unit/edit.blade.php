@@ -684,7 +684,7 @@
                 </button>
                 </div>
                 <div class="col-12 mt-0">
-                <hr>
+                    <hr>
                 </div>
             </div>
             `;

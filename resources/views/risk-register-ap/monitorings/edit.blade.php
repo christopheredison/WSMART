@@ -574,7 +574,7 @@
         </div>
     </form>
 
-    @include('risk-register-unit.monitorings._modal_kri')
+    @include('risk-register-ap.monitorings._modal_kri')
     @include('risk-register-unit.monitorings._modal_penyebab')
     @include('risk-register-unit.monitorings._modal_mitigasi')
     @include('risk-register-unit.monitorings._modal_update_realisasi_dampak')
