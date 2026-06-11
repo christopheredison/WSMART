@@ -2737,16 +2737,22 @@ class HomeController extends Controller
                 $projectQuery->where('cost_center_parent', $selectedUnit->cost_center);
             }
         }
+        
+        $hariIni = Carbon::today()->toDateString();
 
         // $projectQuery->where(function($q) use ($endOfSelectedPeriod) {
         //     $q->whereNull('masa_pelaksanaan_end')
         //       ->orWhereDate('masa_pelaksanaan_end', '>=', $endOfSelectedPeriod);
         // });
 
-        $projectQuery->where(function($q) use ($startOfSelectedPeriod) {
-            $q->whereNull('masa_pelaksanaan_end')
-            ->orWhereDate('masa_pelaksanaan_end', '>=', $startOfSelectedPeriod);
-        });
+        // $projectQuery->where(function($q) use ($startOfSelectedPeriod) {
+        //     $q->whereNull('masa_pelaksanaan_end')
+        //     ->orWhereDate('masa_pelaksanaan_end', '>=', $startOfSelectedPeriod);
+        // });
+
+        // Hanya yang tanggalnya tidak kosong dan >= hari ini yang dianggap Aktif
+        $projectQuery->whereNotNull('masa_pelaksanaan_end')
+                     ->whereDate('masa_pelaksanaan_end', '>=', $hariIni);
 
         $projects = $projectQuery->get();
         $activeProjectIds = $projects->pluck('id');

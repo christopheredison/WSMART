@@ -179,18 +179,26 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             }
         ]);
 
-        $query->whereNull('deleted_at');
+        $query->where('status', 6)
+            ->whereNull('deleted_at');
 
         // 3. Menampilkan yang memiliki laporan publish sampai batas bulan.
-        $query->whereHas('projectRiskMonitorings', $filterUpToPeriod);
+        // $query->whereHas('projectRiskMonitorings', $filterUpToPeriod);
 
-        // Project aktif pada periode export, bukan aktif berdasarkan tanggal cut off
-        $query->whereHas('project', function($q) use ($startOfSelectedPeriod) {
-            $q->where(function($sub) use ($startOfSelectedPeriod) {
-                $sub->whereNull('masa_pelaksanaan_end')
-                    ->orWhereDate('masa_pelaksanaan_end', '>=', $startOfSelectedPeriod);
-            });
+        // Project aktif pada periode export
+        $hariIni = Carbon::today()->toDateString();
+        $query->whereHas('project', function($q) use ($hariIni) {
+            $q->whereNotNull('masa_pelaksanaan_end')
+              ->whereDate('masa_pelaksanaan_end', '>=', $hariIni);
         });
+
+        // Project aktif berdasarkan tanggal cut off
+        // $query->whereHas('project', function($q) use ($startOfSelectedPeriod) {
+        //     $q->where(function($sub) use ($startOfSelectedPeriod) {
+        //         $sub->whereNull('masa_pelaksanaan_end')
+        //             ->orWhereDate('masa_pelaksanaan_end', '>=', $startOfSelectedPeriod);
+        //     });
+        // });
 
         if (!in_array('all', $this->costCenters)) {
             $query->whereIn('unit_id', $this->costCenters);
@@ -296,15 +304,37 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             // Memanggil relasi monitoring, akan otomats mengambil 'first' / terbaru karena sudah di-ORDER BY 'desc' di Eager Load
             $lastMonitoring = $risk->projectRiskMonitorings->first();
 
-            $levelResidualRealisasi = '-';
-            $periodeMonitoringText = '-';
+            // Ambil Monitoring Realisasi Terupdate
+            // $levelResidualRealisasi = '-';
+            // $periodeMonitoringText = '-';
+
+            // if ($lastMonitoring) {
+            //     if ($lastMonitoring->level_risiko) {
+            //         $levelResidualRealisasi = $lastMonitoring->level_risiko . ' - ' . ($lastMonitoring->skala_risiko ?? 0);
+            //     }
+
+            //     // Set text "Bulan Tahun" (Contoh: "Februari 2024")
+            //     if ($lastMonitoring->month && $lastMonitoring->tahun) {
+            //         $bulanStr = $namaBulan[(int)$lastMonitoring->month] ?? $lastMonitoring->month;
+            //         $periodeMonitoringText = $bulanStr . ' ' . $lastMonitoring->tahun;
+            //     }
+            // }
+
+            // Default realisasi = Inherent.
+            // Ini dipakai ketika belum ada monitoring publish/approved sampai periode cutoff.
+            $realisasiDampak = $analisa->nilai_dampak ?? 0;
+            $realisasiEksposur = $analisa->eksposur_risiko ?? 0;
+            $levelResidualRealisasi = ($analisa->level_risiko ?? '-') . ' - ' . ($analisa->skala_risiko ?? 0);
+            $periodeMonitoringText = 'Inherent';
 
             if ($lastMonitoring) {
+                $realisasiDampak = $lastMonitoring->nilai_dampak ?? 0;
+                $realisasiEksposur = $lastMonitoring->eksposure_risiko ?? 0;
+
                 if ($lastMonitoring->level_risiko) {
                     $levelResidualRealisasi = $lastMonitoring->level_risiko . ' - ' . ($lastMonitoring->skala_risiko ?? 0);
                 }
 
-                // Set text "Bulan Tahun" (Contoh: "Februari 2024")
                 if ($lastMonitoring->month && $lastMonitoring->tahun) {
                     $bulanStr = $namaBulan[(int)$lastMonitoring->month] ?? $lastMonitoring->month;
                     $periodeMonitoringText = $bulanStr . ' ' . $lastMonitoring->tahun;
@@ -353,10 +383,19 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                 $risk->perkiraan_waktu_terpapar_risiko_akhir ? Carbon::parse($risk->perkiraan_waktu_terpapar_risiko_akhir)->format('d/m/Y') : '-',
                 implode("\n", $picStr) ?: '-',
 
+                // Old
+                // trim($realisasiPerlakuanStr) ?: '-',
+                // ($realBiayaPenyebab + $realBiayaDampak),
+                // $lastMonitoring?->nilai_dampak ?? 0,
+                // $lastMonitoring?->eksposure_risiko ?? 0,
+
+                // $levelResidualRealisasi,
+
+                // New
                 trim($realisasiPerlakuanStr) ?: '-',
                 ($realBiayaPenyebab + $realBiayaDampak),
-                $lastMonitoring?->nilai_dampak ?? 0,
-                $lastMonitoring?->eksposure_risiko ?? 0,
+                $realisasiDampak,
+                $realisasiEksposur,
 
                 $levelResidualRealisasi,
 
