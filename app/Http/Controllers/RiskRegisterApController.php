@@ -38,6 +38,7 @@ use App\Models\ApprovalStep;
 use App\Models\DataBatchNotes;
 use Illuminate\Support\Facades\DB;
 use App\Models\PerlakuanDampakRisikoUnit;
+use App\Models\TaksonomiRisiko;
 use App\Models\UnitRiskMonitoring;
 use App\Models\RiskContext;
 

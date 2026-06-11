@@ -672,30 +672,21 @@
                                 </div>
                             </div>
                             <div class="col-3">
-                                <div class="input-group">
-                                    <span class="input-group-text satuan-addon">-</span>
-                                    <div class="form-floating flex-grow-1">
-                                        <input type="text" class="form-control decimal-input border-success" name="batas_aman[]" placeholder="0">
-                                        <label>Risk Limit <span class="text-danger">*</span></label>
-                                    </div>
+                                <div class="form-floating">
+                                    <input type="text" class="form-control decimal-input border-success" name="batas_aman[]" placeholder="0">
+                                    <label>Risk Limit <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                             <div class="col-3">
-                                <div class="input-group">
-                                    <span class="input-group-text satuan-addon">-</span>
-                                    <div class="form-floating flex-grow-1">
-                                        <input type="text" class="form-control decimal-input border-warning" name="batas_waspada[]" placeholder="0">
-                                        <label>Risk Appetite <span class="text-danger">*</span></label>
-                                    </div>
+                                <div class="form-floating">
+                                    <input type="text" class="form-control decimal-input border-warning" name="batas_waspada[]" placeholder="0">
+                                    <label>Risk Appetite <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                             <div class="col-3">
-                                <div class="input-group">
-                                    <span class="input-group-text satuan-addon">-</span>
-                                    <div class="form-floating flex-grow-1">
-                                        <input type="text" class="form-control decimal-input border-danger" name="batas_bahaya[]" placeholder="0">
-                                        <label>Risk Tolerance <span class="text-danger">*</span></label>
-                                    </div>
+                                <div class="form-floating">
+                                    <input type="text" class="form-control decimal-input border-danger" name="batas_bahaya[]" placeholder="0">
+                                    <label>Risk Tolerance <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                         </div>
