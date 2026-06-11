@@ -1,4 +1,17 @@
 @extends('layouts.default')
+@php
+if (!function_exists('formatKriBatas')) {
+    function formatKriBatas($value) {
+        if ($value === null || $value === '') return '-';
+        // Cek apakah data murni angka atau desimal dari DB (contoh: 100, 15.50)
+        if (preg_match('/^-?\d+(\.\d+)?$/', trim($value))) {
+            return number_format((float)$value, 2, ',', '.');
+        }
+        // Jika ada huruf/simbol, kembalikan string aslinya
+        return $value;
+    }
+}
+@endphp
 @section('dashboard')
     <div class="row mb-5">
         <div class="col-12 d-flex align-items-center gap-3 position-relative">
@@ -424,50 +437,58 @@
                         </table>
 
                         <h5 class="mt-6 mb-2">Perlakuan terhadap KRI</h5>
-                        <table class="table" id="table-kri">
-                            <thead>
+                        <table class="table table-bordered align-middle" id="table-kri">
+                            <thead class="bg-light small fw-bold text-center">
                                 <tr>
-                                    <th>#</th>
-                                    <th>Key Risk Indicator</th>
-                                    <th>Satuan KRI</th>
-                                    <th>Batas Aman</th>
-                                    <th>Batas Waspada</th>
-                                    <th>Batas Bahaya</th>
-                                    <th>Nilai KRI</th>
-                                    <th>Kondisi</th>
-                                    <th style="width: 80px; text-align: center;">Action</th>
+                                    <th rowspan="2" class="align-middle">#</th>
+                                    <th rowspan="2" class="align-middle">Key Risk Indicator</th>
+                                    <th rowspan="2" class="align-middle">Tren Parameter</th>
+                                    <th rowspan="2" class="align-middle">Metode Pengukuran</th>
+                                    <th colspan="3">Ambang Batas / Threshold</th>
+                                    <th rowspan="2" class="align-middle">Nilai Realisasi</th>
+                                    <th rowspan="2" class="align-middle">Status</th>
+                                    <th rowspan="2" class="align-middle">Action</th>
+                                </tr>
+                                <tr>
+                                    <th class="align-middle">Risk Limit</th>
+                                    <th class="align-middle">Risk Appetite</th>
+                                    <th class="align-middle">Risk Tolerance</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($risk->kris as $kriProject)
+                                @forelse ($risk->kris as $kriProject)
                                     @php
                                         $lastMonitoring = $riskMonitoring?->kriUnitMonitorings->where('key_risk_indicator_id', $kriProject->id)->first();
                                     @endphp
                                     <tr data-id="{{ $kriProject->id }}">
-                                        <td>{{ $loop->iteration }}</td>
-                                        <td>{{ $kriProject->kri ?: '-' }}</td>
-                                        <td>{{ $kriProject->satuan_kri ?: '-' }}</td>
-                                        <td>{{ $kriProject->batas_aman ?? '-' }}</td>
-                                        <td>{{ $kriProject->batas_waspada ?? '-' }}</td>
-                                        <td>{{ $kriProject->batas_bahaya ?? '-' }}</td>
-                                        <td class="display-nilai-kri">
-                                            {{ $lastMonitoring?->nilai_kri_terkini ?? '-' }}
+                                        <td class="text-center">{{ $loop->iteration }}</td>
+                                        <td>
+                                            {{ $kriProject->kri ?: '-' }}
                                         </td>
-                                        <td class="display-kondisi">
+                                        <td>
+                                            <span class="badge bg-info bg-opacity-10 text-info border border-info">{{ $kriProject->tren_parameter ?? '-' }} </span>
+                                        </td>
+                                        <td>
+                                            {{ $kriProject->metode_pengukuran ?? '-' }}
+                                        </td>
+                                        <td class="text-center text-nowrap">{{ formatKriBatas($kriProject->batas_aman) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap">{{ formatKriBatas($kriProject->batas_waspada) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap">{{ formatKriBatas($kriProject->batas_bahaya) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        
+                                        <td class="display-nilai-kri fw-bold text-center text-primary">
+                                            {{ $lastMonitoring?->nilai_kri_terkini ?? '-' }} {{ $kriProject->satuan_kri ?: '-' }}
+                                        </td>
+                                        <td class="display-kondisi text-center">
                                             @php
-                                                $statusMap = [
-                                                    1 => 'Aman',
-                                                    2 => 'Waspada',
-                                                    3 => 'Bahaya',
-                                                ];
+                                                $statusMap = [1 => 'Aman', 2 => 'Waspada', 3 => 'Bahaya'];
+                                                $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
                                                 $status = $lastMonitoring?->status_kri_terkini;
-                                                $displayStatus = $statusMap[$status] ?? '-';
                                             @endphp
-                                            {{ $displayStatus }}
+                                            <span class="badge bg-{{ $statusColor[$status] ?? 'light text-dark border' }} p-2">
+                                                {{ $statusMap[$status] ?? '-' }}
+                                            </span>
                                         </td>
-                                        <td style="white-space:nowrap">
-                                            {{-- <a href="javascript:void(0)" class="hover-underline px-1 btn-action" data-action="update-kri" data-id="{{ $kriProject->id }}">Update KRI</a> --}}
-                                            <div class="text-center">
+                                        <td class="text-center">
                                             <a href="javascript:void(0)"
                                               class="btn-input-icon btn-action"
                                               data-action="update-kri"
@@ -476,15 +497,13 @@
                                               data-id="{{ $kriProject->id }}">
                                                 <span class="bx bx-chart text-primary"></span>
                                             </a>
-                                            </div>
                                         </td>
                                     </tr>
-                                @endforeach
-                                @if($risk->kris->isEmpty())
+                                @empty
                                     <tr>
-                                        <td colspan="9" class="text-center">Tidak ada data</td>
+                                        <td colspan="7" class="text-center text-muted">Tidak ada data</td>
                                     </tr>
-                                @endif
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -670,6 +689,7 @@ const kriProjects = @json($risk->kris->keyBy('id'));
 const quarter = {{ $quarter }};
 const riskMonitoring = @json($riskMonitoring);
 const namaRisiko = @json($risk->peristiwa_risiko);
+const kriPengendalians = @json($kriPengendalians ?? '{}');
 
 // Flatpickr untuk penyebab
 var flatpickrIns = flatpickr("#timelineInput", {
@@ -890,6 +910,16 @@ $(document).ready(function() {
         toggle.html("<i class='bx bx-chevron-down'></i> Show Log");
     });
 
+    // Listener Toggle Dropdown Modal KRI
+    $('#status_kri_select').on('change', function() {
+        const val = $(this).val();
+        if (val === '2' || val === '3') {
+            $('#kri-pengendalian-section').removeClass('d-none');
+        } else {
+            $('#kri-pengendalian-section').addClass('d-none');
+        }
+    });
+
     $('.btn-action').on('click', function() {
         const action = $(this).data('action');
         if (action === 'save' || action === 'save-and-close') {
@@ -917,17 +947,42 @@ $(document).ready(function() {
             });
         } else if (action === 'update-kri') {
             const kriProject = kriProjects[$(this).data('id')];
-            //console.log(kriProject);
             const latestMonitoring = riskMonitoring?.kri_unit_monitorings?.find(m => m.key_risk_indicator_id == kriProject.id);
+            const kriPeng = kriPengendalians ? (kriPengendalians[kriProject.id] || {}) : {};
+            let satuan = kriProject.satuan_kri ? ' ' + kriProject.satuan_kri : '';
+
+            // Deteksi apakah format baru
+            const isNewFormat = kriProject.tren_parameter && kriProject.tren_parameter.trim() !== '';
+            $('#modalUpdateKri').data('is-new-format', isNewFormat);
 
             $('#modalUpdateKri input[name="kri_project_id"]').val($(this).data('id'));
             $('#modalUpdateKri input[name="key_risk_indicator"]').val(kriProject.kri);
-            $('#modalUpdateKri input[name="batas_aman"]').val(kriProject.batas_aman);
-            $('#modalUpdateKri input[name="batas_waspada"]').val(kriProject.batas_waspada);
-            $('#modalUpdateKri input[name="batas_bahaya"]').val(kriProject.batas_bahaya);
-            console.log(latestMonitoring);
-            $('#modalUpdateKri input[name="nilai_kri"]').val(latestMonitoring?.nilai_kri_terkini || '');
-            $('#modalUpdateKri :input[name="status_kri"]').val(latestMonitoring?.status_kri_terkini || '').change();
+            $('#modalUpdateKri input[name="batas_aman"]').val(formatKriBatasJS(kriProject.batas_aman) + satuan);
+            $('#modalUpdateKri input[name="batas_waspada"]').val(formatKriBatasJS(kriProject.batas_waspada) + satuan);
+            $('#modalUpdateKri input[name="batas_bahaya"]').val(formatKriBatasJS(kriProject.batas_bahaya) + satuan);
+
+            // Populate Tren & Metode
+            $('#modalUpdateKri input[name="kri_tren_parameter"]').val(kriProject.tren_parameter || '-');
+            $('#modalUpdateKri textarea[name="kri_metode_pengukuran"]').val(kriProject.metode_pengukuran || '-');
+
+            // Set Data Monitoring Sebelumnya
+            let valKri = kriProject['nilai_kri_terkini_q' + quarter] || latestMonitoring?.nilai_kri_terkini || '';
+            let statusVal = kriProject['status_kri_terkini_q' + quarter] || latestMonitoring?.status_kri_terkini || '';
+            $('#modal_satuan_addon').text(kriProject.satuan_kri || '-');
+
+            if (valKri) {
+                valKri = valKri.toString().replace('.', ',');
+            }
+            
+            $('#modalUpdateKri input[name="nilai_kri"]').val(valKri);
+            $('#modalUpdateKri select[name="status_kri"]').val(statusVal).trigger('change');
+
+            // Field Pengendalian
+            $('#modalUpdateKri [name="kri_rencana_pengendalian"]').val(kriProject.rencana_pengendalian || kriPeng.rencana_pengendalian || '');
+            $('#modalUpdateKri [name="kri_biaya_rencana_pengendalian"]').val(kriProject.biaya_rencana_pengendalian || kriPeng.biaya_rencana_pengendalian || 0);
+            $('#modalUpdateKri [name="kri_realisasi_pengendalian"]').val(kriProject.realisasi_pengendalian || kriPeng.realisasi_pengendalian || '');
+            $('#modalUpdateKri [name="kri_biaya_realisasi_pengendalian"]').val(kriProject.biaya_realisasi_pengendalian || kriPeng.biaya_realisasi_pengendalian || 0);
+
             $('#modalUpdateKri').modal('show');
         } else if (action === 'update-realisasi') {
             const perlakuanPenyebab = perlakuanPenyebabRisikos[$(this).data('id')];
@@ -1276,21 +1331,29 @@ $(document).ready(function() {
         const id = $('#formUpdateKri :input[name="kri_project_id"]').val();
         const nilaiKri = $('#formUpdateKri :input[name="nilai_kri"]').val();
         const statusKri = $('#formUpdateKri :input[name="status_kri"]').val();
-        const statusMap = {
-            '1': 'Aman',
-            '2': 'Waspada',
-            '3': 'Bahaya'
-        };
-        const statusText = statusMap[statusKri] || '-';
 
-        // update kri
+        // Update kri object
         kriProjects[id]['nilai_kri_terkini_q' + quarter] = nilaiKri;
         kriProjects[id]['status_kri_terkini_q' + quarter] = statusKri;
+        
+        // Ambil data pengendalian
+        if (statusKri === '2' || statusKri === '3') {
+            kriProjects[id]['rencana_pengendalian'] = $('#formUpdateKri [name="kri_rencana_pengendalian"]').val();
+            kriProjects[id]['biaya_rencana_pengendalian'] = $('#formUpdateKri [name="kri_biaya_rencana_pengendalian"]').val();
+            kriProjects[id]['realisasi_pengendalian'] = $('#formUpdateKri [name="kri_realisasi_pengendalian"]').val();
+            kriProjects[id]['biaya_realisasi_pengendalian'] = $('#formUpdateKri [name="kri_biaya_realisasi_pengendalian"]').val();
+        }
 
-        // update DOM
+        // Update DOM status badge
+        const statusMap = {'1': 'Aman', '2': 'Waspada', '3': 'Bahaya'};
+        const colorMap = {'1': 'success', '2': 'warning', '3': 'danger'};
+        const statusText = statusMap[statusKri] || '-';
+        const colorClass = colorMap[statusKri] || 'secondary';
+
+        const satuanTeks = kriProjects[id]['satuan_kri'] ? ' ' + kriProjects[id]['satuan_kri'] : '';
         const tr = $('#table-kri tr[data-id="' + id + '"]');
         tr.find('.display-nilai-kri').text(nilaiKri);
-        tr.find('.display-kondisi').text(statusText);
+        tr.find('.display-kondisi').html(`<span class="badge bg-${colorClass} p-2">${statusText} ${satuanTeks}</span>`);
 
         $('#modalUpdateKri').modal('hide');
     });

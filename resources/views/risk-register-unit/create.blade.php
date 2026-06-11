@@ -213,7 +213,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">{{ $danantara ? '4' : '2' }}</span>
+                            <span class="nav-item-circle">2</span>
                         </span>
                         <span class="h3 mb-0">Dampak Risiko</span>
                     </div>
@@ -256,7 +256,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">{{ $danantara ? '5' : '3' }}</span>
+                            <span class="nav-item-circle">3</span>
                         </span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
@@ -299,9 +299,9 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">{{ $danantara ? '6' : '4' }}</span>
+                            <span class="nav-item-circle">4</span>
                         </span>
-                        <span class="h3 mb-0">Key Risk Indicator</span>
+                        <span class="h3 mb-0">Parameter / KRI</span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -317,7 +317,7 @@
                                 <div class="row g-2">
                                     <div class="col-12">
                                         <div class="form-group form-floating">
-                                            <input type="text" class="form-control" name="key_risk_indicator[]" value="{{ $kri ? $kri->kri : '' }}" required>
+                                            <input type="text" class="form-control" name="key_risk_indicator[]" placeholder="Parameter / Key Risk Indicator" value="{{ $kri ? $kri->kri : '' }}" required>
                                             <label>Parameter / Key Risk Indicator <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
@@ -344,7 +344,7 @@
                                     </div>
                                     <div class="col-3">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control satuan-kri-input" name="satuan_kri[]" value="{{ $kri ? $kri->satuan_kri : '' }}" required>
+                                            <input type="text" class="form-control satuan-kri-input" name="satuan_kri[]" value="{{ $kri ? $kri->satuan_kri : '' }}" placeholder="Satuan / Unit KRI" required>
                                             <label>Satuan / Unit KRI <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
@@ -395,7 +395,7 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">{{ $danantara ? '7' : '5' }}</span>
+                            <span class="nav-item-circle">5</span>
                         </span>
                         <span class="h3 mb-0">Kontrol</span>
                     </div>
@@ -491,7 +491,7 @@
                     <div class="card-header stepper border-0 pb-0">
                         <div class="nav-link active d-flex align-items-center p-0">
                             <span class="nav-item-circle-parent">
-                                <span class="nav-item-circle">{{ $danantara ? '8' : '6' }}</span>
+                                <span class="nav-item-circle">6</span>
                             </span>
                             <span class="h3 mb-0">Risiko Proyek Terkait</span>
                         </div>
@@ -918,7 +918,7 @@
                         <div class="row g-2">
                             <div class="col-12">
                                 <div class="form-group form-floating">
-                                    <input type="text" class="form-control" name="key_risk_indicator[]" required>
+                                    <input type="text" class="form-control" name="key_risk_indicator[]" placeholder="Parameter / Key Risk Indicator" required>
                                     <label>Parameter / Key Risk Indicator <span class="text-danger">*</span></label>
                                 </div>
                             </div>
@@ -935,7 +935,7 @@
                             </div>
                             <div class="col-12 col-md-6">
                                 <div class="form-group form-floating">
-                                    <textarea class="form-control" name="metode_pengukuran[]" cols="2" required></textarea>
+                                    <textarea class="form-control" name="metode_pengukuran[]" placeholder="Metode Pengukuran" cols="2" required></textarea>
                                     <label>Metode Pengukuran <span class="text-danger">*</span></label>
                                 </div>
                             </div>
@@ -945,7 +945,7 @@
                             </div>
                             <div class="col-3">
                                 <div class="form-floating">
-                                    <input type="text" class="form-control satuan-kri-input" name="satuan_kri[]" required>
+                                    <input type="text" class="form-control satuan-kri-input" name="satuan_kri[]" placeholder="Satuan / Unit KRI" required>
                                     <label>Satuan / Unit KRI <span class="text-danger">*</span></label>
                                 </div>
                             </div>
@@ -984,10 +984,10 @@
                 $('#kri-body .btn-icon-danger').prop('disabled', false);
             }
 
-            const newDropdown = $('#kri-body').find('select[name="master_kri_id[]"]').last()[0];
-            if (newDropdown) {
-                loadKriOptions(newDropdown, peristiwaRisikoId);
-            }
+            // const newDropdown = $('#kri-body').find('select[name="master_kri_id[]"]').last()[0];
+            // if (newDropdown) {
+            //     loadKriOptions(newDropdown, peristiwaRisikoId);
+            // }
         });
 
         $('#kri-body').on('change', '[name="master_kri_id[]"]', function() {

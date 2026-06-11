@@ -410,8 +410,9 @@ class RiskRegisterApController extends Controller
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
         $kontrolEksistings = KontrolEksisting::get();
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
+        $taksonomiRisikos = TaksonomiRisiko::all();
 
-        return view('risk-register-ap.create',compact('kategoriRisiko','peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings','areaDampak','jenisRisiko','tck','selectedPeriode'));
+        return view('risk-register-ap.create',compact('kategoriRisiko','peristiwaRisikos', 'masterKris', 'jenisKontrolEksistings', 'penilaianEfektifitasKontrols', 'kontrolEksistings','areaDampak','jenisRisiko','tck','selectedPeriode', 'taksonomiRisikos'));
     }
 
     public function RiskPeriodeList(Request $request)
@@ -682,6 +683,11 @@ class RiskRegisterApController extends Controller
             // Validasi KRI (Array)
             'key_risk_indicator' => 'required|array|min:1',
             'key_risk_indicator.*' => 'required|string',
+            
+            // Danantara
+            'tren_parameter.*' => 'required|string',
+            'metode_pengukuran.*' => 'required|string',
+
             'satuan_kri.*' => 'required|string',
             'batas_aman.*' => 'required',
             'batas_waspada.*' => 'required',
@@ -710,6 +716,8 @@ class RiskRegisterApController extends Controller
 
             'key_risk_indicator.required' => 'Mohon masukkan minimal satu Key Risk Indicator (KRI).',
             'key_risk_indicator.*.required' => 'Nama KRI wajib diisi.',
+            'tren_parameter.*.required' => 'Tren Parameter wajib diisi.',
+            'metode_pengukuran.*.required' => 'Metode Pengukuran wajib diisi.',
             'satuan_kri.*.required' => 'Satuan wajib diisi.',
             'batas_aman.*.required' => 'Batas Aman wajib diisi.',
             'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
@@ -791,6 +799,8 @@ class RiskRegisterApController extends Controller
             $identifikasiRisiko->status_progress = 1;
             $identifikasiRisiko->step_verification = 0;
 
+            $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
+
             // Simpan kontrol eksisting
             // if ($request->has('kontrol_eksisting_id') && is_array($request->kontrol_eksisting_id)) {
             //     // Ubah array menjadi string dengan pemisah koma
@@ -811,11 +821,7 @@ class RiskRegisterApController extends Controller
                         ]);
                     }
                 }
-            }
-
-            // Buat analisa dan perencanaan
-            $identifikasiRisiko->riskAnalysis()->create([]);
-            $identifikasiRisiko->rencanaPerlakuanRisiko()->create([]);
+            };
 
             // Simpan dampak risiko
             if ($request->has('dampak_risiko') && is_array($request->dampak_risiko)) {
@@ -844,17 +850,23 @@ class RiskRegisterApController extends Controller
                 for ($i = 0; $i < count($request->key_risk_indicator); $i++) {
                     if (!empty($request->key_risk_indicator[$i])) {
                         $identifikasiRisiko->kris()->create([
-                            'kri_id' => 0, // Karena tidak menggunakan master_kri_id lagi
+                            'kri_id' => 0, 
                             'risiko_id' => $identifikasiRisiko->id,
                             'kri' => $this->cleanInput($request->key_risk_indicator[$i]),
                             'satuan_kri' => $request->satuan_kri[$i] ?? null,
-                            'batas_aman' => $request->batas_aman[$i] ?? null,
-                            'batas_waspada' => $request->batas_waspada[$i] ?? null,
-                            'batas_bahaya' => $request->batas_bahaya[$i] ?? null,
+                            'tren_parameter' => $request->tren_parameter[$i] ?? null,
+                            'metode_pengukuran' => $request->metode_pengukuran[$i] ?? null,
+                            'batas_aman' => $this->cleanDecimal($request->batas_aman[$i] ?? 0),
+                            'batas_waspada' => $this->cleanDecimal($request->batas_waspada[$i] ?? 0),
+                            'batas_bahaya' => $this->cleanDecimal($request->batas_bahaya[$i] ?? 0),
                         ]);
                     }
                 }
             }
+
+            // Buat analisa dan perencanaan
+            $identifikasiRisiko->riskAnalysis()->create([]);
+            $identifikasiRisiko->rencanaPerlakuanRisiko()->create([]);
 
             // Tentukan redirect berdasarkan action
             $action = $request->input('action', 'save');
@@ -1433,6 +1445,7 @@ class RiskRegisterApController extends Controller
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
         $kontrolEksistings = KontrolEksisting::get();
         $penilaianEfektifitasKontrols = PenilaianEfektivitasKontrol::get();
+        $taksonomiRisikos = TaksonomiRisiko::all();
 
         return view('risk-register-ap.edit', compact(
             'identifikasiRisiko',
@@ -1445,7 +1458,8 @@ class RiskRegisterApController extends Controller
             'areaDampak',
             'jenisRisiko',
             'tck',
-            'selectedPeriode'
+            'selectedPeriode',
+            'taksonomiRisikos',
         ));
     }
 
@@ -1472,6 +1486,11 @@ class RiskRegisterApController extends Controller
             // KRI Validation
             'key_risk_indicator' => 'required|array|min:1',
             'key_risk_indicator.*' => 'required|string',
+            
+            // Danantara
+            'tren_parameter.*' => 'required|string',
+            'metode_pengukuran.*' => 'required|string',
+
             'satuan_kri.*' => 'required|string',
             'batas_aman.*' => 'required',
             'batas_waspada.*' => 'required',
@@ -1497,6 +1516,8 @@ class RiskRegisterApController extends Controller
             'kontrol_eksisting.*.required' => 'Kontrol eksisting tidak boleh kosong.',
 
             'key_risk_indicator.*.required' => 'Nama KRI wajib diisi.',
+            'tren_parameter.*.required' => 'Tren Parameter wajib diisi.',
+            'metode_pengukuran.*.required' => 'Metode Pengukuran wajib diisi.',
             'satuan_kri.*.required' => 'Satuan wajib diisi.',
             'batas_aman.*.required' => 'Batas Aman wajib diisi.',
             'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
@@ -1542,6 +1563,8 @@ class RiskRegisterApController extends Controller
             // $identifikasiRisiko->penilaian_efektifitas_kontrol = $request->penilaian_efektifitas_kontrol;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
+
+            $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
 
             $identifikasiRisiko->save();
 
@@ -1595,26 +1618,33 @@ class RiskRegisterApController extends Controller
             $identifikasiRisiko->penyebabRisiko()->whereNotIn('id', $penyebabRisikoIds)->delete();
 
             $savedKriIds = [];
-            foreach ($request->key_risk_indicator as $key => $kri) {
-                $kriData = [
-                    'kri_id' => 0,
-                    'kri' => $kri,
-                    'satuan_kri' => $request->satuan_kri[$key] ?? '',
-                    'batas_aman' => $request->batas_aman[$key] ?? '',
-                    'batas_waspada' => $request->batas_waspada[$key] ?? '',
-                    'batas_bahaya' => $request->batas_bahaya[$key] ?? '',
-                ];
+            if ($request->has('key_risk_indicator') && is_array($request->key_risk_indicator)) {
+                foreach ($request->key_risk_indicator as $key => $kri) {
+                    $kriId = $request->kri_ids[$key] ?? null;
 
-                $existKri = $identifikasiRisiko->kris()->find($key);
+                    $kriData = [
+                        'kri_id' => 0,
+                        'kri' => $kri,
+                        'satuan_kri' => $request->satuan_kri[$key] ?? '',
+                        'tren_parameter' => $request->tren_parameter[$key] ?? null,
+                        'metode_pengukuran' => $request->metode_pengukuran[$key] ?? null,
+                        'batas_aman' => $this->cleanDecimal($request->batas_aman[$key] ?? 0),
+                        'batas_waspada' => $this->cleanDecimal($request->batas_waspada[$key] ?? 0),
+                        'batas_bahaya' => $this->cleanDecimal($request->batas_bahaya[$key] ?? 0),
+                    ];
 
-                if ($existKri) {
-                    $existKri->update($kriData);
-                    $savedKriIds[] = $existKri->id;
-                } else {
-                    $newKri = $identifikasiRisiko->kris()->create($kriData);
-                    $savedKriIds[] = $newKri->id;
+                    $existKri = $identifikasiRisiko->kris()->find($kriId);
+
+                    if ($existKri) {
+                        $existKri->update($kriData);
+                        $savedKriIds[] = $existKri->id;
+                    } else {
+                        $newKri = $identifikasiRisiko->kris()->create($kriData);
+                        $savedKriIds[] = $newKri->id;
+                    }
                 }
             }
+            // Hapus yang diclear/trash oleh user
             $identifikasiRisiko->kris()->whereNotIn('id', $savedKriIds)->delete();
 
             // Tentukan redirect berdasarkan action
@@ -2953,5 +2983,15 @@ class RiskRegisterApController extends Controller
                 'read_at' => null,
             ]);
         }
+    }
+
+    private function cleanDecimal($value) {
+        if(empty($value)) return "0";
+        // Hapus pemisah ribuan (titik), dan ganti koma menjadi titik untuk DB.
+        $val = str_replace('.', '', $value);
+        $val = str_replace(',', '.', $val);
+        
+        // Return sebagai string agar sesuai dengan tipe data kolom batas_aman dkk
+        return (string) (float) $val;
     }
 }

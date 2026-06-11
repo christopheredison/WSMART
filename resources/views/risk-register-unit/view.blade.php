@@ -693,7 +693,7 @@ if (!function_exists('formatKriBatas')) {
                     <span class="nav-item-circle-parent">
                         <span class="nav-item-circle">5</span>
                     </span>
-                    <span class="h3 mb-0">Key Risk Indicator</span>
+                    <span class="h3 mb-0">Parameter / KRI</span>
                 </div>
             </div>
             <div class="card-body">

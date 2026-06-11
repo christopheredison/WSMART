@@ -43,7 +43,7 @@
 
                         <div class="col-md-12">
                             <div class="form-group d-lg-flex">
-                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Danantara</label>
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Risiko</label>
                                 <div class="w-100">
                                     <select class="form-select select2" name="taksonomi_risiko_id" required>
                                         <option value="">Pilih Taksonomi</option>
@@ -82,90 +82,12 @@
         </div>
         <!-- ::DataRisiko End -->
 
-        @if($danantara)
-        <!-- ::ParameeterRisiko Start -->
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header stepper border-0 pb-0">
-                    <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">2</span>
-                        </span>
-                        <span class="h3 mb-0">Parameter Risiko</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="parameter-risiko-body">
-                        <div class="row g-2 mb-3 parameter-row-item">
-                            <div class="col-md-1 text-center d-flex justify-content-center align-items-center">
-                              <span class="number-pill-info">1</span>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-floating">
-                                    <input type="hidden" name="parameter_risiko_id[]">
-                                    <input type="text" class="form-control" name="param_nama[]" placeholder="Nama">
-                                    <label>Nama Parameter</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating">
-                                    <input type="text" class="form-control" name="param_formula[]" placeholder="Formula">
-                                    <label>Formula</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating">
-                                    <input type="text" class="form-control" name="param_satuan[]" placeholder="Satuan">
-                                    <label>Satuan</label>
-                                </div>
-                            </div>
-                            <div class="col-auto d-flex align-items-center">
-                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)"><i class="bx bx-trash"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-outline-secondary rounded-pill p-2 float-end" id="add-parameter"><i class='bx bx-plus fs-5'></i></button>
-                </div>
-            </div>
-        </div>
-        <!-- ::ParameeterRisiko End -->
-
-        <!-- ::Threshold Start -->
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header stepper border-0 pb-0">
-                    <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent"><span class="nav-item-circle">3</span></span>
-                        <span class="h3 mb-0">Threshold</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Risk Limit</label>
-                            <input type="text" class="form-control rupiah-input" name="threshold_risk_limit" value="{{ old('threshold_risk_limit', $identifikasiRisiko->threshold_risk_limit) }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Risk Appetite</label>
-                            <input type="text" class="form-control rupiah-input" name="threshold_risk_appetite" value="{{ old('threshold_risk_appetite', $identifikasiRisiko->threshold_risk_appetite) }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Risk Tolerance</label>
-                            <input type="text" class="form-control rupiah-input" name="threshold_risk_tolerance" value="{{ old('threshold_risk_tolerance', $identifikasiRisiko->threshold_risk_tolerance) }}">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- ::Threshold End -->
-        @endif
-
         <!-- ::DampakRisiko Start -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent"><span class="nav-item-circle">{{ $danantara ? '4' : '2' }}</span></span>
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">2</span></span>
                         <span class="h3 mb-0">Dampak Risiko</span>
                     </div>
                 </div>
@@ -224,7 +146,7 @@
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent"><span class="nav-item-circle">{{ $danantara ? '5' : '3' }}</span></span>
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">3</span></span>
                         <span class="h3 mb-0">Penyebab Risiko</span>
                     </div>
                 </div>
@@ -284,9 +206,9 @@
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
                         <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">{{ $danantara ? '6' : '4' }}</span>
+                            <span class="nav-item-circle">4</span>
                         </span>
-                        <span class="h3 mb-0">Key Risk Indicator</span>
+                        <span class="h3 mb-0">Parameter / KRI</span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -302,7 +224,7 @@
                                 <div class="row g-2">
                                     <div class="col-12">
                                         <div class="form-group form-floating">
-                                            <input type="text" class="form-control" name="key_risk_indicator[]" value="{{ $kri ? $kri->kri : '' }}" required>
+                                            <input type="text" class="form-control" name="key_risk_indicator[]" placeholder="Parameter / Key Risk Indicator" value="{{ $kri ? $kri->kri : '' }}" required>
                                             <label>Parameter / Key Risk Indicator <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
@@ -339,7 +261,7 @@
                                     @endphp
                                     <div class="col-3">
                                         <div class="form-group form-floating">
-                                            <input type="text" class="form-control satuan-kri-input" name="satuan_kri[]" value="{{ $kri ? $kri->satuan_kri : '' }}" required>
+                                            <input type="text" class="form-control satuan-kri-input" name="satuan_kri[]" value="{{ $kri ? $kri->satuan_kri : '' }}" placeholder="Satuan / Unit KRI" required>
                                             <label>Satuan / Unit KRI <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
@@ -389,7 +311,7 @@
             <div class="card">
                 <div class="card-header stepper border-0 pb-0">
                     <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent"><span class="nav-item-circle">{{ $danantara ? '7' : '5' }}</span></span>
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle">5</span></span>
                         <span class="h3 mb-0">Kontrol</span>
                     </div>
                 </div>
@@ -718,7 +640,7 @@
                         <div class="row g-2">
                             <div class="col-12">
                                 <div class="form-group form-floating">
-                                    <input type="text" class="form-control" name="key_risk_indicator[]" required>
+                                    <input type="text" class="form-control" name="key_risk_indicator[]" placeholder="Parameter / Key Risk Indicator" required>
                                     <label>Parameter / Key Risk Indicator <span class="text-danger">*</span></label>
                                 </div>
                             </div>
@@ -735,7 +657,7 @@
                             </div>
                             <div class="col-12 col-md-6">
                                 <div class="form-group form-floating">
-                                    <textarea class="form-control" name="metode_pengukuran[]" cols="2" required></textarea>
+                                    <textarea class="form-control" name="metode_pengukuran[]" placeholder="Metode Pengukuran" cols="2" required></textarea>
                                     <label>Metode Pengukuran <span class="text-danger">*</span></label>
                                 </div>
                             </div>
@@ -745,7 +667,7 @@
                             </div>
                             <div class="col-3">
                                 <div class="form-group form-floating">
-                                    <input type="text" class="form-control satuan-kri-input" name="satuan_kri[]" required>
+                                    <input type="text" class="form-control satuan-kri-input" name="satuan_kri[]" placeholder="Satuan / Unit KRI" required>
                                     <label>Satuan / Unit KRI <span class="text-danger">*</span></label>
                                 </div>
                             </div>
@@ -793,10 +715,10 @@
                 $('#kri-body .btn-icon-danger').prop('disabled', false);
             }
 
-            const newDropdown = $('#kri-body').find('select[name="master_kri_id[]"]').last()[0];
-            if (newDropdown) {
-                loadKriOptions(newDropdown, peristiwaRisikoId);
-            }
+            // const newDropdown = $('#kri-body').find('select[name="master_kri_id[]"]').last()[0];
+            // if (newDropdown) {
+            //     loadKriOptions(newDropdown, peristiwaRisikoId);
+            // }
         });
 
         $('#kri-body').on('change', '[name="master_kri_id[]"]', function() {

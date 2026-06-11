@@ -742,6 +742,8 @@ class RiskRegisterUnitController extends Controller
 
             'key_risk_indicator.required' => 'Mohon masukkan minimal satu Key Risk Indicator (KRI).',
             'key_risk_indicator.*.required' => 'Nama KRI wajib diisi.',
+            'tren_parameter.*.required' => 'Tren Parameter wajib diisi.',
+            'metode_pengukuran.*.required' => 'Metode Pengukuran wajib diisi.',
             'satuan_kri.*.required' => 'Satuan wajib diisi.',
             'batas_aman.*.required' => 'Batas Aman wajib diisi.',
             'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
@@ -823,8 +825,8 @@ class RiskRegisterUnitController extends Controller
             $identifikasiRisiko->status_progress = 1;
             $identifikasiRisiko->step_verification = 0;
 
+            $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
             if ($request->has('taksonomi_risiko_id')) {
-                $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
                 $identifikasiRisiko->threshold_risk_limit = $this->cleanRupiah($request->threshold_risk_limit ?? 0);
                 $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite ?? 0);
                 $identifikasiRisiko->threshold_risk_tolerance = $this->cleanRupiah($request->threshold_risk_tolerance ?? 0);
@@ -1680,6 +1682,11 @@ class RiskRegisterUnitController extends Controller
             // KRI Validation
             'key_risk_indicator' => 'required|array|min:1',
             'key_risk_indicator.*' => 'required|string',
+
+            // Danantara
+            'tren_parameter.*' => 'required|string',
+            'metode_pengukuran.*' => 'required|string',
+
             'satuan_kri.*' => 'required|string',
             'batas_aman.*' => 'required',
             'batas_waspada.*' => 'required',
@@ -1705,6 +1712,8 @@ class RiskRegisterUnitController extends Controller
             'kontrol_eksisting.*.required' => 'Kontrol eksisting tidak boleh kosong.',
 
             'key_risk_indicator.*.required' => 'Nama KRI wajib diisi.',
+            'tren_parameter.*.required' => 'Tren Parameter wajib diisi.',
+            'metode_pengukuran.*.required' => 'Metode Pengukuran wajib diisi.',
             'satuan_kri.*.required' => 'Satuan wajib diisi.',
             'batas_aman.*.required' => 'Batas Aman wajib diisi.',
             'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
@@ -1751,8 +1760,8 @@ class RiskRegisterUnitController extends Controller
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_mulai = $waktuMulai;
             $identifikasiRisiko->perkiraan_waktu_terpapar_risiko_akhir = $waktuSelesai;
 
+            $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
             if ($request->has('taksonomi_risiko_id')) {
-                $identifikasiRisiko->taksonomi_risiko_id = $request->taksonomi_risiko_id;
                 $identifikasiRisiko->threshold_risk_limit = $this->cleanRupiah($request->threshold_risk_limit ?? 0);
                 $identifikasiRisiko->threshold_risk_appetite = $this->cleanRupiah($request->threshold_risk_appetite ?? 0);
                 $identifikasiRisiko->threshold_risk_tolerance = $this->cleanRupiah($request->threshold_risk_tolerance ?? 0);
@@ -1803,21 +1812,6 @@ class RiskRegisterUnitController extends Controller
                     }
                 }
             }
-
-            // // Hapus penyebab risiko lama dan buat yang baru
-            // $identifikasiRisiko->penyebabRisiko()->delete();
-
-            // // Simpan penyebab risiko
-            // if ($request->has('penyebab_risiko') && is_array($request->penyebab_risiko)) {
-            //     foreach ($request->penyebab_risiko as $penyebab) {
-            //         if (!empty($penyebab)) {
-            //             $identifikasiRisiko->penyebabRisiko()->create([
-            //                 'penyebab_risiko' => $penyebab,
-            //                 'risiko_id' => $identifikasiRisiko->id,
-            //             ]);
-            //         }
-            //     }
-            // }
 
             $dampakRisikoIds = [];
             foreach ($request->dampak_risiko as $dampakRisikoId => $dampakRisiko) {

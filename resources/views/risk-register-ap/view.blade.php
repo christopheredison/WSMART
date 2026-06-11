@@ -1,4 +1,17 @@
 @extends('layouts.default')
+@php
+if (!function_exists('formatKriBatas')) {
+    function formatKriBatas($value) {
+        if ($value === null || $value === '') return '-';
+        // Cek apakah data murni angka atau desimal dari DB (contoh: 100, 15.50)
+        if (preg_match('/^-?\d+(\.\d+)?$/', trim($value))) {
+            return number_format((float)$value, 2, ',', '.');
+        }
+        // Jika ada huruf/simbol, kembalikan string aslinya
+        return $value;
+    }
+}
+@endphp
 @section('dashboard')
     <div class="row mb-5">
         <div class="col-12 d-flex align-items-center gap-3 position-relative">
@@ -284,6 +297,14 @@
                             </div>
                         </div>
                     </div>
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Taksonomi Risiko</label>
+                            <div class="p-3 bg-light rounded">
+                              {{ $risiko?->taksonomiRisiko?->nama ?? '-' }}
+                            </div>
+                        </div>
+                    </div>
                     {{-- <div class="col-12">
                         <div class="form-group">
                             <label class="form-label fw-bold">Jenis Risiko T2 & T3 KBUMN</label>
@@ -359,7 +380,7 @@
                                             @endif
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
                                             <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
-                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
+                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}</td>
                                             <td class="text-center">
                                                 <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailDampak{{ $perlakuan->id }}" title="Lihat Detail">
                                                     <span class='bx bx-show'></span>
@@ -444,12 +465,10 @@
                                     <td colspan="6" class="text-center text-muted">Tidak ada dampak risiko</td>
                                 </tr>
                             @endforelse
-                            @if($totalBiaya > 0)
-                                <tr class="table-warning">
-                                    <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
-                                    <td colspan="2" class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
-                                </tr>
-                            @endif
+                            <tr class="table-warning">
+                                <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
+                                <td colspan="2" class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -495,7 +514,7 @@
                                             @endif
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
                                             <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
-                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}</td>
+                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}</td>
                                             <td class="text-center">
                                                 <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailPenyebab{{ $perlakuan->id }}" title="Lihat Detail">
                                                     <span class='bx bx-show'></span>
@@ -580,12 +599,10 @@
                                     <td colspan="6" class="text-center text-muted">Tidak ada penyebab risiko</td>
                                 </tr>
                             @endforelse
-                            @if($totalBiaya > 0)
-                                <tr class="table-warning">
-                                    <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
-                                    <td colspan="2" class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
-                                </tr>
-                            @endif
+                            <tr class="table-warning">
+                                <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
+                                <td colspan="2" class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -602,41 +619,69 @@
                     <span class="nav-item-circle-parent">
                         <span class="nav-item-circle">5</span>
                     </span>
-                    <span class="h3 mb-0">Key Risk Indicator</span>
+                    <span class="h3 mb-0">Parameter / KRI</span>
                 </div>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead class="table-light">
+                <div class="table-responsive scrollbar">
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-light text-center fw-bold small">
                             <tr>
-                                <th width="5%">#</th>
-                                <th width="35%">Key Risk Indicator</th>
-                                <th width="15%">Satuan KRI</th>
-                                <th width="15%">Batas Aman</th>
-                                <th width="15%">Batas Waspada</th>
-                                <th width="15%">Batas Bahaya</th>
+                                <th rowspan="2" class="align-middle" width="5%">#</th>
+                                <th rowspan="2" class="align-middle" width="20%">Parameter / Key Risk Indicator</th>
+                                <th rowspan="2" class="align-middle" width="15%">Tren Parameter</th>
+                                <th rowspan="2" class="align-middle" width="15%">Metode Pengukuran</th>
+                                <th rowspan="2" class="align-middle" width="15%">Satuan</th>
+                                <th colspan="3">Ambang Batas / Threshold</th>
+                            </tr>
+                            <tr>
+                                <th class="bg-success text-white align-middle">Risk Limit</th>
+                                <th class="bg-warning text-dark align-middle">Risk Appetite</th>
+                                <th class="bg-danger text-white align-middle">Risk Tolerance</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($risiko->kris as $kri)
+                            @forelse($risiko?->kris as $kri)
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $kri->kri ?? '-' }}</td>
-                                    <td>{{ $kri->satuan_kri ?? '-' }}</td>
+                                    <td class="text-center">{{ $loop->iteration }}</td>
+                                    <td>
+                                        {{ $kri->kri ?? '-' }}
+                                    </td>
+                                    <td>
+                                        @if($kri->tren_parameter)
+                                            <span class="badge bg-info bg-opacity-10 text-info border border-info">{{ $kri->tren_parameter }}</span>
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                    <td>
+                                        {{ $kri->metode_pengukuran ?? '-' }}
+                                    </td>
                                     <td class="text-center">
+                                        {{ $kri->satuan_kri ?? '-' }}
+                                    </td>
+                                    <td class="text-center text-nowrap">
+                                        {{ formatKriBatas($kri->batas_aman) }} 
+                                    </td>
+                                    <td class="text-center text-nowrap">
+                                        {{ formatKriBatas($kri->batas_waspada) }} 
+                                    </td>
+                                    <td class="text-center text-nowrap">
+                                        {{ formatKriBatas($kri->batas_bahaya) }} 
+                                    </td>
+                                    <!-- <td class="text-center">
                                         <span class="badge bg-success">{{ $kri->batas_aman ?? '-' }}</span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge bg-warning">{{ $kri->batas_waspada ?? '-' }}</span>
+                                        <span class="badge bg-warning text-dark">{{ $kri->batas_waspada ?? '-' }}</span>
                                     </td>
                                     <td class="text-center">
                                         <span class="badge bg-danger">{{ $kri->batas_bahaya ?? '-' }}</span>
-                                    </td>
+                                    </td> -->
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted">Tidak ada Key Risk Indicator</td>
+                                    <td colspan="7" class="text-center text-muted py-4">Tidak ada Key Risk Indicator</td>
                                 </tr>
                             @endforelse
                         </tbody>

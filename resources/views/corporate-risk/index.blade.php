@@ -98,7 +98,7 @@
               </div>
             </div>
           </div>
-          <table class="table dataTable" id="example" data-paging="true" data-info="true" data-filter="true">
+          <table class="table ajax-datatable" id="example" data-paging="true" data-info="true" data-filter="true">
             <thead>
               <tr>
                 <th class="no-sort white-space-nowrap">

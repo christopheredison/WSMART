@@ -60,22 +60,21 @@
                                 </div>
                             </div>
                         </div>
-                        {{-- Hide Danantara --}}
-                        {{-- <div class="col-md-12">
+                        <div class="col-md-12">
                             <div class="form-group d-lg-flex">
-                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Danantara</label>
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Risiko</label>
                                 <div class="w-100">
                                     <select class="form-select select2" name="taksonomi_risiko_id" required>
                                         <option value="">Pilih Taksonomi</option>
                                         @foreach($taksonomiRisikos as $tax)
-                                            <option value="{{ $tax->id }}" {{ old('taksonomi_risiko_id', $projectRisk->taksonomi_risiko_id ?? '') == $tax->id ? 'selected' : '' }}>
+                                            <option value="{{ $tax->id }}">
                                                 {{ $tax->nama }}
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
                             </div>
-                        </div> --}}
+                        </div>
                         {{-- <div class="col-12">
                             <div class="form-group d-lg-flex">
                                 <div class="form-floating flex-grow-1">
@@ -129,83 +128,6 @@
             </div>
         </div>
         <!-- ::DataRisiko End -->
-
-        {{-- Hide Danantara --}}
-        {{-- <!-- ::ParameeterRisiko Start -->
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header stepper border-0 pb-0">
-                    <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent">
-                            <span class="nav-item-circle">2</span>
-                        </span>
-                        <span class="h3 mb-0">Parameter Risiko</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="parameter-risiko-body">
-                        <div class="row g-2 mb-3 parameter-row-item">
-                            <div class="col-md-1 text-center d-flex justify-content-center align-items-center">
-                              <span class="number-pill-info">1</span>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-floating">
-                                    <input type="hidden" name="parameter_risiko_id[]">
-                                    <input type="text" class="form-control" name="param_nama[]" placeholder="Nama">
-                                    <label>Nama Parameter</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating">
-                                    <input type="text" class="form-control" name="param_formula[]" placeholder="Formula">
-                                    <label>Formula</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating">
-                                    <input type="text" class="form-control" name="param_satuan[]" placeholder="Satuan">
-                                    <label>Satuan</label>
-                                </div>
-                            </div>
-                            <div class="col-auto d-flex align-items-center">
-                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)"><i class="bx bx-trash"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-outline-secondary rounded-pill p-2 float-end" id="add-parameter"><i class='bx bx-plus fs-5'></i></button>
-                </div>
-            </div>
-        </div>
-        <!-- ::ParameeterRisiko End -->
-
-        <!-- ::Threshold Start -->
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header stepper border-0 pb-0">
-                    <div class="nav-link active d-flex align-items-center p-0">
-                        <span class="nav-item-circle-parent"><span class="nav-item-circle">3</span></span>
-                        <span class="h3 mb-0">Threshold</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Risk Limit</label>
-                            <input type="text" class="form-control rupiah-input" name="threshold_risk_limit" value="{{ 0 }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Risk Appetite</label>
-                            <input type="text" class="form-control rupiah-input" name="threshold_risk_appetite" value="{{ 0 }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Risk Tolerance</label>
-                            <input type="text" class="form-control rupiah-input" name="threshold_risk_tolerance" value="{{ 0 }}">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- ::Threshold End --> --}}
 
         <!-- ::DampakRisiko Start -->
         <div class="col-12">
@@ -301,42 +223,70 @@
                         <span class="nav-item-circle-parent">
                             <span class="nav-item-circle">4</span>
                         </span>
-                        <span class="h3 mb-0">Key Risk Indicator</span>
+                        <span class="h3 mb-0">Parameter / KRI</span>
                     </div>
                 </div>
+                
                 <div class="card-body">
                     <div id="kri-body">
-                        <div class="row g-2">
-                            <div class="col-12 col-lg-11">
+                        @php
+                            $kriItems = isset($identifikasiRisiko) && $identifikasiRisiko->kris->count() > 0 ? $identifikasiRisiko->kris : [null];
+                        @endphp
+                        
+                        @foreach($kriItems as $kri)
+                        <div class="row g-2 mb-3 border-bottom pb-3">
+                            <div class="col">
+                                <input type="hidden" name="kri_ids[]" value="{{ $kri ? $kri->id : '' }}">
                                 <div class="row g-2">
                                     <div class="col-12">
                                         <div class="form-group form-floating">
-                                            <input type="text" class="form-control" name="key_risk_indicator[]" id="key_risk_indicator">
-                                            <label for="key_risk_indicator_1">Key Risk Indicator <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" name="key_risk_indicator[]" placeholder="Parameter / Key Risk Indicator" value="{{ $kri ? $kri->kri : '' }}" required>
+                                            <label>Parameter / Key Risk Indicator <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
-                                    <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
+
+                                    <div class="col-12 col-md-6">
                                         <div class="form-group form-floating">
-                                            <input type="text" class="form-control" name="satuan_kri[]" id="satuan_kri">
-                                            <label for="satuan_kri_1">Satuan KRI <span class="text-danger">*</span></label>
+                                            <select class="form-select" name="tren_parameter[]" required>
+                                                <option value="" {{ !$kri ? 'selected' : '' }} disabled>Pilih Tren Parameter</option>
+                                                <option value="Higher is Better" {{ ($kri && $kri->tren_parameter == 'Higher is Better') ? 'selected' : '' }}>Higher is Better</option>
+                                                <option value="Lower is Better" {{ ($kri && $kri->tren_parameter == 'Lower is Better') ? 'selected' : '' }}>Lower is Better</option>
+                                            </select>
+                                            <label>Tren Parameter <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
-                                    <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                        <div class="form-group form-floating text-center">
-                                            <input type="text" class="form-control border-success" name="batas_aman[]" id="batas_aman">
-                                            <label for="batas_aman_1">Batas Aman <span class="text-danger">*</span></label>
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-group form-floating">
+                                            <textarea class="form-control" name="metode_pengukuran[]" placeholder="Metode Pengukuran" cols="2" required>{{ $kri ? $kri->metode_pengukuran : '' }}</textarea>
+                                            <label>Metode Pengukuran <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
-                                    <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                        <div class="form-group form-floating text-center">
-                                            <input type="text" class="form-control border-warning" name="batas_waspada[]" id="batas_waspada">
-                                            <label for="batas_waspada_1">Batas Waspada <span class="text-danger">*</span></label>
+
+                                    <div class="col-12 mt-2 mb-1">
+                                        <span class="text-muted fw-bold">Ambang Batas / Threshold KRI</span>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control satuan-kri-input" name="satuan_kri[]" value="{{ $kri ? $kri->satuan_kri : '' }}" placeholder="Satuan / Unit KRI" required>
+                                            <label>Satuan / Unit KRI <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
-                                    <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                        <div class="form-group form-floating text-center">
-                                            <input type="text" class="form-control border-danger" name="batas_bahaya[]" id="batas_bahaya">
-                                            <label for="batas_bahaya_1">Batas Bahaya <span class="text-danger">*</span></label>
+                                    <div class="col-3">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control decimal-input border-success" name="batas_aman[]" value="{{ $kri ? $kri->batas_aman : '' }}" placeholder="0">
+                                            <label>Risk Limit <span class="text-danger">*</span></label>
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control decimal-input border-warning" name="batas_waspada[]" value="{{ $kri ? $kri->batas_waspada : '' }}" placeholder="0">
+                                            <label>Risk Appetite <span class="text-danger">*</span></label>
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control decimal-input border-danger" name="batas_bahaya[]" value="{{ $kri ? $kri->batas_bahaya : '' }}" placeholder="0">
+                                            <label>Risk Tolerance <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                 </div>
@@ -346,10 +296,8 @@
                                     <i class="bx bx-trash"></i>
                                 </button>
                             </div>
-                            <div class="col-12 mt-0">
-                                <hr>
-                            </div>
                         </div>
+                        @endforeach
                     </div>
                     <div class="row">
                         <div class="col-auto ms-auto d-flex">
@@ -503,7 +451,30 @@
         }
     }
 
+    function initKriMasks() {
+        $('.decimal-input').inputmask({
+            alias: 'numeric',
+            groupSeparator: '.',
+            radixPoint: ',',
+            autoGroup: true,
+            digits: 2,
+            digitsOptional: false,
+            placeholder: '0',
+            rightAlign: false,
+            autoUnmask: true,
+            removeMaskOnSubmit: true
+        });
+    }
+
     $(document).ready(function() {
+        initKriMasks();
+
+        // Event listener saat satuan diubah agar ambang batas otomatis berganti unitnya
+        $(document).on('input', '.satuan-kri-input', function() {
+            let val = $(this).val() || '-';
+            $(this).closest('.row').find('.satuan-addon').text(val);
+        });
+
         $('.select2').select2({
             width: '100%',
         });
@@ -688,37 +659,59 @@
             const peristiwaRisikoId = $('#peristiwa_risiko').val();
 
             let html = `
-                <div class="row g-2">
-                    <div class="col-12 col-lg-11">
+                <div class="row g-2 mb-3 border-bottom pb-3">
+                    <div class="col">
+                        <input type="hidden" name="kri_ids[]" value="">
                         <div class="row g-2">
                             <div class="col-12">
                                 <div class="form-group form-floating">
-                                    <input type="text" class="form-control" name="key_risk_indicator[]">
-                                    <label for="key_risk_indicator_1">Key Risk Indicator <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="key_risk_indicator[]" placeholder="Parameter / Key Risk Indicator" required>
+                                    <label>Parameter / Key Risk Indicator <span class="text-danger">*</span></label>
                                 </div>
                             </div>
-                            <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
+
+                            <div class="col-12 col-md-6">
                                 <div class="form-group form-floating">
-                                    <input type="text" class="form-control" name="satuan_kri[]">
-                                    <label for="satuan_kri_1">Satuan KRI <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="tren_parameter[]" required>
+                                        <option value="" selected disabled>Pilih Tren Parameter</option>
+                                        <option value="Higher is Better">Higher is Better</option>
+                                        <option value="Lower is Better">Lower is Better</option>
+                                    </select>
+                                    <label>Tren Parameter <span class="text-danger">*</span></label>
                                 </div>
                             </div>
-                            <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                <div class="form-group form-floating text-center">
-                                    <input type="text" class="form-control border-success" name="batas_aman[]">
-                                    <label for="batas_aman_1">Batas Aman <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-6">
+                                <div class="form-group form-floating">
+                                    <textarea class="form-control" name="metode_pengukuran[]" placeholder="Metode Pengukuran" cols="2" required></textarea>
+                                    <label>Metode Pengukuran <span class="text-danger">*</span></label>
                                 </div>
                             </div>
-                            <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                <div class="form-group form-floating text-center">
-                                    <input type="text" class="form-control border-warning" name="batas_waspada[]">
-                                    <label for="batas_waspada_1">Batas Waspada <span class="text-danger">*</span></label>
+
+                            <div class="col-12 mt-2 mb-1">
+                                <span class="text-muted fw-bold">Ambang Batas / Threshold KRI</span>
+                            </div>
+                            <div class="col-3">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control satuan-kri-input" name="satuan_kri[]" placeholder="Satuan / Unit KRI" required>
+                                    <label>Satuan / Unit KRI <span class="text-danger">*</span></label>
                                 </div>
                             </div>
-                            <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
-                                <div class="form-group form-floating text-center">
-                                    <input type="text" class="form-control border-danger" name="batas_bahaya[]">
-                                    <label for="batas_bahaya_1">Batas Bahaya <span class="text-danger">*</span></label>
+                            <div class="col-3">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control decimal-input border-success" name="batas_aman[]" placeholder="0">
+                                    <label>Risk Limit <span class="text-danger">*</span></label>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control decimal-input border-warning" name="batas_waspada[]" placeholder="0">
+                                    <label>Risk Appetite <span class="text-danger">*</span></label>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control decimal-input border-danger" name="batas_bahaya[]" placeholder="0">
+                                    <label>Risk Tolerance <span class="text-danger">*</span></label>
                                 </div>
                             </div>
                         </div>
@@ -728,15 +721,20 @@
                             <i class="bx bx-trash"></i>
                         </button>
                     </div>
-                    <div class="col-12 mt-0">
-                        <hr>
-                    </div>
                 </div>`;
             $('#kri-body').append(html);
+            
+            initKriMasks(); // Pasang mask untuk elemen yang baru saja ditambahkan
 
-            // Muat data KRI pada dropdown yang baru ditambahkan
-            const newDropdown = $('#kri-body').find('select[name="master_kri_id[]"]').last()[0];
-            loadKriOptions(newDropdown, peristiwaRisikoId);
+            // Enable all delete buttons when we have more than one row
+            if ($('#kri-body .row.border-bottom').length > 1) {
+                $('#kri-body .btn-icon-danger').prop('disabled', false);
+            }
+
+            // const newDropdown = $('#kri-body').find('select[name="master_kri_id[]"]').last()[0];
+            // if (newDropdown) {
+            //     loadKriOptions(newDropdown, peristiwaRisikoId);
+            // }
         });
 
         $('#kri-body').on('change', '[name="master_kri_id[]"]', function() {
@@ -896,10 +894,11 @@
                                     }
                                 });
 
+                                const errorMessage = xhr.responseJSON?.message || ''
                                 Swal.fire({
                                     icon: 'warning',
                                     title: 'Validasi Gagal',
-                                    text: 'Mohon periksa kembali isian form yang berwarna merah.',
+                                    text:  errorMessage ?? 'Mohon periksa kembali isian form yang berwarna merah.',
                                     confirmButtonText: 'OK'
                                 }).then(() => {
                                     if (firstErrorElement) {
