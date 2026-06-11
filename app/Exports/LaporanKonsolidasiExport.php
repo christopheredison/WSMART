@@ -325,7 +325,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             $realisasiDampak = $analisa->nilai_dampak ?? 0;
             $realisasiEksposur = $analisa->eksposur_risiko ?? 0;
             $levelResidualRealisasi = ($analisa->level_risiko ?? '-') . ' - ' . ($analisa->skala_risiko ?? 0);
-            $periodeMonitoringText = 'Inherent';
+            $periodeMonitoringText = 'Belum ada monitoring';
 
             if ($lastMonitoring) {
                 $realisasiDampak = $lastMonitoring->nilai_dampak ?? 0;
