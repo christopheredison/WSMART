@@ -746,6 +746,85 @@ $(document).ready(function() {
                     <div class="form-check mb-0">
                         <input class="form-check-input row-checkbox" type="checkbox" value="${monitoringId}" ${canVerify ? '' : 'disabled'}>
                     </div>`;
+              @elseif (request()->route()->getName() === 'risk-register-unit.monitorings.index')
+                // --- LOGIKA CHECKBOX MONITORING UNIT ---
+                if (row.is_closed) {
+                    return '<div class="form-check mb-0"><input class="form-check-input row-checkbox" type="checkbox" disabled></div>';
+                }
+
+                const monitoring = row.last_monitoring_risiko;
+
+                if (!monitoring || monitoring.is_approved == 1) {
+                    return '<div class="form-check mb-0"><input class="form-check-input row-checkbox" type="checkbox" disabled></div>';
+                }
+
+                const monitoringId = monitoring.id;
+                
+                const userLevel = {{ $extraViewData['currentUserLevel'] ?? 0 }};
+                const hasVerificationMr = {{ (!empty($extraViewData['hasVerificationMr']) && $extraViewData['hasVerificationMr']) ? 'true' : 'false' }};
+                console.log(hasVerificationMr);
+                const isUserUnitMr = {{ $extraViewData['isUserUnitMr'] ?? 0 }};
+
+                const status = parseInt(monitoring.status);
+                let canVerify = false;
+
+                // Verifikasi Monitoring Unit
+                // A. RO Divisi (Level 2) Verifikasi Status 2
+                if (userLevel == 2 && status == 2) {
+                    canVerify = true;
+                }
+                // B. RO MR (Level 1) Verifikasi Status 3
+                else if (userLevel == 1 && status == 3 && isUserUnitMr == 1 && hasVerificationMr) {
+                    canVerify = true;
+                }
+                // C. ROW MR (Level 2) Verifikasi Status 4
+                else if (userLevel == 2 && status == 4 && isUserUnitMr == 1 && hasVerificationMr) {
+                    canVerify = true;
+                }
+
+                return `
+                    <div class="form-check mb-0">
+                        <input class="form-check-input row-checkbox" type="checkbox" value="${monitoringId}" ${canVerify ? '' : 'disabled'}>
+                    </div>`;
+              @elseif (request()->route()->getName() === 'risk-register-ap.monitorings.index')
+                // --- LOGIKA CHECKBOX MONITORING AP ---
+                if (row.is_closed) {
+                    return '<div class="form-check mb-0"><input class="form-check-input row-checkbox" type="checkbox" disabled></div>';
+                }
+
+                const monitoring = row.last_monitoring_risiko;
+
+                if (!monitoring || monitoring.is_approved == 1) {
+                    return '<div class="form-check mb-0"><input class="form-check-input row-checkbox" type="checkbox" disabled></div>';
+                }
+
+                const monitoringId = monitoring.id;
+                
+                const userLevel = {{ $extraViewData['currentUserLevel'] ?? 0 }};
+                const hasVerificationMr = {{ (!empty($extraViewData['hasVerificationMr']) && $extraViewData['hasVerificationMr']) ? 'true' : 'false' }};
+                const isUserUnitMr = {{ $extraViewData['isUserUnitMr'] ?? 0 }};
+
+                const status = parseInt(monitoring.status);
+                let canVerify = false;
+
+                // Verifikasi Monitoring Unit
+                // A. RO Divisi (Level 2) Verifikasi Status 2
+                if (userLevel == 2 && status == 2) {
+                    canVerify = true;
+                }
+                // B. RO MR (Level 1) Verifikasi Status 3
+                else if (userLevel == 1 && status == 3 && isUserUnitMr == 1 && hasVerificationMr) {
+                    canVerify = true;
+                }
+                // C. ROW MR (Level 2) Verifikasi Status 4
+                else if (userLevel == 2 && status == 4 && isUserUnitMr == 1 && hasVerificationMr) {
+                    canVerify = true;
+                }
+
+                return `
+                    <div class="form-check mb-0">
+                        <input class="form-check-input row-checkbox" type="checkbox" value="${monitoringId}" ${canVerify ? '' : 'disabled'}>
+                    </div>`;
               @else
                   return '<div class="form-check mb-0"><input class="form-check-input row-checkbox" type="checkbox" value="' + data + '"></div>';
               @endif

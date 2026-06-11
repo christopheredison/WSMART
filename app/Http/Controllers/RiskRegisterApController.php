@@ -2801,8 +2801,8 @@ class RiskRegisterApController extends Controller
         $redirectUrl = route('risk-register-ap.monitorings.index', [
             'period' => $periodeId,
             'unit_id' => $unitId,
-            'quarter' => $quarter,
             'month' => $selectedMonth,
+            'quarter' => $quarter,
         ]);
 
         $pulseDot = '
