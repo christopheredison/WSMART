@@ -3101,6 +3101,7 @@ class RiskRegisterUnitController extends Controller
         $unitId = $item['unit']->id;
         $periodeId = $item['periode']->id;
         $selectedMonth = $item['selected_month'];
+        $quarter = ceil((int)$selectedMonth / 3);
 
         $rawMonitorings = \App\Models\UnitRiskMonitoring::whereHas('identifikasiRisiko', function($q) use ($unitId, $periodeId) {
                 $q->where('unit_id', $unitId)
@@ -3135,7 +3136,8 @@ class RiskRegisterUnitController extends Controller
         $redirectUrl = route('risk-register-unit.monitorings.index', [
             'period' => $periodeId,
             'unit_id' => $unitId,
-            'month' => $selectedMonth
+            'quarter' => $quarter,
+            'month' => $selectedMonth,
         ]);
 
         $pulseDot = '
