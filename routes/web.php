@@ -696,6 +696,7 @@ Route::prefix('risk-register-unit')->middleware('auth')->group(function () {
             ->only(['index', 'show', 'edit', 'update']);
     Route::prefix('risk-register-unit/{period}/monitorings')->name('risk-register-unit.monitorings.')->group(function () {
         Route::post('send-all', [RiskRegisterUnitMonitoringController::class, 'sendAllMonitoring'])->name('send.all');
+        Route::post('bulk-verify', [RiskRegisterUnitMonitoringController::class, 'bulkVerifyMonitoring'])->name('bulk-verify');
         Route::post('{monitoring}/verify', [RiskRegisterUnitMonitoringController::class, 'verifyMonitoring'])->name('verify');
         Route::get('{risk}/notes', [RiskRegisterUnitMonitoringController::class, 'getNotes'])->name('notes');
     });
@@ -738,6 +739,7 @@ Route::prefix('risk-register-ap')->group(function () {
             ->only(['index', 'show', 'edit', 'update']);
     Route::prefix('risk-register-ap/{period}/monitorings')->name('risk-register-ap.monitorings.')->group(function () {
         Route::post('send-all', [RiskRegisterApMonitoringController::class, 'sendAllMonitoring'])->name('send.all');
+        Route::post('bulk-verify', [RiskRegisterApMonitoringController::class, 'bulkVerifyMonitoring'])->name('bulk-verify');
         Route::post('{monitoring}/verify', [RiskRegisterApMonitoringController::class, 'verifyMonitoring'])->name('verify');
         Route::get('{risk}/notes', [RiskRegisterApMonitoringController::class, 'getNotes'])->name('notes');
     });

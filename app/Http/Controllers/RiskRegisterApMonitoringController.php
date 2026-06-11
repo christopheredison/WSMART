@@ -898,27 +898,29 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         $this->extraViewData['showVerifikasiModal'] = in_array($userLevel, $verificatorLevels);
         $this->extraViewData['showCatatanModal'] = true;
 
+        // --- TAMBAHAN UNTUK BULK VERIFY ---
+        $this->extraViewData['showBulkCheckbox'] = true;
+        $this->extraViewData['currentUserLevel'] = $userLevel;
+        $this->extraViewData['hasVerificationMr'] = $hasVerificationMr;
+        $this->extraViewData['isUserUnitMr'] = $user->unit ? $user->unit->unit_mr : 0;
+    
+        $bulkRoute = route("risk-register-ap.monitorings.bulk-verify", ["period" => $period->id]);
+
         $csrfToken = csrf_token();
 
-        // 1. Kaitkan Data Alert & Escalation ke JSON Datatables
         $this->datatableCallback = function ($datatable) use ($summaryInfo, $escalationConfig) {
             $datatable->with('summaryInfo', $summaryInfo);
             $datatable->with('escalationConfig', $escalationConfig);
         };
 
-        // 2. Injeksi Script Render Ulang Alert via AJAX Datatable
+        // Injeksi Script Render Ulang Alert via AJAX Datatable
         $this->extraScripts[] = <<<SCRIPT
         <script>
         $(document).on('xhr.dt', function (e, settings, json, xhr) {
-            // Deteksi apakah ada key summaryInfo di dalam JSON response
             if (json && 'summaryInfo' in json) {
-                // Targetkan container alert dan tombol eskalasi
                 let container = $('.card-body > .d-flex.align-items-center.justify-content-end.gap-3').first();
-
-                // KOSONGKAN CONTAINER (penting untuk reset layar setiap ganti filter)
                 container.empty();
 
-                // Render Ulang Alert (Jika ada isinya)
                 if (json.summaryInfo) {
                     let s = json.summaryInfo;
                     container.append(`
@@ -934,7 +936,6 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                     `);
                 }
 
-                // Render Ulang Tombol Proses/Eskalasi (Jika butuh ditampilkan)
                 if (json.escalationConfig && json.escalationConfig.show) {
                     let e = json.escalationConfig;
                     let disabledAttr = e.disabled ? 'disabled' : '';
@@ -961,6 +962,125 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                     `);
                 }
             }
+        });
+
+        // --- LOGIKA BULK VERIFY ---
+        let currentIds = [];
+
+        // Handler Checkbox Select All
+        $(document).on('change', '#check-all-risiko', function() {
+            $('.row-checkbox:not(:disabled)').prop('checked', this.checked);
+            toggleBulkButton();
+        });
+
+        // Handler Checkbox per Row
+        $(document).on('change', '.row-checkbox', function() {
+            toggleBulkButton();
+            if(!this.checked) {
+                $('#check-all-risiko').prop('checked', false);
+            }
+        });
+
+        function toggleBulkButton() {
+            const checkedCount = $('.row-checkbox:checked').length;
+            if (checkedCount > 0) {
+                $('#bulk-verify-container').removeClass('d-none');
+                $('#count-checked').text(checkedCount);
+            } else {
+                $('#bulk-verify-container').addClass('d-none');
+            }
+        }
+
+        // Handler Tombol "Verifikasi Risiko" (Membuka Modal)
+        function handleBulkVerifikasiClick() {
+            currentIds = [];
+            $('.row-checkbox:checked').each(function() {
+                currentIds.push($(this).val());
+            });
+
+            if (currentIds.length === 0) return;
+
+            // Reset Form Catatan
+            $('#catatan-verifikasi').val('');
+
+            // Update Info Jumlah Data di Modal
+            if($('#modal-bulk-info').length == 0) {
+                $('.modal-body').prepend(`
+                    <div id="modal-bulk-info" class="alert alert-info mt-0 mb-3">
+                        <i class="bx bx-info-circle"></i> Memverifikasi <strong>\${currentIds.length}</strong> data terpilih.
+                    </div>
+                `);
+            } else {
+                $('#modal-bulk-info strong').text(currentIds.length);
+            }
+
+            // Tampilkan Modal dengan ID yang benar untuk Unit/AP
+            const modalEl = document.getElementById('modalVerifikasi');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+
+            // Trik Clone: Mengganti tombol dengan duplikatnya agar event listener bawaan (form.submit) mati.
+            let btnTerima = $('#btn-terima-verifikasi');
+            let btnTolak = $('#btn-tolak-verifikasi');
+            btnTerima.replaceWith(btnTerima.clone());
+            btnTolak.replaceWith(btnTolak.clone());
+
+            // Pasang fungsi AJAX submitBulk
+            $('#btn-terima-verifikasi').on('click', function() { submitBulk('terima'); });
+            $('#btn-tolak-verifikasi').on('click', function() { submitBulk('tolak'); });
+        }
+
+        // Fungsi Submit AJAX Bulk Verify
+        function submitBulk(status) {
+            const catatan = $('#catatan-verifikasi').val().trim();
+
+            if (status === 'tolak' && !catatan) {
+                Swal.fire('Peringatan', 'Catatan verifikasi wajib diisi jika menolak.', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: status === 'terima' ? 'Terima Monitoring Terpilih?' : 'Kembalikan Monitoring Terpilih?',
+                text: `Anda akan memproses \${currentIds.length} data.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Lanjutkan',
+                reverseButtons: true,
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '{$bulkRoute}',
+                        type: 'POST',
+                        data: {
+                            _token: '{$csrfToken}',
+                            ids: currentIds,
+                            status_verifikasi: status,
+                            catatan_verifikasi: catatan
+                        },
+                        beforeSend: function() {
+                            Swal.fire({ title: 'Sedang memproses...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+                        },
+                        success: function(res) {
+                            Swal.fire('Berhasil', res.message, 'success').then(() => {
+                                location.reload();
+                            });
+                        },
+                        error: function(xhr) {
+                            const msg = xhr.responseJSON?.message || 'Terjadi kesalahan sistem';
+                            Swal.fire('Gagal', msg, 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            $('#table-filter select[name="unit_id"]').on('change', function() {
+                let selectedUnitName = $(this).find('option:selected').text();
+                if ($(this).val() !== '') {
+                    $('.card-header .ff-preheading').text(selectedUnitName);
+                }
+            });
         });
         </script>
         SCRIPT;
