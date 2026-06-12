@@ -123,7 +123,9 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
         ];
 
-        // 1. Buat Closure: "Ambil monitoring sampai dengan bulan & tahun yang dipilih dengan status Publish"
+        // Definisikan tanggal batas akhir bulan dari periode cutoff terpilih (jam 23:59:59)
+        $cutoffDate = Carbon::create($this->tahun, $this->bulan, 1)->endOfMonth()->format('Y-m-d 23:59:59');
+
         $filterUpToPeriod = function($q) {
             if ($this->bulan && $this->tahun) {
                 $q->where(function($query) {
@@ -131,7 +133,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                     $query->where('tahun', '<', $this->tahun)
                           ->orWhere(function($subQuery) {
                               $subQuery->where('tahun', $this->tahun)
-                                      ->where('month', '<=', $this->bulan);
+                                       ->where('month', '<=', $this->bulan);
                           });
                 });
             }
@@ -179,16 +181,28 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             }
         ]);
 
-        $query->whereNull('deleted_at');
+        $query->where('status', 6)->whereNull('deleted_at');
 
-        // 3. Menampilkan yang memiliki laporan publish sampai batas bulan.
-        $query->whereHas('projectRiskMonitorings', $filterUpToPeriod);
+        // Project aktif pada periode export berdasarkan masa_pelaksanaan_end nya
+        $hariIni = Carbon::today()->toDateString();
+        $query->whereHas('project', function($q) use ($hariIni) {
+            $q->whereNotNull('masa_pelaksanaan_end')
+              ->whereDate('masa_pelaksanaan_end', '>=', $hariIni);
+        });
 
-        // Project aktif pada periode export, bukan aktif berdasarkan tanggal cut off
-        $query->whereHas('project', function($q) use ($startOfSelectedPeriod) {
-            $q->where(function($sub) use ($startOfSelectedPeriod) {
-                $sub->whereNull('masa_pelaksanaan_end')
-                    ->orWhereDate('masa_pelaksanaan_end', '>=', $startOfSelectedPeriod);
+        // =========================================================================
+        // PERBAIKAN QUERY: Menyesuaikan penarikan data risiko dengan logika cutoff
+        // =========================================================================
+        $query->where(function ($queryScope) use ($cutoffDate) {
+            $queryScope->where(function ($q1) use ($cutoffDate) {
+                // Kondisi 1: is_closed = 0 && created_at <= periode cutoff
+                $q1->where('is_closed', 0)
+                   ->where('created_at', '<=', $cutoffDate);
+            })->orWhere(function ($q2) use ($cutoffDate) {
+                // Kondisi 2: is_closed = 1 && created_at <= periode cutoff && updated_at > periode cutoff
+                $q2->where('is_closed', 1)
+                   ->where('created_at', '<=', $cutoffDate)
+                   ->where('updated_at', '>', $cutoffDate);
             });
         });
 
@@ -296,18 +310,54 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             // Memanggil relasi monitoring, akan otomats mengambil 'first' / terbaru karena sudah di-ORDER BY 'desc' di Eager Load
             $lastMonitoring = $risk->projectRiskMonitorings->first();
 
-            $levelResidualRealisasi = '-';
-            $periodeMonitoringText = '-';
+            // Ambil Monitoring Realisasi Terupdate
+            // $levelResidualRealisasi = '-';
+            // $periodeMonitoringText = '-';
+
+            // if ($lastMonitoring) {
+            //     if ($lastMonitoring->level_risiko) {
+            //         $levelResidualRealisasi = $lastMonitoring->level_risiko . ' - ' . ($lastMonitoring->skala_risiko ?? 0);
+            //     }
+
+            //     // Set text "Bulan Tahun" (Contoh: "Februari 2024")
+            //     if ($lastMonitoring->month && $lastMonitoring->tahun) {
+            //         $bulanStr = $namaBulan[(int)$lastMonitoring->month] ?? $lastMonitoring->month;
+            //         $periodeMonitoringText = $bulanStr . ' ' . $lastMonitoring->tahun;
+            //     }
+            // }
+
+            // Default realisasi = Inherent.
+            // Ini dipakai ketika belum ada monitoring publish/approved sampai periode cutoff.
+            $realisasiDampak = $analisa->nilai_dampak ?? 0;
+            $realisasiEksposur = $analisa->eksposur_risiko ?? 0;
+            $levelResidualRealisasi = ($analisa->level_risiko ?? '-') . ' - ' . ($analisa->skala_risiko ?? 0);
+            $periodeMonitoringText = 'Belum ada monitoring';
 
             if ($lastMonitoring) {
+                $realisasiDampak = $lastMonitoring->nilai_dampak ?? 0;
+                $realisasiEksposur = $lastMonitoring->eksposure_risiko ?? 0;
+
                 if ($lastMonitoring->level_risiko) {
                     $levelResidualRealisasi = $lastMonitoring->level_risiko . ' - ' . ($lastMonitoring->skala_risiko ?? 0);
                 }
 
-                // Set text "Bulan Tahun" (Contoh: "Februari 2024")
                 if ($lastMonitoring->month && $lastMonitoring->tahun) {
                     $bulanStr = $namaBulan[(int)$lastMonitoring->month] ?? $lastMonitoring->month;
                     $periodeMonitoringText = $bulanStr . ' ' . $lastMonitoring->tahun;
+                }
+            }
+
+            // =========================================================================
+            // PERBAIKAN LOGIKA STATUS KONSOLIDASI: Penentuan status Open / Closed
+            // =========================================================================
+            $statusTeks = 'Open';
+            if ($risk->is_closed) {
+                // Jika is_closed = 1, namun tanggal penutupan (updated_at) ternyata di atas batas cutoff,
+                // berarti pada masa cutoff tersebut risiko ini statusnya harus dianggap masih 'Open'
+                if ($risk->updated_at && $risk->updated_at->format('Y-m-d H:i:s') > $cutoffDate) {
+                    $statusTeks = 'Open';
+                } else {
+                    $statusTeks = 'Closed';
                 }
             }
 
@@ -353,14 +403,23 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                 $risk->perkiraan_waktu_terpapar_risiko_akhir ? Carbon::parse($risk->perkiraan_waktu_terpapar_risiko_akhir)->format('d/m/Y') : '-',
                 implode("\n", $picStr) ?: '-',
 
+                // Old
+                // trim($realisasiPerlakuanStr) ?: '-',
+                // ($realBiayaPenyebab + $realBiayaDampak),
+                // $lastMonitoring?->nilai_dampak ?? 0,
+                // $lastMonitoring?->eksposure_risiko ?? 0,
+
+                // $levelResidualRealisasi,
+
+                // New
                 trim($realisasiPerlakuanStr) ?: '-',
                 ($realBiayaPenyebab + $realBiayaDampak),
-                $lastMonitoring?->nilai_dampak ?? 0,
-                $lastMonitoring?->eksposure_risiko ?? 0,
+                $realisasiDampak,
+                $realisasiEksposur,
 
                 $levelResidualRealisasi,
 
-                $risk->is_closed ? 'Closed' : 'Open',
+                $statusTeks, // Menggunakan variabel status hasil pengecekan cutoff dinamis
                 ((float) $risk->efektivitas_perlakuan_risiko >= 0) ? 'Efektif' : 'Tidak Efektif',
                 $periodeMonitoringText,
             ];

@@ -1755,7 +1755,7 @@ class HomeController extends Controller
                 ])
                 ->where('unit_id', $selectedUnit->id)
                 ->where('periode_id', $periode->id)
-                ->where('status_risiko', 6)
+                ->where('status', 6)
                 ->where('is_closed', false)
                 ->whereNull('deleted_at')
                 ->get();
@@ -2014,7 +2014,7 @@ class HomeController extends Controller
                 ])
                 ->where('unit_id', $selectedUnit->id)
                 ->where('periode_id', $periode->id)
-                ->where('status_risiko', 6)
+                ->where('status', 6)
                 ->where('is_closed', false)
                 ->whereNull('deleted_at')
                 ->get();
@@ -2738,15 +2738,21 @@ class HomeController extends Controller
             }
         }
 
+        $hariIni = Carbon::today()->toDateString();
+
         // $projectQuery->where(function($q) use ($endOfSelectedPeriod) {
         //     $q->whereNull('masa_pelaksanaan_end')
         //       ->orWhereDate('masa_pelaksanaan_end', '>=', $endOfSelectedPeriod);
         // });
 
-        $projectQuery->where(function($q) use ($startOfSelectedPeriod) {
-            $q->whereNull('masa_pelaksanaan_end')
-            ->orWhereDate('masa_pelaksanaan_end', '>=', $startOfSelectedPeriod);
-        });
+        // $projectQuery->where(function($q) use ($startOfSelectedPeriod) {
+        //     $q->whereNull('masa_pelaksanaan_end')
+        //     ->orWhereDate('masa_pelaksanaan_end', '>=', $startOfSelectedPeriod);
+        // });
+
+        // Hanya yang tanggalnya tidak kosong dan >= hari ini yang dianggap Aktif
+        $projectQuery->whereNotNull('masa_pelaksanaan_end')
+                     ->whereDate('masa_pelaksanaan_end', '>=', $hariIni);
 
         $projects = $projectQuery->get();
         $activeProjectIds = $projects->pluck('id');
@@ -2776,6 +2782,15 @@ class HomeController extends Controller
         // Catatan:
         // - status = 6 tetap dipakai karena dashboard ini memakai risiko terpublish.
         // - is_closed = 0 memastikan hanya risiko yang masih open yang dihitung.
+        
+        // =========================================================================
+        // BAGIAN YANG DIUBAH: MENERAPKAN LOGIKA CUTOFF PADA PENGAMBILAN RISIKO
+        // =========================================================================
+        
+        // 1. Dapatkan tanggal akhir bulan dari periode cutoff jam 23:59:59
+        $cutoffDate = \Carbon\Carbon::createFromFormat('Y-m', $selectedPeriod)->endOfMonth()->format('Y-m-d 23:59:59');
+
+        // 2. Ambil data risiko dengan kondisi is_closed yang sudah disesuaikan
         $risksQuery = ProjectRisk::with([
             'project',
             'projectRiskAnalisa.skalaDampakObj',
@@ -2803,8 +2818,19 @@ class HomeController extends Controller
         ])
         ->whereIn('project_id', $activeProjectIds)
         ->where('status', 6)
-        ->where('is_closed', 0)
-        ->whereNull('deleted_at');
+        ->whereNull('deleted_at')
+        ->where(function ($query) use ($cutoffDate) {
+            $query->where(function ($q1) use ($cutoffDate) {
+                // Kondisi 1: is_closed = 0 && created_at <= periode cutoff
+                $q1->where('is_closed', 0)
+                   ->where('created_at', '<=', $cutoffDate);
+            })->orWhere(function ($q2) use ($cutoffDate) {
+                // Kondisi 2: is_closed = 1 && created_at <= periode cutoff && updated_at > periode cutoff
+                $q2->where('is_closed', 1)
+                   ->where('created_at', '<=', $cutoffDate)
+                   ->where('updated_at', '>', $cutoffDate);
+            });
+        });
 
         // Filter Peristiwa Risiko jika ada
         if ($selectedPeristiwaId !== null && $selectedPeristiwaId !== '') {
