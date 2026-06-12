@@ -2782,6 +2782,15 @@ class HomeController extends Controller
         // Catatan:
         // - status = 6 tetap dipakai karena dashboard ini memakai risiko terpublish.
         // - is_closed = 0 memastikan hanya risiko yang masih open yang dihitung.
+        
+        // =========================================================================
+        // BAGIAN YANG DIUBAH: MENERAPKAN LOGIKA CUTOFF PADA PENGAMBILAN RISIKO
+        // =========================================================================
+        
+        // 1. Dapatkan tanggal akhir bulan dari periode cutoff jam 23:59:59
+        $cutoffDate = \Carbon\Carbon::createFromFormat('Y-m', $selectedPeriod)->endOfMonth()->format('Y-m-d 23:59:59');
+
+        // 2. Ambil data risiko dengan kondisi is_closed yang sudah disesuaikan
         $risksQuery = ProjectRisk::with([
             'project',
             'projectRiskAnalisa.skalaDampakObj',
@@ -2809,8 +2818,19 @@ class HomeController extends Controller
         ])
         ->whereIn('project_id', $activeProjectIds)
         ->where('status', 6)
-        ->where('is_closed', 0)
-        ->whereNull('deleted_at');
+        ->whereNull('deleted_at')
+        ->where(function ($query) use ($cutoffDate) {
+            $query->where(function ($q1) use ($cutoffDate) {
+                // Kondisi 1: is_closed = 0 && created_at <= periode cutoff
+                $q1->where('is_closed', 0)
+                   ->where('created_at', '<=', $cutoffDate);
+            })->orWhere(function ($q2) use ($cutoffDate) {
+                // Kondisi 2: is_closed = 1 && created_at <= periode cutoff && updated_at > periode cutoff
+                $q2->where('is_closed', 1)
+                   ->where('created_at', '<=', $cutoffDate)
+                   ->where('updated_at', '>', $cutoffDate);
+            });
+        });
 
         // Filter Peristiwa Risiko jika ada
         if ($selectedPeristiwaId !== null && $selectedPeristiwaId !== '') {
