@@ -1755,7 +1755,7 @@ class HomeController extends Controller
                 ])
                 ->where('unit_id', $selectedUnit->id)
                 ->where('periode_id', $periode->id)
-                ->where('status_risiko', 6)
+                ->where('status', 6)
                 ->where('is_closed', false)
                 ->whereNull('deleted_at')
                 ->get();
@@ -2014,7 +2014,7 @@ class HomeController extends Controller
                 ])
                 ->where('unit_id', $selectedUnit->id)
                 ->where('periode_id', $periode->id)
-                ->where('status_risiko', 6)
+                ->where('status', 6)
                 ->where('is_closed', false)
                 ->whereNull('deleted_at')
                 ->get();
@@ -2737,7 +2737,7 @@ class HomeController extends Controller
                 $projectQuery->where('cost_center_parent', $selectedUnit->cost_center);
             }
         }
-        
+
         $hariIni = Carbon::today()->toDateString();
 
         // $projectQuery->where(function($q) use ($endOfSelectedPeriod) {
