@@ -311,7 +311,7 @@
                         @endphp
                         
                         @foreach($kriItems as $kri)
-                        <div class="row g-2 mb-3 border-bottom pb-3">
+                        <div class="row g-2 mb-3 border-bottom pb-3 kri-row-item">
                             <div class="col">
                                 <input type="hidden" name="kri_ids[]" value="{{ $kri ? $kri->id : '' }}">
 
@@ -345,7 +345,7 @@
                                     </div>
 
                                     <div class="col-12 mt-2 mb-1">
-                                        <span class="text-muted fw-bold">Ambang Batas / Threshold KRI</span>
+                                        <span class="text-muted fw-bold kri-threshold-title">Ambang Batas / Threshold KRI {{ $loop->iteration }}</span>
                                     </div>
                                     <div class="col-3">
                                         <div class="form-floating">
@@ -916,11 +916,15 @@
         $('#add-column-kri').click(function() {
             row++;
             const peristiwaRisikoId = $('#peristiwa_risiko').val();
-
+            
+            let rowIdx = $('#kri-body .kri-row-item').length + 1;
             let html = `
-                <div class="row g-2 mb-3 border-bottom pb-3">
+                <div class="row g-2 mb-3 border-bottom pb-3 kri-row-item">
                     <div class="col">
                         <input type="hidden" name="kri_ids[]" value="">
+                        <div class="mb-2">
+                            <h6 class="mb-0 fw-bold text-primary kri-header-title">Parameter / Key Risk Indicator ${rowIdx}</h6>
+                        </div>
                         <div class="row g-2">
                             <div class="col-12">
                                 <div class="form-group form-floating">
@@ -947,7 +951,7 @@
                             </div>
 
                             <div class="col-12 mt-2 mb-1">
-                                <span class="text-muted fw-bold">Ambang Batas / Threshold KRI</span>
+                                <span class="text-muted fw-bold kri-threshold-title">Ambang Batas / Threshold KRI ${rowIdx}</span>
                             </div>
                             <div class="col-3">
                                 <div class="form-floating">
@@ -981,19 +985,14 @@
                         </button>
                     </div>
                 </div>`;
+
             $('#kri-body').append(html);
             
-            initKriMasks(); // Pasang mask untuk elemen yang baru saja ditambahkan
+            initKriMasks();
 
-            // Enable all delete buttons when we have more than one row
-            if ($('#kri-body .row.border-bottom').length > 1) {
+            if ($('#kri-body .kri-row-item').length > 1) {
                 $('#kri-body .btn-icon-danger').prop('disabled', false);
             }
-
-            // const newDropdown = $('#kri-body').find('select[name="master_kri_id[]"]').last()[0];
-            // if (newDropdown) {
-            //     loadKriOptions(newDropdown, peristiwaRisikoId);
-            // }
         });
 
         function reindexKri() {
