@@ -221,6 +221,11 @@
                         <div class="row g-2 mb-3 border-bottom pb-3">
                             <div class="col">
                                 <input type="hidden" name="kri_ids[]" value="{{ $kri ? $kri->id : '' }}">
+
+                                <div class="mb-2">
+                                    <h6 class="mb-0 fw-bold text-primary kri-header-title">Parameter / Key Risk Indicator {{ $loop->iteration }}</h6>
+                                </div>
+
                                 <div class="row g-2">
                                     <div class="col-12">
                                         <div class="form-group form-floating">
@@ -250,15 +255,27 @@
                                         <span class="text-muted fw-bold">Ambang Batas / Threshold KRI</span>
                                     </div>
                                     @php
-                                        // Logic pengecekan: Jika angka murni/desimal maka format, jika teks biarkan
-                                        $isNumAman = !$kri || empty($kri->batas_aman) || preg_match('/^-?\d+(\.\d+)?$/', trim($kri->batas_aman));
-                                        $isNumWaspada = !$kri || empty($kri->batas_waspada) || preg_match('/^-?\d+(\.\d+)?$/', trim($kri->batas_waspada));
-                                        $isNumBahaya = !$kri || empty($kri->batas_bahaya) || preg_match('/^-?\d+(\.\d+)?$/', trim($kri->batas_bahaya));
+                                        // Fungsi closure/helper untuk mengecek dan memformat batas KRI
+                                        $formatKriValue = function($val) {
+                                            if ($val === null || $val === '') return ['is_number' => true, 'value' => ''];
+                                            $val = trim($val);
+                                            
+                                            // Cek jika datanya adalah angka (mendukung format desimal koma maupun titik)
+                                            if (preg_match('/^-?\d+([.,]\d+)?$/', $val)) {
+                                                // Pastikan format pemisah desimal menggunakan koma agar cocok dengan Inputmask
+                                                $formattedVal = str_replace('.', ',', $val);
+                                                return ['is_number' => true, 'value' => $formattedVal];
+                                            }
+                                            
+                                            // Jika data berupa text/simbol murni (Contoh: "< 10%")
+                                            return ['is_number' => false, 'value' => $val];
+                                        };
 
-                                        $valAman = $kri ? ($isNumAman && $kri->batas_aman !== '' ? str_replace('.', ',', $kri->batas_aman) : $kri->batas_aman) : '';
-                                        $valWaspada = $kri ? ($isNumWaspada && $kri->batas_waspada !== '' ? str_replace('.', ',', $kri->batas_waspada) : $kri->batas_waspada) : '';
-                                        $valBahaya = $kri ? ($isNumBahaya && $kri->batas_bahaya !== '' ? str_replace('.', ',', $kri->batas_bahaya) : $kri->batas_bahaya) : '';
+                                        $aman = $formatKriValue($kri ? $kri->batas_aman : '');
+                                        $waspada = $formatKriValue($kri ? $kri->batas_waspada : '');
+                                        $bahaya = $formatKriValue($kri ? $kri->batas_bahaya : '');
                                     @endphp
+
                                     <div class="col-3">
                                         <div class="form-group form-floating">
                                             <input type="text" class="form-control satuan-kri-input" name="satuan_kri[]" value="{{ $kri ? $kri->satuan_kri : '' }}" placeholder="Satuan / Unit KRI" required>
@@ -267,19 +284,19 @@
                                     </div>
                                     <div class="col-3">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control {{ $isNumAman ? 'decimal-input' : '' }} border-success" name="batas_aman[]" value="{{ $valAman }}" placeholder="0" required>
+                                            <input type="text" class="form-control {{ $aman['is_number'] ? 'decimal-input' : '' }} border-success" name="batas_aman[]" value="{{ $aman['value'] }}" placeholder="0" required>
                                             <label>Risk Limit <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                     <div class="col-3">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control {{ $isNumWaspada ? 'decimal-input' : '' }} border-warning" name="batas_waspada[]" value="{{ $valWaspada }}" placeholder="0" required>
+                                            <input type="text" class="form-control {{ $waspada['is_number'] ? 'decimal-input' : '' }} border-warning" name="batas_waspada[]" value="{{ $waspada['value'] }}" placeholder="0" required>
                                             <label>Risk Appetite <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
                                     <div class="col-3">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control {{ $isNumBahaya ? 'decimal-input' : '' }} border-danger" name="batas_bahaya[]" value="{{ $valBahaya }}" placeholder="0" required>
+                                            <input type="text" class="form-control {{ $bahaya['is_number'] ? 'decimal-input' : '' }} border-danger" name="batas_bahaya[]" value="{{ $bahaya['value'] }}" placeholder="0" required>
                                             <label>Risk Tolerance <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
@@ -422,6 +439,7 @@
     function removeRow(event) {
         let row = $(event.target).closest('.row');
         row.remove();
+        reindexKri();
     }
 
     function loadKriOptions(dropdown, peristiwaRisikoId) {
@@ -632,11 +650,15 @@
         $('#add-column-kri').click(function() {
             row++;
             const peristiwaRisikoId = $('#peristiwa_risiko').val();
+            let rowIdx = $('#kri-body .kri-row-item').length + 1;
 
             let html = `
                 <div class="row g-2 mb-3 border-bottom pb-3">
                     <div class="col">
                         <input type="hidden" name="kri_ids[]" value="">
+                        <div class="mb-2">
+                            <h6 class="mb-0 fw-bold text-primary kri-header-title">Parameter / Key Risk Indicator ${rowIdx}</h6>
+                        </div>
                         <div class="row g-2">
                             <div class="col-12">
                                 <div class="form-group form-floating">
@@ -711,6 +733,18 @@
             //     loadKriOptions(newDropdown, peristiwaRisikoId);
             // }
         });
+
+        function reindexKri() {
+            $('#kri-body .kri-row-item').each(function(index) {
+                let number = index + 1; // Mulai urut dari 1
+                
+                // Update teks di header KRI
+                $(this).find('.kri-header-title').text('Parameter / Key Risk Indicator ' + number);
+                
+                // Update teks di span Threshold
+                $(this).find('.kri-threshold-title').text('Ambang Batas / Threshold KRI ' + number);
+            });
+        }
 
         $('#kri-body').on('change', '[name="master_kri_id[]"]', function() {
             const row = $(this).closest('.row');
@@ -855,40 +889,40 @@
                 const value = preloadedData[key];
                 if (Array.isArray(value)) {
                     if (key === 'penyebab_risiko') {
-                        value.forEach((penyebab, index) => {
-                            if (index === 0) {
-                                $('.input-penyebab-risiko').val(penyebab.penyebab_risiko).attr('name', `penyebab_risiko[${penyebab.id}]`);
-                            } else {
-                                $('#add-column').click();
-                                $(`.input-penyebab-risiko`).last().val(penyebab.penyebab_risiko).attr('name', `penyebab_risiko[${penyebab.id}]`);
-                            }
-                        });
+                        // value.forEach((penyebab, index) => {
+                        //     if (index === 0) {
+                        //         $('.input-penyebab-risiko').val(penyebab.penyebab_risiko).attr('name', `penyebab_risiko[${penyebab.id}]`);
+                        //     } else {
+                        //         $('#add-column').click();
+                        //         $(`.input-penyebab-risiko`).last().val(penyebab.penyebab_risiko).attr('name', `penyebab_risiko[${penyebab.id}]`);
+                        //     }
+                        // });
                     } else if (key === 'dampak_risikos') {
-                        value.forEach((dampak, index) => {
-                            if (index === 0) {
-                                $('.input-dampak-risiko').val(dampak.dampak_risiko).attr('name', `dampak_risiko[${dampak.id}]`);
-                            } else {
-                                $('#add-dampak').click();
-                                $(`.input-dampak-risiko`).last().val(dampak.dampak_risiko).attr('name', `dampak_risiko[${dampak.id}]`);
-                            }
-                        });
+                        // value.forEach((dampak, index) => {
+                        //     if (index === 0) {
+                        //         $('.input-dampak-risiko').val(dampak.dampak_risiko).attr('name', `dampak_risiko[${dampak.id}]`);
+                        //     } else {
+                        //         $('#add-dampak').click();
+                        //         $(`.input-dampak-risiko`).last().val(dampak.dampak_risiko).attr('name', `dampak_risiko[${dampak.id}]`);
+                        //     }
+                        // });
                     } else if (key === 'kris') {
-                        value.forEach((kri, index) => {
-                            if (index === 0) {
-                                $(`[name="key_risk_indicator[]"]`).val(kri.kri);
-                                $(`[name="satuan_kri[]"]`).val(kri.satuan_kri);
-                                $(`[name="batas_aman[]"]`).val(kri.batas_aman);
-                                $(`[name="batas_waspada[]"]`).val(kri.batas_waspada);
-                                $(`[name="batas_bahaya[]"]`).val(kri.batas_bahaya);
-                            } else {
-                                $('#add-column-kri').click();
-                                $(`[name="key_risk_indicator[]"]`).last().val(kri.kri);
-                                $(`[name="satuan_kri[]"]`).last().val(kri.satuan_kri);
-                                $(`[name="batas_aman[]"]`).last().val(kri.batas_aman);
-                                $(`[name="batas_waspada[]"]`).last().val(kri.batas_waspada);
-                                $(`[name="batas_bahaya[]"]`).last().val(kri.batas_bahaya);
-                            }
-                        });
+                        // value.forEach((kri, index) => {
+                        //     if (index === 0) {
+                        //         $(`[name="key_risk_indicator[]"]`).val(kri.kri);
+                        //         $(`[name="satuan_kri[]"]`).val(kri.satuan_kri);
+                        //         $(`[name="batas_aman[]"]`).val(kri.batas_aman);
+                        //         $(`[name="batas_waspada[]"]`).val(kri.batas_waspada);
+                        //         $(`[name="batas_bahaya[]"]`).val(kri.batas_bahaya);
+                        //     } else {
+                        //         $('#add-column-kri').click();
+                        //         $(`[name="key_risk_indicator[]"]`).last().val(kri.kri);
+                        //         $(`[name="satuan_kri[]"]`).last().val(kri.satuan_kri);
+                        //         $(`[name="batas_aman[]"]`).last().val(kri.batas_aman);
+                        //         $(`[name="batas_waspada[]"]`).last().val(kri.batas_waspada);
+                        //         $(`[name="batas_bahaya[]"]`).last().val(kri.batas_bahaya);
+                        //     }
+                        // });
                     } else if (key === 'parameter_risikos') {
                         const params = value;
                         params.forEach((param, index) => {

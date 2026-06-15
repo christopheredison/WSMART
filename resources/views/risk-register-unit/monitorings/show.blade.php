@@ -1,7 +1,7 @@
 @extends('layouts.default')
 @php
-if (!function_exists('formatKriBatas')) {
-    function formatKriBatas($value) {
+if (!function_exists('formatKriBatasJs')) {
+    function formatKriBatasJs($value) {
         if ($value === null || $value === '') return '-';
         // Cek apakah data murni angka atau desimal dari DB (contoh: 100, 15.50)
         if (preg_match('/^-?\d+(\.\d+)?$/', trim($value))) {
@@ -232,9 +232,9 @@ if (!function_exists('formatKriBatas')) {
                                         <td>
                                             {{ $kriProject->metode_pengukuran ?? '-' }}
                                         </td>
-                                        <td class="text-center text-nowrap">{{ formatKriBatas($kriProject->batas_aman) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
-                                        <td class="text-center text-nowrap">{{ formatKriBatas($kriProject->batas_waspada) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
-                                        <td class="text-center text-nowrap">{{ formatKriBatas($kriProject->batas_bahaya) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_aman) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_waspada) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_bahaya) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
                                         <td class="display-nilai-kri fw-bold text-center text-primary">
                                             {{ $lastMonitoring?->nilai_kri_terkini ?? '-' }} {{ $kriProject->satuan_kri ?: '-' }}
                                         </td>
@@ -1002,14 +1002,20 @@ const kriProjects = @json($risk->kris->keyBy('id'));
 const historyMonitoringsData = @json($historyMonitorings->keyBy('id'));
 const quarter = {{ $quarter }};
 
-function formatKriBatas($value) {
-    if ($value === null || $value === '') return '-';
-    // Cek apakah data murni angka atau desimal dari DB (contoh: 100, 15.50)
-    if (preg_match('/^-?\d+(\.\d+)?$/', trim($value))) {
-        return number_format((float)$value, 2, ',', '.');
+function formatKriBatasJS(value) {
+    if (value === null || value === undefined || value === '') return '-';
+    
+    // Ubah ke string dan hapus spasi di awal/akhir (padanan trim() di JS)
+    let valStr = String(value).trim();
+    
+    // Regex padanan preg_match() di JS untuk ngecek apakah murni angka/desimal
+    if (/^-?\d+(\.\d+)?$/.test(valStr)) {
+        // Jika angka, ubah titik (format DB) menjadi koma agar sesuai dengan UI
+        return valStr.replace('.', ',');
     }
-    // Jika ada huruf/simbol, kembalikan string aslinya
-    return $value;
+    
+    // Jika ada teks/simbol (misal: "< 10%"), kembalikan apa adanya
+    return valStr;
 }
 
 function getSkalaProbabilitasByValue(value) {
@@ -1150,7 +1156,7 @@ $(document).ready(function() {
             
             let satuan = kriProject.satuan_kri ? ' ' + kriProject.satuan_kri : '';
             $('#modalUpdateKri input[name="batas_aman"]').val(formatKriBatasJS(kriProject.batas_aman) + satuan);
-            $('#modalUpdateKri input[name="batas_waspada"]').val(formatKriBatasJS(kriProject.batas_waspada) + satuan);
+            $('#modalUpdateKri input[name="batas_waspada"]').val(   (kriProject.batas_waspada) + satuan);
             $('#modalUpdateKri input[name="batas_bahaya"]').val(formatKriBatasJS(kriProject.batas_bahaya) + satuan);
             $('#modal_satuan_addon').text(kriProject.satuan_kri || '-');
 
@@ -1179,7 +1185,6 @@ $(document).ready(function() {
             }
 
             $('#modalUpdateKri').modal('show');
-
         } else if (action === 'update-realisasi') {
             const perlakuanPenyebab = perlakuanPenyebabRisikos[$(this).data('id')];
             if (!perlakuanPenyebab) {

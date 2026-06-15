@@ -237,6 +237,11 @@
                         <div class="row g-2 mb-3 border-bottom pb-3">
                             <div class="col">
                                 <input type="hidden" name="kri_ids[]" value="{{ $kri ? $kri->id : '' }}">
+
+                                <div class="mb-2">
+                                    <h6 class="mb-0 fw-bold text-primary kri-header-title">Parameter / Key Risk Indicator {{ $loop->iteration }}</h6>
+                                </div>
+
                                 <div class="row g-2">
                                     <div class="col-12">
                                         <div class="form-group form-floating">
@@ -432,6 +437,7 @@
     function removeRow(event) {
         let row = $(event.target).closest('.row');
         row.remove();
+        reindexKri();
     }
 
     function loadKriOptions(dropdown, peristiwaRisikoId) {
@@ -736,6 +742,18 @@
             //     loadKriOptions(newDropdown, peristiwaRisikoId);
             // }
         });
+
+        function reindexKri() {
+            $('#kri-body .kri-row-item').each(function(index) {
+                let number = index + 1; // Mulai urut dari 1
+                
+                // Update teks di header KRI
+                $(this).find('.kri-header-title').text('Parameter / Key Risk Indicator ' + number);
+                
+                // Update teks di span Threshold
+                $(this).find('.kri-threshold-title').text('Ambang Batas / Threshold KRI ' + number);
+            });
+        }
 
         $('#kri-body').on('change', '[name="master_kri_id[]"]', function() {
             const row = $(this).closest('.row');

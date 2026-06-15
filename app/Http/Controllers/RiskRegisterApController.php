@@ -2988,13 +2988,33 @@ class RiskRegisterApController extends Controller
         }
     }
 
+    // private function cleanDecimal($value) {
+    //     if(empty($value)) return "0";
+    //     // Hapus pemisah ribuan (titik), dan ganti koma menjadi titik untuk DB.
+    //     $val = str_replace('.', '', $value);
+    //     $val = str_replace(',', '.', $val);
+        
+    //     // Return sebagai string agar sesuai dengan tipe data kolom batas_aman dkk
+    //     return (string) (float) $val;
+    // }
+
     private function cleanDecimal($value) {
         if(empty($value)) return "0";
-        // Hapus pemisah ribuan (titik), dan ganti koma menjadi titik untuk DB.
-        $val = str_replace('.', '', $value);
-        $val = str_replace(',', '.', $val);
         
-        // Return sebagai string agar sesuai dengan tipe data kolom batas_aman dkk
-        return (string) (float) $val;
+        $value = trim($value);
+
+        // Cek apakah input murni berupa angka (hanya boleh angka, tanda minus, titik, dan koma)
+        if (preg_match('/^-?[0-9.,]+$/', $value)) {
+            // Hapus titik pemisah ribuan (bawaan format inputmask)
+            $val = str_replace('.', '', $value);
+            
+            // Return nilainya (Koma tetap dipertahankan)
+            // Contoh Input: "1.500.000,50" -> Tersimpan: "1500000,50"
+            return $val;
+        }
+
+        // Jika mengandung teks atau simbol lain (contoh: "< 10%", "TBA")
+        // Kembalikan datanya apa adanya tanpa diubah
+        return $value;
     }
 }

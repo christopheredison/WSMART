@@ -1,7 +1,7 @@
 @extends('layouts.default')
 @php
-if (!function_exists('formatKriBatas')) {
-    function formatKriBatas($value) {
+if (!function_exists('formatKriBatasJs')) {
+    function formatKriBatasJs($value) {
         if ($value === null || $value === '') return '-';
         // Cek apakah data murni angka atau desimal dari DB (contoh: 100, 15.50)
         if (preg_match('/^-?\d+(\.\d+)?$/', trim($value))) {
@@ -471,9 +471,9 @@ if (!function_exists('formatKriBatas')) {
                                         <td>
                                             {{ $kriProject->metode_pengukuran ?? '-' }}
                                         </td>
-                                        <td class="text-center text-nowrap">{{ formatKriBatas($kriProject->batas_aman) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
-                                        <td class="text-center text-nowrap">{{ formatKriBatas($kriProject->batas_waspada) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
-                                        <td class="text-center text-nowrap">{{ formatKriBatas($kriProject->batas_bahaya) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_aman) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_waspada) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_bahaya) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
                                         
                                         <td class="display-nilai-kri fw-bold text-center text-primary">
                                             {{ $lastMonitoring?->nilai_kri_terkini ?? '-' }} {{ $kriProject->satuan_kri ?: '-' }}
@@ -713,6 +713,22 @@ var impactFlatpickr = flatpickr("#timelineImpactInput", {
     // maxDate: dayjs().toDate(),
     disableMobile: true
 });
+
+function formatKriBatasJS(value) {
+    if (value === null || value === undefined || value === '') return '-';
+    
+    // Ubah ke string dan hapus spasi di awal/akhir (padanan trim() di JS)
+    let valStr = String(value).trim();
+    
+    // Regex padanan preg_match() di JS untuk ngecek apakah murni angka/desimal
+    if (/^-?\d+(\.\d+)?$/.test(valStr)) {
+        // Jika angka, ubah titik (format DB) menjadi koma agar sesuai dengan UI
+        return valStr.replace('.', ',');
+    }
+    
+    // Jika ada teks/simbol (misal: "< 10%"), kembalikan apa adanya
+    return valStr;
+}
 
 function getSkalaProbabilitasByValue(value) {
     const skalaProbabilitases = @json($skalaProbabilitas);
