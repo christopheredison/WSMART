@@ -1138,8 +1138,8 @@ $(document).ready(function() {
             const monData = historyMonitoringsData[monitoringId] || {};
             const realisasiKri = monData?.kri_unit_monitorings?.find(m => m.key_risk_indicator_id == kriId);
             const pengendalian = monData?.pengendalians?.find(p => p.kri_id == kriId) || {};
-            console.log(monData)
-            console.log(kriId)
+            // console.log(monData)
+            // console.log(kriId)
 
             const isNewFormat = kriProject.tren_parameter && kriProject.tren_parameter.trim() !== '';
             $('#modalUpdateKri').data('is-new-format', isNewFormat);
@@ -1156,7 +1156,7 @@ $(document).ready(function() {
             
             let satuan = kriProject.satuan_kri ? ' ' + kriProject.satuan_kri : '';
             $('#modalUpdateKri input[name="batas_aman"]').val(formatKriBatasJS(kriProject.batas_aman) + satuan);
-            $('#modalUpdateKri input[name="batas_waspada"]').val(   (kriProject.batas_waspada) + satuan);
+            $('#modalUpdateKri input[name="batas_waspada"]').val(formatKriBatasJS(kriProject.batas_waspada) + satuan);
             $('#modalUpdateKri input[name="batas_bahaya"]').val(formatKriBatasJS(kriProject.batas_bahaya) + satuan);
             $('#modal_satuan_addon').text(kriProject.satuan_kri || '-');
 
@@ -1170,18 +1170,31 @@ $(document).ready(function() {
             }
 
             // Set nilai aktual pada periode history tersebut
+            const statusVal = realisasiKri?.status_kri_terkini || '';
             $('#modalUpdateKri input[name="nilai_kri"]').val(realisasiKri?.nilai_kri_terkini || '');
-            $('#modalUpdateKri select[name="status_kri"]').val(realisasiKri?.status_kri_terkini || '').trigger('change');
+            $('#modalUpdateKri select[name="status_kri"]').val(statusVal).trigger('change');
+
+            // ==========================================
+            // PERBAIKAN: MUNCULKAN FORM PENGENDALIAN
+            // ==========================================
+            if (statusVal == '2' || statusVal == '3') {
+                $('#kri-pengendalian-section').removeClass('d-none');
+            } else {
+                $('#kri-pengendalian-section').addClass('d-none');
+            }
 
             // Populate nilai pengendalian history
-            console.log('isNewFormat', isNewFormat)
-            console.log('status', realisasiKri?.status_kri_terkini == '2' || realisasiKri?.status_kri_terkini == '3', realisasiKri?.status_kri_terkini)
-            if (isNewFormat && (realisasiKri?.status_kri_terkini == '2' || realisasiKri?.status_kri_terkini == '3')) {
-                console.log(pengendalian);
+            if (isNewFormat && (statusVal == '2' || statusVal == '3')) {
                 $('#modalUpdateKri [name="kri_rencana_pengendalian"]').val(pengendalian.rencana_pengendalian || '');
                 $('#modalUpdateKri [name="kri_biaya_rencana_pengendalian"]').val(pengendalian.biaya_rencana_pengendalian || 0);
                 $('#modalUpdateKri [name="kri_realisasi_pengendalian"]').val(pengendalian.realisasi_pengendalian || '');
                 $('#modalUpdateKri [name="kri_biaya_realisasi_pengendalian"]').val(pengendalian.biaya_realisasi_pengandalian || pengendalian.biaya_realisasi_pengendalian || 0);
+                
+                // Tambahan: pastikan form pengendalian juga disabled di mode view
+                $('#modalUpdateKri [name="kri_rencana_pengendalian"]').prop('disabled', true);
+                $('#modalUpdateKri [name="kri_biaya_rencana_pengendalian"]').prop('disabled', true);
+                $('#modalUpdateKri [name="kri_realisasi_pengendalian"]').prop('disabled', true);
+                $('#modalUpdateKri [name="kri_biaya_realisasi_pengendalian"]').prop('disabled', true);
             }
 
             $('#modalUpdateKri').modal('show');

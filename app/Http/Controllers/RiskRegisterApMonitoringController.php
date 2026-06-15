@@ -1284,6 +1284,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
                 'perlakuanPenyebabRisikoDocuments',
                 'kriUnitMonitorings.keyRiskIndicator',
                 'kriUnitMonitorings.keyRiskIndicator.unitRiskPengendalians',
+                'pengendalians',
             ])
             ->orderBy('id', 'desc')
             ->get();
