@@ -2124,7 +2124,8 @@ class RiskRegisterUnitController extends Controller
                 ->where('periode_id', $periode_id)
                 ->update([
                     'status' => IdentifikasiRisiko::STATUS_PUBLISHED,
-                    'step_verification' => $step_order
+                    'step_verification' => $step_order,
+                    'published_at' => now(),
                 ]);
 
             // Tetapkan project risk utama

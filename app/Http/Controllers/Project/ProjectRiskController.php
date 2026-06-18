@@ -3967,7 +3967,8 @@ class ProjectRiskController extends BasicCRUDController
                     ->where('step_verification', 4)
                     ->update([
                         'status' => ProjectRisk::STATUS_PUBLISHED, // 6
-                        'status_progress' => 4 // Final
+                        'status_progress' => 4, // Final
+                        'published_at' => now(),
                     ]);
 
                 ProjectRisk::determineMainRisks($project_id, $periode_id);

@@ -1518,6 +1518,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         if ($request->is_closed == '1') {
           $risk->update([
               'is_closed' => true,
+              'closed_at' => now(),
           ]);
 
           KamusRisikoAp::updateOrCreate(

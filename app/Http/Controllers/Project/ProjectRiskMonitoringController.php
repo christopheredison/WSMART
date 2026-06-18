@@ -1800,6 +1800,7 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         if ($request->is_closed == '1') {
             $projectRisk->update([
                 'is_closed' => true,
+                'closed_at' => now(),
             ]);
 
             KamusRisikoProject::updateOrCreate(
