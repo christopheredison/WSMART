@@ -1312,7 +1312,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $risk_tolerance = 0;
         $riskLimit = 0;
 
-        $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+        $riskLimitPeriode = RiskLimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
         if ($riskLimitPeriode) {
             $riskLimit = $riskLimitPeriode->risk_limit;
             $risk_tolerance = $riskLimitPeriode->risk_limit;
@@ -1437,7 +1437,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             ->orderBy('id', 'desc')
             ->get();
 
-        $riskLimitPeriode = \App\Models\RisklimitPeriode::where('unit_id', $risk->unit_id)
+        $riskLimitPeriode = \App\Models\RiskLimitPeriode::where('unit_id', $risk->unit_id)
             ->where('periode_id', $risk->periode_id)
             ->first();
         $riskLimit = $riskLimitPeriode ? $riskLimitPeriode->risk_limit : 0;
@@ -1532,10 +1532,10 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             $toCreate['level_risiko'] = null;
         }
 
-        // Ambil risk_limit yang benar dari RisklimitPeriode (Sama seperti di doAnalisa)
+        // Ambil risk_limit yang benar dari RiskLimitPeriode (Sama seperti di doAnalisa)
         $unit = $risk->unit;
         $periode = $risk->periode;
-        $riskLimitPeriode = \App\Models\RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+        $riskLimitPeriode = \App\Models\RiskLimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
         $riskLimit = $riskLimitPeriode ? $riskLimitPeriode->risk_limit : 0;
 
         // Perhitungan Eksposur Risiko Realisasi

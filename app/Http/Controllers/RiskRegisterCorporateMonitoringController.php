@@ -494,7 +494,7 @@ class RiskRegisterCorporateMonitoringController extends BasicCRUDController
         $risk_tolerance = 0;
         $riskLimit = 0;
 
-        $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+        $riskLimitPeriode = RiskLimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
         if ($riskLimitPeriode) {
             $riskLimit = $riskLimitPeriode->risk_limit;
             $risk_tolerance = $riskLimitPeriode->risk_limit;
