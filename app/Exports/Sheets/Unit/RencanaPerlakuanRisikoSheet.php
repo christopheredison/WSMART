@@ -13,8 +13,9 @@ use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 
-class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
+class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithStrictNullComparison
 {
     private $risikos;
     private $opsiPerlakuan = [];
@@ -51,27 +52,20 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 $sheet = $event->sheet->getDelegate();
                 $sheet->insertNewRowBefore(1, 2);
 
-                // Row 1: Header
                 $sheet->setCellValue('A1', 'No');
                 $sheet->setCellValue('B1', 'Nama BUMN');
                 $sheet->setCellValue('C1', 'No Risiko');
-                $sheet->setCellValue('D1', 'Tipe Perlakuan'); // Tipe: Penyebab / Dampak
+                $sheet->setCellValue('D1', 'Tipe Perlakuan');
                 $sheet->setCellValue('E1', 'Kode Risiko (Penyebab/Dampak)');
                 $sheet->setCellValue('F1', 'Penyebab/Dampak Risiko');
                 $sheet->setCellValue('G1', 'Opsi Perlakuan Risiko');
-
-                // Hapus Jenis Rencana Perlakuan, Geser Rencana Perlakuan ke H
                 $sheet->setCellValue('H1', 'Rencana Perlakuan Risiko');
                 $sheet->setCellValue('I1', 'Output Perlakuan Risiko');
                 $sheet->setCellValue('J1', 'Biaya Perlakuan Risiko');
-
-                // Tambahan: Progress Perlakuan
                 $sheet->setCellValue('K1', 'Progress Perlakuan Risiko');
                 $sheet->setCellValue('L1', 'PIC');
-
                 $sheet->setCellValue('M1', 'Timeline');
 
-                // Row 2: Sub-header bulan untuk Timeline
                 $sheet->setCellValue('M2', '1');
                 $sheet->setCellValue('N2', '2');
                 $sheet->setCellValue('O2', '3');
@@ -85,15 +79,12 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 $sheet->setCellValue('W2', '11');
                 $sheet->setCellValue('X2', '12');
 
-                // Merge A-L
                 for ($col = 'A'; $col <= 'L'; $col++) {
                     $sheet->mergeCells("{$col}1:{$col}2");
                 }
 
-                // Merge Timeline M-X
                 $sheet->mergeCells('M1:X1');
 
-                // Style Header
                 $headerStyle = [
                     'alignment' => [
                         'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
@@ -113,7 +104,6 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 ];
                 $sheet->getStyle('A1:X2')->applyFromArray($headerStyle);
 
-                // Sub-header bulan
                 $sheet->getStyle('M2:X2')->applyFromArray([
                     'fill' => [
                         'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -149,15 +139,15 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
     private function applyTimelineColoring($sheet, $maxRow)
     {
         foreach ($this->timelineData as $rowIndex => $monthsData) {
-            $actualRow = $rowIndex + 3; // Data mulai dari row 3
+            $actualRow = $rowIndex + 3;
             if ($actualRow <= $maxRow) {
                 for ($month = 0; $month < 12; $month++) {
                     if (isset($monthsData[$month]) && $monthsData[$month] === true) {
-                        $columnLetter = chr(77 + $month); // M = 77
+                        $columnLetter = chr(77 + $month);
                         $sheet->getStyle($columnLetter . $actualRow)->applyFromArray([
                             'fill' => [
                                 'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                                'startColor' => ['rgb' => '5B9BD5'] // Blue
+                                'startColor' => ['rgb' => '5B9BD5']
                             ]
                         ]);
                     }
@@ -173,7 +163,6 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
         $currentRowIndex = 0;
 
         foreach ($this->risikos as $risiko) {
-            // 1. Ambil Perlakuan Penyebab
             $perlakuanPenyebab = $risiko->penyebabRisiko->flatMap(function ($penyebab) {
                 return $penyebab->perlakuanPenyebabRisiko->map(function ($p) use ($penyebab) {
                     $p->tipe_perlakuan = 'Penyebab';
@@ -182,7 +171,6 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 });
             });
 
-            // 2. Ambil Perlakuan Dampak
             $perlakuanDampak = $risiko->dampakRisikos->flatMap(function ($dampak) {
                 return $dampak->perlakuanDampakRisikos->map(function ($p) use ($dampak) {
                     $p->tipe_perlakuan = 'Dampak';
@@ -191,7 +179,6 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 });
             });
 
-            // Gabungkan Keduanya
             $allPerlakuan = collect()->merge($perlakuanPenyebab)->merge($perlakuanDampak);
 
             if ($allPerlakuan->isEmpty()) {
@@ -205,7 +192,7 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                     'opsi_perlakuan' => '-',
                     'rencana_perlakuan' => '-',
                     'output_perlakuan' => '-',
-                    'biaya_perlakuan' => '-',
+                    'biaya_perlakuan' => '0',
                     'progress' => '-',
                     'pic' => '-',
                 ];
@@ -234,7 +221,6 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                         }
                     }
 
-                    // Logika Progress dari Monitoring Terakhir
                     $progress = '-';
                     if ($perlakuan->tipe_perlakuan == 'Penyebab' && $perlakuan->lastMonitoring) {
                         $progress = ($perlakuan->lastMonitoring->progress_perlakuan_risiko ?? 0) . '%';
@@ -273,7 +259,14 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
 
     private function formatCurrency($value)
     {
-        if ($value == 0) return 'Rp0';
-        return 'Rp' . number_format($value, 0, ',', '.');
+        if (is_string($value)) {
+            $value = preg_replace('/[^0-9.\-]/', '', $value);
+        }
+        
+        if ($value === '' || $value === null || !is_numeric($value)) {
+            return 0; 
+        }
+
+        return (float) $value;
     }
 }

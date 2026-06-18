@@ -9,8 +9,9 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 
-class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
+class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithStrictNullComparison
 {
     private $risikos;
 
@@ -213,7 +214,21 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
         return $exportData;
     }
 
-    private function formatCurrency($value) { return $value == 0 ? 'Rp0' : 'Rp' . number_format($value, 0, ',', '.'); }
+    private function formatCurrency($value)
+    {
+        // Bersihkan karakter non-numerik jika data berbentuk string (misal spasi atau teks nyasar)
+        if (is_string($value)) {
+            $value = preg_replace('/[^0-9.\-]/', '', $value);
+        }
+        
+        // Jika kosong atau bukan angka, kembalikan integer mutlak 0
+        if ($value === '' || $value === null || !is_numeric($value)) {
+            return 0; 
+        }
+
+        return (float) $value;
+    }
+
     private function formatPercentage($value) { return $value . '%'; }
     private function formatSkalaDampak($skala, $obj) { return $skala ? ($obj ? $skala . ' - ' . $obj->deskripsi : $skala) : '-'; }
     private function formatSkalaProbabilitas($obj) { return $obj ? ($obj->skala ? $obj->tingkat . ' - ' . $obj->skala : $obj->tingkat) : '-'; }

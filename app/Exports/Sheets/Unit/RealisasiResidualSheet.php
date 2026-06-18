@@ -12,8 +12,9 @@ use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 
-class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
+class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithStrictNullComparison
 {
     private $risikos;
     private $bulan;
@@ -54,12 +55,12 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 $sheet->setCellValue('C1', 'Nama BUMN');
                 $sheet->setCellValue('D1', 'No Risiko');
                 $sheet->setCellValue('E1', 'Peristiwa Risiko');
-                $sheet->setCellValue('F1', 'Realisasi Risiko Residual' . $teksBulan); // Tambahan teks bulan
+                $sheet->setCellValue('F1', 'Realisasi Risiko Residual' . $teksBulan);
 
                 $sheet->setCellValue('M1', 'Nilai Efektivitas');
                 $sheet->setCellValue('N1', 'Efektifitas Perlakuan Risiko');
 
-                // Row 2: Sub-header (Asumsi dihapus, semua geser kiri)
+                // Row 2: Sub-header
                 $sheet->setCellValue('F2', 'Nilai Dampak');
                 $sheet->setCellValue('G2', 'Skala Dampak BUMN');
                 $sheet->setCellValue('H2', 'Nilai Probabilitas');
@@ -68,18 +69,15 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 $sheet->setCellValue('K2', 'Skala Risiko BUMN');
                 $sheet->setCellValue('L2', 'Level Risiko BUMN');
 
-                // Merge sel header vertikal untuk kolom A-E (2 level)
                 $mergeColumns = ['A', 'B', 'C', 'D', 'E'];
                 foreach ($mergeColumns as $col) {
                     $sheet->mergeCells("{$col}1:{$col}2");
                 }
 
-                // Merge sel horizontal
-                $sheet->mergeCells('F1:L1'); // Dari F sampai L
-                $sheet->mergeCells('M1:M2'); // Nilai Efektivitas
-                $sheet->mergeCells('N1:N2'); // Efektifitas Perlakuan
+                $sheet->mergeCells('F1:L1');
+                $sheet->mergeCells('M1:M2');
+                $sheet->mergeCells('N1:N2');
 
-                // Atur style untuk header utama (Row 1-2) - Biru
                 $headerStyle = [
                     'alignment' => [
                         'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -99,7 +97,6 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 ];
                 $sheet->getStyle('A1:N2')->applyFromArray($headerStyle);
 
-                // Style khusus untuk sub-header kategori (F2-L2) - Background abu-abu
                 $subHeaderStyle = [
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
@@ -127,7 +124,6 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                     $dataRange = 'A3:N' . $lastRow;
                     $sheet->getStyle($dataRange)->applyFromArray($dataStyle);
 
-                    // Penyesuaian rata tengah untuk kolom-kolom baru
                     $centerCols = ['A', 'B', 'D', 'G', 'H', 'I', 'K', 'L', 'M', 'N'];
                     foreach ($centerCols as $col) {
                         $sheet->getStyle("{$col}3:{$col}{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -145,7 +141,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
 
     private function applyLevelRisikoColoring($sheet, $maxRow)
     {
-        $column = 'L'; // Kolom Level Risiko BUMN geser ke L
+        $column = 'L';
         for ($row = 3; $row <= $maxRow; $row++) {
             $cellValue = $sheet->getCell($column . $row)->getValue();
             $backgroundColor = $this->getLevelRisikoBackgroundColor($cellValue);
@@ -187,8 +183,8 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 $exportData->push([
                     'jenis_data' => '-', 'no' => $nomorUrut, 'nama_bumn' => 'PT Wijaya Karya (Persero) Tbk',
                     'no_risiko' => $nomorUrut, 'peristiwa_risiko' => $risiko->peristiwa_risiko ?? '-',
-                    'nilai_dampak' => '-', 'skala_dampak' => '-', // Asumsi dihapus
-                    'nilai_probabilitas' => '-', 'skala_probabilitas' => '-', 'eksposur_risiko' => '-',
+                    'nilai_dampak' => 0, 'skala_dampak' => '-', 
+                    'nilai_probabilitas' => '-', 'skala_probabilitas' => '-', 'eksposur_risiko' => 0,
                     'skala_risiko' => '-', 'level_risiko' => '-', 'nilai_efektivitas' => '-', 'efektifitas_perlakuan' => '-'
                 ]);
                 $nomorUrut++;
@@ -205,7 +201,6 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 'no_risiko' => $nomorUrut,
                 'peristiwa_risiko' => $risiko->peristiwa_risiko ?? '-',
 
-                // Data monitoring bulanan (Asumsi dihapus)
                 'nilai_dampak' => $this->formatCurrency($monitoring->nilai_dampak ?? 0),
                 'skala_dampak' => $monitoring ? $this->formatSkalaDampak($monitoring->skala_dampak, $monitoring->skalaDampakObj) : '-',
                 'nilai_probabilitas' => $monitoring ? $this->formatPercentage($monitoring->nilai_probabilitas ?? 0) : '-',
@@ -233,8 +228,15 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
 
     private function formatCurrency($value)
     {
-        if ($value == 0 || $value === null) return 'Rp0';
-        return 'Rp' . number_format($value, 0, ',', '.');
+        if (is_string($value)) {
+            $value = preg_replace('/[^0-9.\-]/', '', $value);
+        }
+        
+        if ($value === '' || $value === null || !is_numeric($value)) {
+            return 0; 
+        }
+
+        return (float) $value;
     }
 
     private function formatPercentage($value)

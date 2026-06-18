@@ -10,8 +10,9 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 
-class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
+class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithStrictNullComparison
 {
     private $risikos;
 
@@ -46,14 +47,12 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 $sheet = $event->sheet->getDelegate();
                 $sheet->insertNewRowBefore(1, 2);
 
-                // Row 1: Header utama
                 $sheet->setCellValue('A1', 'No');
                 $sheet->setCellValue('B1', 'Nama BUMN');
                 $sheet->setCellValue('C1', 'No Risiko');
                 $sheet->setCellValue('D1', 'Peristiwa Risiko');
                 $sheet->setCellValue('E1', 'Risiko Inherent');
 
-                // Row 2: Sub-header
                 $sheet->setCellValue('E2', 'Asumsi Perhitungan Dampak');
                 $sheet->setCellValue('F2', 'Nilai Dampak');
                 $sheet->setCellValue('G2', 'Skala Dampak BUMN');
@@ -63,14 +62,12 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 $sheet->setCellValue('K2', 'Skala Risiko BUMN');
                 $sheet->setCellValue('L2', 'Level Risiko BUMN');
 
-                // Merge
                 $mergeColumns = ['A', 'B', 'C', 'D'];
                 foreach ($mergeColumns as $col) {
                     $sheet->mergeCells("{$col}1:{$col}2");
                 }
                 $sheet->mergeCells('E1:L1');
 
-                // Styles
                 $headerStyle = [
                     'alignment' => [
                         'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
@@ -185,7 +182,19 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
         return $exportData;
     }
 
-    private function formatCurrency($value) { return $value == 0 ? 'Rp0' : 'Rp' . number_format($value, 0, ',', '.'); }
+    private function formatCurrency($value)
+    {
+        if (is_string($value)) {
+            $value = preg_replace('/[^0-9.\-]/', '', $value);
+        }
+        
+        if ($value === '' || $value === null || !is_numeric($value)) {
+            return 0; 
+        }
+
+        return (float) $value;
+    }
+
     private function formatPercentage($value) { return $value . '%'; }
 
     private function formatSkalaDampak($analisa)
