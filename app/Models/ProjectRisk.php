@@ -50,6 +50,8 @@ class ProjectRisk extends Model
         'deskripsi_dampak',
         'request_edit',
         'request_edit_reason',
+        'published_at',
+        'closed_at',
     ];
 
     public const STATUS_INPUT_DATA = 1;

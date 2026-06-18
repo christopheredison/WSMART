@@ -48,6 +48,8 @@ class IdentifikasiRisiko extends Model
         'threshold_risk_limit',
         'threshold_risk_appetite',
         'threshold_risk_tolerance',
+        'published_at',
+        'closed_at',
     ];
 
     protected $guarded = [];

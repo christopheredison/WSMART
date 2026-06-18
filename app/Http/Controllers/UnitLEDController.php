@@ -696,6 +696,7 @@ class UnitLEDController extends Controller
             if ($request->input('is_closed') == '1') {
                 $riskRegister->update([
                   'is_closed' => true,
+                  'closed_at' => now(),
                 ]);
 
                 KamusRisikoUnit::updateOrCreate(
