@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\UnitRiskMonitoring;
-use App\Models\RisklimitPeriode;
+use App\Models\RiskLimitPeriode;
 use Illuminate\Support\Facades\Log;
 
 class RecalculateEksposurRisiko extends Command
@@ -63,7 +63,7 @@ class RecalculateEksposurRisiko extends Command
 
                     // Ambil Risk Limit dari periode jika Kualitatif
                     if ($kategoriDampak === 'Kualitatif') {
-                        $riskLimitPeriode = RisklimitPeriode::where('unit_id', $risk->unit_id)
+                        $riskLimitPeriode = RiskLimitPeriode::where('unit_id', $risk->unit_id)
                             ->where('periode_id', $risk->periode_id)
                             ->first();
                         

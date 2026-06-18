@@ -937,7 +937,7 @@ class RiskRegisterApController extends Controller
         //     }
         // }
 
-        $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+        $riskLimitPeriode = RiskLimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
         if ($riskLimitPeriode) {
             $risk_limit = $riskLimitPeriode->risk_limit;
             $risk_tolerance = $riskLimitPeriode->risk_limit;
@@ -1191,7 +1191,7 @@ class RiskRegisterApController extends Controller
         $validated = $request->validate($validationRules);
         $unit = $identifikasiRisiko->unit;
         $periode = $identifikasiRisiko->periode;
-        $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+        $riskLimitPeriode = RiskLimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
 
         // [HIDE] Calculate Skala Dampak base on Nilai Dampak
         // if ($request->kategori_dampak == 'Kuantitatif') {
@@ -2378,7 +2378,7 @@ class RiskRegisterApController extends Controller
             $unit = $risiko->unit;
             $periode = $risiko->periode;
 
-            $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+            $riskLimitPeriode = RiskLimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
             if ($riskLimitPeriode) {
                 $risk_limit = $riskLimitPeriode->risk_limit;
                 $risk_tolerance = $riskLimitPeriode->risk_limit;
