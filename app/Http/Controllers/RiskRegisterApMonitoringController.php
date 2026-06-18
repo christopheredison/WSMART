@@ -1301,6 +1301,11 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             ->orderBy('id', 'desc')
             ->get();
 
+        $riskLimitPeriode = \App\Models\RisklimitPeriode::where('unit_id', $risk->unit_id)
+            ->where('periode_id', $risk->periode_id)
+            ->first();
+        $riskLimit = $riskLimitPeriode ? $riskLimitPeriode->risk_limit : 0;
+
         return view('risk-register-ap.monitorings.show', [
             'period' => $period,
             'risk' => $risk,
@@ -1314,6 +1319,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             'files' => $files,
             'historyMonitorings' => $historyMonitorings,
             'opportunities' => $opportunities,
+            'riskLimit' => $riskLimit,
         ]);
     }
 
@@ -1373,11 +1379,19 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             $toCreate['level_risiko'] = null;
         }
 
-        //perhitungan eksposur risiko
-        if ($risk->riskAnalysis?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF) {
-            $toCreate['eksposur_risiko'] = floatval($toCreate['skala_dampak']) * (1/100) * floatval($toCreate['nilai_probabilitas']) * ($risk->riskAnalysis?->risk_limit ?: 0);
-        } elseif ($risk->riskAnalysis?->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
-            $toCreate['eksposur_risiko'] = floatval($toCreate['nilai_dampak']) * floatval($toCreate['nilai_probabilitas']) / 100;
+        // Ambil risk_limit yang benar dari RisklimitPeriode (Sama seperti di doAnalisa)
+        $unit = $risk->unit;
+        $periode = $risk->periode;
+        $riskLimitPeriode = \App\Models\RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+        $riskLimit = $riskLimitPeriode ? $riskLimitPeriode->risk_limit : 0;
+
+        // Perhitungan Eksposur Risiko Realisasi
+        if ($risk->riskAnalysis?->kategori_dampak === \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF) {
+            // Rumus: skala * 1% * probabilitas% * risk limit
+            $toCreate['eksposure_risiko'] = floatval($toCreate['skala_dampak']) * (1/100) * (floatval($toCreate['nilai_probabilitas']) / 100) * $riskLimit;
+        } elseif ($risk->riskAnalysis?->kategori_dampak === \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
+            // Rumus: nilai_dampak * probabilitas%
+            $toCreate['eksposure_risiko'] = floatval($toCreate['nilai_dampak']) * (floatval($toCreate['nilai_probabilitas']) / 100);
         }
 
         $projectMonitoring = $risk->monitoringRisikos()->create($toCreate);

@@ -9,8 +9,9 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 
-class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
+class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithStrictNullComparison
 {
     private $risikos;
 
@@ -170,10 +171,11 @@ class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, Wit
                 'deskripsi_dampak_q3' => $analisa->deskripsi_dampak_residual_q3 ?? '-',
                 'deskripsi_dampak_q4' => $analisa->deskripsi_dampak_residual_q4 ?? '-',
 
-                'nilai_dampak_q1' => 'Rp0',
-                'nilai_dampak_q2' => 'Rp0',
-                'nilai_dampak_q3' => 'Rp0',
-                'nilai_dampak_q4' => 'Rp0',
+                // Disesuaikan dari string 'Rp0' ke angka murni 0
+                'nilai_dampak_q1' => '0',
+                'nilai_dampak_q2' => '0',
+                'nilai_dampak_q3' => '0',
+                'nilai_dampak_q4' => '0',
 
                 'skala_dampak_q1' => $this->formatSkalaDampak($analisa->skala_dampak_residual_q1, $analisa->skalaDampakResidualQ1Obj),
                 'skala_dampak_q2' => $this->formatSkalaDampak($analisa->skala_dampak_residual_q2, $analisa->skalaDampakResidualQ2Obj),
@@ -213,7 +215,19 @@ class RisikoResidualKualitatifSheet implements FromCollection, WithHeadings, Wit
         return $exportData;
     }
 
-    private function formatCurrency($value) { return $value == 0 ? 'Rp0' : 'Rp' . number_format($value, 0, ',', '.'); }
+    private function formatCurrency($value)
+    {
+        if (is_string($value)) {
+            $value = preg_replace('/[^0-9.\-]/', '', $value);
+        }
+        
+        if ($value === '' || $value === null || !is_numeric($value)) {
+            return 0; 
+        }
+
+        return (float) $value;
+    }
+
     private function formatPercentage($value) { return $value . '%'; }
     private function formatSkalaDampak($skala, $obj) { return $skala ? ($obj ? $skala . ' - ' . $obj->deskripsi : $skala) : '-'; }
     private function formatSkalaProbabilitas($obj) { return $obj ? ($obj->skala ? $obj->tingkat . ' - ' . $obj->skala : $obj->tingkat) : '-'; }

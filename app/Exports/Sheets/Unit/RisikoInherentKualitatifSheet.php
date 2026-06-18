@@ -10,8 +10,9 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 
-class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
+class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithStrictNullComparison
 {
     private $risikos;
 
@@ -146,7 +147,7 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
                 'no_risiko' => $nomorUrut,
                 'peristiwa_risiko' => $risiko->peristiwa_risiko ?? '-',
                 'deskripsi_dampak' => $analisa->deskripsi_dampak ?? $risiko->deskripsi_dampak ?? '-',
-                'nilai_dampak' => 'Rp0',
+                'nilai_dampak' => '0',
                 'skala_dampak' => $this->formatSkalaDampak($analisa),
                 'nilai_probabilitas' => $this->formatPercentage($analisa->nilai_probabilitas ?? 0),
                 'skala_probabilitas' => $this->formatSkalaProbabilitas($analisa),
@@ -161,7 +162,19 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
         return $exportData;
     }
 
-    private function formatCurrency($value) { return $value == 0 ? 'Rp0' : 'Rp' . number_format($value, 0, ',', '.'); }
+    private function formatCurrency($value)
+    {
+        if (is_string($value)) {
+            $value = preg_replace('/[^0-9.\-]/', '', $value);
+        }
+        
+        if ($value === '' || $value === null || !is_numeric($value)) {
+            return 0; 
+        }
+
+        return (float) $value;
+    }
+
     private function formatPercentage($value) { return $value . '%'; }
 
     private function formatSkalaDampak($analisa) {
