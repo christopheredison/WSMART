@@ -44,6 +44,12 @@
                     <h4 class="mb-0 ff-heading-sm">Nilai Risiko Residual Realisasi</h4>
                 </div>
             </div>
+            <div class="alert alert-info d-flex align-items-center mb-4 py-2 border-0 shadow-sm" role="alert">
+                <i class='bx bx-info-circle fs-4 me-2'></i>
+                <div>
+                    Informasi Risk Limit: <strong>Rp {{ number_format($riskLimit ?? 0, 0, ',', '.') }}</strong>
+                </div>
+            </div>
             <div class="row g-2">
                 <div class="col-md-4">
                     <div class="card btn-reveal-trigger">
@@ -235,6 +241,10 @@
                                 placeholder="" readonly />
                                 <input type="hidden" name="realisasi_level_risiko_hidden" id="realisasi_level_risiko_hidden">
                                 <label for="">Realisasi Level Risiko</label>
+                            </div>
+                            <div class="form-floating mt-2">
+                                <input class="form-control inputmask-rupiah" type="text" name="realisasi_eksposur_risiko" id="realisasi_eksposur_risiko" placeholder="" readonly>
+                                <label for="">Realisasi Eksposur Risiko</label>
                             </div>
                         </div>
                     </div>
@@ -902,6 +912,31 @@ function refreshSkalaAndLevelRisiko() {
     }
 }
 
+function refreshEksposurRisiko() {
+    const kategoriDampak = '{{ $riskAnalysis->kategori_dampak }}';
+    const riskLimit = parseFloat('{{ $riskLimit }}') || 0;
+    const nilaiProbabilitas = parseFloat($('#realisasi_nilai_probabilitas').val()) || 0;
+    let eksposurVal = 0;
+
+    if (kategoriDampak === 'Kuantitatif') {
+        // Parse format inputmask rupiah jadi angka murni
+        let nilaiDampakStr = $('#realisasi_nilai_dampak').val().replace(/[^0-9,-]/g, '').replace(',', '.');
+        let nilaiDampak = parseFloat(nilaiDampakStr) || 0;
+        
+        eksposurVal = nilaiDampak * (nilaiProbabilitas / 100);
+    } else if (kategoriDampak === 'Kualitatif') {
+        let skalaDampak = parseFloat($('#realisasi_skala_dampak').val());
+        if (isNaN(skalaDampak)) {
+            skalaDampak = parseFloat($('#realisasi_skala_dampak_hidden').val()) || 0;
+        }
+        
+        eksposurVal = skalaDampak * (1 / 100) * (nilaiProbabilitas / 100) * riskLimit;
+    }
+
+    // Set valuenya ke form (inputmask akan auto format)
+    $('#realisasi_eksposur_risiko').val(eksposurVal);
+}
+
 function convertDateFormat(dateStr) {
   const [year, month, day] = dateStr.split('-');
   return `${day}/${month}/${year}`;
@@ -1075,6 +1110,7 @@ $(document).ready(function() {
 
     $('#section-realisasi').on('change', '.update-trigger', function() {
         refreshSkalaAndLevelRisiko();
+        refreshEksposurRisiko();
     }).change();
 
     // Toggle logic for log section
@@ -1621,6 +1657,7 @@ $(document).ready(function() {
         // console.log("hitung skala dampak");
         hitungRealisasiSkalaDampak();
         refreshSkalaAndLevelRisiko();
+        refreshEksposurRisiko();
     });
 
     $('#realisasi_skala_dampak').on('change', function() {
@@ -1630,6 +1667,7 @@ $(document).ready(function() {
             $('#realisasi_skala_dampak_hidden').val(value);
         }
         refreshSkalaAndLevelRisiko();
+        refreshEksposurRisiko();
     });
 
     $('.datatable').DataTable({
@@ -1709,6 +1747,7 @@ $(document).ready(function() {
     // Panggil fungsi saat halaman dimuat
     // hitungRealisasiSkalaDampak();
     refreshSkalaAndLevelRisiko();
+    refreshEksposurRisiko();
 });
 </script>
 @endpush

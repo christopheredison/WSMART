@@ -425,6 +425,12 @@
                     <h4 class="mb-0 ff-heading-sm">Nilai Risiko Residual Realisasi</h4>
                 </div>
             </div>
+            <div class="alert alert-info d-flex align-items-center mb-4 py-2 border-0 shadow-sm" role="alert">
+                <i class='bx bx-info-circle fs-4 me-2'></i>
+                <div>
+                    Informasi Risk Limit: <strong>Rp {{ number_format($riskLimit ?? 0, 0, ',', '.') }}</strong>
+                </div>
+            </div>
             <div class="row g-2">
                 <div class="col-md-4">
                     <div class="card btn-reveal-trigger">
