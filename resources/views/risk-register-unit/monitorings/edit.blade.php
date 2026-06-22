@@ -1122,14 +1122,89 @@ $(document).ready(function() {
         toggle.html("<i class='bx bx-chevron-down'></i> Show Log");
     });
 
-    // Listener Toggle Dropdown Modal KRI
-    $('#status_kri_select').on('change', function() {
-        const val = $(this).val();
-        if (val === '2' || val === '3') {
-            $('#kri-pengendalian-section').removeClass('d-none');
+    $('.decimal-kri-input').inputmask({
+        alias: 'numeric',
+        groupSeparator: '.',
+        radixPoint: ',',
+        autoGroup: true,
+        digits: 2,
+        digitsOptional: true,
+        placeholder: '0',
+        rightAlign: false,
+        min: 0,
+        allowMinus: false,
+        autoUnmask: false,
+        removeMaskOnSubmit: false
+    });
+
+    function cleanDecimalKri(value) {
+        if (value === null || value === undefined) return '';
+
+        value = value.toString().trim();
+
+        if (value === '') return '';
+
+        // Format Indonesia: 1.234,56 -> 1234.56
+        value = value.replace(/\s/g, '');
+        value = value.replace(/\./g, '');
+        value = value.replace(',', '.');
+
+        const parsed = parseFloat(value);
+
+        if (isNaN(parsed)) return '';
+
+        return parsed.toFixed(2);
+    }
+
+    function formatDecimalKriDisplay(value) {
+        const parsed = parseFloat(value);
+
+        if (isNaN(parsed)) return '-';
+
+        return new Intl.NumberFormat('id-ID', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        }).format(parsed);
+    }
+
+    function isFilledAllowZero(value) {
+        return value !== null && value !== undefined && value.toString().trim() !== '';
+    }
+
+    function toggleKriPengendalianRequired() {
+        const statusKri = $('#status_kri_select').val();
+        const wajibPengendalian = statusKri === '2' || statusKri === '3';
+
+        const section = $('#kri-pengendalian-section');
+        const fields = section.find('[data-required-kri="true"]');
+
+        if (wajibPengendalian) {
+            section.removeClass('d-none');
+
+            fields.each(function () {
+                $(this).prop('required', true);
+
+                if (
+                    ($(this).attr('name') === 'kri_biaya_rencana_pengendalian' ||
+                    $(this).attr('name') === 'kri_biaya_realisasi_pengendalian') &&
+                    !isFilledAllowZero($(this).val())
+                ) {
+                    $(this).val('0');
+                }
+            });
         } else {
-            $('#kri-pengendalian-section').addClass('d-none');
+            section.addClass('d-none');
+
+            fields.each(function () {
+                $(this)
+                    .prop('required', false)
+                    .removeClass('is-invalid');
+            });
         }
+    }
+
+    $('#status_kri_select').on('change', function () {
+        toggleKriPengendalianRequired();
     });
 
     $('.btn-action').on('click', function() {
@@ -1195,10 +1270,10 @@ $(document).ready(function() {
             let statusVal = kriProject['status_kri_terkini_q' + quarter] || latestMonitoring?.status_kri_terkini || '';
             $('#modal_satuan_addon').text(kriProject.satuan_kri || '-');
 
-            if (valKri) {
-                valKri = valKri.toString().replace('.', ',');
+            if (valKri !== null && valKri !== undefined && valKri !== '') {
+                valKri = formatDecimalKriDisplay(cleanDecimalKri(valKri));
             }
-            
+
             $('#modalUpdateKri input[name="nilai_kri"]').val(valKri);
             $('#modalUpdateKri select[name="status_kri"]').val(statusVal).trigger('change');
 
@@ -1207,6 +1282,8 @@ $(document).ready(function() {
             $('#modalUpdateKri [name="kri_biaya_rencana_pengendalian"]').val(kriProject.biaya_rencana_pengendalian || kriPeng.biaya_rencana_pengendalian || 0);
             $('#modalUpdateKri [name="kri_realisasi_pengendalian"]').val(kriProject.realisasi_pengendalian || kriPeng.realisasi_pengendalian || '');
             $('#modalUpdateKri [name="kri_biaya_realisasi_pengendalian"]').val(kriProject.biaya_realisasi_pengendalian || kriPeng.biaya_realisasi_pengendalian || 0);
+
+            toggleKriPengendalianRequired();
 
             $('#modalUpdateKri').modal('show');
 
@@ -1548,25 +1625,72 @@ $(document).ready(function() {
     });
 
     $('#btnSimpanUpdateKri').on('click', function() {
-        if (!$('#formUpdateKri')[0].checkValidity()) {
-            $('#formUpdateKri')[0].reportValidity();
+        toggleKriPengendalianRequired();
+
+        const form = $('#formUpdateKri')[0];
+
+        if (!form.checkValidity()) {
+            form.reportValidity();
             return;
         }
 
         const id = $('#formUpdateKri :input[name="kri_project_id"]').val();
-        const nilaiKri = $('#formUpdateKri :input[name="nilai_kri"]').val();
+
+        const nilaiKriRaw = $('#formUpdateKri :input[name="nilai_kri"]').val();
+        const nilaiKri = cleanDecimalKri(nilaiKriRaw);
+
         const statusKri = $('#formUpdateKri :input[name="status_kri"]').val();
+
+        if (!isFilledAllowZero(nilaiKri)) {
+            Swal.fire('Peringatan', 'Nilai Realisasi KRI wajib diisi.', 'warning');
+            return;
+        }
+
+        if (!['1', '2', '3'].includes(statusKri)) {
+            Swal.fire('Peringatan', 'Status KRI wajib dipilih.', 'warning');
+            return;
+        }
 
         // Update kri object
         kriProjects[id]['nilai_kri_terkini_q' + quarter] = nilaiKri;
         kriProjects[id]['status_kri_terkini_q' + quarter] = statusKri;
-        
-        // Ambil data pengendalian
+
+        // Ambil data pengendalian jika status Waspada/Bahaya
         if (statusKri === '2' || statusKri === '3') {
-            kriProjects[id]['rencana_pengendalian'] = $('#formUpdateKri [name="kri_rencana_pengendalian"]').val();
-            kriProjects[id]['biaya_rencana_pengendalian'] = $('#formUpdateKri [name="kri_biaya_rencana_pengendalian"]').val();
-            kriProjects[id]['realisasi_pengendalian'] = $('#formUpdateKri [name="kri_realisasi_pengendalian"]').val();
-            kriProjects[id]['biaya_realisasi_pengendalian'] = $('#formUpdateKri [name="kri_biaya_realisasi_pengendalian"]').val();
+            const rencanaPengendalian = $('#formUpdateKri [name="kri_rencana_pengendalian"]').val();
+            const realisasiPengendalian = $('#formUpdateKri [name="kri_realisasi_pengendalian"]').val();
+            const biayaRencanaPengendalian = $('#formUpdateKri [name="kri_biaya_rencana_pengendalian"]').val();
+            const biayaRealisasiPengendalian = $('#formUpdateKri [name="kri_biaya_realisasi_pengendalian"]').val();
+
+            if (!isFilledAllowZero(rencanaPengendalian)) {
+                Swal.fire('Peringatan', 'Rencana Pengendalian wajib diisi.', 'warning');
+                return;
+            }
+
+            if (!isFilledAllowZero(realisasiPengendalian)) {
+                Swal.fire('Peringatan', 'Realisasi Pengendalian wajib diisi.', 'warning');
+                return;
+            }
+
+            if (!isFilledAllowZero(biayaRencanaPengendalian)) {
+                Swal.fire('Peringatan', 'Biaya Rencana Pengendalian wajib diisi. Isi 0 jika tidak ada biaya.', 'warning');
+                return;
+            }
+
+            if (!isFilledAllowZero(biayaRealisasiPengendalian)) {
+                Swal.fire('Peringatan', 'Biaya Realisasi Pengendalian wajib diisi. Isi 0 jika tidak ada biaya.', 'warning');
+                return;
+            }
+
+            kriProjects[id]['rencana_pengendalian'] = rencanaPengendalian;
+            kriProjects[id]['biaya_rencana_pengendalian'] = biayaRencanaPengendalian;
+            kriProjects[id]['realisasi_pengendalian'] = realisasiPengendalian;
+            kriProjects[id]['biaya_realisasi_pengendalian'] = biayaRealisasiPengendalian;
+        } else {
+            kriProjects[id]['rencana_pengendalian'] = null;
+            kriProjects[id]['biaya_rencana_pengendalian'] = 0;
+            kriProjects[id]['realisasi_pengendalian'] = null;
+            kriProjects[id]['biaya_realisasi_pengendalian'] = 0;
         }
 
         // Update DOM status badge
@@ -1577,7 +1701,8 @@ $(document).ready(function() {
 
         const satuanTeks = kriProjects[id]['satuan_kri'] ? ' ' + kriProjects[id]['satuan_kri'] : '';
         const tr = $('#table-kri tr[data-id="' + id + '"]');
-        tr.find('.display-nilai-kri').text(`${nilaiKri} ${satuanTeks}`);
+
+        tr.find('.display-nilai-kri').text(`${formatDecimalKriDisplay(nilaiKri)}${satuanTeks}`);
         tr.find('.display-kondisi').html(`<span class="badge bg-${colorClass} p-2">${statusText}</span>`);
 
         $('#modalUpdateKri').modal('hide');

@@ -82,22 +82,31 @@
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
                             <h6 class="text-primary text-uppercase mb-3">Input Realisasi</h6>
+                            
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <div class="input-group">
                                         <div class="form-floating flex-grow-1">
-                                            <input type="text" class="form-control decimal-input border-primary" name="nilai_kri" placeholder="0" required>
+                                            <input
+                                                type="text"
+                                                class="form-control decimal-input decimal-kri-input border-primary"
+                                                name="nilai_kri"
+                                                placeholder="0,00"
+                                                inputmode="decimal"
+                                                required
+                                            >
                                             <label>Nilai Realisasi KRI <span class="text-danger">*</span></label>
                                         </div>
                                         <span class="input-group-text border-primary bg-primary-subtle text-primary fw-bold" id="modal_satuan_addon">-</span>
                                     </div>
                                 </div>
+
                                 <div class="col-md-6">
                                     <div class="form-group form-floating">
                                         <select class="form-select border-primary" name="status_kri" id="status_kri_select" required>
                                             <option value="" disabled selected>Pilih Status</option>
                                             <option value="1">Aman</option>
-                                            <option value="2">Waspada (Siaga)</option>
+                                            <option value="2">Siaga</option>
                                             <option value="3">Bahaya</option>
                                         </select>
                                         <label>Status KRI <span class="text-danger">*</span></label>
@@ -106,30 +115,58 @@
 
                                 <div class="col-12 d-none mt-4 animate__animated animate__fadeIn" id="kri-pengendalian-section">
                                     <div class="p-3 border border-danger rounded bg-danger-subtle bg-opacity-10">
-                                        <h6 class="text-danger mb-3"><i class="bx bx-error-circle"></i> Pengendalian Parameter KRI</h6>
+                                        <h6 class="text-danger mb-3">
+                                            <i class="bx bx-error-circle"></i> Pengendalian Parameter KRI
+                                        </h6>
+
                                         <div class="row g-3">
                                             <div class="col-md-6">
                                                 <div class="form-group form-floating">
-                                                    <textarea class="form-control bg-white shadow-none" name="kri_rencana_pengendalian" style="height: 80px;"></textarea>
-                                                    <label>Rencana Pengendalian</label>
+                                                    <textarea
+                                                        class="form-control bg-white shadow-none kri-pengendalian-required"
+                                                        name="kri_rencana_pengendalian"
+                                                        style="height: 80px;"
+                                                        data-required-kri="true"
+                                                    ></textarea>
+                                                    <label>Rencana Pengendalian <span class="text-danger">*</span></label>
                                                 </div>
                                             </div>
+
                                             <div class="col-md-6">
                                                 <div class="form-group form-floating">
-                                                    <textarea class="form-control bg-white shadow-none" name="kri_realisasi_pengendalian" style="height: 80px;"></textarea>
-                                                    <label>Realisasi Pengendalian</label>
+                                                    <textarea
+                                                        class="form-control bg-white shadow-none kri-pengendalian-required"
+                                                        name="kri_realisasi_pengendalian"
+                                                        style="height: 80px;"
+                                                        data-required-kri="true"
+                                                    ></textarea>
+                                                    <label>Realisasi Pengendalian <span class="text-danger">*</span></label>
                                                 </div>
                                             </div>
+
                                             <div class="col-md-6">
                                                 <div class="form-group form-floating">
-                                                    <input type="text" class="form-control bg-white inputmask-rupiah" name="kri_biaya_rencana_pengendalian" value="0">
-                                                    <label>Biaya Rencana Pengendalian</label>
+                                                    <input
+                                                        type="text"
+                                                        class="form-control bg-white inputmask-rupiah kri-pengendalian-required"
+                                                        name="kri_biaya_rencana_pengendalian"
+                                                        value="0"
+                                                        data-required-kri="true"
+                                                    >
+                                                    <label>Biaya Rencana Pengendalian <span class="text-danger">*</span></label>
                                                 </div>
                                             </div>
+
                                             <div class="col-md-6">
                                                 <div class="form-group form-floating">
-                                                    <input type="text" class="form-control bg-white inputmask-rupiah" name="kri_biaya_realisasi_pengendalian" value="0">
-                                                    <label>Biaya Realisasi Pengendalian</label>
+                                                    <input
+                                                        type="text"
+                                                        class="form-control bg-white inputmask-rupiah kri-pengendalian-required"
+                                                        name="kri_biaya_realisasi_pengendalian"
+                                                        value="0"
+                                                        data-required-kri="true"
+                                                    >
+                                                    <label>Biaya Realisasi Pengendalian <span class="text-danger">*</span></label>
                                                 </div>
                                             </div>
                                         </div>
