@@ -11,6 +11,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\LaporanUnitExport;
 use App\Exports\LaporanProjectExport;
 use App\Exports\LaporanLossEventProjectExport;
+use App\Exports\LaporanRiskRegisterBaruExport;
 use Illuminate\Support\Facades\Log;
 
 class LaporanController extends Controller
@@ -76,15 +77,17 @@ class LaporanController extends Controller
     public function unitExport(Request $request)
     {
         $request->validate([
-            'periode_id' => 'required|exists:periodes,id',
-            'unit_id'    => 'required|exists:units,id',
-            'month'      => 'nullable|integer|between:1,12',
+            'periode_id'     => 'required|exists:periodes,id',
+            'unit_id'        => 'required|exists:units,id',
+            'month'          => 'nullable|integer|between:1,12',
+            'format_laporan' => 'required|in:lama,baru',
         ]);
 
         try {
             $periodeId = $request->input('periode_id');
             $unitId    = $request->input('unit_id');
             $month     = $request->input('month');
+            $format    = $request->input('format_laporan');
 
             $periode = Periode::find($periodeId);
             $unit    = Unit::find($unitId);
@@ -96,10 +99,17 @@ class LaporanController extends Controller
             ];
             $monthString = $month ? '_' . $namaBulan[(int)$month] : '';
 
-            $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
+            // Tentukan Class Export berdasarkan pilihan
+            if ($format === 'baru') {
+                $fileName = 'Laporan_Risk_Register_New_Format_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
+                $exportClass = new LaporanRiskRegisterBaruExport($periodeId, $unitId, $month);
+            } else {
+                $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
+                $exportClass = new LaporanUnitExport($periodeId, $unitId, $month);
+            }
 
             $fileContents = Excel::raw(
-                new LaporanUnitExport($periodeId, $unitId, $month),
+                $exportClass,
                 \Maatwebsite\Excel\Excel::XLSX
             );
 
@@ -127,12 +137,14 @@ class LaporanController extends Controller
             'periode_id' => 'required|exists:periodes,id',
             'unit_id'    => 'required|exists:units,id',
             'month'      => 'nullable|integer|between:1,12',
+            'format_laporan' => 'required|in:lama,baru',
         ]);
 
         try {
             $periodeId = $request->input('periode_id');
             $unitId    = $request->input('unit_id');
             $month     = $request->input('month');
+            $format    = $request->input('format_laporan');
 
             $periode = Periode::find($periodeId);
             $unit    = Unit::find($unitId);
@@ -144,10 +156,17 @@ class LaporanController extends Controller
             ];
             $monthString = $month ? '_' . $namaBulan[(int)$month] : '';
 
-            $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
+             // Tentukan Class Export berdasarkan pilihan
+            if ($format === 'baru') {
+                $fileName = 'Laporan_Risk_Register_New_Format_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
+                $exportClass = new LaporanRiskRegisterBaruExport($periodeId, $unitId, $month);
+            } else {
+                $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
+                $exportClass = new LaporanUnitExport($periodeId, $unitId, $month);
+            }
 
             $fileContents = Excel::raw(
-                new LaporanUnitExport($periodeId, $unitId, $month),
+                $exportClass,
                 \Maatwebsite\Excel\Excel::XLSX
             );
 

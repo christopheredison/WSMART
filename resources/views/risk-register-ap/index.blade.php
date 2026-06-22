@@ -373,7 +373,12 @@
                   {{ $rejectedText }}
                   @break
                   @case(6)
-                  Published
+                  @php
+                      $statusText = 'Published';
+                      if ($item->request_edit == 1) $statusText .= ' (Request Edit)';
+                      else if ($item->request_edit == 3) $statusText .= ' (Request Edit Ditolak)';
+                  @endphp
+                  {{ $statusText }}
                   @break
                   @default
                   Draft
@@ -516,6 +521,30 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-submit" id="btn-kirim-perbaikan">Kirim Perbaikan</button>
         <button type="button" class="btn btn-muted" data-bs-dismiss="modal">Batal</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="modalRequestEdit" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content p-0">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title text-white">Request Edit Risiko</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="request_risk_id">
+        <div class="alert alert-info mb-3">
+          Risiko ini telah di-Publish. Silakan ajukan request jika perlu melakukan perubahan. Request akan dikirimkan ke <strong>Risk Owner MR</strong>.
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label fw-bold">Alasan Perubahan Data Risiko <span class="text-danger">*</span></label>
+          <textarea id="request_reason" class="form-control" rows="4" placeholder="Tuliskan alasan yang jelas mengapa risiko ini perlu diubah..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-info" onclick="submitRequestEdit()"><span class="bx bx-send me-1"></span>Kirim Request</button>
       </div>
     </div>
   </div>
@@ -804,6 +833,139 @@ function submitVerifikasi(status) {
             }
         }
     });
+}
+
+let submitReqUrl = window.location.href.includes('risk-register-ap') ? '{{ route("risk-register-ap.submit-request-edit") }}' : '{{ route("risk-register-unit.submit-request-edit") }}';
+let approveReqUrl = window.location.href.includes('risk-register-ap') ? '{{ route("risk-register-ap.approve-request-edit") }}' : '{{ route("risk-register-unit.approve-request-edit") }}';
+let rejectReqUrl = window.location.href.includes('risk-register-ap') ? '{{ route("risk-register-ap.reject-request-edit") }}' : '{{ route("risk-register-unit.reject-request-edit") }}';
+
+function showRequestEditModal(id) {
+    $('#request_risk_id').val(id);
+    $('#request_reason').val('');
+    $('#modalRequestEdit').modal('show');
+}
+
+function submitRequestEdit() {
+    const id = $('#request_risk_id').val();
+    const reason = $('#request_reason').val().trim();
+
+    if(!reason) {
+        Swal.fire('Peringatan', 'Alasan perubahan wajib diisi!', 'warning');
+        return;
+    }
+
+    Swal.fire({
+        title: 'Kirim Request?',
+        text: 'Request edit risiko akan dikirimkan ke Risk Owner MR.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Kirim',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if(result.isConfirmed) {
+            Swal.fire({title: 'Memproses...', didOpen: () => {Swal.showLoading()}});
+            $.ajax({
+                url: '{{ route("risk-register-ap.submit-request-edit") }}',
+                type: 'POST',
+                data: { _token: '{{ csrf_token() }}', risk_id: id, reason: reason },
+                success: function(res) {
+                    $('#modalRequestEdit').modal('hide');
+                    Swal.fire('Berhasil', res.message, 'success').then(() => location.reload());
+                },
+                error: function(err) {
+                    Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                }
+            });
+        }
+    });
+}
+
+function approveRequestEdit(id, reason, riskName, unitName) {
+    Swal.fire({
+        title: 'Tindak Lanjut Request Edit',
+        html: `Apakah Anda ingin menyetujui atau menolak request edit untuk risiko <strong>${riskName}</strong> pada unit/divisi <strong>${unitName}</strong> ini?<br><br>` +
+              `<div class="p-3 mt-2 rounded bg-light border border-info text-start">` +
+                  `<strong>Alasan Request Edit:</strong><br>` +
+                  `<span class="text-dark">${reason}</span>` +
+              `</div>`,
+        icon: 'question',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: '<span class="bx bx-check"></span> Setujui',
+        denyButtonText: '<span class="bx bx-x"></span> Tolak',
+        cancelButtonText: 'Batal',
+        customClass: {
+            confirmButton: 'btn btn-success me-2',
+            denyButton: 'btn btn-danger me-2',
+            cancelButton: 'btn btn-secondary'
+        },
+        buttonsStyling: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({title: 'Menyetujui...', didOpen: () => {Swal.showLoading()}});
+            $.ajax({
+                url: approveReqUrl,
+                type: 'POST',
+                data: { _token: '{{ csrf_token() }}', risk_id: id },
+                success: function(res) {
+                    Swal.fire('Berhasil', res.message, 'success').then(() => {
+                        clearUrlParam(); location.reload();
+                    });
+                },
+                error: function(err) {
+                    Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                }
+            });
+        } else if (result.isDenied) {
+            Swal.fire({
+                title: 'Konfirmasi Penolakan',
+                text: 'Yakin ingin menolak request ini? Status akan tetap Published.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Tolak',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#dc3545'
+            }).then((denyResult) => {
+                if (denyResult.isConfirmed) {
+                    Swal.fire({title: 'Menolak...', didOpen: () => {Swal.showLoading()}});
+                    $.ajax({
+                        url: rejectReqUrl,
+                        type: 'POST',
+                        data: { _token: '{{ csrf_token() }}', risk_id: id },
+                        success: function(res) {
+                            Swal.fire('Ditolak', res.message, 'info').then(() => {
+                                clearUrlParam(); location.reload();
+                            });
+                        },
+                        error: function(err) {
+                            Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                        }
+                    });
+                }
+            });
+        }
+    });
+}
+
+// Handler Jika diakses melalui Link dari Lonceng Notifikasi
+$(document).ready(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const autoVerifyId = urlParams.get('verify_request_edit');
+    if (autoVerifyId) {
+        // Cari tombol di tabel yang ID-nya cocok lalu trigger click otomatis
+        const btnApprove = $(`button[onclick*="approveRequestEdit(${autoVerifyId}"]`);
+        if (btnApprove.length > 0) {
+            setTimeout(() => btnApprove.click(), 500);
+        }
+    }
+});
+
+function clearUrlParam() {
+    if (window.location.search.includes('verify_request_edit')) {
+        const url = new URL(window.location);
+        url.searchParams.delete('verify_request_edit');
+        window.history.replaceState({}, '', url);
+    }
 }
 </script>
 <script>

@@ -21,7 +21,7 @@
         <form id="exportForm">
           @csrf
           <div class="row g-3">
-            <div class="col-md-3">
+            <div class="col-md-2">
               <label for="periode_id" class="form-label">Periode</label>
               <select name="periode_id" id="periode_id" class="form-select select2" required>
                 <option value="">Pilih Periode...</option>
@@ -30,7 +30,7 @@
                 @endforeach
               </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
               <label for="month" class="form-label">Bulan Monitoring</label>
               <select name="month" id="month" class="form-select select2">
                 <option value="">Pilih Bulan (Opsional)...</option>
@@ -57,6 +57,13 @@
                 @else
                   <option value="{{ $units->id }}" selected>{{ $units->name }}</option>
                 @endif
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label for="format_laporan" class="form-label">Format Laporan</label>
+              <select name="format_laporan" id="format_laporan" class="form-select select2" required>
+                <option value="lama">Format Lama</option>
+                <option value="baru">Format Baru</option>
               </select>
             </div>
             <div class="col-md-2 d-flex align-items-end">
@@ -102,6 +109,7 @@ $(document).ready(function() {
                 periode_id: periodeId,
                 unit_id: unitId,
                 month: $('#month').val(),
+                format_laporan: $('#format_laporan').val(),
             },
             xhrFields: {
                 responseType: 'blob'

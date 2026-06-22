@@ -729,6 +729,10 @@ Route::prefix('risk-register-unit')->middleware('auth')->group(function () {
     Route::get('/rencana-perlakuan-dampak/{id}', [RiskRegisterUnitController::class, 'editRencanaPerlakuanDampak']);
     Route::put('/rencana-perlakuan-dampak/{id}', [RiskRegisterUnitController::class, 'updateRencanaPerlakuanDampak']);
     Route::delete('/rencana-perlakuan-dampak/{id}', [RiskRegisterUnitController::class, 'hapusRencanaPerlakuanDampak']);
+    
+    Route::post('/submit-request-edit', [RiskRegisterUnitController::class, 'submitRequestEdit'])->name('risk-register-unit.submit-request-edit');
+    Route::post('/approve-request-edit', [RiskRegisterUnitController::class, 'approveRequestEdit'])->name('risk-register-unit.approve-request-edit');
+    Route::post('/reject-request-edit', [RiskRegisterUnitController::class, 'rejectRequestEdit'])->name('risk-register-unit.reject-request-edit');
 });
 
 Route::prefix('risk-register-ap')->group(function () {
@@ -767,6 +771,10 @@ Route::prefix('risk-register-ap')->group(function () {
 
     Route::get('/{riskRegister}/loss-events/create', [ApLEDController::class, 'riskChangeToLed'])->name('risk-register-ap.loss-events.create')->middleware('can:risk_register_list');
     Route::post('/{riskRegister}/loss-events', [ApLEDController::class, 'riskChangeToLedStore'])->name('risk-register-ap.loss-events.store')->middleware('can:risk_register_list');
+
+    Route::post('/submit-request-edit', [RiskRegisterApController::class, 'submitRequestEdit'])->name('risk-register-ap.submit-request-edit');
+    Route::post('/approve-request-edit', [RiskRegisterApController::class, 'approveRequestEdit'])->name('risk-register-ap.approve-request-edit');
+    Route::post('/reject-request-edit', [RiskRegisterApController::class, 'rejectRequestEdit'])->name('risk-register-ap.reject-request-edit');
 });
 
 Route::match(['get', 'post'], 'kamus-risiko-ap', [KamusRisikoApController::class, 'index'])->name('kamus-risiko-ap.index');

@@ -425,9 +425,15 @@
                 <div class="col-auto order-3 px-0 px-md-1 d-flex">
                     <button type="button" data-action="save" class="btn btn-warning bg-warning ms-auto btn-action">Simpan dan Keluar</button>
                 </div>
-                <div class="col-auto order-3 px-0 px-md-1 d-flex">
-                    <button type="button" data-action="savenext" class="btn btn-primary ms-auto btn-action">Simpan dan Lanjutkan Analisa</button>
-                </div>
+                @if($identifikasiRisiko->request_edit != 2)
+                    <div class="col-auto order-3 px-0 px-md-1 d-flex">
+                        <button type="button" data-action="savenext" class="btn btn-primary ms-auto btn-action">Simpan dan Lanjutkan Analisa</button>
+                    </div>
+                @else
+                    <div class="col-auto order-3 px-0 px-md-1 d-flex">
+                        <button type="button" data-action="savenext" class="btn btn-primary ms-auto btn-action">Simpan dan Lanjut Perencanaan</button>
+                    </div>
+                @endif
             </div>
         </div>
     </form>

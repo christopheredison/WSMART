@@ -725,6 +725,9 @@ class ProjectRiskController extends BasicCRUDController
             }
         }
 
+        // Ambil nama project secara global karena list ini spesifik per project
+        $globalProjectName = addslashes($projectPeriodeList->project->project_name);
+
         // INJEKSI SCRIPT JAVASCRIPT & MODAL REQUEST EDIT
         $this->extraScripts[] = <<<SCRIPT
             <div class="modal fade" id="modalRequestEdit" tabindex="-1" aria-hidden="true">
@@ -818,16 +821,15 @@ class ProjectRiskController extends BasicCRUDController
 
                 // Tentukan Alasan
                 if (manualReason !== null) {
-                    reason = manualReason; // Pakai alasan dari backend jika auto-trigger
+                    reason = manualReason; 
                 } else if (rowData && rowData.request_edit_reason) {
-                    reason = rowData.request_edit_reason; // Pakai data Datatable jika manual klik
+                    reason = rowData.request_edit_reason; 
                 }
 
                 // Tentukan Nama Risiko
                 if (manualRiskName !== null) {
-                    riskName = manualRiskName; // Dari auto-trigger URL
+                    riskName = manualRiskName;
                 } else if (rowData) {
-                    // Dari klik tombol Datatable
                     if (rowData.peristiwa_risiko_id == 0) {
                         riskName = rowData.rencana_kegiatan || 'Risiko Proyek';
                     } else {
@@ -837,7 +839,7 @@ class ProjectRiskController extends BasicCRUDController
 
                 Swal.fire({
                     title: 'Tindak Lanjut Request Edit',
-                    html: `Apakah Anda ingin menyetujui atau menolak request edit untuk risiko <strong>\${riskName}</strong> ini?<br><br>` +
+                    html: `Apakah Anda ingin menyetujui atau menolak request edit untuk risiko <strong>\${riskName}</strong> pada proyek <strong>{$globalProjectName}</strong> ini?<br><br>` +
                           '<div class="p-3 mt-2 rounded bg-light border border-info text-start">' +
                               '<strong>Alasan Request Edit:</strong><br>' +
                               '<span class="text-dark">' + reason + '</span>' +

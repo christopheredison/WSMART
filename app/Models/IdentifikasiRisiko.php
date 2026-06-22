@@ -50,6 +50,8 @@ class IdentifikasiRisiko extends Model
         'threshold_risk_tolerance',
         'published_at',
         'closed_at',
+        'request_edit',
+        'request_edit_reason',
     ];
 
     protected $guarded = [];
@@ -172,6 +174,11 @@ class IdentifikasiRisiko extends Model
     public function parameterRisikos()
     {
         return $this->hasMany(ParameterRisikoUnit::class, 'risiko_id');
+    }
+
+    public function opportunities()
+    {
+        return $this->hasMany(Opportunity::class, 'identifikasi_risiko_id');
     }
 
     public function toDraftStructure() {

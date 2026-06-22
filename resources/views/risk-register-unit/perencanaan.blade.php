@@ -269,9 +269,11 @@
     <div class="col-12">
         <div class="d-flex justify-content-between">
             <div>
-                <a href="{{ route('risk-register-unit.analisa', $identifikasiRisiko->id) }}" class="btn btn-secondary me-2">
-                    <span class="bx bx-chevron-left" style="line-height: 0.8;"></span> Kembali ke Analisa
-                </a>
+                @if($identifikasiRisiko->request_edit != 2)
+                    <a href="{{ route('risk-register-unit.analisa', $identifikasiRisiko->id) }}" class="btn btn-secondary me-2">
+                        <span class="bx bx-chevron-left" style="line-height: 0.8;"></span> Kembali ke Analisa
+                    </a>
+                @endif
                 <a href="{{ route('risk-register-unit.index') }}" class="btn btn-outline-secondary">Selesai</a>
             </div>
             <div>
