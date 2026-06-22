@@ -199,7 +199,7 @@ if (!function_exists('formatKriBatasJs')) {
                             </tbody>
                         </table>
 
-                        <h5 class="mt-6 mb-2">Perlakuan terhadap KRI</h5>
+                        <h5 class="mt-6 mb-2">Perlakuan terhadap Parameter / KRI</h5>
                         <table class="table" id="table-kri">
                             <thead>
                                 <tr>
@@ -239,7 +239,7 @@ if (!function_exists('formatKriBatasJs')) {
                                             {{ $lastMonitoring?->nilai_kri_terkini ?? '-' }} {{ $kriProject->satuan_kri ?: '-' }}
                                         </td>
                                         @php
-                                            $statusMap = [1 => 'Aman', 2 => 'Waspada', 3 => 'Bahaya'];
+                                            $statusMap = [1 => 'Aman', 2 => 'Siaga', 3 => 'Bahaya'];
                                             $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
                                             $status = $lastMonitoring?->status_kri_terkini;
                                         @endphp
@@ -257,7 +257,7 @@ if (!function_exists('formatKriBatasJs')) {
                                                 class="btn btn-sm btn-link btn-action" 
                                                 data-action="view-kri" 
                                                 data-bs-toggle="tooltip" 
-                                                title="Lihat Detail KRI" 
+                                                title="Lihat Detail Parameter / KRI" 
                                                 data-monitoring-id="{{ $riskMonitoring->id }}" 
                                                 data-kri-id="{{ $kriProject->id }}"
                                             >
@@ -934,7 +934,7 @@ if (!function_exists('formatKriBatasJs')) {
                                             </tr>
                                             <tr>
                                                 <th class="bg-success text-white">Aman</th>
-                                                <th class="bg-warning text-dark">Waspada</th>
+                                                <th class="bg-warning text-dark">Siaga</th>
                                                 <th class="bg-danger text-white">Bahaya</th>
                                             </tr>
                                         </thead>
@@ -951,7 +951,7 @@ if (!function_exists('formatKriBatasJs')) {
                                                     <td class="fw-bold text-center text-primary">{{ $realisasiKri->nilai_kri_terkini ?? '-' }}</td>
                                                     <td class="text-center">
                                                         @php
-                                                            $statusMap = [1 => 'Aman', 2 => 'Waspada', 3 => 'Bahaya'];
+                                                            $statusMap = [1 => 'Aman', 2 => 'Siaga', 3 => 'Bahaya'];
                                                             $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
                                                             $status = $realisasiKri->status_kri_terkini;
                                                         @endphp

@@ -97,6 +97,7 @@
                         <div class="row g-2 mb-3 dampak-row-item">
                             <div class="col">
                                 <div class="form-floating">
+                                    <input type="hidden" name="dampak_ids[]" value="{{ $dampak->id }}">
                                     <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required>{{ $dampak->dampak_risiko }}</textarea>
                                     <label>Dampak Risiko <span class="text-danger">*</span></label>
                                 </div>
@@ -114,6 +115,7 @@
                         <div class="row g-2 mb-3 dampak-row-item">
                             <div class="col">
                                 <div class="form-floating">
+                                    <input type="hidden" name="dampak_ids[]" value="">
                                     <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required></textarea>
                                     <label>Dampak Risiko <span class="text-danger">*</span></label>
                                 </div>
@@ -156,6 +158,7 @@
                         <div class="row g-2 mb-3">
                             <div class="col">
                                 <div class="form-floating">
+                                    <input type="hidden" name="penyebab_ids[]" value="{{ $penyebab->id }}">
                                     <textarea class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko" required>{{ $penyebab->penyebab_risiko }}</textarea>
                                     <label>Penyebab Risiko <span class="text-danger">*</span></label>
                                 </div>
@@ -173,6 +176,7 @@
                         <div class="row g-2 mb-3">
                             <div class="col">
                                 <div class="form-floating">
+                                    <input type="hidden" name="penyebab_ids[]" value="">
                                     <textarea class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko" required></textarea>
                                     <label>Penyebab Risiko <span class="text-danger">*</span></label>
                                 </div>
@@ -213,12 +217,13 @@
                 </div>
                 <div class="card-body">
                     <div id="kri-body">
+                        <input type="hidden" name="deleted_kri_ids" id="deleted_kri_ids" value="">
                         @php
                             $kriItems = isset($identifikasiRisiko) && $identifikasiRisiko->kris->count() > 0 ? $identifikasiRisiko->kris : [null];
                         @endphp
                         
                         @foreach($kriItems as $kri)
-                        <div class="row g-2 mb-3 border-bottom pb-3">
+                        <div class="row g-2 mb-3 border-bottom pb-3 kri-row-item" data-id="{{ $kri ? $kri->id : '' }}">
                             <div class="col">
                                 <input type="hidden" name="kri_ids[]" value="{{ $kri ? $kri->id : '' }}">
 
@@ -303,7 +308,7 @@
                                 </div>
                             </div>
                             <div class="col-auto d-flex align-items-center ms-auto">
-                                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
+                                <button type="button" class="btn btn-icon-danger h-100 remove-kri-btn">
                                     <i class="bx bx-trash"></i>
                                 </button>
                             </div>
@@ -599,12 +604,13 @@
             $('#parameter-risiko-body').append(html);
         });
 
+        // Append Row Dampak Baru
         $('#add-dampak').click(function() {
             let html = `
             <div class="row g-2 mb-3 dampak-row-item">
                 <div class="col">
                     <div class="form-floating">
-                        <input type="hidden" name="penyebab_dampak_id[]">
+                        <input type="hidden" name="dampak_ids[]" value="">
                         <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required></textarea>
                         <label>Dampak Risiko <span class="text-danger">*</span></label>
                     </div>
@@ -621,45 +627,62 @@
             $('#dampak-risiko-body').append(html);
         });
 
-        // Add Column Penyebab Risiko
-        let row = 0;
+        // Append Row Penyebab Baru
         $('#add-column').click(function() {
-            row++;
             let html = `
             <div class="row g-2">
                 <div class="col">
-                <div class="form-floating">
-                    <input type="hidden" name="penyebab_risiko_id[]" value="">
-                    <textarea class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko" required></textarea>
-                    <label>Penyebab Risiko <span class="text-danger">*</span></label>
-                </div>
+                    <div class="form-floating">
+                        <input type="hidden" name="penyebab_ids[]" value="">
+                        <textarea class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko" required></textarea>
+                        <label>Penyebab Risiko <span class="text-danger">*</span></label>
+                    </div>
                 </div>
                 <div class="col-auto d-flex align-items-center">
-                <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
-                    <i class="bx bx-trash"></i>
-                </button>
+                    <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
+                        <i class="bx bx-trash"></i>
+                    </button>
                 </div>
                 <div class="col-12 mt-0">
                     <hr>
                 </div>
-            </div>
-            `;
+            </div>`;
             $('#penyebab-risiko-body').append(html);
+        });
 
-            // Enable all delete buttons when we have more than one row
-            if ($('#penyebab-risiko-body .row').length > 1) {
-                $('#penyebab-risiko-body .btn-icon-danger').prop('disabled', false);
+        // Array global penampung ID KRI yang dihapus oleh user
+        let deletedKriIds = [];
+
+        // Event listener khusus untuk tombol hapus KRI
+        $(document).on('click', '.remove-kri-btn', function() {
+            let row = $(this).closest('.kri-row-item');
+            let kriId = row.data('id'); // Ambil ID dari data attribute
+
+            // Jika baris yang dihapus memiliki ID (berarti data lama dari database)
+            if (kriId) {
+                deletedKriIds.push(kriId);
+                // Masukkan array ke input hidden berupa string dipisah koma (contoh: "12,15")
+                $('#deleted_kri_ids').val(deletedKriIds.join(','));
+            }
+
+            // Hapus baris dari view DOM
+            row.remove();
+            
+            // Urutkan kembali penomoran title header KRI
+            reindexKri();
+
+            // Proteksi: Jika baris KRI habis, disable tombol hapus baris terakhir jika diperlukan
+            if ($('#kri-body .kri-row-item').length === 1) {
+                $('#kri-body .remove-kri-btn').prop('disabled', true);
             }
         });
 
         // Add Column Key Risk Indicator
         $('#add-column-kri').click(function() {
-            row++;
-            const peristiwaRisikoId = $('#peristiwa_risiko').val();
             let rowIdx = $('#kri-body .kri-row-item').length + 1;
 
             let html = `
-                <div class="row g-2 mb-3 border-bottom pb-3">
+                <div class="row g-2 mb-3 border-bottom pb-3 kri-row-item" data-id="">
                     <div class="col">
                         <input type="hidden" name="kri_ids[]" value="">
                         <div class="mb-2">
@@ -672,7 +695,6 @@
                                     <label>Parameter / Key Risk Indicator <span class="text-danger">*</span></label>
                                 </div>
                             </div>
-
                             <div class="col-12 col-md-6">
                                 <div class="form-group form-floating">
                                     <select class="form-select" name="tren_parameter[]" required>
@@ -688,10 +710,6 @@
                                     <textarea class="form-control" name="metode_pengukuran[]" placeholder="Metode Pengukuran" cols="2" required></textarea>
                                     <label>Metode Pengukuran <span class="text-danger">*</span></label>
                                 </div>
-                            </div>
-
-                            <div class="col-12 mt-2 mb-1">
-                                <span class="text-muted fw-bold">Ambang Batas / Threshold KRI</span>
                             </div>
                             <div class="col-3">
                                 <div class="form-group form-floating">
@@ -720,24 +738,18 @@
                         </div>
                     </div>
                     <div class="col-auto d-flex align-items-center ms-auto">
-                        <button type="button" class="btn btn-icon-danger h-100" onclick="removeRow(event)">
+                        <button type="button" class="btn btn-icon-danger h-100 remove-kri-btn">
                             <i class="bx bx-trash"></i>
                         </button>
                     </div>
                 </div>`;
             $('#kri-body').append(html);
             
-            initKriMasks(); // Pasang mask untuk elemen yang baru saja ditambahkan
+            initKriMasks();
 
-            // Enable all delete buttons when we have more than one row
-            if ($('#kri-body .row.border-bottom').length > 1) {
-                $('#kri-body .btn-icon-danger').prop('disabled', false);
+            if ($('#kri-body .kri-row-item').length > 1) {
+                $('#kri-body .remove-kri-btn').prop('disabled', false);
             }
-
-            // const newDropdown = $('#kri-body').find('select[name="master_kri_id[]"]').last()[0];
-            // if (newDropdown) {
-            //     loadKriOptions(newDropdown, peristiwaRisikoId);
-            // }
         });
 
         function reindexKri() {

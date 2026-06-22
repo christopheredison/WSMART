@@ -436,7 +436,7 @@ if (!function_exists('formatKriBatasJs')) {
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <i class="bx bx-chart text-primary"></i>
-                                <span>Update KRI</span>
+                                <span>Update Parameter / KRI</span>
                             </div>
                         </div>
                     </div>
@@ -600,7 +600,7 @@ if (!function_exists('formatKriBatasJs')) {
                             </tbody>
                         </table>
 
-                        <h5 class="mt-6 mb-2">Perlakuan terhadap KRI</h5>
+                        <h5 class="mt-6 mb-2">Perlakuan terhadap Parameter /  KRI</h5>
                         <table class="table table-bordered align-middle" id="table-kri">
                             <thead class="bg-light small fw-bold text-center">
                                 <tr>
@@ -644,7 +644,7 @@ if (!function_exists('formatKriBatasJs')) {
                                         </td>
                                         <td class="display-kondisi text-center">
                                             @php
-                                                $statusMap = [1 => 'Aman', 2 => 'Waspada', 3 => 'Bahaya'];
+                                                $statusMap = [1 => 'Aman', 2 => 'Siaga', 3 => 'Bahaya'];
                                                 $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
                                                 $status = $lastMonitoring?->status_kri_terkini;
                                             @endphp
@@ -657,7 +657,7 @@ if (!function_exists('formatKriBatasJs')) {
                                               class="btn-input-icon btn-action"
                                               data-action="update-kri"
                                               data-bs-toggle="tooltip"
-                                              title="Update KRI"
+                                              title="Update Parameter /  KRI"
                                               data-id="{{ $kriProject->id }}">
                                                 <span class="bx bx-chart text-primary"></span>
                                             </a>
@@ -1606,7 +1606,7 @@ $(document).ready(function() {
         }
 
         // Update DOM status badge
-        const statusMap = {'1': 'Aman', '2': 'Waspada', '3': 'Bahaya'};
+        const statusMap = {'1': 'Aman', '2': 'Siaga', '3': 'Bahaya'};
         const colorMap = {'1': 'success', '2': 'warning', '3': 'danger'};
         const statusText = statusMap[statusKri] || '-';
         const colorClass = colorMap[statusKri] || 'secondary';

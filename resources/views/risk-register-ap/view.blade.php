@@ -1223,7 +1223,7 @@ if (!function_exists('formatKriBatas')) {
                                             </tr>
                                             <tr>
                                                 <th class="bg-success text-white">Aman</th>
-                                                <th class="bg-warning text-dark">Waspada</th>
+                                                <th class="bg-warning text-dark">Siaga</th>
                                                 <th class="bg-danger text-white">Bahaya</th>
                                             </tr>
                                         </thead>

@@ -18,6 +18,9 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
     protected $unitId;
     protected $bulan;
     protected $quarterTarget;
+    
+    // Property untuk menampung koordinat baris yang akan di-merge secara dinamis
+    protected $mergeRanges = [];
 
     public function __construct(int $periodeId, int $unitId, $bulan = null)
     {
@@ -66,9 +69,12 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
 
         $exportData = new Collection();
         $no = 1;
+        
+        // Data dimulai dari baris ke-3 di Excel
+        $currentRow = 3; 
 
         foreach ($risikos as $risiko) {
-            // 1. Mapping Penyebab & Dampak
+            // 1. Mapping Penyebab & Dampak ke bentuk String Numbered (\n)
             $penyebabText = '';
             if ($risiko->penyebabRisiko) {
                 foreach ($risiko->penyebabRisiko as $idx => $p) {
@@ -83,24 +89,15 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                 }
             }
 
-            // 2. Mengambil Indikator Utama
-            $kri = $risiko->kris->first();
-            $kriMonitoring = $kri ? $kri->kriUnitMonitorings->first() : null;
+            // 2. Mengambil Indikator Utama Berbasis Risiko
             $monitoring = $risiko->monitoringRisikos->first();
-            $pengendalian = ($monitoring && $monitoring->pengendalians) ? $monitoring->pengendalians->first() : null;
             $analisis = $risiko->riskAnalysis;
 
-            // Efektivitas Pengendalian
-            $statusKri = $kriMonitoring ? $kriMonitoring->status_kri_terkini : null;
-            $efektivitas = '-';
-            if ($statusKri == 1) { $efektivitas = 'Efektif'; } 
-            elseif ($statusKri == 2 || $statusKri == 3) { $efektivitas = 'Tidak Efektif'; }
-
-            // 3. Mapping Data Inherent
+            // Mapping Data Inherent
             $inherentNilaiProb = $analisis->nilai_probabilitas ?? 0;
             $inherentTktProb   = optional($analisis->skalaProbabilitas)->tingkat ?? '-';
 
-            // 4. Mapping Data Residual (Quarter dinamis)
+            // Mapping Data Residual (Quarter dinamis)
             $resNilai     = $analisis->{"nilai_dampak_residual_q{$qTarget}"} ?? 0;
             $resDampak    = $analisis->{"skala_dampak_residual_q{$qTarget}"} ?? '-';
             $resNilaiProb = $analisis->{"nilai_probabilitas_residual_q{$qTarget}"} ?? 0;
@@ -108,11 +105,11 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
             $resLevel     = $analisis->{"level_risiko_residual_q{$qTarget}"} ?? '-';
             $resEksposur  = $analisis->{"eksposur_risiko_residual_q{$qTarget}"} ?? 0;
 
-            // 5. Mapping Data Realisasi Month-Current
+            // Mapping Data Realisasi Month-Current
             $realisasiNilaiProb = $monitoring->nilai_probabilitas ?? 0;
             $realisasiTktProb   = optional($monitoring->skalaProbabilitas)->tingkat ?? '-';
 
-            // 6. Mapping Peluang & Nilai Peluang
+            // Mapping Peluang & Nilai Peluang
             $peluangRaText = '';
             $peluangRiText = '';
             $nilaiPeluangRaText = '';
@@ -132,64 +129,145 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                 }
             }
 
-            $exportData->push([
-                'no' => $no++,
-                'taksonomi' => $risiko->taksonomiRisiko->nama ?? '-',
-                'peristiwa' => $risiko->peristiwa_risiko ?? '-',
-                'penyebab'  => trim($penyebabText) ?: '-',
-                'dampak'    => trim($dampakText) ?: '-',
-                'parameter_kri'   => $kri->kri ?? '-',
-                'tren_parameter'  => $kri->tren_parameter ?? '-',
-                'metode_ukur'     => $kri->metode_pengukuran ?? '-',
-                'unit'            => $kri->satuan_kri ?? '-',
-                
-                // Ambang Batas
-                'risk_limit'     => $kri->batas_aman ?? '-',
-                'risk_appetite'  => $kri->batas_waspada ?? '-',
-                'risk_tolerance' => $kri->batas_bahaya ?? '-',
-                
-                // Aktual & Efektivitas
-                'aktual_bulan' => $kriMonitoring->nilai_kri_terkini ?? '-',
-                'efektivitas'  => $efektivitas,
+            // 3. Breakdown Row berdasarkan Banyak Data KRI
+            $kriList = $risiko->kris ?? collect();
+            $kriCount = max(1, $kriList->count());
 
-                // Rencana & Realisasi Pengendalian
-                'rencana_pengendalian' => $pengendalian->rencana_pengendalian ?? '-',
-                'biaya_rencana'        => $this->formatUang($pengendalian->biaya_rencana_pengendalian ?? 0),
-                'realisasi_pengendalian'=> $pengendalian->realisasi_pengendalian ?? '-',
-                'biaya_realisasi'      => $this->formatUang($pengendalian->biaya_realisasi_pengendalian ?? 0),
+            // Jika KRI lebih dari 1, catat range baris untuk di-merge nanti
+            if ($kriCount > 1) {
+                $this->mergeRanges[] = [
+                    'start' => $currentRow,
+                    'end'   => $currentRow + $kriCount - 1
+                ];
+            }
 
-                // INHERENT (Menggunakan formatNilaiDampak)
-                'inherent_nilai'      => $this->formatNilaiDampak($analisis->nilai_dampak ?? 0),
-                'inherent_dampak'     => $analisis->skala_dampak ?? '-',
-                'inherent_nilai_prob' => $inherentNilaiProb . '%',
-                'inherent_tkt_prob'   => $inherentTktProb,
-                'inherent_level'      => $analisis->level_risiko ?? '-',
-                'inherent_eksposur'   => $this->formatUang($analisis->eksposur_risiko ?? 0),
+            if ($kriList->isEmpty()) {
+                $exportData->push([
+                    'no' => $no,
+                    'taksonomi' => $risiko->taksonomiRisiko->nama ?? '-',
+                    'peristiwa' => $risiko->peristiwa_risiko ?? '-',
+                    'penyebab'  => trim($penyebabText) ?: '-',
+                    'dampak'    => trim($dampakText) ?: '-',
+                    'parameter_kri'   => '-',
+                    'tren_parameter'  => '-',
+                    'metode_ukur'     => '-',
+                    'unit'            => '-',
+                    'risk_limit'     => '-',
+                    'risk_appetite'  => '-',
+                    'risk_tolerance' => '-',
+                    'aktual_bulan' => '-',
+                    'status_kri'   => '-', 
+                    'efektivitas'  => '-',
+                    'rencana_pengendalian' => '-',
+                    'biaya_rencana'        => 0,
+                    'realisasi_pengendalian'=> '-',
+                    'biaya_realisasi'      => 0,
+                    'inherent_nilai'      => $this->formatNilaiDampak($analisis->nilai_dampak ?? 0),
+                    'inherent_dampak'     => $analisis->skala_dampak ?? '-',
+                    'inherent_nilai_prob' => $inherentNilaiProb . '%',
+                    'inherent_tkt_prob'   => $inherentTktProb,
+                    'inherent_level'      => $analisis->level_risiko ?? '-',
+                    'inherent_eksposur'   => $this->formatUang($analisis->eksposur_risiko ?? 0),
+                    'residual_nilai'      => $this->formatNilaiDampak($resNilai),
+                    'residual_dampak'     => $resDampak,
+                    'residual_nilai_prob' => $resNilaiProb . '%',
+                    'residual_tkt_prob'   => $resTktProb,
+                    'residual_level'      => $resLevel,
+                    'residual_eksposur'   => $this->formatUang($resEksposur),
+                    'realisasi_nilai'      => $this->formatNilaiDampak($monitoring->nilai_dampak ?? 0),
+                    'realisasi_dampak'     => $monitoring->skala_dampak ?? '-',
+                    'realisasi_nilai_prob' => $realisasiNilaiProb . '%',
+                    'realisasi_tkt_prob'   => $realisasiTktProb,
+                    'realisasi_level'      => $monitoring->level_risiko ?? '-',
+                    'realisasi_eksposur'   => $this->formatUang($monitoring->eksposure_risiko ?? $monitoring->eksposur_risiko ?? 0),
+                    'peluang_ra' => trim($peluangRaText) ?: '-',
+                    'peluang_ri' => trim($peluangRiText) ?: '-',
+                    'nilai_peluang_ra' => trim($nilaiPeluangRaText) ?: '-',
+                    'nilai_peluang_ri' => trim($nilaiPeluangRiText) ?: '-',
+                ]);
+                $currentRow++;
+            } else {
+                $isFirstRowOfGroup = true;
+                foreach ($kriList as $kri) {
+                    $kriMonitoring = $kri->kriUnitMonitorings->first();
 
-                // RESIDUAL QUARTER (Menggunakan formatNilaiDampak)
-                'residual_nilai'      => $this->formatNilaiDampak($resNilai),
-                'residual_dampak'     => $resDampak,
-                'residual_nilai_prob' => $resNilaiProb . '%',
-                'residual_tkt_prob'   => $resTktProb,
-                'residual_level'      => $resLevel,
-                'residual_eksposur'   => $this->formatUang($resEksposur),
+                    $statusKriText = '-';
+                    $statusKri = $kriMonitoring ? $kriMonitoring->status_kri_terkini : null;
+                    if ($statusKri == 1) { $statusKriText = 'Aman'; }
+                    elseif ($statusKri == 2) { $statusKriText = 'Siaga'; }
+                    elseif ($statusKri == 3) { $statusKriText = 'Bahaya'; }
 
-                // REALISASI MONTH-CURRENT (Menggunakan formatNilaiDampak)
-                'realisasi_nilai'      => $this->formatNilaiDampak($monitoring->nilai_dampak ?? 0),
-                'realisasi_dampak'     => $monitoring->skala_dampak ?? '-',
-                'realisasi_nilai_prob' => $realisasiNilaiProb . '%',
-                'realisasi_tkt_prob'   => $realisasiTktProb,
-                'realisasi_level'      => $monitoring->level_risiko ?? '-',
-                'realisasi_eksposur'   => $this->formatUang($monitoring->eksposure_risiko ?? $monitoring->eksposur_risiko ?? 0),
+                    $efektivitas = '-';
+                    if ($statusKri == 1) { $efektivitas = 'Efektif'; } 
+                    elseif ($statusKri == 2 || $statusKri == 3) { $efektivitas = 'Tidak Efektif'; }
 
-                // PELUANG
-                'peluang_ra' => trim($peluangRaText) ?: '-',
-                'peluang_ri' => trim($peluangRiText) ?: '-',
+                    // PERUBAHAN: Tarik data pengendalian spesifik mencocokkan id KRI baris saat ini
+                    $pengendalian = null;
+                    if ($monitoring && $monitoring->pengendalians) {
+                        $pengendalian = $monitoring->pengendalians->where('kri_id', $kri->id)->first();
+                    }
 
-                // NILAI PELUANG
-                'nilai_peluang_ra' => trim($nilaiPeluangRaText) ?: '-',
-                'nilai_peluang_ri' => trim($nilaiPeluangRiText) ?: '-',
-            ]);
+                    $exportData->push([
+                        'no'        => $isFirstRowOfGroup ? $no : '',
+                        'taksonomi' => $isFirstRowOfGroup ? ($risiko->taksonomiRisiko->nama ?? '-') : '',
+                        'peristiwa' => $isFirstRowOfGroup ? ($risiko->peristiwa_risiko ?? '-') : '',
+                        'penyebab'  => $isFirstRowOfGroup ? (trim($penyebabText) ?: '-') : '',
+                        'dampak'    => $isFirstRowOfGroup ? (trim($dampakText) ?: '-') : '',
+                        
+                        // Data KRI
+                        'parameter_kri'   => $kri->kri ?? '-',
+                        'tren_parameter'  => $kri->tren_parameter ?? '-',
+                        'metode_ukur'     => $kri->metode_pengukuran ?? '-',
+                        'unit'            => $kri->satuan_kri ?? '-',
+                        'risk_limit'      => $kri->batas_aman ?? '-',
+                        'risk_appetite'   => $kri->batas_waspada ?? '-',
+                        'risk_tolerance'  => $kri->batas_bahaya ?? '-',
+                        'aktual_bulan'    => $kriMonitoring->nilai_kri_terkini ?? '-',
+                        'status_kri'      => $statusKriText,
+                        'efektivitas'     => $efektivitas,
+
+                        // PERUBAHAN: Selalu tampilkan data pengendalian per KRI (Tanpa kondisi $isFirstRowOfGroup)
+                        'rencana_pengendalian' => $pengendalian->rencana_pengendalian ?? '-',
+                        'biaya_rencana'        => $this->formatUang($pengendalian->biaya_rencana_pengendalian ?? 0),
+                        'realisasi_pengendalian'=> $pengendalian->realisasi_pengendalian ?? '-',
+                        'biaya_realisasi'      => $this->formatUang($pengendalian->biaya_realisasi_pengendalian ?? 0),
+
+                        // INHERENT BLOCK (Hanya baris pertama)
+                        'inherent_nilai'      => $isFirstRowOfGroup ? $this->formatNilaiDampak($analisis->nilai_dampak ?? 0) : '',
+                        'inherent_dampak'     => $isFirstRowOfGroup ? ($analisis->skala_dampak ?? '-') : '',
+                        'inherent_nilai_prob' => $isFirstRowOfGroup ? ($inherentNilaiProb . '%') : '',
+                        'inherent_tkt_prob'   => $isFirstRowOfGroup ? $inherentTktProb : '',
+                        'inherent_level'      => $isFirstRowOfGroup ? ($analisis->level_risiko ?? '-') : '',
+                        'inherent_eksposur'   => $isFirstRowOfGroup ? $this->formatUang($analisis->eksposur_risiko ?? 0) : '',
+
+                        // RESIDUAL BLOCK (Hanya baris pertama)
+                        'residual_nilai'      => $isFirstRowOfGroup ? $this->formatNilaiDampak($resNilai) : '',
+                        'residual_dampak'     => $isFirstRowOfGroup ? $resDampak : '',
+                        'residual_nilai_prob' => $isFirstRowOfGroup ? ($resNilaiProb . '%') : '',
+                        'residual_tkt_prob'   => $isFirstRowOfGroup ? $resTktProb : '',
+                        'residual_level'      => $isFirstRowOfGroup ? $resLevel : '',
+                        'residual_eksposur'   => $isFirstRowOfGroup ? $this->formatUang($resEksposur) : '',
+
+                        // REALISASI BLOCK (Hanya baris pertama)
+                        'realisasi_nilai'      => $isFirstRowOfGroup ? $this->formatNilaiDampak($monitoring->nilai_dampak ?? 0) : '',
+                        'realisasi_dampak'     => $isFirstRowOfGroup ? ($monitoring->skala_dampak ?? '-') : '',
+                        'realisasi_nilai_prob' => $isFirstRowOfGroup ? ($realisasiNilaiProb . '%') : '',
+                        'realisasi_tkt_prob'   => $isFirstRowOfGroup ? $realisasiTktProb : '',
+                        'realisasi_level'      => $isFirstRowOfGroup ? ($monitoring->level_risiko ?? '-') : '',
+                        'realisasi_eksposur'   => $isFirstRowOfGroup ? $this->formatUang($monitoring->eksposure_risiko ?? $monitoring->eksposur_risiko ?? 0) : '',
+
+                        // OPPORTUNITY BLOCK (Hanya baris pertama)
+                        'peluang_ra'       => $isFirstRowOfGroup ? (trim($peluangRaText) ?: '-') : '',
+                        'peluang_ri'       => $isFirstRowOfGroup ? (trim($peluangRiText) ?: '-') : '',
+                        'nilai_peluang_ra' => $isFirstRowOfGroup ? (trim($nilaiPeluangRaText) ?: '-') : '',
+                        'nilai_peluang_ri' => $isFirstRowOfGroup ? (trim($nilaiPeluangRiText) ?: '-') : '',
+                    ]);
+
+                    $isFirstRowOfGroup = false;
+                    $currentRow++;
+                }
+            }
+            $no++;
         }
 
         return $exportData;
@@ -203,7 +281,7 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                 
                 $sheet->insertNewRowBefore(1, 2);
                 
-                // Header Parent
+                // Header Parent (Row 1)
                 $sheet->setCellValue('A1', 'No');
                 $sheet->setCellValue('B1', 'Taksonomi/ Kategori Risiko');
                 $sheet->setCellValue('C1', 'Peristiwa Risiko');
@@ -214,27 +292,31 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                 $sheet->setCellValue('H1', 'Metode Pengukuran');
                 $sheet->setCellValue('I1', 'Unit');
                 $sheet->setCellValue('J1', 'Ambang Batas');
-                $sheet->setCellValue('M1', 'Aktual');
-                $sheet->setCellValue('O1', 'Pengendalian Parameter/KRI');
-                $sheet->setCellValue('Q1', 'Realisasi Pengendalian');
-                $sheet->setCellValue('S1', 'Inherent');
-                $sheet->setCellValue('Y1', "Residual Quarter (Q{$this->quarterTarget})");
-                $sheet->setCellValue('AE1', 'Realisasi Month-Current');
-                $sheet->setCellValue('AK1', 'Peluang');
-                $sheet->setCellValue('AM1', 'Nilai Peluang');
+                $sheet->setCellValue('M1', 'Aktual'); 
+                $sheet->setCellValue('P1', 'Pengendalian Parameter/KRI');
+                $sheet->setCellValue('R1', 'Realisasi Pengendalian');
+                
+                $sheet->setCellValue('T1', 'Inherent');
+                $sheet->setCellValue('Z1', "Residual Quarter (Q{$this->quarterTarget})");
+                $sheet->setCellValue('AF1', 'Realisasi Month-Current');
+                $sheet->setCellValue('AL1', 'Peluang');
+                $sheet->setCellValue('AN1', 'Nilai Peluang');
 
-                // Header Child
+                // Header Child (Row 2)
                 $sheet->setCellValue('J2', 'Risk Limit');
                 $sheet->setCellValue('K2', 'Risk Appetite');
                 $sheet->setCellValue('L2', 'Risk Tolerance');
-                $sheet->setCellValue('M2', 'Month-Current');
-                $sheet->setCellValue('N2', 'Efektivitas Pengendalian Risiko');
-                $sheet->setCellValue('O2', 'Rencana Pengendalian');
-                $sheet->setCellValue('P2', 'Biaya Pengendalian');
-                $sheet->setCellValue('Q2', 'Realisasi Pengendalian');
-                $sheet->setCellValue('R2', 'Biaya Pengendalian');
                 
-                $starts = ['S', 'Y', 'AE'];
+                $sheet->setCellValue('M2', 'Month-Current');
+                $sheet->setCellValue('N2', 'Status'); 
+                $sheet->setCellValue('O2', 'Efektivitas Pengendalian Risiko');
+                
+                $sheet->setCellValue('P2', 'Rencana Pengendalian');
+                $sheet->setCellValue('Q2', 'Biaya Pengendalian');
+                $sheet->setCellValue('R2', 'Realisasi Pengendalian');
+                $sheet->setCellValue('S2', 'Biaya Pengendalian');
+                
+                $starts = ['T', 'Z', 'AF'];
                 foreach ($starts as $col) {
                     $cIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($col);
                     $sheet->setCellValue(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($cIndex) . '2', 'Nilai Dampak (Rp)');
@@ -245,30 +327,31 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                     $sheet->setCellValue(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($cIndex+5) . '2', 'Eksposure Risiko');
                 }
 
-                $sheet->setCellValue('AK2', 'Ra');
-                $sheet->setCellValue('AL2', 'Ri');
-                $sheet->setCellValue('AM2', 'Ra');
-                $sheet->setCellValue('AN2', 'Ri');
+                $sheet->setCellValue('AL2', 'Ra');
+                $sheet->setCellValue('AM2', 'Ri');
+                $sheet->setCellValue('AN2', 'Ra');
+                $sheet->setCellValue('AO2', 'Ri');
 
-                // Merge Cells
+                // Merge Cells Vertikal untuk Header Utama
                 $singles = ['A','B','C','D','E','F','G','H','I'];
                 foreach($singles as $col) {
                     $sheet->mergeCells("{$col}1:{$col}2");
                 }
 
-                $sheet->mergeCells('J1:L1');
-                $sheet->mergeCells('M1:N1');
-                $sheet->mergeCells('O1:P1');
-                $sheet->mergeCells('Q1:R1');
-                $sheet->mergeCells('S1:X1');
-                $sheet->mergeCells('Y1:AD1');
-                $sheet->mergeCells('AE1:AJ1');
-                $sheet->mergeCells('AK1:AL1');
-                $sheet->mergeCells('AM1:AN1');
+                // Merge Cells Horizontal untuk Parent Header
+                $sheet->mergeCells('J1:L1');   
+                $sheet->mergeCells('M1:O1');   
+                $sheet->mergeCells('P1:Q1');   
+                $sheet->mergeCells('R1:S1');   
+                $sheet->mergeCells('T1:Y1');   
+                $sheet->mergeCells('Z1:AE1');  
+                $sheet->mergeCells('AF1:AK1'); 
+                $sheet->mergeCells('AL1:AM1'); 
+                $sheet->mergeCells('AN1:AO1'); 
 
-                // Styling Area Header
-                $sheet->getStyle('A1:AN2')->applyFromArray([
-                    'font' => ['bold' => true],
+                // STYLING BLOCK 1: MAROON DAN TEKS PUTIH BOLD (Kolom A s/d S)
+                $sheet->getStyle('A1:S2')->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                     'alignment' => [
                         'horizontal' => Alignment::HORIZONTAL_CENTER,
                         'vertical' => Alignment::VERTICAL_CENTER,
@@ -276,47 +359,91 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                     ],
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => '9BC2E6']
+                        'startColor' => ['rgb' => '800000'] 
                     ],
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000']
+                            'color' => ['rgb' => 'FFFFFF'] 
                         ]
                     ]
                 ]);
 
-                // Styling Data Body
+                // STYLING BLOCK 2: BIRU TUA DAN TEKS PUTIH BOLD (Kolom T s/d AO)
+                $sheet->getStyle('T1:AO2')->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical' => Alignment::VERTICAL_CENTER,
+                        'wrapText' => true,
+                    ],
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => '002060'] 
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                            'color' => ['rgb' => 'FFFFFF']
+                        ]
+                    ]
+                ]);
+
+                // ==================== PROSES MERGE CELLS DINAMIS PER RISIKO ====================
+                if (!empty($this->mergeRanges)) {
+                    // PERUBAHAN: Menghapus 'P', 'Q', 'R', 'S' dari list merge agar mengalir per KRI
+                    $columnsToMerge = [
+                        'A', 'B', 'C', 'D', 'E',                   // Identitas Risiko
+                        'T', 'U', 'V', 'W', 'X', 'Y',               // Inherent
+                        'Z', 'AA', 'AB', 'AC', 'AD', 'AE',           // Residual
+                        'AF', 'AG', 'AH', 'AI', 'AJ', 'AK',         // Realisasi M-C
+                        'AL', 'AM', 'AN', 'AO'                      // Peluang & Nilai Peluang
+                    ];
+                    
+                    foreach ($this->mergeRanges as $range) {
+                        foreach ($columnsToMerge as $col) {
+                            $sheet->mergeCells("{$col}{$range['start']}:{$col}{$range['end']}");
+                        }
+                    }
+                }
+                // ==============================================================================
+
+                // Styling Data Body (Row 3 sampai akhir)
                 $lastRow = $sheet->getHighestRow();
                 if ($lastRow >= 3) {
-                    $sheet->getStyle('A3:AN' . $lastRow)->applyFromArray([
+                    $sheet->getStyle('A3:AO' . $lastRow)->applyFromArray([
                         'alignment' => [
-                            'vertical' => Alignment::VERTICAL_TOP,
+                            'vertical' => Alignment::VERTICAL_TOP, 
                             'wrapText' => true,
                         ],
                         'borders' => [
                             'allBorders' => [
                                 'borderStyle' => Border::BORDER_THIN,
+                                'color' => ['rgb' => 'A6A6A6'] 
                             ]
                         ]
                     ]);
                     
                     $sheet->getStyle('A3:A'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                    $sheet->getStyle('J3:N'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    $sheet->getStyle('J3:O'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     
-                    $centerCols = ['U', 'V', 'AA', 'AB', 'AG', 'AH', 'AK', 'AL', 'AM', 'AN'];
+                    $centerCols = ['V', 'W', 'X', 'AB', 'AC', 'AD', 'AH', 'AI', 'AJ', 'AL', 'AM', 'AN', 'AO'];
                     foreach($centerCols as $cCol) {
                         $sheet->getStyle($cCol.'3:'.$cCol.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     }
                 }
 
+                // AutoSize seluruh kolom dari A s/d AO
                 foreach (range('A', 'Z') as $col) { $sheet->getColumnDimension($col)->setAutoSize(true); }
-                foreach (range('A', 'N') as $col) { $sheet->getColumnDimension('A'.$col)->setAutoSize(true); }
+                for ($i = 27; $i <= 41; $i++) {
+                    $colStr = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i);
+                    $sheet->getColumnDimension($colStr)->setAutoSize(true);
+                }
                 
                 $sheet->getColumnDimension('D')->setAutoSize(false)->setWidth(35);
                 $sheet->getColumnDimension('E')->setAutoSize(false)->setWidth(35);
-                $sheet->getColumnDimension('AK')->setAutoSize(false)->setWidth(35);
                 $sheet->getColumnDimension('AL')->setAutoSize(false)->setWidth(35);
+                $sheet->getColumnDimension('AM')->setAutoSize(false)->setWidth(35);
             },
         ];
     }
@@ -329,9 +456,6 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
         return (float) ($value ?: 0);
     }
 
-    /**
-     * Helper baru untuk merubah nilai dampak 0 atau null menjadi '-'
-     */
     private function formatNilaiDampak($value)
     {
         if ($value === null || $value === '' || $value == 0) {

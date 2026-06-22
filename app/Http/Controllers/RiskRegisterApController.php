@@ -1592,72 +1592,141 @@ class RiskRegisterApController extends Controller
             }
 
             $dampakRisikoIds = [];
-            foreach ($request->dampak_risiko as $dampakRisikoId => $dampakRisiko) {
-                $exist = $identifikasiRisiko->dampakRisikos()->where('id', $dampakRisikoId)->first();
+            if ($request->has('dampak_risiko') && is_array($request->dampak_risiko)) {
+                foreach ($request->dampak_risiko as $key => $dampakText) {
+                    if (!empty($dampakText)) {
+                        // Ambil ID asli dari array pendamping dampak_ids
+                        $dampakId = $request->dampak_ids[$key] ?? null;
+                        
+                        $exist = null;
+                        if (!empty($dampakId)) {
+                            $exist = $identifikasiRisiko->dampakRisikos()->find($dampakId);
+                        }
 
-                if ($exist) {
-                    $exist->update([
-                        'dampak_risiko' => $this->cleanInput($dampakRisiko),
-                    ]);
-                } else {
-                    $exist = $identifikasiRisiko->dampakRisikos()->create([
-                        'dampak_risiko' => $this->cleanInput($dampakRisiko),
-                    ]);
+                        if ($exist) {
+                            // Hanya update text jika ada perubahan, mencegah trigger query jika tidak diubah
+                            if ($exist->dampak_risiko !== $this->cleanInput($dampakText)) {
+                                $exist->update([
+                                    'dampak_risiko' => $this->cleanInput($dampakText),
+                                ]);
+                            }
+                            $dampakRisikoIds[] = $exist->id;
+                        } else {
+                            // Jika benar-benar row baru hasil klik tombol tambah, baru di-create
+                            $newDampak = $identifikasiRisiko->dampakRisikos()->create([
+                                'dampak_risiko' => $this->cleanInput($dampakText),
+                            ]);
+                            $dampakRisikoIds[] = $newDampak->id;
+                        }
+                    }
                 }
-                $dampakRisikoIds[] = $exist->id;
             }
+            // Hapus dampak yang memang sengaja dibuang/di-trash oleh user di form view
             $identifikasiRisiko->dampakRisikos()->whereNotIn('id', $dampakRisikoIds)->delete();
 
             $penyebabRisikoIds = [];
-            foreach ($request->penyebab_risiko as $penyebabRisikoId => $penyebabRisiko) {
-                $exist = $identifikasiRisiko->penyebabRisiko()->where('id', $penyebabRisikoId)->first();
-                if ($exist) {
-                    $exist->update([
-                        'penyebab_risiko' => $this->cleanInput($penyebabRisiko),
-                    ]);
-                } else {
-                    $exist = $identifikasiRisiko->penyebabRisiko()->create([
-                        'penyebab_risiko' => $this->cleanInput($penyebabRisiko),
-                    ]);
+            if ($request->has('penyebab_risiko') && is_array($request->penyebab_risiko)) {
+                foreach ($request->penyebab_risiko as $key => $penyebabText) {
+                    if (!empty($penyebabText)) {
+                        // Ambil ID asli dari array pendamping penyebab_ids
+                        $penyebabId = $request->penyebab_ids[$key] ?? null;
+
+                        $exist = null;
+                        if (!empty($penyebabId)) {
+                            $exist = $identifikasiRisiko->penyebabRisiko()->find($penyebabId);
+                        }
+
+                        if ($exist) {
+                            if ($exist->penyebab_risiko !== $this->cleanInput($penyebabText)) {
+                                $exist->update([
+                                    'penyebab_risiko' => $this->cleanInput($penyebabText),
+                                ]);
+                            }
+                            $penyebabRisikoIds[] = $exist->id;
+                        } else {
+                            $newPenyebab = $identifikasiRisiko->penyebabRisiko()->create([
+                                'penyebab_risiko' => $this->cleanInput($penyebabText),
+                            ]);
+                            $penyebabRisikoIds[] = $newPenyebab->id;
+                        }
+                    }
                 }
-                $penyebabRisikoIds[] = $exist->id;
             }
+            // Hapus penyebab yang memang sengaja dibuang/di-trash oleh user di form view
             $identifikasiRisiko->penyebabRisiko()->whereNotIn('id', $penyebabRisikoIds)->delete();
 
             $savedKriIds = [];
             if ($request->has('key_risk_indicator') && is_array($request->key_risk_indicator)) {
-                foreach ($request->key_risk_indicator as $key => $kri) {
+                foreach ($request->key_risk_indicator as $key => $kriName) {
+                    // Ambil ID KRI lama dari array hidden input secara berurutan
                     $kriId = $request->kri_ids[$key] ?? null;
 
+                    // Bersihkan data numerik dari threshold inputmask
+                    $batasAman    = $this->cleanDecimal($request->batas_aman[$key] ?? 0);
+                    $batasWaspada = $this->cleanDecimal($request->batas_waspada[$key] ?? 0);
+                    $batasBahaya  = $this->cleanDecimal($request->batas_bahaya[$key] ?? 0);
+                    $satuanKri    = $request->satuan_kri[$key] ?? '';
+                    $trenParam    = $request->tren_parameter[$key] ?? null;
+                    $metodeUkur   = $request->metode_pengukuran[$key] ?? null;
+
                     $kriData = [
-                        'kri_id' => 0,
-                        'kri' => $kri,
-                        'satuan_kri' => $request->satuan_kri[$key] ?? '',
-                        'tren_parameter' => $request->tren_parameter[$key] ?? null,
-                        'metode_pengukuran' => $request->metode_pengukuran[$key] ?? null,
-                        'batas_aman' => $this->cleanDecimal($request->batas_aman[$key] ?? 0),
-                        'batas_waspada' => $this->cleanDecimal($request->batas_waspada[$key] ?? 0),
-                        'batas_bahaya' => $this->cleanDecimal($request->batas_bahaya[$key] ?? 0),
+                        'kri_id'            => 0,
+                        'kri'               => $this->cleanInput($kriName),
+                        'satuan_kri'        => $satuanKri,
+                        'tren_parameter'    => $trenParam,
+                        'metode_pengukuran' => $metodeUkur,
+                        'batas_aman'        => $batasAman,
+                        'batas_waspada'     => $batasWaspada,
+                        'batas_bahaya'      => $batasBahaya,
                     ];
 
-                    $existKri = $identifikasiRisiko->kris()->find($kriId);
+                    // Cari apakah data KRI ini sudah eksis di DB sebelumnya
+                    $existKri = null;
+                    if (!empty($kriId)) {
+                        $existKri = $identifikasiRisiko->kris()->find($kriId);
+                    }
 
                     if ($existKri) {
-                        $existKri->update($kriData);
+                        // OPTIMALISASI: Hanya jalankan update query di DB jika ada perubahan nilai komponen inputan
+                        if (
+                            $existKri->kri !== $kriData['kri'] ||
+                            $existKri->satuan_kri !== $kriData['satuan_kri'] ||
+                            $existKri->tren_parameter !== $kriData['tren_parameter'] ||
+                            $existKri->metode_pengukuran !== $kriData['metode_pengukuran'] ||
+                            $existKri->batas_aman != $kriData['batas_aman'] ||
+                            $existKri->batas_waspada != $kriData['batas_waspada'] ||
+                            $existKri->batas_bahaya != $kriData['batas_bahaya']
+                        ) {
+                            $existKri->update($kriData);
+                        }
                         $savedKriIds[] = $existKri->id;
                     } else {
+                        // Jika data baru (KRI tambahan saat edit), lakukan insersi baru
                         $newKri = $identifikasiRisiko->kris()->create($kriData);
                         $savedKriIds[] = $newKri->id;
                     }
                 }
             }
-            // Hapus yang diclear/trash oleh user
+
+            // AMAN: Hapus KRI lama jika ID-nya secara eksplisit dikirim dari input hidden penghapusan di view
+            if (!empty($request->deleted_kri_ids)) {
+                $deletedIds = explode(',', $request->deleted_kri_ids);
+                $identifikasiRisiko->kris()->whereIn('id', $deletedIds)->delete();
+            }
+
+            // Fallback safety delete: bersihkan data yatim piatu yang tidak masuk dalam list simpan
             $identifikasiRisiko->kris()->whereNotIn('id', $savedKriIds)->delete();
 
             // Tentukan redirect berdasarkan action
             $action = $request->input('action', 'save');
 
             if ($action === 'savenext') {
+                if ($identifikasiRisiko->request_edit == 2) {
+                    return response()->json([
+                        'message' => 'Data risiko berhasil diperbarui',
+                        'redirect' => route('risk-register-ap.perencanaan', ['riskRegister' => $identifikasiRisiko->id])
+                    ]);
+                }
                 // Redirect ke halaman analisis risiko
                 return response()->json([
                     'message' => 'Data risiko berhasil diperbarui',
