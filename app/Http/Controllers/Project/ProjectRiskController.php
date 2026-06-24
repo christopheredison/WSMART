@@ -4101,7 +4101,8 @@ class ProjectRiskController extends BasicCRUDController
         if (!$projectPeriodeList || !$projectPeriodeList->project) return;
 
         $project = $projectPeriodeList->project;
-        $unitId = $project->unit_id; // Sesuaikan dengan kolom relasi unit di tabel projects (misal: unit_id / cost_center)
+        $unitCostCenter = $project->cost_center_parent;
+        $unitId = \App\Models\Unit::where('cost_center', $project->cost_center_parent)->first()?->id;
 
         if ($target === 'RO_PROYEK') {
             // Risk Officer Project (Level 6) YANG di-assign ke project ini
