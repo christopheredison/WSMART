@@ -3,11 +3,25 @@
 if (!function_exists('formatKriBatasJs')) {
     function formatKriBatasJs($value) {
         if ($value === null || $value === '') return '-';
-        // Cek apakah data murni angka atau desimal dari DB (contoh: 100, 15.50)
-        if (preg_match('/^-?\d+(\.\d+)?$/', trim($value))) {
-            return number_format((float)$value, 2, ',', '.');
+        
+        $trimmed = trim($value);
+        
+        // Cek apakah data murni angka atau desimal (mendukung koma atau titik di belakang)
+        if (preg_match('/^-?\d+([.,]\d+)?$/', $trimmed)) {
+            // Ubah koma menjadi titik agar dikenali sebagai float oleh PHP
+            $normalized = str_replace(',', '.', $trimmed);
+            
+            // Deteksi berapa digit di belakang koma dinamis berdasarkan data asli
+            $decimals = 0;
+            if (strpos($normalized, '.') !== false) {
+                $decimals = strlen(substr($normalized, strpos($normalized, '.') + 1));
+            }
+            
+            // Konversi ke format ribuan dengan titik (.) dan desimal dengan koma (,)
+            return number_format((float)$normalized, $decimals, ',', '.');
         }
-        // Jika ada huruf/simbol, kembalikan string aslinya
+        
+        // Jika mengandung huruf/simbol (misal "< 10%"), biarkan aslinya
         return $value;
     }
 }
@@ -237,7 +251,7 @@ if (!function_exists('formatKriBatasJs')) {
                                         <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_waspada) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
                                         <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_bahaya) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
                                         <td class="display-nilai-kri fw-bold text-center text-primary">
-                                            {{ $lastMonitoring?->nilai_kri_terkini ?? '-' }} {{ $kriProject->satuan_kri ?: '-' }}
+                                            {{ formatKriBatasJs($lastMonitoring?->nilai_kri_terkini) }} {{ $kriProject->satuan_kri ?: '-' }}
                                         </td>
                                         @php
                                             $statusMap = [1 => 'Aman', 2 => 'Siaga', 3 => 'Bahaya'];
@@ -873,16 +887,25 @@ const kriProjects = @json($risk->kris->keyBy('id'));
 const historyMonitoringsData = @json($historyMonitorings->keyBy('id'));
 const quarter = {{ $quarter }};
 
-function formatKriBatasJS(value) {
+function formatKriBatasJs(value) {
     if (value === null || value === undefined || value === '') return '-';
     
-    // Ubah ke string dan hapus spasi di awal/akhir (padanan trim() di JS)
+    // Ubah ke string dan hapus spasi di awal/akhir
     let valStr = String(value).trim();
     
-    // Regex padanan preg_match() di JS untuk ngecek apakah murni angka/desimal
-    if (/^-?\d+(\.\d+)?$/.test(valStr)) {
-        // Jika angka, ubah titik (format DB) menjadi koma agar sesuai dengan UI
-        return valStr.replace('.', ',');
+    // Regex mengecek angka murni dengan desimal (koma atau titik)
+    if (/^-?\d+([.,]\d+)?$/.test(valStr)) {
+        // Normalisasi koma menjadi titik
+        let normalized = valStr.replace(',', '.');
+        
+        // Pisahkan bagian angka bulat dan angka desimal
+        let parts = normalized.split('.');
+        
+        // Tambahkan separator ribuan (titik) pada angka depan menggunakan regex
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        
+        // Jika ada desimal, gabungkan kembali menggunakan koma
+        return parts.length > 1 ? parts.join(',') : parts[0];
     }
     
     // Jika ada teks/simbol (misal: "< 10%"), kembalikan apa adanya
@@ -1026,9 +1049,9 @@ $(document).ready(function() {
             $('#modalUpdateKri input[name="key_risk_indicator"]').val(kriProject.kri);
             
             let satuan = kriProject.satuan_kri ? ' ' + kriProject.satuan_kri : '';
-            $('#modalUpdateKri input[name="batas_aman"]').val(formatKriBatasJS(kriProject.batas_aman) + satuan);
-            $('#modalUpdateKri input[name="batas_waspada"]').val(formatKriBatasJS(kriProject.batas_waspada) + satuan);
-            $('#modalUpdateKri input[name="batas_bahaya"]').val(formatKriBatasJS(kriProject.batas_bahaya) + satuan);
+            $('#modalUpdateKri input[name="batas_aman"]').val(formatKriBatasJs(kriProject.batas_aman) + satuan);
+            $('#modalUpdateKri input[name="batas_waspada"]').val(formatKriBatasJs(kriProject.batas_waspada) + satuan);
+            $('#modalUpdateKri input[name="batas_bahaya"]').val(formatKriBatasJs(kriProject.batas_bahaya) + satuan);
             $('#modal_satuan_addon').text(kriProject.satuan_kri || '-');
 
             // Populate Tren Parameter

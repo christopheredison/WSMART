@@ -82,7 +82,6 @@
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
                             <h6 class="text-primary text-uppercase mb-3">Input Realisasi</h6>
-                            
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <div class="input-group">

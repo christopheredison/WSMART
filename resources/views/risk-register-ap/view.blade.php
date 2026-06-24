@@ -3,11 +3,25 @@
 if (!function_exists('formatKriBatas')) {
     function formatKriBatas($value) {
         if ($value === null || $value === '') return '-';
-        // Cek apakah data murni angka atau desimal dari DB (contoh: 100, 15.50)
-        if (preg_match('/^-?\d+(\.\d+)?$/', trim($value))) {
-            return number_format((float)$value, 2, ',', '.');
+        
+        $trimmed = trim($value);
+        
+        // Cek apakah data murni angka atau desimal (mendukung koma atau titik di belakang)
+        if (preg_match('/^-?\d+([.,]\d+)?$/', $trimmed)) {
+            // Ubah koma menjadi titik agar dikenali sebagai float oleh PHP
+            $normalized = str_replace(',', '.', $trimmed);
+            
+            // Deteksi berapa digit di belakang koma dinamis berdasarkan data asli
+            $decimals = 0;
+            if (strpos($normalized, '.') !== false) {
+                $decimals = strlen(substr($normalized, strpos($normalized, '.') + 1));
+            }
+            
+            // Konversi ke format ribuan dengan titik (.) dan desimal dengan koma (,)
+            return number_format((float)$normalized, $decimals, ',', '.');
         }
-        // Jika ada huruf/simbol, kembalikan string aslinya
+        
+        // Jika mengandung huruf/simbol (misal "< 10%"), biarkan aslinya
         return $value;
     }
 }
@@ -355,123 +369,121 @@ if (!function_exists('formatKriBatas')) {
                 </div>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead class="table-light">
-                            <tr>
-                                <th width="5%">#</th>
-                                <th width="20%">Dampak Risiko</th>
-                                <th width="25%">Rencana Perlakuan Risiko</th>
-                                <th width="20%">Output Perlakuan Risiko</th>
-                                <th width="20%">Biaya Perlakuan Risiko</th>
-                                <th width="10%" class="text-center">Detail</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @php $totalBiaya = 0; @endphp
-                            @forelse($risiko->dampakRisikos as $dampak)
-                                @if($dampak->perlakuanDampakRisikos && $dampak->perlakuanDampakRisikos->isNotEmpty())
-                                    @foreach($dampak->perlakuanDampakRisikos as $perlakuan)
-                                        @php $totalBiaya += $perlakuan->biaya_perlakuan_risiko ?? 0; @endphp
-                                        <tr>
-                                            @if($loop->first)
-                                                <td rowspan="{{ $dampak->perlakuanDampakRisikos->count() }}">{{ $loop->parent->iteration }}</td>
-                                                <td rowspan="{{ $dampak->perlakuanDampakRisikos->count() }}">{{ $dampak->dampak_risiko }}</td>
-                                            @endif
-                                            <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
-                                            <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
-                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}</td>
-                                            <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailDampak{{ $perlakuan->id }}" title="Lihat Detail">
-                                                    <span class='bx bx-show'></span>
-                                                </button>
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="20%">Dampak Risiko</th>
+                            <th width="25%">Rencana Perlakuan Risiko</th>
+                            <th width="20%">Output Perlakuan Risiko</th>
+                            <th width="20%">Biaya Perlakuan Risiko</th>
+                            <th width="10%" class="text-center">Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @php $totalBiaya = 0; @endphp
+                        @forelse($risiko->dampakRisikos as $dampak)
+                            @if($dampak->perlakuanDampakRisikos && $dampak->perlakuanDampakRisikos->isNotEmpty())
+                                @foreach($dampak->perlakuanDampakRisikos as $perlakuan)
+                                    @php $totalBiaya += $perlakuan->biaya_perlakuan_risiko ?? 0; @endphp
+                                    <tr>
+                                        @if($loop->first)
+                                            <td rowspan="{{ $dampak->perlakuanDampakRisikos->count() }}">{{ $loop->parent->iteration }}</td>
+                                            <td rowspan="{{ $dampak->perlakuanDampakRisikos->count() }}">{{ $dampak->dampak_risiko }}</td>
+                                        @endif
+                                        <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
+                                        <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
+                                        <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}</td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailDampak{{ $perlakuan->id }}" title="Lihat Detail">
+                                                <span class='bx bx-show'></span>
+                                            </button>
 
-                                                <div class="modal fade text-start" id="modalDetailDampak{{ $perlakuan->id }}" tabindex="-1" aria-hidden="true">
-                                                    <div class="modal-dialog modal-dialog-centered modal-lg">
-                                                        <div class="modal-content border-0 shadow p-0">
-                                                            <div class="modal-header border-bottom bg-light">
-                                                                <h5 class="modal-title fw-bold">Detail Perlakuan Dampak Risiko</h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <div class="modal-body p-4">
-                                                                <div class="row g-4">
-                                                                    <div class="col-12">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Dampak Risiko</span>
-                                                                        <div class="text-dark fs-6">{{ $dampak->dampak_risiko ?? '-' }}</div>
-                                                                    </div>
-                                                                    <div class="col-12 col-md-6">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Rencana Perlakuan Risiko</span>
-                                                                        <div class="text-dark">{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</div>
-                                                                    </div>
-                                                                    <div class="col-12 col-md-6">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Output Perlakuan Risiko</span>
-                                                                        <div class="text-dark">{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</div>
-                                                                    </div>
+                                            <div class="modal fade text-start" id="modalDetailDampak{{ $perlakuan->id }}" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog modal-dialog-centered modal-lg">
+                                                    <div class="modal-content border-0 shadow p-0">
+                                                        <div class="modal-header border-bottom bg-light">
+                                                            <h5 class="modal-title fw-bold">Detail Perlakuan Dampak Risiko</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body p-4">
+                                                            <div class="row g-4">
+                                                                <div class="col-12">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Dampak Risiko</span>
+                                                                    <div class="text-dark fs-6">{{ $dampak->dampak_risiko ?? '-' }}</div>
+                                                                </div>
+                                                                <div class="col-12 col-md-6">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Rencana Perlakuan Risiko</span>
+                                                                    <div class="text-dark">{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</div>
+                                                                </div>
+                                                                <div class="col-12 col-md-6">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Output Perlakuan Risiko</span>
+                                                                    <div class="text-dark">{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</div>
+                                                                </div>
 
-                                                                    <div class="col-12">
-                                                                        <hr class="my-2 text-muted">
-                                                                    </div>
+                                                                <div class="col-12">
+                                                                    <hr class="my-2 text-muted">
+                                                                </div>
 
-                                                                    <div class="col-12 col-md-6">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Opsi Perlakuan Risiko</span>
-                                                                        <div class="text-dark">
-                                                                            {{ $perlakuan->opsiPerlakuan->opsi_perlakuan_risiko ?? $perlakuan->opsi_perlakuan_risiko ?? '-' }}
-                                                                        </div>
+                                                                <div class="col-12 col-md-6">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Opsi Perlakuan Risiko</span>
+                                                                    <div class="text-dark">
+                                                                        {{ $perlakuan->opsiPerlakuan->opsi_perlakuan_risiko ?? $perlakuan->opsi_perlakuan_risiko ?? '-' }}
                                                                     </div>
-                                                                    <div class="col-12 col-md-6">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">PIC</span>
-                                                                        <div class="text-dark">{{ $perlakuan->picJabatan->name ?? $perlakuan->pic ?? '-' }}</div>
+                                                                </div>
+                                                                <div class="col-12 col-md-6">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">PIC</span>
+                                                                    <div class="text-dark">{{ $perlakuan->picJabatan->name ?? $perlakuan->pic ?? '-' }}</div>
+                                                                </div>
+                                                                <div class="col-12 col-md-4">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Biaya Perlakuan</span>
+                                                                    <div class="text-primary fw-bold">
+                                                                        {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                                                     </div>
-                                                                    <div class="col-12 col-md-4">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Biaya Perlakuan</span>
-                                                                        <div class="text-primary fw-bold">
-                                                                            {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
-                                                                        </div>
+                                                                </div>
+                                                                <div class="col-12 col-md-4">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Mulai</span>
+                                                                    <div class="text-dark">
+                                                                        <i class='bx bx-calendar-event me-1 text-muted'></i>
+                                                                        {{ $perlakuan->timeline_perlakuan_risiko_start ? $perlakuan->timeline_perlakuan_risiko_start->format('d F Y') : '-' }}
                                                                     </div>
-                                                                    <div class="col-12 col-md-4">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Mulai</span>
-                                                                        <div class="text-dark">
-                                                                            <i class='bx bx-calendar-event me-1 text-muted'></i>
-                                                                            {{ $perlakuan->timeline_perlakuan_risiko_start ? $perlakuan->timeline_perlakuan_risiko_start->format('d F Y') : '-' }}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="col-12 col-md-4">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Selesai</span>
-                                                                        <div class="text-dark">
-                                                                            <i class='bx bx-calendar-check me-1 text-muted'></i>
-                                                                            {{ $perlakuan->timeline_perlakuan_risiko_end ? $perlakuan->timeline_perlakuan_risiko_end->format('d F Y') : '-' }}
-                                                                        </div>
+                                                                </div>
+                                                                <div class="col-12 col-md-4">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Selesai</span>
+                                                                    <div class="text-dark">
+                                                                        <i class='bx bx-calendar-check me-1 text-muted'></i>
+                                                                        {{ $perlakuan->timeline_perlakuan_risiko_end ? $perlakuan->timeline_perlakuan_risiko_end->format('d F Y') : '-' }}
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <div class="modal-footer bg-light border-top-0">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer bg-light border-top-0">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                </td>
-                                        </tr>
-                                    @endforeach
-                                @else
-                                    <tr>
-                                        <td>{{ $loop->iteration }}</td>
-                                        <td>{{ $dampak->dampak_risiko }}</td>
-                                        <td colspan="4" class="text-center text-muted">Belum ada rencana perlakuan</td>
+                                            </div>
+                                            </td>
                                     </tr>
-                                @endif
-                            @empty
+                                @endforeach
+                            @else
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted">Tidak ada dampak risiko</td>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $dampak->dampak_risiko }}</td>
+                                    <td colspan="4" class="text-center text-muted">Belum ada rencana perlakuan</td>
                                 </tr>
-                            @endforelse
-                            <tr class="table-warning">
-                                <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
-                                <td colspan="2" class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                            @endif
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Tidak ada dampak risiko</td>
                             </tr>
-                        </tbody>
-                    </table>
-                </div>
+                        @endforelse
+                        <tr class="table-warning">
+                            <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
+                            <td colspan="2" class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -489,123 +501,121 @@ if (!function_exists('formatKriBatas')) {
                 </div>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead class="table-light">
-                            <tr>
-                                <th width="5%">#</th>
-                                <th width="20%">Penyebab Risiko</th>
-                                <th width="25%">Rencana Perlakuan Risiko</th>
-                                <th width="20%">Output Perlakuan Risiko</th>
-                                <th width="20%">Biaya Perlakuan Risiko</th>
-                                <th width="10%" class="text-center">Detail</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @php $totalBiaya = 0; @endphp
-                            @forelse($risiko->penyebabRisiko as $penyebab)
-                                @if($penyebab->perlakuanPenyebabRisiko && $penyebab->perlakuanPenyebabRisiko->isNotEmpty())
-                                    @foreach($penyebab->perlakuanPenyebabRisiko as $perlakuan)
-                                        @php $totalBiaya += $perlakuan->biaya_perlakuan_risiko ?? 0; @endphp
-                                        <tr>
-                                            @if($loop->first)
-                                                <td rowspan="{{ $penyebab->perlakuanPenyebabRisiko->count() }}">{{ $loop->parent->iteration }}</td>
-                                                <td rowspan="{{ $penyebab->perlakuanPenyebabRisiko->count() }}">{{ $penyebab->penyebab_risiko }}</td>
-                                            @endif
-                                            <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
-                                            <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
-                                            <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}</td>
-                                            <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailPenyebab{{ $perlakuan->id }}" title="Lihat Detail">
-                                                    <span class='bx bx-show'></span>
-                                                </button>
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="20%">Penyebab Risiko</th>
+                            <th width="25%">Rencana Perlakuan Risiko</th>
+                            <th width="20%">Output Perlakuan Risiko</th>
+                            <th width="20%">Biaya Perlakuan Risiko</th>
+                            <th width="10%" class="text-center">Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @php $totalBiaya = 0; @endphp
+                        @forelse($risiko->penyebabRisiko as $penyebab)
+                            @if($penyebab->perlakuanPenyebabRisiko && $penyebab->perlakuanPenyebabRisiko->isNotEmpty())
+                                @foreach($penyebab->perlakuanPenyebabRisiko as $perlakuan)
+                                    @php $totalBiaya += $perlakuan->biaya_perlakuan_risiko ?? 0; @endphp
+                                    <tr>
+                                        @if($loop->first)
+                                            <td rowspan="{{ $penyebab->perlakuanPenyebabRisiko->count() }}">{{ $loop->parent->iteration }}</td>
+                                            <td rowspan="{{ $penyebab->perlakuanPenyebabRisiko->count() }}">{{ $penyebab->penyebab_risiko }}</td>
+                                        @endif
+                                        <td>{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</td>
+                                        <td>{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</td>
+                                        <td>{{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}</td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailPenyebab{{ $perlakuan->id }}" title="Lihat Detail">
+                                                <span class='bx bx-show'></span>
+                                            </button>
 
-                                                <div class="modal fade text-start" id="modalDetailPenyebab{{ $perlakuan->id }}" tabindex="-1" aria-hidden="true">
-                                                    <div class="modal-dialog modal-dialog-centered modal-lg">
-                                                        <div class="modal-content border-0 shadow p-0">
-                                                            <div class="modal-header border-bottom bg-light">
-                                                                <h5 class="modal-title fw-bold">Detail Perlakuan Penyebab Risiko</h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <div class="modal-body p-4">
-                                                                <div class="row g-4">
-                                                                    <div class="col-12">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Penyebab Risiko</span>
-                                                                        <div class="text-dark fs-6">{{ $penyebab->penyebab_risiko ?? '-' }}</div>
-                                                                    </div>
-                                                                    <div class="col-12 col-md-6">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Rencana Perlakuan Risiko</span>
-                                                                        <div class="text-dark">{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</div>
-                                                                    </div>
-                                                                    <div class="col-12 col-md-6">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Output Perlakuan Risiko</span>
-                                                                        <div class="text-dark">{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</div>
-                                                                    </div>
+                                            <div class="modal fade text-start" id="modalDetailPenyebab{{ $perlakuan->id }}" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog modal-dialog-centered modal-lg">
+                                                    <div class="modal-content border-0 shadow p-0">
+                                                        <div class="modal-header border-bottom bg-light">
+                                                            <h5 class="modal-title fw-bold">Detail Perlakuan Penyebab Risiko</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body p-4">
+                                                            <div class="row g-4">
+                                                                <div class="col-12">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Penyebab Risiko</span>
+                                                                    <div class="text-dark fs-6">{{ $penyebab->penyebab_risiko ?? '-' }}</div>
+                                                                </div>
+                                                                <div class="col-12 col-md-6">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Rencana Perlakuan Risiko</span>
+                                                                    <div class="text-dark">{{ $perlakuan->rencana_perlakuan_risiko ?? '-' }}</div>
+                                                                </div>
+                                                                <div class="col-12 col-md-6">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Output Perlakuan Risiko</span>
+                                                                    <div class="text-dark">{{ $perlakuan->output_perlakuan_risiko ?? '-' }}</div>
+                                                                </div>
 
-                                                                    <div class="col-12">
-                                                                        <hr class="my-2 text-muted">
-                                                                    </div>
+                                                                <div class="col-12">
+                                                                    <hr class="my-2 text-muted">
+                                                                </div>
 
-                                                                    <div class="col-12 col-md-6">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Opsi Perlakuan Risiko</span>
-                                                                        <div class="text-dark">
-                                                                            {{ $perlakuan->opsiPerlakuan->opsi_perlakuan_risiko ?? $perlakuan->opsi_perlakuan_risiko ?? '-' }}
-                                                                        </div>
+                                                                <div class="col-12 col-md-6">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Opsi Perlakuan Risiko</span>
+                                                                    <div class="text-dark">
+                                                                        {{ $perlakuan->opsiPerlakuan->opsi_perlakuan_risiko ?? $perlakuan->opsi_perlakuan_risiko ?? '-' }}
                                                                     </div>
-                                                                    <div class="col-12 col-md-6">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">PIC</span>
-                                                                        <div class="text-dark">{{ $perlakuan->picJabatan->name ?? $perlakuan->pic ?? '-' }}</div>
+                                                                </div>
+                                                                <div class="col-12 col-md-6">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">PIC</span>
+                                                                    <div class="text-dark">{{ $perlakuan->picJabatan->name ?? $perlakuan->pic ?? '-' }}</div>
+                                                                </div>
+                                                                <div class="col-12 col-md-4">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Biaya Perlakuan</span>
+                                                                    <div class="text-primary fw-bold">
+                                                                        {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                                                     </div>
-                                                                    <div class="col-12 col-md-4">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Biaya Perlakuan</span>
-                                                                        <div class="text-primary fw-bold">
-                                                                            {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
-                                                                        </div>
+                                                                </div>
+                                                                <div class="col-12 col-md-4">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Mulai</span>
+                                                                    <div class="text-dark">
+                                                                        <i class='bx bx-calendar-event me-1 text-muted'></i>
+                                                                        {{ $perlakuan->timeline_perlakuan_risiko_start ? $perlakuan->timeline_perlakuan_risiko_start->format('d F Y') : '-' }}
                                                                     </div>
-                                                                    <div class="col-12 col-md-4">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Mulai</span>
-                                                                        <div class="text-dark">
-                                                                            <i class='bx bx-calendar-event me-1 text-muted'></i>
-                                                                            {{ $perlakuan->timeline_perlakuan_risiko_start ? $perlakuan->timeline_perlakuan_risiko_start->format('d F Y') : '-' }}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="col-12 col-md-4">
-                                                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Selesai</span>
-                                                                        <div class="text-dark">
-                                                                            <i class='bx bx-calendar-check me-1 text-muted'></i>
-                                                                            {{ $perlakuan->timeline_perlakuan_risiko_end ? $perlakuan->timeline_perlakuan_risiko_end->format('d F Y') : '-' }}
-                                                                        </div>
+                                                                </div>
+                                                                <div class="col-12 col-md-4">
+                                                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Waktu Selesai</span>
+                                                                    <div class="text-dark">
+                                                                        <i class='bx bx-calendar-check me-1 text-muted'></i>
+                                                                        {{ $perlakuan->timeline_perlakuan_risiko_end ? $perlakuan->timeline_perlakuan_risiko_end->format('d F Y') : '-' }}
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <div class="modal-footer bg-light border-top-0">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer bg-light border-top-0">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
                                                         </div>
                                                     </div>
                                                 </div>
-                                              </td>
-                                        </tr>
-                                    @endforeach
-                                @else
-                                    <tr>
-                                        <td>{{ $loop->iteration }}</td>
-                                        <td>{{ $penyebab->penyebab_risiko }}</td>
-                                        <td colspan="4" class="text-center text-muted">Belum ada rencana perlakuan</td>
+                                            </div>
+                                            </td>
                                     </tr>
-                                @endif
-                            @empty
+                                @endforeach
+                            @else
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted">Tidak ada penyebab risiko</td>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $penyebab->penyebab_risiko }}</td>
+                                    <td colspan="4" class="text-center text-muted">Belum ada rencana perlakuan</td>
                                 </tr>
-                            @endforelse
-                            <tr class="table-warning">
-                                <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
-                                <td colspan="2" class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                            @endif
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Tidak ada penyebab risiko</td>
                             </tr>
-                        </tbody>
-                    </table>
-                </div>
+                        @endforelse
+                        <tr class="table-warning">
+                            <td colspan="4" class="text-end fw-bold">Total Biaya Perlakuan:</td>
+                            <td colspan="2" class="fw-bold">{{ 'Rp ' . number_format($totalBiaya, 0, ',', '.') }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -623,70 +633,68 @@ if (!function_exists('formatKriBatas')) {
                 </div>
             </div>
             <div class="card-body">
-                <div class="table-responsive scrollbar">
-                    <table class="table table-bordered align-middle">
-                        <thead class="table-light text-center fw-bold small">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light text-center fw-bold small">
+                        <tr>
+                            <th rowspan="2" class="align-middle" width="5%">#</th>
+                            <th rowspan="2" class="align-middle" width="20%">Parameter / Key Risk Indicator</th>
+                            <th rowspan="2" class="align-middle" width="15%">Tren Parameter</th>
+                            <th rowspan="2" class="align-middle" width="15%">Metode Pengukuran</th>
+                            <th rowspan="2" class="align-middle" width="15%">Satuan</th>
+                            <th colspan="3">Ambang Batas / Threshold</th>
+                        </tr>
+                        <tr>
+                            <th class="bg-success text-white align-middle">Risk Limit</th>
+                            <th class="bg-warning text-dark align-middle">Risk Appetite</th>
+                            <th class="bg-danger text-white align-middle">Risk Tolerance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($risiko?->kris as $kri)
                             <tr>
-                                <th rowspan="2" class="align-middle" width="5%">#</th>
-                                <th rowspan="2" class="align-middle" width="20%">Parameter / Key Risk Indicator</th>
-                                <th rowspan="2" class="align-middle" width="15%">Tren Parameter</th>
-                                <th rowspan="2" class="align-middle" width="15%">Metode Pengukuran</th>
-                                <th rowspan="2" class="align-middle" width="15%">Satuan</th>
-                                <th colspan="3">Ambang Batas / Threshold</th>
+                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td>
+                                    {{ $kri->kri ?? '-' }}
+                                </td>
+                                <td>
+                                    @if($kri->tren_parameter)
+                                        <span class="badge bg-info bg-opacity-10 text-info border border-info">{{ $kri->tren_parameter }}</span>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                                <td>
+                                    {{ $kri->metode_pengukuran ?? '-' }}
+                                </td>
+                                <td class="text-center">
+                                    {{ $kri->satuan_kri ?? '-' }}
+                                </td>
+                                <td class="text-center text-nowrap">
+                                    {{ formatKriBatas($kri->batas_aman) }} 
+                                </td>
+                                <td class="text-center text-nowrap">
+                                    {{ formatKriBatas($kri->batas_waspada) }} 
+                                </td>
+                                <td class="text-center text-nowrap">
+                                    {{ formatKriBatas($kri->batas_bahaya) }} 
+                                </td>
+                                <!-- <td class="text-center">
+                                    <span class="badge bg-success">{{ $kri->batas_aman ?? '-' }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-warning text-dark">{{ $kri->batas_waspada ?? '-' }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-danger">{{ $kri->batas_bahaya ?? '-' }}</span>
+                                </td> -->
                             </tr>
+                        @empty
                             <tr>
-                                <th class="bg-success text-white align-middle">Risk Limit</th>
-                                <th class="bg-warning text-dark align-middle">Risk Appetite</th>
-                                <th class="bg-danger text-white align-middle">Risk Tolerance</th>
+                                <td colspan="7" class="text-center text-muted py-4">Tidak ada Key Risk Indicator</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($risiko?->kris as $kri)
-                                <tr>
-                                    <td class="text-center">{{ $loop->iteration }}</td>
-                                    <td>
-                                        {{ $kri->kri ?? '-' }}
-                                    </td>
-                                    <td>
-                                        @if($kri->tren_parameter)
-                                            <span class="badge bg-info bg-opacity-10 text-info border border-info">{{ $kri->tren_parameter }}</span>
-                                        @else
-                                            -
-                                        @endif
-                                    </td>
-                                    <td>
-                                        {{ $kri->metode_pengukuran ?? '-' }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ $kri->satuan_kri ?? '-' }}
-                                    </td>
-                                    <td class="text-center text-nowrap">
-                                        {{ formatKriBatas($kri->batas_aman) }} 
-                                    </td>
-                                    <td class="text-center text-nowrap">
-                                        {{ formatKriBatas($kri->batas_waspada) }} 
-                                    </td>
-                                    <td class="text-center text-nowrap">
-                                        {{ formatKriBatas($kri->batas_bahaya) }} 
-                                    </td>
-                                    <!-- <td class="text-center">
-                                        <span class="badge bg-success">{{ $kri->batas_aman ?? '-' }}</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-warning text-dark">{{ $kri->batas_waspada ?? '-' }}</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-danger">{{ $kri->batas_bahaya ?? '-' }}</span>
-                                    </td> -->
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">Tidak ada Key Risk Indicator</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -1000,72 +1008,70 @@ if (!function_exists('formatKriBatas')) {
                 </div>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered align-middle">
-                        <thead class="table-light text-center fw-bold text-uppercase">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light text-center fw-bold text-uppercase">
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="15%">Periode</th>
+                            <th width="15%">Realisasi Dampak</th>
+                            <th width="15%">Realisasi Probabilitas</th>
+                            <th width="15%">Realisasi Eksposur</th>
+                            <th width="15%">Realisasi Level Risiko</th>
+                            <th width="10%">Efektivitas</th>
+                            <th width="10%">Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($historyMonitorings as $monitoring)
                             <tr>
-                                <th width="5%">#</th>
-                                <th width="15%">Periode</th>
-                                <th width="15%">Realisasi Dampak</th>
-                                <th width="15%">Realisasi Probabilitas</th>
-                                <th width="15%">Realisasi Eksposur</th>
-                                <th width="15%">Realisasi Level Risiko</th>
-                                <th width="10%">Efektivitas</th>
-                                <th width="10%">Detail</th>
+                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td class="text-center">
+                                    <div class="fw-bold">{{ $risiko->periode->tahun }} - Q{{ $monitoring->quarter }}</div>
+                                    <div class="fw-normal">
+                                        @if($monitoring->month)
+                                            @lang('basic.month.' . $monitoring->month)
+                                        @else - @endif
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-bold">
+                                            {{ $monitoring->nilai_dampak ? 'Rp ' . number_format($monitoring->nilai_dampak, 0, ',', '.') : '-' }}
+                                        </span>
+                                        <span class="text-muted">
+                                            {{ $monitoring->skalaDampakObj ? '('.$monitoring->skalaDampakObj->tingkat.') '.$monitoring->skalaDampakObj->deskripsi : '-' }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span>{{ $monitoring->nilai_probabilitas ?? '-' }}%</span>
+                                        <span class="text-muted">
+                                            {{ $monitoring->skalaProbabilitas ? '('.$monitoring->skalaProbabilitas->tingkat.') '.$monitoring->skalaProbabilitas->skala : '-' }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="text-end fw-bold">
+                                    {{ $monitoring->eksposure_risiko ? 'Rp ' . number_format($monitoring->eksposure_risiko, 0, ',', '.') : '-' }}
+                                </td>
+                                <td class="text-center">
+                                    @php $lvlColor = str_replace(' ', '-', str_replace('to ', '', strtolower($monitoring->level_risiko))); @endphp
+                                    <div class="badge p-2 w-100 bg-{{ $lvlColor ?: 'secondary' }}">
+                                        {{ $monitoring->skala_risiko }} - {{ $monitoring->level_risiko ?? '-' }}
+                                    </div>
+                                </td>
+                                <td class="text-center fw-bold">
+                                    {{ $monitoring->efektivitas_perlakuan_risiko ?? 0 }}%
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailMonitoring{{ $monitoring->id }}">
+                                        <span class="bx bx-show"></span>
+                                    </button>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($historyMonitorings as $monitoring)
-                                <tr>
-                                    <td class="text-center">{{ $loop->iteration }}</td>
-                                    <td class="text-center">
-                                        <div class="fw-bold">{{ $risiko->periode->tahun }} - Q{{ $monitoring->quarter }}</div>
-                                        <div class="fw-normal">
-                                            @if($monitoring->month)
-                                                @lang('basic.month.' . $monitoring->month)
-                                            @else - @endif
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            <span class="fw-bold">
-                                                {{ $monitoring->nilai_dampak ? 'Rp ' . number_format($monitoring->nilai_dampak, 0, ',', '.') : '-' }}
-                                            </span>
-                                            <span class="text-muted">
-                                                {{ $monitoring->skalaDampakObj ? '('.$monitoring->skalaDampakObj->tingkat.') '.$monitoring->skalaDampakObj->deskripsi : '-' }}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            <span>{{ $monitoring->nilai_probabilitas ?? '-' }}%</span>
-                                            <span class="text-muted">
-                                                {{ $monitoring->skalaProbabilitas ? '('.$monitoring->skalaProbabilitas->tingkat.') '.$monitoring->skalaProbabilitas->skala : '-' }}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td class="text-end fw-bold">
-                                        {{ $monitoring->eksposure_risiko ? 'Rp ' . number_format($monitoring->eksposure_risiko, 0, ',', '.') : '-' }}
-                                    </td>
-                                    <td class="text-center">
-                                        @php $lvlColor = str_replace(' ', '-', str_replace('to ', '', strtolower($monitoring->level_risiko))); @endphp
-                                        <div class="badge p-2 w-100 bg-{{ $lvlColor ?: 'secondary' }}">
-                                            {{ $monitoring->skala_risiko }} - {{ $monitoring->level_risiko ?? '-' }}
-                                        </div>
-                                    </td>
-                                    <td class="text-center fw-bold">
-                                        {{ $monitoring->efektivitas_perlakuan_risiko ?? 0 }}%
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalDetailMonitoring{{ $monitoring->id }}">
-                                            <span class="bx bx-show"></span>
-                                        </button>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -1212,50 +1218,48 @@ if (!function_exists('formatKriBatas')) {
                         <div class="tab-pane fade" id="tab_kri_{{ $monitoring->id }}" role="tabpanel">
                             <div class="card card-body shadow-sm border-0">
                                 <h5 class="mb-3 text-info">Monitoring Key Risk Indicator (KRI)</h5>
-                                <div class="table-responsive">
-                                    <table class="table table-bordered align-middle">
-                                        <thead class="bg-light text-center small fw-bold">
+                                <table class="table table-bordered align-middle">
+                                    <thead class="bg-light text-center small fw-bold">
+                                        <tr>
+                                            <th rowspan="2" class="align-middle">Indikator (KRI)</th>
+                                            <th colspan="3">Target Threshold</th>
+                                            <th rowspan="2" class="align-middle">Nilai Realisasi</th>
+                                            <th rowspan="2" class="align-middle">Status</th>
+                                        </tr>
+                                        <tr>
+                                            <th class="bg-success text-white">Aman</th>
+                                            <th class="bg-warning text-dark">Siaga</th>
+                                            <th class="bg-danger text-white">Bahaya</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($monitoring->kriUnitMonitorings as $realisasiKri)
                                             <tr>
-                                                <th rowspan="2" class="align-middle">Indikator (KRI)</th>
-                                                <th colspan="3">Target Threshold</th>
-                                                <th rowspan="2" class="align-middle">Nilai Realisasi</th>
-                                                <th rowspan="2" class="align-middle">Status</th>
-                                            </tr>
-                                            <tr>
-                                                <th class="bg-success text-white">Aman</th>
-                                                <th class="bg-warning text-dark">Siaga</th>
-                                                <th class="bg-danger text-white">Bahaya</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @forelse($monitoring->kriUnitMonitorings as $realisasiKri)
-                                                <tr>
-                                                    <td>
-                                                        <div class="fw-bold">{{ $realisasiKri->keyRiskIndicator->kri ?? '-' }}</div>
-                                                        <small class="text-muted">Satuan: {{ $realisasiKri->keyRiskIndicator->satuan_kri ?? '-' }}</small>
-                                                    </td>
-                                                    <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_aman ?? '-' }}</td>
-                                                    <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_waspada ?? '-' }}</td>
-                                                    <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_bahaya ?? '-' }}</td>
+                                                <td>
+                                                    <div class="fw-bold">{{ $realisasiKri->keyRiskIndicator->kri ?? '-' }}</div>
+                                                    <small class="text-muted">Satuan: {{ $realisasiKri->keyRiskIndicator->satuan_kri ?? '-' }}</small>
+                                                </td>
+                                                <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_aman ?? '-' }}</td>
+                                                <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_waspada ?? '-' }}</td>
+                                                <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_bahaya ?? '-' }}</td>
 
-                                                    <td class="fw-bold text-center text-primary">{{ $realisasiKri->nilai_kri_terkini ?? '-' }}</td>
-                                                    <td class="text-center">
-                                                        @php
-                                                            $statusMap = [1 => 'Aman', 2 => 'Waspada', 3 => 'Bahaya'];
-                                                            $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
-                                                            $status = $realisasiKri->status_kri_terkini;
-                                                        @endphp
-                                                        <span class="badge bg-{{ $statusColor[$status] ?? 'light text-dark border' }} p-2">
-                                                            {{ $statusMap[$status] ?? '-' }}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            @empty
-                                                <tr><td colspan="6" class="text-center text-muted">Belum ada KRI yang dimonitoring</td></tr>
-                                            @endforelse
-                                        </tbody>
-                                    </table>
-                                </div>
+                                                <td class="fw-bold text-center text-primary">{{ $realisasiKri->nilai_kri_terkini ?? '-' }}</td>
+                                                <td class="text-center">
+                                                    @php
+                                                        $statusMap = [1 => 'Aman', 2 => 'Waspada', 3 => 'Bahaya'];
+                                                        $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
+                                                        $status = $realisasiKri->status_kri_terkini;
+                                                    @endphp
+                                                    <span class="badge bg-{{ $statusColor[$status] ?? 'light text-dark border' }} p-2">
+                                                        {{ $statusMap[$status] ?? '-' }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="6" class="text-center text-muted">Belum ada KRI yang dimonitoring</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 

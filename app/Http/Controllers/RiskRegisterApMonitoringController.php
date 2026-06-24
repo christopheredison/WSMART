@@ -1472,7 +1472,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             $toCreate = [
                 'key_risk_indicator_id' => $kriProjectRequest['id'],
                 'status_kri_terkini' => $statusKriVal,
-                'nilai_kri_terkini' => $kriProjectRequest['nilai_kri_terkini_q' . $quarter],
+                'nilai_kri_terkini' => $this->cleanDecimal($kriProjectRequest['nilai_kri_terkini_q' . $quarter]),
             ];
             $projectMonitoring->kriUnitMonitorings()->create($toCreate);
 
@@ -2059,6 +2059,30 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
 
     private function cleanRupiah($value) {
         return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
+    }
+
+    private function cleanDecimal($value) {
+        if(empty($value)) return "0";
+        
+        $value = trim($value);
+
+        // Kasus 1: Input berupa Raw Float dari JavaScript (Misal: "17832719.24" atau "17832719")
+        // Di sini titik bertindak sebagai pemisah desimal.
+        if (preg_match('/^-?\d+(\.\d+)?$/', $value)) {
+            // Ubah titik (desimal) menjadi koma
+            return str_replace('.', ',', $value);
+        }
+
+        // Kasus 2: Input berupa format Rupiah/Ribuan Indonesia (Misal: "8.548.714,35" atau "8.548.714")
+        // Di sini titik bertindak sebagai ribuan, dan koma sebagai desimal.
+        if (preg_match('/^-?\d{1,3}(?:\.\d{3})*(?:\,\d+)?$/', $value)) {
+            // Hapus titik pemisah ribuan saja
+            return str_replace('.', '', $value);
+        }
+
+        // Kasus 3: Jika mengandung teks atau simbol lain (contoh: "< 10%", "Aman")
+        // Kembalikan datanya apa adanya tanpa diubah
+        return $value;
     }
 
     /**
