@@ -669,6 +669,7 @@ class RiskRegisterApController extends Controller
             'target_capaian_kinerja' => 'required|string',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
+            'taksonomi_risiko_id' => 'required|exists:taksonomi_risikos,id',
             // 'wbs' => 'nullable|string', // Opsional sesuai kebutuhan
 
             // Validasi Array (Minimal 1 baris)
@@ -704,7 +705,8 @@ class RiskRegisterApController extends Controller
             'periode_id.required' => 'Periode wajib dipilih.',
             'target_capaian_kinerja.required' => 'Sasaran Risiko wajib diisi.',
             'peristiwa_risiko.required' => 'Peristiwa Risiko wajib diisi.',
-            'deskripsi_peristiwa_risiko.required' => 'Deskripsi detail peristiwa risiko wajib diisi.',
+            'deskripsi_peristiwa_risiko.required' => 'Deskripsi detail peristiwa risiko wajib diisi.','taksonomi_risiko_id.required' => 'Taksonomi Risiko wajib dipilih.',
+            'taksonomi_risiko_id.exists' => 'Taksonomi Risiko yang dipilih tidak ditemukan.',
 
             'dampak_risiko.required' => 'Mohon masukkan minimal satu Dampak Risiko.',
             'dampak_risiko.*.required' => 'Dampak risiko tidak boleh ada yang kosong.',
@@ -1478,6 +1480,7 @@ class RiskRegisterApController extends Controller
             'target_capaian_kinerja' => 'required|string',
             'peristiwa_risiko' => 'required|string',
             'deskripsi_peristiwa_risiko' => 'required|string',
+            'taksonomi_risiko_id' => 'required|exists:taksonomi_risikos,id',
             'wbs_id' => 'nullable|exists:w_b_s,id',
 
             // Array Validation
@@ -1512,6 +1515,8 @@ class RiskRegisterApController extends Controller
             'target_capaian_kinerja.required' => 'Sasaran Risiko wajib diisi.',
             'peristiwa_risiko.required' => 'Peristiwa Risiko wajib diisi.',
             'deskripsi_peristiwa_risiko.required' => 'Deskripsi detail wajib diisi.',
+            'taksonomi_risiko_id.required' => 'Taksonomi Risiko wajib dipilih.',
+            'taksonomi_risiko_id.exists' => 'Taksonomi Risiko yang dipilih tidak ditemukan.',
 
             'dampak_risiko.required' => 'Minimal satu Dampak Risiko wajib diisi.',
             'dampak_risiko.*.required' => 'Dampak risiko tidak boleh kosong.',

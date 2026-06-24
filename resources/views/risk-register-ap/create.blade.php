@@ -62,9 +62,9 @@
                         </div>
                         <div class="col-md-12">
                             <div class="form-group d-lg-flex">
-                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Risiko</label>
+                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Taksonomi Risiko <span class="text-danger">*</span></label>
                                 <div class="w-100">
-                                    <select class="form-select select2" name="taksonomi_risiko_id" required>
+                                    <select id="taksonomi_risiko_id" class="form-select select2" name="taksonomi_risiko_id" required>
                                         <option value="">Pilih Taksonomi</option>
                                         @foreach($taksonomiRisikos as $tax)
                                             <option value="{{ $tax->id }}">
@@ -72,6 +72,9 @@
                                             </option>
                                         @endforeach
                                     </select>
+                                    @error('taksonomi_risiko_id')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
