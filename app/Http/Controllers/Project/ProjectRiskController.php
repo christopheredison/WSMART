@@ -1090,7 +1090,7 @@ class ProjectRiskController extends BasicCRUDController
                     modalTarget.find('.modal-title').html('Verifikasi Risiko');
                     document.getElementById('btn-terima-risiko').innerHTML = '<span class="bx bx-check-shield"></span> Terima Risiko';
                     document.getElementById('btn-tolak-risiko').innerHTML = '<span class="bx bx-undo"></span> Kembalikan Risiko';
-                    document.getElementById('btn-tolak-risiko').className = 'btn btn-warning';
+                    document.getElementById('btn-tolak-risiko').className = 'btn btn-danger';
 
                     const infoText = `<i class="bx bx-info-circle"></i> Anda akan memverifikasi <strong>\${currentIds.length}</strong> data risiko proyek sekaligus.`;
                     if($('#modal-bulk-info').length == 0) {
