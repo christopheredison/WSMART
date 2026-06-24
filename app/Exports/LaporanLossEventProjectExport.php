@@ -10,6 +10,7 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Font;
 
 class LaporanLossEventProjectExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithColumnFormatting
 {
@@ -90,8 +91,31 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
             default => '-',
         };
 
+        // 7. Format Tanggal Kejadian
+        $tanggalKejadian = $row->tanggal_kejadian ? \Carbon\Carbon::parse($row->tanggal_kejadian)->format('d/m/Y') : '-';
+
+        // 8. Mapping Teridentifikasi & Link Risk Register
+        $teridentifikasi = $row->project_risk_id ? 'Yes' : 'No';
+        $linkRiskRegister = '-';
+
+        if ($row->project_risk_id && $row->risiko) {
+            // Generate URL ke detail risiko
+            $url = route('projects.risks.view', [
+                'project' => $row->risiko->project_periode_list_id,
+                'risk'    => $row->project_risk_id
+            ]);
+
+            // Ambil deskripsi dan bersihkan karakter kutip ganda untuk format formula excel
+            $namaHyperlink = $row->risiko->deskripsi_peristiwa_risiko ?? 'Lihat Detail';
+            $namaHyperlink = str_replace('"', '""', $namaHyperlink);
+            
+            // Format output hyperlink untuk excel
+            $linkRiskRegister = '=HYPERLINK("' . $url . '", "' . $namaHyperlink . '")';
+        }
+
         return [
             $this->rowNumber,
+            $tanggalKejadian,
             optional($row->project)->project_name ?? '-',
             $row->nama_kejadian ?? '-',
             $identifikasiKejadian,
@@ -109,7 +133,8 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
             $statusAsuransi,
             $row->nilai_premi ?? 0,
             $row->nilai_klaim ?? 0,
-            $row->project_risk_id ? 'Yes (ID: '.$row->project_risk_id.')' : 'No',
+            $teridentifikasi,
+            $linkRiskRegister, // Kolom U
             optional(optional($row->risiko)->projectRiskAnalisa)->nilai_dampak ?? 0,
         ];
     }
@@ -118,6 +143,7 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
     {
         return [
             'No',
+            'Tanggal Kejadian',
             'Nama Proyek',
             'Nama Kejadian',
             'Identifikasi Kejadian',
@@ -136,25 +162,20 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
             'Nilai Premi',
             'Nilai Klaim',
             'Teridentifikasi di Risk Register',
+            'Link Risk Register', // Kolom U
             'Biaya Risiko Inheren'
         ];
     }
 
     public function columnFormats(): array
     {
-        // Penyesuaian huruf kolom karena ada penghapusan kolom di tengah:
-        // M -> Nilai Kerugian
-        // Q -> Nilai Premi (Sebelumnya U)
-        // R -> Nilai Klaim (Sebelumnya V)
-        // T -> Biaya Risiko Inheren (Sebelumnya Y)
-
         $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
 
         return [
-            'M' => $currencyFormat,
-            'Q' => $currencyFormat,
+            'N' => $currencyFormat,
             'R' => $currencyFormat,
-            'T' => $currencyFormat,
+            'S' => $currencyFormat,
+            'V' => $currencyFormat,
         ];
     }
 
@@ -164,7 +185,20 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
         $sheet->getStyle('1')->getFont()->setBold(true);
 
         // Agar teks yang ada \n (newline) bisa tampil rapi (wrap text)
-        $sheet->getStyle('G:H')->getAlignment()->setWrapText(true);
+        $sheet->getStyle('H:I')->getAlignment()->setWrapText(true);
+
+        // Menghitung total baris data (termasuk heading baris 1)
+        $totalRows = $this->rowNumber + 1;
+
+        if ($totalRows > 1) {
+            // Target baris data dari baris 2 sampai baris terakhir pada Kolom U (Link Risk Register)
+            $linkRange = 'U2:U' . $totalRows;
+
+            // Menerapkan warna biru standard (#0563C1) dan underline (garis bawah)
+            $sheet->getStyle($linkRange)->getFont()
+                ->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('0563C1'))
+                ->setUnderline(Font::UNDERLINE_SINGLE);
+        }
 
         return [];
     }
