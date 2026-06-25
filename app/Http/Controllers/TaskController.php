@@ -302,8 +302,9 @@ class TaskController extends Controller
                             $monitoringActionCount += $countPendingM;
 
                             if ($levelId == 6) {
-                                if ($actionableItems->where('is_revision', true)->count() > 0) {
-                                    $statusM = 'revision'; $isMonUrgent = true;
+                                if ($actionableItems->filter(fn($mon) => $mon->is_revision > 0)->count() > 0) {
+                                    $statusM = 'revision';
+                                    $isMonUrgent = true;
                                 } else {
                                     $statusM = 'draft';
                                 }
@@ -475,7 +476,7 @@ class TaskController extends Controller
 
                 if ($u_step == 0) {
                     $countCreated = $monsInMonth->count();
-                    $revisiCount = $monsInMonth->where('is_revision', true)->count();
+                    $revisiCount = $monsInMonth->filter(fn($mon) => $mon->is_revision > 0)->count();
                     $activeRisksCount = IdentifikasiRisiko::where('unit_id', $unit->id)->where('periode_id', $activePeriodeId)->where('is_closed', 0)->count();
                     $unstarted = max(0, $activeRisksCount - $countCreated);
 

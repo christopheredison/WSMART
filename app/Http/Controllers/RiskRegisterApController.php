@@ -222,12 +222,12 @@ class RiskRegisterApController extends Controller
                                 $summaryInfo = ['type' => 'danger', 'icon' => 'bx-undo', 'message' => "Terdapat <strong>{$pending_risk}</strong> risiko yang <strong>dikembalikan (revisi)</strong>. Silahkan perbaiki data."];
                                 $escalationConfig['disabled'] = false;
                             } else {
-                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Seluruh perbaikan telah selesai. Silahkan klik tombol <strong>Kirim Perbaikan</strong> untuk melanjutkan ke Risk Owner Divisi."];
+                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Seluruh perbaikan telah selesai. Silahkan klik tombol <strong>Kirim Perbaikan</strong> untuk melanjutkan ke Risk Owner Anak Perusahaan."];
                                 $escalationConfig['disabled'] = false;
                             }
                         } else {
                             if ($draft_risk > 0) {
-                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan ke Risk Owner Divisi."];
+                                $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan ke Risk Owner Anak Perusahaan."];
 
                                 $escalationConfig['disabled'] = false;
                             } else {
@@ -271,7 +271,7 @@ class RiskRegisterApController extends Controller
                         }
                     } elseif ($status == DataBatch::STATUS_PROSES) {
                         if ($draft_risk > 0) {
-                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan ke Risk Owner Divisi."];
+                            $summaryInfo = ['type' => 'success', 'icon' => 'bx-check-double', 'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan ke Risk Owner Anak Perusahaan."];
                             $escalationConfig['disabled'] = false;
                         } else {
                             $escalationConfig['disabled'] = true;
@@ -2198,7 +2198,7 @@ class RiskRegisterApController extends Controller
                 $this->sendNotificationCustom('RO_AP', $unit_id, 'Risiko Ditolak', $msg, $targetLink, 'bx bx-x-circle');
 
                 // Beritahu RW_AP agar bisa memonitor officer-nya
-                $msgOwner = 'Terdapat risiko dari divisi Anda yang ditolak dan dikembalikan ke Drafter. Catatan: ' . $validated['catatan_verifikasi'];
+                $msgOwner = 'Terdapat risiko dari anak perusahaan Anda yang ditolak dan dikembalikan ke Drafter. Catatan: ' . $validated['catatan_verifikasi'];
                 $this->sendNotificationCustom('RW_AP', $unit_id, 'Risiko Ditolak', $msgOwner, $targetLink, 'bx bx-x-circle');
             }
 
@@ -2794,7 +2794,7 @@ class RiskRegisterApController extends Controller
         $countApproved = $currentMonitorings->where('status', 100)->count();
 
         $hasDraft = $currentMonitorings->where('status', 1)->isNotEmpty();
-        $hasRevision = $currentMonitorings->where('status', 1)->where('is_revision', true)->isNotEmpty();
+        $hasRevision = $currentMonitorings->where('status', 1)->filter(fn($item) => $item->is_revision > 0)->isNotEmpty();
         $hasVerifROD = $currentMonitorings->where('status', 2)->isNotEmpty();
         $hasVerifROMR = $currentMonitorings->where('status', 3)->isNotEmpty();
         $hasVerifROWMR = $currentMonitorings->where('status', 4)->isNotEmpty();
@@ -2832,40 +2832,48 @@ class RiskRegisterApController extends Controller
                     </div>';
         }
 
-        // --- SKENARIO 2: INPUTTER ---
+        // --- SKENARIO 2 & 3: PRIORITAS REVISI / DRAFT ---
         $is_unit_mr = $item['unit']->unit_mr == 1;
-        if ($levelId == 1 && (!$is_mr || ($is_mr && $is_unit_mr)) && $hasDraft) {
-            $isMyMonTurn = true;
-            if ($hasRevision) {
-                $statusLabel = 'Perlu Revisi';
-                $badgeColor = 'bg-danger border border-danger text-white';
-                $labelPosisi = 'Dikembalikan ke Risk Officer Anak Perusahaan';
-                $tooltipText = 'Status: Dikembalikan. Mohon perbaiki data monitoring sesuai catatan.';
-            } else {
-                $statusLabel = 'Draft / Input Monitoring';
-                $badgeColor = 'bg-info border border-info text-white';
-                $labelPosisi = 'Risk Officer Anak Perusahaan';
-                $tooltipText = 'Status: Draft Monitoring. Mohon lengkapi data.';
+
+        // Cek apakah ada yang masih di step 1 (Draft / Revisi)
+        // Ini akan memblokir status "Perlu Verifikasi" sampai semuanya selesai direvisi/disubmit
+        if ($hasDraft) {
+            if ($levelId == 1 && (!$is_mr || ($is_mr && $is_unit_mr))) {
+                $isMyMonTurn = true;
+                if ($hasRevision) {
+                    $statusLabel = 'Perlu Revisi';
+                    $badgeColor = 'bg-danger border border-danger text-white';
+                    $labelPosisi = 'Dikembalikan ke Risk Officer Anak Perusahaan';
+                    $tooltipText = 'Status: Dikembalikan. Mohon perbaiki data monitoring sesuai catatan.';
+                } else {
+                    $statusLabel = 'Draft / Input Monitoring';
+                    $badgeColor = 'bg-info border border-info text-white';
+                    $labelPosisi = 'Risk Officer Anak Perusahaan';
+                    $tooltipText = 'Status: Draft Monitoring. Mohon lengkapi data.';
+                }
             }
-        }
-        // --- SKENARIO 3: VERIFIKATOR ---
-        elseif ($levelId == 2 && !$is_mr && $hasVerifROD) {
-            $isMyMonTurn = true;
-            $statusLabel = 'Perlu Verifikasi';
-            $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
-            $labelPosisi = 'Risk Owner Anak Perusahaan';
-        }
-        elseif ($levelId == 1 && $is_mr && $hasVerifROMR) {
-            $isMyMonTurn = true;
-            $statusLabel = 'Perlu Verifikasi';
-            $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
-            $labelPosisi = 'Risk Officer MR';
-        }
-        elseif ($levelId == 2 && $is_mr && $hasVerifROWMR) {
-            $isMyMonTurn = true;
-            $statusLabel = 'Perlu Verifikasi';
-            $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
-            $labelPosisi = 'Risk Owner MR';
+            // Jika user bukan inputter (misal Verifikator), $isMyMonTurn tetap false 
+            // sehingga mereka hanya melihat posisi dokumen sedang ada di Officer Anak Perusahaan
+        } else {
+            // Jika TIDAK ADA draft/revisi (berarti semua sudah diajukan), baru jalankan antrean Verifikator
+            if ($levelId == 2 && !$is_mr && $hasVerifROD) {
+                $isMyMonTurn = true;
+                $statusLabel = 'Perlu Verifikasi';
+                $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
+                $labelPosisi = 'Risk Owner Anak Perusahaan';
+            }
+            elseif ($levelId == 1 && $is_mr && $hasVerifROMR) {
+                $isMyMonTurn = true;
+                $statusLabel = 'Perlu Verifikasi';
+                $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
+                $labelPosisi = 'Risk Officer MR';
+            }
+            elseif ($levelId == 2 && $is_mr && $hasVerifROWMR) {
+                $isMyMonTurn = true;
+                $statusLabel = 'Perlu Verifikasi';
+                $badgeColor = 'bg-warning text-dark border border-warning shadow-sm';
+                $labelPosisi = 'Risk Owner MR';
+            }
         }
 
         if ($isMyMonTurn && empty($tooltipText)) {

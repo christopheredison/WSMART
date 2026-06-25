@@ -920,7 +920,7 @@ $(document).ready(function() {
         paging: true,
         lengthChange: true,
         lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-        pageLength: 10,
+        pageLength: 25,
         language: {
             search: "_INPUT_",
             searchPlaceholder: "Search...",
