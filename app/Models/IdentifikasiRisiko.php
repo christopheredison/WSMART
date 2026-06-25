@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+use OwenIt\Auditing\Auditable;
 
-class IdentifikasiRisiko extends Model
+class IdentifikasiRisiko extends Model implements AuditableContract
 {
-    use HasFactory, SoftDeletes;
+    use Auditable, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'unit_type_id',
@@ -459,5 +462,11 @@ class IdentifikasiRisiko extends Model
             'identifikasi_risiko_corporate_id',
             'identifikasi_risiko_ap_id'
         );
+    }
+
+    public function auditTrails(): HasMany
+    {
+        return $this->hasMany(Audit::class, 'identifikasi_risiko_id')
+            ->latest('id');
     }
 }

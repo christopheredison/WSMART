@@ -4,14 +4,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+use OwenIt\Auditing\Auditable;
 
-class KRIProject extends Model
+class KRIProject extends Model implements AuditableContract
 {
-    use HasFactory;
+    use Auditable, HasFactory;
+
+    protected $auditExclude = [
+        'nilai_kri_terkini_q1',
+        'nilai_kri_terkini_q2',
+        'nilai_kri_terkini_q3',
+        'nilai_kri_terkini_q4',
+        'status_kri_terkini_q1',
+        'status_kri_terkini_q2',
+        'status_kri_terkini_q3',
+        'status_kri_terkini_q4',
+    ];
 
     protected $fillable = [
-        'risiko_id',//berelasi dengan model ProjectRisk (table project_risks)
-        'kri_id', //berelasi dengan model MasterKRI
+        'risiko_id',
+        'kri_id',
         'kri',
         'satuan_kri',
         'batas_aman',
@@ -49,7 +62,6 @@ class KRIProject extends Model
 
         return $this->kriProjectMonitorings
             ->filter(function ($item) use ($quarter, $tahun) {
-                // Antisipasi jika relasi tidak diload
                 if (!$item->relationLoaded('projectMonitoring')) {
                     $item->load('projectMonitoring');
                 }

@@ -4,12 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+use OwenIt\Auditing\Auditable;
 
-class ProjectRisk extends Model
+class ProjectRisk extends Model implements AuditableContract
 {
-    use HasFactory;
-    use SoftDeletes;
+    use Auditable, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'unit_type_id',//berelasi ke model UnitType (table unit_types)
@@ -450,5 +452,11 @@ class ProjectRisk extends Model
                       ->orWhere('is_approved', true);
             })
             ->orderBy('id', 'desc');
+    }
+
+    public function auditTrails(): HasMany
+    {
+        return $this->hasMany(Audit::class, 'project_risk_id')
+            ->latest('id');
     }
 }

@@ -4,10 +4,24 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+use OwenIt\Auditing\Auditable;
 
-class KRI extends Model
+class KRI extends Model implements AuditableContract
 {
-    use HasFactory;
+    use Auditable, HasFactory;
+
+    protected $auditExclude = [
+        'nilai_kri_terkini_q1',
+        'nilai_kri_terkini_q2',
+        'nilai_kri_terkini_q3',
+        'nilai_kri_terkini_q4',
+        'status_kri_terkini_q1',
+        'status_kri_terkini_q2',
+        'status_kri_terkini_q3',
+        'status_kri_terkini_q4',
+    ];
+
     protected $guarded = [];
     protected $table = 'key_risk_indicators';
 
