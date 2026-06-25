@@ -35,7 +35,7 @@ class UnitRiskMonitoring extends Model
 
     protected $casts = [
         'is_approved' => 'boolean',
-        'is_revision' => 'boolean',
+        // 'is_revision' => 'boolean',
         'efektivitas_perlakuan_risiko' => 'decimal:2',
     ];
 

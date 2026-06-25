@@ -602,15 +602,17 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
                     const m = row.last_monitoring_risiko;
                     const status = parseInt(m.status);
-                    const isRevision = m.is_revision;
+                    const isRevision = parseInt(m.is_revision) || 0; // Baca angka status rejector-nya
                     const isApproved = m.is_approved;
                     const map = ' . json_encode($verificatorMap) . ';
 
-                    if (isRevision && !isApproved) {
-                        let source = "";
-                        if (status === 1) source = "Risk Owner Divisi";
-                        if (status === 2) source = "Risk Officer MR";
-                        if (status === 3) source = "Risk Owner MR";
+                    // 1. Logic Revisi/Ditolak
+                    if (isRevision > 0 && !isApproved) {
+                        let source = "Risk Owner Divisi"; // Default
+                        if (isRevision === 2) source = "Risk Owner Divisi";
+                        if (isRevision === 3) source = "Risk Officer MR";
+                        if (isRevision === 4) source = "Risk Owner MR";
+                        
                         return `<div class="badge bg-danger"><i class="bx bx-undo me-1"></i>Ditolak ${source}</div>`;
                     }
 
@@ -918,7 +920,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 // KASUS 1: DRAFTER (Unit Biasa Step 1 atau Unit MR Officer)
                 if ($step == 1) {
                     $unstartedCount = $risksInMyStep->filter(fn($r) => !isset($activeMonitorings[$r->id]))->count();
-                    $revisionCount = $risksInMyStep->filter(fn($r) => isset($activeMonitorings[$r->id]) && $activeMonitorings[$r->id]->status == 1 && $activeMonitorings[$r->id]->is_revision)->count();
+                    $revisionCount = $risksInMyStep->filter(fn($r) => isset($activeMonitorings[$r->id]) && $activeMonitorings[$r->id]->status == 1 && $activeMonitorings[$r->id]->is_revision > 0)->count();
 
                     // Label Target Dinamis
                     $targetLabel = $isUnitMr ? 'Kirim ke Risk Owner MR' : 'Kirim ke Risk Owner Divisi';
@@ -967,7 +969,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     $escalationConfig['label'] = $nextLabel;
 
                     $unapprovedCount = $risksInMyStep->filter(fn($r) => !$activeMonitorings[$r->id]->is_approved)->count();
-                    $returnedCount = $risksInMyStep->filter(fn($r) => $activeMonitorings[$r->id]->is_revision)->count();
+                    $returnedCount = $risksInMyStep->filter(fn($r) => $activeMonitorings[$r->id]->is_revision > 0)->count();
 
                     if ($unapprovedCount > 0) {
                         $escalationConfig['show'] = true;
@@ -1915,7 +1917,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             UnitRiskMonitoring::whereIn('id', $latestMonitorings->pluck('id'))->update([
                 'status' => $targetStatus,
                 'is_approved' => $isFinal, // Jika final, auto approved/published
-                'is_revision' => false,
+                'is_revision' => 0,
             ]);
 
             DB::commit();
@@ -1983,7 +1985,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 $monitoring->update([
                     'status' => $targetStatus,
                     'is_approved' => false,
-                    'is_revision' => true,
+                    'is_revision' => $currentStatus,
                 ]);
             }
 
@@ -2051,7 +2053,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     $monitoring->update([
                         'status' => $targetStatus,
                         'is_approved' => false,
-                        'is_revision' => true,
+                        'is_revision' => $monitoring->status,
                     ]);
                 }
 
