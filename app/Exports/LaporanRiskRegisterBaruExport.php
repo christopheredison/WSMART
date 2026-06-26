@@ -21,6 +21,7 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
     protected $quarterTarget;
     
     protected $mergeRanges = [];
+    protected $mergeTaksonomiRanges = [];
 
     public function __construct(int $periodeId, int $unitId, $bulan = null)
     {
@@ -33,9 +34,6 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
 
     public function columnFormats(): array
     {
-        // PERBAIKAN: 
-        // Bagian ketiga: _("Rp"* "-"??_) 
-        // Artinya -> Jika PHP mengirim angka 0, Excel akan menyimpan nilai 0, tapi menampilkannya sebagai "Rp   -"
         $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
 
         return [
@@ -83,13 +81,18 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
         ])
         ->where('periode_id', $this->periodeId)
         ->where('unit_id', $this->unitId)
+        ->orderBy('taksonomi_risiko_id', 'asc') // MAPPING ORDERING DI SINI
         ->get();
 
         $exportData = new Collection();
         $no = 1;
-        $currentRow = 3; 
+        $currentRow = 3; // Data dimulai dari baris ke-3 Excel
 
-        foreach ($risikos as $risiko) {
+        // Variabel bantuan untuk tracking merge Taksonomi
+        $lastTaksonomiId = null;
+        $taksonomiStartRow = 3;
+
+        foreach ($risikos as $index => $risiko) {
             $penyebabText = '';
             if ($risiko->penyebabRisiko) {
                 foreach ($risiko->penyebabRisiko as $idx => $p) {
@@ -142,11 +145,35 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
             $kriList = $risiko->kris ?? collect();
             $kriCount = max(1, $kriList->count());
 
+            // Hitung baris awal risiko saat ini sebelum loop KRI
+            $risikoStartRow = $currentRow;
+
+            // Simpan range merge internal untuk KRI / Peristiwa Risiko dkk
             if ($kriCount > 1) {
                 $this->mergeRanges[] = [
                     'start' => $currentRow,
                     'end'   => $currentRow + $kriCount - 1
                 ];
+            }
+
+            // Logika Evaluasi Merging Kolom Taksonomi (Kolom B)
+            $currentTaksonomiId = $risiko->taksonomi_risiko_id ?? 'empty';
+            
+            if ($index === 0) {
+                $lastTaksonomiId = $currentTaksonomiId;
+                $taksonomiStartRow = $currentRow;
+            } elseif ($currentTaksonomiId !== $lastTaksonomiId) {
+                // Jika taksonomi berganti, kunci koordinat baris taksonomi sebelumnya
+                $taksonomiEndRow = $currentRow - 1;
+                if ($taksonomiEndRow >= $taksonomiStartRow) {
+                    $this->mergeTaksonomiRanges[] = [
+                        'start' => $taksonomiStartRow,
+                        'end'   => $taksonomiEndRow
+                    ];
+                }
+                // Reset tracker untuk taksonomi baru
+                $lastTaksonomiId = $currentTaksonomiId;
+                $taksonomiStartRow = $currentRow;
             }
 
             if ($kriList->isEmpty()) {
@@ -216,7 +243,7 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
 
                     $exportData->push([
                         'no'        => $isFirstRowOfGroup ? $no : '',
-                        'taksonomi' => $isFirstRowOfGroup ? ($risiko->taksonomiRisiko->nama ?? '-') : '',
+                        'taksonomi' => $risiko->taksonomiRisiko->nama ?? '-', // PERBAIKAN: Selalu isi teks taksonomi agar kalau di-merge text-nya tidak hilang
                         'peristiwa' => $isFirstRowOfGroup ? ($risiko->peristiwa_risiko ?? '-') : '',
                         'penyebab'  => $isFirstRowOfGroup ? (trim($penyebabText) ?: '-') : '',
                         'dampak'    => $isFirstRowOfGroup ? (trim($dampakText) ?: '-') : '',
@@ -238,7 +265,6 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                         'realisasi_pengendalian'=> $pengendalian->realisasi_pengendalian ?? '-',
                         'biaya_realisasi'      => $this->formatUang($pengendalian->biaya_realisasi_pengendalian ?? 0),
 
-                        // Tetap lemparkan nilai 0 ke Excel saat datanya kualitatif/0
                         'inherent_nilai'      => $isFirstRowOfGroup ? $this->formatUang($analisis->nilai_dampak ?? 0) : null,
                         'inherent_dampak'     => $isFirstRowOfGroup ? ($analisis->skala_dampak ?? '-') : '',
                         'inherent_nilai_prob' => $isFirstRowOfGroup ? ($inherentNilaiProb . '%') : '',
@@ -271,6 +297,14 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                 }
             }
             $no++;
+        }
+
+        // Kunci taksonomi terakhir setelah looping selesai
+        if ($currentRow - 1 >= $taksonomiStartRow) {
+            $this->mergeTaksonomiRanges[] = [
+                'start' => $taksonomiStartRow,
+                'end'   => $currentRow - 1
+            ];
         }
 
         return $exportData;
@@ -338,13 +372,13 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                 $sheet->setCellValue('AN2', 'Ra');
                 $sheet->setCellValue('AO2', 'Ri');
 
-                // Merge Cells Vertikal
+                // Merge Cells Vertikal Header
                 $singles = ['A','B','C','D','E','F','G','H','I','N','O'];
                 foreach($singles as $col) {
                     $sheet->mergeCells("{$col}1:{$col}2");
                 }
 
-                // Merge Cells Horizontal
+                // Merge Cells Horizontal Header
                 $sheet->mergeCells('J1:L1');   
                 $sheet->mergeCells('P1:Q1');   
                 $sheet->mergeCells('R1:S1');   
@@ -397,19 +431,29 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                     ]
                 ]);
 
-                // MERGE CELLS BODY DINAMIS
+                // 1. MERGE CELLS BODY DINAMIS (KRI & Info Risiko Utama)
                 if (!empty($this->mergeRanges)) {
+                    // PERBAIKAN: Keluarkan 'B' (Taksonomi) dari list ini karena punya aturan merge-nya tersendiri
                     $columnsToMerge = [
-                        'A', 'B', 'C', 'D', 'E',                    
-                        'T', 'U', 'V', 'W', 'X', 'Y',               
+                        'A', 'C', 'D', 'E',                                     
+                        'T', 'U', 'V', 'W', 'X', 'Y',                 
                         'Z', 'AA', 'AB', 'AC', 'AD', 'AE',           
-                        'AF', 'AG', 'AH', 'AI', 'AJ', 'AK',         
-                        'AL', 'AM', 'AN', 'AO'                      
+                        'AF', 'AG', 'AH', 'AI', 'AJ', 'AK',          
+                        'AL', 'AM', 'AN', 'AO'                                      
                     ];
                     
                     foreach ($this->mergeRanges as $range) {
                         foreach ($columnsToMerge as $col) {
                             $sheet->mergeCells("{$col}{$range['start']}:{$col}{$range['end']}");
+                        }
+                    }
+                }
+
+                // 2. PERBAIKAN: MERGE CELLS KHUSUS KOLOM TAKSONOMI (KOLOM B)
+                if (!empty($this->mergeTaksonomiRanges)) {
+                    foreach ($this->mergeTaksonomiRanges as $tRange) {
+                        if ($tRange['start'] !== $tRange['end']) {
+                            $sheet->mergeCells("B{$tRange['start']}:B{$tRange['end']}");
                         }
                     }
                 }
@@ -431,6 +475,7 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                     ]);
                     
                     $sheet->getStyle('A3:A'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    $sheet->getStyle('B3:B'.$lastRow)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER); // Set taksonomi di tengah vertikal agar rapi
                     $sheet->getStyle('J3:O'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     
                     $centerCols = ['V', 'W', 'X', 'AB', 'AC', 'AD', 'AH', 'AI', 'AJ', 'AL', 'AM', 'AN', 'AO'];
