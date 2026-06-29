@@ -3363,33 +3363,33 @@ class RiskRegisterUnitController extends Controller
             'request_edit_reason' => $request->reason
         ]);
 
-        // Simpan Log ke Risk Note (Type 1 untuk Unit/Anper)
-        \App\Models\RiskNote::create([
-            'risiko_id' => $risk->id,
-            'type' => 1, 
-            'status' => 3, // Status 3 Khusus untuk penanda Request Edit
-            'notes' => 'Mengajukan Request Edit. Alasan: ' . $request->reason,
-            'user_id' => $request->user()->id,
-        ]);
+        // // Simpan Log ke Risk Note (Type 1 untuk Unit/Anper)
+        // \App\Models\RiskNote::create([
+        //     'risiko_id' => $risk->id,
+        //     'type' => 1, 
+        //     'status' => 3, // Status 3 Khusus untuk penanda Request Edit
+        //     'notes' => 'Mengajukan Request Edit. Alasan: ' . $request->reason,
+        //     'user_id' => $request->user()->id,
+        // ]);
 
-        $riskName = $risk->peristiwa_risiko ?? 'Risiko Divisi/Anper';
-        $unitName = $risk->unit->name ?? 'Unit Tidak Diketahui';
+        // $riskName = $risk->peristiwa_risiko ?? 'Risiko Divisi/Anper';
+        // $unitName = $risk->unit->name ?? 'Unit Tidak Diketahui';
 
-        // Ganti route nama sesuai controller (unit/ap)
-        $targetLink = route('risk-register-unit.index', [
-            'pid' => $risk->periode_id, 
-            'unit_id' => $risk->unit_id,
-            'verify_request_edit' => $risk->id
-        ]);
+        // // Ganti route nama sesuai controller (unit/ap)
+        // $targetLink = route('risk-register-unit.index', [
+        //     'pid' => $risk->periode_id, 
+        //     'unit_id' => $risk->unit_id,
+        //     'verify_request_edit' => $risk->id
+        // ]);
 
-        $this->sendNotificationCustom(
-            'RW_MR',
-            $risk->unit_id,
-            'Request Edit Risiko',
-            'Risk Officer mengajukan request edit untuk risiko (' . $riskName . ') pada unit ' . $unitName . '. Alasan: ' . $request->reason,
-            $targetLink,
-            'bx bx-message-square-edit'
-        );
+        // $this->sendNotificationCustom(
+        //     'RW_MR',
+        //     $risk->unit_id,
+        //     'Request Edit Risiko',
+        //     'Risk Officer mengajukan request edit untuk risiko (' . $riskName . ') pada unit ' . $unitName . '. Alasan: ' . $request->reason,
+        //     $targetLink,
+        //     'bx bx-message-square-edit'
+        // );
 
         return response()->json(['message' => 'Request edit berhasil dikirim']);
     }
@@ -3414,48 +3414,48 @@ class RiskRegisterUnitController extends Controller
                     'request_edit' => 2 // 2 = Approved / Unlocked mode
                 ]);
 
-                \App\Models\RiskNote::create([
-                    'risiko_id' => $risk->id,
-                    'type' => 1,
-                    'status' => 1, 
-                    'notes' => $catatan,
-                    'user_id' => $user->id,
-                ]);
+                // \App\Models\RiskNote::create([
+                //     'risiko_id' => $risk->id,
+                //     'type' => 1,
+                //     'status' => 1, 
+                //     'notes' => $catatan,
+                //     'user_id' => $user->id,
+                // ]);
 
-                // Reset batch / Buat baru jika belum ada agar data bisa diproses ulang
-                $dataBatch = \App\Models\DataBatch::where('unit_id', $risk->unit_id)
-                        ->where('type', 1)
-                        ->where('finish', false)
-                        ->orderBy('batch', 'desc')
-                        ->first();
+                // // Reset batch / Buat baru jika belum ada agar data bisa diproses ulang
+                // $dataBatch = \App\Models\DataBatch::where('unit_id', $risk->unit_id)
+                //         ->where('type', 1)
+                //         ->where('finish', false)
+                //         ->orderBy('batch', 'desc')
+                //         ->first();
 
-                if (!$dataBatch) {
-                    \App\Models\DataBatch::create([
-                        'unit_id' => $risk->unit_id,
-                        'periode_id' => $risk->periode_id,
-                        'type' => 1,
-                        'status' => \App\Models\DataBatch::STATUS_PROSES,
-                        'step_verification' => 0,
-                        'finish' => false
-                    ]);
-                } else {
-                    $dataBatch->update([
-                        'status' => \App\Models\DataBatch::STATUS_PROSES,
-                        'step_verification' => 0
-                    ]);
-                }
+                // if (!$dataBatch) {
+                //     \App\Models\DataBatch::create([
+                //         'unit_id' => $risk->unit_id,
+                //         'periode_id' => $risk->periode_id,
+                //         'type' => 1,
+                //         'status' => \App\Models\DataBatch::STATUS_PROSES,
+                //         'step_verification' => 0,
+                //         'finish' => false
+                //     ]);
+                // } else {
+                //     $dataBatch->update([
+                //         'status' => \App\Models\DataBatch::STATUS_PROSES,
+                //         'step_verification' => 0
+                //     ]);
+                // }
 
-                $riskName = $risk->peristiwa_risiko ?? 'Risiko';
-                $targetLink = route('risk-register-unit.index', ['pid' => $risk->periode_id, 'unit_id' => $risk->unit_id]);
+                // $riskName = $risk->peristiwa_risiko ?? 'Risiko';
+                // $targetLink = route('risk-register-unit.index', ['pid' => $risk->periode_id, 'unit_id' => $risk->unit_id]);
 
-                $this->sendNotificationCustom(
-                    'RO_DIVISI',
-                    $risk->unit_id,
-                    'Request Edit Disetujui',
-                    'Request edit risiko Anda (' . $riskName . ') telah disetujui.',
-                    $targetLink,
-                    'bx bx-check-double'
-                );
+                // $this->sendNotificationCustom(
+                //     'RO_DIVISI',
+                //     $risk->unit_id,
+                //     'Request Edit Disetujui',
+                //     'Request edit risiko Anda (' . $riskName . ') telah disetujui.',
+                //     $targetLink,
+                //     'bx bx-check-double'
+                // );
             }
             \Illuminate\Support\Facades\DB::commit();
             return response()->json(['message' => 'Request edit berhasil disetujui.']);
@@ -3481,25 +3481,25 @@ class RiskRegisterUnitController extends Controller
                     'request_edit' => 3, // REQ_EDIT_REJECTED
                 ]);
 
-                \App\Models\RiskNote::create([
-                    'risiko_id' => $risk->id,
-                    'type' => 1,
-                    'status' => 2, 
-                    'notes' => $catatan,
-                    'user_id' => $user->id,
-                ]);
+                // \App\Models\RiskNote::create([
+                //     'risiko_id' => $risk->id,
+                //     'type' => 1,
+                //     'status' => 2, 
+                //     'notes' => $catatan,
+                //     'user_id' => $user->id,
+                // ]);
 
-                $riskName = $risk->peristiwa_risiko ?? 'Risiko';
-                $targetLink = route('risk-register-unit.index', ['pid' => $risk->periode_id, 'unit_id' => $risk->unit_id]);
+                // $riskName = $risk->peristiwa_risiko ?? 'Risiko';
+                // $targetLink = route('risk-register-unit.index', ['pid' => $risk->periode_id, 'unit_id' => $risk->unit_id]);
 
-                $this->sendNotificationCustom(
-                    'RO_DIVISI',
-                    $risk->unit_id,
-                    'Request Edit Ditolak',
-                    'Request edit risiko Anda (' . $riskName . ') telah ditolak oleh Risk Owner MR.',
-                    $targetLink,
-                    'bx bx-x-circle'
-                );
+                // $this->sendNotificationCustom(
+                //     'RO_DIVISI',
+                //     $risk->unit_id,
+                //     'Request Edit Ditolak',
+                //     'Request edit risiko Anda (' . $riskName . ') telah ditolak oleh Risk Owner MR.',
+                //     $targetLink,
+                //     'bx bx-x-circle'
+                // );
             }
             \Illuminate\Support\Facades\DB::commit();
             return response()->json(['message' => 'Request edit berhasil ditolak. Status risiko tetap Published.']);
