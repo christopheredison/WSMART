@@ -42,7 +42,7 @@ return [
     |
     */
     'resolvers' => [
-        'ip_address' => OwenIt\Auditing\Resolvers\IpAddressResolver::class,
+        'ip_address' => App\AuditResolvers\IpAddressResolver::class,
         'user_agent' => OwenIt\Auditing\Resolvers\UserAgentResolver::class,
         'url' => OwenIt\Auditing\Resolvers\UrlResolver::class,
         'identifikasi_risiko_id' => App\AuditResolvers\IdentifikasiRisikoIdResolver::class,
