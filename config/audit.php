@@ -47,6 +47,7 @@ return [
         'url' => OwenIt\Auditing\Resolvers\UrlResolver::class,
         'identifikasi_risiko_id' => App\AuditResolvers\IdentifikasiRisikoIdResolver::class,
         'project_risk_id' => App\AuditResolvers\ProjectRiskIdResolver::class,
+        'unit_id' => App\AuditResolvers\UnitIdResolver::class,
     ],
 
     /*
