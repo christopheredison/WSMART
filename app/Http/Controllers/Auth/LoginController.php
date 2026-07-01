@@ -134,10 +134,12 @@ class LoginController extends Controller
 
         if ($costCenterParent) {
             $unit = Unit::where('cost_center', $costCenterParent)->first();
-            // $userExist->update([
-            //     'unit_type_id' => $unit?->unit_type_id ?: 0,
-            //     'unit_id' => $unit?->id ?: 0,
-            // ]);
+            if ($unit) {
+                $userExist->update([
+                    'unit_type_id' => $unit?->unit_type_id ?: 0,
+                    'unit_id' => $unit?->id ?: 0,
+                ]);
+            }
         }
 
         $namaProyek = $responseData['nama_proyek'] ?? null;
