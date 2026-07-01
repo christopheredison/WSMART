@@ -21,6 +21,7 @@ class ProjectPeriodeListController extends BasicCRUDController
     protected $resourceName = 'Proyek';
     protected $baseRoute = 'project-periode-list.';
     protected $userProjectIdsx = [];
+    protected $pageLength = 10;
 
     protected $tableColumns = [
         'project_code' => [

@@ -308,9 +308,11 @@ Route::group(['middleware' => ['auth']], function () {
         Route::group(['middleware' => ['can:manajemen_unit']],function ()
         {
             Route::get('/unit', [UnitController::class, 'index'])->name('unit.index');
+            Route::get('/unit/logs', [UnitController::class, 'logs'])->name('unit.logs');
             Route::get('/unit/create', [UnitController::class, 'create'])->name('unit.create');
             Route::post('/unit/sync', [UnitController::class, 'sync'])->name('unit.sync');
             Route::post('/unit', [UnitController::class, 'store'])->name('unit.store');
+            Route::get('/unit/{unit}/logs', [UnitController::class, 'logsByUnit'])->name('unit.logs.show');
             Route::get('/unit/{unit}/edit', [UnitController::class, 'edit'])->name('unit.edit');
             Route::put('/unit/{unit}', [UnitController::class, 'update'])->name('unit.update');
             Route::delete('/unit/{unit}', [UnitController::class, 'destroy'])->name('unit.destroy');
@@ -430,6 +432,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('/projects/risks/approve-request-edit', [App\Http\Controllers\Project\ProjectRiskController::class, 'approveRequestEdit'])->name('projects.risks.approve-request-edit');
     Route::post('/projects/risks/reject-request-edit', [App\Http\Controllers\Project\ProjectRiskController::class, 'rejectRequestEdit'])->name('projects.risks.reject-request-edit');
     Route::get('projects/{project}/detail', [ProjectController::class, 'detail'])->name('projects.detail');
+    Route::get('projects/logs', [ProjectController::class, 'logs'])->name('projects.logs');
+    Route::get('projects/{project}/logs', [ProjectController::class, 'logsByProject'])->name('projects.logs.show');
     Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit', 'destroy']);
     Route::resource('projects/{project}/risks', ProjectRiskController::class)->names('projects.risks');
     Route::get('projects/{project}/risks/{risk}/view', [ProjectRiskController::class, 'view'])->name('projects.risks.view');

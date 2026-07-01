@@ -24,6 +24,7 @@ abstract class BasicCRUDController extends Controller
     protected $callbackQuery = null;
     protected $cardFooter = null;
     protected $defaultOrder = null;
+    protected $pageLength = 25;
     protected $indexTitle = null;
     protected $indexSubtitle = null;
     protected $datatableCallback = null;
@@ -120,6 +121,7 @@ abstract class BasicCRUDController extends Controller
             'availableFilters' => $this->availableFilters,
             'cardFooter' => $this->cardFooter,
             'defaultOrder' => $this->defaultOrder ?? [[1, 'asc']],
+            'pageLength' => $this->pageLength,
             'indexTitle' => $this->indexTitle,
             'indexSubtitle' => $this->indexSubtitle,
             'tableLegend' => $this->tableLegend,
