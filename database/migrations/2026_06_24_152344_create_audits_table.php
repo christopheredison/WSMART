@@ -33,6 +33,7 @@ class CreateAuditsTable extends Migration
             $table->string('tags')->nullable();
             $table->unsignedBigInteger('identifikasi_risiko_id')->nullable()->index();
             $table->unsignedBigInteger('project_risk_id')->nullable()->index();
+            $table->unsignedBigInteger('unit_id')->nullable()->index();
             $table->timestamps();
 
             $table->index([$morphPrefix . '_id', $morphPrefix . '_type']);

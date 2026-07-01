@@ -6,12 +6,15 @@ use App\Supports\ApiHC;
 use App\Supports\ApiWika;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Log;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+use OwenIt\Auditing\Auditable;
 
-class Unit extends Model
+class Unit extends Model implements AuditableContract
 {
-    use HasFactory, SoftDeletes;
+    use Auditable, HasFactory, SoftDeletes;
 
     protected $guarded = [];
     protected $table = 'units';
@@ -171,5 +174,11 @@ class Unit extends Model
     public function projects()
     {
         return $this->hasMany(Project::class, 'cost_center_parent', 'cost_center');
+    }
+
+    public function auditTrails(): HasMany
+    {
+        return $this->hasMany(Audit::class, 'unit_id')
+            ->latest('id');
     }
 }

@@ -16,6 +16,11 @@ class Audit extends OwenItAudit
         return $this->belongsTo(ProjectRisk::class, 'project_risk_id');
     }
 
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_id');
+    }
+
     public function getEntityLabelAttribute(): string
     {
         return match ($this->auditable_type) {
@@ -27,6 +32,7 @@ class Audit extends OwenItAudit
             DampakRisikoProject::class => 'Dampak Risiko Proyek',
             PenyebabRisikoProject::class => 'Penyebab Risiko Proyek',
             KRIProject::class => 'Key Risk Indicator Proyek (KRI)',
+            Unit::class => 'Unit',
             default => class_basename($this->auditable_type),
         };
     }
