@@ -90,7 +90,7 @@ class Unit extends Model implements AuditableContract
         $unitData = collect($unitData)->filter(function ($unit) {
             return $unit['company_sap'] == 'A000' && $unit['cost_center_parent'] != "";
         })->keyBy('cost_center_parent')->values()->toArray();
-        dd($unitData);
+        // dd($unitData);
 
         foreach ($unitData as $unit) {
             $cost_center_parent = $unit['cost_center_parent'];
