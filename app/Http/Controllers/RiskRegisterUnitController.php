@@ -2027,6 +2027,30 @@ class RiskRegisterUnitController extends Controller
         }
     }
 
+    public function reopen(Request $request, $riskRegister)
+    {
+        abort_unless(Gate::allows('risk_register_reopen'), 403);
+
+        $identifikasiRisiko = IdentifikasiRisiko::query()
+            ->where('unit_type_id', 1)
+            ->findOrFail($riskRegister);
+
+        if (! $identifikasiRisiko->is_closed) {
+            return response()->json([
+                'message' => 'Risiko ini sudah berstatus open.',
+            ], 422);
+        }
+
+        $identifikasiRisiko->update([
+            'is_closed' => false,
+            'closed_at' => null,
+        ]);
+
+        return response()->json([
+            'message' => 'Risiko berhasil diubah menjadi open kembali.',
+        ]);
+    }
+
     public function send(Request $request)
     {
         // 1. Setup Data Awal

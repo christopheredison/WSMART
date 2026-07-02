@@ -183,6 +183,7 @@ return [
         'project_risk_list',
         'project_risk_create',
         'project_risk_edit',
+        'project_risk_reopen',
         'project_risk_delete',
         'project_risk_delete_admin',
         'project_risk_recalculate',
@@ -270,6 +271,7 @@ return [
         'risk_monitoring_edit',
 
         'risk_register_verification',
+        'risk_register_reopen',
         'risk_register_validation',
         'risk_register_delete_admin',
         'jabatan_list',
