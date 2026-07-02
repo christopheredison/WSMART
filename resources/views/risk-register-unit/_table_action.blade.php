@@ -19,6 +19,14 @@
 
 @if(!$unitExpired)
 
+  @can('risk_register_reopen')
+    @if($item->is_closed)
+      <button type="button" class="btn-input-icon" onclick="reopenRiskRegisterUnit({{ $item->id }}, '{{ addslashes($item->peristiwa_risiko ?? 'Risiko') }}')">
+        <span class="bx bx-reset text-warning" data-bs-toggle="tooltip" title="Re-open Risiko"></span>
+      </button>
+    @endif
+  @endcan
+
   @if($canEdit)
     @can('risk_register_edit')
       <a href="{{ route('risk-register-unit.edit', $item->id) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Edit Data Risiko">

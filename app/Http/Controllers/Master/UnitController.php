@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Master;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\Audit;
 use App\Models\User;
 use App\Models\Unit;
 use App\Models\UnitType;
@@ -150,5 +151,38 @@ class UnitController extends Controller
         Unit::sync();
 
         return response()->json(['message' => 'Unit synced successfully']);
+    }
+
+    public function logs(Request $request)
+    {
+        $event = $request->query('event');
+        $unitId = $request->query('unit_id');
+
+        $units = Unit::query()
+            ->withTrashed()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $audits = Audit::query()
+            ->with(['user', 'auditable'])
+            ->where('auditable_type', Unit::class)
+            ->when($unitId, function ($query) use ($unitId) {
+                $query->where('unit_id', $unitId);
+            })
+            ->when($event, function ($query) use ($event) {
+                $query->where('event', $event);
+            })
+            ->latest('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('master.unit.logs', compact('units', 'audits', 'event', 'unitId'));
+    }
+
+    public function logsByUnit(Request $request, Unit $unit)
+    {
+        $request->merge(['unit_id' => $unit->id]);
+
+        return $this->logs($request);
     }
 }

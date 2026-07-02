@@ -273,6 +273,9 @@
       </div>
 
       <div class="card-footer border-top d-flex justify-content-end bg-light">
+        <a href="{{ route('projects.logs.show', $project) }}" class="btn btn-outline-info me-2">
+          <span class="bx bx-history me-1"></span> Lihat Log Perubahan
+        </a>
         <a href="{{ route('projects.index') }}" class="btn btn-outline-secondary">
           <span class="bx bx-arrow-back me-1"></span> Kembali ke List
         </a>

@@ -308,9 +308,11 @@ Route::group(['middleware' => ['auth']], function () {
         Route::group(['middleware' => ['can:manajemen_unit']],function ()
         {
             Route::get('/unit', [UnitController::class, 'index'])->name('unit.index');
+            Route::get('/unit/logs', [UnitController::class, 'logs'])->name('unit.logs');
             Route::get('/unit/create', [UnitController::class, 'create'])->name('unit.create');
             Route::post('/unit/sync', [UnitController::class, 'sync'])->name('unit.sync');
             Route::post('/unit', [UnitController::class, 'store'])->name('unit.store');
+            Route::get('/unit/{unit}/logs', [UnitController::class, 'logsByUnit'])->name('unit.logs.show');
             Route::get('/unit/{unit}/edit', [UnitController::class, 'edit'])->name('unit.edit');
             Route::put('/unit/{unit}', [UnitController::class, 'update'])->name('unit.update');
             Route::delete('/unit/{unit}', [UnitController::class, 'destroy'])->name('unit.destroy');
@@ -430,6 +432,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('/projects/risks/approve-request-edit', [App\Http\Controllers\Project\ProjectRiskController::class, 'approveRequestEdit'])->name('projects.risks.approve-request-edit');
     Route::post('/projects/risks/reject-request-edit', [App\Http\Controllers\Project\ProjectRiskController::class, 'rejectRequestEdit'])->name('projects.risks.reject-request-edit');
     Route::get('projects/{project}/detail', [ProjectController::class, 'detail'])->name('projects.detail');
+    Route::get('projects/logs', [ProjectController::class, 'logs'])->name('projects.logs');
+    Route::get('projects/{project}/logs', [ProjectController::class, 'logsByProject'])->name('projects.logs.show');
     Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit', 'destroy']);
     Route::resource('projects/{project}/risks', ProjectRiskController::class)->names('projects.risks');
     Route::get('projects/{project}/risks/{risk}/view', [ProjectRiskController::class, 'view'])->name('projects.risks.view');
@@ -437,6 +441,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('projects/{project}/risks/{risk}/rencana', [ProjectRiskController::class, 'doRencana'])->name('projects.risks.do-rencana')->middleware('can:project_risk_edit');
     Route::get('projects/{project}/risks/{risk}/analisa', [ProjectRiskController::class, 'analisa'])->name('projects.risks.analisa')->middleware('can:project_risk_edit');
     Route::post('projects/{project}/risks/{risk}/analisa', [ProjectRiskController::class, 'doAnalisa'])->name('projects.risks.do-analisa')->middleware('can:project_risk_edit');
+    Route::post('projects/{project}/risks/{risk}/reopen', [ProjectRiskController::class, 'reopen'])->name('projects.risks.reopen')->middleware('can:project_risk_reopen');
     Route::post('projects/{project}/risks/import-tender', [ProjectRiskController::class, 'importTender'])->name('projects.risks.import-tender');
     Route::post('project-risk/{id}/verifikasi', [ProjectRiskController::class, 'verifikasi'])->name('project-risk.verifikasi');
     Route::post('projects/risks/eskalasi', [ProjectRiskController::class, 'eskalasi'])->name('projects.risks.eskalasi');
@@ -721,6 +726,7 @@ Route::prefix('risk-register-unit')->middleware('auth')->group(function () {
 
     Route::post('/{riskRegister}/verifikasi', [RiskRegisterUnitController::class, 'verifikasi'])->name('risk-register-unit.verifikasi');
     Route::post('/bulk-verifikasi', [RiskRegisterUnitController::class, 'bulkVerifikasi'])->name('risk-register-unit.bulk-verifikasi');
+    Route::post('/{riskRegister}/reopen', [RiskRegisterUnitController::class, 'reopen'])->name('risk-register-unit.reopen')->middleware('can:risk_register_reopen');
 
     Route::get('/{riskRegister}/loss-events/create', [UnitLEDController::class, 'riskChangeToLed'])->name('risk-register-unit.loss-events.create')->middleware('can:risk_register_list');
     Route::post('/{riskRegister}/loss-events', [UnitLEDController::class, 'riskChangeToLedStore'])->name('risk-register-unit.loss-events.store')->middleware('can:risk_register_list');
@@ -768,6 +774,7 @@ Route::prefix('risk-register-ap')->group(function () {
 
     Route::post('/{riskRegister}/verifikasi', [RiskRegisterApController::class, 'verifikasi'])->name('risk-register-ap.verifikasi');
     Route::post('/bulk-verifikasi', [RiskRegisterApController::class, 'bulkVerifikasi'])->name('risk-register-ap.bulk-verifikasi');
+    Route::post('/{riskRegister}/reopen', [RiskRegisterApController::class, 'reopen'])->name('risk-register-ap.reopen')->middleware('can:risk_register_reopen');
 
     Route::get('/{riskRegister}/loss-events/create', [ApLEDController::class, 'riskChangeToLed'])->name('risk-register-ap.loss-events.create')->middleware('can:risk_register_list');
     Route::post('/{riskRegister}/loss-events', [ApLEDController::class, 'riskChangeToLedStore'])->name('risk-register-ap.loss-events.store')->middleware('can:risk_register_list');

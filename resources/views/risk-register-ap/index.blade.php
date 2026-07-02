@@ -967,6 +967,44 @@ function clearUrlParam() {
         window.history.replaceState({}, '', url);
     }
 }
+
+function reopenRiskRegisterAp(id, riskName = 'risiko ini') {
+    const url = "{{ route('risk-register-ap.reopen', ['riskRegister' => ':id']) }}".replace(':id', id);
+
+    Swal.fire({
+        title: 'Re-open Risiko?',
+        text: `Risiko "${riskName}" akan dibuka kembali.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Re-open',
+        cancelButtonText: 'Batal',
+        reverseButtons: true,
+    }).then((result) => {
+        if (!result.isConfirmed) {
+            return;
+        }
+
+        Swal.fire({
+            title: 'Memproses...',
+            text: 'Mohon tunggu sebentar.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: { _token: '{{ csrf_token() }}' },
+            success: function(response) {
+                Swal.fire('Berhasil', response.message || 'Risiko berhasil diubah menjadi open kembali.', 'success')
+                    .then(() => location.reload());
+            },
+            error: function(xhr) {
+                Swal.fire('Gagal', xhr.responseJSON?.message || 'Terjadi kesalahan saat re-open risiko.', 'error');
+            }
+        });
+    });
+}
 </script>
 <script>
 const table = new DataTable('#example');

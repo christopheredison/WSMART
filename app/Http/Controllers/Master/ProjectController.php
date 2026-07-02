@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Master;
 
 use App\Models\Project;
+use App\Models\Audit;
 use App\Models\ProjectLocation;
 use App\Models\ProjectSektor;
 use App\Models\ProjectType;
@@ -99,6 +100,14 @@ class ProjectController extends BasicCRUDController
                 'title' => 'Lihat Detail',
                 'class' => 'btn-outline-primary btn-sm'
             ];
+            $this->tableActions[] = [
+                'label' => '<span class="bx bx-history"></span>',
+                'btn_icon' => true,
+                'action' => 'link',
+                'url' => route('projects.logs.show', ':id'),
+                'title' => 'Lihat Log Perubahan',
+                'class' => 'btn-outline-primary btn-sm'
+            ];
         }
 
         $this->datatableCallback = function($datatable) {
@@ -124,7 +133,11 @@ class ProjectController extends BasicCRUDController
 
         // Tambahkan tombol "Sync WIKA" di footer halaman list proyek
         $this->cardFooter = '
-            <div class="text-end">
+            <div class="d-flex justify-content-end gap-2">
+                <a href="' . route('projects.logs') . '" class="btn btn-outline-secondary btn-sm">
+                    <span class="bx bx-history"></span>
+                    <span class="ms-1">Log Perubahan</span>
+                </a>
                 <button id="btn-sync-wika" class="btn btn-outline-info btn-sm">
                     <span class="bx bx-sync"></span>
                     <span class="ms-1">Sync WIKA</span>
@@ -334,7 +347,8 @@ class ProjectController extends BasicCRUDController
                 $pembayaranName = empty($projectData['pembayaran_name']) ? '' : (is_array($projectData['pembayaran_name']) ? implode(', ', $projectData['pembayaran_name']) : $projectData['pembayaran_name']);
 
                 $persentase = $this->hitungPersentaseBatasanBiaya($jenisKontrakName, $pembayaranName);
-                $batasanBiaya = $nkTotal * $persentase;
+                // Samakan presisi dengan kolom DB numeric(20,2) agar tidak memicu audit palsu.
+                $batasanBiaya = round($nkTotal * $persentase, 2);
 
                 // Simpan / Update Project
                 $project = Project::updateOrCreate([
@@ -491,5 +505,39 @@ class ProjectController extends BasicCRUDController
         }
 
         return $persentase / 100; // Mengubah misalnya 1.25 menjadi 0.0125 untuk pengali
+    }
+
+    public function logs(Request $request)
+    {
+        abort_unless(Gate::allows('project_list'), 403);
+
+        $event = $request->query('event');
+        $projectId = $request->query('project_id');
+
+        $projects = Project::query()
+            ->orderBy('project_name')
+            ->get(['id', 'project_code', 'project_name']);
+
+        $audits = Audit::query()
+            ->with(['user', 'auditable'])
+            ->where('auditable_type', Project::class)
+            ->when($event, function ($query) use ($event) {
+                $query->where('event', $event);
+            })
+            ->when($projectId, function ($query) use ($projectId) {
+                $query->where('auditable_id', $projectId);
+            })
+            ->latest('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('master.project.logs', compact('audits', 'projects', 'event', 'projectId'));
+    }
+
+    public function logsByProject(Request $request, Project $project)
+    {
+        $request->merge(['project_id' => $project->id]);
+
+        return $this->logs($request);
     }
 }

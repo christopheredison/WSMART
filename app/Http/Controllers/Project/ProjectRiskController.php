@@ -447,6 +447,19 @@ class ProjectRiskController extends BasicCRUDController
             $this->tableActions[] = ['label' => '<span class="bx bx-trash text-danger"></span>', 'btn_icon' => true, 'action' => 'delete', 'url' => route('projects.risks.destroy', ['project' => request()->route('project'), 'risk' => ':id']), 'title' => 'Hapus', 'active_state' => "(data, type, row) => $deleteJsLogic"];
         }
 
+        if (Gate::check('project_risk_reopen')) {
+            $this->tableActions[] = [
+                'label' => '<span class="bx bx-reset text-success"></span>',
+                'btn_icon' => true,
+                'action' => 'script',
+                'permissions' => ['project_risk_reopen'],
+                'script' => 'reopenProjectRisk($(this).data("id"))',
+                'title' => 'Re-open Risiko',
+                'active_state' => 'function(id, type, row) { return row.is_closed == 1 || row.is_closed === true; }',
+            ];
+            $this->tableLegend[] = ['icon' => '<span class="bx bx-reset text-success"></span>', 'label' => 'Re-open Risiko'];
+        }
+
         $this->tableActions[] = [
             'label' => '<span class="bx bx-comment-dots"></span>',
             'btn_icon' => true,
@@ -688,6 +701,7 @@ class ProjectRiskController extends BasicCRUDController
         $submitRequestRoute = route('projects.risks.submit-request-edit');
         $approveRequestRoute = route('projects.risks.approve-request-edit');
         $rejectRequestRoute = route('projects.risks.reject-request-edit');
+        $reopenRoute = route('projects.risks.reopen', ['project' => request()->route('project'), 'risk' => ':id']);
 
         // CEK APAKAH ADA PERMINTAAN AUTO-VERIFY DARI URL
         $autoVerifyJs = '';
@@ -1168,6 +1182,51 @@ class ProjectRiskController extends BasicCRUDController
                     error: function(err) {
                         Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan sistem', 'error');
                     }
+                });
+            }
+
+            function reopenProjectRisk(id) {
+                const table = $('.ajax-datatable').DataTable();
+                const rowData = table.rows().data().toArray().find(r => r.id == id);
+
+                if (!rowData || !(rowData.is_closed == 1 || rowData.is_closed === true)) {
+                    Swal.fire('Info', 'Risiko ini belum berstatus closed.', 'info');
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Re-open Risiko?',
+                    html: 'Status risiko akan diubah menjadi <strong>Open</strong> dan tanggal penutupan dihapus.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Re-open',
+                    cancelButtonText: 'Batal',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (!result.isConfirmed) return;
+
+                    Swal.fire({
+                        title: 'Memproses...',
+                        text: 'Mohon tunggu sebentar.',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+
+                    $.ajax({
+                        url: '{$reopenRoute}'.replace(':id', id),
+                        type: 'POST',
+                        data: {
+                            _token: '{$csrfToken}'
+                        },
+                        success: function(res) {
+                            Swal.fire('Berhasil', res.message || 'Risiko berhasil dibuka kembali.', 'success').then(() => {
+                                table.ajax.reload(null, false);
+                            });
+                        },
+                        error: function(err) {
+                            Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan saat re-open risiko.', 'error');
+                        }
+                    });
                 });
             }
 
@@ -2422,6 +2481,30 @@ class ProjectRiskController extends BasicCRUDController
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function reopen(Request $request, $project, $risk)
+    {
+        abort_unless(Gate::allows('project_risk_reopen'), 403);
+
+        $projectRisk = ProjectRisk::query()
+            ->where('project_periode_list_id', $project)
+            ->findOrFail($risk);
+
+        if (! $projectRisk->is_closed) {
+            return response()->json([
+                'message' => 'Risiko ini sudah berstatus open.',
+            ], 422);
+        }
+
+        $projectRisk->update([
+            'is_closed' => false,
+            'closed_at' => null,
+        ]);
+
+        return response()->json([
+            'message' => 'Risiko berhasil diubah menjadi open kembali.',
+        ]);
     }
 
     public function analisa(Request $request, $resource) {

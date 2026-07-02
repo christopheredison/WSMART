@@ -32,6 +32,7 @@ class Audit extends OwenItAudit
             DampakRisikoProject::class => 'Dampak Risiko Proyek',
             PenyebabRisikoProject::class => 'Penyebab Risiko Proyek',
             KRIProject::class => 'Key Risk Indicator Proyek (KRI)',
+            Project::class => 'Project',
             Unit::class => 'Unit',
             default => class_basename($this->auditable_type),
         };

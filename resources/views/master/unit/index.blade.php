@@ -13,6 +13,10 @@
           </div>
           <h2 class="h3">Unit</h2>
           <div id="bulk-select-replace-element" class="col-auto ms-auto">
+            <a class="btn btn-outline-secondary btn-sm" href="{{ route('unit.logs') }}">
+              <span class="bx bx-history"></span>
+              <span class="ms-1">Log Perubahan</span>
+            </a>
             <button class="btn btn-outline-info btn-sm" onclick="syncUnit()">
               <span class="bx bx-sync"></span>
               <span class="ms-1">Sync</span>
@@ -89,6 +93,9 @@
               <td class="valid_from">{{ $item->valid_from ? $item->valid_from->format('Y-m-d') : 'N/A' }}</td>
               <td class="valid_to">{{ $item->valid_to ? $item->valid_to->format('Y-m-d') : 'N/A' }}</td>
               <td class="white-space-nowrap">
+                <a href="{{ route('unit.logs.show', $item) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Log perubahan">
+                  <span class="bx bx-history"></span>
+                </a>
                 @if ($item->trashed())
                 <button type="submit" class="btn-input-icon ps-0" data-bs-toggle="modal"
                   data-bs-target="#modalRestore{{ $item->id }}">
