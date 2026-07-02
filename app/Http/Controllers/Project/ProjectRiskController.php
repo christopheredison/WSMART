@@ -399,9 +399,9 @@ class ProjectRiskController extends BasicCRUDController
                     'action' => 'script',
                     'script' => 'showRequestEditModal($(this).data("id"))',
                     'title' => 'Request Edit Risiko',
-                    // 'active_state' => 'function(id, type, row) { return row.status === 6 && row.request_edit != 1 && row.request_edit != 2; }'
-                    // Tombol muncul jika status Published, DAN request_edit BUKAN 1 (Pending) atau 2 (Approved)
-                    'active_state' => 'function(id, type, row) { return row.status === 6 && row.request_edit !== 1 && row.request_edit !== 2; }'
+                    // Tombol hanya disembunyikan saat request masih pending approval (request_edit == 1).
+                    // Jika siklus sebelumnya sudah approved/rejected, user boleh request lagi.
+                    'active_state' => 'function(id, type, row) { return row.status === 6 && row.request_edit !== 1; }'
                 ];
                 $this->tableLegend[] = ['icon' => '<span class="bx bx-message-square-edit text-info"></span>', 'label' => 'Request Edit Risiko'];
             }
@@ -1259,6 +1259,18 @@ class ProjectRiskController extends BasicCRUDController
         ]);
 
         $risk = ProjectRisk::with(['peristiwaRisiko', 'project'])->findOrFail($request->risk_id);
+
+        if ((int) $risk->status !== ProjectRisk::STATUS_PUBLISHED) {
+            return response()->json([
+                'message' => 'Request edit hanya dapat diajukan untuk risiko yang sudah Published.',
+            ], 422);
+        }
+
+        if ((int) $risk->request_edit === 1) {
+            return response()->json([
+                'message' => 'Masih ada request edit yang menunggu persetujuan.',
+            ], 422);
+        }
 
         $risk->update([
             'request_edit' => 1,

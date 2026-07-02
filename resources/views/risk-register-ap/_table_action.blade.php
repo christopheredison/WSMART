@@ -47,7 +47,7 @@
     @endcan
   @endif
 
-  @if(auth()->user()->level_id == 1 && auth()->user()->unit_id == $item->unit_id && $item->status == 6 && $item->request_edit != 1 && $item->request_edit != 2)
+  @if(auth()->user()->level_id == 1 && auth()->user()->unit_id == $item->unit_id && $item->status == 6 && $item->request_edit != 1)
       <button type="button" class="btn-input-icon" onclick="showRequestEditModal({{ $item->id }})">
           <span class="bx bx-message-square-edit text-info" data-bs-toggle="tooltip" title="Request Edit Risiko"></span>
       </button>

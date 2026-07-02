@@ -3069,6 +3069,18 @@ class RiskRegisterApController extends Controller
 
         $risk = IdentifikasiRisiko::with(['unit'])->findOrFail($request->risk_id);
 
+        if ((int) $risk->status !== IdentifikasiRisiko::STATUS_PUBLISHED) {
+            return response()->json([
+                'message' => 'Request edit hanya dapat diajukan untuk risiko yang sudah Published.',
+            ], 422);
+        }
+
+        if ((int) $risk->request_edit === 1) {
+            return response()->json([
+                'message' => 'Masih ada request edit yang menunggu persetujuan.',
+            ], 422);
+        }
+
         $risk->update([
             'request_edit' => 1,
             'request_edit_reason' => $request->reason
