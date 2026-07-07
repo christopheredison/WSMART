@@ -526,6 +526,7 @@
             digitsOptional: false,
             placeholder: '0',
             rightAlign: false,
+            allowMinus: true,
             autoUnmask: true,
             removeMaskOnSubmit: true
         });

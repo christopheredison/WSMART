@@ -2238,24 +2238,28 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         if(empty($value)) return "0";
         
         $value = trim($value);
+        $isNegative = str_starts_with($value, '-');
+        $value = str_replace('-', '', $value);
 
         // Kasus 1: Input berupa Raw Float dari JavaScript (Misal: "17832719.24" atau "17832719")
         // Di sini titik bertindak sebagai pemisah desimal.
-        if (preg_match('/^-?\d+(\.\d+)?$/', $value)) {
+        if (preg_match('/^\d+(\.\d+)?$/', $value)) {
             // Ubah titik (desimal) menjadi koma
-            return str_replace('.', ',', $value);
+            $normalized = str_replace('.', ',', $value);
+            return $isNegative ? '-' . $normalized : $normalized;
         }
 
         // Kasus 2: Input berupa format Rupiah/Ribuan Indonesia (Misal: "8.548.714,35" atau "8.548.714")
         // Di sini titik bertindak sebagai ribuan, dan koma sebagai desimal.
-        if (preg_match('/^-?\d{1,3}(?:\.\d{3})*(?:\,\d+)?$/', $value)) {
+        if (preg_match('/^\d{1,3}(?:\.\d{3})*(?:\,\d+)?$/', $value)) {
             // Hapus titik pemisah ribuan saja
-            return str_replace('.', '', $value);
+            $normalized = str_replace('.', '', $value);
+            return $isNegative ? '-' . $normalized : $normalized;
         }
 
         // Kasus 3: Jika mengandung teks atau simbol lain (contoh: "< 10%", "Aman")
         // Kembalikan datanya apa adanya tanpa diubah
-        return $value;
+        return $isNegative ? '-' . $value : $value;
     }
 
     /**
