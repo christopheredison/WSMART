@@ -993,8 +993,7 @@ $(document).ready(function() {
         digitsOptional: true,
         placeholder: '0',
         rightAlign: false,
-        min: 0,
-        allowMinus: false,
+        allowMinus: true,
         autoUnmask: false,
         removeMaskOnSubmit: false
     });

@@ -3621,19 +3621,23 @@ class RiskRegisterUnitController extends Controller
         if(empty($value)) return "0";
         
         $value = trim($value);
+        $isNegative = str_starts_with($value, '-');
+        $value = str_replace('-', '', $value);
 
-        // Cek apakah input murni berupa angka (hanya boleh angka, tanda minus, titik, dan koma)
-        if (preg_match('/^-?[0-9.,]+$/', $value)) {
-            // Hapus titik pemisah ribuan (bawaan format inputmask)
-            $val = str_replace('.', '', $value);
-            
-            // Return nilainya (Koma tetap dipertahankan)
-            // Contoh Input: "1.500.000,50" -> Tersimpan: "1500000,50"
-            return $val;
+        // Kasus 1: Input berupa raw float JS ("-1234.56" / "1234.56")
+        if (preg_match('/^\d+(\.\d+)?$/', $value)) {
+            $normalized = str_replace('.', ',', $value);
+            return $isNegative ? '-' . $normalized : $normalized;
+        }
+
+        // Kasus 2: Input format Indonesia ("-1.234,56" / "1.234,56")
+        if (preg_match('/^\d{1,3}(?:\.\d{3})*(?:\,\d+)?$/', $value)) {
+            $normalized = str_replace('.', '', $value);
+            return $isNegative ? '-' . $normalized : $normalized;
         }
 
         // Jika mengandung teks atau simbol lain (contoh: "< 10%", "TBA")
         // Kembalikan datanya apa adanya tanpa diubah
-        return $value;
+        return $isNegative ? '-' . $value : $value;
     }
 }
