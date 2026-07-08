@@ -9,6 +9,10 @@
         $user = auth()->user();
         $isRiskOfficer = ($user->level_id == 1);
         $isRiskOwner = ($user->level_id == 2);
+        $canManageAsRiskOwner = $isRiskOwner && (
+            (int) $user->unit_id === (int) $unit->id ||
+            ($user->can('verification_mr') && optional($user->unit)->unit_mr == 1)
+        );
 
         // Menyamakan styling dengan Project & Unit Context
         $thClass = "table-light text-dark fw-semibold align-middle";
@@ -72,7 +76,7 @@
                             @endif
 
                             {{-- RISK OWNER (Level 2) --}}
-                            @if($isRiskOwner && $context)
+                            @if($canManageAsRiskOwner && $context)
                                 @if($status == 'Submitted' || $status == 'Verified')
                                     <button type="button" class="btn btn-sm d-flex align-items-center gap-2 btn-danger" data-bs-toggle="modal" data-bs-target="#modalReject">
                                         <i class="bx bx-x"></i> Revisi
@@ -297,7 +301,7 @@
     </div>
 
     {{-- MODAL REVISI --}}
-    @if($context && $isRiskOwner)
+    @if($context && $canManageAsRiskOwner)
     <div class="modal fade" id="modalReject" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">

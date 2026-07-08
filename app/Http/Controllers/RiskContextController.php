@@ -612,7 +612,14 @@ class RiskContextController extends Controller
             return back()->with('error', 'Akses Ditolak. Hanya Risk Owner yang dapat melakukan verifikasi.');
         }
 
-        $context = RiskContext::where('unit_id', $user->unit_id)->findOrFail($id);
+        $context = RiskContext::find($id);
+        if (!$context) {
+            return back()->with('error', 'Data Risk Context tidak ditemukan.');
+        }
+
+        if (!$this->canManageContextAsOwner($user, $context)) {
+            return back()->with('error', 'Akses Ditolak. Anda tidak dapat memverifikasi data unit tersebut.');
+        }
 
         if ($context->status !== RiskContext::STATUS_SUBMITTED) {
             return back()->with('error', 'Dokumen belum diajukan.');
@@ -671,7 +678,14 @@ class RiskContextController extends Controller
             'catatan_perbaikan' => 'required|string'
         ]);
 
-        $context = RiskContext::where('unit_id', $user->unit_id)->findOrFail($id);
+        $context = RiskContext::find($id);
+        if (!$context) {
+            return back()->with('error', 'Data Risk Context tidak ditemukan.');
+        }
+
+        if (!$this->canManageContextAsOwner($user, $context)) {
+            return back()->with('error', 'Akses Ditolak. Anda tidak dapat merevisi data unit tersebut.');
+        }
 
         // if ($context->status !== RiskContext::STATUS_SUBMITTED && $context->status !== RiskContext::STATUS_VERIFIED) {
         //     return back()->with('error', 'Dokumen belum diajukan.');
@@ -715,5 +729,19 @@ class RiskContextController extends Controller
         }
 
         return back()->with('success', 'Risk Context dikembalikan untuk perbaikan.');
+    }
+
+    private function canManageContextAsOwner($user, RiskContext $context): bool
+    {
+        if ((int) $user->unit_id === (int) $context->unit_id) {
+            return true;
+        }
+
+        // Owner MR dapat mengelola context lintas unit saat punya permission verifikasi MR.
+        if ($user->can('verification_mr') && optional($user->unit)->unit_mr == 1) {
+            return true;
+        }
+
+        return false;
     }
 }
