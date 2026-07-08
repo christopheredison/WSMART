@@ -71,6 +71,15 @@ class ApiWika
     {
         $processData = function ($apiResult) {
             $data = $apiResult['data'] ?? [];
+            $hasFilledValue = function ($value) use (&$hasFilledValue) {
+                if (is_array($value)) {
+                    return collect($value)->contains(function ($item) use ($hasFilledValue) {
+                        return $hasFilledValue($item);
+                    });
+                }
+
+                return !is_null($value) && trim((string) $value) !== '';
+            };
 
             return collect($data)
                 // 1. Pastikan kode_spk ada dan tidak null
@@ -78,6 +87,10 @@ class ApiWika
                 // 2. Pastikan kode_spk adalah String atau Angka (bukan Array)
                 ->filter(function ($item) {
                     return is_string($item['kode_spk']) || is_numeric($item['kode_spk']);
+                })
+                // 3. Abaikan project tanpa kddivisi agar tidak ikut proses mapping divisi
+                ->filter(function ($item) use ($hasFilledValue) {
+                    return $hasFilledValue($item['kddivisi'] ?? null);
                 })
                 // PERBAIKAN: Hapus ->keyBy('kode_spk') agar urutan indeks array numerik murni
                 // sehingga urutan periodenya tetap konsisten saat digabungkan

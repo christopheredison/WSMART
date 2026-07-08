@@ -41,6 +41,7 @@ use App\Models\ProjectRisk;
 use App\Models\RiskDivisiProject;
 use App\Models\TaksonomiRisiko;
 use App\Models\UnitRiskMonitoring;
+use App\Models\UnitRelation;
 use Illuminate\Support\Facades\DB;
 use App\Models\PerlakuanDampakRisikoUnit;
 use App\Models\RiskContext;
@@ -478,6 +479,7 @@ class RiskRegisterUnitController extends Controller
         $selectedPeriodeId = $request->query('pid') ?? ($activePeriode?->id);
         $selectedPeriode = $selectedPeriodeId ? Periode::find($selectedPeriodeId) : null;
         $selectedMonth = $request->query('month') ?? date('n');
+        $selectedStatus = $request->query('status') ?? 'Valid';
         $user = auth()->user();
         $levelId = $user->level_id;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
@@ -493,8 +495,12 @@ class RiskRegisterUnitController extends Controller
         $unitQuery = Unit::where('unit_type_id', 1);
         $units = [];
         if (!$viewAllDivision) {
-            $unitQuery->where('id', $user->unit_id);
-            $units = Unit::where('unit_type_id', 1)->where('id', $user->unit_id)->pluck('name', 'id');
+            // Ambil unit milik user dan unit-unit lama yang direlasikan
+            $relatedUnitIds = UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id')->toArray();
+            $myUnitIds = array_merge([$user->unit_id], $relatedUnitIds);
+
+            $unitQuery->whereIn('id', $myUnitIds);
+            $units = Unit::where('unit_type_id', 1)->whereIn('id', $myUnitIds)->pluck('name', 'id');
         } else {
             $units = Unit::where('unit_type_id', 1)->pluck('name', 'id');
         }
@@ -560,6 +566,7 @@ class RiskRegisterUnitController extends Controller
           'viewAllDivision',
           'units',
           'selectedMonth',
+          'selectedStatus',
         ));
     }
 
@@ -573,7 +580,15 @@ class RiskRegisterUnitController extends Controller
         if (Gate::check('view_all_division') && $request->has('unit_id')) {
             $targetUnitId = $request->input('unit_id');
         } else {
-            $targetUnitId = $user->unit_id;
+            // Jika user biasa, izinkan akses ke unit sendiri atau unit yang direlasikan
+            $targetUnitId = $request->input('unit_id', $user->unit_id);
+            
+            $relatedUnitIds = UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id')->toArray();
+            $allowedUnitIds = array_merge([$user->unit_id], $relatedUnitIds);
+
+            if (!in_array($targetUnitId, $allowedUnitIds)) {
+                $targetUnitId = $user->unit_id;
+            }
         }
 
         $targetUnit = Unit::find($targetUnitId);

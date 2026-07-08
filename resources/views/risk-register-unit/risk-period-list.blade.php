@@ -35,8 +35,8 @@
           <div class="col-md-3">
             <label class="form-label d-none" for="unit_status_filter">Filter Status Divisi</label>
             <select id="unit_status_filter" class="form-select select2">
-              <option value="Valid">Valid</option>
-              <option value="Expired">Expired</option>
+              <option value="Valid" {{ $selectedStatus == 'Valid' ? 'selected' : '' }}>Valid</option>
+              <option value="Expired" {{ $selectedStatus == 'Expired' ? 'selected' : '' }}>Expired</option>
             </select>
           </div>
           @if($viewAllDivision)
@@ -256,23 +256,17 @@
       });
     @endif
 
-    $('#periode_filter, #month_filter').on('change', function() {
+    $('#periode_filter, #month_filter, #unit_status_filter').on('change', function() {
       const pid = $('#periode_filter').val();
       const month = $('#month_filter').val();
+      const status = $('#unit_status_filter').val();
 
       const url = new URL(window.location.href);
       url.searchParams.set('pid', pid);
       url.searchParams.set('month', month);
+      url.searchParams.set('status', status);
 
       window.location.href = url.toString();
-    });
-
-    $('#unit_status_filter').on('change', function() {
-      const searchTerm = $(this).val();
-      // Use non-regex search to avoid whitespace/newline mismatch
-      table.column(4).search(searchTerm || '', false, false).draw();
-      // Update division options to reflect selected status
-      updateDivisionOptions(searchTerm);
     });
   });
 </script>

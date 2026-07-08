@@ -302,6 +302,8 @@ return [
 
         'get_all_notification',
 
+        'ghost_login',
+
         'unit_risk_context',
         'project_risk_context',
 

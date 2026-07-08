@@ -21,6 +21,11 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
+        abort_unless(
+            $request->user()?->can('manajemen_user') || $request->user()?->can('ghost_login'),
+            403
+        );
+
         if ($request->ajax()) {
             $users = User::with(['roles', 'unit', 'level', 'projects'])->withTrashed()->select('users.*');
 
@@ -61,16 +66,32 @@ class UserController extends Controller
                 })
                 ->addColumn('action', function($row) {
                     $btn = '';
+                    $canManageUser = auth()->user()?->can('manajemen_user');
+                    $canGhostLogin = auth()->user()?->can('ghost_login');
                     if ($row->trashed()) {
-                        $btn .= '<button type="button" class="btn-input-icon ps-0" onclick="restoreUser('.$row->id.')">
-                                    <span class="bx bx-undo" title="Undo"></span>
-                                </button>';
+                        if ($canManageUser) {
+                            $btn .= '<button type="button" class="btn-input-icon ps-0" onclick="restoreUser('.$row->id.')">
+                                        <span class="bx bx-undo" title="Undo"></span>
+                                    </button>';
+                        }
                     } else {
-                        $editUrl = route('users.edit', $row->id);
-                        $btn .= '<a href="'.$editUrl.'" class="btn-input-icon" title="Edit"><span class="bx bx-edit"></span></a>';
-                        $btn .= '<button type="button" class="btn-input-icon" onclick="deleteUser('.$row->id.')">
-                                    <span class="bx bx-trash text-danger" title="Delete"></span>
-                                </button>';
+                        if ($canManageUser) {
+                            $editUrl = route('users.edit', $row->id);
+                            $btn .= '<a href="'.$editUrl.'" class="btn-input-icon" title="Edit"><span class="bx bx-edit"></span></a>';
+                        }
+                        $isAdminTarget = collect($row->role_names ?? [])->map(function ($roleName) {
+                            return strtolower((string) $roleName);
+                        })->contains('admin');
+                        if ($canGhostLogin && auth()->id() !== $row->id && !$isAdminTarget) {
+                            $btn .= '<button type="button" class="btn-input-icon btn-ghost-login" data-user-id="'.$row->id.'" data-user-name="'.e($row->name).'">
+                                        <span class="bx bx-ghost" title="Ghost Login"></span>
+                                    </button>';
+                        }
+                        if ($canManageUser) {
+                            $btn .= '<button type="button" class="btn-input-icon" onclick="deleteUser('.$row->id.')">
+                                        <span class="bx bx-trash text-danger" title="Delete"></span>
+                                    </button>';
+                        }
                     }
                     return $btn;
                 })

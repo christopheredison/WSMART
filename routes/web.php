@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\GhostLoginController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CapaianTckController;
@@ -128,6 +129,13 @@ Auth::routes();
 
 Route::group(['middleware' => ['auth']], function () {
 
+    Route::post('/ghost-login/restore', [GhostLoginController::class, 'destroy'])->name('ghost-login.destroy');
+    Route::post('/ghost-login/{user}', [GhostLoginController::class, 'store'])
+        ->whereNumber('user')
+        ->name('ghost-login.store');
+
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+
     Route::post('/opportunities', [OpportunityController::class, 'store'])->name('opportunities.store');
     Route::put('/opportunities/{id}', [OpportunityController::class, 'update'])->name('opportunities.update');
     Route::delete('/opportunities/{id}', [OpportunityController::class, 'destroy'])->name('opportunities.destroy');
@@ -192,7 +200,6 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::group(['middleware' => ['can:manajemen_user']],function ()
     {
-        Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
         Route::get('/users/remote-users', [UserController::class, 'searchRemoteUser'])->name('users.search-remote-user');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
