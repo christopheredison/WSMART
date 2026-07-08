@@ -80,7 +80,7 @@
                                 @endif
 
                                 @if($status == 'Submitted')
-                                    <form id="form-verify-context" action="{{ route('risk-context-anper.verify', $context->id) }}" method="POST" class="d-inline">
+                                    <form id="form-verify-context" action="{{ route('risk-context.verify', $context->id) }}" method="POST" class="d-inline">
                                         @csrf
                                         <button type="submit" class="btn btn-sm d-flex align-items-center gap-2 btn-success">
                                             <i class="bx bx-check-double"></i> Setujui
