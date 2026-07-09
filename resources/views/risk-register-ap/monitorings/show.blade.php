@@ -1043,7 +1043,7 @@ $(document).ready(function() {
             $('#btnSimpanUpdateKri').addClass('d-none');
             $('#modalUpdateKri input[name="nilai_kri"]').prop('disabled', true);
             $('#modalUpdateKri select[name="status_kri"]').prop('disabled', true);
-            $('.kri-input-toggled').prop('disabled', true); // Disable input pengendalian
+            $('#kri-pengendalian-section :input').prop('disabled', true); // Disable semua input pengendalian
 
             // Populate data dasar
             $('#modalUpdateKri input[name="key_risk_indicator"]').val(kriProject.kri);
@@ -1077,8 +1077,8 @@ $(document).ready(function() {
                 $('#kri-pengendalian-section').addClass('d-none');
             }
 
-            // Populate nilai pengendalian history
-            if (isNewFormat && (statusVal == '2' || statusVal == '3')) {
+            // Populate nilai pengendalian history (tetap tampil untuk status siaga/bahaya)
+            if (statusVal == '2' || statusVal == '3') {
                 $('#modalUpdateKri [name="kri_rencana_pengendalian"]').val(pengendalian.rencana_pengendalian || '');
                 $('#modalUpdateKri [name="kri_biaya_rencana_pengendalian"]').val(pengendalian.biaya_rencana_pengendalian || 0);
                 $('#modalUpdateKri [name="kri_realisasi_pengendalian"]').val(pengendalian.realisasi_pengendalian || '');
@@ -1089,6 +1089,12 @@ $(document).ready(function() {
                 $('#modalUpdateKri [name="kri_biaya_rencana_pengendalian"]').prop('disabled', true);
                 $('#modalUpdateKri [name="kri_realisasi_pengendalian"]').prop('disabled', true);
                 $('#modalUpdateKri [name="kri_biaya_realisasi_pengendalian"]').prop('disabled', true);
+            } else {
+                // Hindari value lama tertinggal ketika pindah antar KRI
+                $('#modalUpdateKri [name="kri_rencana_pengendalian"]').val('');
+                $('#modalUpdateKri [name="kri_biaya_rencana_pengendalian"]').val(0);
+                $('#modalUpdateKri [name="kri_realisasi_pengendalian"]').val('');
+                $('#modalUpdateKri [name="kri_biaya_realisasi_pengendalian"]').val(0);
             }
             
             $('#modalUpdateKri').modal('show');

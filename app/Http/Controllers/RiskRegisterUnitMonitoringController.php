@@ -637,7 +637,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $this->tableActions = [];
 
         if (Gate::check('risk_monitoring_view')) {
-            $showRoute = route('risk-register-unit.monitorings.show', ['period' => $period->id, 'monitoring' => ':id', 'quarter' => ':quarter', 'tahun' => ':tahun', 'month' => ':month']);
+            $showRoute = route('risk-register-unit.monitorings.show', ['period' => $period->id, 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
             $this->tableActions[] = [
                 'label' => 'View',
                 'btn_icon' => false,
