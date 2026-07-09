@@ -1977,7 +1977,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'month'   => $monitoring->month
         ]);
 
-        DB::transaction(function () use ($validated, $monitoring, $isUnitMr) {
+        DB::transaction(function () use ($validated, $monitoring, $isUnitMr, $currentStatus) {
             if ($validated['status_verifikasi'] == 'terima') {
                 $monitoring->update(['is_approved' => true]);
             } else {
