@@ -3099,7 +3099,11 @@ class RiskRegisterApController extends Controller
         $unitName = $risk->unit->name ?? 'Unit Tidak Diketahui';
 
         // Ganti route nama sesuai controller (unit/ap)
-        $targetLink = route('risk-register-ap.index', ['pid' => $risk->periode_id, 'unit_id' => $risk->unit_id]) . '?verify_request_edit=' . $risk->id;
+        $targetLink = route('risk-register-ap.index', [
+            'pid' => $risk->periode_id, 
+            'unit_id' => $risk->unit_id,
+            'verify_request_edit' => $risk->id
+        ]);
 
         $this->sendNotificationCustom(
             'RW_MR',
