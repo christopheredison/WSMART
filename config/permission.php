@@ -307,6 +307,7 @@ return [
 
         'kuesioner_responden',
         'risk_map_setting',
+        'data_sync_access',
 
         'can_access_project_under_division',
         'report_consolidation',

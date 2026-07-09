@@ -53,7 +53,11 @@
             </div>
           </div>
           <h2 class="h3">Manajemen User</h2>
-          <div id="bulk-select-replace-element" class="col-auto ms-auto">
+          <div id="bulk-select-replace-element" class="col-auto ms-auto d-flex gap-2">
+            <a class="btn btn-outline-secondary btn-sm" href="{{ route('users.logs') }}">
+              <span class="bx bx-history"></span>
+              <span class="ms-1">Log Perubahan</span>
+            </a>
             <a class="btn btn-outline-info btn-sm" href="{{ route('users.create') }}">
               <span class="bx bx-plus"></span>
               <span class="ms-1">New</span>
