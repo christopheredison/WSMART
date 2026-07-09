@@ -949,21 +949,47 @@ function approveRequestEdit(id, reason, riskName, unitName) {
 
 // Handler Jika diakses melalui Link dari Lonceng Notifikasi
 $(document).ready(function() {
+    // 1. Tangkap parameter
     const urlParams = new URLSearchParams(window.location.search);
-    const autoVerifyId = urlParams.get('verify_request_edit');
-    if (autoVerifyId) {
-        // Cari tombol di tabel yang ID-nya cocok lalu trigger click otomatis
-        const btnApprove = $(`button[onclick*="approveRequestEdit(${autoVerifyId}"]`);
-        if (btnApprove.length > 0) {
-            setTimeout(() => btnApprove.click(), 500);
+    let autoVerifyId = urlParams.get('verify_request_edit');
+    
+    if (!autoVerifyId) {
+        const match = window.location.href.match(/verify_request_edit=(\d+)/);
+        if (match) {
+            autoVerifyId = match[1];
         }
+    }
+
+    if (autoVerifyId) {
+        let hasTriggered = false; // Flag penanda agar klik hanya terjadi 1x
+
+        // Cara terbaik: Gunakan event 'draw.dt' dari DataTables
+        // Event ini dipanggil setiap kali DataTables selesai memuat baris HTML-nya
+        $('#example').on('draw.dt', function () {
+            if (hasTriggered) return; // Jika sudah pernah pop-up, jangan eksekusi lagi
+            
+            const btnApprove = $(`button[onclick*="approveRequestEdit(${autoVerifyId}"]`);
+            if (btnApprove.length > 0) {
+                btnApprove.trigger('click');
+                hasTriggered = true; // Kunci agar tidak diklik ulang saat user pindah page tabel
+            }
+        });
+
+        // Fallback darurat jika DataTables tidak merespon event draw (opsional)
+        setTimeout(() => {
+            if (hasTriggered) return;
+            const btnApprove = $(`button[onclick*="approveRequestEdit(${autoVerifyId}"]`);
+            if (btnApprove.length > 0) {
+                btnApprove.trigger('click');
+                hasTriggered = true;
+            }
+        }, 1500);
     }
 });
 
 function clearUrlParam() {
-    if (window.location.search.includes('verify_request_edit')) {
-        const url = new URL(window.location);
-        url.searchParams.delete('verify_request_edit');
+    if (window.location.href.includes('verify_request_edit')) {
+        const url = new URL(window.location.href.replace(/\?verify_request_edit=\d+/, '').replace(/&verify_request_edit=\d+/, ''));
         window.history.replaceState({}, '', url);
     }
 }
