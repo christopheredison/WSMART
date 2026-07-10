@@ -297,6 +297,24 @@
       userModal.hide();
     });
 
+    $('form[action="{{ route('data-sync.sync') }}"]').on('submit', function() {
+      const submitButton = $(this).find('button[type="submit"]');
+      submitButton.prop('disabled', true);
+
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          title: 'Sinkronisasi sedang diproses...',
+          text: 'Mohon tunggu, data sedang disinkronkan.',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+      }
+    });
+
     toggleUserArea();
     renderSelectedUsers();
   });
