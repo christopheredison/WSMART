@@ -112,6 +112,11 @@ if (!function_exists('formatKriBatasJs')) {
                                 value="{{ $riskAnalysis->skala_risiko }}">
                                 <label for="">Skala Risiko Inherent</label>
                             </div>
+                            <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text" name="eksposur_risiko_inherent"
+                                value="{{ $riskAnalysis->eksposur_risiko ? 'Rp ' . number_format($riskAnalysis->eksposur_risiko, 0, ',', '.') : '-' }}">
+                                <label for="">Eksposur Risiko Inherent</label>
+                            </div>
                             <div class="form-group pt-3">
                                 <p>Level Risiko Inherent: <span class="ff-heading fw-medium">{{ $riskAnalysis->level_risiko }}</strong>
                                 </p>
@@ -169,6 +174,11 @@ if (!function_exists('formatKriBatasJs')) {
                                 name="target_skala_risiko" value="{{ $riskAnalysis->{'skala_risiko_residual_q' . $quarter} }}">
                                 <label for="">Target Skala Risiko</label>
                             </div>
+                            <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text" id="target_eksposur_risiko"
+                                name="target_eksposur_risiko" value="{{ $riskAnalysis->{'eksposur_risiko_residual_q' . $quarter} ? 'Rp ' . number_format($riskAnalysis->{'eksposur_risiko_residual_q' . $quarter}, 0, ',', '.') : '-' }}">
+                                <label for="">Target Eksposur Risiko</label>
+                            </div>
                             <div class="form-group pt-3">
                                 <p>Target Level Risiko: <span class="ff-heading fw-medium">{{ $riskAnalysis->{'level_risiko_residual_q' . $quarter} }}</span>
                                 </p>
@@ -212,6 +222,7 @@ if (!function_exists('formatKriBatasJs')) {
                                   min="0"
                                   {{-- oninput="if(this.value > {{ $riskAnalysis->nilai_dampak }} && '{{ $riskAnalysis->kategori_dampak }}' === 'Kuantitatif') this.value = {{ $riskAnalysis->nilai_dampak }};" --}}
                                   required
+                                  autocomplete="off"
                                 >
                                 <label for="">Realisasi Nilai Dampak</label>
                             </div>
@@ -263,15 +274,16 @@ if (!function_exists('formatKriBatasJs')) {
                                 <input type="hidden" name="realisasi_skala_risiko_hidden" id="realisasi_skala_risiko_hidden">
                                 <label for="">Realisasi Skala Risiko</label>
                             </div>
+                            <div class="form-floating mt-2">
+                                <input class="form-control inputmask-rupiah" type="text" name="realisasi_eksposur_risiko" id="realisasi_eksposur_risiko" placeholder=""
+                                value="{{ isset($riskMonitoring?->eksposure_risiko) ? 'Rp ' . number_format($riskMonitoring->eksposure_risiko, 0, ',', '.') : '-' }}" readonly>
+                                <label for="">Realisasi Eksposur Risiko</label>
+                            </div>
                             <div class="form-floating">
                                 <input class="form-control" name="realisasi_level_risiko" id="realisasi_level_risiko" type="text"
                                 placeholder="" readonly />
                                 <input type="hidden" name="realisasi_level_risiko_hidden" id="realisasi_level_risiko_hidden">
                                 <label for="">Realisasi Level Risiko</label>
-                            </div>
-                            <div class="form-floating mt-2">
-                                <input class="form-control inputmask-rupiah" type="text" name="realisasi_eksposur_risiko" id="realisasi_eksposur_risiko" placeholder="" readonly>
-                                <label for="">Realisasi Eksposur Risiko</label>
                             </div>
                         </div>
                     </div>
@@ -868,6 +880,45 @@ const quarter = {{ $quarter }};
 const riskMonitoring = @json($riskMonitoring);
 const namaRisiko = @json($risk->peristiwa_risiko);
 const kriPengendalians = @json($kriPengendalians ?? '{}');
+
+function hydrateKriPayloadFromLatestMonitoring() {
+    Object.keys(kriProjects || {}).forEach(function (id) {
+        const kriProject = kriProjects[id] || {};
+        const latestMonitoring = riskMonitoring?.kri_unit_monitorings?.find(function (m) {
+            return String(m.key_risk_indicator_id) === String(id);
+        });
+        const kriPeng = kriPengendalians ? (kriPengendalians[id] || {}) : {};
+
+        const nilaiKey = 'nilai_kri_terkini_q' + quarter;
+        const statusKey = 'status_kri_terkini_q' + quarter;
+
+        if ((kriProject[nilaiKey] === undefined || kriProject[nilaiKey] === null || kriProject[nilaiKey] === '') && latestMonitoring?.nilai_kri_terkini !== undefined) {
+            kriProject[nilaiKey] = latestMonitoring.nilai_kri_terkini;
+        }
+
+        if ((kriProject[statusKey] === undefined || kriProject[statusKey] === null || kriProject[statusKey] === '') && latestMonitoring?.status_kri_terkini !== undefined) {
+            kriProject[statusKey] = latestMonitoring.status_kri_terkini;
+        }
+
+        if (kriProject.rencana_pengendalian === undefined || kriProject.rencana_pengendalian === null || kriProject.rencana_pengendalian === '') {
+            kriProject.rencana_pengendalian = kriPeng?.rencana_pengendalian ?? null;
+        }
+
+        if (kriProject.realisasi_pengendalian === undefined || kriProject.realisasi_pengendalian === null || kriProject.realisasi_pengendalian === '') {
+            kriProject.realisasi_pengendalian = kriPeng?.realisasi_pengendalian ?? null;
+        }
+
+        if (kriProject.biaya_rencana_pengendalian === undefined || kriProject.biaya_rencana_pengendalian === null || kriProject.biaya_rencana_pengendalian === '') {
+            kriProject.biaya_rencana_pengendalian = kriPeng?.biaya_rencana_pengendalian ?? 0;
+        }
+
+        if (kriProject.biaya_realisasi_pengendalian === undefined || kriProject.biaya_realisasi_pengendalian === null || kriProject.biaya_realisasi_pengendalian === '') {
+            kriProject.biaya_realisasi_pengendalian = kriPeng?.biaya_realisasi_pengendalian ?? 0;
+        }
+    });
+}
+
+hydrateKriPayloadFromLatestMonitoring();
 
 // var today = new Date();
 // var endOfYear = new Date(today.getFullYear(), 11, 31); // Mendapatkan tanggal terakhir dalam tahun ini
