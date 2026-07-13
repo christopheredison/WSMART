@@ -938,7 +938,7 @@ if (!function_exists('formatKriBatasJs')) {
 
                             <div class="tab-pane fade" id="tab_kri_{{ $monitoring->id }}" role="tabpanel">
                                 <div class="card card-body shadow-sm border-0">
-                                    <table class="table table-bordered align-middle">
+                                    <table class="table align-middle">
                                         <thead class="bg-light text-center small fw-bold">
                                             <tr>
                                                 <th rowspan="2" class="align-middle">Indikator (KRI)</th>
@@ -954,24 +954,74 @@ if (!function_exists('formatKriBatasJs')) {
                                         </thead>
                                         <tbody>
                                             @forelse($monitoring->kriUnitMonitorings as $realisasiKri)
+                                                @php
+                                                    $statusMap = [1 => 'Aman', 2 => 'Siaga', 3 => 'Bahaya'];
+                                                    $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
+                                                    $status = (int) $realisasiKri->status_kri_terkini;
+                                                    $isNeedControl = in_array($status, [2, 3], true);
+                                                    $pengendalianKri = $monitoring->pengendalians->firstWhere('kri_id', $realisasiKri->key_risk_indicator_id);
+                                                    $satuanKri = $realisasiKri->keyRiskIndicator->satuan_kri ?? '-';
+                                                @endphp
                                                 <tr>
                                                     <td>
                                                         <div class="fw-bold">{{ $realisasiKri->keyRiskIndicator->kri ?? '-' }}</div>
                                                         <small class="text-muted">Satuan: {{ $realisasiKri->keyRiskIndicator->satuan_kri ?? '-' }}</small>
+                                                        <div class="mt-2 small">
+                                                            <div>
+                                                                <span class="text-muted">Tren Parameter:</span>
+                                                                <span class="badge bg-info bg-opacity-10 text-info border border-info px-2 py-1 ms-1">
+                                                                    {{ $realisasiKri->keyRiskIndicator->tren_parameter ?? '-' }}
+                                                                </span>
+                                                            </div>
+                                                            <div class="mt-1">
+                                                                <span class="text-muted">Metode Pengukuran:</span>
+                                                                <span class="text-dark fw-semibold">{{ $realisasiKri->keyRiskIndicator->metode_pengukuran ?? '-' }}</span>
+                                                            </div>
+                                                        </div>
                                                     </td>
-                                                    <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_aman ?? '-' }}</td>
-                                                    <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_waspada ?? '-' }}</td>
-                                                    <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_bahaya ?? '-' }}</td>
-                                                    <td class="fw-bold text-center text-primary">{{ $realisasiKri->nilai_kri_terkini ?? '-' }}</td>
+                                                    <td class="text-center small">{{ formatKriBatasJs($realisasiKri->keyRiskIndicator->batas_aman) }} {{ $satuanKri }}</td>
+                                                    <td class="text-center small">{{ formatKriBatasJs($realisasiKri->keyRiskIndicator->batas_waspada) }} {{ $satuanKri }}</td>
+                                                    <td class="text-center small">{{ formatKriBatasJs($realisasiKri->keyRiskIndicator->batas_bahaya) }} {{ $satuanKri }}</td>
+                                                    <td class="fw-bold text-center text-primary">{{ formatKriBatasJs($realisasiKri->nilai_kri_terkini) }} {{ $satuanKri }}</td>
                                                     <td class="text-center">
-                                                        @php
-                                                            $statusMap = [1 => 'Aman', 2 => 'Siaga', 3 => 'Bahaya'];
-                                                            $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
-                                                            $status = $realisasiKri->status_kri_terkini;
-                                                        @endphp
                                                         <span class="badge bg-{{ $statusColor[$status] ?? 'light text-dark border' }} p-2">
                                                             {{ $statusMap[$status] ?? '-' }}
                                                         </span>
+                                                        <div class="small text-muted mt-1">
+                                                            {{ $status === 1 ? 'Efektif' : 'Tidak Efektif' }}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="6" class="bg-white">
+                                                        @if($isNeedControl)
+                                                            <div class="p-2 border rounded bg-light">
+                                                                <div class="small fw-semibold text-danger mb-2">
+                                                                    <i class='bx bx-error-circle'></i> Pengendalian Parameter KRI ({{ $statusMap[$status] ?? '-' }})
+                                                                </div>
+                                                                <div class="small mb-2">
+                                                                    <div class="text-muted">Rencana Pengendalian</div>
+                                                                    <div class="fw-semibold">{{ $pengendalianKri->rencana_pengendalian ?? '-' }}</div>
+                                                                    <div class="text-muted mt-1">
+                                                                        Biaya Rencana:
+                                                                        <span class="fw-semibold text-dark">Rp {{ number_format($pengendalianKri->biaya_rencana_pengendalian ?? 0, 0, ',', '.') }}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <hr class="my-2">
+                                                                <div class="small">
+                                                                    <div class="text-muted">Realisasi Pengendalian</div>
+                                                                    <div class="fw-semibold">{{ $pengendalianKri->realisasi_pengendalian ?? '-' }}</div>
+                                                                    <div class="text-muted mt-1">
+                                                                        Biaya Realisasi:
+                                                                        <span class="fw-semibold text-dark">Rp {{ number_format($pengendalianKri->biaya_realisasi_pengendalian ?? 0, 0, ',', '.') }}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        @else
+                                                            <div class="p-2 border rounded bg-success-subtle text-success small text-center">
+                                                                Tidak diperlukan.<br><span class="fw-semibold">Status masih Aman.</span>
+                                                            </div>
+                                                        @endif
                                                     </td>
                                                 </tr>
                                             @empty
