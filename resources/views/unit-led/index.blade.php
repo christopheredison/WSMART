@@ -23,14 +23,17 @@
                         <div class="col-auto ms-auto">
                             @php
                                 $createRouteParams = ['periode' => $periode->id ?? null];
-                                if ($viewAllDivision && isset($targetUnitId)) {
+                                if (($viewAllDivision || (auth()->user()->unit_id == $targetUnitId)) && isset($targetUnitId)) {
                                     $createRouteParams['unit_id'] = $targetUnitId;
                                 }
+                                $isMyUnit = (auth()->user()->unit_id == $targetUnitId);
                             @endphp
+                            @if(!$unitExpired && ($isMyUnit || $viewAllDivision))
                             <a class="btn btn-outline-info btn-sm" href="{{ route('unit-led.create', $createRouteParams) }}">
                                 <span class="bx bx-plus"></span>
                                 <span class="ms-1">Tambah Data Loss Event</span>
                             </a>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -51,7 +54,7 @@
                         @endif
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Divisi</label>
-                            @if($viewAllDivision)
+                            @if($viewAllDivision || count($units) > 1)
                                 <select class="form-select select2" id="filter-unit">
                                     @foreach($units as $id => $name)
                                         <option value="{{ $id }}" {{ $targetUnitId == $id ? 'selected' : '' }}>{{ $name }}</option>

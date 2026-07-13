@@ -140,16 +140,16 @@
                       <span class="bx bx-target-lock"></span>
                     </a>
                   @else
-                    <a href="{{ route('risk-register-unit.periods.show', ['period' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
+                    <a href="{{ route('risk-register-unit.periods.show', ['period' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="View">
                       <span class="bx bx-show"></span>
                     </a>
                     <a href="{{ route('risk-register-unit.index', ['pid' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
                       <span class="bx bx-list-check"></span>
                     </a>
-                    <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id, 'quarter' => $monQuarter, 'month' => $monMonth]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
+                    <a href="{{ route('risk-register-unit.monitorings.index', ['period' => $periode->id, 'unit_id' => $unit->id, 'quarter' => $monQuarter, 'month' => $monMonth]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
                       <span class="bx bx-radar"></span>
                     </a>
-                    <a href="{{ route('unit-led.index-by-periode', ['periode' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
+                    <a href="{{ route('unit-led.index-by-periode', ['periode' => $periode->id, 'unit_id' => $unit->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
                       title="Loss Event">
                       <span class="bx bx-dock-bottom"></span>
                     </a>

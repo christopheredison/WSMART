@@ -74,17 +74,29 @@ class RiskRegisterUnitController extends Controller
                         ? $requestedUnitId
                         : ($allowedUnitIds->contains($user->unit_id) ? $user->unit_id : $allowedUnitIds->first());
         } else {
-            $unitId = $user->unit_id;
+            // Jika user biasa, izinkan akses ke unit sendiri atau unit yang direlasikan (unit lama)
+            $requestedUnitId = (int) $request->query('unit_id');
+            $relatedUnitIds = UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id')->toArray();
+            $allowedUnitIds = array_merge([$user->unit_id], $relatedUnitIds);
+
+            if ($requestedUnitId && in_array($requestedUnitId, $allowedUnitIds)) {
+                $unitId = $requestedUnitId;
+            } else {
+                $unitId = $user->unit_id;
+            }
         }
 
         // 3. Setup Data Batch & Logic Unit MR
         $selectedUnit = Unit::find($unitId);
         $is_unit_mr = $selectedUnit->unit_mr == 1;
 
-        // Cek sudah ada Risk Context belum
-        $riskContext = RiskContext::where('unit_id', $selectedUnit->id)->first();
-        if (!$riskContext || $riskContext->status != RiskContext::STATUS_VERIFIED) {
-            return redirect()->route('risk-register-unit.periods')->with('error', 'Silahkan buat Risk Context terlebih dahulu pada Divisi ' . $selectedUnit->name . '.');
+        // Cek sudah ada Risk Context belum (Hanya untuk unit yang masih aktif)
+        $isExpired = $selectedUnit->valid_to && $selectedUnit->valid_to->isPast() && !$selectedUnit->valid_to->isToday();
+        if (!$isExpired) {
+            $riskContext = RiskContext::where('unit_id', $selectedUnit->id)->first();
+            if (!$riskContext || $riskContext->status != RiskContext::STATUS_VERIFIED) {
+                return redirect()->route('risk-register-unit.periods', ['status' => 'Valid'])->with('error', 'Silahkan buat Risk Context terlebih dahulu pada Divisi ' . $selectedUnit->name . '.');
+            }
         }
 
         // --- LOGIC: Tentukan Min Verification ---
@@ -479,7 +491,6 @@ class RiskRegisterUnitController extends Controller
         $selectedPeriodeId = $request->query('pid') ?? ($activePeriode?->id);
         $selectedPeriode = $selectedPeriodeId ? Periode::find($selectedPeriodeId) : null;
         $selectedMonth = $request->query('month') ?? date('n');
-        $selectedStatus = $request->query('status') ?? 'Valid';
         $user = auth()->user();
         $levelId = $user->level_id;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
@@ -506,12 +517,23 @@ class RiskRegisterUnitController extends Controller
         }
         $displayUnits = $unitQuery->get();
 
+        // Tentukan default status (Valid/Expired) jika tidak ada di request
+        $selectedStatus = $request->query('status');
+        if (!$selectedStatus) {
+            $today = \Carbon\Carbon::today();
+            $hasValidUnit = $displayUnits->contains(function ($unit) use ($today) {
+                $isValid = ($unit->status == 1) && ((is_null($unit->valid_to)) || $unit->valid_to->isAfter($today) || $unit->valid_to->isSameDay($today));
+                return $isValid;
+            });
+            $selectedStatus = $hasValidUnit ? 'Valid' : 'Expired';
+        }
+
         foreach ($displayUnits as $unit) {
             if ($selectedPeriode) {
                 $today = \Carbon\Carbon::today();
 
                 // 1. Status Kelayakan Unit (Valid/Expired)
-                $isValid = ((is_null($unit->valid_to)) || $unit->valid_to->isAfter($today) || $unit->valid_to->isSameDay($today));
+                $isValid = ($unit->status == 1) && ((is_null($unit->valid_to)) || $unit->valid_to->isAfter($today) || $unit->valid_to->isSameDay($today));
                 $unitStatus = $isValid ? 'valid' : 'expired';
 
                 // 2. Hitung Total Risiko
