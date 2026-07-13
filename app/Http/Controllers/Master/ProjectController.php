@@ -313,6 +313,7 @@ class ProjectController extends BasicCRUDController
 
         $countUpdated = 0;
         $failedProjects = []; // Array penampung project yang gagal
+        $projectsBeforeUpdate = [];
 
         foreach ($projectDatas as $projectData) {
             // Gunakan Transaction per-project agar jika gagal, db tetap bersih
@@ -320,8 +321,31 @@ class ProjectController extends BasicCRUDController
 
             try {
                 $profitCenter = $projectData['profit_center'] ?? null;
-                $kodeSpk = $projectData['kode_spk'] ?? '-';
+                $kodeSpkRaw = (string) ($projectData['kode_spk'] ?? '-');
+                $kodeSpk = strtoupper(trim($kodeSpkRaw));
                 $namaSpk = $projectData['nama_spk_full'] ?? ($projectData['project_name'] ?? '-');
+                $existingProject = Project::where('project_code', $kodeSpk)->first();
+
+                $projectsBeforeUpdate[] = [
+                    'project_code_raw' => $kodeSpkRaw,
+                    'project_code' => $kodeSpk,
+                    'project_name_api' => $namaSpk,
+                    'profit_center_api' => $profitCenter,
+                    'cost_center_parent_api' => $projectData['divisisap'] ?? null,
+                    'api_payload' => $projectData,
+                    'existing_project' => $existingProject ? [
+                        'id' => $existingProject->id,
+                        'project_code' => $existingProject->project_code,
+                        'project_name' => $existingProject->project_name,
+                        'project_status' => $existingProject->project_status,
+                        'profit_center' => $existingProject->profit_center,
+                        'nk' => $existingProject->nk,
+                        'nilai_ok_porsi' => $existingProject->nilai_ok_porsi,
+                        'batasan_biaya_perlakuan_risiko' => $existingProject->batasan_biaya_perlakuan_risiko,
+                        'cost_center_parent' => $existingProject->cost_center_parent,
+                        'updated_at' => optional($existingProject->updated_at)->toDateTimeString(),
+                    ] : null,
+                ];
 
                 // 1. CEK UNIT / DIVISI TERLEBIH DAHULU
                 $divisiUnit = null;
@@ -400,18 +424,26 @@ class ProjectController extends BasicCRUDController
                 \Illuminate\Support\Facades\DB::rollBack();
 
                 $failedProjects[] = [
-                    'kode' => $projectData['kode_spk'] ?? '-',
+                    'kode' => strtoupper(trim((string) ($projectData['kode_spk'] ?? '-'))),
                     'nama' => $projectData['nama_spk_full'] ?? ($projectData['project_name'] ?? '-'),
                     'alasan' => $e->getMessage()
                 ];
             }
         }
 
+        $projectCodesFromApi = collect($projectsBeforeUpdate)
+            ->pluck('project_code')
+            ->filter()
+            ->unique()
+            ->values();
+
         return response()->json([
             'success' => true,
             'count_updated' => $countUpdated,
             'count_failed' => count($failedProjects),
             'failed_list' => $failedProjects,
+            'project_codes_from_api' => $projectCodesFromApi,
+            'projects_before_update' => $projectsBeforeUpdate,
             'message' => "Sinkronisasi Selesai."
         ]);
     }
