@@ -830,7 +830,7 @@ if (!function_exists('formatKriBatasJs')) {
                                                 <tr>
                                                     <td>
                                                         <div class="fw-bold">{{ $realisasiKri->keyRiskIndicator->kri ?? '-' }}</div>
-                                                        <small class="text-muted">Satuan: {{ $satuanKri }}</small>
+                                                        <div class="text-muted">Satuan: {{ $satuanKri }}</div>
                                                         <div class="mt-2 small">
                                                             <div>
                                                                 <span class="text-muted">Tren Parameter:</span>
