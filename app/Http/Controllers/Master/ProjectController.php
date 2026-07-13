@@ -328,7 +328,18 @@ class ProjectController extends BasicCRUDController
                 $costCenterParent = $projectData['divisisap'] ?? null;
 
                 if (!empty($costCenterParent)) {
-                    $divisiUnit = Unit::where('cost_center', $costCenterParent)->first();
+                    $today = now()->toDateString();
+
+                    $divisiUnit = Unit::query()
+                        ->where('cost_center', $costCenterParent)
+                        ->whereNull('deleted_at')
+                        ->where('status', true)
+                        ->where(function ($query) use ($today) {
+                            // Unit aktif berdasarkan masa berlaku
+                            $query->whereNull('valid_to')
+                                ->orWhereDate('valid_to', '>=', $today);
+                        })
+                        ->first();
                 }
 
                 // Jika Unit tidak ditemukan, langsung lemparkan exception agar masuk ke blok catch
