@@ -262,7 +262,7 @@ if (!function_exists('formatKriBatasJs')) {
                                                 {{ $statusMap[$status] ?? '-' }}
                                             </span>
                                             <br>
-                                            <small >
+                                            <small>
                                                 ({{ $status == 1 ? 'Efektif' : 'Tidak Efektif' }})
                                             </small>
                                         </td>
@@ -965,7 +965,7 @@ if (!function_exists('formatKriBatasJs')) {
                                                 <tr>
                                                     <td>
                                                         <div class="fw-bold">{{ $realisasiKri->keyRiskIndicator->kri ?? '-' }}</div>
-                                                        <small class="text-muted">Satuan: {{ $realisasiKri->keyRiskIndicator->satuan_kri ?? '-' }}</small>
+                                                        <div class="text-muted">Satuan: {{ $satuanKri }}</div>
                                                         <div class="mt-2 small">
                                                             <div>
                                                                 <span class="text-muted">Tren Parameter:</span>
