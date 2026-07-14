@@ -150,7 +150,7 @@ class Unit extends Model implements AuditableContract
                 // 'cost_center_parent_deskripsi' => $unit['cost_center_parent_deskripsi'] ?? null,
                 'valid_from' => $validFrom,
                 'valid_to' => $validTo,
-                'status' => $unit['status'] ?? null,
+                'status' => true,
             ];
 
             $existingUnit = Unit::query()
