@@ -478,6 +478,7 @@ if (!function_exists('formatKriBatasJs')) {
                                 <tr>
                                     <th rowspan="2" class="align-middle">#</th>
                                     <th rowspan="2" class="align-middle">Key Risk Indicator</th>
+                                    <th rowspan="2" class="align-middle kri-satuan-col">Satuan</th>
                                     <th rowspan="2" class="align-middle">Tren Parameter</th>
                                     <th rowspan="2" class="align-middle">Metode Pengukuran</th>
                                     <th colspan="3">Ambang Batas / Threshold</th>
@@ -507,12 +508,13 @@ if (!function_exists('formatKriBatasJs')) {
                                         <td>
                                             {{ $kriProject->metode_pengukuran ?? '-' }}
                                         </td>
-                                        <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_aman) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
-                                        <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_waspada) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
-                                        <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_bahaya) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="kri-satuan-col">{{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap kri-threshold-col">{{ formatKriBatasJs($kriProject->batas_aman) }}</td>
+                                        <td class="text-center text-nowrap kri-threshold-col">{{ formatKriBatasJs($kriProject->batas_waspada) }}</td>
+                                        <td class="text-center text-nowrap kri-threshold-col">{{ formatKriBatasJs($kriProject->batas_bahaya) }}</td>
                                         
                                         <td class="display-nilai-kri fw-bold text-center text-primary">
-                                            {{ $lastMonitoring?->nilai_kri_terkini ? formatKriBatasJs($lastMonitoring?->nilai_kri_terkini) : '-' }} {{ $kriProject->satuan_kri ?: '-' }}
+                                            {{ $lastMonitoring?->nilai_kri_terkini ? formatKriBatasJs($lastMonitoring?->nilai_kri_terkini) : '-' }}
                                         </td>
                                         <td class="display-kondisi text-center">
                                             @php
@@ -537,7 +539,7 @@ if (!function_exists('formatKriBatasJs')) {
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted">Tidak ada data</td>
+                                        <td colspan="11" class="text-center text-muted">Tidak ada data</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -639,6 +641,45 @@ if (!function_exists('formatKriBatasJs')) {
 <style>
     .hover-underline:hover {
         text-decoration: underline;
+    }
+
+    #table-kri {
+        table-layout: fixed;
+    }
+
+    #table-kri .kri-satuan-col {
+        width: 140px;
+        max-width: 140px;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    #table-kri .kri-threshold-col {
+        min-width: 120px;
+    }
+
+    #modalUpdateKri .input-group {
+        flex-wrap: nowrap;
+        align-items: stretch;
+    }
+
+    #modalUpdateKri .input-group .form-floating {
+        min-width: 0;
+    }
+
+    #modalUpdateKri #modal_satuan_addon {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        text-align: left;
+        line-height: 1.1;
+        font-size: 0.75rem;
+        min-width: 90px;
+        max-width: 170px;
+        width: auto;
+        display: flex;
+        align-items: center;
     }
 </style>
 @endpush
@@ -1627,10 +1668,9 @@ $(document).ready(function() {
         const statusText = statusMap[statusKri] || '-';
         const colorClass = colorMap[statusKri] || 'secondary';
 
-        const satuanTeks = kriProjects[id]['satuan_kri'] ? ' ' + kriProjects[id]['satuan_kri'] : '';
         const tr = $('#table-kri tr[data-id="' + id + '"]');
 
-        tr.find('.display-nilai-kri').text(`${formatDecimalKriDisplay(nilaiKri)}${satuanTeks}`);
+        tr.find('.display-nilai-kri').text(`${formatDecimalKriDisplay(nilaiKri)}`);
         tr.find('.display-kondisi').html(`<span class="badge bg-${colorClass} p-2">${statusText}</span>`);
 
         $('#modalUpdateKri').modal('hide');
