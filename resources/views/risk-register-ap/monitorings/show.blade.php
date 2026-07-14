@@ -220,6 +220,7 @@ if (!function_exists('formatKriBatasJs')) {
                                 <tr>
                                     <th rowspan="2" class="align-middle">#</th>
                                     <th rowspan="2" class="align-middle">Key Risk Indicator</th>
+                                    <th rowspan="2" class="align-middle kri-satuan-col">Satuan</th>
                                     <th rowspan="2" class="align-middle">Tren Parameter</th>
                                     <th rowspan="2" class="align-middle">Metode Pengukuran</th>
                                     <th colspan="3" class="text-center">Ambang Batas / Threshold</th>
@@ -247,11 +248,12 @@ if (!function_exists('formatKriBatasJs')) {
                                         <td>
                                             {{ $kriProject->metode_pengukuran ?? '-' }}
                                         </td>
-                                        <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_aman) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
-                                        <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_waspada) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
-                                        <td class="text-center text-nowrap">{{ formatKriBatasJs($kriProject->batas_bahaya) }} {{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="kri-satuan-col">{{ $kriProject->satuan_kri ?: '-' }}</td>
+                                        <td class="text-center text-nowrap kri-threshold-col">{{ formatKriBatasJs($kriProject->batas_aman) }}</td>
+                                        <td class="text-center text-nowrap kri-threshold-col">{{ formatKriBatasJs($kriProject->batas_waspada) }}</td>
+                                        <td class="text-center text-nowrap kri-threshold-col">{{ formatKriBatasJs($kriProject->batas_bahaya) }}</td>
                                         <td class="display-nilai-kri fw-bold text-center text-primary">
-                                            {{ formatKriBatasJs($lastMonitoring?->nilai_kri_terkini) }} {{ $kriProject->satuan_kri ?: '-' }}
+                                            {{ formatKriBatasJs($lastMonitoring?->nilai_kri_terkini) }}
                                         </td>
                                         @php
                                             $statusMap = [1 => 'Aman', 2 => 'Siaga', 3 => 'Bahaya'];
@@ -283,7 +285,7 @@ if (!function_exists('formatKriBatasJs')) {
                                 @endforeach
                                 @if($risk->kris->isEmpty())
                                     <tr>
-                                        <td colspan="10" class="text-center">Tidak ada data</td>
+                                        <td colspan="11" class="text-center">Tidak ada data</td>
                                     </tr>
                                 @endif
                             </tbody>
@@ -925,6 +927,45 @@ if (!function_exists('formatKriBatasJs')) {
     .hover-underline:hover {
         text-decoration: underline;
     }
+
+    #table-kri {
+        table-layout: fixed;
+    }
+
+    #table-kri .kri-satuan-col {
+        width: 140px;
+        max-width: 140px;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    #table-kri .kri-threshold-col {
+        min-width: 120px;
+    }
+
+    #modalUpdateKri .input-group {
+        flex-wrap: nowrap;
+        align-items: stretch;
+    }
+
+    #modalUpdateKri .input-group .form-floating {
+        min-width: 0;
+    }
+
+    #modalUpdateKri #modal_satuan_addon {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        text-align: left;
+        line-height: 1.1;
+        font-size: 0.75rem;
+        min-width: 90px;
+        max-width: 170px;
+        width: auto;
+        display: flex;
+        align-items: center;
+    }
 </style>
 @endpush
 
@@ -1065,12 +1106,13 @@ $(document).ready(function() {
         } else if (action === 'update-kri') {
             const kriProject = kriProjects[$(this).data('id')];
             const latestMonitoring = riskMonitoring?.kri_unit_monitorings?.find(m => m.key_risk_indicator_id == kriProject.id);
+            let satuan = kriProject.satuan_kri ? ' ' + kriProject.satuan_kri : '';
 
             $('#modalUpdateKri input[name="kri_project_id"]').val($(this).data('id'));
             $('#modalUpdateKri input[name="key_risk_indicator"]').val(kriProject.kri);
-            $('#modalUpdateKri input[name="batas_aman"]').val(kriProject.batas_aman);
-            $('#modalUpdateKri input[name="batas_waspada"]').val(kriProject.batas_waspada);
-            $('#modalUpdateKri input[name="batas_bahaya"]').val(kriProject.batas_bahaya);
+            $('#modalUpdateKri input[name="batas_aman"]').val(formatKriBatasJs(kriProject.batas_aman) + satuan);
+            $('#modalUpdateKri input[name="batas_waspada"]').val(formatKriBatasJs(kriProject.batas_waspada) + satuan);
+            $('#modalUpdateKri input[name="batas_bahaya"]').val(formatKriBatasJs(kriProject.batas_bahaya) + satuan);
             $('#modalUpdateKri input[name="nilai_kri"]').val(latestMonitoring?.nilai_kri_terkini || '');
             $('#modalUpdateKri :input[name="status_kri"]').val(latestMonitoring?.status_kri_terkini || '').change();
             $('#modalUpdateKri').modal('show');
