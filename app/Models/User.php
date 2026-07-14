@@ -116,7 +116,11 @@ class User extends Authenticatable implements AuditableContract
 
     public function levels()
     {
-        return $this->jabatan ? $this->jabatan->levels() : collect([]);
+        $jabatan = $this->relationLoaded('jabatan')
+            ? $this->getRelation('jabatan')
+            : $this->jabatan()->first();
+
+        return $jabatan ? $jabatan->levels() : collect([]);
     }
 
     public function level()
@@ -129,9 +133,13 @@ class User extends Authenticatable implements AuditableContract
     {
         $directRoles = $this->roles()->pluck('name');
 
+        $jabatan = $this->relationLoaded('jabatan')
+            ? $this->getRelation('jabatan')
+            : $this->jabatan()->first();
+
         // Jika user memiliki jabatan, ambil role dari level yang terkait dengan jabatan
-        if ($this->jabatan) {
-            $levelRoles = $this->jabatan->levels()
+        if ($jabatan) {
+            $levelRoles = $jabatan->levels()
                 ->with('roles')
                 ->get()
                 ->pluck('roles')
