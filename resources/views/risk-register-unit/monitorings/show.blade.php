@@ -219,9 +219,9 @@ if (!function_exists('formatKriBatasJs')) {
                                 <tr>
                                     <th rowspan="2" class="align-middle">#</th>
                                     <th rowspan="2" class="align-middle">Key Risk Indicator</th>
-                                    <th rowspan="2" class="align-middle kri-satuan-col">Satuan</th>
                                     <th rowspan="2" class="align-middle">Tren Parameter</th>
                                     <th rowspan="2" class="align-middle">Metode Pengukuran</th>
+                                    <th rowspan="2" class="align-middle kri-satuan-col">Satuan</th>
                                     <th colspan="3" class="text-center">Ambang Batas / Threshold</th>
                                     <th rowspan="2" class="align-middle">Nilai Realisasi</th>
                                     <th rowspan="2" class="align-middle">Status</th>
