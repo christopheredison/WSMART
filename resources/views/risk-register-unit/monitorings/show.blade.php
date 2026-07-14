@@ -571,7 +571,7 @@ if (!function_exists('formatKriBatasJs')) {
                             </div>
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" name="skala_probabilitas_inherent"
-                                value="{{ $riskAnalysis->{'skalaProbabilitasResidualQ' . $quarter} ? $riskAnalysis->{'skalaProbabilitasResidualQ' . $quarter}->tingkat . ' - ' . $riskAnalysis->{'skalaProbabilitasResidualQ' . $quarter}->deskripsi : '-' }}">
+                                value="{{ $riskAnalysis->{'skalaProbabilitasResidualQ' . $quarter} ? $riskAnalysis->{'skalaProbabilitasResidualQ' . $quarter}->tingkat . ' - ' . $riskAnalysis->{'skalaProbabilitasResidualQ' . $quarter}->skala : '-' }}">
                                 <label for="">Target Skala Probabilitas</label>
                             </div>
                             <div class="form-floating">
