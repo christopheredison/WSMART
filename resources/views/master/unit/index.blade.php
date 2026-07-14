@@ -99,9 +99,9 @@
                   $isValid = $item->status == 1 && !$isExpired;
                 @endphp
                 @if ($isValid)
-                  <span class="badge badge-subtle-success">Valid</span>
+                  <span class="badge text-success bg-subtle-success">Valid</span>
                 @else
-                  <span class="badge badge-subtle-danger">Invalid</span>
+                  <span class="badge text-danger bg-subtle-danger">Invalid</span>
                 @endif
               </td>
               <td class="white-space-nowrap">

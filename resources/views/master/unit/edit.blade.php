@@ -42,14 +42,13 @@
               @endforeach
             </select>
           </div>
-          <div class="form-group d-none" id="unit_api_id_group">
-            <label class="form-label label-md-start col-md-3">Unit ID</label>
-            <input type="text" name="unit_api_id" id="unit_api_id" class="form-control" value="{{ $unit->unit_api_id }}">
+          <div class="form-group d-md-flex" id="cost_center_group">
+            <label class="form-label label-md-start col-md-3">Cost Center</label>
+            <input type="text" name="cost_center" id="cost_center" class="form-control form-control-plain" value="{{ old('cost_center', $unit->cost_center) }}" disabled>
           </div>
           <div class="form-group d-md-flex">
             <label class="form-label label-md-start col-md-3">Nama Unit</label>
-            <input type="text" id="name_display" class="form-control form-control-plain" value="{{ old('name', $unit->name) }}" disabled>
-            <input type="hidden" name="name" id="name" value="{{ old('name', $unit->name) }}">
+            <input type="text" name="name" id="name" class="form-control" value="{{ old('name', $unit->name) }}">
           </div>
           <div class="form-group d-none" id="parent_group">
             <label class="form-label label-md-start col-md-3">Parent</label>

@@ -54,6 +54,7 @@ class UnitController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'unit_type_id' => 'required',
+            'cost_center' => 'required|string|max:255|unique:units,cost_center',
             // 'parent_id' => 'required',
         ]);
 
@@ -64,7 +65,7 @@ class UnitController extends Controller
         Unit::create([
             'name' => $request->name,
             'unit_type_id' => $request->unit_type_id,
-            'unit_api_id' => $request->unit_api_id,
+            'cost_center' => trim((string) $request->cost_center),
             'parent_id' => $request->parent_id ?? 0
         ]);
 

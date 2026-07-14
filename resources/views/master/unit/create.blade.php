@@ -13,6 +13,16 @@
         </div>
       </div>
       <div class="card-body">
+        @if($errors->any())
+        <div class="alert alert-danger" role="alert">
+          <strong>Terjadi kesalahan:</strong>
+          <ul class="mb-0">
+            @foreach ($errors->all() as $error)
+              <li>{{ $error }}</li>
+            @endforeach
+          </ul>
+        </div>
+        @endif
         <div class="row gx-0 gy-3">
           <div class="form-group d-md-flex">
             <label class="form-label label-md-start col-md-3">Tipe Unit</label>
@@ -24,9 +34,14 @@
             </select>
           </div>
           <div class="form-group d-md-flex">
-            <label class="form-label label-md-start col-md-3">Unit ID</label>
-            <input class="form-control" id="unit_api_id" name="unit_api_id" type="text" placeholder="Isi Unit ID"
-              value="{{ old('unit_api_id') }}" />
+            <label class="form-label label-md-start col-md-3">Cost Center</label>
+            <div class="w-100">
+              <input class="form-control @error('cost_center') is-invalid @enderror" id="cost_center" name="cost_center" type="text" placeholder="Isi Cost Center"
+                value="{{ old('cost_center') }}" />
+              @error('cost_center')
+                <div class="invalid-feedback">{{ $message }}</div>
+              @enderror
+            </div>
           </div>
           <div class="form-group d-md-flex">
             <label class="form-label label-md-start col-md-3">Nama Unit</label>
