@@ -24,6 +24,7 @@ use App\Models\PenyebabRisiko;
 use App\Models\JenisKontrolEksisting;
 use App\Models\KamusRisikoUnit;
 use App\Models\Unit;
+use App\Models\UnitRelation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -39,17 +40,35 @@ class UnitLEDController extends Controller
             $units = Unit::where('unit_type_id', 1)->pluck('name', 'id');
             $targetUnitId = $request->input('unit_id', $units->keys()->first());
         } else {
-            $targetUnitId = $request->user()->unit_id;
+            // Jika user biasa, izinkan akses ke unit sendiri atau unit yang direlasikan (unit lama)
+            $requestedUnitId = (int) $request->input('unit_id');
+            $relatedUnitIds = UnitRelation::where('unit_id', $request->user()->unit_id)->pluck('related_unit_id')->toArray();
+            $allowedUnitIds = array_merge([$request->user()->unit_id], $relatedUnitIds);
+
+            if ($requestedUnitId && in_array($requestedUnitId, $allowedUnitIds)) {
+                $targetUnitId = $requestedUnitId;
+            } else {
+                $targetUnitId = $request->user()->unit_id;
+            }
+
+            // Untuk dropdown filter unit (hanya unit sendiri & relasi)
+            $units = Unit::whereIn('id', $allowedUnitIds)->pluck('name', 'id');
         }
+
+        $unit = Unit::find($targetUnitId);
+        $today = \Carbon\Carbon::today();
+        $unitExpired = $unit && $unit->valid_to && $unit->valid_to->isPast() && !$unit->valid_to->isToday();
 
         if ($request->ajax()) {
             $data = LossEvent::with(['kategoriKejadian']);
 
-            $unitToFilter = null;
-            if ($viewAllDivision) {
-                $unitToFilter = $request->input('unit_id');
-            } else {
-                $unitToFilter = $request->user()->unit_id;
+            $unitToFilter = $request->input('unit_id');
+            if (!$viewAllDivision) {
+                $relatedUnitIds = UnitRelation::where('unit_id', $request->user()->unit_id)->pluck('related_unit_id')->toArray();
+                $allowedUnitIds = array_merge([$request->user()->unit_id], $relatedUnitIds);
+                if (!$unitToFilter || !in_array($unitToFilter, $allowedUnitIds)) {
+                    $unitToFilter = $request->user()->unit_id;
+                }
             }
 
             $data->where('unit_id', $unitToFilter);
@@ -63,8 +82,8 @@ class UnitLEDController extends Controller
 
             return DataTables::of($data)
                 ->addIndexColumn()
-                ->addColumn('action', function($row) {
-                    return view('unit-led._table_action', compact('row'))->render();
+                ->addColumn('action', function($row) use ($unitExpired) {
+                    return view('unit-led._table_action', compact('row', 'unitExpired'))->render();
                 })
                 ->editColumn('nama_kejadian', function($row) {
                     return $row->nama_kejadian ?? '-';
@@ -102,6 +121,7 @@ class UnitLEDController extends Controller
           'units',
           'viewAllDivision',
           'targetUnitId',
+          'unitExpired',
         ));
     }
 

@@ -1,0 +1,37 @@
+stages:
+  - deploy
+
+# --- DEPLOY KE DEV ---
+deploy_to_dev:
+  stage: deploy
+  only:
+    - EUT-DEV
+  tags:
+    - dev-rms
+  script:
+    - cd /home/webmin/vhosts/rwi/https
+    - git fetch origin EUT-DEV
+    - git reset --hard origin/EUT-DEV
+    - composer install --no-interaction --prefer-dist --optimize-autoloader
+    - php artisan migrate --force
+    - php artisan optimize:clear
+    - echo "🎉 Deploy DEV Sukses!"
+
+# --- DEPLOY KE PRODUCTION ---
+deploy_to_prod:
+  stage: deploy
+  only:
+    - EUT
+  tags:
+    - prod-rms
+  script:
+    - cd /home/webmin/vhosts/rwi/https
+    - git fetch origin EUT
+    - git reset --hard origin/EUT
+    - composer install --no-interaction --prefer-dist --optimize-autoloader
+    - php artisan migrate --force
+    - php artisan optimize:clear
+    - php artisan config:cache
+    - php artisan route:cache
+    - php artisan view:cache
+    - echo "🚀 Deploy PRODUCTION Sukses!"

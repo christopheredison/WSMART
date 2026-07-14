@@ -53,7 +53,7 @@
           </div>
         </div>
         <table class="table table-bulk-select table-hover dataTable" data-paging="true" data-scroll-y="false"
-          data-filter="true" data-info="true">
+          data-filter="true" data-info="true" data-order='[]'>
           <thead>
             <tr>
               <th class="no-sort white-space-nowrap">
@@ -68,6 +68,7 @@
               <th class="sort" data-sort="parent_id">Parent</th>
               <th class="sort" data-sort="valid_from">Valid From</th>
               <th class="sort" data-sort="valid_to">Valid To</th>
+              <th class="sort" data-sort="status">Status</th>
               <th class="no-sort white-space-nowrap" data-sort="action">Action</th>
             </tr>
           </thead>
@@ -92,6 +93,17 @@
               </td>
               <td class="valid_from">{{ $item->valid_from ? $item->valid_from->format('Y-m-d') : 'N/A' }}</td>
               <td class="valid_to">{{ $item->valid_to ? $item->valid_to->format('Y-m-d') : 'N/A' }}</td>
+              <td class="status">
+                @php
+                  $isExpired = $item->valid_to && $item->valid_to->isPast() && !$item->valid_to->isToday();
+                  $isValid = $item->status == 1 && !$isExpired;
+                @endphp
+                @if ($isValid)
+                  <span class="badge badge-subtle-success">Valid</span>
+                @else
+                  <span class="badge badge-subtle-danger">Invalid</span>
+                @endif
+              </td>
               <td class="white-space-nowrap">
                 <a href="{{ route('unit.logs.show', $item) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Log perubahan">
                   <span class="bx bx-history"></span>
@@ -111,11 +123,13 @@
                 <a href="{{ route('unit.edit', $item) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Edit">
                   <span class="bx bx-edit"></span>
                 </a>
+                @if ($isValid)
                 <button type="button" class="btn-input-icon btn-manage-relation" data-unit-id="{{ $item->id }}" data-unit-name="{{ $item->name }}" data-bs-toggle="modal" data-bs-target="#modalManageRelation">
                   <div data-bs-toggle="tooltip" title="Manage relation">
                     <span class="bx bx-link-alt"></span>
                   </div>
                 </button>
+                @endif
                 <button type="button" class="btn-input-icon" data-bs-toggle="modal"
                   data-bs-target="#modalDelete{{ $item->id }}">
                   <span class="bx bx-trash text-danger" data-bs-toggle="tooltip" title="Delete"></span>
