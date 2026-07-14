@@ -50,6 +50,7 @@ use App\Http\Controllers\Master\ProjectSektorController;
 use App\Http\Controllers\Master\ProjectTypeController;
 use App\Http\Controllers\Master\ProjectHasilUsahaController;
 use App\Http\Controllers\Master\UnitHasilUsahaController;
+use App\Http\Controllers\Master\DataSyncController;
 use App\Http\Controllers\Master\QuestionController;
 use App\Http\Controllers\Master\RMIPeriodController;
 use App\Http\Controllers\Master\WBSController;
@@ -194,6 +195,8 @@ Route::group(['middleware' => ['auth']], function () {
     {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+        Route::get('/users/logs', [UserController::class, 'logs'])->name('users.logs');
+        Route::get('/users/{user}/logs', [UserController::class, 'logsByUser'])->name('users.logs.show');
         Route::get('/users/remote-users', [UserController::class, 'searchRemoteUser'])->name('users.search-remote-user');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
@@ -330,6 +333,11 @@ Route::group(['middleware' => ['auth']], function () {
             Route::put('/unit-type/{unitType}', [UnitTypeController::class, 'update'])->name('unit-type.update');
             Route::delete('/unit-type/{unitType}', [UnitTypeController::class, 'destroy'])->name('unit-type.destroy');
             Route::post('/unit-type/{id}/restore', [UnitTypeController::class, 'restore'])->name('unit-type.restore');
+        });
+
+        Route::group(['middleware' => ['can:data_sync_access']], function () {
+            Route::get('/data-sync', [DataSyncController::class, 'index'])->name('data-sync.index');
+            Route::post('/data-sync', [DataSyncController::class, 'sync'])->name('data-sync.sync');
         });
     });
     Route::group(['middleware' => ['can:risk_register_list']],function ()

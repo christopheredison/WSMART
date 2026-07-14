@@ -21,7 +21,7 @@
 
   @can('risk_register_reopen')
     @if($item->is_closed)
-      <button type="button" class="btn-input-icon" onclick="reopenRiskRegisterUnit({{ $item->id }}, '{{ addslashes($item->peristiwa_risiko ?? 'Risiko') }}')">
+      <button type="button" class="btn-input-icon" onclick='reopenRiskRegisterUnit({{ $item->id }}, @json($item->peristiwa_risiko ?? "Risiko"))'>
         <span class="bx bx-reset text-warning" data-bs-toggle="tooltip" title="Re-open Risiko"></span>
       </button>
     @endif
@@ -54,7 +54,7 @@
   @endif
 
   @if(auth()->user()->level_id == 2 && $is_mr && $item->status == 6 && $item->request_edit == 1)
-      <button type="button" class="btn-input-icon" onclick="approveRequestEdit({{ $item->id }}, '{{ addslashes($item->request_edit_reason) }}', '{{ addslashes($item->peristiwa_risiko) }}', '{{ addslashes($item->unit->name ?? 'Unit Tidak Diketahui') }}')">
+      <button type="button" class="btn-input-icon" onclick='approveRequestEdit({{ $item->id }}, @json($item->request_edit_reason), @json($item->peristiwa_risiko), @json($item->unit->name ?? "Unit Tidak Diketahui"))'>
           <span class="bx bx-check-double text-success" data-bs-toggle="tooltip" title="Setujui Request Edit"></span>
       </button>
   @endif
@@ -67,7 +67,7 @@
       }
   @endphp
   @if($canVerify)
-  <button type="button" class="btn-input-icon" onclick="showVerifikasiModal({{ $item->id }}, '{{ addslashes($item->peristiwa_risiko) }}', '{{ addslashes($item->deskripsi_peristiwa_risiko) }}')">
+  <button type="button" class="btn-input-icon" onclick='showVerifikasiModal({{ $item->id }}, @json($item->peristiwa_risiko), @json($item->deskripsi_peristiwa_risiko))'>
     <span class="bx bx-check-shield text-success" data-bs-toggle="tooltip" title="Verifikasi Risiko"></span>
   </button>
   @endif

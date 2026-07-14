@@ -34,6 +34,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Server Error Detail Log Channel
+    |--------------------------------------------------------------------------
+    |
+    | This channel is used to store detailed request/response context for
+    | HTTP 5xx errors to make production issue investigation easier.
+    |
+    */
+    'server_error_channel' => env('SERVER_ERROR_LOG_CHANNEL', 'server_error'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Log Channels
     |--------------------------------------------------------------------------
     |
@@ -168,6 +179,13 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/sync_wika_log.log'),
             'level' => env('LOG_LEVEL', 'info'),
+            'days' => 30,
+        ],
+
+        'server_error' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/server_error.log'),
+            'level' => 'error',
             'days' => 30,
         ],
     ],

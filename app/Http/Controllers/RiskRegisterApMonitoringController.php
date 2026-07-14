@@ -520,7 +520,7 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
         $this->tableActions = [];
 
         if (Gate::check('risk_monitoring_view')) {
-            $showRoute = route('risk-register-ap.monitorings.show', ['period' => $period->id, 'monitoring' => ':id', 'quarter' => ':quarter', 'tahun' => ':tahun', 'month' => ':month']);
+            $showRoute = route('risk-register-ap.monitorings.show', ['period' => $period->id, 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
             $this->tableActions[] = [
                 'label' => 'View',
                 'btn_icon' => false,
@@ -1395,6 +1395,21 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             $toCreate['eksposure_risiko'] = floatval($toCreate['nilai_dampak']) * (floatval($toCreate['nilai_probabilitas']) / 100);
         }
 
+        $latestMonitoringSnapshot = $risk->monitoringRisikos()
+            ->where('quarter', $quarter)
+            ->where('month', $month)
+            ->with(['kriUnitMonitorings', 'pengendalians'])
+            ->latest('id')
+            ->first();
+
+        $latestKriMonitorings = $latestMonitoringSnapshot
+            ? $latestMonitoringSnapshot->kriUnitMonitorings->keyBy('key_risk_indicator_id')
+            : collect();
+
+        $latestKriPengendalians = $latestMonitoringSnapshot
+            ? $latestMonitoringSnapshot->pengendalians->whereNotNull('kri_id')->keyBy('kri_id')
+            : collect();
+
         $projectMonitoring = $risk->monitoringRisikos()->create($toCreate);
 
         $perlakuanDampakReq = json_decode($request->perlakuan_dampak_risikos, true);
@@ -1466,26 +1481,41 @@ class RiskRegisterApMonitoringController extends BasicCRUDController
             }
         }
 
-        $kriProjectRequests = json_decode($request->kri_projects, true);
-        foreach ($kriProjectRequests as $id => $kriProjectRequest) {
-            $statusKriVal = $kriProjectRequest['status_kri_terkini_q' . $quarter];
-            
-            $toCreate = [
-                'key_risk_indicator_id' => $kriProjectRequest['id'],
+        $kriProjectRequests = json_decode($request->kri_projects, true) ?: [];
+        foreach ($risk->kris as $kri) {
+            $kriProjectRequest = $kriProjectRequests[$kri->id] ?? [];
+            $latestKriMonitoring = $latestKriMonitorings->get($kri->id);
+            $latestKriPengendalian = $latestKriPengendalians->get($kri->id);
+
+            $statusKriVal = $kriProjectRequest['status_kri_terkini_q' . $quarter]
+                ?? $latestKriMonitoring?->status_kri_terkini
+                ?? $kri->{'status_kri_terkini_q' . $quarter}
+                ?? null;
+
+            $nilaiKriRaw = $kriProjectRequest['nilai_kri_terkini_q' . $quarter]
+                ?? $latestKriMonitoring?->nilai_kri_terkini
+                ?? $kri->{'nilai_kri_terkini_q' . $quarter}
+                ?? null;
+
+            $nilaiKriVal = ($nilaiKriRaw !== null && $nilaiKriRaw !== '')
+                ? $this->cleanDecimal($nilaiKriRaw)
+                : null;
+
+            $projectMonitoring->kriUnitMonitorings()->create([
+                'key_risk_indicator_id' => $kri->id,
                 'status_kri_terkini' => $statusKriVal,
-                'nilai_kri_terkini' => $this->cleanDecimal($kriProjectRequest['nilai_kri_terkini_q' . $quarter]),
-            ];
-            $projectMonitoring->kriUnitMonitorings()->create($toCreate);
+                'nilai_kri_terkini' => $nilaiKriVal,
+            ]);
 
             // SIMPAN PENGENDALIAN KRI JIKA STATUS WASPADA (2) ATAU BAHAYA (3)
-            if (in_array($statusKriVal, [2, 3])) {
+            if (in_array((string) $statusKriVal, ['2', '3'], true)) {
                 $projectMonitoring->pengendalians()->create([
                     'parameter_id' => null,
-                    'kri_id' => $kriProjectRequest['id'],
-                    'rencana_pengendalian' => $kriProjectRequest['rencana_pengendalian'] ?? null,
-                    'biaya_rencana_pengendalian' => $this->cleanRupiah($kriProjectRequest['biaya_rencana_pengendalian'] ?? 0),
-                    'realisasi_pengendalian' => $kriProjectRequest['realisasi_pengendalian'] ?? null,
-                    'biaya_realisasi_pengendalian' => $this->cleanRupiah($kriProjectRequest['biaya_realisasi_pengendalian'] ?? 0), 
+                    'kri_id' => $kri->id,
+                    'rencana_pengendalian' => $kriProjectRequest['rencana_pengendalian'] ?? $latestKriPengendalian?->rencana_pengendalian,
+                    'biaya_rencana_pengendalian' => $this->cleanRupiah($kriProjectRequest['biaya_rencana_pengendalian'] ?? $latestKriPengendalian?->biaya_rencana_pengendalian ?? 0),
+                    'realisasi_pengendalian' => $kriProjectRequest['realisasi_pengendalian'] ?? $latestKriPengendalian?->realisasi_pengendalian,
+                    'biaya_realisasi_pengendalian' => $this->cleanRupiah($kriProjectRequest['biaya_realisasi_pengendalian'] ?? $latestKriPengendalian?->biaya_realisasi_pengendalian ?? 0),
                 ]);
             }
         }

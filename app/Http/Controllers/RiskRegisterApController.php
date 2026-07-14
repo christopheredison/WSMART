@@ -347,6 +347,24 @@ class RiskRegisterApController extends Controller
             ],
         ];
 
+        // Legend tambahan untuk fitur Request Edit Risiko
+        $canRequestEditLegend = ($levelId == 1 && $unitId == $user->unit_id);
+        $canVerifyRequestEditLegend = ($levelId == 2 && $is_mr);
+
+        if ($canRequestEditLegend) {
+            $tableLegend[] = [
+                'icon' => '<span class="bx bx-message-square-edit text-info"></span>',
+                'label' => 'Request Edit Risiko'
+            ];
+        }
+
+        if ($canVerifyRequestEditLegend) {
+            $tableLegend[] = [
+                'icon' => '<span class="bx bx-check-double text-success"></span>',
+                'label' => 'Setujui Request Edit'
+            ];
+        }
+
         // Hitung status expired divisi berdasarkan valid_to unit
         $currentUnit = Unit::find($unitId);
         $today = Carbon::today();
@@ -3099,7 +3117,11 @@ class RiskRegisterApController extends Controller
         $unitName = $risk->unit->name ?? 'Unit Tidak Diketahui';
 
         // Ganti route nama sesuai controller (unit/ap)
-        $targetLink = route('risk-register-ap.index', ['pid' => $risk->periode_id, 'unit_id' => $risk->unit_id]) . '?verify_request_edit=' . $risk->id;
+        $targetLink = route('risk-register-ap.index', [
+            'pid' => $risk->periode_id, 
+            'unit_id' => $risk->unit_id,
+            'verify_request_edit' => $risk->id
+        ]);
 
         $this->sendNotificationCustom(
             'RW_MR',

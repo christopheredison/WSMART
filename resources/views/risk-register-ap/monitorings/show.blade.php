@@ -430,11 +430,6 @@ if (!function_exists('formatKriBatasJs')) {
                                 <label for="">Target Skala Dampak</label>
                             </div>
                             <div class="form-floating">
-                                <input disabled="disabled" class="form-control" type="text" id="target_eksposur_risiko"
-                                name="target_eksposur_risiko" value="{{ $riskAnalysis->{'eksposur_risiko_residual_q' . $quarter} ? 'Rp ' . number_format($riskAnalysis->{'eksposur_risiko_residual_q' . $quarter}, 0, ',', '.') : '-' }}">
-                                <label for="">Target Eksposur Risiko</label>
-                            </div>
-                            <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" id="target_nilai_probabilitas"
                                 name="target_nilai_probabilitas" value="{{ $riskAnalysis->{'nilai_probabilitas_residual_q' . $quarter} }}">
                                 <label for="">Target Nilai Probabilitas (%)</label>
@@ -448,6 +443,11 @@ if (!function_exists('formatKriBatasJs')) {
                                 <input disabled="disabled" class="form-control" type="text" id="target_skala_risiko"
                                 name="target_skala_risiko" value="{{ $riskAnalysis->{'skala_risiko_residual_q' . $quarter} }}">
                                 <label for="">Target Skala Risiko</label>
+                            </div>
+                            <div class="form-floating">
+                                <input disabled="disabled" class="form-control" type="text" id="target_eksposur_risiko"
+                                name="target_eksposur_risiko" value="{{ $riskAnalysis->{'eksposur_risiko_residual_q' . $quarter} ? 'Rp ' . number_format($riskAnalysis->{'eksposur_risiko_residual_q' . $quarter}, 0, ',', '.') : '-' }}">
+                                <label for="">Target Eksposur Risiko</label>
                             </div>
                             <div class="form-group pt-3">
                                 <p>Target Level Risiko: <span class="ff-heading fw-medium">{{ $riskAnalysis->{'level_risiko_residual_q' . $quarter} }}</span>
@@ -508,11 +508,6 @@ if (!function_exists('formatKriBatasJs')) {
                                 <label for="">Realisasi Skala Dampak</label>
                             </div>
                             <div class="form-floating">
-                                <input class="form-control" type="text" name="realisasi_eksposure_risiko" id="realisasi_eksposure_risiko" placeholder=""
-                                value="{{ isset($riskMonitoring?->eksposure_risiko) ? 'Rp ' . number_format($riskMonitoring->eksposure_risiko, 0, ',', '.') : '-' }}" readonly>
-                                <label for="">Realisasi Eksposur Risiko</label>
-                            </div>
-                            <div class="form-floating">
                                 <input class="form-control update-trigger" type="number" id="realisasi_nilai_probabilitas"
                                 name="realisasi_nilai_probabilitas" value="{{ $riskMonitoring?->nilai_probabilitas }}"
                                 data-max="{{ $riskAnalysis->nilai_probabilitas }}"
@@ -532,6 +527,11 @@ if (!function_exists('formatKriBatasJs')) {
                                 <input class="form-control" type="text" name="realisasi_skala_risiko" id="realisasi_skala_risiko" placeholder="" readonly value="{{ $riskMonitoring?->skala_risiko }}">
                                 <input type="hidden" name="realisasi_skala_risiko_hidden" id="realisasi_skala_risiko_hidden">
                                 <label for="">Realisasi Skala Risiko</label>
+                            </div>
+                            <div class="form-floating">
+                                <input class="form-control" type="text" name="realisasi_eksposure_risiko" id="realisasi_eksposure_risiko" placeholder=""
+                                value="{{ isset($riskMonitoring?->eksposure_risiko) ? 'Rp ' . number_format($riskMonitoring->eksposure_risiko, 0, ',', '.') : '-' }}" readonly>
+                                <label for="">Realisasi Eksposur Risiko</label>
                             </div>
                             <div class="form-floating">
                                 <input class="form-control" name="realisasi_level_risiko" id="realisasi_level_risiko" type="text"
@@ -819,24 +819,74 @@ if (!function_exists('formatKriBatasJs')) {
                                         </thead>
                                         <tbody>
                                             @forelse($monitoring->kriUnitMonitorings as $realisasiKri)
+                                                @php
+                                                    $statusMap = [1 => 'Aman', 2 => 'Siaga', 3 => 'Bahaya'];
+                                                    $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
+                                                    $status = (int) $realisasiKri->status_kri_terkini;
+                                                    $isNeedControl = in_array($status, [2, 3], true);
+                                                    $pengendalianKri = $monitoring->pengendalians->firstWhere('kri_id', $realisasiKri->key_risk_indicator_id);
+                                                    $satuanKri = $realisasiKri->keyRiskIndicator->satuan_kri ?? '-';
+                                                @endphp
                                                 <tr>
                                                     <td>
                                                         <div class="fw-bold">{{ $realisasiKri->keyRiskIndicator->kri ?? '-' }}</div>
-                                                        <small class="text-muted">Satuan: {{ $realisasiKri->keyRiskIndicator->satuan_kri ?? '-' }}</small>
+                                                        <div class="text-muted">Satuan: {{ $satuanKri }}</div>
+                                                        <div class="mt-2 small">
+                                                            <div>
+                                                                <span class="text-muted">Tren Parameter:</span>
+                                                                <span class="badge bg-info bg-opacity-10 text-info border border-info px-2 py-1 ms-1">
+                                                                    {{ $realisasiKri->keyRiskIndicator->tren_parameter ?? '-' }}
+                                                                </span>
+                                                            </div>
+                                                            <div class="mt-1">
+                                                                <span class="text-muted">Metode Pengukuran:</span>
+                                                                <span class="text-dark fw-semibold">{{ $realisasiKri->keyRiskIndicator->metode_pengukuran ?? '-' }}</span>
+                                                            </div>
+                                                        </div>
                                                     </td>
-                                                    <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_aman ?? '-' }}</td>
-                                                    <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_waspada ?? '-' }}</td>
-                                                    <td class="text-center small">{{ $realisasiKri->keyRiskIndicator->batas_bahaya ?? '-' }}</td>
-                                                    <td class="fw-bold text-center text-primary">{{ $realisasiKri->nilai_kri_terkini ?? '-' }}</td>
+                                                    <td class="text-center small">{{ formatKriBatasJs($realisasiKri->keyRiskIndicator->batas_aman) }} {{ $satuanKri }}</td>
+                                                    <td class="text-center small">{{ formatKriBatasJs($realisasiKri->keyRiskIndicator->batas_waspada) }} {{ $satuanKri }}</td>
+                                                    <td class="text-center small">{{ formatKriBatasJs($realisasiKri->keyRiskIndicator->batas_bahaya) }} {{ $satuanKri }}</td>
+                                                    <td class="fw-bold text-center text-primary">{{ formatKriBatasJs($realisasiKri->nilai_kri_terkini) }} {{ $satuanKri }}</td>
                                                     <td class="text-center">
-                                                        @php
-                                                            $statusMap = [1 => 'Aman', 2 => 'Siaga', 3 => 'Bahaya'];
-                                                            $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
-                                                            $status = $realisasiKri->status_kri_terkini;
-                                                        @endphp
                                                         <span class="badge bg-{{ $statusColor[$status] ?? 'light text-dark border' }} p-2">
                                                             {{ $statusMap[$status] ?? '-' }}
                                                         </span>
+                                                        <div class="small text-muted mt-1">
+                                                            {{ $status === 1 ? 'Efektif' : 'Tidak Efektif' }}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="6" class="bg-white">
+                                                        @if($isNeedControl)
+                                                            <div class="p-2 border rounded bg-light">
+                                                                <div class="small fw-semibold text-danger mb-2">
+                                                                    <i class='bx bx-error-circle'></i> Pengendalian Parameter KRI ({{ $statusMap[$status] ?? '-' }})
+                                                                </div>
+                                                                <div class="small mb-2">
+                                                                    <div class="text-muted">Rencana Pengendalian</div>
+                                                                    <div class="fw-semibold">{{ $pengendalianKri->rencana_pengendalian ?? '-' }}</div>
+                                                                    <div class="text-muted mt-1">
+                                                                        Biaya Rencana:
+                                                                        <span class="fw-semibold text-dark">Rp {{ number_format($pengendalianKri->biaya_rencana_pengendalian ?? 0, 0, ',', '.') }}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <hr class="my-2">
+                                                                <div class="small">
+                                                                    <div class="text-muted">Realisasi Pengendalian</div>
+                                                                    <div class="fw-semibold">{{ $pengendalianKri->realisasi_pengendalian ?? '-' }}</div>
+                                                                    <div class="text-muted mt-1">
+                                                                        Biaya Realisasi:
+                                                                        <span class="fw-semibold text-dark">Rp {{ number_format($pengendalianKri->biaya_realisasi_pengendalian ?? 0, 0, ',', '.') }}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        @else
+                                                            <div class="p-2 border rounded bg-success-subtle text-success small text-center">
+                                                                Tidak diperlukan.<br><span class="fw-semibold">Status masih Aman.</span>
+                                                            </div>
+                                                        @endif
                                                     </td>
                                                 </tr>
                                             @empty
@@ -1043,7 +1093,7 @@ $(document).ready(function() {
             $('#btnSimpanUpdateKri').addClass('d-none');
             $('#modalUpdateKri input[name="nilai_kri"]').prop('disabled', true);
             $('#modalUpdateKri select[name="status_kri"]').prop('disabled', true);
-            $('.kri-input-toggled').prop('disabled', true); // Disable input pengendalian
+            $('#kri-pengendalian-section :input').prop('disabled', true); // Disable semua input pengendalian
 
             // Populate data dasar
             $('#modalUpdateKri input[name="key_risk_indicator"]').val(kriProject.kri);
@@ -1077,8 +1127,8 @@ $(document).ready(function() {
                 $('#kri-pengendalian-section').addClass('d-none');
             }
 
-            // Populate nilai pengendalian history
-            if (isNewFormat && (statusVal == '2' || statusVal == '3')) {
+            // Populate nilai pengendalian history (tetap tampil untuk status siaga/bahaya)
+            if (statusVal == '2' || statusVal == '3') {
                 $('#modalUpdateKri [name="kri_rencana_pengendalian"]').val(pengendalian.rencana_pengendalian || '');
                 $('#modalUpdateKri [name="kri_biaya_rencana_pengendalian"]').val(pengendalian.biaya_rencana_pengendalian || 0);
                 $('#modalUpdateKri [name="kri_realisasi_pengendalian"]').val(pengendalian.realisasi_pengendalian || '');
@@ -1089,6 +1139,12 @@ $(document).ready(function() {
                 $('#modalUpdateKri [name="kri_biaya_rencana_pengendalian"]').prop('disabled', true);
                 $('#modalUpdateKri [name="kri_realisasi_pengendalian"]').prop('disabled', true);
                 $('#modalUpdateKri [name="kri_biaya_realisasi_pengendalian"]').prop('disabled', true);
+            } else {
+                // Hindari value lama tertinggal ketika pindah antar KRI
+                $('#modalUpdateKri [name="kri_rencana_pengendalian"]').val('');
+                $('#modalUpdateKri [name="kri_biaya_rencana_pengendalian"]').val(0);
+                $('#modalUpdateKri [name="kri_realisasi_pengendalian"]').val('');
+                $('#modalUpdateKri [name="kri_biaya_realisasi_pengendalian"]').val(0);
             }
             
             $('#modalUpdateKri').modal('show');
