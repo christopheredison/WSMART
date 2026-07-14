@@ -88,9 +88,13 @@ class Unit extends Model implements AuditableContract
         $unitData = $units['data'];
 
         $unitData = collect($unitData)->filter(function ($unit) {
-            return $unit['company_sap'] == 'A000' && $unit['cost_center_parent'] != "";
+            $costCenterParentDesc = trim((string) ($unit['cost_center_parent_deskripsi'] ?? ''));
+
+            return $unit['company_sap'] == 'A000'
+                && $unit['cost_center_parent'] != ""
+                && $costCenterParentDesc !== '';
         })->keyBy('cost_center_parent')->values()->toArray();
-        // dd($unitData);
+        dd($unitData);
 
         $today = now()->toDateString();
 
