@@ -93,7 +93,12 @@
 
           <a class="tx-g700 font-base" href="{{ route('home') }}">
             <div class="d-flex align-items-center py-3">
-              <div>{{ Auth::user()->name }}</div>
+              <div>
+                {{ Auth::user()->name }}
+                @if(session()->has('ghost_login'))
+                  <span class="badge bg-warning text-dark ms-2">Ghost Login</span>
+                @endif
+              </div>
             </div>
           </a>
           <li class="nav-item dropdown"><a class="nav-link pe-0 ps-2" id="navbarDropdownUser" role="button"
@@ -112,6 +117,16 @@
                 {{-- <a class="dropdown-item" href="#!">Set status</a> --}}
                 <a class="dropdown-item" href="{{ route('profile') }}">Profile &amp; account</a>
                 {{-- <a class="dropdown-item" href="#!">Feedback</a> --}}
+
+                @if(session()->has('ghost_login'))
+                  <form method="POST" action="{{ route('ghost-login.destroy') }}">
+                    @csrf
+                    <button type="submit" class="dropdown-item">
+                      Keluar Ghost Login
+                    </button>
+                  </form>
+                  <div class="dropdown-divider"></div>
+                @endif
 
                 <div class="dropdown-divider"></div>
                 {{-- <a class="dropdown-item" href="pages/user/settings.html">Settings</a> --}}

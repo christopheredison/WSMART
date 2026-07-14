@@ -2,7 +2,7 @@
 @section('dashboard')
 <div class="row justify-content-center">
   <div class="col-12 col-md-10 col-lg-7">
-    <form class="card" method="POST" action="{{ route('unit.update', $unit) }}">
+    <form id="editUnitForm" class="card" method="POST" action="{{ route('unit.update', $unit) }}">
       @csrf
       @method('PUT')
       <div class="card-header d-flex justify-content-between">
@@ -102,6 +102,34 @@
     dateFormat: 'd/m/Y',
     disableMobile: true,
     allowInput: true
+  });
+
+  $('#editUnitForm').on('submit', function(e) {
+    const validToVal = $('#valid_to').val();
+    if (validToVal) {
+      const parts = validToVal.split('/');
+      const validToDate = new Date(parts[2], parts[1] - 1, parts[0]);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (validToDate < today) {
+        e.preventDefault();
+        Swal.fire({
+          title: 'Apakah anda yakin?',
+          text: "Unit akan menjadi expired/invalid karena tanggal Valid To sudah terlewati.",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'Ya, Simpan!',
+          cancelButtonText: 'Batal'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.submit();
+          }
+        });
+      }
+    }
   });
 </script>
 @endpush

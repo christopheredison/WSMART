@@ -14,6 +14,7 @@ use App\Models\StrategiRisiko;
 use App\Models\Level;
 use App\Models\UnitRiskMonitoring;
 use App\Models\Unit;
+use App\Models\UnitRelation;
 use App\Models\RiskMonitoringNote;
 use DateTime;
 use Illuminate\Http\Request;
@@ -77,7 +78,16 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             $targetUnitId = $firstUnit ? $firstUnit->id : null;
           }
         } else {
-          $targetUnitId = $user->unit_id;
+          // User non view_all_division boleh mengakses unit sendiri + unit relasi.
+          $requestedUnitId = request()->input('filters.unit_id', request()->query('unit_id'));
+          $relatedUnitIds = UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id')->toArray();
+          $allowedUnitIds = array_merge([$user->unit_id], $relatedUnitIds);
+
+          if ($requestedUnitId && in_array((int) $requestedUnitId, $allowedUnitIds, true)) {
+            $targetUnitId = $requestedUnitId;
+          } else {
+            $targetUnitId = $user->unit_id;
+          }
         }
 
         $this->baseRouteParams['unit_id'] = $targetUnitId;
@@ -87,6 +97,9 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
           $this->indexSubtitle = $unit->name . ' - Periode ' . $tahunPeriode;
         }
         $isUnitMr = $unit->unit_mr == 1;
+        $today = \Carbon\Carbon::today();
+        $isStillValid = !$unit?->valid_to || ($unit?->valid_to && ($unit->valid_to->isSameDay($today) || $unit->valid_to->isAfter($today)));
+        $unitExpired = !$isStillValid;
 
         // Merge request
         request()->merge(['month' => $month, 'quarter' => $quarter, 'unit_id' => $targetUnitId]);
@@ -663,7 +676,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'extra_attrs' => [ 'style' => 'font-size: 16px; font-weight: 400;', 'data-id' => 'row.id' ]
         ];
 
-        if ($canEdit) {
+        if ($canEdit && !$unitExpired) {
             $monitoringRoute = route('risk-register-unit.monitorings.edit', ['period' => $period->id, 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
 
             $this->tableActions[] = [
@@ -688,7 +701,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $hasVerificationMr = Gate::allows('verification_mr');
         $verificatorLevels = [2, 1]; // 1=Officer , 2=Owner
 
-        if (in_array($user->level_id, $verificatorLevels)) {
+        if (in_array($user->level_id, $verificatorLevels) && !$unitExpired) {
             $this->tableActions[] = [
                 'label' => 'Verifikasi',
                 'btn_class' => 'btn-warning btn-sm',
@@ -734,10 +747,13 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         if ($viewAllDivision) {
             $unitFilterOptions = Unit::where('unit_type_id', 1)->pluck('name', 'id')->toArray();
         } else {
-            if ($user->unit) {
-                $unitFilterOptions = [$user->unit_id => $user->unit->name];
+            $relatedUnitIds = UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id')->toArray();
+            $allowedUnitIds = array_merge([$user->unit_id], $relatedUnitIds);
+            $unitFilterOptions = Unit::whereIn('id', $allowedUnitIds)->pluck('name', 'id')->toArray();
+
+            if (count($unitFilterOptions) <= 1) {
+                $unitFilterAttributes['disabled'] = true;
             }
-            $unitFilterAttributes['disabled'] = true;
         }
 
         $monthOptions = match((int)$quarter) {
@@ -1003,15 +1019,16 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         }
 
         $this->extraViewData['summaryInfo'] = $summaryInfo;
-        $this->extraViewData['escalationConfig'] = $escalationConfig;
-        $this->extraViewData['showVerifikasiModal'] = in_array($userLevel, $verificatorLevels);
+        $this->extraViewData['escalationConfig'] = $unitExpired ? ['show' => false] : $escalationConfig;
+        $this->extraViewData['showVerifikasiModal'] = in_array($userLevel, $verificatorLevels) && !$unitExpired;
         $this->extraViewData['showCatatanModal'] = true;
 
         // --- TAMBAHAN UNTUK BULK VERIFY ---
-        $this->extraViewData['showBulkCheckbox'] = true;
+        $this->extraViewData['showBulkCheckbox'] = !$unitExpired;
         $this->extraViewData['currentUserLevel'] = $userLevel;
         $this->extraViewData['hasVerificationMr'] = $hasVerificationMr;
         $this->extraViewData['isUserUnitMr'] = $user->unit ? $user->unit->unit_mr : 0;
+        $this->extraViewData['unitExpired'] = $unitExpired;
         
         $bulkRoute = route("risk-register-unit.monitorings.bulk-verify", ["period" => $period->id]);
 
