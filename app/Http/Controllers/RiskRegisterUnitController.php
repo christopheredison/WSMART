@@ -509,6 +509,10 @@ class RiskRegisterUnitController extends Controller
         $selectedPeriodeId = $request->query('pid') ?? ($activePeriode?->id);
         $selectedPeriode = $selectedPeriodeId ? Periode::find($selectedPeriodeId) : null;
         $selectedMonth = $request->query('month') ?? date('n');
+        $selectedStatus = $request->query('status', 'Valid');
+        if (!in_array($selectedStatus, ['Valid', 'Expired'], true)) {
+            $selectedStatus = 'Valid';
+        }
         $user = auth()->user();
         $levelId = $user->level_id;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
@@ -594,6 +598,7 @@ class RiskRegisterUnitController extends Controller
           'viewAllDivision',
           'units',
           'selectedMonth',
+          'selectedStatus',
         ));
     }
 
