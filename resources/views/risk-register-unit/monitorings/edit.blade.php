@@ -156,7 +156,7 @@ if (!function_exists('formatKriBatasJs')) {
                             <div class="form-floating">
                                 <input disabled="disabled" class="form-control" type="text" id="target_skala_dampak"
                                 name="target_skala_dampak"
-                                value="{{ $riskAnalysis->{'skalaDampakResidualQ' . $quarter . 'Obj'} ? $riskAnalysis->{'skalaDampakResidualQ' . $quarter . 'Obj'}->tingkat . ' - ' . $riskAnalysis->{'skalaDampakResidualQ' . $quarter . 'Obj'}->deskripsi : '-' }}">
+                                value="{{ $riskAnalysis->{'skalaDampakResidualQ' . $quarter . 'Obj'} ? $riskAnalysis->{'skalaDampakResidualQ' . $quarter . 'Obj'}->tingkat . ' - ' . $riskAnalysis->{'skalaDampakResidualQ' . $quarter . 'Obj'}->skala : '-' }}">
                                 <label for="">Target Skala Dampak</label>
                             </div>
                             <div class="form-floating">
