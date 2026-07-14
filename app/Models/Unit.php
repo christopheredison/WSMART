@@ -94,7 +94,7 @@ class Unit extends Model implements AuditableContract
                 && $unit['cost_center_parent'] != ""
                 && $costCenterParentDesc !== '';
         })->keyBy('cost_center_parent')->values()->toArray();
-        dd($unitData);
+        // dd($unitData);
 
         $today = now()->toDateString();
 
