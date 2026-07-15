@@ -148,27 +148,38 @@ class Unit extends Model implements AuditableContract
                 'cost_center_type' => $unit['cost_center_type'] ?? null,
                 // 'cost_center_parent' => $unit['cost_center_parent'] ?? null,
                 // 'cost_center_parent_deskripsi' => $unit['cost_center_parent_deskripsi'] ?? null,
-                'valid_from' => $validFrom,
-                'valid_to' => $validTo,
-                'status' => true,
             ];
 
             $existingUnit = Unit::query()
                 ->where('cost_center', $cost_center_parent)
                 ->whereNull('deleted_at')
-                ->where(function ($query) use ($today) {
-                    $query->whereNull('valid_to')
-                        ->orWhereDate('valid_to', '>=', $today);
-                })
+                // ->where(function ($query) use ($today) {
+                //     $query->whereNull('valid_to')
+                //         ->orWhereDate('valid_to', '>=', $today);
+                // })
                 ->first();
 
             if ($existingUnit) {
-                $existingUnit->fill($payload)->save();
+                $existingPayload = $payload;
+
+                // Update valid_from/valid_to hanya jika status unit existing masih aktif (true).
+                if ((bool) $existingUnit->status) {
+                    $existingPayload['valid_from'] = $validFrom;
+                    $existingPayload['valid_to'] = $validTo;
+                }
+
+                $existingUnit->fill($existingPayload)->save();
                 $syncedUnit = $existingUnit;
             } else {
+                $createPayload = array_merge($payload, [
+                    'valid_from' => $validFrom,
+                    'valid_to' => $validTo,
+                    'status' => true,
+                ]);
+
                 $syncedUnit = Unit::create(array_merge(
                     ['cost_center' => $cost_center_parent],
-                    $payload
+                    $createPayload
                 ));
             }
 
