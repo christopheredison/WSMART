@@ -669,14 +669,16 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         // Dan pastikan user di unit yang sedang dibuka
         $canEdit = Gate::check('risk_monitoring_input') && $userLevel == 1 && $user->unit_id == $targetUnitId;
 
-        $this->tableActions[] = [
-            'label' => 'Peluang',
-            'btn_icon' => false,
-            'action' => 'script',
-            'script' => "showPeluangModal($(this).data('id'), '__RISK_TITLE__', '__RISK_DESC__')",
-            'active_state' => '(data, type, row) => true',
-            'extra_attrs' => [ 'style' => 'font-size: 16px; font-weight: 400;', 'data-id' => 'row.id' ]
-        ];
+        if (!$unitExpired) {
+            $this->tableActions[] = [
+                'label' => 'Peluang',
+                'btn_icon' => false,
+                'action' => 'script',
+                'script' => "showPeluangModal($(this).data('id'), '__RISK_TITLE__', '__RISK_DESC__')",
+                'active_state' => '(data, type, row) => true',
+                'extra_attrs' => [ 'style' => 'font-size: 16px; font-weight: 400;', 'data-id' => 'row.id' ]
+            ];
+        }
 
         if ($canEdit && !$unitExpired) {
             $monitoringRoute = route('risk-register-unit.monitorings.edit', ['period' => $period->id, 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
