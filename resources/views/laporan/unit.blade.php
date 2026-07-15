@@ -52,7 +52,10 @@
                 <option value="">Pilih Divisi...</option>
                 @if (is_iterable($units))
                   @foreach ($units as $unit)
-                    <option value="{{ $unit->id }}">{{ $unit->name }}</option>
+                    @php
+                      $isExpired = ($unit->valid_to && $unit->valid_to->isPast() && !$unit->valid_to->isToday()) || $unit->status == 0;
+                    @endphp
+                    <option value="{{ $unit->id }}">{{ $unit->name }} {{ $isExpired ? '(Expired)' : '' }}</option>
                   @endforeach
                 @else
                   <option value="{{ $units->id }}" selected>{{ $units->name }}</option>
@@ -142,16 +145,46 @@ $(document).ready(function() {
 
                 let errorMsg = 'Gagal membuat laporan Excel. Silakan coba lagi.';
 
-                if (xhr.responseJSON && xhr.responseJSON.message) {
+                // Coba baca error dari blob response
+                if (xhr.responseText) {
+                    try {
+                        const json = JSON.parse(xhr.responseText);
+                        if (json.message) {
+                            errorMsg = json.message;
+                        }
+                    } catch (e) {
+                        errorMsg = xhr.statusText || errorMsg;
+                    }
+                    showError(errorMsg);
+                } else if (xhr.response) {
+                    const reader = new FileReader();
+                    reader.onload = function() {
+                        try {
+                            const json = JSON.parse(reader.result);
+                            if (json.message) {
+                                errorMsg = json.message;
+                            }
+                        } catch (e) {
+                            errorMsg = xhr.statusText || errorMsg;
+                        }
+                        showError(errorMsg);
+                    };
+                    reader.readAsText(xhr.response);
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
+                    showError(errorMsg);
+                } else {
+                    showError(errorMsg);
                 }
 
-                Swal.fire({
-                    title: 'Error',
-                    text: errorMsg,
-                    icon: 'error',
-                    confirmButtonText: 'OK',
-                });
+                function showError(msg) {
+                    Swal.fire({
+                        title: 'Error',
+                        text: msg,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                    });
+                }
             }
         });
     });
