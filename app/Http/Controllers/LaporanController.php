@@ -263,7 +263,8 @@ class LaporanController extends Controller
             if (in_array('all', $inputIds)) {
                 // Jika pilih 'all', gunakan hanya ID yang boleh diakses user (atau semua jika Admin)
                 if (Gate::check('project_admin_access')) {
-                    $finalProjectIds = Project::pluck('id')->toArray();
+                    // Optimasi: untuk admin tidak perlu pluck semua ID (hemat memori & query whereIn besar).
+                    $finalProjectIds = null;
                     $fileNameProject = 'All_Projects';
                 } else {
                     $finalProjectIds = $allAccessibleIds;
@@ -277,6 +278,14 @@ class LaporanController extends Controller
                     $finalProjectIds = $inputIds;
                 }
 
+                $finalProjectIds = collect($finalProjectIds)
+                    ->filter(fn ($id) => $id !== null && $id !== '' && $id !== 'all')
+                    ->map(fn ($id) => (int) $id)
+                    ->filter(fn ($id) => $id > 0)
+                    ->unique()
+                    ->values()
+                    ->all();
+
                 if (count($finalProjectIds) === 1) {
                     $project = Project::find($finalProjectIds[array_key_first($finalProjectIds)]);
                     $fileNameProject = $project ? str_replace(' ', '_', $project->project_name) : 'Project';
@@ -285,7 +294,7 @@ class LaporanController extends Controller
                 }
             }
 
-            if (empty($finalProjectIds)) {
+            if (is_array($finalProjectIds) && empty($finalProjectIds)) {
                 return response()->json(['message' => 'Tidak ada project yang dapat diakses untuk di-export.'], 403);
             }
 

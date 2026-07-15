@@ -19,7 +19,7 @@ class LaporanProjectExport implements WithMultipleSheets
     protected $bulan;
     protected $tahun;
 
-    public function __construct(array $projectIds, $bulan = null, $tahun = null)
+    public function __construct(?array $projectIds, $bulan = null, $tahun = null)
     {
         $this->projectIds = $projectIds;
         $this->bulan = $bulan;
@@ -49,13 +49,11 @@ class LaporanProjectExport implements WithMultipleSheets
         };
 
         // QUERY MASTER
-        $semuaRisiko = ProjectRisk::with([
-            'wbsMaster',
+        $semuaRisikoQuery = ProjectRisk::with([
             'projectPeriodeList.project',
             'peristiwaRisiko',
             'projectRiskAnalisa.skalaDampakObj',
             'projectRiskAnalisa.skalaProbabilitas',
-            'projectRiskAnalisa.areaDampakObj',
             'projectRiskAnalisa.skalaDampakResidualObj',
             'projectRiskAnalisa.skalaProbabilitasResidual',
             'penyebabRisikoProjects.perlakuanPenyebabRisiko.lastMonitoring' => function($q) use ($filterUpToPeriod) {
@@ -69,7 +67,6 @@ class LaporanProjectExport implements WithMultipleSheets
             },
             'dampakRisikoProjects',
             'jenisKontrolEksisting',
-            'projectKontrolEksistings',
             'penilaianEfektivitasKontrolObj',
             'projectRiskMonitorings' => function($query) use ($filterUpToPeriod) {
                 $filterUpToPeriod($query);
@@ -80,11 +77,16 @@ class LaporanProjectExport implements WithMultipleSheets
             'projectRiskMonitorings.skalaDampakObj'
         ])
         ->whereHas('projectRiskMonitorings', $filterUpToPeriod)
-        ->whereIn('project_id', $this->projectIds)
-        ->whereNull('deleted_at')
-        ->get();
+        ->whereNull('deleted_at');
 
-        if (count($this->projectIds) === 1) {
+        // Optimasi: jika projectIds null artinya "all projects", hindari whereIn ribuan ID.
+        if (is_array($this->projectIds)) {
+            $semuaRisikoQuery->whereIn('project_id', $this->projectIds);
+        }
+
+        $semuaRisiko = $semuaRisikoQuery->get();
+
+        if (is_array($this->projectIds) && count($this->projectIds) === 1) {
             $singleProjectId = $this->projectIds[array_key_first($this->projectIds)];
             $sheets[] = new ResumeProjectSheet($singleProjectId, $this->bulan, $this->tahun);
         }
