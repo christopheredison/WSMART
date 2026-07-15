@@ -16,6 +16,7 @@ use App\Models\UnitRiskMonitoring;
 use App\Models\Unit;
 use App\Models\UnitRelation;
 use App\Models\RiskMonitoringNote;
+use App\Models\RiskNote;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -1740,15 +1741,39 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'efektivitas_perlakuan_risiko' => round($efektivitas, 2)
         ]);
 
-        if ($request->is_closed == '1') {
+        $wasClosed = (bool) $risk->is_closed;
+        if ($request->is_closed == '1' && !$wasClosed) {
+            $closedAt = now();
             $risk->update([
                 'is_closed' => true,
-                'closed_at' => now(),
+                'closed_at' => $closedAt,
             ]);
 
             KamusRisikoUnit::updateOrCreate(
                 ['risiko_id' => $risk->id],
             );
+
+            $closeNoteText = 'Risiko ditutup melalui monitoring pada ' . $closedAt->format('d-m-Y H:i:s')
+                . " (Q{$quarter}, Bulan {$month}).";
+
+            RiskMonitoringNote::create([
+                'risiko_id' => $risk->id,
+                'type' => 1,
+                'user_id' => $user->id,
+                'status' => 1,
+                'notes' => $closeNoteText,
+                'quarter' => $quarter,
+                'month' => $month,
+                'year' => null,
+            ]);
+
+            RiskNote::create([
+                'risiko_id' => $risk->id,
+                'type' => 1,
+                'status' => 1,
+                'notes' => $closeNoteText,
+                'user_id' => $user->id,
+            ]);
         }
 
         return response()->json([
