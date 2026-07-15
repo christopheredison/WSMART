@@ -65,6 +65,7 @@
               <th class="sort white-space-nowrap" data-sort="no">#</th>
               <th class="sort" data-sort="unit_type_id">Unit Type</th>
               <th class="sort" data-sort="name">Name</th>
+              <th class="sort" data-sort="cost_center">Cost Center</th>
               <th class="sort" data-sort="parent_id">Parent</th>
               <th class="sort" data-sort="valid_from">Valid From</th>
               <th class="sort" data-sort="valid_to">Valid To</th>
@@ -84,6 +85,7 @@
               <td class="index-number">{{ $index + 1 }}</td>
               <td class="title">{{ $item->unitType->name }}</td>
               <td class="name">{{ $item->name }}</td>
+              <td class="cost_center">{{ $item->cost_center ?? '-' }}</td>
               <td class="parent_id">
                 @if ($item->parent)
                 {{ $item->parent->name }}
