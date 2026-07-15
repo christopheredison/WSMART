@@ -25,6 +25,8 @@ use App\Models\JenisKontrolEksisting;
 use App\Models\KamusRisikoUnit;
 use App\Models\Unit;
 use App\Models\UnitRelation;
+use App\Models\RiskMonitoringNote;
+use App\Models\RiskNote;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -713,15 +715,41 @@ class UnitLEDController extends Controller
             ]);
 
             // Cek apakah risiko perlu di-close
-            if ($request->input('is_closed') == '1') {
+            $wasClosed = (bool) $riskRegister->is_closed;
+            if ($request->input('is_closed') == '1' && !$wasClosed) {
+                $closedAt = now();
                 $riskRegister->update([
                   'is_closed' => true,
-                  'closed_at' => now(),
+                  'closed_at' => $closedAt,
                 ]);
 
                 KamusRisikoUnit::updateOrCreate(
                     ['risiko_id' => $riskRegister->id],
                 );
+
+                $month = (int) (optional($monitoring)->month ?? 1);
+                $closeNoteText = 'Risiko ditutup melalui konversi ke LED pada '
+                    . $closedAt->format('d-m-Y H:i:s')
+                    . " (Q{$quarter}, Bulan {$month}).";
+
+                RiskMonitoringNote::create([
+                    'risiko_id' => $riskRegister->id,
+                    'type' => 1,
+                    'user_id' => auth()->id(),
+                    'status' => 1,
+                    'notes' => $closeNoteText,
+                    'quarter' => $quarter,
+                    'month' => $month,
+                    'year' => null,
+                ]);
+
+                RiskNote::create([
+                    'risiko_id' => $riskRegister->id,
+                    'type' => 1,
+                    'status' => 1,
+                    'notes' => $closeNoteText,
+                    'user_id' => auth()->id(),
+                ]);
             }
 
             DB::commit();

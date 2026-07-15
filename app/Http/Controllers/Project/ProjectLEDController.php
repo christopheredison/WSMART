@@ -29,6 +29,8 @@ use App\Models\PenyebabRisikoProject;
 use App\Models\PerlakuanPenyebabRisikoProject;
 use App\Models\KamusRisikoProject;
 use App\Models\DataBatch;
+use App\Models\RiskMonitoringNote;
+use App\Models\RiskNote;
 use Illuminate\Support\Facades\DB;
 
 class ProjectLEDController extends Controller
@@ -763,10 +765,12 @@ class ProjectLEDController extends Controller
             ]);
 
             // Cek apakah risiko perlu di-close
-            if ($request->input('is_closed') == '1') {
+            $wasClosed = (bool) $risk->is_closed;
+            if ($request->input('is_closed') == '1' && !$wasClosed) {
+                $closedAt = now();
                 $risk->update([
                   'is_closed' => true,
-                  'closed_at' => now(),
+                  'closed_at' => $closedAt,
                 ]);
 
                 KamusRisikoProject::updateOrCreate(
@@ -775,6 +779,32 @@ class ProjectLEDController extends Controller
                       'project_risk_id' => $risk->id,
                     ],
                 );
+
+                $quarter = (int) (optional($monitoring)->quarter ?? 1);
+                $month = (int) (optional($monitoring)->month ?? 1);
+                $year = (int) (optional($monitoring)->tahun ?? now()->year);
+                $closeNoteText = 'Risiko ditutup melalui konversi ke LED pada '
+                    . $closedAt->format('d-m-Y H:i:s')
+                    . " (Q{$quarter}, Bulan {$month}).";
+
+                RiskMonitoringNote::create([
+                    'risiko_id' => $risk->id,
+                    'type' => 2,
+                    'user_id' => auth()->id(),
+                    'status' => 1,
+                    'notes' => $closeNoteText,
+                    'quarter' => $quarter,
+                    'month' => $month,
+                    'year' => $year,
+                ]);
+
+                RiskNote::create([
+                    'risiko_id' => $risk->id,
+                    'type' => 2,
+                    'status' => 1,
+                    'notes' => $closeNoteText,
+                    'user_id' => auth()->id(),
+                ]);
             }
 
             DB::commit();
