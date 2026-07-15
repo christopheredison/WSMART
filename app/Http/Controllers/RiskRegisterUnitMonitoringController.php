@@ -98,8 +98,10 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         }
         $isUnitMr = $unit->unit_mr == 1;
         $today = \Carbon\Carbon::today();
-        $isStillValid = !$unit?->valid_to || ($unit?->valid_to && ($unit->valid_to->isSameDay($today) || $unit->valid_to->isAfter($today)));
-        $unitExpired = !$isStillValid;
+        $isWithinValidFrom = !$unit?->valid_from || ($unit?->valid_from && ($unit->valid_from->isSameDay($today) || $unit->valid_from->isBefore($today)));
+        $isWithinValidTo = !$unit?->valid_to || ($unit?->valid_to && ($unit->valid_to->isSameDay($today) || $unit->valid_to->isAfter($today)));
+        $isUnitActive = (bool) ($unit?->status) && $isWithinValidFrom && $isWithinValidTo;
+        $unitExpired = !$isUnitActive;
 
         // Merge request
         request()->merge(['month' => $month, 'quarter' => $quarter, 'unit_id' => $targetUnitId]);

@@ -433,6 +433,9 @@ class UserController extends Controller
         }
 
         $authUser = Auth::user();
+        $ipAddress = request()->ip();
+        $ipAddress = is_string($ipAddress) ? trim($ipAddress) : null;
+        $ipAddress = filter_var($ipAddress, FILTER_VALIDATE_IP) ? $ipAddress : null;
 
         Audit::query()->create([
             'user_type' => $authUser ? get_class($authUser) : null,
@@ -443,7 +446,7 @@ class UserController extends Controller
             'old_values' => json_encode(['user_projects' => $old], JSON_UNESCAPED_UNICODE),
             'new_values' => json_encode(['user_projects' => $new], JSON_UNESCAPED_UNICODE),
             'url' => request()->fullUrl(),
-            'ip_address' => request()->ip(),
+            'ip_address' => $ipAddress,
             'user_agent' => request()->userAgent(),
             'unit_id' => $user->unit_id,
             'created_at' => now(),

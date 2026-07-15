@@ -44,7 +44,7 @@
           </div>
           <div class="form-group d-md-flex" id="cost_center_group">
             <label class="form-label label-md-start col-md-3">Cost Center</label>
-            <input type="text" name="cost_center" id="cost_center" class="form-control form-control-plain" value="{{ old('cost_center', $unit->cost_center) }}" disabled>
+            <input type="text" name="cost_center" id="cost_center" class="form-control @error('cost_center') is-invalid @enderror" value="{{ old('cost_center', $unit->cost_center) }}">
           </div>
           <div class="form-group d-md-flex">
             <label class="form-label label-md-start col-md-3">Nama Unit</label>

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Unit;
 use App\Models\UnitType;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 class UnitController extends Controller
@@ -92,6 +93,14 @@ class UnitController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'unit_type_id' => 'required',
+            'cost_center' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('units', 'cost_center')
+                    ->ignore($unit->id)
+                    ->whereNull('deleted_at'),
+            ],
             'valid_from' => 'nullable|date',
             'valid_to' => 'nullable|date|after_or_equal:valid_from',
             // 'parent_id' => 'required',
@@ -115,6 +124,7 @@ class UnitController extends Controller
             'unit_type_id' => $request->unit_type_id,
             'parent_id' => $request->parent_id ?? 0,
             'unit_api_id' => $request->unit_api_id,
+            'cost_center' => trim((string) $request->cost_center),
             'valid_from' => $validFrom,
             'valid_to' => $validTo,
             'status' => $status,
