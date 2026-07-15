@@ -313,5 +313,8 @@ return [
 
         'can_access_project_under_division',
         'report_consolidation',
+        'mr_notification_project',
+        'mr_notification_division',
+        'mr_notification_ap',
     ],
 ];

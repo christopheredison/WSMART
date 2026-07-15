@@ -177,7 +177,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="fw-bold text-success-emphasis mb-0">Potensi Hasil Usaha s/d Bulan {{ $formattedPeriod }}</h6>
-                            <small class="text-muted">(LSP Realisasi + LED)<br><i>(jika LED tidak terjadi)</i></small>
+                            <small class="text-muted">(LSP Realisasi + LED Proyek)</small>
                         </div>
                         <span class="fw-bold fs-4 text-success">Rp {{ number_format($summaryData['potensi_hasil_usaha_sd_bulan'], 0, ',', '.') }}</span>
                     </div>

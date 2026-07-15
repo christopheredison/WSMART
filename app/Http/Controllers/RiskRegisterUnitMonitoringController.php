@@ -2331,15 +2331,19 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         }
         elseif ($target === 'RO_MR') {
             // Risk Officer MR: level 1, unit_mr = 1
-            $users = \App\Models\User::where('level_id', 1)->whereHas('unit', function($q) {
-                $q->where('unit_mr', 1);
-            })->get();
+            $users = \App\Models\User::permission('mr_notification_division')
+                ->where('level_id', 1)
+                ->whereHas('unit', function($q) {
+                    $q->where('unit_mr', 1);
+                })->get();
         }
         elseif ($target === 'RW_MR') {
             // Risk Owner MR: level 2, unit_mr = 1
-            $users = \App\Models\User::where('level_id', 2)->whereHas('unit', function($q) {
-                $q->where('unit_mr', 1);
-            })->get();
+            $users = \App\Models\User::permission('mr_notification_division')
+                ->where('level_id', 2)
+                ->whereHas('unit', function($q) {
+                    $q->where('unit_mr', 1);
+                })->get();
         }
 
         foreach ($users as $user) {
