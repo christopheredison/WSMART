@@ -169,9 +169,17 @@
                     </div>
                     <div class="col-md-12">
                       <div class="mb-3">
-                        <label class="form-label fw-bold">Keterangan</label>
+                        <label class="form-label fw-bold">Rencana Tindak Lanjut</label>
                         <div class="p-3 bg-light-subtle border rounded">
                           {!! nl2br(e($ictReport->keterangan)) !!}
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-12">
+                      <div class="mb-3">
+                        <label class="form-label fw-bold">Realisasi Tindak Lanjut</label>
+                        <div class="p-3 bg-light-subtle border rounded">
+                          {!! nl2br(e($ictReport->realisasi_tindak_lanjut ?? '-')) !!}
                         </div>
                       </div>
                     </div>

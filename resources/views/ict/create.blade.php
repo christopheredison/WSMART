@@ -36,16 +36,33 @@
             </div>
 
             <div class="col-md-6 mb-3">
-              <label for="risiko_id" class="form-label">Peristiwa Risiko <span class="text-danger">*</span></label>
-              <select class="form-select select2" id="risiko_id" name="risiko_id" required>
-                <option value="" selected disabled>Pilih Peristiwa Risiko</option>
-                {{-- Tampilkan langsung data dari controller --}}
+              <label for="risiko_mode" class="form-label">Peristiwa Risiko <span class="text-danger">*</span></label>
+              <select class="form-select" id="risiko_mode" name="risiko_mode" required>
+                <option value="existing" {{ old('risiko_mode', 'existing') === 'existing' ? 'selected' : '' }}>Pilih dari daftar</option>
+                <option value="manual" {{ old('risiko_mode') === 'manual' ? 'selected' : '' }}>Input manual</option>
+              </select>
+            </div>
+
+            <div class="col-md-6 mb-3" id="existing-risiko-wrapper">
+              <label for="risiko_id" class="form-label">Pilih Peristiwa Risiko</label>
+              <select class="form-select select2" id="risiko_id" name="risiko_id">
+                <option value="" selected>Pilih Peristiwa Risiko</option>
                 @foreach($identifikasiRisikos as $risiko)
                   <option value="{{ $risiko->id }}" {{ old('risiko_id') == $risiko->id ? 'selected' : '' }}>
                     {{ $risiko->peristiwa_risiko }}
                   </option>
                 @endforeach
               </select>
+            </div>
+
+            <div class="col-12 mb-3 d-none" id="manual-risiko-wrapper">
+              <label for="peristiwa_risiko_manual" class="form-label">Peristiwa Risiko (Manual) <span class="text-danger">*</span></label>
+              <textarea class="form-control" id="peristiwa_risiko_manual" name="peristiwa_risiko_manual" rows="3">{{ old('peristiwa_risiko_manual') }}</textarea>
+            </div>
+
+            <div class="col-12 mb-3">
+              <label for="lokasi_risiko" class="form-label">Lokasi Risiko <span class="text-danger">*</span></label>
+              <textarea class="form-control" id="lokasi_risiko" name="lokasi_risiko" rows="3" required>{{ old('lokasi_risiko') }}</textarea>
             </div>
 
             <div class="col-12 mb-3">
@@ -59,16 +76,22 @@
             </div>
 
             <div class="col-12 mb-3">
-              <label class="form-label">Key Control</label>
+              <div class="d-flex justify-content-between align-items-center">
+                <label class="form-label mb-0">Key Control <span class="text-danger">*</span></label>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="addManualKeyControlBtn">
+                  <span class="bx bx-plus"></span> Tambah Key Control Manual
+                </button>
+              </div>
               <div class="table-responsive">
                 <table class="table table-bordered" id="keyControlTable">
                   <thead>
                     <tr>
-                      <th width="100%">Key Control</th>
+                      <th width="90%">Key Control</th>
+                      <th width="10%">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <!-- Key control akan ditambahkan di sini via AJAX -->
+                    <!-- Key control dari daftar/manual -->
                   </tbody>
                 </table>
               </div>
@@ -90,79 +113,128 @@
 @push('scripts')
 <script>
   $(document).ready(function() {
-    // Inisialisasi Select2
     $('.select2').select2({
       placeholder: "Pilih Peristiwa Risiko",
       allowClear: true,
       width: '100%'
     });
 
-    // Cek jika ada old('risiko_id') agar key control ter-load jika validasi gagal
-    if ($('#risiko_id').val()) {
-        $('#risiko_id').trigger('change');
+    const oldKeyControlIds = @json(old('key_control_id', []));
+    const oldKeyControls = @json(old('key_control', []));
+    const oldRisikoMode = @json(old('risiko_mode', 'existing'));
+    const hasOldInput = oldKeyControls.length > 0;
+
+    function toggleRiskMode() {
+      const mode = $('#risiko_mode').val();
+      const isManual = mode === 'manual';
+
+      $('#existing-risiko-wrapper').toggleClass('d-none', isManual);
+      $('#manual-risiko-wrapper').toggleClass('d-none', !isManual);
+      $('#risiko_id').prop('required', !isManual);
+      $('#peristiwa_risiko_manual').prop('required', isManual);
+
+      if (isManual) {
+        $('#risiko_id').val(null).trigger('change');
+        if ($('#keyControlTable tbody tr').length === 0) {
+          addKeyControlRow(0, '', false);
+        }
+      } else if (!hasOldInput) {
+        loadKeyControlsByRisiko();
+      }
     }
 
-    // Ketika peristiwa risiko berubah
-    $('#risiko_id').on('change', function() {
-      const risikoId = $(this).val();
-      const type = 1; // Hardcode type 1 (Korporat) karena dropdown type sudah dihilangkan
+    function addKeyControlRow(id, text, isReadonly) {
+      const readonlyAttr = isReadonly ? 'readonly' : '';
+      const removeBtn = isReadonly
+        ? '<button type="button" class="btn btn-sm btn-light text-muted" disabled><span class="bx bx-lock-alt"></span></button>'
+        : '<button type="button" class="btn btn-sm btn-outline-danger remove-key-control"><span class="bx bx-trash"></span></button>';
 
-      if (!risikoId) return;
-
-      // Kosongkan tabel key control
-      $('#keyControlTable tbody').empty();
-
-      // Ambil key control berdasarkan type dan risiko_id
-      $.ajax({
-        url: '/api/key-controls',
-        type: 'GET',
-        data: {
-          type: type,
-          risiko_id: risikoId
-        },
-        success: function(response) {
-          if (response.data && response.data.length > 0) {
-            // Tambahkan key control ke tabel
-            response.data.forEach(function(item) {
-              addKeyControlRow(item.id, item.kontrol_eksisting || item.kontrol_eksisting_desc);
-            });
-          } else {
-            // Jika tidak ada key control, tambahkan baris kosong
-            addEmptyKeyControlRow();
-          }
-        },
-        error: function(xhr) {
-          console.error('Error fetching key controls:', xhr);
-          addEmptyKeyControlRow();
-        }
-      });
-    });
-
-    // Fungsi untuk menambahkan baris key control
-    function addKeyControlRow(id, text) {
       const row = `
         <tr>
           <td>
             <input type="hidden" name="key_control_id[]" value="${id}">
-            <input type="text" class="form-control" name="key_control[]" value="${text}" readonly required>
+            <input type="text" class="form-control" name="key_control[]" value="${text || ''}" ${readonlyAttr} required>
           </td>
+          <td class="text-center align-middle">${removeBtn}</td>
         </tr>
       `;
       $('#keyControlTable tbody').append(row);
     }
 
-    // Fungsi untuk menambahkan baris key control kosong
-    function addEmptyKeyControlRow() {
-      const row = `
-        <tr>
-          <td>
-            <input type="hidden" name="key_control_id[]" value="0">
-            <input type="text" class="form-control" name="key_control[]" readonly required>
-          </td>
-        </tr>
-      `;
-      $('#keyControlTable tbody').append(row);
+    function loadKeyControlsByRisiko() {
+      const risikoId = $('#risiko_id').val();
+      const mode = $('#risiko_mode').val();
+
+      $('#keyControlTable tbody').empty();
+
+      if (mode === 'manual') {
+        addKeyControlRow(0, '', false);
+        return;
+      }
+
+      if (!risikoId) {
+        return;
+      }
+
+      $.ajax({
+        url: '/api/key-controls',
+        type: 'GET',
+        data: {
+          type: 1,
+          risiko_id: risikoId
+        },
+        success: function(response) {
+          if (response.data && response.data.length > 0) {
+            response.data.forEach(function(item) {
+              addKeyControlRow(item.id, item.kontrol_eksisting || item.kontrol_eksisting_desc, true);
+            });
+          } else {
+            addKeyControlRow(0, '', false);
+          }
+        },
+        error: function(xhr) {
+          console.error('Error fetching key controls:', xhr);
+          addKeyControlRow(0, '', false);
+        }
+      });
     }
+
+    if (hasOldInput) {
+      $('#keyControlTable tbody').empty();
+      oldKeyControls.forEach(function(text, index) {
+        const id = oldKeyControlIds[index] ?? 0;
+        const isReadonly = Number(id) > 0;
+        addKeyControlRow(id, text, isReadonly);
+      });
+    } else if ($('#risiko_id').val()) {
+      loadKeyControlsByRisiko();
+    } else {
+      addKeyControlRow(0, '', false);
+    }
+
+    $('#risiko_mode').val(oldRisikoMode);
+    toggleRiskMode();
+
+    $('#risiko_mode').on('change', function() {
+      toggleRiskMode();
+    });
+
+    $('#risiko_id').on('change', function() {
+      if ($('#risiko_mode').val() === 'existing') {
+        loadKeyControlsByRisiko();
+      }
+    });
+
+    $('#addManualKeyControlBtn').on('click', function() {
+      addKeyControlRow(0, '', false);
+    });
+
+    $(document).on('click', '.remove-key-control', function() {
+      $(this).closest('tr').remove();
+      if ($('#keyControlTable tbody tr').length === 0) {
+        addKeyControlRow(0, '', false);
+      }
+    });
 
     // Konfirmasi submit form dengan SweetAlert
     $('#ictPlanForm').on('submit', function(e) {

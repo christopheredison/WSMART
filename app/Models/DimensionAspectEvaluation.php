@@ -11,6 +11,7 @@ class DimensionAspectEvaluation extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'period_id',
         'sub_dimension_id',
         'dimension_id',
         'score_dimension',

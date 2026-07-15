@@ -65,10 +65,12 @@
                                       <strong class="text-primary">Kriteria {{ $loop->iteration }}</strong>
                                       <div class="d-flex gap-2">
                                         <!-- Menggunakan $paramIndex pada data-fieldname untuk validasi js -->
-                                        <select class="form-select form-select-sm w-auto" name="scores[{{ $criteria->id }}]" data-fieldname="Score: Parameter {{ $paramIndex }}, Kriteria {{ $loop->iteration }}">
-                                          <option value="" disabled {{ !isset($scores[$criteria->id]) ? 'selected' : '' }}>Pilih Score</option>
-                                          @for($i = $criteria->min_score; $i <= $criteria->max_score; $i++)
-                                            <option value="{{ $i }}" {{ isset($scores[$criteria->id]) && $scores[$criteria->id] == $i ? 'selected' : '' }}>
+                                        @php $selectedScore = $scores[$criteria->id] ?? null; @endphp
+                                        <select class="form-select form-select-sm w-auto" name="scores[{{ $criteria->id }}]" data-fieldname="Score: Parameter {{ $paramIndex }}, Kriteria {{ $loop->iteration }}" data-criteria-id="{{ $criteria->id }}">
+                                          <option value="" disabled {{ $selectedScore === null ? 'selected' : '' }}>Pilih Score</option>
+                                          <option value="0" {{ $selectedScore !== null && (int) $selectedScore === 0 ? 'selected' : '' }}>0 - Skip Penilaian</option>
+                                          @for($i = max(1, $criteria->min_score); $i <= $criteria->max_score; $i++)
+                                            <option value="{{ $i }}" {{ $selectedScore !== null && (int) $selectedScore === $i ? 'selected' : '' }}>
                                               {{ $i }}
                                             </option>
                                           @endfor
@@ -299,26 +301,34 @@
         if ($(this).val() === null || $(this).val() === '') {
           isValid = false;
           $(this).addClass('is-invalid');
-
-          // Ambil nama dari data-fieldname dan masukkan ke array
           errorMessages.push('<li>' + $(this).data('fieldname') + '</li>');
-
           if (!firstInvalidElement) firstInvalidElement = $(this);
         }
       });
 
-      // 3. Validasi Gap Analysis
-      $('textarea[name^="gap_analysis"]').each(function() {
-        if ($(this).val().trim() === '') {
-          isValid = false;
-          $(this).addClass('is-invalid');
+      // 3. Validasi Gap Analysis (skip jika score = 0)
+      $('select[name^="scores"]').each(function() {
+        const scoreVal = $(this).val();
+        const criteriaId = $(this).data('criteria-id');
+        const gapTextarea = $('textarea[name="gap_analysis[' + criteriaId + ']"]');
 
-          let modalId = $(this).closest('.modal').attr('id');
+        if (scoreVal === '0' || scoreVal === 0) {
+          gapTextarea.removeClass('is-invalid');
+          let modalId = gapTextarea.closest('.modal').attr('id');
+          let triggerBtn = $('button[data-bs-target="#' + modalId + '"]');
+          triggerBtn.removeClass('btn-danger text-white');
+          return;
+        }
+
+        if (gapTextarea.length && gapTextarea.val().trim() === '') {
+          isValid = false;
+          gapTextarea.addClass('is-invalid');
+
+          let modalId = gapTextarea.closest('.modal').attr('id');
           let triggerBtn = $('button[data-bs-target="#' + modalId + '"]');
           triggerBtn.removeClass('btn-primary btn-outline-primary').addClass('btn-danger text-white');
 
-          // Ambil nama dari data-fieldname dan masukkan ke array
-          errorMessages.push('<li>' + $(this).data('fieldname') + '</li>');
+          errorMessages.push('<li>' + gapTextarea.data('fieldname') + '</li>');
 
           if (!firstInvalidElement) firstInvalidElement = triggerBtn;
         }
@@ -366,6 +376,15 @@
     // EVENT LISTENER: Hapus border merah saat user memilih Score
     $(document).on('change', 'select[name^="scores"]', function() {
       $(this).removeClass('is-invalid');
+
+      const criteriaId = $(this).data('criteria-id');
+      const gapTextarea = $('textarea[name="gap_analysis[' + criteriaId + ']"]');
+      if ($(this).val() === '0') {
+        gapTextarea.removeClass('is-invalid');
+        let modalId = gapTextarea.closest('.modal').attr('id');
+        let triggerBtn = $('button[data-bs-target="#' + modalId + '"]');
+        triggerBtn.removeClass('btn-danger').addClass('btn-outline-primary');
+      }
     });
 
 // EVENT LISTENER: Ubah warna dan icon (Check) tombol Modal secara LIVE

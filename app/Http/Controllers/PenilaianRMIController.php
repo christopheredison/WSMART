@@ -152,9 +152,9 @@ class PenilaianRMIController extends Controller
                             ->get()
                             ->keyBy('parameter_criteria_id');
 
-        $dimensionScores = DimensionAspectEvaluation::whereNull('deleted_at')
-                            ->get()
-                            ->keyBy('sub_dimension_id');
+        $dimensionScores = DimensionAspectEvaluation::where('period_id', $id)
+                            ->whereNull('deleted_at')
+                            ->get();
 
         // 3. **Baru**: ambil parameter kinerja top-level
         $paramsCapaian = ParameterKinerja::capaian()
@@ -235,22 +235,43 @@ class PenilaianRMIController extends Controller
      */
     public function saveAspekDinamis(Request $request, $periodId)
     {
-        // Validasi input berdasarkan action
         if ($request->action === 'finish') {
-            $request->validate([
+            $validator = Validator::make($request->all(), [
                 'scores' => 'array',
-                'scores.*' => 'required|numeric',
+                'scores.*' => 'required|numeric|min:0|max:5',
                 'gap_analysis' => 'array',
-                'gap_analysis.*' => 'required|string'
+                'gap_analysis.*' => 'nullable|string',
+                'action' => 'required|in:save,finish',
             ]);
+
+            $validator->after(function ($validator) use ($request) {
+                if (!$request->has('scores')) {
+                    return;
+                }
+
+                foreach ($request->scores as $criteriaId => $score) {
+                    if ($this->isScorableCriteriaScore($score)) {
+                        $gap = trim($request->gap_analysis[$criteriaId] ?? '');
+                        if ($gap === '') {
+                            $validator->errors()->add(
+                                "gap_analysis.{$criteriaId}",
+                                'Gap analysis wajib diisi untuk kriteria yang tidak di-skip.'
+                            );
+                        }
+                    }
+                }
+            });
+
+            if ($validator->fails()) {
+                return back()->withErrors($validator)->withInput();
+            }
         } else {
-            // Validasi lebih longgar untuk simpan sementara
             $request->validate([
                 'scores' => 'array',
-                'scores.*' => 'nullable|numeric',
+                'scores.*' => 'nullable|numeric|min:0|max:5',
                 'action' => 'required|in:save,finish',
                 'gap_analysis' => 'array',
-                'gap_analysis.*' => 'nullable|string'
+                'gap_analysis.*' => 'nullable|string',
             ]);
         }
 
@@ -347,23 +368,23 @@ class PenilaianRMIController extends Controller
                     ->whereNull('deleted_at')
                     ->first();
 
-                // Cek apakah kriteria ini sudah diberi nilai
-                if ($criteriaScore && $criteriaScore->score !== null) {
-                    if ($lowestScore === null || $criteriaScore->score < $lowestScore) {
-                        $lowestScore = $criteriaScore->score;
+                if ($criteriaScore && $this->isCriteriaFilled($criteriaScore->score)) {
+                    if ($this->isScorableCriteriaScore($criteriaScore->score)) {
+                        if ($lowestScore === null || $criteriaScore->score < $lowestScore) {
+                            $lowestScore = $criteriaScore->score;
+                        }
                     }
                 } else {
-                    $isAllCriteriaFilled = false; // Ada kriteria yang belum diisi
+                    $isAllCriteriaFilled = false;
                 }
             }
 
-            // Eksekusi kalkulasi jika Action FINISH ATAU jika kriteria parameter ini sudah LENGKAP diisi
             if ($request->action === 'finish' || ($request->action === 'save' && $isAllCriteriaFilled)) {
+                ScoreParameter::where('period_id', $periodId)->where('parameter_id', $parameter->id)->delete();
+
                 if ($lowestScore !== null) {
                     $scoreDesc = $this->getScoreParameterDesc($lowestScore);
                     $prioritasWawancara = $this->getPrioritasWawancara($lowestScore);
-
-                    ScoreParameter::where('period_id', $periodId)->where('parameter_id', $parameter->id)->delete();
 
                     ScoreParameter::create([
                         'period_id' => $periodId,
@@ -509,7 +530,7 @@ class PenilaianRMIController extends Controller
             $countScore = 0;
 
             foreach ($parameterScores as $parameterScore) {
-                if ($parameterScore->score !== null) {
+                if ($this->isScorableCriteriaScore($parameterScore->score)) {
                     $totalScore += $parameterScore->score;
                     $countScore++;
                 }
@@ -518,19 +539,22 @@ class PenilaianRMIController extends Controller
             if ($countScore > 0) {
                 $averageScore = $totalScore / $countScore;
 
-                // Tentukan deskripsi skor dimensi
                 $scoreDimensionDesc = $this->getScoreDimensionDesc($averageScore);
 
-                // Soft delete skor dimensi lama jika ada
-                DimensionAspectEvaluation::where('dimension_id', $dimension->id)
+                DimensionAspectEvaluation::where('period_id', $periodId)
+                    ->where('dimension_id', $dimension->id)
                     ->delete();
 
-                // Buat skor dimensi baru
                 DimensionAspectEvaluation::create([
+                    'period_id' => $periodId,
                     'dimension_id' => $dimension->id,
                     'score_dimension' => $averageScore,
                     'score_dimension_desc' => $scoreDimensionDesc,
                 ]);
+            } else {
+                DimensionAspectEvaluation::where('period_id', $periodId)
+                    ->where('dimension_id', $dimension->id)
+                    ->delete();
             }
         }
     }
@@ -610,7 +634,7 @@ class PenilaianRMIController extends Controller
         $countScore = 0;
 
         foreach ($parameterScores as $parameterScore) {
-            if ($parameterScore->score !== null) {
+            if ($this->isScorableCriteriaScore($parameterScore->score)) {
                 $totalScore += $parameterScore->score;
                 $countScore++;
             }
@@ -630,6 +654,16 @@ class PenilaianRMIController extends Controller
                 'score_rmi_desc' => $rmiScoreDesc,
             ]);
         }
+    }
+
+    private function isCriteriaFilled($score): bool
+    {
+        return $score !== null && $score !== '';
+    }
+
+    private function isScorableCriteriaScore($score): bool
+    {
+        return is_numeric($score) && (int) $score >= 1 && (int) $score <= 5;
     }
 
     /**

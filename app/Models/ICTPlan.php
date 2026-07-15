@@ -15,6 +15,8 @@ class ICTPlan extends Model
     protected $fillable = [
         'sasaran_bumn',
         'risiko_id',
+        'peristiwa_risiko',
+        'lokasi_risiko',
         'type',
         'business_process',
         'metode_pengujian',

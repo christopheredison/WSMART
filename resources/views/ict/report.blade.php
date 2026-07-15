@@ -63,8 +63,14 @@
             </div>
             <div class="col-12">
               <div class="mb-3">
-                <label class="form-label">Keterangan <span class="text-danger">*</span></label>
-                <textarea class="form-control" name="keterangan" rows="5" required>{{ $ictReport->keterangan ?? '' }}</textarea>
+                <label class="form-label">Rencana Tindak Lanjut <span class="text-danger">*</span></label>
+                <textarea class="form-control" name="rencana_tindak_lanjut" rows="5" required>{{ old('rencana_tindak_lanjut', $ictReport->keterangan ?? '') }}</textarea>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="mb-3">
+                <label class="form-label">Realisasi Tindak Lanjut <span class="text-danger">*</span></label>
+                <textarea class="form-control" name="realisasi_tindak_lanjut" rows="5" required>{{ old('realisasi_tindak_lanjut', $ictReport->realisasi_tindak_lanjut ?? '') }}</textarea>
               </div>
             </div>
           </div>
@@ -83,11 +89,13 @@
 </div>
 
 <script>
-  $(document).ready(function() {
-    // Konfirmasi submit form dengan SweetAlert
-    $('#ictReportForm').on('submit', function(e) {
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('ictReportForm');
+    if (!form) return;
+
+    form.addEventListener('submit', function (e) {
       e.preventDefault();
-      
+
       Swal.fire({
         title: 'Konfirmasi',
         text: 'Apakah Anda yakin ingin menyimpan laporan ini?',
@@ -97,7 +105,7 @@
         cancelButtonText: 'Batal'
       }).then((result) => {
         if (result.isConfirmed) {
-          this.submit();
+          form.submit();
         }
       });
     });
