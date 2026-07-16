@@ -355,7 +355,7 @@ if (!function_exists('formatKriBatasJs')) {
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
                                             <td>
                                                 <span class="inputmask-fixed">
-                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                                 </span>
                                             </td>
                                             <td class="display-progress inputmask-fixed">
@@ -431,7 +431,7 @@ if (!function_exists('formatKriBatasJs')) {
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
                                             <td>
                                               <span class="inputmask-fixed">
-                                                {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') :  '-' }}
+                                                {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') :  'Rp 0' }}
                                               </span>
                                             </td>
                                             <td class="display-progress inputmask-fixed">
@@ -806,6 +806,34 @@ function hydrateKriPayloadFromLatestMonitoring() {
 }
 
 hydrateKriPayloadFromLatestMonitoring();
+
+function parseTimelineDate(value) {
+    if (!value) return null;
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+
+        const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (slashMatch) {
+            const day = parseInt(slashMatch[1], 10);
+            const month = parseInt(slashMatch[2], 10) - 1;
+            const year = parseInt(slashMatch[3], 10);
+            const date = new Date(year, month, day);
+            if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+                return dayjs(date);
+            }
+        }
+
+        const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+            const parsed = dayjs(trimmed);
+            if (parsed.isValid()) return parsed;
+        }
+    }
+
+    const parsed = dayjs(value);
+    return parsed.isValid() ? parsed : null;
+}
 
 // Flatpickr untuk penyebab
 var flatpickrIns = flatpickr("#timelineInput", {
@@ -1323,8 +1351,9 @@ $(document).ready(function() {
             // } else {
             //     $("#timelineInput").data('_flatpickr').clear();
             // }
-            if (perlakuanPenyebab?.timeline_perlakuan_risiko) {
-                flatpickrIns.setDate(dayjs(perlakuanPenyebab.timeline_perlakuan_risiko).format('DD/MM/YYYY'));
+            const penyebabTimelineParsed = parseTimelineDate(perlakuanPenyebab?.timeline_perlakuan_risiko);
+            if (penyebabTimelineParsed) {
+                flatpickrIns.setDate(penyebabTimelineParsed.toDate());
             } else {
                 flatpickrIns.clear();
             }
@@ -1472,16 +1501,15 @@ $(document).ready(function() {
         $('#timeline_perlakuan_risiko_dampak_start').val(dayjs(perlakuan.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
         $('#timeline_perlakuan_risiko_dampak_end').val(dayjs(perlakuan.timeline_perlakuan_risiko_end).format('DD/MM/YYYY'));
 
-        // Load Realisasi Sebelumnya jika ada
-        const lastMon = perlakuan.last_monitoring;
         const form = $('#formUpdateRealisasiDampak');
 
-        form.find('[name="realisasi_biaya_dampak"]').val(lastMon?.realisasi_biaya_perlakuan_risiko ?? 0);
-        form.find('[name="progress_dampak"]').val(lastMon?.progress_rencana_perlakuan_risiko ?? 0);
-        form.find('[name="deskripsi_dampak"]').val(lastMon?.deskripsi_perlakuan_risiko ?? '');
+        form.find('[name="realisasi_biaya_dampak"]').val(perlakuan.realisasi_biaya_perlakuan_risiko ?? 0);
+        form.find('[name="progress_dampak"]').val(perlakuan.progress_rencana_perlakuan_risiko ?? 0);
+        form.find('[name="deskripsi_dampak"]').val(perlakuan.deskripsi_perlakuan_risiko ?? '');
 
-        if(lastMon?.timeline_perlakuan_risiko_start) {
-            impactFlatpickr.setDate(dayjs(lastMon.timeline_perlakuan_risiko_start).format('DD/MM/YYYY'));
+        const dampakTimelineParsed = parseTimelineDate(perlakuan.timeline_perlakuan_risiko);
+        if (dampakTimelineParsed) {
+            impactFlatpickr.setDate(dampakTimelineParsed.toDate());
         } else {
             impactFlatpickr.clear();
         }
