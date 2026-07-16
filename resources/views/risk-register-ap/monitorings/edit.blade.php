@@ -274,7 +274,7 @@ if (!function_exists('formatKriBatasJs')) {
                                 <input type="hidden" name="realisasi_skala_risiko_hidden" id="realisasi_skala_risiko_hidden">
                                 <label for="">Realisasi Skala Risiko</label>
                             </div>
-                            <div class="form-floating mt-2">
+                            <div class="form-floating">
                                 <input class="form-control inputmask-rupiah" type="text" name="realisasi_eksposur_risiko" id="realisasi_eksposur_risiko" placeholder=""
                                 value="{{ isset($riskMonitoring?->eksposure_risiko) ? 'Rp ' . number_format($riskMonitoring->eksposure_risiko, 0, ',', '.') : '-' }}" readonly>
                                 <label for="">Realisasi Eksposur Risiko</label>
