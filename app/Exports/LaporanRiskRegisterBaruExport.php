@@ -110,18 +110,18 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
             $monitoring = $risiko->monitoringRisikos->first();
             $analisis = $risiko->riskAnalysis;
 
-            $inherentNilaiProb = $analisis->nilai_probabilitas ?? 0;
-            $inherentTktProb   = optional($analisis->skalaProbabilitas)->tingkat ?? '-';
+            $inherentNilaiProb = $analisis?->nilai_probabilitas ?? 0;
+            $inherentTktProb   = $analisis?->skalaProbabilitas?->tingkat ?? '-';
 
-            $resNilai     = $analisis->{"nilai_dampak_residual_q{$qTarget}"} ?? 0;
-            $resDampak    = $analisis->{"skala_dampak_residual_q{$qTarget}"} ?? '-';
-            $resNilaiProb = $analisis->{"nilai_probabilitas_residual_q{$qTarget}"} ?? 0;
-            $resTktProb   = optional($analisis->{"skalaProbabilitasResidualQ{$qTarget}"})->tingkat ?? '-';
-            $resLevel     = $analisis->{"level_risiko_residual_q{$qTarget}"} ?? '-';
-            $resEksposur  = $analisis->{"eksposur_risiko_residual_q{$qTarget}"} ?? 0;
+            $resNilai     = $analisis?->{"nilai_dampak_residual_q{$qTarget}"} ?? 0;
+            $resDampak    = $analisis?->{"skala_dampak_residual_q{$qTarget}"} ?? '-';
+            $resNilaiProb = $analisis?->{"nilai_probabilitas_residual_q{$qTarget}"} ?? 0;
+            $resTktProb   = $analisis?->{"skalaProbabilitasResidualQ{$qTarget}"}?->tingkat ?? '-';
+            $resLevel     = $analisis?->{"level_risiko_residual_q{$qTarget}"} ?? '-';
+            $resEksposur  = $analisis?->{"eksposur_risiko_residual_q{$qTarget}"} ?? 0;
 
-            $realisasiNilaiProb = $monitoring->nilai_probabilitas ?? 0;
-            $realisasiTktProb   = optional($monitoring->skalaProbabilitas)->tingkat ?? '-';
+            $realisasiNilaiProb = $monitoring?->nilai_probabilitas ?? 0;
+            $realisasiTktProb   = $monitoring?->skalaProbabilitas?->tingkat ?? '-';
 
             $peluangRaText = '';
             $peluangRiText = '';
@@ -197,24 +197,24 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                     'biaya_rencana'        => 0,
                     'realisasi_pengendalian'=> '-',
                     'biaya_realisasi'      => 0,
-                    'inherent_nilai'      => $this->formatUang($analisis->nilai_dampak ?? 0),
-                    'inherent_dampak'     => $analisis->skala_dampak ?? '-',
+                    'inherent_nilai'      => $this->formatUang($analisis?->nilai_dampak ?? 0),
+                    'inherent_dampak'     => $analisis?->skala_dampak ?? '-',
                     'inherent_nilai_prob' => $inherentNilaiProb . '%',
                     'inherent_tkt_prob'   => $inherentTktProb,
-                    'inherent_level'      => $analisis->level_risiko ?? '-',
-                    'inherent_eksposur'   => $this->formatUang($analisis->eksposur_risiko ?? 0),
+                    'inherent_level'      => $analisis?->level_risiko ?? '-',
+                    'inherent_eksposur'   => $this->formatUang($analisis?->eksposur_risiko ?? 0),
                     'residual_nilai'      => $this->formatUang($resNilai),
                     'residual_dampak'     => $resDampak,
                     'residual_nilai_prob' => $resNilaiProb . '%',
                     'residual_tkt_prob'   => $resTktProb,
                     'residual_level'      => $resLevel,
                     'residual_eksposur'   => $this->formatUang($resEksposur),
-                    'realisasi_nilai'      => $this->formatUang($monitoring->nilai_dampak ?? 0),
-                    'realisasi_dampak'     => $monitoring->skala_dampak ?? '-',
+                    'realisasi_nilai'      => $this->formatUang($monitoring?->nilai_dampak ?? 0),
+                    'realisasi_dampak'     => $monitoring?->skala_dampak ?? '-',
                     'realisasi_nilai_prob' => $realisasiNilaiProb . '%',
                     'realisasi_tkt_prob'   => $realisasiTktProb,
-                    'realisasi_level'      => $monitoring->level_risiko ?? '-',
-                    'realisasi_eksposur'   => $this->formatUang($monitoring->eksposure_risiko ?? $monitoring->eksposur_risiko ?? 0),
+                    'realisasi_level'      => $monitoring?->level_risiko ?? '-',
+                    'realisasi_eksposur'   => $this->formatUang($monitoring?->eksposure_risiko ?? $monitoring?->eksposur_risiko ?? 0),
                     'peluang_ra' => trim($peluangRaText) ?: '-',
                     'peluang_ri' => trim($peluangRiText) ?: '-',
                     'nilai_peluang_ra' => trim($nilaiPeluangRaText) ?: '-',
@@ -265,12 +265,12 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                         'realisasi_pengendalian'=> $pengendalian->realisasi_pengendalian ?? '-',
                         'biaya_realisasi'      => $this->formatUang($pengendalian->biaya_realisasi_pengendalian ?? 0),
 
-                        'inherent_nilai'      => $isFirstRowOfGroup ? $this->formatUang($analisis->nilai_dampak ?? 0) : null,
-                        'inherent_dampak'     => $isFirstRowOfGroup ? ($analisis->skala_dampak ?? '-') : '',
+                        'inherent_nilai'      => $isFirstRowOfGroup ? $this->formatUang($analisis?->nilai_dampak ?? 0) : null,
+                        'inherent_dampak'     => $isFirstRowOfGroup ? ($analisis?->skala_dampak ?? '-') : '',
                         'inherent_nilai_prob' => $isFirstRowOfGroup ? ($inherentNilaiProb . '%') : '',
                         'inherent_tkt_prob'   => $isFirstRowOfGroup ? $inherentTktProb : '',
-                        'inherent_level'      => $isFirstRowOfGroup ? ($analisis->level_risiko ?? '-') : '',
-                        'inherent_eksposur'   => $isFirstRowOfGroup ? $this->formatUang($analisis->eksposur_risiko ?? 0) : null,
+                        'inherent_level'      => $isFirstRowOfGroup ? ($analisis?->level_risiko ?? '-') : '',
+                        'inherent_eksposur'   => $isFirstRowOfGroup ? $this->formatUang($analisis?->eksposur_risiko ?? 0) : null,
 
                         'residual_nilai'      => $isFirstRowOfGroup ? $this->formatUang($resNilai) : null,
                         'residual_dampak'     => $isFirstRowOfGroup ? $resDampak : '',
@@ -279,12 +279,12 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                         'residual_level'      => $isFirstRowOfGroup ? $resLevel : '',
                         'residual_eksposur'   => $isFirstRowOfGroup ? $this->formatUang($resEksposur) : null,
 
-                        'realisasi_nilai'      => $isFirstRowOfGroup ? $this->formatUang($monitoring->nilai_dampak ?? 0) : null,
-                        'realisasi_dampak'     => $isFirstRowOfGroup ? ($monitoring->skala_dampak ?? '-') : '',
+                        'realisasi_nilai'      => $isFirstRowOfGroup ? $this->formatUang($monitoring?->nilai_dampak ?? 0) : null,
+                        'realisasi_dampak'     => $isFirstRowOfGroup ? ($monitoring?->skala_dampak ?? '-') : '',
                         'realisasi_nilai_prob' => $isFirstRowOfGroup ? ($realisasiNilaiProb . '%') : '',
                         'realisasi_tkt_prob'   => $isFirstRowOfGroup ? $realisasiTktProb : '',
-                        'realisasi_level'      => $isFirstRowOfGroup ? ($monitoring->level_risiko ?? '-') : '',
-                        'realisasi_eksposur'   => $isFirstRowOfGroup ? $this->formatUang($monitoring->eksposure_risiko ?? $monitoring->eksposur_risiko ?? 0) : null,
+                        'realisasi_level'      => $isFirstRowOfGroup ? ($monitoring?->level_risiko ?? '-') : '',
+                        'realisasi_eksposur'   => $isFirstRowOfGroup ? $this->formatUang($monitoring?->eksposure_risiko ?? $monitoring?->eksposur_risiko ?? 0) : null,
 
                         'peluang_ra'       => $isFirstRowOfGroup ? (trim($peluangRaText) ?: '-') : '',
                         'peluang_ri'       => $isFirstRowOfGroup ? (trim($peluangRiText) ?: '-') : '',
