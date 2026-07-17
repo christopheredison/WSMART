@@ -226,11 +226,8 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                 foreach ($kriList as $kri) {
                     $kriMonitoring = $kri->kriUnitMonitorings->first();
 
-                    $statusKriText = '-';
                     $statusKri = $kriMonitoring ? $kriMonitoring->status_kri_terkini : null;
-                    if ($statusKri == 1) { $statusKriText = 'Aman'; }
-                    elseif ($statusKri == 2) { $statusKriText = 'Siaga'; }
-                    elseif ($statusKri == 3) { $statusKriText = 'Bahaya'; }
+                    $statusKriText = $this->formatStatusKri($statusKri);
 
                     $efektivitas = '-';
                     if ($statusKri == 1) { $efektivitas = 'Efektif'; } 
@@ -502,6 +499,16 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                 $sheet->getColumnDimension('N')->setAutoSize(false)->setWidth(42);
             },
         ];
+    }
+
+    private function formatStatusKri($statusKri): string
+    {
+        return match ((int) $statusKri) {
+            1 => '🟢 Aman',
+            2 => '🟡 Siaga',
+            3 => '🔴 Bahaya',
+            default => '-',
+        };
     }
 
     private function formatUang($value)
