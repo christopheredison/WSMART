@@ -12,6 +12,8 @@ use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Color;
+use PhpOffice\PhpSpreadsheet\RichText\RichText;
 
 class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, ShouldAutoSize, WithColumnFormatting
 {
@@ -22,6 +24,7 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
     
     protected $mergeRanges = [];
     protected $mergeTaksonomiRanges = [];
+    protected $statusKriByRow = [];
 
     public function __construct(int $periodeId, int $unitId, $bulan = null)
     {
@@ -228,6 +231,9 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
 
                     $statusKri = $kriMonitoring ? $kriMonitoring->status_kri_terkini : null;
                     $statusKriText = $this->formatStatusKri($statusKri);
+                    if (in_array((int) $statusKri, [1, 2, 3], true)) {
+                        $this->statusKriByRow[$currentRow] = (int) $statusKri;
+                    }
 
                     $efektivitas = '-';
                     if ($statusKri == 1) { $efektivitas = 'Efektif'; } 
@@ -330,7 +336,7 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                 $sheet->setCellValue('J1', 'Ambang Batas');
                 $sheet->setCellValue('M1', 'Aktual'); 
                 
-                $sheet->setCellValue('N1', "Status\n🟢 Aman (Aktual < Risk Limit)\n🟡 Siaga (Risk Limit < Aktual < Risk Tolerance)\n🔴 Bahaya > Risk Tolerance");
+                $sheet->setCellValue('N1', 'Status');
                 $sheet->setCellValue('O1', 'Efektivitas Pengendalian Risiko');
                 
                 $sheet->setCellValue('P1', 'Pengendalian Parameter/KRI');
@@ -497,18 +503,86 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                 $sheet->getColumnDimension('AL')->setAutoSize(false)->setWidth(35);
                 $sheet->getColumnDimension('AM')->setAutoSize(false)->setWidth(35);
                 $sheet->getColumnDimension('N')->setAutoSize(false)->setWidth(42);
+
+                $sheet->getCell('N1')->setValue($this->buildStatusLegendRichText());
+                $this->applyStatusKriCellStyles($sheet);
             },
         ];
     }
 
     private function formatStatusKri($statusKri): string
     {
-        return match ((int) $statusKri) {
-            1 => '🟢 Aman',
-            2 => '🟡 Siaga',
-            3 => '🔴 Bahaya',
+        return $this->getStatusLabel((int) $statusKri);
+    }
+
+    private function getStatusLabel(int $statusKri): string
+    {
+        return match ($statusKri) {
+            1 => 'Aman',
+            2 => 'Siaga',
+            3 => 'Bahaya',
             default => '-',
         };
+    }
+
+    private function getStatusColor(int $statusKri): string
+    {
+        return match ($statusKri) {
+            1 => '00B050',
+            2 => 'FFC000',
+            3 => 'FF0000',
+            default => '000000',
+        };
+    }
+
+    private function buildStatusLegendRichText(): RichText
+    {
+        $richText = new RichText();
+
+        $title = $richText->createTextRun("Status\n");
+        $title->getFont()->setBold(true)->setColor(new Color('FFFFFF'))->setName('Arial');
+
+        $this->appendStatusLegendLine($richText, 1, " Aman (Aktual < Risk Limit)\n");
+        $this->appendStatusLegendLine($richText, 2, " Siaga (Risk Limit < Aktual < Risk Tolerance)\n");
+        $this->appendStatusLegendLine($richText, 3, ' Bahaya > Risk Tolerance');
+
+        return $richText;
+    }
+
+    private function appendStatusLegendLine(RichText $richText, int $statusKri, string $suffix): void
+    {
+        $circle = $richText->createTextRun('●');
+        $circle->getFont()
+            ->setColor(new Color($this->getStatusColor($statusKri)))
+            ->setName('Arial')
+            ->setBold(true);
+
+        $text = $richText->createTextRun($suffix);
+        $text->getFont()
+            ->setColor(new Color('FFFFFF'))
+            ->setName('Arial')
+            ->setBold(true);
+    }
+
+    private function applyStatusKriCellStyles($sheet): void
+    {
+        foreach ($this->statusKriByRow as $row => $statusKri) {
+            $richText = new RichText();
+
+            $circle = $richText->createTextRun('● ');
+            $circle->getFont()
+                ->setColor(new Color($this->getStatusColor($statusKri)))
+                ->setName('Arial')
+                ->setSize(14)
+                ->setBold(true);
+
+            $text = $richText->createTextRun($this->getStatusLabel($statusKri));
+            $text->getFont()
+                ->setColor(new Color('000000'))
+                ->setName('Arial');
+
+            $sheet->getCell("N{$row}")->setValue($richText);
+        }
     }
 
     private function formatUang($value)
