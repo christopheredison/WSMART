@@ -124,11 +124,14 @@
                                 <td class="align-middle">
                                   @if(isset($criteriaScores[$criteria->id]))
                                     @php
-                                      $sel = $criteriaScores[$criteria->id]->score;
-                                      $det = $criteria->details->where('level', $sel)->first();
+                                      $sel = (int) $criteriaScores[$criteria->id]->score;
                                     @endphp
-                                    {!! $det?->criteria ? nl2br(e($det->criteria)) :
-                                    '-' !!}
+                                    @if($sel === 0)
+                                      <span class="text-muted fst-italic">Skip Penilaian</span>
+                                    @else
+                                      @php $det = $criteria->details->where('level', $sel)->first(); @endphp
+                                      {!! $det?->criteria ? nl2br(e($det->criteria)) : '-' !!}
+                                    @endif
                                   @else
                                     <span class="text-muted fst-italic">Belum dinilai</span>
                                   @endif
@@ -150,12 +153,12 @@
                                         3 => 'bg-success',
                                         4 => 'bg-warning text-dark',
                                         5 => 'bg-danger',
-                                        0 => 'bg-secondary text-white',
+                                        0 => 'bg-secondary text-dark border border-dark',
                                         default => 'bg-secondary'
                                       };
                                     @endphp
                                     <small class="badge {{ $badgeClass }} px-2 py-1">
-                                      {{ $scoreVal === 0 ? '-' : $scoreVal }}
+                                      {{ $scoreVal }}
                                     </small>
                                   @else
                                     -

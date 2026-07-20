@@ -13,6 +13,7 @@ use App\Models\Project;
 use App\Models\Level;
 use App\Models\ProjectRiskMonitoring;
 use App\Models\RiskMonitoringNote;
+use App\Models\RiskNote;
 use App\Models\Unit;
 use App\Models\SkalaParameter;
 use App\Models\ProjectRiskContext;
@@ -1797,16 +1798,40 @@ class ProjectRiskMonitoringController extends BasicCRUDController
             'efektivitas_perlakuan_risiko' => round($efektivitas, 2)
         ]);
 
-        if ($request->is_closed == '1') {
+        $wasClosed = (bool) $projectRisk->is_closed;
+        if ($request->is_closed == '1' && !$wasClosed) {
+            $closedAt = now();
             $projectRisk->update([
                 'is_closed' => true,
-                'closed_at' => now(),
+                'closed_at' => $closedAt,
             ]);
 
             KamusRisikoProject::updateOrCreate(
                 ['project_risk_id' => $projectRisk->id],
                 ['project_id' => $projectRisk->project_id],
             );
+
+            $closeNoteText = 'Risiko ditutup melalui monitoring pada ' . $closedAt->format('d-m-Y H:i:s')
+                . " (Q{$quarter}, Bulan {$month}).";
+
+            RiskMonitoringNote::create([
+                'risiko_id' => $projectRisk->id,
+                'type' => 2,
+                'user_id' => $user->id,
+                'status' => 1,
+                'notes' => $closeNoteText,
+                'quarter' => $quarter,
+                'month' => $month,
+                'year' => $tahun,
+            ]);
+
+            RiskNote::create([
+                'risiko_id' => $projectRisk->id,
+                'type' => 2,
+                'status' => 1,
+                'notes' => $closeNoteText,
+                'user_id' => $user->id,
+            ]);
         }
 
         return response()->json([
@@ -2284,15 +2309,19 @@ class ProjectRiskMonitoringController extends BasicCRUDController
         }
         elseif ($target === 'RO_MR') {
             // Risk Officer MR (Level 1, unit_mr = 1)
-            $users = \App\Models\User::where('level_id', 1)->whereHas('unit', function($q) {
-                $q->where('unit_mr', 1);
-            })->get();
+            $users = \App\Models\User::permission('mr_notification_project')
+                ->where('level_id', 1)
+                ->whereHas('unit', function($q) {
+                    $q->where('unit_mr', 1);
+                })->get();
         }
         elseif ($target === 'RW_MR') {
             // Risk Owner MR (Level 2, unit_mr = 1)
-            $users = \App\Models\User::where('level_id', 2)->whereHas('unit', function($q) {
-                $q->where('unit_mr', 1);
-          })->get();
+            $users = \App\Models\User::permission('mr_notification_project')
+                ->where('level_id', 2)
+                ->whereHas('unit', function($q) {
+                    $q->where('unit_mr', 1);
+              })->get();
         }
 
         foreach ($users as $user) {

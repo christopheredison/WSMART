@@ -88,9 +88,15 @@ class Unit extends Model implements AuditableContract
         $unitData = $units['data'];
 
         $unitData = collect($unitData)->filter(function ($unit) {
-            return $unit['company_sap'] == 'A000' && $unit['cost_center_parent'] != "";
+            $costCenterParentDesc = trim((string) ($unit['cost_center_parent_deskripsi'] ?? ''));
+
+            return $unit['company_sap'] == 'A000'
+                && $unit['cost_center_parent'] != ""
+                && $costCenterParentDesc !== '';
         })->keyBy('cost_center_parent')->values()->toArray();
         // dd($unitData);
+
+        $today = now()->toDateString();
 
         foreach ($unitData as $unit) {
             $cost_center_parent = $unit['cost_center_parent'];
@@ -102,29 +108,82 @@ class Unit extends Model implements AuditableContract
                 $unit_name = $unit['cost_center_deskripsi'];
             }
 
-            $unit = Unit::updateOrCreate(
-                ['cost_center' => $cost_center_parent],
-                [
-                    // 'unit_api_id' => $unit['unit_id'],
-                    'name' => $unit_name,
-                    'unit_type_id' => self::UNIT_TYPE_DIVISION,
-                    'parent_id' => 0,
-                    // 'unit_deskripsi' => $unit['unit_deskripsi'] ?? null,
-                    // 'persubarea_sap' => $unit['persubarea_sap'] ?? null,
-                    // 'persubarea_deskripsi' => $unit['persubarea_deskripsi'] ?? null,
-                    'persubarea_type' => $unit['persubarea_type'] ?? null,
-                    'company_sap' => $unit['company_sap'] ?? null,
-                    'company_deskripsi' => $unit['company_deskripsi'] ?? null,
-                    // 'cost_center' => $unit['cost_center'] ?? null,
-                    // 'cost_center_deskripsi' => $unit['cost_center_deskripsi'] ?? null,
-                    // 'cost_center_abbrevation' => $unit['cost_center_abbrevation'] ?? null,
-                    'cost_center_type' => $unit['cost_center_type'] ?? null,
-                    // 'cost_center_parent' => $unit['cost_center_parent'] ?? null,
-                    // 'cost_center_parent_deskripsi' => $unit['cost_center_parent_deskripsi'] ?? null,
-                ]
-            );
+            $validTo = null;
+            if (!empty($unit['valid_to'])) {
+                try {
+                    $validTo = \Carbon\Carbon::parse($unit['valid_to'])->toDateString();
+                } catch (\Throwable $e) {
+                    $validTo = null;
+                }
+            }
 
-            $divisiUnits[$unit['cost_center']] = $unit;
+            // Hanya sinkronkan unit yang masih valid berdasarkan valid_to
+            if ($validTo && $validTo < $today) {
+                continue;
+            }
+
+            $validFrom = null;
+            if (!empty($unit['valid_from'])) {
+                try {
+                    $validFrom = \Carbon\Carbon::parse($unit['valid_from'])->toDateString();
+                } catch (\Throwable $e) {
+                    $validFrom = null;
+                }
+            }
+
+            $payload = [
+                // 'unit_api_id' => $unit['unit_id'],
+                'name' => $unit_name,
+                'unit_type_id' => self::UNIT_TYPE_DIVISION,
+                'parent_id' => 0,
+                // 'unit_deskripsi' => $unit['unit_deskripsi'] ?? null,
+                // 'persubarea_sap' => $unit['persubarea_sap'] ?? null,
+                // 'persubarea_deskripsi' => $unit['persubarea_deskripsi'] ?? null,
+                'persubarea_type' => $unit['persubarea_type'] ?? null,
+                'company_sap' => $unit['company_sap'] ?? null,
+                'company_deskripsi' => $unit['company_deskripsi'] ?? null,
+                // 'cost_center' => $unit['cost_center'] ?? null,
+                // 'cost_center_deskripsi' => $unit['cost_center_deskripsi'] ?? null,
+                // 'cost_center_abbrevation' => $unit['cost_center_abbrevation'] ?? null,
+                'cost_center_type' => $unit['cost_center_type'] ?? null,
+                // 'cost_center_parent' => $unit['cost_center_parent'] ?? null,
+                // 'cost_center_parent_deskripsi' => $unit['cost_center_parent_deskripsi'] ?? null,
+            ];
+
+            $existingUnit = Unit::query()
+                ->where('cost_center', $cost_center_parent)
+                ->whereNull('deleted_at')
+                // ->where(function ($query) use ($today) {
+                //     $query->whereNull('valid_to')
+                //         ->orWhereDate('valid_to', '>=', $today);
+                // })
+                ->first();
+
+            if ($existingUnit) {
+                $existingPayload = $payload;
+
+                // Update valid_from/valid_to hanya jika status unit existing masih aktif (true).
+                if ((bool) $existingUnit->status) {
+                    $existingPayload['valid_from'] = $validFrom;
+                    $existingPayload['valid_to'] = $validTo;
+                }
+
+                $existingUnit->fill($existingPayload)->save();
+                $syncedUnit = $existingUnit;
+            } else {
+                $createPayload = array_merge($payload, [
+                    'valid_from' => $validFrom,
+                    'valid_to' => $validTo,
+                    'status' => true,
+                ]);
+
+                $syncedUnit = Unit::create(array_merge(
+                    ['cost_center' => $cost_center_parent],
+                    $createPayload
+                ));
+            }
+
+            $divisiUnits[$syncedUnit->cost_center] = $syncedUnit;
         }
 
         /*

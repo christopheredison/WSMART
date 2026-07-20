@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Unit;
 use App\Models\UnitType;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 class UnitController extends Controller
@@ -21,19 +22,25 @@ class UnitController extends Controller
         $query = Unit::with(['unitType', 'parent'])->withTrashed();
 
         if ($status === 'valid') {
-            // Tampilkan yang masih valid: valid_to null atau >= hari ini, dan valid_from null atau <= hari ini
-            $query->where(function ($q) use ($today) {
-                $q->whereNull('valid_to')->orWhereDate('valid_to', '>=', $today);
-            })->where(function ($q) use ($today) {
-                $q->whereNull('valid_from')->orWhereDate('valid_from', '<=', $today);
-            });
+            // Tampilkan yang masih valid: status 1 DAN (valid_to null atau >= hari ini) DAN (valid_from null atau <= hari ini)
+            $query->where('status', 1)
+                ->where(function ($q) use ($today) {
+                    $q->whereNull('valid_to')->orWhereDate('valid_to', '>=', $today);
+                })->where(function ($q) use ($today) {
+                    $q->whereNull('valid_from')->orWhereDate('valid_from', '<=', $today);
+                });
         } elseif ($status === 'invalid') {
-            // Tampilkan yang sudah tidak valid: valid_to terisi dan < hari ini
-            $query->whereNotNull('valid_to')->whereDate('valid_to', '<', $today);
+            // Tampilkan yang sudah tidak valid: status 0 ATAU (valid_to terisi dan < hari ini)
+            $query->where(function ($q) use ($today) {
+                $q->where('status', 0)
+                    ->orWhere(function ($sq) use ($today) {
+                        $sq->whereNotNull('valid_to')->whereDate('valid_to', '<', $today);
+                    });
+            });
         } // status 'all' menampilkan semua
 
-        $unit = $query->get();
-        return view('master.unit.index', compact('unit', 'status'));
+        $unit = $query->orderBy('status', 'desc')->orderBy('name', 'asc')->get();
+        return view('master.unit.index', compact('unit', 'status', 'today'));
     }
 
     public function create()
@@ -48,6 +55,7 @@ class UnitController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'unit_type_id' => 'required',
+            'cost_center' => 'required|string|max:255|unique:units,cost_center',
             // 'parent_id' => 'required',
         ]);
 
@@ -58,7 +66,7 @@ class UnitController extends Controller
         Unit::create([
             'name' => $request->name,
             'unit_type_id' => $request->unit_type_id,
-            'unit_api_id' => $request->unit_api_id,
+            'cost_center' => trim((string) $request->cost_center),
             'parent_id' => $request->parent_id ?? 0
         ]);
 
@@ -85,6 +93,14 @@ class UnitController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'unit_type_id' => 'required',
+            'cost_center' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('units', 'cost_center')
+                    ->ignore($unit->id)
+                    ->whereNull('deleted_at'),
+            ],
             'valid_from' => 'nullable|date',
             'valid_to' => 'nullable|date|after_or_equal:valid_from',
             // 'parent_id' => 'required',
@@ -98,13 +114,20 @@ class UnitController extends Controller
         $validFrom = $request->valid_from ?: null;
         $validTo = $request->valid_to ?: null;
 
+        $status = $unit->status;
+        if ($validTo && Carbon::parse($validTo)->isPast() && !Carbon::parse($validTo)->isToday()) {
+            $status = 0;
+        }
+
         $unit->update([
             'name' => $request->name,
             'unit_type_id' => $request->unit_type_id,
             'parent_id' => $request->parent_id ?? 0,
             'unit_api_id' => $request->unit_api_id,
+            'cost_center' => trim((string) $request->cost_center),
             'valid_from' => $validFrom,
             'valid_to' => $validTo,
+            'status' => $status,
         ]);
 
         return redirect()->route('unit.index')->with('success', 'Unit updated successfully!');

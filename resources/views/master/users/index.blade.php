@@ -53,11 +53,17 @@
             </div>
           </div>
           <h2 class="h3">Manajemen User</h2>
-          <div id="bulk-select-replace-element" class="col-auto ms-auto">
-            <a class="btn btn-outline-info btn-sm" href="{{ route('users.create') }}">
-              <span class="bx bx-plus"></span>
-              <span class="ms-1">New</span>
+          <div id="bulk-select-replace-element" class="col-auto ms-auto d-flex gap-2">
+            <a class="btn btn-outline-secondary btn-sm" href="{{ route('users.logs') }}">
+              <span class="bx bx-history"></span>
+              <span class="ms-1">Log Perubahan</span>
             </a>
+            @can('manajemen_user')
+              <a class="btn btn-outline-info btn-sm" href="{{ route('users.create') }}">
+                <span class="bx bx-plus"></span>
+                <span class="ms-1">New</span>
+              </a>
+            @endcan
           </div>
         </div>
       </div>
@@ -158,6 +164,12 @@
             autoWidth: false
         });
 
+        $('#userTable').on('click', '.btn-ghost-login', function() {
+            const id = $(this).data('user-id');
+            const name = $(this).data('user-name');
+            ghostLogin(id, name);
+        });
+
         // Trigger reload DataTables saat dropdown filter berubah
         $('#filter_unit, #filter_project').on('change', function() {
             table.draw();
@@ -230,6 +242,37 @@
                 let form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '/users/' + id + '/restore';
+                form.innerHTML = '@csrf';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+
+    function ghostLogin(id, name) {
+        Swal.fire({
+            title: 'Masuk sebagai user ini?',
+            text: 'Anda akan ghost login sebagai ' + name + '.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#0d6efd',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, ghost login',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Memproses...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading()
+                    }
+                });
+
+                let form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/ghost-login/' + id;
                 form.innerHTML = '@csrf';
                 document.body.appendChild(form);
                 form.submit();

@@ -14,7 +14,9 @@ use App\Models\StrategiRisiko;
 use App\Models\Level;
 use App\Models\UnitRiskMonitoring;
 use App\Models\Unit;
+use App\Models\UnitRelation;
 use App\Models\RiskMonitoringNote;
+use App\Models\RiskNote;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -77,7 +79,16 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             $targetUnitId = $firstUnit ? $firstUnit->id : null;
           }
         } else {
-          $targetUnitId = $user->unit_id;
+          // User non view_all_division boleh mengakses unit sendiri + unit relasi.
+          $requestedUnitId = request()->input('filters.unit_id', request()->query('unit_id'));
+          $relatedUnitIds = UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id')->toArray();
+          $allowedUnitIds = array_merge([$user->unit_id], $relatedUnitIds);
+
+          if ($requestedUnitId && in_array((int) $requestedUnitId, $allowedUnitIds, true)) {
+            $targetUnitId = $requestedUnitId;
+          } else {
+            $targetUnitId = $user->unit_id;
+          }
         }
 
         $this->baseRouteParams['unit_id'] = $targetUnitId;
@@ -87,6 +98,11 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
           $this->indexSubtitle = $unit->name . ' - Periode ' . $tahunPeriode;
         }
         $isUnitMr = $unit->unit_mr == 1;
+        $today = \Carbon\Carbon::today();
+        $isWithinValidFrom = !$unit?->valid_from || ($unit?->valid_from && ($unit->valid_from->isSameDay($today) || $unit->valid_from->isBefore($today)));
+        $isWithinValidTo = !$unit?->valid_to || ($unit?->valid_to && ($unit->valid_to->isSameDay($today) || $unit->valid_to->isAfter($today)));
+        $isUnitActive = (bool) ($unit?->status) && $isWithinValidFrom && $isWithinValidTo;
+        $unitExpired = !$isUnitActive;
 
         // Merge request
         request()->merge(['month' => $month, 'quarter' => $quarter, 'unit_id' => $targetUnitId]);
@@ -654,16 +670,18 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         // Dan pastikan user di unit yang sedang dibuka
         $canEdit = Gate::check('risk_monitoring_input') && $userLevel == 1 && $user->unit_id == $targetUnitId;
 
-        $this->tableActions[] = [
-            'label' => 'Peluang',
-            'btn_icon' => false,
-            'action' => 'script',
-            'script' => "showPeluangModal($(this).data('id'), '__RISK_TITLE__', '__RISK_DESC__')",
-            'active_state' => '(data, type, row) => true',
-            'extra_attrs' => [ 'style' => 'font-size: 16px; font-weight: 400;', 'data-id' => 'row.id' ]
-        ];
+        if (!$unitExpired) {
+            $this->tableActions[] = [
+                'label' => 'Peluang',
+                'btn_icon' => false,
+                'action' => 'script',
+                'script' => "showPeluangModal($(this).data('id'), '__RISK_TITLE__', '__RISK_DESC__')",
+                'active_state' => '(data, type, row) => true',
+                'extra_attrs' => [ 'style' => 'font-size: 16px; font-weight: 400;', 'data-id' => 'row.id' ]
+            ];
+        }
 
-        if ($canEdit) {
+        if ($canEdit && !$unitExpired) {
             $monitoringRoute = route('risk-register-unit.monitorings.edit', ['period' => $period->id, 'monitoring' => ':id', 'quarter' => ':quarter', 'month' => ':month']);
 
             $this->tableActions[] = [
@@ -688,7 +706,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $hasVerificationMr = Gate::allows('verification_mr');
         $verificatorLevels = [2, 1]; // 1=Officer , 2=Owner
 
-        if (in_array($user->level_id, $verificatorLevels)) {
+        if (in_array($user->level_id, $verificatorLevels) && !$unitExpired) {
             $this->tableActions[] = [
                 'label' => 'Verifikasi',
                 'btn_class' => 'btn-warning btn-sm',
@@ -734,10 +752,13 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         if ($viewAllDivision) {
             $unitFilterOptions = Unit::where('unit_type_id', 1)->pluck('name', 'id')->toArray();
         } else {
-            if ($user->unit) {
-                $unitFilterOptions = [$user->unit_id => $user->unit->name];
+            $relatedUnitIds = UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id')->toArray();
+            $allowedUnitIds = array_merge([$user->unit_id], $relatedUnitIds);
+            $unitFilterOptions = Unit::whereIn('id', $allowedUnitIds)->pluck('name', 'id')->toArray();
+
+            if (count($unitFilterOptions) <= 1) {
+                $unitFilterAttributes['disabled'] = true;
             }
-            $unitFilterAttributes['disabled'] = true;
         }
 
         $monthOptions = match((int)$quarter) {
@@ -1003,15 +1024,16 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         }
 
         $this->extraViewData['summaryInfo'] = $summaryInfo;
-        $this->extraViewData['escalationConfig'] = $escalationConfig;
-        $this->extraViewData['showVerifikasiModal'] = in_array($userLevel, $verificatorLevels);
+        $this->extraViewData['escalationConfig'] = $unitExpired ? ['show' => false] : $escalationConfig;
+        $this->extraViewData['showVerifikasiModal'] = in_array($userLevel, $verificatorLevels) && !$unitExpired;
         $this->extraViewData['showCatatanModal'] = true;
 
         // --- TAMBAHAN UNTUK BULK VERIFY ---
-        $this->extraViewData['showBulkCheckbox'] = true;
+        $this->extraViewData['showBulkCheckbox'] = !$unitExpired;
         $this->extraViewData['currentUserLevel'] = $userLevel;
         $this->extraViewData['hasVerificationMr'] = $hasVerificationMr;
         $this->extraViewData['isUserUnitMr'] = $user->unit ? $user->unit->unit_mr : 0;
+        $this->extraViewData['unitExpired'] = $unitExpired;
         
         $bulkRoute = route("risk-register-unit.monitorings.bulk-verify", ["period" => $period->id]);
 
@@ -1719,15 +1741,39 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             'efektivitas_perlakuan_risiko' => round($efektivitas, 2)
         ]);
 
-        if ($request->is_closed == '1') {
+        $wasClosed = (bool) $risk->is_closed;
+        if ($request->is_closed == '1' && !$wasClosed) {
+            $closedAt = now();
             $risk->update([
                 'is_closed' => true,
-                'closed_at' => now(),
+                'closed_at' => $closedAt,
             ]);
 
             KamusRisikoUnit::updateOrCreate(
                 ['risiko_id' => $risk->id],
             );
+
+            $closeNoteText = 'Risiko ditutup melalui monitoring pada ' . $closedAt->format('d-m-Y H:i:s')
+                . " (Q{$quarter}, Bulan {$month}).";
+
+            RiskMonitoringNote::create([
+                'risiko_id' => $risk->id,
+                'type' => 1,
+                'user_id' => $user->id,
+                'status' => 1,
+                'notes' => $closeNoteText,
+                'quarter' => $quarter,
+                'month' => $month,
+                'year' => null,
+            ]);
+
+            RiskNote::create([
+                'risiko_id' => $risk->id,
+                'type' => 1,
+                'status' => 1,
+                'notes' => $closeNoteText,
+                'user_id' => $user->id,
+            ]);
         }
 
         return response()->json([
@@ -2310,15 +2356,19 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         }
         elseif ($target === 'RO_MR') {
             // Risk Officer MR: level 1, unit_mr = 1
-            $users = \App\Models\User::where('level_id', 1)->whereHas('unit', function($q) {
-                $q->where('unit_mr', 1);
-            })->get();
+            $users = \App\Models\User::permission('mr_notification_division')
+                ->where('level_id', 1)
+                ->whereHas('unit', function($q) {
+                    $q->where('unit_mr', 1);
+                })->get();
         }
         elseif ($target === 'RW_MR') {
             // Risk Owner MR: level 2, unit_mr = 1
-            $users = \App\Models\User::where('level_id', 2)->whereHas('unit', function($q) {
-                $q->where('unit_mr', 1);
-            })->get();
+            $users = \App\Models\User::permission('mr_notification_division')
+                ->where('level_id', 2)
+                ->whereHas('unit', function($q) {
+                    $q->where('unit_mr', 1);
+                })->get();
         }
 
         foreach ($users as $user) {

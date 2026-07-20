@@ -35,26 +35,7 @@ class ICTController extends Controller
 
         $data = [];
         foreach ($ictPlans as $plan) {
-            $peristiwaRisiko = '-';
-            $lokasiRisiko = '-';
-
-            // Kita biarkan deteksi type untuk jaga-jaga old data, walau kedepannya semua type = 1
-            if ($plan->type == 1) {
-                $identifikasiRisiko = IdentifikasiRisiko::find($plan->risiko_id);
-                if ($identifikasiRisiko) {
-                    $peristiwaRisiko = $identifikasiRisiko->peristiwa_risiko;
-                    $unit = Unit::find($identifikasiRisiko->unit_id);
-                    $lokasiRisiko = $unit ? $unit->name : '-';
-                }
-            } elseif ($plan->type == 2) {
-                $projectRisk = \App\Models\ProjectRisk::find($plan->risiko_id);
-                if ($projectRisk) {
-                    $peristiwaRisikoObj = \App\Models\PeristiwaRisiko::find($projectRisk->peristiwa_risiko_id);
-                    $peristiwaRisiko = $peristiwaRisikoObj ? $peristiwaRisikoObj->title : '-';
-                    $project = \App\Models\Project::find($projectRisk->project_id);
-                    $lokasiRisiko = $project ? $project->name : '-';
-                }
-            }
+            $riskDetail = $this->resolveRiskDetail($plan);
 
             $keyControls = $plan->planControls->pluck('key_control')->implode(', ');
 
@@ -62,8 +43,8 @@ class ICTController extends Controller
                 'id' => $plan->id,
                 'tahun_pelaporan' => $plan->tahun_pelaporan ?? '-', // TAMBAHAN
                 'sasaran_bumn' => $plan->sasaran_bumn,
-                'peristiwa_risiko' => $peristiwaRisiko,
-                'lokasi_risiko' => $lokasiRisiko,
+                'peristiwa_risiko' => $riskDetail['peristiwa_risiko'],
+                'lokasi_risiko' => $riskDetail['lokasi_risiko'],
                 'business_process' => $plan->business_process,
                 'key_controls' => $keyControls,
                 'metode_pengujian' => $plan->metode_pengujian,
@@ -95,17 +76,25 @@ class ICTController extends Controller
         $request->validate([
             'tahun_pelaporan' => 'required|numeric|min:2025',
             'sasaran_bumn' => 'required',
-            'risiko_id' => 'required',
+            'risiko_mode' => 'required|in:existing,manual',
+            'risiko_id' => 'required_if:risiko_mode,existing|nullable',
+            'peristiwa_risiko_manual' => 'required_if:risiko_mode,manual|nullable|string',
+            'lokasi_risiko' => 'required|string',
             'business_process' => 'required',
             'metode_pengujian' => 'required',
             'key_control_id' => 'required|array',
             'key_control' => 'required|array',
+            'key_control.*' => 'required|string',
         ]);
+
+        $isManualRisk = $request->risiko_mode === 'manual';
 
         $ictPlan = ICTPlan::create([
             'tahun_pelaporan' => $request->tahun_pelaporan,
             'sasaran_bumn' => $request->sasaran_bumn,
-            'risiko_id' => $request->risiko_id,
+            'risiko_id' => $isManualRisk ? null : $request->risiko_id,
+            'peristiwa_risiko' => $isManualRisk ? $request->peristiwa_risiko_manual : null,
+            'lokasi_risiko' => $request->lokasi_risiko,
             'type' => 1, // KUNCI KE TYPE 1 (Korporat)
             'business_process' => $request->business_process,
             'metode_pengujian' => $request->metode_pengujian,
@@ -146,22 +135,37 @@ class ICTController extends Controller
         $request->validate([
             'tahun_pelaporan' => 'required|numeric|min:2025',
             'sasaran_bumn' => 'required',
-            'risiko_id' => 'required',
+            'risiko_mode' => 'required|in:existing,manual',
+            'risiko_id' => 'required_if:risiko_mode,existing|nullable',
+            'peristiwa_risiko_manual' => 'required_if:risiko_mode,manual|nullable|string',
+            'lokasi_risiko' => 'required|string',
             'business_process' => 'required',
             'metode_pengujian' => 'required',
             'key_control_id' => 'required|array',
             'key_control' => 'required|array',
+            'key_control.*' => 'required|string',
         ]);
 
         try {
             DB::beginTransaction();
 
-            $riskChanged = ($ictPlan->risiko_id != $request->risiko_id) || ($ictPlan->type != 1);
+            $oldMode = empty($ictPlan->risiko_id) ? 'manual' : 'existing';
+            $newMode = $request->risiko_mode;
+            $newRisikoId = $newMode === 'existing' ? $request->risiko_id : null;
+            $newPeristiwaManual = $newMode === 'manual' ? $request->peristiwa_risiko_manual : null;
+
+            $riskChanged = ($oldMode !== $newMode)
+                || ((string) $ictPlan->risiko_id !== (string) $newRisikoId)
+                || ((string) ($ictPlan->peristiwa_risiko ?? '') !== (string) ($newPeristiwaManual ?? ''))
+                || ((string) ($ictPlan->lokasi_risiko ?? '') !== (string) $request->lokasi_risiko)
+                || ($ictPlan->type != 1);
 
             $ictPlan->update([
                 'tahun_pelaporan' => $request->tahun_pelaporan,
                 'sasaran_bumn' => $request->sasaran_bumn,
-                'risiko_id' => $request->risiko_id,
+                'risiko_id' => $newRisikoId,
+                'peristiwa_risiko' => $newPeristiwaManual,
+                'lokasi_risiko' => $request->lokasi_risiko,
                 'type' => 1, // KUNCI KE TYPE 1 (Korporat)
                 'business_process' => $request->business_process,
                 'metode_pengujian' => $request->metode_pengujian,
@@ -223,28 +227,9 @@ class ICTController extends Controller
         // Ambil data ICTPlan dengan relasi planControls
         $ictPlan = ICTPlan::with(['planControls.latestDo'])->findOrFail($id);
 
-        // Tentukan peristiwa risiko dan lokasi risiko berdasarkan type
-        $peristiwaRisiko = '-';
-        $lokasiRisiko = '-';
-
-        if ($ictPlan->type == 1) {
-            // Ambil dari IdentifikasiRisiko
-            $identifikasiRisiko = IdentifikasiRisiko::find($ictPlan->risiko_id);
-            if ($identifikasiRisiko) {
-                $peristiwaRisiko = $identifikasiRisiko->peristiwa_risiko;
-                $unit = Unit::find($identifikasiRisiko->unit_id);
-                $lokasiRisiko = $unit ? $unit->name : '-';
-            }
-        } elseif ($ictPlan->type == 2) {
-            // Ambil dari ProjectRisk
-            $projectRisk = ProjectRisk::find($ictPlan->risiko_id);
-            if ($projectRisk) {
-                $peristiwaRisikoObj = PeristiwaRisiko::find($projectRisk->peristiwa_risiko_id);
-                $peristiwaRisiko = $peristiwaRisikoObj ? $peristiwaRisikoObj->title : '-';
-                $project = Project::find($projectRisk->project_id);
-                $lokasiRisiko = $project ? $project->name : '-';
-            }
-        }
+        $riskDetail = $this->resolveRiskDetail($ictPlan);
+        $peristiwaRisiko = $riskDetail['peristiwa_risiko'];
+        $lokasiRisiko = $riskDetail['lokasi_risiko'];
 
         // Ambil data Jabatan untuk dropdown
         $jabatans = \App\Models\Jabatan::orderBy('name')->get();
@@ -399,28 +384,9 @@ class ICTController extends Controller
         // Ambil data ICTPlan dengan relasi planControls
         $ictPlan = ICTPlan::with(['planControls.dos'])->findOrFail($id);
 
-        // Tentukan peristiwa risiko dan lokasi risiko berdasarkan type
-        $peristiwaRisiko = '-';
-        $lokasiRisiko = '-';
-
-        if ($ictPlan->type == 1) {
-            // Ambil dari IdentifikasiRisiko
-            $identifikasiRisiko = IdentifikasiRisiko::find($ictPlan->risiko_id);
-            if ($identifikasiRisiko) {
-                $peristiwaRisiko = $identifikasiRisiko->peristiwa_risiko;
-                $unit = Unit::find($identifikasiRisiko->unit_id);
-                $lokasiRisiko = $unit ? $unit->name : '-';
-            }
-        } elseif ($ictPlan->type == 2) {
-            // Ambil dari ProjectRisk
-            $projectRisk = ProjectRisk::find($ictPlan->risiko_id);
-            if ($projectRisk) {
-                $peristiwaRisikoObj = PeristiwaRisiko::find($projectRisk->peristiwa_risiko_id);
-                $peristiwaRisiko = $peristiwaRisikoObj ? $peristiwaRisikoObj->title : '-';
-                $project = Project::find($projectRisk->project_id);
-                $lokasiRisiko = $project ? $project->name : '-';
-            }
-        }
+        $riskDetail = $this->resolveRiskDetail($ictPlan);
+        $peristiwaRisiko = $riskDetail['peristiwa_risiko'];
+        $lokasiRisiko = $riskDetail['lokasi_risiko'];
 
         // Ambil data ICTReport jika sudah ada
         $ictReport = ICTReport::where('ict_plan_id', $id)->first();
@@ -453,7 +419,8 @@ class ICTController extends Controller
         // Validasi input
         $request->validate([
             'status_tindak_lanjut' => 'required',
-            'keterangan' => 'required',
+            'rencana_tindak_lanjut' => 'required',
+            'realisasi_tindak_lanjut' => 'required',
         ]);
 
         // Cek apakah sudah ada report untuk ICTPlan ini
@@ -463,14 +430,16 @@ class ICTController extends Controller
             // Update report yang sudah ada
             $ictReport->update([
                 'status_tindak_lanjut' => $request->status_tindak_lanjut,
-                'keterangan' => $request->keterangan,
+                'keterangan' => $request->rencana_tindak_lanjut,
+                'realisasi_tindak_lanjut' => $request->realisasi_tindak_lanjut,
             ]);
         } else {
             // Buat report baru
             ICTReport::create([
                 'ict_plan_id' => $id,
                 'status_tindak_lanjut' => $request->status_tindak_lanjut,
-                'keterangan' => $request->keterangan,
+                'keterangan' => $request->rencana_tindak_lanjut,
+                'realisasi_tindak_lanjut' => $request->realisasi_tindak_lanjut,
             ]);
         }
 
@@ -482,33 +451,53 @@ class ICTController extends Controller
         // Ambil data ICTPlan dengan relasi planControls dan dos
         $ictPlan = ICTPlan::with(['planControls.dos'])->findOrFail($id);
 
-        // Tentukan peristiwa risiko dan lokasi risiko berdasarkan type
-        $peristiwaRisiko = '-';
-        $lokasiRisiko = '-';
-
-        if ($ictPlan->type == 1) {
-            // Ambil dari IdentifikasiRisiko
-            $identifikasiRisiko = IdentifikasiRisiko::find($ictPlan->risiko_id);
-            if ($identifikasiRisiko) {
-                $peristiwaRisiko = $identifikasiRisiko->peristiwa_risiko;
-                $unit = Unit::find($identifikasiRisiko->unit_id);
-                $lokasiRisiko = $unit ? $unit->name : '-';
-            }
-        } elseif ($ictPlan->type == 2) {
-            // Ambil dari ProjectRisk
-            $projectRisk = ProjectRisk::find($ictPlan->risiko_id);
-            if ($projectRisk) {
-                $peristiwaRisikoObj = PeristiwaRisiko::find($projectRisk->peristiwa_risiko_id);
-                $peristiwaRisiko = $peristiwaRisikoObj ? $peristiwaRisikoObj->title : '-';
-                $project = Project::find($projectRisk->project_id);
-                $lokasiRisiko = $project ? $project->name : '-';
-            }
-        }
+        $riskDetail = $this->resolveRiskDetail($ictPlan);
+        $peristiwaRisiko = $riskDetail['peristiwa_risiko'];
+        $lokasiRisiko = $riskDetail['lokasi_risiko'];
 
         // Ambil data ICTReport jika sudah ada
         $ictReport = ICTReport::where('ict_plan_id', $id)->first();
 
         return view('ict.show', compact('ictPlan', 'peristiwaRisiko', 'lokasiRisiko', 'ictReport'));
+    }
+
+    private function resolveRiskDetail(ICTPlan $plan): array
+    {
+        if (!empty($plan->peristiwa_risiko)) {
+            return [
+                'peristiwa_risiko' => $plan->peristiwa_risiko,
+                'lokasi_risiko' => $plan->lokasi_risiko ?: '-',
+            ];
+        }
+
+        $peristiwaRisiko = '-';
+        $lokasiRisiko = $plan->lokasi_risiko ?: '-';
+
+        if ($plan->type == 1 && !empty($plan->risiko_id)) {
+            $identifikasiRisiko = IdentifikasiRisiko::find($plan->risiko_id);
+            if ($identifikasiRisiko) {
+                $peristiwaRisiko = $identifikasiRisiko->peristiwa_risiko;
+                if (empty($plan->lokasi_risiko)) {
+                    $unit = Unit::find($identifikasiRisiko->unit_id);
+                    $lokasiRisiko = $unit ? $unit->name : '-';
+                }
+            }
+        } elseif ($plan->type == 2 && !empty($plan->risiko_id)) {
+            $projectRisk = ProjectRisk::find($plan->risiko_id);
+            if ($projectRisk) {
+                $peristiwaRisikoObj = PeristiwaRisiko::find($projectRisk->peristiwa_risiko_id);
+                $peristiwaRisiko = $peristiwaRisikoObj ? $peristiwaRisikoObj->title : '-';
+                if (empty($plan->lokasi_risiko)) {
+                    $project = Project::find($projectRisk->project_id);
+                    $lokasiRisiko = $project ? $project->name : '-';
+                }
+            }
+        }
+
+        return [
+            'peristiwa_risiko' => $peristiwaRisiko,
+            'lokasi_risiko' => $lokasiRisiko ?: '-',
+        ];
     }
 
     public function destroy($id)

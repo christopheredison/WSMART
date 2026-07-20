@@ -9,10 +9,6 @@
         $user = auth()->user();
         $isRiskOfficer = ($user->level_id == 1);
         $isRiskOwner = ($user->level_id == 2);
-        $canManageAsRiskOwner = $isRiskOwner && (
-            (int) $user->unit_id === (int) $unit->id ||
-            ($user->can('verification_mr') && optional($user->unit)->unit_mr == 1)
-        );
 
         // Menyamakan styling dengan Project & Unit Context
         $thClass = "table-light text-dark fw-semibold align-middle";
@@ -56,12 +52,12 @@
                             {{-- RISK OFFICER (Level 1) --}}
                             @if($isRiskOfficer)
                                 @if($status == 'Draft' || $status == 'Revision')
-                                    <a href="{{ route('risk-context.update-or-create', ['unit_id' => $unit->id, 'periode_id' => $periode->id]) }}" class="btn btn-sm d-flex align-items-center gap-2 btn-primary">
+                                    <a href="{{ route('risk-context-anper.update-or-create', ['unit_id' => $unit->id, 'periode_id' => $periode->id]) }}" class="btn btn-sm d-flex align-items-center gap-2 btn-primary">
                                         <i class="bx bx-edit"></i> {{ $context ? 'Edit Data' : 'Isi Data' }}
                                     </a>
 
                                     @if($context)
-                                    <form id="form-submit-context" action="{{ route('risk-context.submit', $context->id) }}" method="POST" class="d-inline">
+                                    <form id="form-submit-context" action="{{ route('risk-context-anper.submit', $context->id) }}" method="POST" class="d-inline">
                                         @csrf
                                         <button type="submit" class="btn btn-sm d-flex align-items-center gap-2 btn-success">
                                             <i class="bx bx-send"></i> Ajukan
@@ -76,7 +72,7 @@
                             @endif
 
                             {{-- RISK OWNER (Level 2) --}}
-                            @if($canManageAsRiskOwner && $context)
+                            @if($isRiskOwner && $context)
                                 @if($status == 'Submitted' || $status == 'Verified')
                                     <button type="button" class="btn btn-sm d-flex align-items-center gap-2 btn-danger" data-bs-toggle="modal" data-bs-target="#modalReject">
                                         <i class="bx bx-x"></i> Revisi
@@ -125,7 +121,7 @@
                             <div class="fs-5 fw-bold text-gray-800">Data Belum Tersedia</div>
                             <p class="text-muted">Risk Context belum dibuat.</p>
                             @if($isRiskOfficer)
-                                <a href="{{ route('risk-context.update-or-create', ['unit_id' => $unit->id, 'periode_id' => $periode->id]) }}" class="btn btn-primary mt-3">Mulai Isi Data</a>
+                                <a href="{{ route('risk-context-anper.update-or-create', ['unit_id' => $unit->id, 'periode_id' => $periode->id]) }}" class="btn btn-primary mt-3">Mulai Isi Data</a>
                             @endif
                         </div>
                     @else
@@ -301,11 +297,11 @@
     </div>
 
     {{-- MODAL REVISI --}}
-    @if($context && $canManageAsRiskOwner)
+    @if($context && $isRiskOwner)
     <div class="modal fade" id="modalReject" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <form id="form-revisi-context" action="{{ route('risk-context.reject', $context->id) }}" method="POST">
+                <form id="form-revisi-context" action="{{ route('risk-context-anper.reject', $context->id) }}" method="POST">
                     @csrf
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold">Revisi Dokumen</h5>

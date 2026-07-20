@@ -2,7 +2,7 @@
 @section('dashboard')
 <div class="row justify-content-center">
   <div class="col-12 col-md-10 col-lg-7">
-    <form class="card" method="POST" action="{{ route('unit.update', $unit) }}">
+    <form id="editUnitForm" class="card" method="POST" action="{{ route('unit.update', $unit) }}">
       @csrf
       @method('PUT')
       <div class="card-header d-flex justify-content-between">
@@ -42,14 +42,13 @@
               @endforeach
             </select>
           </div>
-          <div class="form-group d-none" id="unit_api_id_group">
-            <label class="form-label label-md-start col-md-3">Unit ID</label>
-            <input type="text" name="unit_api_id" id="unit_api_id" class="form-control" value="{{ $unit->unit_api_id }}">
+          <div class="form-group d-md-flex" id="cost_center_group">
+            <label class="form-label label-md-start col-md-3">Cost Center</label>
+            <input type="text" name="cost_center" id="cost_center" class="form-control @error('cost_center') is-invalid @enderror" value="{{ old('cost_center', $unit->cost_center) }}">
           </div>
           <div class="form-group d-md-flex">
             <label class="form-label label-md-start col-md-3">Nama Unit</label>
-            <input type="text" id="name_display" class="form-control form-control-plain" value="{{ old('name', $unit->name) }}" disabled>
-            <input type="hidden" name="name" id="name" value="{{ old('name', $unit->name) }}">
+            <input type="text" name="name" id="name" class="form-control" value="{{ old('name', $unit->name) }}">
           </div>
           <div class="form-group d-none" id="parent_group">
             <label class="form-label label-md-start col-md-3">Parent</label>
@@ -102,6 +101,34 @@
     dateFormat: 'd/m/Y',
     disableMobile: true,
     allowInput: true
+  });
+
+  $('#editUnitForm').on('submit', function(e) {
+    const validToVal = $('#valid_to').val();
+    if (validToVal) {
+      const parts = validToVal.split('/');
+      const validToDate = new Date(parts[2], parts[1] - 1, parts[0]);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (validToDate < today) {
+        e.preventDefault();
+        Swal.fire({
+          title: 'Apakah anda yakin?',
+          text: "Unit akan menjadi expired/invalid karena tanggal Valid To sudah terlewati.",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'Ya, Simpan!',
+          cancelButtonText: 'Batal'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.submit();
+          }
+        });
+      }
+    }
   });
 </script>
 @endpush

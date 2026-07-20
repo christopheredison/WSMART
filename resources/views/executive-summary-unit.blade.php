@@ -154,8 +154,8 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="fw-bold text-success-emphasis mb-0">Hasil Usaha Aktual s/d {{ $formattedPeriod }}</h6>
-                            @if($isProjectUnit) <small class="text-muted">(LSP Realisasi - LED Proyek - LED Divisi)</small>
-                            @else <small class="text-muted">(Biaya Usaha - LED Divisi)</small> @endif
+                            @if($isProjectUnit) <small class="text-muted">(LSP Realisasi + LED Proyek + LED Divisi)</small>
+                            @else <small class="text-muted">(Biaya Usaha + LED Divisi)</small> @endif
                         </div>
                         <span class="fw-bold fs-4 text-success">Rp {{ number_format($summaryData['hasil_usaha_sd_bulan'], 0, ',', '.') }}</span>
                     </div>

@@ -15,7 +15,8 @@ class ICTReport extends Model
     protected $fillable = [
         'ict_plan_id',
         'status_tindak_lanjut',
-        'keterangan'
+        'keterangan',
+        'realisasi_tindak_lanjut',
     ];
 
     /**

@@ -302,13 +302,19 @@ return [
 
         'get_all_notification',
 
+        'ghost_login',
+
         'unit_risk_context',
         'project_risk_context',
 
         'kuesioner_responden',
         'risk_map_setting',
+        'data_sync_access',
 
         'can_access_project_under_division',
         'report_consolidation',
+        'mr_notification_project',
+        'mr_notification_division',
+        'mr_notification_ap',
     ],
 ];

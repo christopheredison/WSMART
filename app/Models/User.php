@@ -12,10 +12,12 @@ use Laravel\Sanctum\HasApiTokens;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use OwenIt\Auditing\Auditable;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 
-class User extends Authenticatable
+class User extends Authenticatable implements AuditableContract
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
+    use Auditable, HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -114,7 +116,11 @@ class User extends Authenticatable
 
     public function levels()
     {
-        return $this->jabatan ? $this->jabatan->levels() : collect([]);
+        $jabatan = $this->relationLoaded('jabatan')
+            ? $this->getRelation('jabatan')
+            : $this->jabatan()->first();
+
+        return $jabatan ? $jabatan->levels() : collect([]);
     }
 
     public function level()
@@ -127,9 +133,13 @@ class User extends Authenticatable
     {
         $directRoles = $this->roles()->pluck('name');
 
+        $jabatan = $this->relationLoaded('jabatan')
+            ? $this->getRelation('jabatan')
+            : $this->jabatan()->first();
+
         // Jika user memiliki jabatan, ambil role dari level yang terkait dengan jabatan
-        if ($this->jabatan) {
-            $levelRoles = $this->jabatan->levels()
+        if ($jabatan) {
+            $levelRoles = $jabatan->levels()
                 ->with('roles')
                 ->get()
                 ->pluck('roles')

@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Master;
 
 use Yajra\DataTables\Facades\DataTables;
 use App\Http\Controllers\Controller;
+use App\Models\Audit;
 use App\Models\Jabatan;
 use App\Models\Level;
 use App\Models\Project;
+use App\Models\UnitType;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Unit;
@@ -15,12 +17,19 @@ use App\Supports\ApiHC;
 use App\Models\Role;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
     public function index(Request $request)
     {
+        abort_unless(
+            $request->user()?->can('manajemen_user') || $request->user()?->can('ghost_login'),
+            403
+        );
+
         if ($request->ajax()) {
             $users = User::with(['roles', 'unit', 'level', 'projects'])->withTrashed()->select('users.*');
 
@@ -61,16 +70,35 @@ class UserController extends Controller
                 })
                 ->addColumn('action', function($row) {
                     $btn = '';
+                    $canManageUser = auth()->user()?->can('manajemen_user');
+                    $canGhostLogin = auth()->user()?->can('ghost_login');
                     if ($row->trashed()) {
-                        $btn .= '<button type="button" class="btn-input-icon ps-0" onclick="restoreUser('.$row->id.')">
-                                    <span class="bx bx-undo" title="Undo"></span>
-                                </button>';
+                        if ($canManageUser) {
+                            $btn .= '<button type="button" class="btn-input-icon ps-0" onclick="restoreUser('.$row->id.')">
+                                        <span class="bx bx-undo" title="Undo"></span>
+                                    </button>';
+                        }
                     } else {
-                        $editUrl = route('users.edit', $row->id);
-                        $btn .= '<a href="'.$editUrl.'" class="btn-input-icon" title="Edit"><span class="bx bx-edit"></span></a>';
-                        $btn .= '<button type="button" class="btn-input-icon" onclick="deleteUser('.$row->id.')">
-                                    <span class="bx bx-trash text-danger" title="Delete"></span>
-                                </button>';
+                        if ($canManageUser) {
+                            $editUrl = route('users.edit', $row->id);
+                            $btn .= '<a href="'.$editUrl.'" class="btn-input-icon" title="Edit"><span class="bx bx-edit"></span></a>';
+                        }
+                        $isAdminTarget = collect($row->role_names ?? [])->map(function ($roleName) {
+                            return strtolower((string) $roleName);
+                        })->contains('admin');
+                        if ($canGhostLogin && auth()->id() !== $row->id && !$isAdminTarget) {
+                            $btn .= '<button type="button" class="btn-input-icon btn-ghost-login" data-user-id="'.$row->id.'" data-user-name="'.e($row->name).'">
+                                        <span class="bx bx-ghost" title="Ghost Login"></span>
+                                    </button>';
+                        }
+                        if ($canManageUser) {
+                            $btn .= '<button type="button" class="btn-input-icon" onclick="deleteUser('.$row->id.')">
+                                        <span class="bx bx-trash text-danger" title="Delete"></span>
+                                    </button>';
+                        }
+                        
+                        $logUrl = route('users.logs.show', $row->id);
+                        $btn .= '<a href="'.$logUrl.'" class="btn-input-icon" title="Lihat Log Perubahan"><span class="bx bx-history"></span></a>';
                     }
                     return $btn;
                 })
@@ -155,9 +183,15 @@ class UserController extends Controller
             'level_id' => $request->level_id,
         ]);
 
+        $newProjectIds = $request->has('user_projects')
+            ? $this->normalizeProjectIds($request->user_projects)
+            : [];
+
         if ($request->has('user_projects')) {
             $user->projects()->attach($request->user_projects);
         }
+
+        $this->writeUserProjectsAudit($user, [], $newProjectIds);
 
         $user->assignRole($request->roles); // Assign selected roles to the user
 
@@ -205,7 +239,13 @@ class UserController extends Controller
         ]);
 
         if ($request->has('user_projects')) {
+            $oldProjectIds = $this->normalizeProjectIds(
+                $user->projects()->pluck('projects.id')->toArray()
+            );
+            $newProjectIds = $this->normalizeProjectIds($request->user_projects);
+
             $user->projects()->sync($request->user_projects);
+            $this->writeUserProjectsAudit($user, $oldProjectIds, $newProjectIds);
         }
 
         // Sync user roles (removes existing and adds new ones)
@@ -316,6 +356,101 @@ class UserController extends Controller
                 'unit_found' => $resolvedUnit ? true : false,
                 'nm_unit' => $dataUser['nm_unit'] ?? null
             ]
+        ]);
+    }
+
+    public function logs(Request $request)
+    {
+        abort_unless(Gate::allows('manajemen_user'), 403);
+
+        $event = $request->query('event');
+        $userId = $request->query('user_id');
+
+        $users = User::withTrashed()
+            ->orderBy('name')
+            ->get(['id', 'name', 'nip', 'email']);
+
+        $audits = Audit::query()
+            ->with(['user', 'auditable'])
+            ->where('auditable_type', User::class)
+            ->when($event, function ($query) use ($event) {
+                $query->where('event', $event);
+            })
+            ->when($userId, function ($query) use ($userId) {
+                $query->where('auditable_id', $userId);
+            })
+            ->latest('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        $relationMaps = [
+            'unit_id' => Unit::query()->pluck('name', 'id')->toArray(),
+            'jabatan_id' => Jabatan::query()->pluck('name', 'id')->toArray(),
+            'level_id' => Level::query()->pluck('name', 'id')->toArray(),
+            'parent_id' => User::withTrashed()->pluck('name', 'id')->toArray(),
+            'unit_type_id' => UnitType::query()->pluck('name', 'id')->toArray(),
+            'user_projects' => Project::query()
+                ->get()
+                ->mapWithKeys(function ($project) {
+                    $label = ($project->profit_center ? '[' . $project->profit_center . '] ' : '') . $project->project_name;
+                    return [$project->id => $label];
+                })
+                ->toArray(),
+        ];
+
+        return view('master.users.logs', compact('audits', 'users', 'event', 'userId', 'relationMaps'));
+    }
+
+    public function logsByUser(Request $request, User $user)
+    {
+        $request->merge(['user_id' => $user->id]);
+
+        return $this->logs($request);
+    }
+
+    private function normalizeProjectIds($projectIds): array
+    {
+        $values = is_array($projectIds) ? $projectIds : [];
+
+        $normalized = collect($values)
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return $normalized;
+    }
+
+    private function writeUserProjectsAudit(User $user, array $oldProjectIds, array $newProjectIds): void
+    {
+        $old = $this->normalizeProjectIds($oldProjectIds);
+        $new = $this->normalizeProjectIds($newProjectIds);
+
+        if ($old === $new) {
+            return;
+        }
+
+        $authUser = Auth::user();
+        $ipAddress = request()->ip();
+        $ipAddress = is_string($ipAddress) ? trim($ipAddress) : null;
+        $ipAddress = filter_var($ipAddress, FILTER_VALIDATE_IP) ? $ipAddress : null;
+
+        Audit::query()->create([
+            'user_type' => $authUser ? get_class($authUser) : null,
+            'user_id' => $authUser?->id,
+            'event' => 'updated',
+            'auditable_type' => User::class,
+            'auditable_id' => $user->id,
+            'old_values' => json_encode(['user_projects' => $old], JSON_UNESCAPED_UNICODE),
+            'new_values' => json_encode(['user_projects' => $new], JSON_UNESCAPED_UNICODE),
+            'url' => request()->fullUrl(),
+            'ip_address' => $ipAddress,
+            'user_agent' => request()->userAgent(),
+            'unit_id' => $user->unit_id,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 }

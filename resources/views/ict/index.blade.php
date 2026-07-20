@@ -216,8 +216,12 @@
 @section('scripts')
 <script>
 const table = new DataTable('#example');
-table.on('mouseenter', 'td', function() {
-  let colIdx = table.cell(this).index().column;
+table.on('mouseenter', 'tbody td', function() {
+  const cellIndex = table.cell(this).index();
+  if (!cellIndex || typeof cellIndex.column === 'undefined') {
+    return;
+  }
+  const colIdx = cellIndex.column;
 
   table
     .cells()
@@ -241,9 +245,6 @@ function deleteItem(element) {
 </script>
 <script>
 $(document).ready(function() {
-  // Inisialisasi DataTable
-  const table = $('#example').DataTable();
-
   // Konfirmasi untuk Kirim ICT
   $('#submit-all-btn').on('click', function(e) {
       e.preventDefault();

@@ -115,8 +115,10 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
                     $this->applyLevelRisikoColoring($sheet, $maxDataRow);
                 }
 
-                foreach (range('A', 'AJ') as $column) {
-                    $sheet->getColumnDimension($column)->setAutoSize(true);
+                $col = 'A';
+                while ($col !== 'AK') {
+                    $sheet->getColumnDimension($col)->setAutoSize(true);
+                    $col++;
                 }
             },
         ];

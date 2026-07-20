@@ -41,6 +41,7 @@ use App\Models\ProjectRisk;
 use App\Models\RiskDivisiProject;
 use App\Models\TaksonomiRisiko;
 use App\Models\UnitRiskMonitoring;
+use App\Models\UnitRelation;
 use Illuminate\Support\Facades\DB;
 use App\Models\PerlakuanDampakRisikoUnit;
 use App\Models\RiskContext;
@@ -73,17 +74,29 @@ class RiskRegisterUnitController extends Controller
                         ? $requestedUnitId
                         : ($allowedUnitIds->contains($user->unit_id) ? $user->unit_id : $allowedUnitIds->first());
         } else {
-            $unitId = $user->unit_id;
+            // User non view_all_division boleh mengakses unit sendiri + unit relasi (unit lama).
+            $requestedUnitId = (int) $request->query('unit_id');
+            $relatedUnitIds = UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id')->toArray();
+            $allowedUnitIds = array_merge([$user->unit_id], $relatedUnitIds);
+
+            if ($requestedUnitId && in_array($requestedUnitId, $allowedUnitIds, true)) {
+                $unitId = $requestedUnitId;
+            } else {
+                $unitId = $user->unit_id;
+            }
         }
 
         // 3. Setup Data Batch & Logic Unit MR
         $selectedUnit = Unit::find($unitId);
         $is_unit_mr = $selectedUnit->unit_mr == 1;
 
-        // Cek sudah ada Risk Context belum
-        $riskContext = RiskContext::where('unit_id', $selectedUnit->id)->first();
-        if (!$riskContext || $riskContext->status != RiskContext::STATUS_VERIFIED) {
-            return redirect()->route('risk-register-unit.periods')->with('error', 'Silahkan buat Risk Context terlebih dahulu pada Divisi ' . $selectedUnit->name . '.');
+        // Cek Risk Context hanya untuk unit yang masih aktif/valid.
+        $isExpired = $selectedUnit->valid_to && $selectedUnit->valid_to->isPast() && !$selectedUnit->valid_to->isToday();
+        if (!$isExpired) {
+            $riskContext = RiskContext::where('unit_id', $selectedUnit->id)->first();
+            if (!$riskContext || $riskContext->status != RiskContext::STATUS_VERIFIED) {
+                return redirect()->route('risk-register-unit.periods', ['status' => 'Valid'])->with('error', 'Silahkan buat Risk Context terlebih dahulu pada Divisi ' . $selectedUnit->name . '.');
+            }
         }
 
         // --- LOGIC: Tentukan Min Verification ---
@@ -496,6 +509,10 @@ class RiskRegisterUnitController extends Controller
         $selectedPeriodeId = $request->query('pid') ?? ($activePeriode?->id);
         $selectedPeriode = $selectedPeriodeId ? Periode::find($selectedPeriodeId) : null;
         $selectedMonth = $request->query('month') ?? date('n');
+        $selectedStatus = $request->query('status', 'Valid');
+        if (!in_array($selectedStatus, ['Valid', 'Expired'], true)) {
+            $selectedStatus = 'Valid';
+        }
         $user = auth()->user();
         $levelId = $user->level_id;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
@@ -511,8 +528,11 @@ class RiskRegisterUnitController extends Controller
         $unitQuery = Unit::where('unit_type_id', 1);
         $units = [];
         if (!$viewAllDivision) {
-            $unitQuery->where('id', $user->unit_id);
-            $units = Unit::where('unit_type_id', 1)->where('id', $user->unit_id)->pluck('name', 'id');
+            $relatedUnitIds = UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id')->toArray();
+            $myUnitIds = array_merge([$user->unit_id], $relatedUnitIds);
+
+            $unitQuery->whereIn('id', $myUnitIds);
+            $units = Unit::where('unit_type_id', 1)->whereIn('id', $myUnitIds)->pluck('name', 'id');
         } else {
             $units = Unit::where('unit_type_id', 1)->pluck('name', 'id');
         }
@@ -578,6 +598,7 @@ class RiskRegisterUnitController extends Controller
           'viewAllDivision',
           'units',
           'selectedMonth',
+          'selectedStatus',
         ));
     }
 
@@ -591,7 +612,14 @@ class RiskRegisterUnitController extends Controller
         if (Gate::check('view_all_division') && $request->has('unit_id')) {
             $targetUnitId = $request->input('unit_id');
         } else {
-            $targetUnitId = $user->unit_id;
+            // User non view_all_division boleh buka unit sendiri + unit relasi.
+            $targetUnitId = $request->input('unit_id', $user->unit_id);
+            $relatedUnitIds = UnitRelation::where('unit_id', $user->unit_id)->pluck('related_unit_id')->toArray();
+            $allowedUnitIds = array_merge([$user->unit_id], $relatedUnitIds);
+
+            if (!in_array((int) $targetUnitId, $allowedUnitIds, true)) {
+                $targetUnitId = $user->unit_id;
+            }
         }
 
         $targetUnit = Unit::find($targetUnitId);
@@ -3602,15 +3630,19 @@ class RiskRegisterUnitController extends Controller
         }
         elseif ($target === 'RO_MR') {
             // Risk Officer MR: level 1, unit_mr = 1
-            $users = User::where('level_id', 1)->whereHas('unit', function($q) {
-                $q->where('unit_mr', 1);
-            })->get();
+            $users = User::permission('mr_notification_division')
+                ->where('level_id', 1)
+                ->whereHas('unit', function($q) {
+                    $q->where('unit_mr', 1);
+                })->get();
         }
         elseif ($target === 'RW_MR') {
             // Risk Owner MR: level 2, unit_mr = 1
-            $users = User::where('level_id', 2)->whereHas('unit', function($q) {
-                $q->where('unit_mr', 1);
-            })->get();
+            $users = User::permission('mr_notification_division')
+                ->where('level_id', 2)
+                ->whereHas('unit', function($q) {
+                    $q->where('unit_mr', 1);
+                })->get();
         }
 
         foreach ($users as $user) {

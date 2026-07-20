@@ -24,6 +24,9 @@ use App\Models\PenyebabRisiko;
 use App\Models\JenisKontrolEksisting;
 use App\Models\KamusRisikoUnit;
 use App\Models\Unit;
+use App\Models\UnitRelation;
+use App\Models\RiskMonitoringNote;
+use App\Models\RiskNote;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -39,17 +42,35 @@ class UnitLEDController extends Controller
             $units = Unit::where('unit_type_id', 1)->pluck('name', 'id');
             $targetUnitId = $request->input('unit_id', $units->keys()->first());
         } else {
-            $targetUnitId = $request->user()->unit_id;
+            // Jika user biasa, izinkan akses ke unit sendiri atau unit yang direlasikan (unit lama)
+            $requestedUnitId = (int) $request->input('unit_id');
+            $relatedUnitIds = UnitRelation::where('unit_id', $request->user()->unit_id)->pluck('related_unit_id')->toArray();
+            $allowedUnitIds = array_merge([$request->user()->unit_id], $relatedUnitIds);
+
+            if ($requestedUnitId && in_array($requestedUnitId, $allowedUnitIds)) {
+                $targetUnitId = $requestedUnitId;
+            } else {
+                $targetUnitId = $request->user()->unit_id;
+            }
+
+            // Untuk dropdown filter unit (hanya unit sendiri & relasi)
+            $units = Unit::whereIn('id', $allowedUnitIds)->pluck('name', 'id');
         }
+
+        $unit = Unit::find($targetUnitId);
+        $today = \Carbon\Carbon::today();
+        $unitExpired = $unit && $unit->valid_to && $unit->valid_to->isPast() && !$unit->valid_to->isToday();
 
         if ($request->ajax()) {
             $data = LossEvent::with(['kategoriKejadian']);
 
-            $unitToFilter = null;
-            if ($viewAllDivision) {
-                $unitToFilter = $request->input('unit_id');
-            } else {
-                $unitToFilter = $request->user()->unit_id;
+            $unitToFilter = $request->input('unit_id');
+            if (!$viewAllDivision) {
+                $relatedUnitIds = UnitRelation::where('unit_id', $request->user()->unit_id)->pluck('related_unit_id')->toArray();
+                $allowedUnitIds = array_merge([$request->user()->unit_id], $relatedUnitIds);
+                if (!$unitToFilter || !in_array($unitToFilter, $allowedUnitIds)) {
+                    $unitToFilter = $request->user()->unit_id;
+                }
             }
 
             $data->where('unit_id', $unitToFilter);
@@ -63,8 +84,8 @@ class UnitLEDController extends Controller
 
             return DataTables::of($data)
                 ->addIndexColumn()
-                ->addColumn('action', function($row) {
-                    return view('unit-led._table_action', compact('row'))->render();
+                ->addColumn('action', function($row) use ($unitExpired) {
+                    return view('unit-led._table_action', compact('row', 'unitExpired'))->render();
                 })
                 ->editColumn('nama_kejadian', function($row) {
                     return $row->nama_kejadian ?? '-';
@@ -102,6 +123,7 @@ class UnitLEDController extends Controller
           'units',
           'viewAllDivision',
           'targetUnitId',
+          'unitExpired',
         ));
     }
 
@@ -693,15 +715,41 @@ class UnitLEDController extends Controller
             ]);
 
             // Cek apakah risiko perlu di-close
-            if ($request->input('is_closed') == '1') {
+            $wasClosed = (bool) $riskRegister->is_closed;
+            if ($request->input('is_closed') == '1' && !$wasClosed) {
+                $closedAt = now();
                 $riskRegister->update([
                   'is_closed' => true,
-                  'closed_at' => now(),
+                  'closed_at' => $closedAt,
                 ]);
 
                 KamusRisikoUnit::updateOrCreate(
                     ['risiko_id' => $riskRegister->id],
                 );
+
+                $month = (int) (optional($monitoring)->month ?? 1);
+                $closeNoteText = 'Risiko ditutup melalui konversi ke LED pada '
+                    . $closedAt->format('d-m-Y H:i:s')
+                    . " (Q{$quarter}, Bulan {$month}).";
+
+                RiskMonitoringNote::create([
+                    'risiko_id' => $riskRegister->id,
+                    'type' => 1,
+                    'user_id' => auth()->id(),
+                    'status' => 1,
+                    'notes' => $closeNoteText,
+                    'quarter' => $quarter,
+                    'month' => $month,
+                    'year' => null,
+                ]);
+
+                RiskNote::create([
+                    'risiko_id' => $riskRegister->id,
+                    'type' => 1,
+                    'status' => 1,
+                    'notes' => $closeNoteText,
+                    'user_id' => auth()->id(),
+                ]);
             }
 
             DB::commit();

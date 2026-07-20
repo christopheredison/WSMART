@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\GhostLoginController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CapaianTckController;
@@ -50,6 +51,7 @@ use App\Http\Controllers\Master\ProjectSektorController;
 use App\Http\Controllers\Master\ProjectTypeController;
 use App\Http\Controllers\Master\ProjectHasilUsahaController;
 use App\Http\Controllers\Master\UnitHasilUsahaController;
+use App\Http\Controllers\Master\DataSyncController;
 use App\Http\Controllers\Master\QuestionController;
 use App\Http\Controllers\Master\RMIPeriodController;
 use App\Http\Controllers\Master\WBSController;
@@ -128,6 +130,13 @@ Auth::routes();
 
 Route::group(['middleware' => ['auth']], function () {
 
+    Route::post('/ghost-login/restore', [GhostLoginController::class, 'destroy'])->name('ghost-login.destroy');
+    Route::post('/ghost-login/{user}', [GhostLoginController::class, 'store'])
+        ->whereNumber('user')
+        ->name('ghost-login.store');
+
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+
     Route::post('/opportunities', [OpportunityController::class, 'store'])->name('opportunities.store');
     Route::put('/opportunities/{id}', [OpportunityController::class, 'update'])->name('opportunities.update');
     Route::delete('/opportunities/{id}', [OpportunityController::class, 'destroy'])->name('opportunities.destroy');
@@ -192,8 +201,9 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::group(['middleware' => ['can:manajemen_user']],function ()
     {
-        Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+        Route::get('/users/logs', [UserController::class, 'logs'])->name('users.logs');
+        Route::get('/users/{user}/logs', [UserController::class, 'logsByUser'])->name('users.logs.show');
         Route::get('/users/remote-users', [UserController::class, 'searchRemoteUser'])->name('users.search-remote-user');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
@@ -330,6 +340,11 @@ Route::group(['middleware' => ['auth']], function () {
             Route::put('/unit-type/{unitType}', [UnitTypeController::class, 'update'])->name('unit-type.update');
             Route::delete('/unit-type/{unitType}', [UnitTypeController::class, 'destroy'])->name('unit-type.destroy');
             Route::post('/unit-type/{id}/restore', [UnitTypeController::class, 'restore'])->name('unit-type.restore');
+        });
+
+        Route::group(['middleware' => ['can:data_sync_access']], function () {
+            Route::get('/data-sync', [DataSyncController::class, 'index'])->name('data-sync.index');
+            Route::post('/data-sync', [DataSyncController::class, 'sync'])->name('data-sync.sync');
         });
     });
     Route::group(['middleware' => ['can:risk_register_list']],function ()
@@ -621,40 +636,34 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('/laporan/project/export-konsolidasi', [App\Http\Controllers\LaporanController::class, 'projectKonsolidasiExport'])->name('laporan.project.export_konsolidasi');
     Route::post('project/export-led', [App\Http\Controllers\LaporanController::class, 'projectLedExport'])->name('laporan.project.export_led');
   });
-  
-  Route::prefix('risk-context-anper')->group(function () {
-      Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detailAnper'])
-          ->whereNumber('periodeId')
-          ->whereNumber('unitId')
-          ->name('risk-context-anper.detail');
-      Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreateAnper'])->name('risk-context-anper.update-or-create');
-      Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdateAnper'])->name('risk-context-anper.store-or-update');
-
-      Route::post('/{id}/submit', [RiskContextController::class, 'submit'])->whereNumber('id')->name('risk-context-anper.submit');
-      Route::post('/{id}/verify', [RiskContextController::class, 'verify'])->whereNumber('id')->name('risk-context-anper.verify');
-      Route::post('/{id}/reject', [RiskContextController::class, 'reject'])->whereNumber('id')->name('risk-context-anper.reject');
-  });
 
   Route::prefix('risk-context')->group(function () {
       Route::get('/', [RiskContextController::class, 'index'])->name('risk-context.index');
-      Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detail'])
-          ->whereNumber('periodeId')
-          ->whereNumber('unitId')
-          ->name('risk-context.detail');
+      Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detail'])->name('risk-context.detail');
       Route::get('/create', [RiskContextController::class, 'create'])->name('risk-context.create');
       Route::post('/store', [RiskContextController::class, 'store'])->name('risk-context.store');
-      Route::get('/edit/{id}', [RiskContextController::class, 'edit'])->whereNumber('id')->name('risk-context.edit');
-      Route::put('/update/{id}', [RiskContextController::class, 'update'])->whereNumber('id')->name('risk-context.update');
-      Route::get('/show/{id}', [RiskContextController::class, 'show'])->whereNumber('id')->name('risk-context.show');
-      Route::delete('/destroy/{id}', [RiskContextController::class, 'destroy'])->whereNumber('id')->name('risk-context.destroy');
+      Route::get('/edit/{id}', [RiskContextController::class, 'edit'])->name('risk-context.edit');
+      Route::put('/update/{id}', [RiskContextController::class, 'update'])->name('risk-context.update');
+      Route::get('/show/{id}', [RiskContextController::class, 'show'])->name('risk-context.show');
+      Route::delete('/destroy/{id}', [RiskContextController::class, 'destroy'])->name('risk-context.destroy');
 
       // New routes for update or create functionality
       Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreate'])->name('risk-context.update-or-create');
       Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdate'])->name('risk-context.store-or-update');
 
-      Route::post('/{id}/submit', [RiskContextController::class, 'submit'])->whereNumber('id')->name('risk-context.submit');
-      Route::post('/{id}/verify', [RiskContextController::class, 'verify'])->whereNumber('id')->name('risk-context.verify');
-      Route::post('/{id}/reject', [RiskContextController::class, 'reject'])->whereNumber('id')->name('risk-context.reject');
+      Route::post('/{id}/submit', [RiskContextController::class, 'submit'])->name('risk-context.submit');
+      Route::post('/{id}/verify', [RiskContextController::class, 'verify'])->name('risk-context.verify');
+      Route::post('/{id}/reject', [RiskContextController::class, 'reject'])->name('risk-context.reject');
+  });
+
+  Route::prefix('risk-context-anper')->group(function () {
+      Route::get('/{periodeId}/{unitId}', [RiskContextController::class, 'detailAnper'])->name('risk-context-anper.detail');
+      Route::get('/update-or-create', [RiskContextController::class, 'updateOrCreateAnper'])->name('risk-context-anper.update-or-create');
+      Route::post('/store-or-update', [RiskContextController::class, 'storeOrUpdateAnper'])->name('risk-context-anper.store-or-update');
+
+      Route::post('/{id}/submit', [RiskContextController::class, 'submit'])->name('risk-context-anper.submit');
+      Route::post('/{id}/verify', [RiskContextController::class, 'verify'])->name('risk-context-anper.verify');
+      Route::post('/{id}/reject', [RiskContextController::class, 'reject'])->name('risk-context-anper.reject');
   });
 
   Route::prefix('project-risk-context')->group(function () {
