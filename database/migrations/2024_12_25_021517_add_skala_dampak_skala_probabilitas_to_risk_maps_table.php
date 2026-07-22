@@ -1,0 +1,32 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('risk_maps', function (Blueprint $table) {
+            //
+            $table->integer('skala_dampak')->after('nilai_risiko')->nullable();
+            $table->integer('skala_probabilitas')->after('skala_dampak')->nullable();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('risk_maps', function (Blueprint $table) {
+            //
+            $table->dropColumn('skala_dampak');
+            $table->dropColumn('skala_probabilitas');
+        });
+    }
+};

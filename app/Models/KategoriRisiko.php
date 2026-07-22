@@ -1,0 +1,20 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class KategoriRisiko extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $guarded = [];
+    protected $table = 'kategori_risikos';
+
+    public function jenisRisikos()
+    {
+        return $this->hasMany(JenisRisiko::class, 'kategori_risiko_id');
+    }
+}

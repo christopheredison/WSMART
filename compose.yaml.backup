@@ -1,0 +1,130 @@
+version: '3.9'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-wika
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: password123
+      MYSQL_DATABASE: mrdb
+      MYSQL_USER: wikauser
+      MYSQL_PASSWORD: password123
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    networks:
+      - wika-network
+    # Tambahkan health check
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-wika
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mrdb
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - wika-network
+
+  # phpMyAdmin untuk MySQL
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin-wika
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: wikauser
+      PMA_PASSWORD: password123
+      #MYSQL_ROOT_PASSWORD: password123
+      # Tambahkan konfigurasi tambahan
+      PMA_ARBITRARY: 1
+      UPLOAD_LIMIT: 300M
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+    networks:
+      - wika-network
+
+  # phpPgAdmin untuk PostgreSQL
+  phppgadmin:
+    image: dockage/phppgadmin:latest
+    container_name: phppgadmin-wika
+    restart: unless-stopped
+    environment:
+      PHP_PG_ADMIN_SERVER_DESC: 'PostgreSQL Server'
+      PHP_PG_ADMIN_SERVER_HOST: postgres
+      PHP_PG_ADMIN_SERVER_PORT: 5432
+      PHP_PG_ADMIN_SERVER_SSL_MODE: allow
+      PHP_PG_ADMIN_SERVER_DEFAULT_DB: mrdb
+    ports:
+      - "8082:80"
+    depends_on:
+      - postgres
+    networks:
+      - wika-network
+
+  # Aplikasi PHP Laravel
+  php-apache:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: php-apache-wika
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+      - ./docker/000-default.conf:/etc/apache2/sites-available/000-default.conf
+    environment:
+      # Database configuration akan diambil dari .env file
+      - DB_CONNECTION=${DB_CONNECTION:-mysql}
+      - DB_HOST=${DB_HOST:-mysql}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_DATABASE=${DB_DATABASE:-mrdb}
+      - DB_USERNAME=${DB_USERNAME:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-password123}
+    depends_on:
+      - mysql
+      - postgres
+    networks:
+      - wika-network
+
+  # Redis (opsional untuk caching)
+  redis:
+    image: redis:7-alpine
+    container_name: redis-wika
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - wika-network
+
+volumes:
+  mysql_data:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  wika-network:
+    driver: bridge

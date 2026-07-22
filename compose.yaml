@@ -1,0 +1,49 @@
+services:
+  php-apache:
+    build:
+      context: . # Mengacu ke lokasi Dockerfile
+      dockerfile: Dockerfile
+    image: php-apache-wika:latest
+    ports:
+      - "8080:80" # Memetakan port 80 di container ke port 8080 di host
+    container_name: php-apache-wika
+    env_file: .env
+    depends_on:
+      - mysql
+    volumes:
+      - ./:/var/www/html
+      - vendor_data:/var/www/html/vendor
+    # environment:
+    #   - APACHE_RUN_USER=root
+    #   - APACHE_RUN_GROUP=root
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password123
+      MYSQL_DATABASE: mrdb
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: appuser123
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "8081:80"
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  vendor_data:
