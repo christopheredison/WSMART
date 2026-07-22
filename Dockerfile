@@ -1,57 +1,65 @@
-# Gunakan PHP 8.3 dengan Apache sebagai base image
-FROM php:8.3-apache
+FROM php:8.4-apache-bookworm
 
-# Set working directory
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+# Library sistem yang diperlukan PHP dan Composer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        unzip \
+        libpq-dev \
+        libpng-dev \
+        libjpeg62-turbo-dev \
+        libfreetype6-dev \
+        libzip-dev \
+        libicu-dev \
+        libonig-dev \
+    && docker-php-ext-configure gd \
+        --with-freetype \
+        --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" \
+        pdo_pgsql \
+        pgsql \
+        gd \
+        intl \
+        zip \
+        mbstring \
+        bcmath \
+        opcache \
+    && a2enmod rewrite headers \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ambil Composer dari image resmi Composer
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
 WORKDIR /var/www/html
 
-# Install ekstensi PHP yang diperlukan
-RUN apt-get update && apt-get install -y \
-    curl \
-    zip \
-    unzip \
-    git \
-    libicu-dev \
-    libonig-dev \
-    libxml2-dev \
-    libpng-dev \
-    libzip-dev \
-    && docker-php-ext-install \
-    intl \
-    mbstring \
-    xml \
-    pdo_mysql \
-    gd \
-    opcache \
-    zip
-
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
-
-# Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-# Salin konfigurasi Apache untuk Laravel dan timpa default
-COPY docker/000-default.conf /etc/apache2/sites-available/000-default.conf
-
-# Optimalkan cache dependency composer dengan menyalin file manifest terlebih dahulu
+# Salin Composer files lebih dahulu agar layer dependency dapat di-cache
 COPY composer.json composer.lock ./
-# Tahap awal: install dependency tanpa menjalankan skrip Composer (artisan belum ada)
-RUN composer install --no-interaction --no-progress --prefer-dist --optimize-autoloader --no-scripts
 
-# Salin seluruh source code ke image
-COPY . .
+RUN composer install \
+        --no-dev \
+        --prefer-dist \
+        --no-interaction \
+        --no-progress \
+        --no-scripts \
+        --no-autoloader
 
-# Setelah seluruh kode ada, jalankan kembali composer install agar skrip dijalankan
-RUN composer install --no-interaction --no-progress --prefer-dist --optimize-autoloader
+# Salin seluruh aplikasi
+COPY . /var/www/html
 
-# Pastikan permission untuk Laravel storage & cache
-RUN mkdir -p storage/framework/sessions storage/framework/cache storage/framework/views \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && find storage -type d -exec chmod 775 {} \; \
-    && chmod -R 775 storage bootstrap/cache
+# Instal dependency dan jalankan Composer scripts aplikasi
+RUN composer install \
+        --no-dev \
+        --prefer-dist \
+        --no-interaction \
+        --no-progress \
+        --optimize-autoloader \
+    && chown -R www-data:www-data /var/www/html
 
-# Expose port 80 (default untuk Apache)
+# Konfigurasi virtual host Apache
+COPY docker/apache-vhost.conf \
+    /etc/apache2/sites-available/000-default.conf
+
 EXPOSE 80
 
-# Jalankan Apache sebagai default command
 CMD ["apache2-foreground"]
