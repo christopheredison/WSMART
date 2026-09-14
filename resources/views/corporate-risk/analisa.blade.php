@@ -466,11 +466,18 @@ function isNumberKey(evt) {
 $(document).ready(function() {
     const autoCalculate = @json($autoCalculate);
 
+    let isInitialLoad = true;
+
     function updateSkalaDampak() {
         const kategoriDampak = $('[name="kategori_dampak"]').val();
         if (kategoriDampak === "Kualitatif") {
             return;
         }
+
+        if (isInitialLoad) {
+            return;
+        }
+
         // Hapus semua karakter non‐angka, lalu parseFloat, default 0
         const riskLimit      = parseFloat($('#risk_limit').val().replace(/[^0-9.-]+/g, '')) || 0;
         const suffixes = [
@@ -551,13 +558,13 @@ $(document).ready(function() {
             if (typeof $('[name="nilai_dampak"]').data('oldValue') !== 'undefined') {
                 $('[name="nilai_dampak"]').val($('[name="nilai_dampak"]').data('oldValue'));
             }
-            $('[name="skala_dampak"]').prop('disabled', true).data('oldValue', $('[name="skala_dampak"]').val());
+            $('[name="skala_dampak"]').prop('disabled', false).data('oldValue', $('[name="skala_dampak"]').val());
             for (let i = 1; i <= 4; i++) {
                 $(`[name="nilai_dampak_residual_q${i}"]`).prop('readonly', false);
                 if (typeof $(`[name="nilai_dampak_residual_q${i}"]`).data('oldValue') !== 'undefined') {
                     $(`[name="nilai_dampak_residual_q${i}"]`).val($(`[name="nilai_dampak_residual_q${i}"]`).data('oldValue'));
                 }
-                $(`[name="skala_dampak_residual_q${i}"]`).prop('disabled', true).data('oldValue', $(`[name="skala_dampak_residual_q${i}"]`).val());
+                $(`[name="skala_dampak_residual_q${i}"]`).prop('disabled', false).data('oldValue', $(`[name="skala_dampak_residual_q${i}"]`).val());
             }
         }
         updateSkalaDampak();
@@ -657,10 +664,23 @@ $(document).ready(function() {
         updateSkalaDampak();
     });
 
-    // Event listener jika pengguna mengubah skala dampak secara manual (hanya untuk Kualitatif)
-    $('[name="skala_dampak"], [name="skala_dampak_residual"]').on('change', function() {
-        const targetHiddenField = $(this).attr('name') === 'skala_dampak' ? '#skala_dampak_hidden' : '#skala_dampak_residual_hidden';
-        $(targetHiddenField).val($(this).val());
+    // Event listener jika pengguna mengubah skala dampak secara manual
+    $('[name^="skala_dampak"]').on('change', function() {
+        const name = $(this).attr('name');
+
+        // Pastikan kita meng-update hidden input yang sesuai
+        if ($(`#${name}_hidden`).length) {
+            $(`#${name}_hidden`).val($(this).val());
+        }
+
+        // Panggil fungsi untuk refresh skala risiko dan level risiko agar langsung berubah di layar
+        refreshSkalaAndLevelRisiko();
+
+        // Khusus untuk residual q1-q4, kita parsing kuartalnya
+        let qMatch = name.match(/_q(\d)$/);
+        if (qMatch) {
+            refreshSkalaAndLevelRisiko(true, parseInt(qMatch[1]));
+        }
     });
 
     $('#skala_dampak').change(function () {
@@ -718,7 +738,12 @@ $(document).ready(function() {
             // For Q1, validate against inherent value
             if (i === 1) {
                 if (nilaiResidual > nilaiDampak) {
-                    alert('Nilai Dampak Residual Q1 tidak boleh lebih besar dari Nilai Dampak Inheren!');
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: 'Nilai Dampak Residual Q1 tidak boleh lebih besar dari Nilai Dampak Inheren!',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
                     $(this).val($('#nilai_dampak').val()).change();
                     return;
                 }
@@ -728,7 +753,12 @@ $(document).ready(function() {
             if (i > 1) {
                 var prevQuarterValue = parseRupiahToNumber($(`#nilai_dampak_residual_q${i-1}`).val());
                 if (nilaiResidual > prevQuarterValue) {
-                    alert(`Nilai Dampak Residual Q${i} tidak boleh lebih besar dari Q${i-1}!`);
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: `Nilai Dampak Residual Q${i} tidak boleh lebih besar dari Q${i-1}!`,
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
                     $(this).val($(`#nilai_dampak_residual_q${i-1}`).val()).change();
                 }
             }
@@ -739,10 +769,35 @@ $(document).ready(function() {
             var currentValue = parseFloat($(this).val()) || 0;
             var inherentProb = parseFloat($('#nilai_probabilitas').val()) || 0;
 
+            if (currentValue < 0) {
+                Swal.fire({
+                    title: 'Peringatan!',
+                    text: `Nilai Probabilitas Q${i} tidak boleh kurang dari 0!`,
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                $(this).val(0).change();
+                return;
+            } else if (currentValue > 100) {
+                Swal.fire({
+                    title: 'Peringatan!',
+                    text: `Nilai Probabilitas Q${i} tidak boleh lebih dari 100!`,
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                $(this).val(100).change();
+                currentValue = 100;
+            }
+
             // For Q1, validate against inherent probability
             if (i === 1) {
                 if (currentValue > inherentProb) {
-                    alert('Nilai Probabilitas Q1 tidak boleh lebih besar dari Nilai Probabilitas Inheren!');
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: 'Nilai Probabilitas Q1 tidak boleh lebih besar dari Nilai Probabilitas Inheren!',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
                     $(this).val(inherentProb).change();
                     return;
                 }
@@ -752,36 +807,41 @@ $(document).ready(function() {
             if (i > 1) {
                 var prevQuarterValue = parseFloat($(`#nilai_probabilitas_residual_q${i-1}`).val()) || 0;
                 if (currentValue > prevQuarterValue) {
-                    alert(`Nilai Probabilitas Q${i} tidak boleh lebih besar dari Q${i-1}!`);
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: `Nilai Probabilitas Q${i} tidak boleh lebih besar dari Q${i-1}!`,
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
                     $(this).val(prevQuarterValue).change();
                 }
             }
         });
 
-        // Add validation for impact scale values
-        $(`#skala_dampak_residual_q${i}`).on('change', function() {
-            var currentValue = parseInt($(this).val());
-            var inherentScale = parseInt($('#skala_dampak').val());
-
-            // For Q1, validate against inherent scale
-            if (i === 1) {
-                if (currentValue > inherentScale) {
-                    alert('Skala Dampak Q1 tidak boleh lebih besar dari Skala Dampak Inheren!');
-                    $(this).val(inherentScale).change();
-                    return;
-                }
-            }
-
-            // For other quarters, validate against previous quarter
-            if (i > 1) {
-                var prevQuarterValue = parseInt($(`#skala_dampak_residual_q${i-1}`).val());
-                if (currentValue > prevQuarterValue) {
-                    alert(`Skala Dampak Q${i} tidak boleh lebih besar dari Q${i-1}!`);
-                    $(this).val(prevQuarterValue).change();
-                }
-            }
-        });
+        // Skala dampak residual dapat dipilih manual (validasi batas dinonaktifkan)
     }
+
+    $('#nilai_probabilitas').on('blur', function() {
+        let value = parseFloat($(this).val()) || 0;
+
+        if (value < 0) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Nilai Probabilitas Inheren tidak boleh kurang dari 0!',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            $(this).val(0).change();
+        } else if (value > 100) {
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Nilai Probabilitas Inheren tidak boleh lebih dari 100!',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            $(this).val(100).change();
+        }
+    });
 
     $('[name="nilai_probabilitas"]').on('change', function() {
         const value = $(this).val();
@@ -962,6 +1022,10 @@ $(document).ready(function() {
             }
         }
     });
+
+    setTimeout(function() {
+        isInitialLoad = false;
+    }, 500);
 });
 </script>
 @endpush

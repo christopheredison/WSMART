@@ -22,7 +22,7 @@
           <div class="d-flex align-items-center">
             <i class="bx bx-info-circle fs-4 me-2"></i>
             <div>
-              <strong>Informasi:</strong> Data risiko yang diambil dan ditampilkan pada laporan ini hanyalah data monitoring risiko yang <strong>sudah terpublish</strong> pada bulan tersebut.
+              <strong>Informasi:</strong> Laporan menampilkan seluruh risiko project. Data monitoring memakai yang <strong>sudah terpublish</strong> pada bulan terpilih. Jika bulan tersebut belum publish, dipakai monitoring publish terakhir dari <strong>bulan sebelumnya</strong>.
             </div>
           </div>
         </div>

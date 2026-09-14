@@ -12,13 +12,13 @@
             </div>
           </div>
           <div>
-            <h2 class="h4 mb-0">Log Perubahan Unit</h2>
-            <small class="text-muted">Riwayat perubahan data unit</small>
+            <h2 class="h4 mb-0">Log Perubahan Divisi</h2>
+            <small class="text-muted">Riwayat perubahan data divisi</small>
           </div>
           <div class="ms-auto">
             <a href="{{ route('unit.index') }}" class="btn btn-outline-secondary btn-sm">
               <span class="bx bx-arrow-back"></span>
-              <span class="ms-1">Kembali ke Unit</span>
+              <span class="ms-1">Kembali ke Divisi</span>
             </a>
           </div>
         </div>
@@ -26,9 +26,9 @@
       <div class="card-body">
         <form method="GET" action="{{ route('unit.logs') }}" class="row g-2 align-items-end mb-3">
           <div class="col-md-5 col-lg-4">
-            <label for="unit_id" class="form-label">Unit</label>
+            <label for="unit_id" class="form-label">Divisi</label>
             <select name="unit_id" id="unit_id" class="form-select">
-              <option value="">Semua Unit</option>
+              <option value="">Semua Divisi</option>
               @foreach ($units as $unit)
                 <option value="{{ $unit->id }}" {{ (string) $unitId === (string) $unit->id ? 'selected' : '' }}>
                   {{ $unit->name }}

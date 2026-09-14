@@ -258,7 +258,7 @@
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
                                             <input type="text" class="form-control border-warning" name="batas_waspada[]" id="batas_waspada">
-                                            <label for="batas_waspada_1">Batas Waspada</label>
+                                            <label for="batas_waspada_1">Batas Siaga</label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
@@ -556,7 +556,7 @@
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
                                     <input type="text" class="form-control border-warning" name="batas_waspada[]">
-                                    <label for="batas_waspada_1">Batas Waspada</label>
+                                    <label for="batas_waspada_1">Batas Siaga</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">

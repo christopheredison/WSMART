@@ -29,7 +29,16 @@
             <p class="mb-0 fw-medium">Nama Role</p>
           </div>
           <div class="col-12 col-md-5">
-            <input type="text" name="name" id="name" class="form-control" value="{{ $role->name }}">
+            <input type="text" name="name" id="name" class="form-control" value="{{ old('name', $role->name) }}">
+          </div>
+        </div>
+        <div class="row g-2 mb-5">
+          <div class="col-12 col-md-2">
+            <p class="mb-0 fw-medium">Notes</p>
+          </div>
+          <div class="col-12 col-md-5">
+            <textarea class="form-control" id="notes" name="notes" rows="3"
+              placeholder="Masukkan notes untuk role ini">{{ old('notes', $role->notes) }}</textarea>
           </div>
         </div>
 

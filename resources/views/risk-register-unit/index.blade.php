@@ -205,7 +205,8 @@
                 <th class="sort mw-10r" data-sort="eksposure_risiko_inherent">Eksposure Risiko</th>
                 <th class="sort mw-10r" data-sort="total_biaya_rencana_perlakuan">Total Biaya Rencana Perlakuan</th>
                 <th class="sort mw-15r" data-sort="waktu_terpapar">Waktu Terpapar</th>
-                <th class="sort" data-sort="status">Status</th>
+                <th class="sort" data-sort="status">Status Approval</th>
+                <th class="sort" data-sort="status_risiko">Status Risiko</th>
                 <th class="no-sort white-space-nowrap" data-sort="action">Action</th>
               </tr>
             </thead>
@@ -363,16 +364,56 @@
                   {{ $rejectedText }}
                   @break
                   @case(6)
-                  @php
-                      $statusText = 'Published';
-                      if ($item->request_edit == 1) $statusText .= ' (Request Edit)';
-                      else if ($item->request_edit == 3) $statusText .= ' (Request Edit Ditolak)';
-                  @endphp
-                  {{ $statusText }}
+                  <div class="d-flex flex-column align-items-center gap-1">
+                    <div>Published</div>
+                    @if($item->request_edit == 1)
+                      <a href="javascript:void(0)"
+                         class="badge bg-warning text-dark rounded-pill px-2 d-inline-flex align-items-center"
+                         onclick='approveRequestEdit({{ $item->id }}, @json($item->request_edit_reason), @json($item->peristiwa_risiko), @json($item->unit->name ?? "Divisi Tidak Diketahui"))'
+                         title="Klik untuk verifikasi request edit">
+                        Request Edit<i class="bx bx-info-circle ms-1" style="font-size:0.95em;"></i>
+                      </a>
+                    @elseif($item->request_edit == 3)
+                      <span class="badge bg-secondary-subtle text-dark border" style="font-size:10px;">Request Edit Ditolak</span>
+                    @endif
+                  </div>
                   @break
                   @default
                   Draft
                   @endswitch
+                </td>
+                <td class="status_risiko text-center">
+                  @if($item->is_closed)
+                    <div class="badge bg-danger rounded-pill px-2 mt-auto d-inline-flex align-items-center">
+                      Closed
+                      @if($item->closed_at_formatted)
+                        <i class="bx bx-info-circle ms-1" style="cursor:pointer;font-size:0.95em;"
+                           data-bs-toggle="popover"
+                           data-bs-trigger="hover focus"
+                           data-bs-placement="top"
+                           data-bs-content="Ditutup pada: {{ $item->closed_at_formatted }}"
+                           title=""></i>
+                      @endif
+                    </div>
+                  @elseif((int) $item->close_request === 1)
+                    <div class="d-flex flex-column align-items-center gap-1">
+                      <a href="javascript:void(0)" class="badge bg-warning text-dark rounded-pill px-2 d-inline-flex align-items-center"
+                         onclick="verifyCloseRequest({{ $item->id }}, @json($item->close_request_reason), @json($item->peristiwa_risiko), @json(optional($item->closeRequestedBy)->name ?? '-'), @json($item->close_requested_at_formatted ?? '-'))"
+                         title="Klik untuk verifikasi penutupan">Pengajuan Tutup Risiko<i class="bx bx-info-circle ms-1" style="font-size:0.95em;"></i></a>
+                      <button type="button" class="btn btn-sm btn-outline-warning py-0 px-2"
+                              style="font-size:11px;"
+                              onclick="verifyCloseRequest({{ $item->id }}, @json($item->close_request_reason), @json($item->peristiwa_risiko), @json(optional($item->closeRequestedBy)->name ?? '-'), @json($item->close_requested_at_formatted ?? '-'))">
+                        Verifikasi Penutupan
+                      </button>
+                    </div>
+                  @elseif((int) $item->close_request === 3)
+                    <div class="d-flex flex-column align-items-center gap-1">
+                      <div class="badge bg-success rounded-pill px-2">Open</div>
+                      <span class="badge bg-secondary-subtle text-dark border" style="font-size:10px;">Pengajuan Tutup Ditolak</span>
+                    </div>
+                  @else
+                    <div class="badge bg-success rounded-pill px-2 mt-auto">Open</div>
+                  @endif
                 </td>
                 <td class="white-space-nowrap">
                   @can('risk_register_view')
@@ -512,7 +553,7 @@
       <div class="modal-body">
         <input type="hidden" id="request_risk_id">
         <div class="alert alert-info mb-3">
-          Risiko ini telah di-Publish. Silakan ajukan request jika perlu melakukan perubahan. Request akan dikirimkan ke <strong>Risk Owner MR</strong>.
+          Risiko ini telah di-Publish. Silakan ajukan request jika perlu melakukan perubahan. Request akan dikirimkan ke <strong>{{ \App\Models\IdentifikasiRisiko::getRequestEditVerifierLabel('unit') }}</strong>.
         </div>
         <div class="form-group mb-0">
           <label class="form-label fw-bold">Alasan Perubahan Data Risiko <span class="text-danger">*</span></label>
@@ -529,6 +570,7 @@
 @include('risk-register-unit._modal_catatan')
 @endsection
 @section('scripts')
+@include('partials.risk-note-helpers')
 <script>
 function submitEskalasiForm(formId, actionText) {
     Swal.fire({
@@ -640,22 +682,8 @@ function showCatatanRisiko(riskId) {
             } else {
                 let html = '';
                 notes.forEach(note => {
-                    // Penyesuaian Status Badge (1: Terima, 2: Tolak, 3: Perbaikan)
-                    let statusBadge = '';
-                    if (note.status == 1) {
-                        statusBadge = '<span class="badge bg-success-subtle text-success border border-success"><i class="bx bx-check me-1"></i>Diterima</span>';
-                    } else if (note.status == 2) {
-                        statusBadge = '<span class="badge bg-danger-subtle text-danger border border-danger"><i class="bx bx-x me-1"></i>Ditolak</span>';
-                    } else if (note.status == 3) {
-                        statusBadge = '<span class="badge bg-info-subtle text-info border border-info"><i class="bx bx-refresh me-1"></i>Perbaikan Dikirim</span>';
-                    } else {
-                        statusBadge = '<span class="badge bg-primary-subtle text-secondary border border-secondary">Informasi</span>';
-                    }
-
-                    const formattedDate = new Date(note.created_at).toLocaleString('id-ID', {
-                        day: '2-digit', month: 'short', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
-                    });
+                    const statusBadge = window.RiskNoteHelpers.statusBadge(note.status);
+                    const formattedDate = window.RiskNoteHelpers.formatDateWib(note.created_at);
 
                     html += `
                     <div class="card mb-3 shadow-sm">
@@ -833,7 +861,7 @@ function submitRequestEdit() {
 
     Swal.fire({
         title: 'Kirim Request?',
-        text: 'Request edit risiko akan dikirimkan ke Risk Owner MR.',
+        text: 'Request edit risiko akan dikirimkan ke {{ \App\Models\IdentifikasiRisiko::getRequestEditVerifierLabel('unit') }}.',
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Ya, Kirim',
@@ -857,10 +885,32 @@ function submitRequestEdit() {
     });
 }
 
+const canVerifyRequestEditUnit = {{ \App\Models\IdentifikasiRisiko::canVerifyRequestEdit(auth()->user(), 'unit') ? 'true' : 'false' }};
+
 function approveRequestEdit(id, reason, riskName, unitName) {
+    reason = reason || 'Tidak ada informasi alasan.';
+    riskName = riskName || 'Risiko Divisi';
+    unitName = unitName || 'Divisi Tidak Diketahui';
+
+    if (!canVerifyRequestEditUnit) {
+        Swal.fire({
+            title: 'Detail Request Edit',
+            icon: 'info',
+            html: `<div class="text-start">
+                <p class="mb-2">Risiko: <strong>${riskName}</strong></p>
+                <p class="mb-2">Divisi: <strong>${unitName}</strong></p>
+                <div class="p-3 rounded bg-light border">
+                    <div><strong>Alasan Request Edit:</strong><br><span>${reason}</span></div>
+                </div>
+            </div>`,
+            confirmButtonText: 'Tutup'
+        });
+        return;
+    }
+
     Swal.fire({
         title: 'Tindak Lanjut Request Edit',
-        html: `Apakah Anda ingin menyetujui atau menolak request edit untuk risiko <strong>${riskName}</strong> pada unit/divisi <strong>${unitName}</strong> ini?<br><br>` +
+        html: `Apakah Anda ingin menyetujui atau menolak request edit untuk risiko <strong>${riskName}</strong> pada divisi <strong>${unitName}</strong> ini?<br><br>` +
               `<div class="p-3 mt-2 rounded bg-light border border-info text-start">` +
                   `<strong>Alasan Request Edit:</strong><br>` +
                   `<span class="text-dark">${reason}</span>` +
@@ -924,11 +974,159 @@ function approveRequestEdit(id, reason, riskName, unitName) {
     });
 }
 
+
+const canVerifyCloseUnit = {{ \App\Models\IdentifikasiRisiko::canVerifyRequestEdit(auth()->user(), 'unit') ? 'true' : 'false' }};
+const approveCloseUrl = '{{ route("risk-register-unit.approve-close-request") }}';
+const rejectCloseUrl = '{{ route("risk-register-unit.reject-close-request") }}';
+const unitRiskDetailUrlTemplate = '{{ route("risk-register-unit.view", ["riskRegister" => "__RISK_ID__"]) }}';
+
+function verifyCloseRequest(id, reason, riskName, requestedBy, requestedAt) {
+    reason = reason || 'Tidak ada informasi alasan.';
+    riskName = riskName || 'Risiko Divisi';
+    requestedBy = requestedBy || '-';
+    requestedAt = requestedAt || '-';
+    const detailUrl = unitRiskDetailUrlTemplate.replace('__RISK_ID__', id);
+    const detailLinkHtml = `<div class="mt-3"><a href="${detailUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary"><i class="bx bx-link-external me-1"></i>Lihat Detail Risiko</a></div>`;
+
+    if (!canVerifyCloseUnit) {
+        Swal.fire({
+            title: 'Detail Pengajuan Tutup Risiko',
+            icon: 'info',
+            html: `<div class="text-start">
+                <p class="mb-2">Risiko: <strong>${riskName}</strong></p>
+                <div class="p-3 rounded bg-light border">
+                    <div class="mb-2"><strong>Alasan Penutupan:</strong><br><span>${reason}</span></div>
+                    <div class="mb-2"><strong>Tanggal Pengajuan:</strong><br><span>${requestedAt}</span></div>
+                    <div><strong>Diajukan Oleh:</strong><br><span>${requestedBy}</span></div>
+                </div>
+                ${detailLinkHtml}
+            </div>`,
+            confirmButtonText: 'Tutup'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Verifikasi Penutupan Risiko',
+        icon: 'warning',
+        width: 640,
+        html: `<div class="text-start">
+            <p class="mb-3">Detail pengajuan penutupan untuk risiko <strong>${riskName}</strong>:</p>
+            <div class="p-3 mb-3 rounded bg-light border">
+                <div class="mb-2"><strong>Alasan Penutupan:</strong><br><span class="text-dark">${reason}</span></div>
+                <div class="mb-2"><strong>Tanggal Pengajuan:</strong><br><span class="text-dark">${requestedAt}</span></div>
+                <div><strong>Diajukan Oleh:</strong><br><span class="text-dark">${requestedBy}</span></div>
+            </div>
+            ${detailLinkHtml}
+            <div class="form-check p-3 mt-3 rounded border border-primary-subtle bg-primary-subtle">
+                <input class="form-check-input" type="checkbox" id="addToKamusRisiko" checked>
+                <label class="form-check-label fw-semibold" for="addToKamusRisiko">
+                    Masukkan risiko ini ke Kamus Risiko
+                </label>
+                <div class="form-text">Centang jika risiko yang ditutup perlu masuk ke kamus risiko.</div>
+            </div>
+        </div>`,
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: '<span class="bx bx-check"></span> Terima Close Risiko',
+        denyButtonText: '<span class="bx bx-x"></span> Tolak Close Risiko',
+        cancelButtonText: 'Batal',
+        customClass: {
+            confirmButton: 'btn btn-success me-2',
+            denyButton: 'btn btn-danger me-2',
+            cancelButton: 'btn btn-secondary'
+        },
+        buttonsStyling: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const addToKamus = document.getElementById('addToKamusRisiko')?.checked ? 1 : 0;
+            Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            $.ajax({
+                url: approveCloseUrl,
+                type: 'POST',
+                data: { _token: '{{ csrf_token() }}', risk_id: id, add_to_kamus: addToKamus },
+                success: function(res) {
+                    Swal.fire('Berhasil', res.message, 'success').then(() => location.reload());
+                },
+                error: function(err) {
+                    Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                }
+            });
+        } else if (result.isDenied) {
+            Swal.fire({
+                title: 'Tolak Close Risiko',
+                input: 'textarea',
+                inputLabel: 'Alasan penolakan',
+                inputPlaceholder: 'Tuliskan alasan penolakan penutupan risiko...',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Tolak',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#dc3545',
+                preConfirm: (value) => {
+                    if (!value || !value.trim()) {
+                        Swal.showValidationMessage('Alasan penolakan wajib diisi.');
+                        return false;
+                    }
+                    return value.trim();
+                }
+            }).then((denyResult) => {
+                if (!denyResult.isConfirmed) return;
+                Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                $.ajax({
+                    url: rejectCloseUrl,
+                    type: 'POST',
+                    data: { _token: '{{ csrf_token() }}', risk_id: id, notes: denyResult.value },
+                    success: function(res) {
+                        Swal.fire('Ditolak', res.message, 'info').then(() => location.reload());
+                    },
+                    error: function(err) {
+                        Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                    }
+                });
+            });
+        }
+    });
+}
+
+
 // Handler Jika diakses melalui Link dari Lonceng Notifikasi
+@php
+    $autoVerifyClosePreset = null;
+    $autoVerifyCloseIdFromQuery = request()->query('verify_close_request');
+    if ($autoVerifyCloseIdFromQuery) {
+        $riskToCloseAuto = \App\Models\IdentifikasiRisiko::with('closeRequestedBy')->find($autoVerifyCloseIdFromQuery);
+        if ($riskToCloseAuto && (int) $riskToCloseAuto->close_request === \App\Models\IdentifikasiRisiko::CLOSE_REQUEST_PENDING) {
+            $autoVerifyClosePreset = [
+                'id' => $riskToCloseAuto->id,
+                'reason' => $riskToCloseAuto->close_request_reason ?: 'Tidak ada informasi alasan.',
+                'riskName' => $riskToCloseAuto->peristiwa_risiko ?? 'Risiko Divisi',
+                'requestedAt' => $riskToCloseAuto->close_requested_at_formatted ?? '-',
+                'requestedBy' => optional($riskToCloseAuto->closeRequestedBy)->name ?? '-',
+            ];
+        }
+    }
+@endphp
 $(document).ready(function() {
     // 1. Tangkap parameter
     const urlParams = new URLSearchParams(window.location.search);
     let autoVerifyId = urlParams.get('verify_request_edit');
+
+    // Auto-verify close request dari notifikasi (langsung buka Swal dengan data server)
+    @if($autoVerifyClosePreset)
+    setTimeout(function() {
+        verifyCloseRequest(
+            {{ $autoVerifyClosePreset['id'] }},
+            @json($autoVerifyClosePreset['reason']),
+            @json($autoVerifyClosePreset['riskName']),
+            @json($autoVerifyClosePreset['requestedBy']),
+            @json($autoVerifyClosePreset['requestedAt'])
+        );
+        const url = new URL(window.location.href);
+        url.searchParams.delete('verify_close_request');
+        window.history.replaceState({}, '', url);
+    }, 700);
+    @endif
+
     
     if (!autoVerifyId) {
         const match = window.location.href.match(/verify_request_edit=(\d+)/);
@@ -1036,6 +1234,10 @@ function deleteItem(element) {
 </script>
 <script>
 $(document).ready(function() {
+  document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function (el) {
+    new bootstrap.Popover(el);
+  });
+
   // Inisialisasi DataTable
   const table = $('#example').DataTable();
 

@@ -7,7 +7,7 @@
       @method('PUT')
       <div class="card-header d-flex justify-content-between">
         <div class="d-block col-10">
-          <h2 class="h3 mb-2">Edit Unit</h2>
+          <h2 class="h3 mb-2">Edit Divisi</h2>
           <span class="ff-heading-med">{{ $unit->name }}</span>
         </div>
         <div class="lead__icon lead__icon_sm">
@@ -34,7 +34,7 @@
         @endif
         <div class="row gx-0 gy-3">
           <div class="form-group d-md-flex">
-            <label class="form-label label-md-start col-md-3">Tipe Unit</label>
+            <label class="form-label label-md-start col-md-3">Tipe Divisi</label>
             <select class="form-select js-select-hide-search" name="unit_type_id">
               <option selected disabled>Unit Type</option>
               @foreach($unitType as $id => $name)
@@ -78,7 +78,6 @@
 </div>
 @endsection
 
-@push('scripts')
 @push('styles')
 <style>
   /* Buat input readonly/disabled tampil seperti enabled */
@@ -86,6 +85,8 @@
   .flatpickr-input[readonly] { background-color: #fff !important; opacity: 1; color: inherit; }
 </style>
 @endpush
+
+@push('scripts')
 <script>
   // Samakan dengan halaman corporate-risk/create: gunakan flatpickr pada .datetimepicker
   flatpickr('#valid_from', {

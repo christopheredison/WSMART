@@ -73,6 +73,10 @@
                 <th class="no-sort white-space-nowrap" data-sort="action">Action</th>
               </tr>
             </thead>
+            @php
+                $monMonth = $selectedMonth ?? date('n');
+                $monQuarter = ceil($monMonth / 3);
+            @endphp
             <tbody class="list" id="bulk-select-body">
               @forelse ($dataToDisplay as $index => $item)
                 @php
@@ -96,7 +100,7 @@
                     <a href="{{ route('corporate-risk.index', ['pid' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Risk Register">
                       <span class="bx bx-list-check"></span>
                     </a>
-                    <a href="{{ route('corporate-risk.monitorings.index', ['period' => $periode->id, 'month' => $selectedMonth]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
+                    <a href="{{ route('corporate-risk.monitorings.index', ['period' => $periode->id, 'quarter' => $monQuarter, 'month' => $monMonth]) }}" class="btn-input-icon" data-bs-toggle="tooltip" title="Monitoring">
                       <span class="bx bx-radar"></span>
                     </a>
                     <a href="{{ route('corporate-led.index', ['periode' => $periode->id]) }}" class="btn-input-icon" data-bs-toggle="tooltip"
@@ -122,6 +126,8 @@
 @push('scripts')
 <script>
   $(document).ready(function() {
+    $("body").tooltip({ selector: '[data-bs-toggle=tooltip]' });
+
     let table = $('#example').DataTable({
       "paging": true,
       "info": true,

@@ -25,6 +25,12 @@ use App\Models\MasterKRI;
 use App\Models\KontrolEksisting;
 use App\Models\TaksonomiRisiko;
 use App\Models\PerlakuanDampakRisikoUnit;
+use App\Models\DataBatchNotes;
+use App\Models\RiskNote;
+use App\Models\User;
+use App\Models\Notification;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CorporateRiskController extends Controller
 {
@@ -401,14 +407,18 @@ class CorporateRiskController extends Controller
         $lastBatch = $item['last_batch'];
         $unitId = $item['unit']->id;
         $periodeId = $item['periode']->id;
+        $user = auth()->user();
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        $verificationData = DataBatch::resolveCorporateUserStep((int) $levelId, $is_mr);
+        $u_step = $verificationData['u_step'];
 
         if ($item['risk_count'] == 0) {
-            return '<span class="badge bg-light text-dark border border-dark">Belum Ada Risiko</span>';
+            return '<span class="badge bg-light text-dark border border-dark">Tidak Aktif</span>';
         }
 
-        // Cek Published
         $allRisksStatus = IdentifikasiRisiko::where('unit_id', $unitId)
             ->where('periode_id', $periodeId)
+            ->where('unit_type_id', 4)
             ->pluck('status')
             ->toArray();
 
@@ -416,29 +426,122 @@ class CorporateRiskController extends Controller
         $publishedCount = count(array_filter($allRisksStatus, fn($s) => $s == IdentifikasiRisiko::STATUS_PUBLISHED));
 
         if (($lastBatch && $lastBatch->finish) || ($totalRisk > 0 && $totalRisk === $publishedCount)) {
-            return '<div class="d-flex flex-column align-items-center">
+            $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Selesai</div>';
+
+            return '<div class="d-flex flex-column align-items-start">
                         <span class="badge bg-success" data-bs-toggle="tooltip" title="Status: Published / Selesai">Published</span>
-                        <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Selesai</div>
+                        '.$positionHtml.'
                     </div>';
         }
 
-        $batchStep = $lastBatch ? $lastBatch->step_verification : 0;
-        $batchStatus = $lastBatch ? $lastBatch->status : 1;
+        $batchStep = $lastBatch ? (int) $lastBatch->step_verification : 0;
+        $batchStatus = $lastBatch ? (int) $lastBatch->status : DataBatch::STATUS_PROSES;
 
-        $stepLabels = [
-            0 => 'Draft Korporat',
-            1 => 'Risk Owner Korporat',
-            2 => 'Direksi',
-        ];
-        $currentLabel = $stepLabels[$batchStep] ?? 'Proses Validasi';
-        if ($batchStatus == 5) $currentLabel = 'Dikembalikan / Revisi';
+        $flow = DataBatch::getCorporateApprovalFlow();
+        $stepLabels = [];
+        foreach ($flow['steps'] as $step => $config) {
+            $stepLabels[(int) $step] = $config['label'];
+        }
+        if (!isset($stepLabels[0])) {
+            $stepLabels[0] = 'Risk Officer MR (Draft)';
+        } else {
+            $stepLabels[0] = $stepLabels[0] . ' (Draft)';
+        }
+
+        $currentLabel = $stepLabels[$batchStep] ?? 'Verifikator';
+        if ($batchStatus == DataBatch::STATUS_REVISI) {
+            $currentLabel = 'Dikembalikan ke ' . ($stepLabels[0] ?? 'Risk Officer MR');
+        }
+
+        $positionHtml = '
+        <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">
+            Posisi: ' . $currentLabel . '
+        </div>';
+
+        $isMyTurn = false;
+        if ($levelId == 1 && $is_mr) {
+            if (in_array($batchStatus, [DataBatch::STATUS_PROSES, DataBatch::STATUS_REVISI, 0], true)) {
+                $isMyTurn = true;
+            }
+        } elseif ($batchStatus != DataBatch::STATUS_REVISI && $u_step == $batchStep && $u_step > 0) {
+            $isMyTurn = true;
+        }
+
+        $pulseDot = '
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle animate-ping"></span>
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>';
+
+        $redirectUrl = route('corporate-risk.index', ['pid' => $periodeId]);
+
+        if ($isMyTurn) {
+            if ($levelId == 1 && $is_mr) {
+                if ($batchStatus == DataBatch::STATUS_REVISI) {
+                    return '
+                    <div class="d-flex flex-column align-items-start">
+                        <a href="'.$redirectUrl.'" class="text-decoration-none align-self-center">
+                            <span class="badge bg-danger cursor-pointer border border-danger text-white position-relative"
+                                  data-bs-toggle="tooltip"
+                                  title="Status: Dikembalikan. Mohon perbaiki data risiko sesuai catatan.">
+                                <i class="bx bx-undo me-1"></i> Perlu Revisi
+                                '.$pulseDot.'
+                            </span>
+                        </a>
+                        '.$positionHtml.'
+                    </div>';
+                }
+
+                return '
+                <div class="d-flex flex-column align-items-start">
+                    <a href="'.$redirectUrl.'" class="text-decoration-none align-self-center">
+                        <span class="badge bg-info cursor-pointer border border-info text-white position-relative"
+                              data-bs-toggle="tooltip"
+                              title="Status: Draft. Silakan lengkapi dan ajukan.">
+                            Draft / Input Risiko
+                            '.$pulseDot.'
+                        </span>
+                    </a>
+                    '.$positionHtml.'
+                </div>';
+            }
+
+            return '
+            <div class="d-flex flex-column align-items-start">
+                <a href="'.$redirectUrl.'" class="text-decoration-none align-self-center">
+                    <span class="badge bg-warning text-dark border border-warning shadow-sm cursor-pointer position-relative"
+                          data-bs-toggle="tooltip"
+                          title="Klik untuk verifikasi: '.$currentLabel.'">
+                        <i class="bx bx-error-circle bx-flashing me-1"></i> Perlu Verifikasi
+                        '.$pulseDot.'
+                    </span>
+                </a>
+                '.$positionHtml.'
+            </div>';
+        }
+
+        if (in_array($batchStatus, [DataBatch::STATUS_REVISI, DataBatch::STATUS_PROSES, 0], true)) {
+            return '
+            <div class="d-flex flex-column align-items-start">
+                <div class="d-inline-block position-relative"
+                    data-bs-toggle="tooltip"
+                    title="Posisi saat ini: '.$currentLabel.'">
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                        <i class="bx bx-info-circle me-1"></i> Draft / Input Risiko
+                    </span>
+                </div>
+                '.$positionHtml.'
+            </div>';
+        }
 
         return '
-        <div class="d-flex flex-column align-items-center">
-            <span class="badge bg-info bg-opacity-10 text-info border border-info" data-bs-toggle="tooltip" title="Posisi saat ini: '.$currentLabel.'">
-                <i class="bx bx-time-five me-1"></i> Sedang Proses
-            </span>
-            <div class="mt-2 text-dark fw-bold" style="font-size: 11px;">'.$currentLabel.'</div>
+        <div class="d-flex flex-column align-items-start">
+            <div class="d-inline-block position-relative"
+                data-bs-toggle="tooltip"
+                title="Posisi saat ini: '.$currentLabel.'">
+                <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                    <i class="bx bx-time-five me-1"></i> Proses Validasi
+                </span>
+            </div>
+            '.$positionHtml.'
         </div>';
     }
 
@@ -504,15 +607,24 @@ class CorporateRiskController extends Controller
         }
 
         $risikos = IdentifikasiRisiko::where('periode_id', $period)
-            // ->where('unit_id', auth()->user()->unit_id)
             ->where('unit_type_id', 4)
-            ->with('riskAnalysis')
+            ->with([
+                'riskAnalysis.skalaDampakObj',
+                'riskAnalysis.skalaProbabilitas',
+                'riskAnalysis.skalaDampakResidualQ1Obj',
+                'riskAnalysis.skalaProbabilitasResidualQ1',
+                'riskAnalysis.skalaDampakResidualQ2Obj',
+                'riskAnalysis.skalaProbabilitasResidualQ2',
+                'riskAnalysis.skalaDampakResidualQ3Obj',
+                'riskAnalysis.skalaProbabilitasResidualQ3',
+                'riskAnalysis.skalaDampakResidualQ4Obj',
+                'riskAnalysis.skalaProbabilitasResidualQ4',
+            ])
             ->get();
 
-        $currentRiskMaps = $risikos->pluck('currentRiskMapsMonth');
         $formattedCurrentRiskMaps = [];
-        foreach ($risikos as $idx => $risiko) {
-            $currentValue = $risiko->currentRiskMapsMonth['inherent'];
+        foreach ($risikos as $risiko) {
+            $currentValue = $risiko->currentRiskMapsMonth['inherent'] ?? [];
             for ($month = 1; $month <= 12; $month++) {
                 if ($nextValue = ($risiko->currentRiskMapsMonth[$month] ?? null)) {
                     $currentValue = $nextValue;
@@ -525,55 +637,67 @@ class CorporateRiskController extends Controller
             }
         }
 
+        $riskResidualData = $this->buildRiskResidualData($risikos);
+
         $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
             ->get()
             ->keyBy(function ($item) {
                 return $item->skala_dampak . '-' . $item->skala_probabilitas;
             });
 
-        return view('corporate-risk.risk-period-dashboard', compact('user', 'periode', 'risikos', 'riskMaps', 'formattedCurrentRiskMaps', 'targetUnit'));
+        return view('corporate-risk.risk-period-dashboard', compact('user', 'periode', 'risikos', 'riskMaps', 'formattedCurrentRiskMaps', 'riskResidualData', 'targetUnit'));
     }
 
     public function index(Request $request)
     {
-        // $unitId = $request->query('unit_id') ?? auth()->user()->unit_id;
-        $unitId = 1;
-        // Ambil periode_id dari parameter URL
+        $corpUnit = Unit::where('unit_type_id', 4)->orderBy('id')->first();
+        $unitId = $corpUnit?->id ?? 1;
+
         $periodeId = $request->query('pid');
         $batchNotes = null;
-        // Jika tidak ada parameter periode, gunakan periode aktif
         if (!$periodeId) {
             $activePeriode = Periode::where('status', Periode::STATUS_ACTIVE)->first();
             $periodeId = $activePeriode ? $activePeriode->id : null;
         }
 
-        // Ambil data periode yang dipilih
         $selectedPeriode = Periode::find($periodeId);
         $user = auth()->user();
-        $unitTypeId = $user->unit_type_id;//not use
-        //$unitId = $user->unit_id;
         $levelId = $user->level_id;
-        $min_verification = 3;
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
 
-        $dataBatch = DataBatch::where('unit_id', $unitId)
-                      ->where('periode_id', $periodeId)
-                      ->where('type', 1)
-                      ->where('finish', false)
-                      ->first();
+        $approvalFlow = DataBatch::getCorporateApprovalFlow();
+        $min_verification = (int) $approvalFlow['min_verification'];
+        $verificationData = DataBatch::resolveCorporateUserStep($levelId, $is_mr);
+        $u_step = $verificationData['u_step'];
+        $user_verification = $verificationData['user_verification'];
+        $step_order = $u_step;
 
-        if(!$dataBatch){
+        $dataBatch = DataBatch::where('unit_id', $unitId)
+            ->where('periode_id', $periodeId)
+            ->where('type', DataBatch::TYPE_RISK_REGISTER)
+            ->where('finish', false)
+            ->orderBy('batch', 'desc')
+            ->first();
+
+        if (!$dataBatch) {
+            $lastBatch = DataBatch::where('unit_id', $unitId)
+                ->where('periode_id', $periodeId)
+                ->where('type', DataBatch::TYPE_RISK_REGISTER)
+                ->orderBy('batch', 'desc')
+                ->first();
+
             $dataBatch = DataBatch::create([
                 'unit_id' => $unitId,
                 'periode_id' => $periodeId,
-                'type' => 1,
+                'type' => DataBatch::TYPE_RISK_REGISTER,
                 'status' => DataBatch::STATUS_PROSES,
+                'batch' => $lastBatch ? $lastBatch->batch + 1 : 1,
                 'step_verification' => 0,
-                'finish' => false
+                'finish' => false,
             ]);
         }
         $status = $dataBatch->status;
-        // Query dasar untuk identifikasi risiko
+
         $risikoQuery = IdentifikasiRisiko::with([
             'unit',
             'user',
@@ -584,7 +708,6 @@ class CorporateRiskController extends Controller
             'riskAnalysis',
         ])->where('unit_type_id', 4);
 
-        // Filter berdasarkan periode jika ada
         if ($periodeId) {
             $risikoQuery->where('periode_id', $periodeId);
         }
@@ -593,9 +716,6 @@ class CorporateRiskController extends Controller
             $risikoQuery->where('unit_id', $unitId);
         }
 
-        // Ambil data risiko
-        //$risiko = $risikoQuery->get();
-        // Ambil data risiko dan urutkan berdasarkan skala risiko dan eksposur risiko
         $risiko = $risikoQuery
             ->join('risk_analyses', 'identifikasi_risikos.id', '=', 'risk_analyses.risiko_id')
             ->orderBy('risk_analyses.skala_risiko', 'desc')
@@ -603,51 +723,178 @@ class CorporateRiskController extends Controller
             ->select('identifikasi_risikos.*')
             ->get();
 
-        // Data untuk filter
         $unit = Unit::where('unit_type_id', 1)->pluck('name', 'id');
         $unitChild = Unit::where('parent_id', '!=', null)->pluck('name', 'id');
         $peristiwaRisiko = PeristiwaRisiko::pluck('title', 'id');
-        $jenisRisiko = JenisRisiko::pluck('title','id');
+        $jenisRisiko = JenisRisiko::pluck('title', 'id');
+
+        $pending_risk = 0;
+        $draft_risk = IdentifikasiRisiko::where('unit_id', $unitId)
+            ->where('periode_id', $periodeId)
+            ->where('unit_type_id', 4)
+            ->where(function ($query) {
+                $query->whereIn('status', [IdentifikasiRisiko::STATUS_INPUT_DATA, IdentifikasiRisiko::STATUS_REJECTED])
+                    ->orWhereNull('status');
+            })->count();
+
+        if ($dataBatch) {
+            $batchNotes = DataBatchNotes::where('data_batch_id', $dataBatch->id)
+                ->where('step_order', $step_order)
+                ->where('unread', 1)
+                ->first();
+        }
+
+        if ($step_order > 0 && $dataBatch->step_verification == $step_order) {
+            $pending_risk = IdentifikasiRisiko::where('unit_id', $unitId)
+                ->where('periode_id', $periodeId)
+                ->where('unit_type_id', 4)
+                ->where('step_verification', $step_order)
+                ->whereNotIn('status', [
+                    IdentifikasiRisiko::STATUS_TERVERIFIKASI,
+                    IdentifikasiRisiko::STATUS_PUBLISHED,
+                ])
+                ->count();
+        } elseif ($dataBatch && $dataBatch->status == DataBatch::STATUS_REVISI) {
+            $pending_risk = IdentifikasiRisiko::where('unit_id', $unitId)
+                ->where('periode_id', $periodeId)
+                ->where('unit_type_id', 4)
+                ->where('status_progress', IdentifikasiRisiko::PROGRESS_ON_REVISION_DELETED)
+                ->count();
+        }
 
         $avgQuantitativeExposure = null;
-        //if ($status == DataBatch::STATUS_RANKING) {
-            $quantitativeRisks = $risiko->filter(function($risk) {
-                return $risk->riskAnalysis && $risk->riskAnalysis->kategori_dampak === 'Kuantitatif';
-            });
+        $quantitativeRisks = $risiko->filter(function ($risk) {
+            return $risk->riskAnalysis && $risk->riskAnalysis->kategori_dampak === 'Kuantitatif';
+        });
 
-            if ($quantitativeRisks->count() > 0) {
-                $avgQuantitativeExposure = $quantitativeRisks->avg(function($risk) {
-                    return $risk->riskAnalysis->eksposur_risiko ?? 0;
-                });
+        if ($quantitativeRisks->count() > 0) {
+            $avgQuantitativeExposure = $quantitativeRisks->avg(function ($risk) {
+                return $risk->riskAnalysis->eksposur_risiko ?? 0;
+            });
+        }
+
+        $summaryInfo = null;
+        $escalationConfig = [
+            'show' => false,
+            'label' => 'Kirim Risiko',
+            'disabled' => true,
+            'route' => route('corporate-risk.send'),
+            'parameters' => [
+                'unit_id' => $unitId,
+                'periode_id' => $periodeId,
+                'send_type' => 'send',
+            ],
+        ];
+
+        $ownerLabel = $approvalFlow['steps'][$min_verification]['label'] ?? 'Risk Owner MR';
+        $canActOnCorporate = $is_mr || ($user->unit_id == $unitId);
+
+        if ($canActOnCorporate) {
+            // Risk Officer MR (Step 0)
+            if ($step_order == 0 && ($verificationData['config']['can_send'] ?? false)) {
+                if (in_array($status, [DataBatch::STATUS_PROSES, DataBatch::STATUS_REVISI])) {
+                    $escalationConfig['show'] = true;
+
+                    if ($status == DataBatch::STATUS_REVISI) {
+                        $escalationConfig['label'] = 'Kirim Perbaikan';
+                        $escalationConfig['parameters']['send_type'] = 'rev';
+
+                        if ($pending_risk > 0) {
+                            $summaryInfo = [
+                                'type' => 'danger',
+                                'icon' => 'bx-undo',
+                                'message' => "Terdapat <strong>{$pending_risk}</strong> risiko yang <strong>dikembalikan (revisi)</strong>. Silahkan perbaiki data.",
+                            ];
+                        } else {
+                            $summaryInfo = [
+                                'type' => 'success',
+                                'icon' => 'bx-check-double',
+                                'message' => "Seluruh perbaikan telah selesai. Silahkan klik tombol <strong>Kirim Perbaikan</strong> untuk melanjutkan ke {$ownerLabel}.",
+                            ];
+                        }
+                        $escalationConfig['disabled'] = false;
+                    } else {
+                        if ($draft_risk > 0) {
+                            $summaryInfo = [
+                                'type' => 'success',
+                                'icon' => 'bx-check-double',
+                                'message' => "Data risiko siap dikirim. Silahkan klik tombol <strong>Kirim Risiko</strong> untuk melanjutkan ke {$ownerLabel}.",
+                            ];
+                            $escalationConfig['disabled'] = false;
+                        } else {
+                            $summaryInfo = [
+                                'type' => 'info',
+                                'icon' => 'bx-info-circle',
+                                'message' => 'Belum ada data risiko. Silahkan tambah risiko baru.',
+                            ];
+                            $escalationConfig['disabled'] = true;
+                        }
+                    }
+                }
             }
-        //}
+            // Risk Owner MR (Step final)
+            elseif ($step_order > 0 && $dataBatch->step_verification == $step_order && !$dataBatch->finish) {
+                if ($status != DataBatch::STATUS_REVISI) {
+                    $escalationConfig['show'] = true;
+                    $escalationConfig['label'] = 'Publish Risiko';
+                    $escalationConfig['parameters']['send_type'] = 'mainrisk';
+
+                    if ($pending_risk > 0) {
+                        $summaryInfo = [
+                            'type' => 'warning',
+                            'icon' => 'bxs-error-circle',
+                            'message' => "Terdapat <strong>{$pending_risk}</strong> risiko belum diverifikasi.",
+                        ];
+                        $escalationConfig['disabled'] = true;
+                    } else {
+                        $summaryInfo = [
+                            'type' => 'success',
+                            'icon' => 'bx-check-double',
+                            'message' => 'Semua terverifikasi. Siap Publish.',
+                        ];
+                        $escalationConfig['disabled'] = false;
+                    }
+                }
+            }
+        }
 
         $tableLegend = [
             [
-              'icon' => '<span class="bx bx-show-alt"></span>',
-              'label' => 'View'
+                'icon' => '<span class="bx bx-show-alt"></span>',
+                'label' => 'View',
             ],
             [
-              'icon' => '<span class="bx bx-message-square-edit"></span>',
-              'label' => 'Edit'
+                'icon' => '<span class="bx bx-message-square-edit"></span>',
+                'label' => 'Edit',
             ],
             [
-              'icon' => '<span class="bx bx-analyse text-warning"></span>',
-              'label' => 'Analisa'
+                'icon' => '<span class="bx bx-analyse text-warning"></span>',
+                'label' => 'Analisa',
             ],
             [
-              'icon' => '<span class="bx bx-task text-primary"></span>',
-              'label' => 'Perencanaan'
+                'icon' => '<span class="bx bx-task text-primary"></span>',
+                'label' => 'Perencanaan',
             ],
             [
-              'icon' => '<span class="bx bx-trash text-danger"></span>',
-              'label' => 'Hapus'
+                'icon' => '<span class="bx bx-trash text-danger"></span>',
+                'label' => 'Hapus',
             ],
             [
-              'icon' => '<span class="badge bg-primary">!</span>',
-              'label' => 'Rekomendasi Risiko'
+                'icon' => '<span class="bx bx-check-shield text-success"></span>',
+                'label' => 'Verifikasi',
+            ],
+            [
+                'icon' => '<span class="bx bx-comment-dots"></span>',
+                'label' => 'Catatan',
+            ],
+            [
+                'icon' => '<span class="badge bg-primary">!</span>',
+                'label' => 'Rekomendasi Risiko',
             ],
         ];
+
+        $is_unit_mr = true;
+        $unitExpired = false;
 
         return view('corporate-risk.index', compact(
             'risiko',
@@ -660,6 +907,19 @@ class CorporateRiskController extends Controller
             'avgQuantitativeExposure',
             'unitId',
             'tableLegend',
+            'pending_risk',
+            'min_verification',
+            'step_order',
+            'u_step',
+            'user_verification',
+            'dataBatch',
+            'batchNotes',
+            'draft_risk',
+            'summaryInfo',
+            'escalationConfig',
+            'is_unit_mr',
+            'unitExpired',
+            'approvalFlow',
         ));
     }
 
@@ -1310,7 +1570,16 @@ class CorporateRiskController extends Controller
               'dampakRisikos',
               'penyebabRisikos',
               'parameterRisikos',
-              'riskAnalysis',
+              'riskAnalysis.skalaDampakObj',
+              'riskAnalysis.skalaProbabilitas',
+              'riskAnalysis.skalaDampakResidualQ1Obj',
+              'riskAnalysis.skalaProbabilitasResidualQ1',
+              'riskAnalysis.skalaDampakResidualQ2Obj',
+              'riskAnalysis.skalaProbabilitasResidualQ2',
+              'riskAnalysis.skalaDampakResidualQ3Obj',
+              'riskAnalysis.skalaProbabilitasResidualQ3',
+              'riskAnalysis.skalaDampakResidualQ4Obj',
+              'riskAnalysis.skalaProbabilitasResidualQ4',
               'projectRisks.project',
               'projectRisks.projectRiskAnalisa',
               'divisiRisks.unit',
@@ -1385,14 +1654,16 @@ class CorporateRiskController extends Controller
             $unit = $risiko->unit;
             $periode = $risiko->periode;
 
-            $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+            $riskLimitPeriode = RiskLimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
             if ($riskLimitPeriode) {
                 $risk_limit = $riskLimitPeriode->risk_limit;
                 $risk_tolerance = $riskLimitPeriode->risk_limit;
             }
         }
 
-        return view('corporate-risk.view', compact('user', 'risikos', 'risiko', 'riskMaps', 'formattedCurrentRiskMaps', 'risk_limit', 'risk_tolerance'));
+        $riskResidualData = $this->buildRiskResidualData($risikos);
+
+        return view('corporate-risk.view', compact('user', 'risikos', 'risiko', 'riskMaps', 'formattedCurrentRiskMaps', 'riskResidualData', 'risk_limit', 'risk_tolerance'));
     }
 
     public function analisa(Request $request, $riskRegisterId)
@@ -1453,7 +1724,7 @@ class CorporateRiskController extends Controller
         //     }
         // }
 
-        $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
+        $riskLimitPeriode = RiskLimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
         if ($riskLimitPeriode) {
             $risk_limit = $riskLimitPeriode->risk_limit;
             $risk_tolerance = $riskLimitPeriode->risk_limit;
@@ -1529,7 +1800,7 @@ class CorporateRiskController extends Controller
             $validationRules['nilai_dampak_residual_q' . $i] = 'nullable';
             $validationRules['nilai_probabilitas_residual_q' . $i] = 'nullable|numeric';
             $validationRules['skala_dampak_residual_q' . $i] = 'nullable|integer';
-            $validationRules['skala_dampak_residual_hidden_q' . $i] = 'nullable|integer';
+            $validationRules['skala_dampak_residual_q' . $i . '_hidden'] = 'nullable|integer';
             $validationRules['deskripsi_dampak_residual_q' . $i] = 'nullable|string';
         }
 
@@ -1537,40 +1808,29 @@ class CorporateRiskController extends Controller
         $validated = $request->validate($validationRules);
         $unit = $identifikasiRisiko->unit;
         $periode = $identifikasiRisiko->periode;
-        $riskLimitPeriode = RisklimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
-        if ($request->kategori_dampak == 'Kuantitatif') {
+        $riskLimitPeriode = RiskLimitPeriode::where('unit_id', $unit->id)->where('periode_id', $periode->id)->first();
 
-            $risk_limit = 0;
-
-
-            if ($riskLimitPeriode) {
-                $risk_limit = $riskLimitPeriode->risk_limit;
-                $risk_tolerance = $riskLimitPeriode->risk_limit;
-                // $totalOtherIdentifikasiRisiko = IdentifikasiRisiko::where('unit_id', $unit->id)
-                //     ->where('periode_id', $periode->id)
-                //     ->whereHas('riskAnalysis', function($query) {
-                //         $query->where('kategori_dampak', 'Kuantitatif');
-                //     })
-                //     ->count();
-
-                // if ($totalOtherIdentifikasiRisiko > 0) {
-                //     $risk_limit = $risk_limit / $totalOtherIdentifikasiRisiko;
-                // }
-            }
-
-            $toMerge = [
-                'skala_dampak' => $this->calculateSkalaDampak($request->nilai_dampak * 100 / $risk_limit),
-            ];
-            //echo "risk limit = " . $risk_limit . "\n";
-            for ($i = 1; $i <= 4; $i++) {
-                //echo "nilai_dampak_residual_q" . $i . " = " . $request->{'nilai_dampak_residual_q' . $i} . "\n";
-                $calculateSkala = $this->calculateSkalaDampak($request->{'nilai_dampak_residual_q' . $i} * 100 / $risk_limit);
-                //echo "skala dampak residual q" . $i . " = " . $calculateSkala . "\n";
-                $toMerge['skala_dampak_residual_q' . $i] = $calculateSkala;
-            }
-
-            $request->merge($toMerge);
-        }
+        // Skala dampak mengikuti pilihan user dari payload (tidak dihitung ulang di server)
+        // if ($request->kategori_dampak == 'Kuantitatif') {
+        //
+        //     $risk_limit = 0;
+        //
+        //
+        //     if ($riskLimitPeriode) {
+        //         $risk_limit = $riskLimitPeriode->risk_limit;
+        //         $risk_tolerance = $riskLimitPeriode->risk_limit;
+        //     }
+        //
+        //     $toMerge = [
+        //         'skala_dampak' => $this->calculateSkalaDampak($request->nilai_dampak * 100 / $risk_limit),
+        //     ];
+        //     for ($i = 1; $i <= 4; $i++) {
+        //         $calculateSkala = $this->calculateSkalaDampak($request->{'nilai_dampak_residual_q' . $i} * 100 / $risk_limit);
+        //         $toMerge['skala_dampak_residual_q' . $i] = $calculateSkala;
+        //     }
+        //
+        //     $request->merge($toMerge);
+        // }
 
         // validate q4 < q3 < q2 < q1 < inherent
         $lastValues = [
@@ -1593,11 +1853,7 @@ class CorporateRiskController extends Controller
             }
             $lastValues['nilai_probabilitas'] = $request->{'nilai_probabilitas_residual_q' . ($i + 1)};
 
-            if ($request->{'skala_dampak_residual_q' . ($i + 1)} > $lastValues['skala_dampak']) {
-                return response()->json([
-                    'message' => 'Skala dampak residual q' . ($i + 1) . ' tidak boleh lebih besar dari ' . ($i ? 'q' . $i : 'inherent'),
-                ], 422);
-            }
+            // Skala dampak residual mengikuti pilihan user (validasi batas dinonaktifkan)
             $lastValues['skala_dampak'] = $request->{'skala_dampak_residual_q' . ($i + 1)};
         }
 
@@ -1644,13 +1900,18 @@ class CorporateRiskController extends Controller
 
         $toUpdate = [
             'nilai_probabilitas' => $request->nilai_probabilitas,
-            'skala_dampak' => $request->skala_dampak_hidden,
+            'skala_dampak' => $request->skala_dampak_hidden ?? $request->skala_dampak,
             'nilai_dampak' => $nilai_dampak,
             //'risk_limit' => $request->risk_limit,
             //'risk_tolerance' => null, // calculated [Done]
         ];
 
         $tingkatSkalaProbabilitas = SkalaProbabilitas::getSkalaByValue($request->nilai_probabilitas);
+        if (!$tingkatSkalaProbabilitas) {
+            return response()->json([
+                'message' => 'Nilai probabilitas tidak valid untuk skala probabilitas yang tersedia',
+            ], 422);
+        }
         $toUpdate['skala_probabilitas_id'] = $tingkatSkalaProbabilitas->id;
 
         $riskMap = $riskMaps[$toUpdate['skala_dampak'] . '-' . $tingkatSkalaProbabilitas->tingkat] ?? null;
@@ -1662,15 +1923,17 @@ class CorporateRiskController extends Controller
         $toUpdate['skala_risiko'] = $riskMap->nilai_risiko;
         $toUpdate['level_risiko'] = $riskMap->level_risiko;
 
+        $riskLimitValue = $riskLimitPeriode?->risk_limit ?: 0;
+
         //$toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
         if ($request->kategori_dampak == 'Kualitatif') {
             // Untuk kualitatif, gunakan skala dampak * skala probabilitas
             // Rumus: skalaDampak * (1/100) * (nilaiProbabilitas / 100) * riskTolerance
-            $toUpdate['eksposur_risiko'] = floatval($toUpdate['skala_dampak']) * (1/100) * (floatval($toUpdate['nilai_probabilitas']) / 100) * ($riskLimitPeriode->risk_limit ?: 0);
+            $toUpdate['eksposur_risiko'] = floatval($toUpdate['skala_dampak']) * (1/100) * (floatval($toUpdate['nilai_probabilitas']) / 100) * $riskLimitValue;
         } else {
             // Untuk kuantitatif, gunakan nilai dampak * probabilitas
             // Rumus: (nilaiDampak * nilaiProbabilitas) / 100
-            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * $toUpdate['nilai_probabilitas'];
+            $toUpdate['eksposur_risiko'] = $toUpdate['nilai_dampak'] * ($toUpdate['nilai_probabilitas'] / 100);
         }
 
         for ($i = 1; $i <= 4; $i++) {
@@ -1680,7 +1943,7 @@ class CorporateRiskController extends Controller
             if (!is_null($nilaiProbResidual) && $nilaiProbResidual !== '') {
                 if ($request->kategori_dampak == 'Kualitatif') {
                     $skalaDampakResidual = $request->{'skala_dampak_residual_q' . $i};
-                    $toUpdate['eksposur_risiko_residual_q' . $i] = floatval($skalaDampakResidual) * (1/100) * (floatval($nilaiProbResidual) / 100) * ($riskLimitPeriode->risk_limit ?: 0);
+                    $toUpdate['eksposur_risiko_residual_q' . $i] = floatval($skalaDampakResidual) * (1/100) * (floatval($nilaiProbResidual) / 100) * $riskLimitValue;
                 } else { // Kategori Kuantitatif
                     $nilaiDampakResidual = $request->{'nilai_dampak_residual_q' . $i};
                     $toUpdate['eksposur_risiko_residual_q' . $i] = $nilaiDampakResidual * ($nilaiProbResidual / 100);
@@ -1906,6 +2169,125 @@ class CorporateRiskController extends Controller
         }
     }
 
+    public function simpanRencanaPerlakuanDampak(Request $request)
+    {
+        $request->validate([
+            'risiko_id' => 'required|exists:identifikasi_risikos,id',
+            'dampak_risiko_id' => 'required|exists:dampak_risiko_units,id',
+            'rencana_perlakuan_risiko' => 'required',
+            'output_perlakuan_risiko' => 'required',
+            'biaya_perlakuan_risiko' => 'required|numeric',
+            'pic' => 'required',
+            'opsi_perlakuan_risiko' => 'required|exists:opsi_perlakuan_risikos,id',
+            'timeline_mulai_perlakuan_risiko' => 'required',
+            'timeline_selesai_perlakuan_risiko' => 'required',
+        ]);
+
+        try {
+            $startDate = Carbon::createFromFormat('d/m/Y', $request->timeline_mulai_perlakuan_risiko)->format('Y-m-d');
+            $endDate = Carbon::createFromFormat('d/m/Y', $request->timeline_selesai_perlakuan_risiko)->format('Y-m-d');
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Format tanggal tidak valid. Pastikan rentang tanggal dipilih dengan benar.',
+            ], 422);
+        }
+
+        $jabatan = Jabatan::find($request->pic);
+
+        PerlakuanDampakRisikoUnit::create([
+            'risiko_id' => $request->risiko_id,
+            'dampak_risiko_id' => $request->dampak_risiko_id,
+            'rencana_perlakuan_risiko' => $request->rencana_perlakuan_risiko,
+            'output_perlakuan_risiko' => $request->output_perlakuan_risiko,
+            'biaya_perlakuan_risiko' => $request->biaya_perlakuan_risiko,
+            'pic' => $jabatan?->name ?? '-',
+            'pic_jabatan_id' => $request->pic,
+            'divisi_terkait' => $request->divisi_terkait ?? [],
+            'opsi_perlakuan_risiko' => $request->opsi_perlakuan_risiko,
+            'timeline_perlakuan_risiko_start' => $startDate,
+            'timeline_perlakuan_risiko_end' => $endDate,
+        ]);
+
+        return response()->json(['message' => 'Rencana Perlakuan Dampak berhasil ditambahkan!']);
+    }
+
+    public function editRencanaPerlakuanDampak($id)
+    {
+        $perlakuan = PerlakuanDampakRisikoUnit::with('risiko', 'dampakRisikoUnit')->findOrFail($id);
+
+        return response()->json([
+            'id' => $perlakuan->id,
+            'risiko_id' => $perlakuan->risiko_id,
+            'dampak_risiko_id' => $perlakuan->dampak_risiko_id,
+            'deskripsi_dampak' => $perlakuan->dampakRisikoUnit->dampak_risiko ?? null,
+            'rencana_perlakuan_risiko' => $perlakuan->rencana_perlakuan_risiko,
+            'output_perlakuan_risiko' => $perlakuan->output_perlakuan_risiko,
+            'opsi_perlakuan_risiko' => $perlakuan->opsi_perlakuan_risiko,
+            'biaya_perlakuan_risiko' => $perlakuan->biaya_perlakuan_risiko,
+            'pic_jabatan_id' => $perlakuan->pic_jabatan_id,
+            'timeline_perlakuan_risiko_start' => $perlakuan->timeline_perlakuan_risiko_start ? $perlakuan->timeline_perlakuan_risiko_start->format('d/m/Y') : null,
+            'timeline_perlakuan_risiko_end' => $perlakuan->timeline_perlakuan_risiko_end ? $perlakuan->timeline_perlakuan_risiko_end->format('d/m/Y') : null,
+        ]);
+    }
+
+    public function updateRencanaPerlakuanDampak(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'xd_rencana_perlakuan_risiko' => 'required',
+            'xd_output_perlakuan_risiko' => 'required',
+            'xd_opsi_perlakuan_risiko' => 'required|exists:opsi_perlakuan_risikos,id',
+            'xd_biaya_perlakuan_risiko' => 'required|numeric',
+            'xd_pic' => 'required',
+            'xd_divisi_terkait' => 'nullable|array',
+            'xd_timeline_mulai_perlakuan_risiko' => 'required',
+            'xd_timeline_selesai_perlakuan_risiko' => 'required',
+        ]);
+
+        try {
+            $startDate = Carbon::createFromFormat('d/m/Y', $validated['xd_timeline_mulai_perlakuan_risiko'])->format('Y-m-d');
+            $endDate = Carbon::createFromFormat('d/m/Y', $validated['xd_timeline_selesai_perlakuan_risiko'])->format('Y-m-d');
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Format tanggal tidak valid. Pastikan rentang tanggal dipilih dengan benar.',
+            ], 422);
+        }
+
+        $perlakuan = PerlakuanDampakRisikoUnit::findOrFail($id);
+        $jabatan = Jabatan::find($validated['xd_pic']);
+
+        $perlakuan->update([
+            'rencana_perlakuan_risiko' => $validated['xd_rencana_perlakuan_risiko'],
+            'output_perlakuan_risiko' => $validated['xd_output_perlakuan_risiko'],
+            'opsi_perlakuan_risiko' => $validated['xd_opsi_perlakuan_risiko'],
+            'biaya_perlakuan_risiko' => $validated['xd_biaya_perlakuan_risiko'],
+            'pic' => $jabatan?->name ?? '-',
+            'pic_jabatan_id' => $validated['xd_pic'],
+            'divisi_terkait' => $request->xd_divisi_terkait ?? [],
+            'timeline_perlakuan_risiko_start' => $startDate,
+            'timeline_perlakuan_risiko_end' => $endDate,
+        ]);
+
+        return response()->json(['message' => 'Rencana perlakuan dampak berhasil diperbarui.']);
+    }
+
+    public function hapusRencanaPerlakuanDampak($id)
+    {
+        try {
+            $perlakuan = PerlakuanDampakRisikoUnit::findOrFail($id);
+            $perlakuan->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Rencana perlakuan dampak berhasil dihapus.',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal menghapus data: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     private function cleanRupiah($value) {
         return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
     }
@@ -1918,38 +2300,506 @@ class CorporateRiskController extends Controller
         return 5; // High
     }
 
+    public function send(Request $request)
+    {
+        $user = auth()->user();
+        $corpUnit = Unit::where('unit_type_id', 4)->orderBy('id')->first();
+        $unit_id = $request->unit_id ?: ($corpUnit?->id ?? 1);
+        $periode_id = $request->periode_id;
+        $send_type = $request->send_type ?? 'send';
+        $targetLink = route('corporate-risk.index', ['pid' => $periode_id]);
+
+        if (!$periode_id) {
+            return redirect()->route('corporate-risk.index')->with('error', 'Periode tidak ditemukan');
+        }
+
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        $verificationData = DataBatch::resolveCorporateUserStep($user->level_id, $is_mr);
+        $step_order = $verificationData['u_step'];
+        $finalStep = $verificationData['final_step'];
+
+        if ($send_type !== 'mainrisk') {
+            $risikos = IdentifikasiRisiko::with([
+                'riskAnalysis',
+                'penyebabRisikos.perlakuanPenyebabRisikoUnit',
+                'dampakRisikos',
+                'perlakuanDampakRisikos',
+            ])
+                ->where('unit_id', $unit_id)
+                ->where('periode_id', $periode_id)
+                ->where('unit_type_id', 4)
+                ->where(function ($query) {
+                    $query->where('status', '!=', IdentifikasiRisiko::STATUS_PUBLISHED)
+                        ->orWhereNull('status');
+                })
+                ->where('is_closed', 0)
+                ->get();
+
+            if ($risikos->isEmpty()) {
+                return redirect()->back()->with('error', 'Tidak ada risiko yang dapat dikirim.');
+            }
+
+            $errBelumAnalisa = [];
+            $errBelumAdaPerlakuanPenyebab = [];
+            $errBelumAdaDampak = [];
+            $errBelumAdaPerlakuanDampak = [];
+
+            foreach ($risikos as $risiko) {
+                $deskripsi = $risiko->peristiwa_risiko;
+                if ($risiko->peristiwaRisiko) {
+                    $deskripsi = $risiko->peristiwaRisiko->title;
+                }
+
+                if (!$risiko->riskAnalysis) {
+                    $errBelumAnalisa[] = $deskripsi;
+                }
+
+                if ($risiko->penyebabRisikos->isNotEmpty()) {
+                    foreach ($risiko->penyebabRisikos as $penyebab) {
+                        if ($penyebab->perlakuanPenyebabRisikoUnit->isEmpty()) {
+                            $errBelumAdaPerlakuanPenyebab[] = $deskripsi;
+                            break;
+                        }
+                    }
+                }
+
+                if ($risiko->dampakRisikos->isEmpty()) {
+                    $errBelumAdaDampak[] = $deskripsi;
+                } else {
+                    $impactIds = $risiko->dampakRisikos->pluck('id')->toArray();
+                    $treatedImpactIds = $risiko->perlakuanDampakRisikos->pluck('dampak_risiko_id')->toArray();
+                    if (!empty(array_diff($impactIds, $treatedImpactIds))) {
+                        $errBelumAdaPerlakuanDampak[] = $deskripsi;
+                    }
+                }
+            }
+
+            $pesanError = '';
+            if (!empty($errBelumAnalisa)) {
+                $pesanError .= '<strong>Risiko berikut belum dianalisa:</strong><ul>';
+                foreach ($errBelumAnalisa as $d) { $pesanError .= "<li>$d</li>"; }
+                $pesanError .= '</ul>';
+            }
+            if (!empty($errBelumAdaPerlakuanPenyebab)) {
+                $pesanError .= '<strong>Risiko berikut belum memiliki rencana perlakuan penyebab:</strong><ul>';
+                foreach ($errBelumAdaPerlakuanPenyebab as $d) { $pesanError .= "<li>$d</li>"; }
+                $pesanError .= '</ul>';
+            }
+            if (!empty($errBelumAdaDampak)) {
+                $pesanError .= '<strong>Risiko berikut belum memiliki daftar dampak:</strong><ul>';
+                foreach ($errBelumAdaDampak as $d) { $pesanError .= "<li>$d</li>"; }
+                $pesanError .= '</ul>';
+            }
+            if (!empty($errBelumAdaPerlakuanDampak)) {
+                $pesanError .= '<strong>Risiko berikut belum memiliki rencana perlakuan dampak:</strong><ul>';
+                foreach ($errBelumAdaPerlakuanDampak as $d) { $pesanError .= "<li>$d</li>"; }
+                $pesanError .= '</ul>';
+            }
+
+            if (!empty($pesanError)) {
+                $pesanError .= 'Silahkan lengkapi data tersebut terlebih dahulu.';
+                return redirect()->route('corporate-risk.index', ['pid' => $periode_id])->with('error', $pesanError);
+            }
+        }
+
+        $dataBatch = DataBatch::where('unit_id', $unit_id)
+            ->where('periode_id', $periode_id)
+            ->where('type', DataBatch::TYPE_RISK_REGISTER)
+            ->orderBy('batch', 'desc')
+            ->first();
+
+        if ($send_type == 'mainrisk') {
+            if ($dataBatch) {
+                $dataBatch->update([
+                    'status' => DataBatch::STATUS_FINISH,
+                    'step_verification' => $step_order,
+                    'finish' => true,
+                ]);
+
+                DataBatch::create([
+                    'unit_id' => $unit_id,
+                    'periode_id' => $periode_id,
+                    'type' => DataBatch::TYPE_RISK_REGISTER,
+                    'batch' => $dataBatch->batch + 1,
+                    'status' => DataBatch::STATUS_PROSES,
+                    'step_verification' => 0,
+                    'finish' => false,
+                ]);
+            }
+
+            IdentifikasiRisiko::where('unit_id', $unit_id)
+                ->where('periode_id', $periode_id)
+                ->where('unit_type_id', 4)
+                ->update([
+                    'status' => IdentifikasiRisiko::STATUS_PUBLISHED,
+                    'step_verification' => $step_order,
+                    'published_at' => now(),
+                ]);
+
+            $this->sendNotificationCustom('RO_MR', $unit_id, 'Risiko Korporat Dipublish', 'Risiko korporat telah dipublish oleh Risk Owner MR.', $targetLink, 'bx bx-check-shield');
+
+            return redirect()->route('corporate-risk.index', ['pid' => $periode_id])
+                ->with('success', 'Risiko korporat berhasil dipublish');
+        }
+
+        if ($send_type == 'rev') {
+            if (!$dataBatch) {
+                return redirect()->back()->with('error', 'Data batch tidak ditemukan.');
+            }
+
+            $dataBatch->update([
+                'status' => DataBatch::STATUS_VERIFIKASI,
+                'step_verification' => $finalStep,
+                'finish' => false,
+            ]);
+
+            $risikoToRevise = IdentifikasiRisiko::where('unit_id', $unit_id)
+                ->where('periode_id', $periode_id)
+                ->where('unit_type_id', 4)
+                ->whereIn('status', [
+                    IdentifikasiRisiko::STATUS_INPUT_DATA,
+                    IdentifikasiRisiko::STATUS_REJECTED,
+                ])->get();
+
+            $catatanPerbaikan = $request->catatan_perbaikan ?? 'Tidak ada catatan tambahan';
+
+            foreach ($risikoToRevise as $risk) {
+                $risk->update([
+                    'status' => IdentifikasiRisiko::STATUS_DIKIRIM,
+                    'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW,
+                    'step_verification' => $finalStep,
+                ]);
+
+                if (!empty($request->catatan_perbaikan)) {
+                    RiskNote::create([
+                        'risiko_id' => $risk->id,
+                        'type' => 1,
+                        'status' => 3,
+                        'notes' => $catatanPerbaikan,
+                        'user_id' => auth()->id(),
+                    ]);
+                }
+            }
+
+            if ($request->filled('catatan_perbaikan')) {
+                DataBatchNotes::create([
+                    'data_batch_id' => $dataBatch->id,
+                    'notes' => $request->catatan_perbaikan,
+                    'step_order' => $dataBatch->step_verification,
+                    'user_id' => auth()->id(),
+                ]);
+            }
+
+            $this->sendNotificationCustom('RW_MR', $unit_id, 'Perbaikan Risiko Korporat Dikirim', 'Risk Officer MR telah mengirimkan perbaikan. Catatan: ' . $catatanPerbaikan, $targetLink, 'bx bx-refresh');
+
+            return redirect()->route('corporate-risk.index', ['pid' => $periode_id])
+                ->with('success', 'Perbaikan risiko berhasil dikirim untuk diverifikasi.');
+        }
+
+        if (!$dataBatch) {
+            $dataBatch = DataBatch::create([
+                'periode_id' => $periode_id,
+                'type' => DataBatch::TYPE_RISK_REGISTER,
+                'unit_id' => $unit_id,
+                'batch' => 1,
+                'status' => DataBatch::STATUS_VERIFIKASI,
+                'step_verification' => $finalStep,
+                'finish' => false,
+            ]);
+        } elseif (!$dataBatch->finish) {
+            if ($dataBatch->step_verification == null || $dataBatch->step_verification < 1) {
+                if ($dataBatch->status != DataBatch::STATUS_PROSES) {
+                    return redirect()->route('corporate-risk.index', ['pid' => $periode_id])
+                        ->with('error', 'Masih ada data batch risiko yang sedang berproses.');
+                }
+
+                $dataBatch->update([
+                    'status' => DataBatch::STATUS_VERIFIKASI,
+                    'step_verification' => $finalStep,
+                    'finish' => false,
+                ]);
+            }
+        } elseif ($dataBatch->finish) {
+            $dataBatch = DataBatch::create([
+                'periode_id' => $periode_id,
+                'type' => DataBatch::TYPE_RISK_REGISTER,
+                'unit_id' => $unit_id,
+                'batch' => $dataBatch->batch + 1,
+                'status' => DataBatch::STATUS_VERIFIKASI,
+                'step_verification' => $finalStep,
+                'finish' => false,
+            ]);
+        }
+
+        IdentifikasiRisiko::where('unit_id', $unit_id)
+            ->where('periode_id', $periode_id)
+            ->where('unit_type_id', 4)
+            ->where(function ($query) {
+                $query->where('status', IdentifikasiRisiko::STATUS_INPUT_DATA)
+                    ->orWhere('status', IdentifikasiRisiko::STATUS_REJECTED)
+                    ->orWhereNull('status');
+            })
+            ->update([
+                'status' => IdentifikasiRisiko::STATUS_DIKIRIM,
+                'status_risiko' => 1,
+                'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVIEW,
+                'step_verification' => $finalStep,
+            ]);
+
+        $this->sendNotificationCustom('RW_MR', $unit_id, 'Menunggu Verifikasi', 'Terdapat data risiko korporat baru yang butuh verifikasi Anda.', $targetLink, 'bx bx-bell');
+
+        return redirect()->route('corporate-risk.index', ['pid' => $periode_id])
+            ->with('success', 'Pengiriman risiko berhasil dilakukan. Risiko telah dikirim untuk diverifikasi.');
+    }
+
+    public function verifikasi(Request $request, $riskRegisterId)
+    {
+        $user = auth()->user();
+        $identifikasiRisiko = IdentifikasiRisiko::findOrFail($riskRegisterId);
+        $unit_id = $identifikasiRisiko->unit_id;
+        $periode_id = $identifikasiRisiko->periode_id;
+        $targetLink = route('corporate-risk.index', ['pid' => $periode_id]);
+
+        $dataBatch = DataBatch::where('unit_id', $unit_id)
+            ->where('periode_id', $periode_id)
+            ->where('type', DataBatch::TYPE_RISK_REGISTER)
+            ->orderBy('batch', 'desc')
+            ->first();
+
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        $verificationData = DataBatch::resolveCorporateUserStep($user->level_id, $is_mr);
+        $step_order = $verificationData['u_step'];
+
+        if ($step_order == 0 || !$dataBatch || $dataBatch->step_verification != $step_order) {
+            return redirect()->route('corporate-risk.index', ['pid' => $periode_id])
+                ->with('error', 'Anda tidak memiliki hak untuk melakukan verifikasi risiko');
+        }
+
+        $validated = $request->validate([
+            'catatan_verifikasi' => 'required|string',
+            'status_verifikasi' => 'required|in:terima,tolak',
+        ]);
+
+        try {
+            if (!Gate::check('risk_register_verification')) {
+                return redirect()->back()->with('error', 'Anda tidak memiliki izin untuk melakukan verifikasi risiko');
+            }
+
+            if ($validated['status_verifikasi'] === 'terima') {
+                $identifikasiRisiko->update([
+                    'status' => IdentifikasiRisiko::STATUS_TERVERIFIKASI,
+                    'status_progress' => IdentifikasiRisiko::PROGRESS_ON_ACCEPTED,
+                    'status_risiko' => 1,
+                    'step_verification' => $step_order,
+                ]);
+            } else {
+                $identifikasiRisiko->update([
+                    'status' => IdentifikasiRisiko::STATUS_REJECTED,
+                    'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVISION_DELETED,
+                    'step_verification' => 0,
+                ]);
+
+                $dataBatch->update(['status' => DataBatch::STATUS_REVISI]);
+                $this->sendNotificationCustom('RO_MR', $unit_id, 'Risiko Korporat Ditolak', 'Risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $validated['catatan_verifikasi'], $targetLink, 'bx bx-x-circle');
+            }
+
+            RiskNote::create([
+                'risiko_id' => $identifikasiRisiko->id,
+                'type' => 1,
+                'user_id' => auth()->id(),
+                'status' => $validated['status_verifikasi'] === 'terima' ? 1 : 2,
+                'notes' => $validated['catatan_verifikasi'],
+            ]);
+
+            return redirect()->route('corporate-risk.index', ['pid' => $periode_id])
+                ->with('success', 'Verifikasi risiko berhasil disimpan.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat memverifikasi risiko: ' . $e->getMessage());
+        }
+    }
+
+    public function bulkVerifikasi(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'status_verifikasi' => 'required|in:terima,tolak',
+            'catatan_verifikasi' => 'required|string',
+        ]);
+
+        $user = auth()->user();
+        $firstRisk = IdentifikasiRisiko::find($request->ids[0]);
+        $unit_id = $firstRisk ? $firstRisk->unit_id : null;
+        $periode_id = $firstRisk ? $firstRisk->periode_id : null;
+        $targetLink = route('corporate-risk.index', ['pid' => $periode_id]);
+
+        $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
+        $verificationData = DataBatch::resolveCorporateUserStep($user->level_id, $is_mr);
+        $step_order = $verificationData['u_step'];
+
+        $dataBatch = DataBatch::where('unit_id', $unit_id)
+            ->where('periode_id', $periode_id)
+            ->where('type', DataBatch::TYPE_RISK_REGISTER)
+            ->orderBy('batch', 'desc')
+            ->first();
+
+        if ($step_order == 0 || !$dataBatch || $dataBatch->step_verification != $step_order) {
+            return redirect()->back()->with('error', 'Anda tidak memiliki hak untuk melakukan verifikasi risiko');
+        }
+
+        DB::beginTransaction();
+        try {
+            foreach ($request->ids as $id) {
+                $risk = IdentifikasiRisiko::find($id);
+                if (!$risk) {
+                    continue;
+                }
+
+                if ($request->status_verifikasi === 'terima') {
+                    $risk->update([
+                        'status' => IdentifikasiRisiko::STATUS_TERVERIFIKASI,
+                        'status_progress' => IdentifikasiRisiko::PROGRESS_ON_ACCEPTED,
+                        'status_risiko' => 1,
+                        'step_verification' => $step_order,
+                    ]);
+                } else {
+                    $risk->update([
+                        'status' => IdentifikasiRisiko::STATUS_REJECTED,
+                        'status_progress' => IdentifikasiRisiko::PROGRESS_ON_REVISION_DELETED,
+                        'step_verification' => 0,
+                    ]);
+                }
+
+                RiskNote::create([
+                    'risiko_id' => $risk->id,
+                    'type' => 1,
+                    'user_id' => $user->id,
+                    'status' => $request->status_verifikasi === 'terima' ? 1 : 2,
+                    'notes' => $request->catatan_verifikasi,
+                ]);
+            }
+
+            if ($request->status_verifikasi === 'tolak') {
+                $dataBatch->update(['status' => DataBatch::STATUS_REVISI]);
+                $this->sendNotificationCustom('RO_MR', $unit_id, 'Risiko Korporat Ditolak', 'Beberapa risiko ditolak dan dikembalikan untuk revisi. Catatan: ' . $request->catatan_verifikasi, $targetLink, 'bx bx-x-circle');
+            }
+
+            DB::commit();
+            return redirect()->route('corporate-risk.index', ['pid' => $periode_id])
+                ->with('success', 'Bulk verifikasi berhasil disimpan.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal bulk verifikasi: ' . $e->getMessage());
+        }
+    }
+
+    public function getRiskNotes(Request $request, $risk)
+    {
+        try {
+            $notes = RiskNote::with('user')
+                ->where('risiko_id', $risk)
+                ->where('type', 1)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json($notes);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Gagal mengambil data catatan.'], 500);
+        }
+    }
+
+    private function sendNotificationCustom($target, $unitId, $title, $message, $link, $icon)
+    {
+        $users = collect();
+
+        if ($target === 'RO_MR') {
+            $users = User::permission('mr_notification_division')
+                ->where('level_id', 1)
+                ->whereHas('unit', function ($q) {
+                    $q->where('unit_mr', 1);
+                })->get();
+        } elseif ($target === 'RW_MR') {
+            $users = User::permission('mr_notification_division')
+                ->where('level_id', 2)
+                ->whereHas('unit', function ($q) {
+                    $q->where('unit_mr', 1);
+                })->get();
+        }
+
+        foreach ($users as $notifUser) {
+            Notification::create([
+                'user_id' => $notifUser->id,
+                'title' => $title,
+                'message' => $message,
+                'icon' => $icon,
+                'link' => $link,
+                'read_at' => null,
+            ]);
+        }
+    }
+
     public function destroy($id)
     {
         try {
-            // Cari data identifikasi risiko
             $identifikasiRisiko = IdentifikasiRisiko::findOrFail($id);
 
-            // Cek apakah user memiliki akses untuk menghapus
             if (!Gate::check('risk_register_delete') && $identifikasiRisiko->user_id != auth()->id()) {
                 return redirect()->route('corporate-risk.index')->with('error', 'Anda tidak memiliki izin untuk menghapus data ini');
             }
 
-            // Hapus data terkait
-            // Hapus kontrol eksisting
-            // $identifikasiRisiko->kontrolEksistings()->delete();
-
-            // // Hapus penyebab risiko
-            // $identifikasiRisiko->penyebabRisiko()->delete();
-
-            // // Hapus KRI
-            // $identifikasiRisiko->kris()->delete();
-
-            // // Hapus analisis risiko jika ada
-            // if ($identifikasiRisiko->riskAnalysis) {
-            //     $identifikasiRisiko->riskAnalysis->delete();
-            // }
-
-            // Hapus data identifikasi risiko
             $identifikasiRisiko->delete();
 
             return redirect()->route('corporate-risk.index')->with('success', 'Data risiko berhasil dihapus');
         } catch (\Exception $e) {
             return redirect()->route('corporate-risk.index')->with('error', 'Terjadi kesalahan saat menghapus data: ' . $e->getMessage());
         }
+    }
+
+    private function buildRiskResidualData($risikos): array
+    {
+        $riskResidualData = [];
+
+        foreach ($risikos as $risiko) {
+            $riskAnalysis = $risiko->riskAnalysis;
+            if (!$riskAnalysis) {
+                continue;
+            }
+
+            $riskResidualData[$risiko->id] = [
+                1 => [
+                    'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q1,
+                    'skala_dampak' => $riskAnalysis->skalaDampakResidualQ1Obj ? "({$riskAnalysis->skalaDampakResidualQ1Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ1Obj->deskripsi}" : '-',
+                    'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q1,
+                    'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ1 ? "({$riskAnalysis->skalaProbabilitasResidualQ1->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ1->skala}" : '-',
+                    'skala_risiko' => $riskAnalysis->skala_risiko_residual_q1,
+                    'level_risiko' => $riskAnalysis->level_risiko_residual_q1,
+                ],
+                2 => [
+                    'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q2,
+                    'skala_dampak' => $riskAnalysis->skalaDampakResidualQ2Obj ? "({$riskAnalysis->skalaDampakResidualQ2Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ2Obj->deskripsi}" : '-',
+                    'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q2,
+                    'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ2 ? "({$riskAnalysis->skalaProbabilitasResidualQ2->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ2->skala}" : '-',
+                    'skala_risiko' => $riskAnalysis->skala_risiko_residual_q2,
+                    'level_risiko' => $riskAnalysis->level_risiko_residual_q2,
+                ],
+                3 => [
+                    'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q3,
+                    'skala_dampak' => $riskAnalysis->skalaDampakResidualQ3Obj ? "({$riskAnalysis->skalaDampakResidualQ3Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ3Obj->deskripsi}" : '-',
+                    'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q3,
+                    'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ3 ? "({$riskAnalysis->skalaProbabilitasResidualQ3->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ3->skala}" : '-',
+                    'skala_risiko' => $riskAnalysis->skala_risiko_residual_q3,
+                    'level_risiko' => $riskAnalysis->level_risiko_residual_q3,
+                ],
+                4 => [
+                    'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q4,
+                    'skala_dampak' => $riskAnalysis->skalaDampakResidualQ4Obj ? "({$riskAnalysis->skalaDampakResidualQ4Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ4Obj->deskripsi}" : '-',
+                    'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q4,
+                    'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ4 ? "({$riskAnalysis->skalaProbabilitasResidualQ4->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ4->skala}" : '-',
+                    'skala_risiko' => $riskAnalysis->skala_risiko_residual_q4,
+                    'level_risiko' => $riskAnalysis->level_risiko_residual_q4,
+                ],
+            ];
+        }
+
+        return $riskResidualData;
     }
 }

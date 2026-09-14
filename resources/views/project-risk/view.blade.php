@@ -703,7 +703,7 @@
                                 <th width="35%">Key Risk Indicator</th>
                                 <th width="15%">Satuan KRI</th>
                                 <th width="15%">Batas Aman</th>
-                                <th width="15%">Batas Waspada</th>
+                                <th width="15%">Batas Siaga</th>
                                 <th width="15%">Batas Bahaya</th>
                             </tr>
                         </thead>
@@ -930,6 +930,47 @@
                             </div>
                         </div>
                     </div>
+
+                    @php
+                        $impactDetails = $analisa?->impactDetails ?? collect();
+                    @endphp
+                    @if($analisa->kategori_dampak === \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF && $impactDetails->isNotEmpty())
+                        <div class="col-12">
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">Rincian Perhitungan Dampak Inheren</label>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Uraian</th>
+                                                <th class="text-end">Volume</th>
+                                                <th>Satuan</th>
+                                                <th class="text-end">Harga Satuan</th>
+                                                <th class="text-end">Jumlah (Vol x HS)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($impactDetails as $detail)
+                                                <tr>
+                                                    <td>{{ $detail->uraian }}</td>
+                                                    <td class="text-end">{{ $detail->formattedVolume() }}</td>
+                                                    <td>{{ $detail->satuan ?? '-' }}</td>
+                                                    <td class="text-end">Rp {{ number_format((float) $detail->harga_satuan, 2, ',', '.') }}</td>
+                                                    <td class="text-end fw-semibold">Rp {{ number_format((float) $detail->subtotal, 2, ',', '.') }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <th colspan="4" class="text-end">Total Dampak</th>
+                                                <th class="text-end">Rp {{ number_format((float) $impactDetails->sum('subtotal'), 2, ',', '.') }}</th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
 
                     @if($analisa->kategori_dampak === \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF)
                         <div class="col-12">
@@ -1180,7 +1221,7 @@
                             <div class="tab-pane fade show active" id="tab_penyebab_{{ $monitoring->id }}" role="tabpanel">
                                 @php
                                     $groupedPenyebab = $monitoring->perlakuanPenyebabMonitorings->groupBy(function($item) {
-                                        return $item->perlakuanPenyebab->penyebabRisikoProject->penyebab_risiko ?? 'Lainnya';
+                                        return $item->perlakuanPenyebab?->penyebabRisikoProject?->penyebab_risiko ?? 'Lainnya';
                                     });
                                 @endphp
 
@@ -1202,23 +1243,24 @@
                                                     </thead>
                                                     <tbody>
                                                         @foreach($items as $realisasi)
+                                                            @php $perlakuanPenyebab = $realisasi->perlakuanPenyebab; @endphp
                                                             <tr>
                                                                 <td class="bg-white">
                                                                     <div class="mb-3">
                                                                         <strong class="text-primary d-block mb-2 text-pre-wrap">
-                                                                          {{ $realisasi->perlakuanPenyebab->rencana_perlakuan_risiko ?? '-' }}
+                                                                          {{ $perlakuanPenyebab?->rencana_perlakuan_risiko ?? '-' }}
                                                                         </strong>
                                                                         <div class="row g-2">
                                                                             <div class="col-12">
-                                                                                <span class="text-muted">Anggaran:</span> <strong>Rp {{ number_format($realisasi->perlakuanPenyebab->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</strong>
+                                                                                <span class="text-muted">Anggaran:</span> <strong>Rp {{ number_format($perlakuanPenyebab?->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</strong>
                                                                             </div>
                                                                             <div class="col-12">
                                                                                 <span class="text-muted">Waktu:</span>
-                                                                                <strong>{{ $realisasi->perlakuanPenyebab->timeline_perlakuan_risiko_start ? \Carbon\Carbon::parse($realisasi->perlakuanPenyebab->timeline_perlakuan_risiko_start)->format('d/m/Y') : '-' }}</strong> s/d
-                                                                                <strong>{{ $realisasi->perlakuanPenyebab->timeline_perlakuan_risiko_end ? \Carbon\Carbon::parse($realisasi->perlakuanPenyebab->timeline_perlakuan_risiko_end)->format('d/m/Y') : '-' }}</strong>
+                                                                                <strong>{{ $perlakuanPenyebab?->timeline_perlakuan_risiko_start ? \Carbon\Carbon::parse($perlakuanPenyebab->timeline_perlakuan_risiko_start)->format('d/m/Y') : '-' }}</strong> s/d
+                                                                                <strong>{{ $perlakuanPenyebab?->timeline_perlakuan_risiko_end ? \Carbon\Carbon::parse($perlakuanPenyebab->timeline_perlakuan_risiko_end)->format('d/m/Y') : '-' }}</strong>
                                                                             </div>
                                                                             <div class="col-12">
-                                                                                <span class="text-muted">PIC:</span> <strong>{{ $realisasi->perlakuanPenyebab->pic ?? '-' }}</strong>
+                                                                                <span class="text-muted">PIC:</span> <strong>{{ $perlakuanPenyebab?->pic ?? '-' }}</strong>
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -1279,7 +1321,7 @@
                             <div class="tab-pane fade" id="tab_dampak_{{ $monitoring->id }}" role="tabpanel">
                                 @php
                                     $groupedDampak = $monitoring->perlakuanDampakMonitorings->groupBy(function($item) {
-                                        return $item->perlakuanDampak->dampakRisikoProject->dampak_risiko ?? 'Lainnya';
+                                        return $item->perlakuanDampak?->dampakRisikoProject?->dampak_risiko ?? 'Lainnya';
                                     });
                                 @endphp
 
@@ -1301,21 +1343,22 @@
                                                     </thead>
                                                     <tbody>
                                                         @foreach($items as $realisasi)
+                                                            @php $perlakuanDampak = $realisasi->perlakuanDampak; @endphp
                                                             <tr>
                                                                 <td class="bg-white">
                                                                     <div class="mb-3">
-                                                                        <strong class="text-warning text-dark d-block mb-2 text-pre-wrap">{{ $realisasi->perlakuanDampak->rencana_perlakuan_risiko ?? '-' }}</strong>
+                                                                        <strong class="text-warning text-dark d-block mb-2 text-pre-wrap">{{ $perlakuanDampak?->rencana_perlakuan_risiko ?? '-' }}</strong>
                                                                         <div class="row g-2">
                                                                             <div class="col-12">
-                                                                                <span class="text-muted">Anggaran:</span> <strong>Rp {{ number_format($realisasi->perlakuanDampak->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</strong>
+                                                                                <span class="text-muted">Anggaran:</span> <strong>Rp {{ number_format($perlakuanDampak?->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</strong>
                                                                             </div>
                                                                             <div class="col-12">
                                                                                 <span class="text-muted">Waktu:</span>
-                                                                                <strong>{{ $realisasi->perlakuanDampak->timeline_perlakuan_risiko_start ? \Carbon\Carbon::parse($realisasi->perlakuanDampak->timeline_perlakuan_risiko_start)->format('d/m/Y') : '-' }}</strong> s/d
-                                                                                <strong>{{ $realisasi->perlakuanDampak->timeline_perlakuan_risiko_end ? \Carbon\Carbon::parse($realisasi->perlakuanDampak->timeline_perlakuan_risiko_end)->format('d/m/Y') : '-' }}</strong>
+                                                                                <strong>{{ $perlakuanDampak?->timeline_perlakuan_risiko_start ? \Carbon\Carbon::parse($perlakuanDampak->timeline_perlakuan_risiko_start)->format('d/m/Y') : '-' }}</strong> s/d
+                                                                                <strong>{{ $perlakuanDampak?->timeline_perlakuan_risiko_end ? \Carbon\Carbon::parse($perlakuanDampak->timeline_perlakuan_risiko_end)->format('d/m/Y') : '-' }}</strong>
                                                                             </div>
                                                                             <div class="col-12">
-                                                                                <span class="text-muted">PIC:</span> <strong>{{ $realisasi->perlakuanDampak->pic ?? '-' }}</strong>
+                                                                                <span class="text-muted">PIC:</span> <strong>{{ $perlakuanDampak?->pic ?? '-' }}</strong>
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -1387,7 +1430,7 @@
                                                 </tr>
                                                 <tr>
                                                     <th class="bg-success text-white">Aman</th>
-                                                    <th class="bg-warning text-dark">Waspada</th>
+                                                    <th class="bg-warning text-dark">Siaga</th>
                                                     <th class="bg-danger text-white">Bahaya</th>
                                                 </tr>
                                             </thead>
@@ -1404,7 +1447,7 @@
                                                         <td class="fw-bold text-center text-primary">{{ $realisasiKri?->nilai_kri_terkini ?? '-' }}</td>
                                                         <td class="text-center">
                                                             @php
-                                                                $statusMap = [1 => 'Aman', 2 => 'Waspada', 3 => 'Bahaya'];
+                                                                $statusMap = [1 => 'Aman', 2 => 'Siaga', 3 => 'Bahaya'];
                                                                 $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
                                                                 $status = $realisasiKri->status_kri_terkini;
                                                             @endphp

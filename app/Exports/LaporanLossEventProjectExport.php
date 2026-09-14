@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\LossEventProject;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -91,10 +92,24 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
             default => '-',
         };
 
-        // 7. Format Tanggal Kejadian
-        $tanggalKejadian = $row->tanggal_kejadian ? \Carbon\Carbon::parse($row->tanggal_kejadian)->format('d/m/Y') : '-';
+        // 7. Kode Profit Center
+        $project = $row->project;
+        $profitCenter = $project
+            ? ($project->profit_center ?? ($project->meta['profit_center'] ?? '-'))
+            : '-';
 
-        // 8. Mapping Teridentifikasi & Link Risk Register
+        // 8. Tanggal Kejadian
+        $tanggalKejadian = $row->tanggal_kejadian
+            ? Carbon::parse($row->tanggal_kejadian)->format('d/m/Y')
+            : '-';
+
+        // 9. Bulan Pelaporan (dari updated_at / created_at LED)
+        $tanggalPelaporan = $row->updated_at ?? $row->created_at;
+        $bulanPelaporan = $tanggalPelaporan
+            ? Carbon::parse($tanggalPelaporan)->locale('id')->translatedFormat('F Y')
+            : '-';
+
+        // 10. Mapping Teridentifikasi & Link Risk Register
         $teridentifikasi = $row->project_risk_id ? 'Yes' : 'No';
         $linkRiskRegister = '-';
 
@@ -108,15 +123,17 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
             // Ambil deskripsi dan bersihkan karakter kutip ganda untuk format formula excel
             $namaHyperlink = $row->risiko->deskripsi_peristiwa_risiko ?? 'Lihat Detail';
             $namaHyperlink = str_replace('"', '""', $namaHyperlink);
-            
+
             // Format output hyperlink untuk excel
             $linkRiskRegister = '=HYPERLINK("' . $url . '", "' . $namaHyperlink . '")';
         }
 
         return [
             $this->rowNumber,
-            $tanggalKejadian,
+            $profitCenter,
             optional($row->project)->project_name ?? '-',
+            $bulanPelaporan,
+            $tanggalKejadian,
             $row->nama_kejadian ?? '-',
             $identifikasiKejadian,
             optional($row->kategoriKejadian)->kategori_kejadian ?? '-',
@@ -134,7 +151,7 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
             $row->nilai_premi ?? 0,
             $row->nilai_klaim ?? 0,
             $teridentifikasi,
-            $linkRiskRegister, // Kolom U
+            $linkRiskRegister,
             optional(optional($row->risiko)->projectRiskAnalisa)->nilai_dampak ?? 0,
         ];
     }
@@ -143,8 +160,10 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
     {
         return [
             'No',
-            'Tanggal Kejadian',
+            'Kode Profit Center',
             'Nama Proyek',
+            'Bulan Pelaporan',
+            'Tanggal Kejadian',
             'Nama Kejadian',
             'Identifikasi Kejadian',
             'Kategori Kejadian',
@@ -162,7 +181,7 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
             'Nilai Premi',
             'Nilai Klaim',
             'Teridentifikasi di Risk Register',
-            'Link Risk Register', // Kolom U
+            'Link Risk Register',
             'Biaya Risiko Inheren'
         ];
     }
@@ -172,10 +191,10 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
         $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
 
         return [
-            'N' => $currencyFormat,
-            'R' => $currencyFormat,
-            'S' => $currencyFormat,
-            'V' => $currencyFormat,
+            'P' => $currencyFormat, // Nilai Kerugian
+            'T' => $currencyFormat, // Nilai Premi
+            'U' => $currencyFormat, // Nilai Klaim
+            'X' => $currencyFormat, // Biaya Risiko Inheren
         ];
     }
 
@@ -185,14 +204,14 @@ class LaporanLossEventProjectExport implements FromCollection, WithHeadings, Wit
         $sheet->getStyle('1')->getFont()->setBold(true);
 
         // Agar teks yang ada \n (newline) bisa tampil rapi (wrap text)
-        $sheet->getStyle('H:I')->getAlignment()->setWrapText(true);
+        $sheet->getStyle('J:K')->getAlignment()->setWrapText(true);
 
         // Menghitung total baris data (termasuk heading baris 1)
         $totalRows = $this->rowNumber + 1;
 
         if ($totalRows > 1) {
-            // Target baris data dari baris 2 sampai baris terakhir pada Kolom U (Link Risk Register)
-            $linkRange = 'U2:U' . $totalRows;
+            // Target baris data dari baris 2 sampai baris terakhir pada Kolom W (Link Risk Register)
+            $linkRange = 'W2:W' . $totalRows;
 
             // Menerapkan warna biru standard (#0563C1) dan underline (garis bawah)
             $sheet->getStyle($linkRange)->getFont()

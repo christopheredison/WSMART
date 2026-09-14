@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Traits\FormatsRiskStatusForExport;
+use App\Traits\HasRequestEditVerification;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,7 +14,7 @@ use OwenIt\Auditing\Auditable;
 
 class ProjectRisk extends Model implements AuditableContract
 {
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, FormatsRiskStatusForExport, HasFactory, HasRequestEditVerification, SoftDeletes;
 
     protected $fillable = [
         'unit_type_id',//berelasi ke model UnitType (table unit_types)
@@ -54,6 +57,10 @@ class ProjectRisk extends Model implements AuditableContract
         'request_edit_reason',
         'published_at',
         'closed_at',
+        'close_request',
+        'close_request_reason',
+        'close_requested_at',
+        'close_requested_by',
     ];
 
     public const STATUS_INPUT_DATA = 1;
@@ -70,6 +77,35 @@ class ProjectRisk extends Model implements AuditableContract
     public const REQ_EDIT_APPROVED = 2;
     public const REQ_EDIT_REJECTED = 3;
 
+    public const CLOSE_REQUEST_NONE = 0;
+    public const CLOSE_REQUEST_PENDING = 1;
+    public const CLOSE_REQUEST_APPROVED = 2;
+    public const CLOSE_REQUEST_REJECTED = 3;
+
+    /**
+     * Penerima notifikasi & verifikator Request Edit (project).
+     * Hanya user dengan permission mr_notification_project.
+     */
+    public static function getRequestEditVerifiers(?string $scope = null): array
+    {
+        return [
+            [
+                'role' => 'RO_MR',
+                'level_id' => 1,
+                'unit_mr' => true,
+                'permission' => 'mr_notification_project',
+                'label' => 'Risk Officer MR',
+            ],
+            [
+                'role' => 'RW_MR',
+                'level_id' => 2,
+                'unit_mr' => true,
+                'permission' => 'mr_notification_project',
+                'label' => 'Risk Owner MR',
+            ],
+        ];
+    }
+
     public const STEP_VERIFICATION_DRAFT = 0;
     public const STEP_VERIFICATION_RISK_OWNER_PROJECT = 1;
     public const STEP_VERIFICATION_RISK_OFFICER_DIVISI = 2;
@@ -82,17 +118,125 @@ class ProjectRisk extends Model implements AuditableContract
     public const LEVEL_RISIKO_MODERATE_TO_HIGH = 'Moderate To High';
     public const LEVEL_RISIKO_HIGH = 'High';
 
+    /** Risiko yang dibuat mulai tanggal ini memakai breakdown nilai dampak inheren. */
+    public const IMPACT_BREAKDOWN_START_DATE = '2026-09-01';
+
+    public function usesImpactBreakdown(): bool
+    {
+        $createdAt = $this->created_at ?: now();
+
+        return $createdAt->gte(Carbon::parse(self::IMPACT_BREAKDOWN_START_DATE)->startOfDay());
+    }
+
     public $casts = [
         'perkiraan_waktu_terpapar_risiko_mulai' => 'date:Y-m-d',
         'perkiraan_waktu_terpapar_risiko_akhir' => 'date:Y-m-d',
         'type_risiko' => 'integer',
         'skala_risiko' => 'integer',
         'status' => 'integer',
+        'is_closed' => 'boolean',
+        'closed_at' => 'datetime',
+        'published_at' => 'datetime',
+        'close_request' => 'integer',
+        'close_requested_at' => 'datetime',
     ];
+
+    /**
+     * Risiko dianggap closed pada periode monitoring jika sudah ditutup
+     * dan closed_at jatuh pada atau sebelum bulan/tahun yang dipilih.
+     * Contoh: closed_at di Maret → monitoring Februari masih Open.
+     */
+    public function isClosedAsOf(?int $year, ?int $month): bool
+    {
+        if (!$this->is_closed) {
+            return false;
+        }
+
+        if (!$this->closed_at || !$year || !$month) {
+            return true;
+        }
+
+        $closedYear = (int) $this->closed_at->format('Y');
+        $closedMonth = (int) $this->closed_at->format('n');
+
+        return $closedYear < $year
+            || ($closedYear === $year && $closedMonth <= $month);
+    }
+
+    public function scopeOpenAsOf($query, int $year, int $month)
+    {
+        return $query->where(function ($q) use ($year, $month) {
+            $q->where('is_closed', 0)
+                ->orWhere(function ($q2) use ($year, $month) {
+                    $q2->where('is_closed', 1)
+                        ->whereNotNull('closed_at')
+                        ->where(function ($q3) use ($year, $month) {
+                            $q3->whereYear('closed_at', '>', $year)
+                                ->orWhere(function ($q4) use ($year, $month) {
+                                    $q4->whereYear('closed_at', $year)
+                                        ->whereMonth('closed_at', '>', $month);
+                                });
+                        });
+                });
+        });
+    }
+
+    /**
+     * Risiko yang sudah terpublish pada atau sebelum akhir bulan monitoring.
+     * Contoh: published_at September tidak tampil di monitoring Agustus.
+     * Data lama tanpa published_at tetap diikutkan jika status sudah published.
+     */
+    public function scopePublishedAsOf($query, int $year, int $month)
+    {
+        $cutoff = Carbon::create($year, $month, 1)->endOfMonth();
+        $table = $query->getModel()->getTable();
+
+        return $query->where(function ($q) use ($cutoff, $table) {
+            $q->where("{$table}.published_at", '<=', $cutoff)
+                ->orWhere(function ($q2) use ($table) {
+                    $q2->whereNull("{$table}.published_at")
+                        ->where("{$table}.status", self::STATUS_PUBLISHED);
+                });
+        });
+    }
+
+    public function isPublishedAsOf(int $year, int $month): bool
+    {
+        if (!$this->published_at) {
+            return (int) $this->status === self::STATUS_PUBLISHED;
+        }
+
+        return $this->published_at->lte(Carbon::create($year, $month, 1)->endOfMonth());
+    }
+
+    public function getClosedAtFormattedAttribute(): ?string
+    {
+        if (!$this->closed_at) {
+            return null;
+        }
+
+        return $this->closed_at->format('d/m/Y');
+    }
+
+    public function getCloseRequestedAtFormattedAttribute(): ?string
+    {
+        if (!$this->close_requested_at) {
+            return null;
+        }
+
+        return $this->close_requested_at->format('d-m-Y H:i:s') . ' WIB';
+    }
 
     protected $appends = [
         'perkiraan_waktu_terpapar_risiko',
+        'closed_at_formatted',
+        'close_requested_at_formatted',
     ];
+
+    public function closeRequestedBy()
+    {
+        return $this->belongsTo(User::class, 'close_requested_by');
+    }
 
     public function unitType()
     {

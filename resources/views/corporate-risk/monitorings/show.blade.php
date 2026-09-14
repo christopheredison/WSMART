@@ -259,14 +259,14 @@
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
                                             <td>
                                                 <span class="inputmask-fixed">
-                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                    {{ $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                                 </span>
                                             </td>
                                             <td class="display-progress inputmask-fixed">
                                                 {{ $perlakuan->lastMonitoring?->progress_rencana_perlakuan_risiko ?? '-' }}
                                             </td>
                                             <td class="display-biaya inputmask-fixed">
-                                                {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                {{ $perlakuan->lastMonitoring?->realisasi_biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->lastMonitoring->realisasi_biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                             </td>
                                             <td class="display-timeline">
                                                 {{ $perlakuan->lastMonitoring?->timeline_perlakuan_risiko_start?->format('d/m/Y') ?: '-' }}
@@ -325,7 +325,7 @@
                                             <td>{{ $perlakuan->rencana_perlakuan_risiko ?: '-' }}</td>
                                             <td>
                                               <span class="inputmask-fixed">
-                                                {{ isset($perlakuan->biaya_perlakuan_risiko) ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-' }}
+                                                {{ isset($perlakuan->biaya_perlakuan_risiko) ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : 'Rp 0' }}
                                               </span>
                                             </td>
                                             <td class="display-progress inputmask-fixed">
@@ -360,7 +360,7 @@
                                     <th>Key Risk Indicator</th>
                                     <th>Satuan KRI</th>
                                     <th>Batas Aman</th>
-                                    <th>Batas Waspada</th>
+                                    <th>Batas Siaga</th>
                                     <th>Batas Bahaya</th>
                                     <th>Nilai KRI</th>
                                     <th>Kondisi</th>
@@ -385,7 +385,7 @@
                                             @php
                                                 $statusMap = [
                                                     1 => 'Aman',
-                                                    2 => 'Waspada',
+                                                    2 => 'Siaga',
                                                     3 => 'Bahaya',
                                                 ];
                                                 $status = $lastMonitoring?->status_kri_terkini;
@@ -979,7 +979,7 @@ $(document).ready(function() {
 
         // update DOM
         const tr = $('#table-penyebab-risiko tr[data-id="' + id + '"]');
-        tr.find('.display-biaya').text('Rp' + Intl.NumberFormat('id-ID').format(realisasiBiayaPerlakuanRisiko));
+        tr.find('.display-biaya').text('Rp ' + Intl.NumberFormat('id-ID').format(realisasiBiayaPerlakuanRisiko));
         tr.find('.display-progress').text(progressPerlakuanRisiko);
 
         $('#modalUpdateRealisasi').modal('hide');

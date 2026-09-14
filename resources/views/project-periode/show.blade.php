@@ -330,7 +330,9 @@
             </div>
         </div>
     </div>
-    @include('master.basic-crud._modal_edit', ['fields' => $editFields, 'action' => route('projects.update', $projectPeriode->project->id), 'resourceName' => 'Project'])
+    @if ($canEditProject)
+        @include('master.basic-crud._modal_edit', ['fields' => $editFields, 'action' => route('projects.update', $projectPeriode->project->id), 'resourceName' => 'Project'])
+    @endif
 @endsection
 
 @push('styles')

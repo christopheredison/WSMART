@@ -407,7 +407,7 @@
 <div class="card shadow-sm mb-4">
     <div class="card-header stepper border-0 pb-0">
         <div class="nav-link active d-flex align-items-center p-0">
-            <span class="h3 mb-0">Daftar KRI Korporat (Status Waspada & Bahaya)</span>
+            <span class="h3 mb-0">Daftar KRI Korporat (Status Siaga & Bahaya)</span>
         </div>
     </div>
     <div class="card-body">
@@ -415,7 +415,7 @@
             <table class="table table-bordered table-hover table-sm">
                 <thead class="text-center align-middle">
                     <tr>
-                        <th style="min-width: 150px;">Risiko</th><th style="min-width: 200px;">Penyebab</th><th style="min-width: 150px;">KRI</th><th>Batas Aman</th><th>Batas Waspada</th><th>Batas Bahaya</th><th>Kondisi Saat Ini</th><th>Status</th>
+                        <th style="min-width: 150px;">Risiko</th><th style="min-width: 200px;">Penyebab</th><th style="min-width: 150px;">KRI</th><th>Batas Aman</th><th>Batas Siaga</th><th>Batas Bahaya</th><th>Kondisi Saat Ini</th><th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -443,7 +443,7 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI Korporat dengan status Waspada atau Bahaya.</td></tr>
+                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI Korporat dengan status Siaga atau Bahaya.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -455,7 +455,7 @@
 <div class="card shadow-sm mb-4">
     <div class="card-header stepper border-0 pb-0">
         <div class="nav-link active d-flex align-items-center p-0">
-            <span class="h3 mb-0">Daftar KRI Proyek (Status Waspada & Bahaya)</span>
+            <span class="h3 mb-0">Daftar KRI Proyek (Status Siaga & Bahaya)</span>
         </div>
     </div>
     <div class="card-body">
@@ -463,7 +463,7 @@
             <table class="table table-bordered table-hover table-sm">
                 <thead class="text-center align-middle">
                     <tr>
-                        <th style="min-width: 150px;">Risiko</th><th style="min-width: 200px;">Penyebab</th><th style="min-width: 150px;">KRI</th><th>Batas Aman</th><th>Batas Waspada</th><th>Batas Bahaya</th><th>Kondisi Saat Ini</th><th>Status</th>
+                        <th style="min-width: 150px;">Risiko</th><th style="min-width: 200px;">Penyebab</th><th style="min-width: 150px;">KRI</th><th>Batas Aman</th><th>Batas Siaga</th><th>Batas Bahaya</th><th>Kondisi Saat Ini</th><th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -491,7 +491,7 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI Proyek dengan status Waspada atau Bahaya.</td></tr>
+                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI Proyek dengan status Siaga atau Bahaya.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -503,7 +503,7 @@
 <div class="card shadow-sm mb-4">
     <div class="card-header stepper border-0 pb-0">
         <div class="nav-link active d-flex align-items-center p-0">
-            <span class="h3 mb-0">Daftar KRI Divisi (Status Waspada & Bahaya)</span>
+            <span class="h3 mb-0">Daftar KRI Divisi (Status Siaga & Bahaya)</span>
         </div>
     </div>
     <div class="card-body">
@@ -511,7 +511,7 @@
             <table class="table table-bordered table-hover table-sm">
                 <thead class="text-center align-middle">
                     <tr>
-                        <th style="min-width: 150px;">Risiko</th><th style="min-width: 200px;">Penyebab</th><th style="min-width: 150px;">KRI</th><th>Batas Aman</th><th>Batas Waspada</th><th>Batas Bahaya</th><th>Kondisi Saat Ini</th><th>Status</th>
+                        <th style="min-width: 150px;">Risiko</th><th style="min-width: 200px;">Penyebab</th><th style="min-width: 150px;">KRI</th><th>Batas Aman</th><th>Batas Siaga</th><th>Batas Bahaya</th><th>Kondisi Saat Ini</th><th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -539,7 +539,7 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI Divisi dengan status Waspada atau Bahaya.</td></tr>
+                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI Divisi dengan status Siaga atau Bahaya.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -551,7 +551,7 @@
 <div class="card shadow-sm mb-4">
     <div class="card-header stepper border-0 pb-0">
         <div class="nav-link active d-flex align-items-center p-0">
-            <span class="h3 mb-0">Daftar KRI Anak Perusahaan (Status Waspada & Bahaya)</span>
+            <span class="h3 mb-0">Daftar KRI Anak Perusahaan (Status Siaga & Bahaya)</span>
         </div>
     </div>
     <div class="card-body">
@@ -559,7 +559,7 @@
             <table class="table table-bordered table-hover table-sm">
                 <thead class="text-center align-middle">
                     <tr>
-                        <th style="min-width: 150px;">Risiko</th><th style="min-width: 200px;">Penyebab</th><th style="min-width: 150px;">KRI</th><th>Batas Aman</th><th>Batas Waspada</th><th>Batas Bahaya</th><th>Kondisi Saat Ini</th><th>Status</th>
+                        <th style="min-width: 150px;">Risiko</th><th style="min-width: 200px;">Penyebab</th><th style="min-width: 150px;">KRI</th><th>Batas Aman</th><th>Batas Siaga</th><th>Batas Bahaya</th><th>Kondisi Saat Ini</th><th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -587,7 +587,7 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI Anak Perusahaan dengan status Waspada atau Bahaya.</td></tr>
+                    <tr><td colspan="8" class="text-center p-4">Tidak ada data KRI Anak Perusahaan dengan status Siaga atau Bahaya.</td></tr>
                     @endforelse
                 </tbody>
             </table>

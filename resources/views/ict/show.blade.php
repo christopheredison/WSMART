@@ -1,5 +1,6 @@
 @extends('layouts.default')
 @section('dashboard')
+@include('partials.success-message')
 <div class="row g-5 mb-5">
   <div class="col-12">
     <div class="card btn-reveal-trigger">

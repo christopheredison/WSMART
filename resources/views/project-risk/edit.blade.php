@@ -32,47 +32,65 @@
                                 @php
                                     $selectedSasaranId = old('sasaran_proyek_id', $projectRisk->sasaran_proyek_id);
                                     $targetCapaianKinerja = old('target_capaian_kinerja', $projectRisk->target_capaian_kinerja);
-                                    $isOther = false;
+                                    $hasLegacySasaran = false;
+                                    $legacySasaranText = null;
 
-                                    if ($selectedSasaranId) {
-                                        // Case 1: Sasaran ID exists
-                                        $isOther = false;
+                                    if ($selectedSasaranId && $selectedSasaranId !== 'legacy') {
+                                        // Sasaran sudah terhubung ke master data
                                     } elseif (!empty($targetCapaianKinerja)) {
-                                        // Case 2 & 3: Check if it matches any sasaran (default or database)
                                         $matchFound = false;
-                                        foreach($sasaranProyeks as $sasaranProyek) {
-                                            // Check if text matches (trimmed to be safe)
+                                        foreach ($sasaranProyeks as $sasaranProyek) {
                                             if (trim($sasaranProyek->kpi_desc) == trim($targetCapaianKinerja)) {
                                                 $selectedSasaranId = $sasaranProyek->id;
                                                 $matchFound = true;
-                                                $isOther = false;
                                                 break;
                                             }
                                         }
 
                                         if (!$matchFound) {
-                                            // Case 3: No ID, Text exists but doesn't match any option -> Other
-                                            $isOther = true;
+                                            $hasLegacySasaran = true;
+                                            $legacySasaranText = $targetCapaianKinerja;
+                                            $selectedSasaranId = 'legacy';
                                         }
                                     }
-                                    //echo "Selected Sasaran ID: " . $selectedSasaranId;
-
                                 @endphp
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko</label>
                                 <div class="w-100">
                                     <select class="form-select select2" id="sasaran_proyek_id" name="sasaran_proyek_id">
                                         <option value="">Pilih Sasaran Risiko</option>
+                                        @if($hasLegacySasaran)
+                                            <option value="legacy" data-kpi="{{ $legacySasaranText }}" {{ $selectedSasaranId == 'legacy' ? 'selected' : '' }}>
+                                                {{ $legacySasaranText }} (Sasaran Saat Ini)
+                                            </option>
+                                        @endif
                                         @foreach($sasaranProyeks as $sasaranProyek)
                                             <option value="{{ $sasaranProyek->id }}" data-kpi="{{ $sasaranProyek->kpi_desc }}" {{ $selectedSasaranId == $sasaranProyek->id ? 'selected' : '' }}>
                                                 {{ $sasaranProyek->kpi_desc }}
                                             </option>
                                         @endforeach
-                                        <option value="other" {{ $isOther ? 'selected' : '' }}>Sasaran Lainnya</option>
+                                        <option value="other" {{ old('sasaran_proyek_id') === 'other' ? 'selected' : '' }}>Ajukan Sasaran Lainnya</option>
                                     </select>
-
-                                    <textarea class="form-control mt-2 {{ $isOther ? '' : 'd-none' }}" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
-                                        placeholder="Masukkan Sasaran Risiko Lainnya">{{ $targetCapaianKinerja }}</textarea>
-
+                                    @if($hasLegacySasaran)
+                                        <div class="alert alert-warning mt-2 mb-2" id="sasaran-legacy-info">
+                                            Sasaran ini berasal dari data lama. Anda dapat mempertahankannya atau memilih sasaran yang sudah disetujui Divisi Manajemen Risiko.
+                                        </div>
+                                    @endif
+                                    <div class="alert alert-info mt-2 d-none mb-2" id="sasaran-other-guide">
+                                        Sasaran ini perlu persetujuan Divisi Manajemen Risiko sebelum bisa digunakan.
+                                    </div>
+                                    <div class="d-none" id="sasaran-other-box">
+                                        <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
+                                            placeholder="Masukkan usulan sasaran risiko lainnya"></textarea>
+                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" id="btn-submit-sasaran-lainnya">
+                                                <i class="bx bx-send me-1"></i>Ajukan Persetujuan
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btn-refresh-sasaran">
+                                                <i class="bx bx-refresh me-1"></i>Muat Ulang Pilihan Sasaran
+                                            </button>
+                                        </div>
+                                        <small class="text-muted d-block mt-2">Setelah disetujui Divisi Manajemen Risiko, pilih kembali sasaran dari dropdown di atas.</small>
+                                    </div>
                                     <input type="hidden" id="kpi_desc_selected" name="kpi_desc_selected">
                                 </div>
                             </div>
@@ -97,29 +115,54 @@
                                 @php
                                     $selectedPeristiwaId = old('peristiwa_risiko_id', $projectRisk->peristiwa_risiko_id);
                                     $manualPeristiwa = old('rencana_kegiatan', $projectRisk->rencana_kegiatan);
-                                    $isOtherPeristiwa = false;
+                                    $hasLegacyPeristiwa = false;
+                                    $isOtherPeristiwa = old('peristiwa_risiko_id') === 'other';
 
-                                    if (!$selectedPeristiwaId && !empty($manualPeristiwa)) {
-                                        $isOtherPeristiwa = true;
+                                    if (!$isOtherPeristiwa && (empty($selectedPeristiwaId) || $selectedPeristiwaId == 0) && !empty($manualPeristiwa)) {
+                                        $hasLegacyPeristiwa = true;
+                                        $selectedPeristiwaId = 'legacy';
                                     }
                                 @endphp
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Peristiwa Risiko</label>
                                 <div class="w-100">
                                     <select class="form-select select2 js-select-hide-search" name="peristiwa_risiko_id" id="peristiwa_risiko" required>
+                                        @if($hasLegacyPeristiwa)
+                                            <option value="legacy" {{ $selectedPeristiwaId == 'legacy' ? 'selected' : '' }}>
+                                                {{ $manualPeristiwa }} (Peristiwa Saat Ini)
+                                            </option>
+                                        @endif
                                         @foreach ($peristiwaRisikos as $peristiwaRisiko)
                                             <option value="{{ $peristiwaRisiko->id }}"
                                                 {{ $selectedPeristiwaId == $peristiwaRisiko->id ? 'selected' : '' }}>
                                                 {{ $peristiwaRisiko->title }}
                                             </option>
                                         @endforeach
-                                        <option value="other" {{ $isOtherPeristiwa ? 'selected' : '' }}>Lainnya</option>
+                                        <option value="other" {{ $isOtherPeristiwa ? 'selected' : '' }}>Ajukan Peristiwa Lainnya</option>
                                     </select>
-
-                                    <textarea class="form-control mt-2 {{ $isOtherPeristiwa ? '' : 'd-none' }}"
-                                        id="peristiwa_risiko_lainnya"
-                                        name="rencana_kegiatan"
-                                        rows="3"
-                                        placeholder="Masukkan Peristiwa Risiko Lainnya">{{ $manualPeristiwa }}</textarea>
+                                    @if($hasLegacyPeristiwa)
+                                        <div class="alert alert-warning mt-2 mb-2" id="peristiwa-legacy-info">
+                                            Peristiwa ini berasal dari data lama. Anda dapat mempertahankannya atau memilih peristiwa yang sudah disetujui Divisi Manajemen Risiko.
+                                        </div>
+                                    @endif
+                                    <div class="alert alert-info mt-2 d-none mb-2" id="peristiwa-other-guide">
+                                        Peristiwa ini perlu persetujuan Divisi Manajemen Risiko sebelum bisa digunakan.
+                                    </div>
+                                    <div class="d-none" id="peristiwa-other-box">
+                                        <textarea class="form-control"
+                                            id="peristiwa_risiko_lainnya"
+                                            name="rencana_kegiatan"
+                                            rows="3"
+                                            placeholder="Masukkan usulan peristiwa risiko lainnya">{{ $isOtherPeristiwa ? $manualPeristiwa : '' }}</textarea>
+                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" id="btn-submit-peristiwa-lainnya">
+                                                <i class="bx bx-send me-1"></i>Ajukan Persetujuan
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btn-refresh-peristiwa">
+                                                <i class="bx bx-refresh me-1"></i>Muat Ulang Pilihan Peristiwa
+                                            </button>
+                                        </div>
+                                        <small class="text-muted d-block mt-2">Setelah disetujui Divisi Manajemen Risiko, pilih kembali peristiwa dari dropdown di atas.</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -273,7 +316,7 @@
                 </div>
                 <div class="card-body">
                     <div id="dampak-risiko-body">
-                        <div class="row g-2 mb-3 dampak-row-item">
+                        <div class="row g-2 mb-3 dampak-row-item" data-item-label="dampak risiko">
                             <div class="col">
                                 <div class="form-floating">
                                     <input type="hidden" name="penyebab_dampak_id[]">
@@ -314,7 +357,7 @@
                 </div>
                 <div class="card-body">
                     <div id="penyebab-risiko-body">
-                        <div class="row g-2">
+                        <div class="row g-2 penyebab-row-item" data-item-label="penyebab risiko">
                             <div class="col">
                                 <div class="form-floating">
                                     <input type="hidden" name="penyebab_risiko_id[]">
@@ -359,7 +402,7 @@
                 </div>
                 <div class="card-body">
                     <div id="kri-body">
-                        <div class="row g-2">
+                        <div class="row g-2 kri-row-item" data-item-label="parameter / KRI">
                             <div class="col-12 col-lg-11">
                                 <div class="row g-2">
                                     <div class="col-12">
@@ -383,7 +426,7 @@
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
                                             <input type="text" class="form-control border-warning" name="batas_waspada[]">
-                                            <label for="batas_waspada_1">Batas Waspada</label>
+                                            <label for="batas_waspada_1">Batas Siaga</label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
@@ -534,9 +577,39 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
-    function removeRow(event) {
-        let row = $(event.target).closest('.row');
+    async function confirmMonitoredRowDeletion(row) {
+        if (String(row.data('has-monitoring')) !== '1') {
+            return true;
+        }
+
+        const itemLabel = row.data('item-label') || 'data';
+        const result = await Swal.fire({
+            title: 'Data Sudah Dimonitoring',
+            text: `Data ${itemLabel} ini sudah memiliki history monitoring. Tetap hapus dari risiko aktif? History monitoring akan tetap tersimpan.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal',
+        });
+
+        return result.isConfirmed;
+    }
+
+    async function removeRow(event) {
+        const row = $(event.target).closest('.row');
+        if (!await confirmMonitoredRowDeletion(row)) {
+            return;
+        }
+
         row.remove();
+    }
+
+    let newRiskDetailKey = -1;
+
+    function nextRiskDetailKey() {
+        return newRiskDetailKey--;
     }
 
     $(document).ready(function() {
@@ -576,11 +649,28 @@
         $('#peristiwa_risiko').on('change', function() {
             const selectedValue = $(this).val();
             const otherTextarea = $('#peristiwa_risiko_lainnya');
+            const otherGuide = $('#peristiwa-other-guide');
+            const otherBox = $('#peristiwa-other-box');
+            const refreshBtn = $('#btn-refresh-peristiwa');
+            const legacyInfo = $('#peristiwa-legacy-info');
 
             if (selectedValue === 'other') {
-                otherTextarea.removeClass('d-none').attr('required', true);
-            } else {
+                legacyInfo.addClass('d-none');
+                otherGuide.removeClass('d-none');
+                otherBox.removeClass('d-none');
+                otherTextarea.removeClass('d-none').attr('required', false);
+            } else if (selectedValue === 'legacy') {
+                legacyInfo.removeClass('d-none');
+                otherGuide.addClass('d-none');
+                otherBox.addClass('d-none');
                 otherTextarea.addClass('d-none').attr('required', false);
+                refreshBtn.addClass('d-none');
+            } else {
+                legacyInfo.addClass('d-none');
+                otherGuide.addClass('d-none');
+                otherBox.addClass('d-none');
+                otherTextarea.addClass('d-none').attr('required', false);
+                refreshBtn.addClass('d-none');
                 if (selectedValue !== "") {
                     otherTextarea.val('');
                 }
@@ -588,62 +678,177 @@
         });
 
         if ($('#peristiwa_risiko').val() === 'other') {
-            $('#peristiwa_risiko_lainnya').removeClass('d-none').attr('required', true);
+            $('#peristiwa-other-guide, #peristiwa-other-box').removeClass('d-none');
         }
 
-        const selectedValueFromPHP = @json(old('sasaran_proyek_id', $projectRisk->sasaran_proyek_id));
+        const submitSasaranUrl = @json(route('projects.sasaran-lainnya.submit', ['project' => $projectPeriodeList->id]));
+        const submitPeristiwaUrl = @json(route('projects.peristiwa-lainnya.submit', ['project' => $projectPeriodeList->id]));
 
         $('#sasaran_proyek_id').on('change', function() {
             const selectedValue = $(this).val();
             const targetTextarea = $('#target_capaian_kinerja');
             const kpiDescSelected = $('#kpi_desc_selected');
+            const otherGuide = $('#sasaran-other-guide');
+            const otherBox = $('#sasaran-other-box');
+            const refreshBtn = $('#btn-refresh-sasaran');
+            const legacyInfo = $('#sasaran-legacy-info');
 
             if (selectedValue === 'other') {
-                targetTextarea.removeClass('d-none').attr('required', true);
+                legacyInfo.addClass('d-none');
+                otherGuide.removeClass('d-none');
+                otherBox.removeClass('d-none');
+                targetTextarea.removeClass('d-none').attr('required', false).val('');
                 kpiDescSelected.val('');
+            } else if (selectedValue === 'legacy') {
+                legacyInfo.removeClass('d-none');
+                otherGuide.addClass('d-none');
+                otherBox.addClass('d-none');
+                targetTextarea.addClass('d-none').attr('required', false).val('');
+                refreshBtn.addClass('d-none');
+                kpiDescSelected.val($(this).find('option:selected').data('kpi') || '');
             } else if (selectedValue) {
+                legacyInfo.addClass('d-none');
                 const kpiDesc = $(this).find('option:selected').data('kpi');
-                targetTextarea.addClass('d-none').attr('required', false);
+                otherGuide.addClass('d-none');
+                otherBox.addClass('d-none');
+                targetTextarea.addClass('d-none').attr('required', false).val('');
+                refreshBtn.addClass('d-none');
                 kpiDescSelected.val(kpiDesc);
             } else {
-                targetTextarea.addClass('d-none').attr('required', false);
+                legacyInfo.addClass('d-none');
+                otherGuide.addClass('d-none');
+                otherBox.addClass('d-none');
+                targetTextarea.addClass('d-none').attr('required', false).val('');
+                refreshBtn.addClass('d-none');
                 kpiDescSelected.val('');
             }
         });
 
-        setTimeout(function() {
-            const sasaranIdFromDb = @json($projectRisk->sasaran_proyek_id);
-            const targetCapaianFromDb = @json($projectRisk->target_capaian_kinerja);
+        $('#btn-submit-sasaran-lainnya').on('click', function() {
+            const value = $('#target_capaian_kinerja').val().trim();
+            const btn = $(this);
 
-            // Jika ID kosong tapi ada text target capaian (migrasi dari data lama atau default sasaran)
-            if (!sasaranIdFromDb && targetCapaianFromDb) {
-                let matchFound = false;
+            if (!value) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Data Belum Lengkap',
+                    text: 'Mohon isi deskripsi sasaran lainnya terlebih dahulu.',
+                });
+                return;
+            }
 
-                // Loop semua option untuk cari yang text-nya sama
-                $('#sasaran_proyek_id option').each(function() {
-                    // Skip option placeholder
-                    if (!$(this).val()) return;
+            Swal.fire({
+                title: 'Ajukan sasaran ini?',
+                html: `Sasaran <strong>${$('<div>').text(value).html()}</strong> akan dikirim ke Divisi Manajemen Risiko untuk diverifikasi.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, Ajukan',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (!result.isConfirmed) {
+                    return;
+                }
 
-                    // Bandingkan text (trim whitespace)
-                    // Ambil text dari data-kpi jika ada, atau text content
-                    const optionText = $(this).data('kpi') ? $(this).data('kpi') : $(this).text().trim();
+                btn.prop('disabled', true);
 
-                    if (optionText === targetCapaianFromDb.trim()) {
-                        $('#sasaran_proyek_id').val($(this).val()).trigger('change');
-                        matchFound = true;
-                        return false; // break loop
+                $.ajax({
+                    url: submitSasaranUrl,
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        kpi_desc: value,
+                    },
+                    success: function(response) {
+                        $('#btn-refresh-sasaran').removeClass('d-none');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Pengajuan Berhasil',
+                            text: response.message || 'Pengajuan telah dikirim ke MR.',
+                        });
+                    },
+                    error: function(xhr) {
+                        const msg = xhr?.responseJSON?.message || 'Gagal mengirim pengajuan sasaran. Silakan coba lagi.';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Pengajuan Gagal',
+                            text: msg,
+                        });
+                    },
+                    complete: function() {
+                        btn.prop('disabled', false);
                     }
                 });
+            });
+        });
 
-                // Jika tidak ada yang cocok, set ke 'other'
-                if (!matchFound) {
-                    $('#sasaran_proyek_id').val('other').trigger('change');
-                }
-            } else {
-                // Jika sudah ada ID atau kondisi normal, trigger change untuk update UI
-                $('#sasaran_proyek_id').trigger('change');
+        $('#btn-refresh-sasaran').on('click', function() {
+            window.location.reload();
+        });
+
+        $('#btn-submit-peristiwa-lainnya').on('click', function() {
+            const value = $('#peristiwa_risiko_lainnya').val().trim();
+            const btn = $(this);
+
+            if (!value) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Data Belum Lengkap',
+                    text: 'Mohon isi deskripsi peristiwa risiko lainnya terlebih dahulu.',
+                });
+                return;
             }
-        }, 100);
+
+            Swal.fire({
+                title: 'Ajukan peristiwa ini?',
+                html: `Peristiwa <strong>${$('<div>').text(value).html()}</strong> akan dikirim ke Divisi Manajemen Risiko untuk diverifikasi.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, Ajukan',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                btn.prop('disabled', true);
+
+                $.ajax({
+                    url: submitPeristiwaUrl,
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        title: value,
+                    },
+                    success: function(response) {
+                        $('#btn-refresh-peristiwa').removeClass('d-none');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Pengajuan Berhasil',
+                            text: response.message || 'Pengajuan telah dikirim ke MR.',
+                        });
+                    },
+                    error: function(xhr) {
+                        const msg = xhr?.responseJSON?.message || 'Gagal mengirim pengajuan peristiwa. Silakan coba lagi.';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Pengajuan Gagal',
+                            text: msg,
+                        });
+                    },
+                    complete: function() {
+                        btn.prop('disabled', false);
+                    }
+                });
+            });
+        });
+
+        $('#btn-refresh-peristiwa').on('click', function() {
+            window.location.reload();
+        });
 
         const masterKris = @json($masterKris->keyBy('id'));
         const kontrolExistings = @json($kontrolEksistings->keyBy('id'));
@@ -661,12 +866,13 @@
         });
 
         $('#add-dampak').click(function() {
+            const itemKey = nextRiskDetailKey();
             let html = `
-            <div class="row g-2 mb-3 dampak-row-item">
+            <div class="row g-2 mb-3 dampak-row-item" data-item-label="dampak risiko">
                 <div class="col">
                     <div class="form-floating">
                         <input type="hidden" name="penyebab_dampak_id[]">
-                        <textarea class="form-control input-dampak-risiko" name="dampak_risiko[]" placeholder="Masukkan Dampak Risiko" required></textarea>
+                        <textarea class="form-control input-dampak-risiko" name="dampak_risiko[${itemKey}]" placeholder="Masukkan Dampak Risiko" required></textarea>
                         <label>Dampak Risiko</label>
                     </div>
                 </div>
@@ -710,12 +916,13 @@
         let row = 0;
         $('#add-column').click(function() {
             row++;
+            const itemKey = nextRiskDetailKey();
             let html = `
-            <div class="row g-2">
+            <div class="row g-2 penyebab-row-item" data-item-label="penyebab risiko">
                 <div class="col">
                 <div class="form-floating">
                     <input type="hidden" name="penyebab_risiko_id[]" value="">
-                    <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[]" placeholder="Masukkan Penyebab Risiko">
+                    <input type="text" class="form-control input-penyebab-risiko" name="penyebab_risiko[${itemKey}]" placeholder="Masukkan Penyebab Risiko">
                     <label>Penyebab Risiko</label>
                 </div>
                 </div>
@@ -735,37 +942,38 @@
         // Add Column Key Risk Indicator
         $('#add-column-kri').click(function() {
             row++;
+            const itemKey = nextRiskDetailKey();
             let html = `
-                <div class="row g-2">
+                <div class="row g-2 kri-row-item" data-item-label="parameter / KRI">
                     <div class="col-12 col-lg-11">
                         <div class="row g-2">
                             <div class="col-12">
                                 <div class="form-group form-floating">
-                                    <input type="text" class="form-control" name="key_risk_indicator[]">
+                                    <input type="text" class="form-control" name="key_risk_indicator[${itemKey}]">
                                     <label for="key_risk_indicator_1">Key Risk Indicator</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating">
-                                    <input type="text" class="form-control" name="satuan_kri[]">
+                                    <input type="text" class="form-control" name="satuan_kri[${itemKey}]">
                                     <label for="satuan_kri_1">Satuan KRI</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
-                                    <input type="text" class="form-control border-success" name="batas_aman[]">
+                                    <input type="text" class="form-control border-success" name="batas_aman[${itemKey}]">
                                     <label for="batas_aman_1">Batas Aman</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
-                                    <input type="text" class="form-control border-warning" name="batas_waspada[]">
-                                    <label for="batas_waspada_1">Batas Waspada</label>
+                                    <input type="text" class="form-control border-warning" name="batas_waspada[${itemKey}]">
+                                    <label for="batas_waspada_1">Batas Siaga</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
-                                    <input type="text" class="form-control border-danger" name="batas_bahaya[]">
+                                    <input type="text" class="form-control border-danger" name="batas_bahaya[${itemKey}]">
                                     <label for="batas_bahaya_1">Batas Bahaya</label>
                                 </div>
                             </div>
@@ -904,6 +1112,16 @@
             const action = $(this).data('action');
             const form = $('#main-form');
             const url = form.attr('action');
+            const selectedSasaran = $('#sasaran_proyek_id').val();
+
+            if (selectedSasaran === 'other') {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Sasaran Belum Bisa Dipakai',
+                    text: 'Silakan ajukan sasaran lainnya terlebih dahulu, lalu tunggu persetujuan MR sebelum menyimpan risiko.',
+                });
+                return;
+            }
 
             const data = new FormData(form[0]);
             data.append('action', action);
@@ -1127,44 +1345,62 @@
                 else if (key === 'perkiraan_waktu_terpapar_risiko_akhir') {
                     // flatpickrIns2.setDate(value);
                 }
-                else if (key === 'peristiwa_risiko_id' || key === 'sasaran_proyek_id') {
+                else if (key === 'peristiwa_risiko_id' || key === 'sasaran_proyek_id' || key === 'target_capaian_kinerja') {
                     continue;
                 }
                 else if (Array.isArray(value)) {
                     if (key === 'penyebab_risiko_projects') {
                         value.forEach((penyebab, index) => {
+                            let currentRow;
                             if (index === 0) {
                                 $('.input-penyebab-risiko').val(penyebab.penyebab_risiko).attr('name', `penyebab_risiko[${penyebab.id}]`);
+                                currentRow = $('#penyebab-risiko-body > .penyebab-row-item').first();
                             } else {
                                 $('#add-column').click();
                                 $(`.input-penyebab-risiko`).last().val(penyebab.penyebab_risiko).attr('name', `penyebab_risiko[${penyebab.id}]`);
+                                currentRow = $('#penyebab-risiko-body > .penyebab-row-item').last();
                             }
+                            currentRow.data('has-monitoring', penyebab.monitorings_count > 0 ? '1' : '0');
                         });
                     } else if (key === 'dampak_risiko_projects') {
                         value.forEach((dampak, index) => {
+                            let currentRow;
                             if (index === 0) {
                                 $('.input-dampak-risiko').val(dampak.dampak_risiko).attr('name', `dampak_risiko[${dampak.id}]`);
+                                currentRow = $('#dampak-risiko-body > .dampak-row-item').first();
                             } else {
                                 $('#add-dampak').click();
                                 $(`.input-dampak-risiko`).last().val(dampak.dampak_risiko).attr('name', `dampak_risiko[${dampak.id}]`);
+                                currentRow = $('#dampak-risiko-body > .dampak-row-item').last();
                             }
+                            currentRow.data('has-monitoring', dampak.monitorings_count > 0 ? '1' : '0');
                         });
                     } else if (key === 'kri_projects') {
                         value.forEach((kri, index) => {
+                            let currentRow;
                             if (index === 0) {
-                                $(`[name="key_risk_indicator[]"]`).val(kri.kri);
-                                $(`[name="satuan_kri[]"]`).val(kri.satuan_kri);
-                                $(`[name="batas_aman[]"]`).val(kri.batas_aman);
-                                $(`[name="batas_waspada[]"]`).val(kri.batas_waspada);
-                                $(`[name="batas_bahaya[]"]`).val(kri.batas_bahaya);
+                                currentRow = $('#kri-body > .kri-row-item').first();
                             } else {
                                 $('#add-column-kri').click();
-                                $(`[name="key_risk_indicator[]"]`).last().val(kri.kri);
-                                $(`[name="satuan_kri[]"]`).last().val(kri.satuan_kri);
-                                $(`[name="batas_aman[]"]`).last().val(kri.batas_aman);
-                                $(`[name="batas_waspada[]"]`).last().val(kri.batas_waspada);
-                                $(`[name="batas_bahaya[]"]`).last().val(kri.batas_bahaya);
+                                currentRow = $('#kri-body > .kri-row-item').last();
                             }
+
+                            currentRow.find('[name^="key_risk_indicator["]')
+                                .attr('name', `key_risk_indicator[${kri.id}]`)
+                                .val(kri.kri);
+                            currentRow.find('[name^="satuan_kri["]')
+                                .attr('name', `satuan_kri[${kri.id}]`)
+                                .val(kri.satuan_kri);
+                            currentRow.find('[name^="batas_aman["]')
+                                .attr('name', `batas_aman[${kri.id}]`)
+                                .val(kri.batas_aman);
+                            currentRow.find('[name^="batas_waspada["]')
+                                .attr('name', `batas_waspada[${kri.id}]`)
+                                .val(kri.batas_waspada);
+                            currentRow.find('[name^="batas_bahaya["]')
+                                .attr('name', `batas_bahaya[${kri.id}]`)
+                                .val(kri.batas_bahaya);
+                            currentRow.data('has-monitoring', kri.kri_project_monitorings_count > 0 ? '1' : '0');
                         });
                     } else if (key === 'kontrol_eksisting_projects') {
                         value.forEach((kontrol, index) => {

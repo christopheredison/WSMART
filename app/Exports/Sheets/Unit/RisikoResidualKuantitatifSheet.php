@@ -2,6 +2,7 @@
 
 namespace App\Exports\Sheets\Unit;
 
+use App\Exports\Sheets\Unit\Concerns\SupportsUnitColumnExport;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -10,14 +11,36 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
-class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithStrictNullComparison
+class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithStrictNullComparison, WithColumnFormatting
 {
+    use SupportsUnitColumnExport;
+
     private $risikos;
 
-    public function __construct(Collection $risikos)
+    public function __construct(Collection $risikos, bool $includeUnitColumn = false, string $unitColumnLabel = 'Nama Divisi')
     {
         $this->risikos = $risikos;
+        $this->includeUnitColumn = $includeUnitColumn;
+        $this->unitColumnLabel = $unitColumnLabel;
+    }
+
+    public function columnFormats(): array
+    {
+        $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
+
+        return $this->shiftColumnFormats([
+            'I' => $currencyFormat,
+            'J' => $currencyFormat,
+            'K' => $currencyFormat,
+            'L' => $currencyFormat,
+            'Y' => $currencyFormat,
+            'Z' => $currencyFormat,
+            'AA' => $currencyFormat,
+            'AB' => $currencyFormat,
+        ]);
     }
 
     private function getFilteredRisikos()
@@ -39,53 +62,54 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
 
     public function registerEvents(): array
     {
-        $risikosCount = $this->getFilteredRisikos()->count();
-
         return [
-            AfterSheet::class => function (AfterSheet $event) use ($risikosCount) {
+            AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
+                $c = fn (string $col) => $this->c($col);
                 $sheet->insertNewRowBefore(1, 3);
 
-                $sheet->setCellValue('A1', 'No');
-                $sheet->setCellValue('B1', 'Nama BUMN');
-                $sheet->setCellValue('C1', 'No Risiko');
-                $sheet->setCellValue('D1', 'Peristiwa Risiko');
-                $sheet->setCellValue('E1', 'Risiko Residual');
+                $this->setUnitColumnHeader($sheet, 3);
 
-                $sheet->setCellValue('E2', 'Asumsi Perhitungan Dampak');
-                $sheet->setCellValue('I2', 'Nilai Dampak');
-                $sheet->setCellValue('M2', 'Skala Dampak BUMN');
-                $sheet->setCellValue('Q2', 'Nilai Probabilitas');
-                $sheet->setCellValue('U2', 'Skala Probabilitas BUMN');
-                $sheet->setCellValue('Y2', 'Eksposur Risiko');
-                $sheet->setCellValue('AC2', 'Skala Risiko BUMN');
-                $sheet->setCellValue('AG2', 'Level Risiko BUMN');
+                $sheet->setCellValue($c('A') . '1', 'No');
+                $sheet->setCellValue($c('B') . '1', 'Nama BUMN');
+                $sheet->setCellValue($c('C') . '1', 'No Risiko');
+                $sheet->setCellValue($c('D') . '1', 'Peristiwa Risiko');
+                $sheet->setCellValue($c('E') . '1', 'Risiko Residual');
+
+                $sheet->setCellValue($c('E') . '2', 'Asumsi Perhitungan Dampak');
+                $sheet->setCellValue($c('I') . '2', 'Nilai Dampak');
+                $sheet->setCellValue($c('M') . '2', 'Skala Dampak BUMN');
+                $sheet->setCellValue($c('Q') . '2', 'Nilai Probabilitas');
+                $sheet->setCellValue($c('U') . '2', 'Skala Probabilitas BUMN');
+                $sheet->setCellValue($c('Y') . '2', 'Eksposur Risiko');
+                $sheet->setCellValue($c('AC') . '2', 'Skala Risiko BUMN');
+                $sheet->setCellValue($c('AG') . '2', 'Level Risiko BUMN');
 
                 $quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
                 $startColumns = ['E', 'I', 'M', 'Q', 'U', 'Y', 'AC', 'AG'];
 
                 foreach ($startColumns as $startCol) {
-                    $colIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($startCol);
+                    $colIndex = Coordinate::columnIndexFromString($c($startCol));
                     foreach ($quarters as $index => $quarter) {
-                        $currentCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + $index);
+                        $currentCol = Coordinate::stringFromColumnIndex($colIndex + $index);
                         $sheet->setCellValue($currentCol . '3', $quarter);
                     }
                 }
 
                 $mergeColumns = ['A', 'B', 'C', 'D'];
                 foreach ($mergeColumns as $col) {
-                    $sheet->mergeCells("{$col}1:{$col}3");
+                    $sheet->mergeCells("{$c($col)}1:{$c($col)}3");
                 }
 
-                $sheet->mergeCells('E1:AJ1');
-                $sheet->mergeCells('E2:H2');
-                $sheet->mergeCells('I2:L2');
-                $sheet->mergeCells('M2:P2');
-                $sheet->mergeCells('Q2:T2');
-                $sheet->mergeCells('U2:X2');
-                $sheet->mergeCells('Y2:AB2');
-                $sheet->mergeCells('AC2:AF2');
-                $sheet->mergeCells('AG2:AJ2');
+                $sheet->mergeCells($c('E') . '1:' . $c('AJ') . '1');
+                $sheet->mergeCells($c('E') . '2:' . $c('H') . '2');
+                $sheet->mergeCells($c('I') . '2:' . $c('L') . '2');
+                $sheet->mergeCells($c('M') . '2:' . $c('P') . '2');
+                $sheet->mergeCells($c('Q') . '2:' . $c('T') . '2');
+                $sheet->mergeCells($c('U') . '2:' . $c('X') . '2');
+                $sheet->mergeCells($c('Y') . '2:' . $c('AB') . '2');
+                $sheet->mergeCells($c('AC') . '2:' . $c('AF') . '2');
+                $sheet->mergeCells($c('AG') . '2:' . $c('AJ') . '2');
 
                 $headerStyle = [
                     'alignment' => [
@@ -96,29 +120,38 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
                     'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '9BC2E6']],
                     'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => '000000']]]
                 ];
-                $sheet->getStyle('A1:AJ3')->applyFromArray($headerStyle);
+                $sheet->getStyle('A1:' . $c('AJ') . '3')->applyFromArray($headerStyle);
 
-                $sheet->getStyle('E2:AJ2')->applyFromArray([
+                $sheet->getStyle($c('E') . '2:' . $c('AJ') . '2')->applyFromArray([
                     'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBDBDB']]
                 ]);
 
-                $sheet->getStyle('E3:AJ3')->applyFromArray([
+                $sheet->getStyle($c('E') . '3:' . $c('AJ') . '3')->applyFromArray([
                     'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFFFFF']]
                 ]);
 
-                if ($risikosCount > 0) {
-                    $maxDataRow = 3 + $risikosCount;
-                    $sheet->getStyle('A4:AJ' . $maxDataRow)->applyFromArray([
+                $dataStartRow = 4;
+                $lastRow = $sheet->getHighestRow();
+
+                if ($lastRow >= $dataStartRow) {
+                    $sheet->getStyle('A4:' . $c('AJ') . $lastRow)->applyFromArray([
                         'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => '000000']]],
                         'alignment' => ['vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP, 'wrapText' => true]
                     ]);
-                    $this->applyLevelRisikoColoring($sheet, $maxDataRow);
+                    $this->applyLevelRisikoColoring($sheet, $lastRow);
+                    $this->appendCurrencyTotalRow(
+                        $sheet,
+                        $dataStartRow,
+                        $lastRow,
+                        'AJ',
+                        ['I', 'J', 'K', 'L', 'Y', 'Z', 'AA', 'AB'],
+                        'D'
+                    );
                 }
 
-                $col = 'A';
-                while ($col !== 'AK') {
-                    $sheet->getColumnDimension($col)->setAutoSize(true);
-                    $col++;
+                $lastColIndex = Coordinate::columnIndexFromString($c('AJ'));
+                for ($i = 1; $i <= $lastColIndex; $i++) {
+                    $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
                 }
             },
         ];
@@ -126,7 +159,7 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
 
     private function applyLevelRisikoColoring($sheet, $maxRow)
     {
-        $levelRisikoColumns = ['AG', 'AH', 'AI', 'AJ'];
+        $levelRisikoColumns = array_map(fn (string $col) => $this->c($col), ['AG', 'AH', 'AI', 'AJ']);
         for ($row = 4; $row <= $maxRow; $row++) {
             foreach ($levelRisikoColumns as $column) {
                 $cellValue = $sheet->getCell($column . $row)->getValue();
@@ -209,7 +242,7 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 'level_risiko_q4' => $analisa->level_risiko_residual_q4 ?? '-',
             ];
 
-            $exportData->push($rowData);
+            $exportData->push($this->prependUnit($rowData, $risiko));
             $nomorUrut++;
         }
 
@@ -218,14 +251,12 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
 
     private function formatCurrency($value)
     {
-        // Bersihkan karakter non-numerik jika data berbentuk string (misal spasi atau teks nyasar)
         if (is_string($value)) {
             $value = preg_replace('/[^0-9.\-]/', '', $value);
         }
-        
-        // Jika kosong atau bukan angka, kembalikan integer mutlak 0
+
         if ($value === '' || $value === null || !is_numeric($value)) {
-            return 0; 
+            return 0;
         }
 
         return (float) $value;

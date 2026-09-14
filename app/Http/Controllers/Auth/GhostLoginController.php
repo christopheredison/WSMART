@@ -96,10 +96,6 @@ class GhostLoginController extends Controller
 
     protected function isAdminTarget(User $user): bool
     {
-        $roleNames = $user->role_names ?? collect();
-
-        return collect($roleNames)->map(function ($roleName) {
-            return strtolower((string) $roleName);
-        })->contains('admin');
+        return $user->hasExactAdminRole();
     }
 }

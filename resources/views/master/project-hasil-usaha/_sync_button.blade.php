@@ -14,14 +14,21 @@
                 @csrf
                 <div class="modal-body">
                     <p>
-                        Masukkan periode (format YYYYMM) untuk mengambil data dari API. Proses ini akan berjalan langsung dan mungkin memakan waktu beberapa menit tergantung jumlah proyek.
+                        Masukkan periode (format YYYYMM) untuk mengambil data dari API WIKA. Proses ini akan memperbarui data hasil usaha proyek, termasuk data LSP yang masih kosong.
                     </p>
                     <div class="mb-3">
                         <label for="period" class="form-label">Periode</label>
                         <input 
                         type="text" class="form-control" id="period" name="period" 
                             placeholder="Contoh: {{ now()->format('Ym') }}" 
+                            value="{{ now()->format('Ym') }}"
                             required pattern="\d{6}" title="Masukkan 6 digit angka, contoh: 202510">
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1" id="force" name="force">
+                        <label class="form-check-label" for="force">
+                            Paksa ambil ulang semua data (overwrite), meskipun data sudah ada
+                        </label>
                     </div>
                 </div>
                 <div class="modal-footer">

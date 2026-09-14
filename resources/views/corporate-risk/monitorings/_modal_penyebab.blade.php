@@ -21,6 +21,12 @@
                         </div>
                         <div class="col-12">
                             <div class="form-floating">
+                                {{ Form::text('opsi_perlakuan_risiko', null, ['class' => 'form-control', 'disabled' => 'disabled']) }}
+                                <label>Opsi Perlakuan Risiko</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-floating">
                                 {{ Form::textarea('rencana_perlakuan_risiko', null, ['class' => 'form-control', 'rows' => 3, 'disabled' => 'disabled']) }}
                                 <label>Rencana Perlakuan Risiko</label>
                             </div>
@@ -40,7 +46,7 @@
                         <div class="col-12">
                             <h5 class="mt-3 mb-0">Realisasi</h5>
                         </div>
-                        
+
                         <!-- Informasi Realisasi Sebelumnya -->
                         <div class="col-12">
                             <div class="alert alert-info mb-3">
@@ -66,7 +72,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="col-md-6">
                             <div class="form-floating">
                                 {{ Form::text('realisasi_biaya_perlakuan_risiko', null, ['class' => 'form-control inputmask-rupiah', 'required' => 'required']) }}
@@ -75,8 +81,8 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-floating">
-                                {{ Form::number('progress_perlakuan_risiko', null, ['class' => 'form-control', 'required' => 'required', 'max' => 100]) }}
-                                <label>Progress Perlakuan Risiko</label>
+                                {{ Form::number('progress_perlakuan_risiko', null, ['class' => 'form-control', 'required' => 'required', 'max' => 100, 'oninput' => 'if(this.value < 0) this.value = 0; if(this.value > 100) this.value = 100;']) }}
+                                <label>Progress Perlakuan Risiko (%)</label>
                             </div>
                         </div>
                         <div class="col-12">
@@ -93,7 +99,7 @@
                         </div> --}}
                         <div class="col-12">
                             <div class="form-floating">
-                                <input type="text" class="form-control" id="timelineInput" name="timeline_perlakuan_risiko" required>
+                                <input type="text" class="form-control bg-white" id="timelineInput" name="timeline_perlakuan_risiko" required>
                                 <label for="timelineInput">Waktu Perlakuan Risiko</label>
                             </div>
                         </div>

@@ -8,13 +8,26 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
+class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithColumnFormatting, WithStrictNullComparison
 {
+    public function columnFormats(): array
+    {
+        $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
+
+        return [
+            'G' => $currencyFormat, // Nilai Dampak
+            'K' => $currencyFormat, // Eksposur Risiko
+        ];
+    }
+
     protected $risikos;
 
     public function __construct(Collection $risikos)
@@ -124,6 +137,8 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 $sheet->getStyle('F2:M2')->applyFromArray($subHeaderStyle);
 
                 $lastRow = $sheet->getHighestRow();
+                $dataStartRow = 3;
+                $currencyCols = ['G', 'K'];
 
                 $dataStyle = [
                     'borders' => [
@@ -139,19 +154,47 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 ];
 
                 // Terapkan border hanya jika ada data (baris > 2)
-                if ($lastRow > 2) {
-                    $dataRange = 'A3:O' . $lastRow;
+                if ($lastRow >= $dataStartRow) {
+                    $this->forceNumericCurrencyCells($sheet, $currencyCols, $dataStartRow, $lastRow);
+
+                    $dataRange = 'A' . $dataStartRow . ':O' . $lastRow;
                     $sheet->getStyle($dataRange)->applyFromArray($dataStyle);
 
                     // Set rata tengah horizontal untuk kolom-kolom tertentu
-                    // (Kolom M: Level Risiko, N: Nilai Efektivitas, O: Efektifitas)
                     $centerCols = ['A', 'B', 'D', 'H', 'I', 'J', 'L', 'M', 'N', 'O'];
                     foreach ($centerCols as $col) {
-                        $sheet->getStyle("{$col}3:{$col}{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                        $sheet->getStyle("{$col}{$dataStartRow}:{$col}{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     }
 
-                    // Gunakan $lastRow
                     $this->applyLevelRisikoColoring($sheet, $lastRow);
+
+                    // Tambah baris TOTAL
+                    $totalRow = $lastRow + 1;
+                    $sheet->setCellValue('A' . $totalRow, 'TOTAL');
+                    $sheet->mergeCells('A' . $totalRow . ':F' . $totalRow);
+                    $sheet->setCellValue('G' . $totalRow, "=SUM(G{$dataStartRow}:G{$lastRow})");
+                    $sheet->setCellValue('K' . $totalRow, "=SUM(K{$dataStartRow}:K{$lastRow})");
+
+                    $sheet->getStyle('A' . $totalRow . ':O' . $totalRow)->applyFromArray([
+                        'font' => ['bold' => true],
+                        'fill' => [
+                            'fillType' => Fill::FILL_SOLID,
+                            'startColor' => ['rgb' => 'FFF2CC'],
+                        ],
+                        'borders' => [
+                            'allBorders' => [
+                                'borderStyle' => Border::BORDER_THIN,
+                                'color' => ['rgb' => '000000'],
+                            ],
+                        ],
+                        'alignment' => [
+                            'vertical' => Alignment::VERTICAL_CENTER,
+                        ],
+                    ]);
+                    $sheet->getStyle('A' . $totalRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
+                    $sheet->getStyle('G' . $totalRow)->getNumberFormat()->setFormatCode($currencyFormat);
+                    $sheet->getStyle('K' . $totalRow)->getNumberFormat()->setFormatCode($currencyFormat);
                 }
 
                 foreach (range('A', 'N') as $column) {
@@ -159,6 +202,23 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 }
             },
         ];
+    }
+
+    private function forceNumericCurrencyCells($sheet, array $columns, int $startRow, int $endRow): void
+    {
+        foreach ($columns as $col) {
+            for ($row = $startRow; $row <= $endRow; $row++) {
+                $raw = $sheet->getCell($col . $row)->getValue();
+                if (is_string($raw)) {
+                    $raw = preg_replace('/[^0-9.\-]/', '', $raw);
+                }
+                $sheet->setCellValueExplicit(
+                    $col . $row,
+                    (float) ($raw ?: 0),
+                    DataType::TYPE_NUMERIC
+                );
+            }
+        }
     }
 
     /**
@@ -241,11 +301,11 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                     'no_risiko' => $nomorUrut,
                     'peristiwa_risiko' => $risiko->peristiwaRisiko->title ?? $risiko->deskripsi_peristiwa_risiko ?? '-',
                     'asumsi_perhitungan_dampak' => '-',
-                    'nilai_dampak' => '-',
+                    'nilai_dampak' => 0,
                     'skala_dampak' => '-',
                     'nilai_probabilitas' => '-',
                     'skala_probabilitas' => '-',
-                    'eksposur_risiko' => '-',
+                    'eksposur_risiko' => 0,
                     'skala_risiko' => '-',
                     'level_risiko' => '-',
                     'nilai_efektivitas' => '-',
@@ -260,7 +320,26 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
             // Tentukan jenis data berdasarkan kategori dampak
             $jenisData = ucfirst(strtolower($analisa->kategori_dampak ?? 'Kuantitatif'));
 
-            $efektivitasNilai = $monitoring->efektivitas_perlakuan_risiko ?? $risiko->efektivitas_perlakuan_risiko;
+            $efektivitasNilai = $monitoring?->efektivitas_perlakuan_risiko ?? $risiko->efektivitas_perlakuan_risiko;
+
+            if ($monitoring) {
+                $nilaiDampakRealisasi = $monitoring->nilai_dampak;
+                $eksposurRealisasi = $monitoring->eksposure_risiko;
+                $skalaDampakRealisasi = $monitoring->skala_dampak;
+                $nilaiProbabilitasRealisasi = $monitoring->nilai_probabilitas;
+                $skalaProbabilitasRealisasi = $monitoring->skalaProbabilitas?->tingkat ?? '-';
+                $skalaRisikoRealisasi = $monitoring->skala_risiko;
+                $levelRisikoRealisasi = $monitoring->level_risiko;
+            } else {
+                // Belum pernah ada monitoring publish: realisasi mengikuti nilai inherent
+                $nilaiDampakRealisasi = $analisa->nilai_dampak ?? 0;
+                $eksposurRealisasi = $analisa->eksposur_risiko ?? 0;
+                $skalaDampakRealisasi = $analisa->skala_dampak;
+                $nilaiProbabilitasRealisasi = $analisa->nilai_probabilitas ?? 0;
+                $skalaProbabilitasRealisasi = $analisa->skalaProbabilitas?->tingkat ?? '-';
+                $skalaRisikoRealisasi = $analisa->skala_risiko ?? '-';
+                $levelRisikoRealisasi = $analisa->level_risiko ?? '-';
+            }
 
             $rowData = [
                 'jenis_data' => $jenisData,
@@ -269,13 +348,13 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
                 'no_risiko' => $nomorUrut,
                 'peristiwa_risiko' => $risiko->peristiwaRisiko->title ?? $risiko->deskripsi_peristiwa_risiko ?? '-',
                 'asumsi_perhitungan_dampak' => $analisa->asumsi_perhitungan_dampak_residual ?? '-',
-                'nilai_dampak' => $this->formatCurrency($monitoring->nilai_dampak ?? ($analisa->nilai_dampak_residual ?? 0)),
-                'skala_dampak' => $monitoring->skala_dampak ?? $this->formatSkalaDampak($analisa),
-                'nilai_probabilitas' => $this->formatPercentage($monitoring->nilai_probabilitas ?? ($analisa->nilai_probabilitas_residual ?? 0)),
-                'skala_probabilitas' => $monitoring ? ($monitoring->skalaProbabilitas->tingkat ?? '-') : $this->formatSkalaProbabilitas($analisa),
-                'eksposur_risiko' => $this->formatCurrency($monitoring->eksposure_risiko ?? ($analisa->eksposur_risiko_residual ?? 0)),
-                'skala_risiko' => $monitoring->skala_risiko ?? ($analisa->skala_risiko_residual ?? '-'),
-                'level_risiko' => $monitoring->level_risiko ?? ($analisa->level_risiko_residual ?? '-'),
+                'nilai_dampak' => $this->formatCurrency($nilaiDampakRealisasi ?? 0),
+                'skala_dampak' => $skalaDampakRealisasi ?? $this->formatSkalaDampak($analisa),
+                'nilai_probabilitas' => $this->formatPercentage($nilaiProbabilitasRealisasi ?? 0),
+                'skala_probabilitas' => $skalaProbabilitasRealisasi,
+                'eksposur_risiko' => $this->formatCurrency($eksposurRealisasi ?? 0),
+                'skala_risiko' => $skalaRisikoRealisasi ?? '-',
+                'level_risiko' => $levelRisikoRealisasi ?? '-',
                 'nilai_efektivitas' => $efektivitasNilai ? $efektivitasNilai . '%' : '-',
                 'efektifitas_perlakuan' => $this->calculateEfektifitasVal($efektivitasNilai),
             ];
@@ -293,7 +372,7 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
     private function formatNilaiDampak($analisa)
     {
         if ($analisa->kategori_dampak === 'Kualitatif') {
-            return 'Rp0';
+            return 0;
         }
         return $this->formatCurrency($analisa->nilai_dampak_residual ?? 0);
     }
@@ -345,8 +424,13 @@ class RealisasiResidualSheet implements FromCollection, WithHeadings, WithTitle,
      */
     private function formatCurrency($value)
     {
-        if ($value == 0) return 'Rp0';
-        return 'Rp' . number_format($value, 0, ',', '.');
+        if ($value === null || $value === '') {
+            return 0;
+        }
+        if (is_string($value)) {
+            $value = preg_replace('/[^0-9.\-]/', '', $value);
+        }
+        return (float) ($value ?: 0);
     }
 
     /**

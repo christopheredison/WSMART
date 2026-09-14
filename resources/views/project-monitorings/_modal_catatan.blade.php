@@ -1,3 +1,4 @@
+@include('partials.risk-note-helpers')
 <div class="modal fade" id="modalCatatan" tabindex="-1" aria-labelledby="modalCatatanLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -22,9 +23,9 @@
     function showCatatanModal(riskId) {
         const modalElement = document.getElementById('modalCatatan');
         const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-        
+
         const contentDiv = $('#catatan-content');
-        
+
         contentDiv.html(`
             <div class="d-flex justify-content-center my-4">
                 <div class="spinner-border" role="status">
@@ -32,9 +33,9 @@
                 </div>
             </div>
         `);
-        
+
         const url = "{{ route('projects.monitorings.notes', ['project' => request()->route('project'), 'riskId' => ':id']) }}".replace(':id', riskId);
-        
+
         $.ajax({
             url: url,
             type: 'GET',
@@ -54,14 +55,8 @@
                 } else {
                     let html = '';
                     notes.forEach(note => {
-                        const statusBadge = note.status == 1 
-                            ? '<span class="badge bg-success-subtle text-success">Diterima</span>' 
-                            : '<span class="badge bg-danger-subtle text-danger">Ditolak</span>';
-                        
-                        const formattedDate = new Date(note.created_at).toLocaleString('id-ID', {
-                            day: '2-digit', month: 'short', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit'
-                        });
+                        const statusBadge = window.RiskNoteHelpers.statusBadge(note.status);
+                        const formattedDate = window.RiskNoteHelpers.formatDateWib(note.created_at);
 
                         html += `
                         <div class="card mb-3 shadow-sm">

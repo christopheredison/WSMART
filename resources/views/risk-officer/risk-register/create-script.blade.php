@@ -68,14 +68,14 @@ const initDraftLogic = () => {
       const keyRiskIndicator = draft[key];
       const satuanKri = draft['satuan_kri'];
       const batasAman = draft['batas_aman'];
-      const batasWaspada = draft['batas_waspada'];
+      const batasSiaga = draft['batas_waspada'];
       const batasBahaya = draft['batas_bahaya'];
       draft[key].forEach((value, idx) => {
         $('#add-column-kri').click();
         $('[name="key_risk_indicator[]"]').last().val(value !== undefined ? value : '');
         $('[name="satuan_kri[]"]').last().val(satuanKri[idx] !== undefined ? satuanKri[idx] : '');
         $('[name="batas_aman[]"]').last().val(batasAman[idx] !== undefined ? batasAman[idx] : '');
-        $('[name="batas_waspada[]"]').last().val(batasWaspada[idx] !== undefined ? batasWaspada[idx] : '');
+        $('[name="batas_waspada[]"]').last().val(batasSiaga[idx] !== undefined ? batasSiaga[idx] : '');
         $('[name="batas_bahaya[]"]').last().val(batasBahaya[idx] !== undefined ? batasBahaya[idx] : '');
       });
     } else if (key === 'perkiraan_waktu_terpapar_risiko') {
@@ -350,8 +350,8 @@ $(document).ready(function() {
       columnCounter + '" placeholder="Batas Aman">' +
       '<label for="batas_aman_' + columnCounter + '">Batas Aman</label></div></div>' +
       '<div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1"><div class="form-group form-floating text-center"><input type="text" class="form-control border-warning" name="batas_waspada[]" id="batas_waspada_' +
-      columnCounter + '" placeholder="Batas Waspada">' +
-      '<label for="batas_waspada_' + columnCounter + '">Batas Waspada</label></div></div>' +
+      columnCounter + '" placeholder="Batas Siaga">' +
+      '<label for="batas_waspada_' + columnCounter + '">Batas Siaga</label></div></div>' +
       '<div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1"><div class="form-group form-floating text-center"><input type="text" class="form-control border-danger" name="batas_bahaya[]" id="batas_bahaya_' +
       columnCounter + '" placeholder="Batas Bahaya">' +
       '<label for="batas_bahaya_' + columnCounter + '">Batas Bahaya</label></div></div>' +

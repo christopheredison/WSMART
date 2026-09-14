@@ -187,12 +187,17 @@
                 </div>
                 <div class="col-md-9 me-lg-7 me-xxl-8">
                   <div class="row gx-2 gx-md-4">
-                    @foreach ($roles as $key => $value)
+                    @foreach ($roles as $role)
                     <div class="col-6 col-md-6 col-lg-3 mb-2">
                       <div class="form-check form-switch">
-                        <input id="roles{{ $key }}" class="form-check-input" role="switch" type="checkbox" name="roles[]"
-                          value="{{ $value }}" @if (in_array($value, old('roles', []))) checked @endif>
-                        <label class="form-check-label" style="cursor:pointer;" for="roles{{ $key }}">{{ ucwords(str_replace('_', ' ', $value)) }}</label>
+                        <input id="roles{{ $role->id }}" class="form-check-input" role="switch" type="checkbox" name="roles[]"
+                          value="{{ $role->name }}" @if (in_array($role->name, old('roles', []))) checked @endif>
+                        <label class="form-check-label" style="cursor:pointer;" for="roles{{ $role->id }}">
+                          {{ ucwords(str_replace('_', ' ', $role->name)) }}
+                          @if ($role->notes)
+                          <small class="d-block text-muted fw-normal mt-1">{{ $role->notes }}</small>
+                          @endif
+                        </label>
                       </div>
                     </div>
                     @endforeach

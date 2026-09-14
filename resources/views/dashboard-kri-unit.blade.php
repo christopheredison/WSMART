@@ -88,7 +88,7 @@
                 <th>Risiko</th>
                 <th>Unit</th>
                 <th class="text-center white-space-nowrap">Batas Aman</th>
-                <th class="text-center white-space-nowrap">Batas Waspada</th>
+                <th class="text-center white-space-nowrap">Batas Siaga</th>
                 <th class="text-center white-space-nowrap">Batas Bahaya</th>
                 <th class="text-center white-space-nowrap">Kondisi Saat Ini</th>
                 <th>T2 & T3 KBUMN</th>
@@ -376,10 +376,10 @@ function updateJenisRisikoChart(selectedJenisRisikoId = null) {
         filteredData = jenisRisikoData.filter(item => item.jenis_risiko_id == selectedJenisRisikoId);
     }
 
-    let totalAmanJenis = 0, totalWaspadaJenis = 0, totalBahayaJenis = 0;
+    let totalAmanJenis = 0, totalSiagaJenis = 0, totalBahayaJenis = 0;
     filteredData.forEach(function(item) {
         totalAmanJenis += item.aman;
-        totalWaspadaJenis += item.waspada;
+        totalSiagaJenis += item.waspada;
         totalBahayaJenis += item.bahaya;
     });
 
@@ -390,9 +390,9 @@ function updateJenisRisikoChart(selectedJenisRisikoId = null) {
     jenisRisikoChartInstance = new Chart(jenisRisikoChartCanvas, {
         type: 'doughnut',
         data: {
-            labels: ['Aman', 'Waspada', 'Bahaya'],
+            labels: ['Aman', 'Siaga', 'Bahaya'],
             datasets: [{
-                data: [totalAmanJenis, totalWaspadaJenis, totalBahayaJenis],
+                data: [totalAmanJenis, totalSiagaJenis, totalBahayaJenis],
                 backgroundColor: ['rgb(25, 163, 0)', 'rgb(253, 220, 34)', 'rgb(240, 100, 69)'],
                 hoverOffset: 10
             }]
@@ -414,10 +414,10 @@ function updateUnitChart(selectedUnitId = null) {
         filteredData = unitData.filter(item => item.unit_id == selectedUnitId);
     }
 
-    let totalAmanUnit = 0, totalWaspadaUnit = 0, totalBahayaUnit = 0;
+    let totalAmanUnit = 0, totalSiagaUnit = 0, totalBahayaUnit = 0;
     filteredData.forEach(function(item) {
         totalAmanUnit += item.aman;
-        totalWaspadaUnit += item.waspada;
+        totalSiagaUnit += item.waspada;
         totalBahayaUnit += item.bahaya;
     });
 
@@ -428,9 +428,9 @@ function updateUnitChart(selectedUnitId = null) {
     unitChartInstance = new Chart(unitChartCanvas, {
         type: 'doughnut',
         data: {
-            labels: ['Aman', 'Waspada', 'Bahaya'],
+            labels: ['Aman', 'Siaga', 'Bahaya'],
             datasets: [{
-                data: [totalAmanUnit, totalWaspadaUnit, totalBahayaUnit],
+                data: [totalAmanUnit, totalSiagaUnit, totalBahayaUnit],
                 backgroundColor: ['rgb(25, 163, 0)', 'rgb(253, 220, 34)', 'rgb(240, 100, 69)'],
                 hoverOffset: 10
             }]

@@ -16,21 +16,21 @@
           <div class="ff-preheading">Input Data</div>
           <h2>ICT Plan</h2>
         </div>
+        <div class="ms-auto d-flex align-items-center gap-3">
+          @can('ict_input')
+          <div class="col-auto">
+            <a id="add-ict-plan-button" href="{{ route('ict.create') }}" type="button"
+              class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
+              data-bs-title="Tambah ICT Plan">
+              <i class="bx bx-plus"></i>
+              <span class="ms-1">Tambah ICT Plan</span>
+            </a>
+          </div>
+          @endcan
+        </div>
       </div>
       <div class="card-body dt-header-true">
         <div id="tableExample3">
-          <div class="row g-2 mb-1">
-            @can('ict_input')
-            <div class="col-auto ms-auto">
-              <a id="add-ict-plan-button" href="{{ route('ict.create') }}" type="button"
-                class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
-                data-bs-title="Tambah ICT Plan">
-                <i class="bx bx-plus"></i>
-                <span class="ms-1">Tambah ICT Plan</span>
-              </a>
-            </div>
-            @endcan
-          </div>
           <table class="table ajax-datatable" id="example" data-paging="true" data-info="true" data-filter="true">
             <thead>
               <tr>

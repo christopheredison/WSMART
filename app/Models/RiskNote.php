@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasRiskNoteStatuses;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class RiskNote extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasRiskNoteStatuses, SoftDeletes;
 
     protected $fillable = [
         'risiko_id',
@@ -18,10 +19,9 @@ class RiskNote extends Model
         'user_id',
     ];
 
-    // public function risiko()
-    // {
-    //     return $this->belongsTo(IdentifikasiRisiko::class, 'risiko_id');
-    // }
+    protected $casts = [
+        'status' => 'integer',
+    ];
 
     public function user()
     {

@@ -2,7 +2,10 @@
 
 namespace App\Exports;
 
+use App\Exports\Support\ExportColumnHelper;
+use App\Exports\Sheets\Unit\Concerns\SupportsUnitColumnExport;
 use App\Models\IdentifikasiRisiko;
+use App\Models\Periode;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -17,29 +20,43 @@ use PhpOffice\PhpSpreadsheet\RichText\RichText;
 
 class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, ShouldAutoSize, WithColumnFormatting
 {
-    protected $periodeId;
-    protected $unitId;
+    use SupportsUnitColumnExport;
+
+    protected int $periodeId;
+    protected array $unitIds;
     protected $bulan;
+    protected $tahun;
     protected $quarterTarget;
     
     protected $mergeRanges = [];
     protected $mergeTaksonomiRanges = [];
     protected $statusKriByRow = [];
 
-    public function __construct(int $periodeId, int $unitId, $bulan = null)
-    {
+    public function __construct(
+        int $periodeId,
+        array $unitIds,
+        $bulan = null,
+        bool $includeUnitColumn = false,
+        string $unitColumnLabel = 'Nama Divisi'
+    ) {
         $this->periodeId = $periodeId;
-        $this->unitId = $unitId;
+        $this->unitIds = $unitIds;
         $this->bulan = $bulan;
+        $this->includeUnitColumn = $includeUnitColumn;
+        $this->unitColumnLabel = $unitColumnLabel;
 
         $this->quarterTarget = $bulan ? (int) ceil($bulan / 3) : 4;
+
+        // Tahun periode dipakai bersama $bulan untuk menilai status Open/Closed
+        // pada bulan laporan, sama seperti badge di halaman monitoring.
+        $this->tahun = optional(Periode::find($periodeId))->tahun;
     }
 
     public function columnFormats(): array
     {
         $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
 
-        return [
+        return $this->shiftColumnFormats([
             'Q' => $currencyFormat, 
             'S' => $currencyFormat, 
             'T' => $currencyFormat, 
@@ -48,7 +65,7 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
             'AE' => $currencyFormat, 
             'AF' => $currencyFormat, 
             'AK' => $currencyFormat, 
-        ];
+        ]);
     }
 
     public function collection()
@@ -56,6 +73,7 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
         $qTarget = $this->quarterTarget;
 
         $risikos = IdentifikasiRisiko::with([
+            'unit',
             'taksonomiRisiko',
             'penyebabRisiko',
             'dampakRisikos',
@@ -83,8 +101,9 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
             'opportunities'
         ])
         ->where('periode_id', $this->periodeId)
-        ->where('unit_id', $this->unitId)
-        ->orderBy('taksonomi_risiko_id', 'asc') // MAPPING ORDERING DI SINI
+        ->whereIn('unit_id', $this->unitIds)
+        ->orderBy('unit_id')
+        ->orderBy('taksonomi_risiko_id', 'asc')
         ->get();
 
         $exportData = new Collection();
@@ -180,7 +199,7 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
             }
 
             if ($kriList->isEmpty()) {
-                $exportData->push([
+                $exportData->push($this->prependUnit([
                     'no' => $no,
                     'taksonomi' => $risiko->taksonomiRisiko->nama ?? '-',
                     'peristiwa' => $risiko->peristiwa_risiko ?? '-',
@@ -222,7 +241,11 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                     'peluang_ri' => trim($peluangRiText) ?: '-',
                     'nilai_peluang_ra' => trim($nilaiPeluangRaText) ?: '-',
                     'nilai_peluang_ri' => trim($nilaiPeluangRiText) ?: '-',
-                ]);
+                    'status_risiko' => $risiko->formatStatusRisikoForExport(
+                        $this->tahun ? (int) $this->tahun : null,
+                        $this->bulan ? (int) $this->bulan : null
+                    ),
+                ], $risiko));
                 $currentRow++;
             } else {
                 $isFirstRowOfGroup = true;
@@ -244,7 +267,7 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                         $pengendalian = $monitoring->pengendalians->where('kri_id', $kri->id)->first();
                     }
 
-                    $exportData->push([
+                    $exportData->push($this->prependUnit([
                         'no'        => $isFirstRowOfGroup ? $no : '',
                         'taksonomi' => $risiko->taksonomiRisiko->nama ?? '-', // PERBAIKAN: Selalu isi teks taksonomi agar kalau di-merge text-nya tidak hilang
                         'peristiwa' => $isFirstRowOfGroup ? ($risiko->peristiwa_risiko ?? '-') : '',
@@ -293,7 +316,11 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                         'peluang_ri'       => $isFirstRowOfGroup ? (trim($peluangRiText) ?: '-') : '',
                         'nilai_peluang_ra' => $isFirstRowOfGroup ? (trim($nilaiPeluangRaText) ?: '-') : '',
                         'nilai_peluang_ri' => $isFirstRowOfGroup ? (trim($nilaiPeluangRiText) ?: '-') : '',
-                    ]);
+                        'status_risiko'     => $isFirstRowOfGroup ? $risiko->formatStatusRisikoForExport(
+                            $this->tahun ? (int) $this->tahun : null,
+                            $this->bulan ? (int) $this->bulan : null
+                        ) : '',
+                    ], $risiko, $isFirstRowOfGroup));
 
                     $isFirstRowOfGroup = false;
                     $currentRow++;
@@ -318,50 +345,55 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
+                $c = fn (string $col) => $this->c($col);
+                $lastCol = $this->includeUnitColumn ? 'AQ' : 'AP';
                 
                 $sheet->insertNewRowBefore(1, 2);
                 
                 $sheet->getRowDimension(1)->setRowHeight(75);
                 $sheet->getRowDimension(2)->setRowHeight(25);
-                
-                $sheet->setCellValue('A1', 'No');
-                $sheet->setCellValue('B1', 'Taksonomi/ Kategori Risiko');
-                $sheet->setCellValue('C1', 'Peristiwa Risiko');
-                $sheet->setCellValue('D1', 'Penyebab');
-                $sheet->setCellValue('E1', 'Dampak');
-                $sheet->setCellValue('F1', 'Parameter/ KRI');
-                $sheet->setCellValue('G1', 'Tren Parameter');
-                $sheet->setCellValue('H1', 'Metode Pengukuran');
-                $sheet->setCellValue('I1', 'Unit');
-                $sheet->setCellValue('J1', 'Ambang Batas');
-                $sheet->setCellValue('M1', 'Aktual'); 
-                
-                $sheet->setCellValue('N1', 'Status');
-                $sheet->setCellValue('O1', 'Efektivitas Pengendalian Risiko');
-                
-                $sheet->setCellValue('P1', 'Pengendalian Parameter/KRI');
-                $sheet->setCellValue('R1', 'Realisasi Pengendalian');
-                
-                $sheet->setCellValue('T1', 'Inherent');
-                $sheet->setCellValue('Z1', "Residual Quarter (Q{$this->quarterTarget})");
-                $sheet->setCellValue('AF1', 'Realisasi Month-Current');
-                $sheet->setCellValue('AL1', 'Peluang');
-                $sheet->setCellValue('AN1', 'Nilai Peluang');
 
-                $sheet->setCellValue('J2', 'Risk Limit');
-                $sheet->setCellValue('K2', 'Risk Appetite');
-                $sheet->setCellValue('L2', 'Risk Tolerance');
+                $this->setUnitColumnHeader($sheet);
+
+                $sheet->setCellValue($c('A') . '1', 'No');
+                $sheet->setCellValue($c('B') . '1', 'Taksonomi/ Kategori Risiko');
+                $sheet->setCellValue($c('C') . '1', 'Peristiwa Risiko');
+                $sheet->setCellValue($c('D') . '1', 'Penyebab');
+                $sheet->setCellValue($c('E') . '1', 'Dampak');
+                $sheet->setCellValue($c('F') . '1', 'Parameter/ KRI');
+                $sheet->setCellValue($c('G') . '1', 'Tren Parameter');
+                $sheet->setCellValue($c('H') . '1', 'Metode Pengukuran');
+                $sheet->setCellValue($c('I') . '1', 'Unit');
+                $sheet->setCellValue($c('J') . '1', 'Ambang Batas');
+                $sheet->setCellValue($c('M') . '1', 'Aktual'); 
                 
-                $sheet->setCellValue('M2', 'Month-Current'); 
+                $sheet->setCellValue($c('N') . '1', 'Status');
+                $sheet->setCellValue($c('O') . '1', 'Efektivitas Pengendalian Risiko');
                 
-                $sheet->setCellValue('P2', 'Rencana Pengendalian');
-                $sheet->setCellValue('Q2', 'Biaya Pengendalian');
-                $sheet->setCellValue('R2', 'Realisasi Pengendalian');
-                $sheet->setCellValue('S2', 'Biaya Pengendalian');
+                $sheet->setCellValue($c('P') . '1', 'Pengendalian Parameter/KRI');
+                $sheet->setCellValue($c('R') . '1', 'Realisasi Pengendalian');
+                
+                $sheet->setCellValue($c('T') . '1', 'Inherent');
+                $sheet->setCellValue($c('Z') . '1', "Residual Quarter (Q{$this->quarterTarget})");
+                $sheet->setCellValue($c('AF') . '1', 'Realisasi Month-Current');
+                $sheet->setCellValue($c('AL') . '1', 'Peluang');
+                $sheet->setCellValue($c('AN') . '1', 'Nilai Peluang');
+                $sheet->setCellValue($c('AP') . '1', 'Status Risiko');
+
+                $sheet->setCellValue($c('J') . '2', 'Risk Limit');
+                $sheet->setCellValue($c('K') . '2', 'Risk Appetite');
+                $sheet->setCellValue($c('L') . '2', 'Risk Tolerance');
+                
+                $sheet->setCellValue($c('M') . '2', 'Month-Current'); 
+                
+                $sheet->setCellValue($c('P') . '2', 'Rencana Pengendalian');
+                $sheet->setCellValue($c('Q') . '2', 'Biaya Pengendalian');
+                $sheet->setCellValue($c('R') . '2', 'Realisasi Pengendalian');
+                $sheet->setCellValue($c('S') . '2', 'Biaya Pengendalian');
                 
                 $starts = ['T', 'Z', 'AF'];
                 foreach ($starts as $col) {
-                    $cIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($col);
+                    $cIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($c($col));
                     $sheet->setCellValue(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($cIndex) . '2', 'Nilai Dampak (Rp)');
                     $sheet->setCellValue(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($cIndex+1) . '2', 'Tingkat Dampak');
                     $sheet->setCellValue(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($cIndex+2) . '2', 'Nilai Probabilitas');
@@ -370,32 +402,28 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                     $sheet->setCellValue(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($cIndex+5) . '2', 'Eksposure Risiko');
                 }
 
-                $sheet->setCellValue('AL2', 'Ra');
-                $sheet->setCellValue('AM2', 'Ri');
-                $sheet->setCellValue('AN2', 'Ra');
-                $sheet->setCellValue('AO2', 'Ri');
+                $sheet->setCellValue($c('AL') . '2', 'Ra');
+                $sheet->setCellValue($c('AM') . '2', 'Ri');
+                $sheet->setCellValue($c('AN') . '2', 'Ra');
+                $sheet->setCellValue($c('AO') . '2', 'Ri');
 
-                // Merge Cells Vertikal Header
-                $singles = ['A','B','C','D','E','F','G','H','I','N','O'];
-                foreach($singles as $col) {
-                    $sheet->mergeCells("{$col}1:{$col}2");
+                $singles = ['A','B','C','D','E','F','G','H','I','N','O','AP'];
+                foreach ($singles as $col) {
+                    $sheet->mergeCells($c($col) . '1:' . $c($col) . '2');
                 }
 
-                // Merge Cells Horizontal Header
-                $sheet->mergeCells('J1:L1');   
-                $sheet->mergeCells('P1:Q1');   
-                $sheet->mergeCells('R1:S1');   
-                $sheet->mergeCells('T1:Y1');   
-                $sheet->mergeCells('Z1:AE1');  
-                $sheet->mergeCells('AF1:AK1'); 
-                $sheet->mergeCells('AL1:AM1'); 
-                $sheet->mergeCells('AN1:AO1'); 
+                $sheet->mergeCells($c('J') . '1:' . $c('L') . '1');   
+                $sheet->mergeCells($c('P') . '1:' . $c('Q') . '1');   
+                $sheet->mergeCells($c('R') . '1:' . $c('S') . '1');   
+                $sheet->mergeCells($c('T') . '1:' . $c('Y') . '1');   
+                $sheet->mergeCells($c('Z') . '1:' . $c('AE') . '1');  
+                $sheet->mergeCells($c('AF') . '1:' . $c('AK') . '1'); 
+                $sheet->mergeCells($c('AL') . '1:' . $c('AM') . '1'); 
+                $sheet->mergeCells($c('AN') . '1:' . $c('AO') . '1'); 
 
-                // SET FONT GLOBAL ARIAL
-                $sheet->getStyle('A1:AO' . $sheet->getHighestRow())->getFont()->setName('Arial');
+                $sheet->getStyle('A1:' . $lastCol . $sheet->getHighestRow())->getFont()->setName('Arial');
 
-                // STYLING BLOCK 1: MERAH (#C00000)
-                $sheet->getStyle('A1:S2')->applyFromArray([
+                $sheet->getStyle('A1:' . $c('S') . '2')->applyFromArray([
                     'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                     'alignment' => [
                         'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -414,8 +442,7 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                     ]
                 ]);
 
-                // STYLING BLOCK 2: BIRU TUA
-                $sheet->getStyle('T1:AO2')->applyFromArray([
+                $sheet->getStyle($c('T') . '1:' . $lastCol . '2')->applyFromArray([
                     'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                     'alignment' => [
                         'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -434,37 +461,33 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                     ]
                 ]);
 
-                // 1. MERGE CELLS BODY DINAMIS (KRI & Info Risiko Utama)
                 if (!empty($this->mergeRanges)) {
-                    // PERBAIKAN: Keluarkan 'B' (Taksonomi) dari list ini karena punya aturan merge-nya tersendiri
-                    $columnsToMerge = [
-                        'A', 'C', 'D', 'E',                                     
-                        'T', 'U', 'V', 'W', 'X', 'Y',                 
-                        'Z', 'AA', 'AB', 'AC', 'AD', 'AE',           
-                        'AF', 'AG', 'AH', 'AI', 'AJ', 'AK',          
-                        'AL', 'AM', 'AN', 'AO'                                      
-                    ];
+                    $columnsToMerge = [];
+                    if ($this->includeUnitColumn) {
+                        $columnsToMerge[] = 'B';
+                    }
+                    foreach (['A', 'C', 'D', 'E', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP'] as $col) {
+                        $columnsToMerge[] = $c($col);
+                    }
                     
                     foreach ($this->mergeRanges as $range) {
-                        foreach ($columnsToMerge as $col) {
-                            $sheet->mergeCells("{$col}{$range['start']}:{$col}{$range['end']}");
+                        foreach ($columnsToMerge as $targetCol) {
+                            $sheet->mergeCells("{$targetCol}{$range['start']}:{$targetCol}{$range['end']}");
                         }
                     }
                 }
 
-                // 2. PERBAIKAN: MERGE CELLS KHUSUS KOLOM TAKSONOMI (KOLOM B)
                 if (!empty($this->mergeTaksonomiRanges)) {
                     foreach ($this->mergeTaksonomiRanges as $tRange) {
                         if ($tRange['start'] !== $tRange['end']) {
-                            $sheet->mergeCells("B{$tRange['start']}:B{$tRange['end']}");
+                            $sheet->mergeCells($c('B') . "{$tRange['start']}:" . $c('B') . "{$tRange['end']}");
                         }
                     }
                 }
 
-                // Styling Data Body
                 $lastRow = $sheet->getHighestRow();
                 if ($lastRow >= 3) {
-                    $sheet->getStyle('A3:AO' . $lastRow)->applyFromArray([
+                    $sheet->getStyle('A3:' . $lastCol . $lastRow)->applyFromArray([
                         'alignment' => [
                             'vertical' => Alignment::VERTICAL_TOP, 
                             'wrapText' => true,
@@ -477,34 +500,43 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                         ]
                     ]);
                     
-                    $sheet->getStyle('A3:A'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                    $sheet->getStyle('B3:B'.$lastRow)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER); // Set taksonomi di tengah vertikal agar rapi
-                    $sheet->getStyle('J3:O'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    $sheet->getStyle($c('A') . '3:' . $c('A') . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    $sheet->getStyle($c('B') . '3:' . $c('B') . $lastRow)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+                    $sheet->getStyle($c('J') . '3:' . $c('O') . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     
-                    $centerCols = ['V', 'W', 'X', 'AB', 'AC', 'AD', 'AH', 'AI', 'AJ', 'AL', 'AM', 'AN', 'AO'];
-                    foreach($centerCols as $cCol) {
-                        $sheet->getStyle($cCol.'3:'.$cCol.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    $centerCols = ['V', 'W', 'X', 'AB', 'AC', 'AD', 'AH', 'AI', 'AJ', 'AL', 'AM', 'AN', 'AO', 'AP'];
+                    foreach ($centerCols as $cCol) {
+                        $sheet->getStyle($c($cCol) . '3:' . $c($cCol) . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     }
 
                     $rightCols = ['Q', 'S', 'T', 'Y', 'Z', 'AE', 'AF', 'AK'];
-                    foreach($rightCols as $rCol) {
-                        $sheet->getStyle($rCol.'3:'.$rCol.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    foreach ($rightCols as $rCol) {
+                        $sheet->getStyle($c($rCol) . '3:' . $c($rCol) . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
                     }
+
+                    $this->appendCurrencyTotalRow(
+                        $sheet,
+                        3,
+                        $lastRow,
+                        'AP',
+                        ['T', 'Y', 'Z', 'AE', 'AF', 'AK'],
+                        'E'
+                    );
                 }
 
                 foreach (range('A', 'Z') as $col) { $sheet->getColumnDimension($col)->setAutoSize(true); }
-                for ($i = 27; $i <= 41; $i++) {
+                for ($i = 27; $i <= ($this->includeUnitColumn ? 43 : 42); $i++) {
                     $colStr = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i);
                     $sheet->getColumnDimension($colStr)->setAutoSize(true);
                 }
                 
-                $sheet->getColumnDimension('D')->setAutoSize(false)->setWidth(35);
-                $sheet->getColumnDimension('E')->setAutoSize(false)->setWidth(35);
-                $sheet->getColumnDimension('AL')->setAutoSize(false)->setWidth(35);
-                $sheet->getColumnDimension('AM')->setAutoSize(false)->setWidth(35);
-                $sheet->getColumnDimension('N')->setAutoSize(false)->setWidth(42);
+                $sheet->getColumnDimension($c('D'))->setAutoSize(false)->setWidth(35);
+                $sheet->getColumnDimension($c('E'))->setAutoSize(false)->setWidth(35);
+                $sheet->getColumnDimension($c('AL'))->setAutoSize(false)->setWidth(35);
+                $sheet->getColumnDimension($c('AM'))->setAutoSize(false)->setWidth(35);
+                $sheet->getColumnDimension($c('N'))->setAutoSize(false)->setWidth(42);
 
-                $sheet->getCell('N1')->setValue($this->buildStatusLegendRichText());
+                $sheet->getCell($c('N') . '1')->setValue($this->buildStatusLegendRichText());
                 $this->applyStatusKriCellStyles($sheet);
             },
         ];
@@ -581,7 +613,7 @@ class LaporanRiskRegisterBaruExport implements FromCollection, WithEvents, Shoul
                 ->setColor(new Color('000000'))
                 ->setName('Arial');
 
-            $sheet->getCell("N{$row}")->setValue($richText);
+            $sheet->getCell($this->c('N') . "{$row}")->setValue($richText);
         }
     }
 

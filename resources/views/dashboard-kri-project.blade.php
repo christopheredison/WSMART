@@ -66,7 +66,7 @@
                 <th>Risiko</th>
                 <th>Proyek</th>
                 <th class="text-center white-space-nowrap">Batas Aman</th>
-                <th class="text-center white-space-nowrap">Batas Waspada</th>
+                <th class="text-center white-space-nowrap">Batas Siaga</th>
                 <th class="text-center white-space-nowrap">Batas Bahaya</th>
                 <th class="text-center white-space-nowrap">Kondisi Saat Ini</th>
                 <th class="text-center">Status</th>
@@ -192,10 +192,10 @@ function updatePeristiwaRisikoChart(selectedPeristiwaName = null) {
         filteredData = peristiwaRisikoData.filter(item => item.peristiwa_risiko == selectedPeristiwaName);
     }
 
-    let totalAman = 0, totalWaspada = 0, totalBahaya = 0;
+    let totalAman = 0, totalSiaga = 0, totalBahaya = 0;
     filteredData.forEach(function(item) {
         totalAman += item.aman;
-        totalWaspada += item.waspada;
+        totalSiaga += item.waspada;
         totalBahaya += item.bahaya;
     });
 
@@ -206,9 +206,9 @@ function updatePeristiwaRisikoChart(selectedPeristiwaName = null) {
     peristiwaRisikoChartInstance = new Chart(peristiwaRisikoChartCanvas, {
         type: 'doughnut',
         data: {
-            labels: ['Aman', 'Waspada', 'Bahaya'],
+            labels: ['Aman', 'Siaga', 'Bahaya'],
             datasets: [{
-                data: [totalAman, totalWaspada, totalBahaya],
+                data: [totalAman, totalSiaga, totalBahaya],
                 backgroundColor: ['rgb(25, 163, 0)', 'rgb(253, 220, 34)', 'rgb(240, 100, 69)'],
                 hoverOffset: 10
             }]
@@ -230,10 +230,10 @@ function updateProjectChart(selectedProjectName = null) {
         filteredData = projectData.filter(item => item.project_name == selectedProjectName);
     }
 
-    let totalAman = 0, totalWaspada = 0, totalBahaya = 0;
+    let totalAman = 0, totalSiaga = 0, totalBahaya = 0;
     filteredData.forEach(function(item) {
         totalAman += item.aman;
-        totalWaspada += item.waspada;
+        totalSiaga += item.waspada;
         totalBahaya += item.bahaya;
     });
 
@@ -244,9 +244,9 @@ function updateProjectChart(selectedProjectName = null) {
     projectChartInstance = new Chart(projectChartCanvas, {
         type: 'doughnut',
         data: {
-            labels: ['Aman', 'Waspada', 'Bahaya'],
+            labels: ['Aman', 'Siaga', 'Bahaya'],
             datasets: [{
-                data: [totalAman, totalWaspada, totalBahaya],
+                data: [totalAman, totalSiaga, totalBahaya],
                 backgroundColor: ['rgb(25, 163, 0)', 'rgb(253, 220, 34)', 'rgb(240, 100, 69)'],
                 hoverOffset: 10
             }]

@@ -212,7 +212,7 @@ if (!function_exists('formatKriBatas')) {
                                 <th>Skala Probabilitas Inherent</th>
                                 <th>Nilai Risiko Inherent</th>
                                 <th>Level Risiko Inherent</th>
-                                <th>Nilai Dampak Residual</th>
+                                <th>Nilai Dampak Residual <small>(Sesuai Kuartal)</small></th>
                                 <th>Skala Dampak Residual</th>
                                 <th>Nilai Probabilitas Residual</th>
                                 <th>Skala Probabilitas Residual</th>
@@ -222,7 +222,7 @@ if (!function_exists('formatKriBatas')) {
                         </thead>
                         <tbody>
                             @foreach($risikos as $risiko)
-                            <tr>
+                            <tr data-risk-id="{{ $risiko->id }}">
                                 {{-- <td>{{ $loop->iteration }}</td> --}}
                                 <td>{{ $risiko->peristiwa_risiko ?? '-' }}</td>
                                 <td>{{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}</td>
@@ -240,20 +240,12 @@ if (!function_exists('formatKriBatas')) {
                                 </td>
                                 <td>{{ $risiko->riskAnalysis?->skala_risiko ?? '-' }}</td>
                                 <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($risiko->riskAnalysis?->level_risiko)))}}">{{ $risiko->riskAnalysis?->level_risiko ?? '-' }}</td>
-                                <td>{{ $risiko->riskAnalysis?->nilai_dampak_residual ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak_residual, 0, ',', '.') : '-' }}</td>
-                                <td>
-                                    {{ $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->tingkat
-                                        ? '(' . $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->tingkat . ') ' . $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->deskripsi
-                                        : '-' }}
-                                </td>
-                                <td>{{ $risiko->riskAnalysis?->nilai_probabilitas_residual ?? '-' }}</td>
-                                <td>
-                                    {{ $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->tingkat
-                                        ? '(' . $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->tingkat . ') ' . $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->skala
-                                        : '-' }}
-                                </td>
-                                <td>{{ $risiko->riskAnalysis?->skala_risiko_residual ?? '-' }}</td>
-                                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($risiko->riskAnalysis?->level_risiko_residual)))}}">{{ $risiko->riskAnalysis?->level_risiko_residual ?? '-' }}</td>
+                                <td class="residual-nilai-dampak">-</td>
+                                <td class="residual-skala-dampak">-</td>
+                                <td class="residual-nilai-prob">-</td>
+                                <td class="residual-skala-prob">-</td>
+                                <td class="residual-nilai-risiko">-</td>
+                                <td class="residual-level-risiko">-</td>
                             </tr>
                             @endforeach
                             @if ($risikos->isEmpty())
@@ -1105,7 +1097,7 @@ if (!function_exists('formatKriBatas')) {
                         <div class="tab-pane fade show active" id="tab_penyebab_{{ $monitoring->id }}" role="tabpanel">
                             @php
                                 $groupedPenyebab = $monitoring->perlakuanPenyebabMonitorings->groupBy(function($item) {
-                                    return $item->perlakuanPenyebabRisikoUnit->penyebabRisiko->penyebab_risiko ?? 'Lainnya';
+                                    return $item->perlakuanPenyebabRisikoUnit?->penyebabRisiko?->penyebab_risiko ?? 'Lainnya';
                                 });
                             @endphp
                             @forelse($groupedPenyebab as $penyebabName => $items)
@@ -1124,12 +1116,13 @@ if (!function_exists('formatKriBatas')) {
                                             </thead>
                                             <tbody>
                                                 @foreach($items as $realisasi)
+                                                    @php $perlakuanPenyebab = $realisasi->perlakuanPenyebabRisikoUnit; @endphp
                                                     <tr>
                                                         <td>
-                                                            <strong class="text-primary">{{ $realisasi->perlakuanPenyebabRisikoUnit->rencana_perlakuan_risiko ?? '-' }}</strong>
+                                                            <strong class="text-primary">{{ $perlakuanPenyebab?->rencana_perlakuan_risiko ?? '-' }}</strong>
                                                             <div class="mt-3">
-                                                                <div class="text-muted">Anggaran: <span class="text-dark fw-bold">Rp {{ number_format($realisasi->perlakuanPenyebabRisikoUnit->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</span></div>
-                                                                <div class="text-muted">PIC: <span class="text-dark">{{ $realisasi->perlakuanPenyebabRisikoUnit->pic ?? '-' }}</span></div>
+                                                                <div class="text-muted">Anggaran: <span class="text-dark fw-bold">Rp {{ number_format($perlakuanPenyebab?->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</span></div>
+                                                                <div class="text-muted">PIC: <span class="text-dark">{{ $perlakuanPenyebab?->pic ?? '-' }}</span></div>
                                                             </div>
                                                         </td>
                                                         <td>
@@ -1166,8 +1159,7 @@ if (!function_exists('formatKriBatas')) {
                         <div class="tab-pane fade" id="tab_dampak_{{ $monitoring->id }}" role="tabpanel">
                             @php
                                 $groupedDampak = $monitoring->perlakuanDampakMonitorings->groupBy(function($item) {
-                                    // PERUBAHAN DI SINI
-                                    return $item->perlakuanDampak->dampakRisikoUnit->dampak_risiko ?? 'Lainnya';
+                                    return $item->perlakuanDampak?->dampakRisikoUnit?->dampak_risiko ?? 'Lainnya';
                                 });
                             @endphp
                             @forelse($groupedDampak as $dampakName => $items)
@@ -1186,12 +1178,13 @@ if (!function_exists('formatKriBatas')) {
                                             </thead>
                                             <tbody>
                                                 @foreach($items as $realisasi)
+                                                    @php $perlakuanDampak = $realisasi->perlakuanDampak; @endphp
                                                     <tr>
                                                         <td>
-                                                            <strong class="text-warning text-dark">{{ $realisasi->perlakuanDampak->rencana_perlakuan_risiko ?? '-' }}</strong>
+                                                            <strong class="text-warning text-dark">{{ $perlakuanDampak?->rencana_perlakuan_risiko ?? '-' }}</strong>
                                                             <div class="mt-3">
-                                                                <div class="text-muted">Anggaran: <span class="text-dark fw-bold">Rp {{ number_format($realisasi->perlakuanDampak->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</span></div>
-                                                                <div class="text-muted">PIC: <span class="text-dark">{{ $realisasi->perlakuanDampak->pic ?? '-' }}</span></div>
+                                                                <div class="text-muted">Anggaran: <span class="text-dark fw-bold">Rp {{ number_format($perlakuanDampak?->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</span></div>
+                                                                <div class="text-muted">PIC: <span class="text-dark">{{ $perlakuanDampak?->pic ?? '-' }}</span></div>
                                                             </div>
                                                         </td>
                                                         <td>
@@ -1464,108 +1457,197 @@ $(document).ready(function () {
 
 
     const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
-    risks.forEach((risk, idx) => {
-        const matrixI = risk.risk_analysis?.skala_dampak + '-' + risk.risk_analysis?.skala_probabilitas?.tingkat;
-        const matrixR = risk.risk_analysis?.skala_dampak_residual + '-' + risk.risk_analysis?.skala_probabilitas_residual_q4?.tingkat;
+    const riskResidualData = @json($riskResidualData);
 
-        const cellI = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixI}"]`);
-        const cellR = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixR}"]`);
+    const formatRupiah = (number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+    };
 
-        const code = (idx + 1).toString();
+    const getLevelClass = (levelName) => {
+        if (!levelName) return '';
+        return 'bg-' + levelName.toLowerCase().replace('to ', '').replace(/\s+/g, '-');
+    };
 
-        if (cellI.length) {
-            if (!cellI.data('kode-peristiwa-inherent')) {
-                cellI.data('kode-peristiwa-inherent', []);
-            }
-
-            cellI.data('kode-peristiwa-inherent').push(code);
-            cellI.data('has-inherent', true);
+    function getResidualMatrix(risk, quarter) {
+        const analysis = risk.risk_analysis;
+        if (!analysis) {
+            return null;
         }
 
-        if (cellR.length) {
-            if (!cellR.data('kode-peristiwa-residual')) {
-                cellR.data('kode-peristiwa-residual', []);
-            }
+        const skalaDampak = analysis[`skala_dampak_residual_q${quarter}`];
+        const skalaProb = analysis[`skala_probabilitas_residual_q${quarter}`]?.tingkat;
 
-            cellR.data('kode-peristiwa-residual').push(code);
-            cellR.data('has-residual', true);
+        if (skalaDampak == null || skalaProb == null) {
+            return null;
         }
 
-        const currentRiskMaps = formattedCurrentRiskMaps[risk.id];
-        currentRiskMaps.forEach((currentRiskMap) => {
-            const matrixC = currentRiskMap.skala_dampak + '-' + currentRiskMap.skala_probabilitas;
-            const cellC = $(`#currentMap.table-risk-map .data-cell[data-matrix="${matrixC}"]`);
+        return `${skalaDampak}-${skalaProb}`;
+    }
 
-            if (cellC.length) {
-                if (!cellC.data('kode-peristiwa-current-q' + currentRiskMap.quarter)) {
-                    cellC.data('kode-peristiwa-current-q' + currentRiskMap.quarter, []);
+    function renderInherentMapMarkers() {
+        $('#inherentMap.table-risk-map .data-cell').each(function() {
+            $(this).removeData('kode-peristiwa-inherent');
+            $(this).removeData('kode-peristiwa-residual');
+            $(this).removeData('has-inherent');
+            $(this).removeData('has-residual');
+            $(this).find('.kode-peristiwa').empty();
+        });
+
+        risks.forEach((risk, idx) => {
+            const matrixI = risk.risk_analysis?.skala_dampak + '-' + risk.risk_analysis?.skala_probabilitas?.tingkat;
+            const cellI = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixI}"]`);
+            const code = (idx + 1).toString();
+
+            if (cellI.length) {
+                if (!cellI.data('kode-peristiwa-inherent')) {
+                    cellI.data('kode-peristiwa-inherent', []);
                 }
-
-                cellC.data('kode-peristiwa-current-q' + currentRiskMap.quarter).push(code);
-                cellC.data('has-current', true);
+                cellI.data('kode-peristiwa-inherent').push(code);
+                cellI.data('has-inherent', true);
             }
         });
 
-        const cells = $('#inherentMap.table-risk-map .data-cell');
-        cells.each((index, cell) => {
+        paintInherentResidualMapCells();
+    }
+
+    function renderResidualMapMarkers(quarter) {
+        $('#inherentMap.table-risk-map .data-cell').each(function() {
+            $(this).removeData('kode-peristiwa-residual');
+            $(this).removeData('has-residual');
+        });
+
+        risks.forEach((risk, idx) => {
+            const matrixR = getResidualMatrix(risk, quarter);
+            if (!matrixR) {
+                return;
+            }
+
+            const cellR = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixR}"]`);
+            const code = (idx + 1).toString();
+
+            if (cellR.length) {
+                if (!cellR.data('kode-peristiwa-residual')) {
+                    cellR.data('kode-peristiwa-residual', []);
+                }
+                cellR.data('kode-peristiwa-residual').push(code);
+                cellR.data('has-residual', true);
+            }
+        });
+
+        paintInherentResidualMapCells();
+    }
+
+    function paintInherentResidualMapCells() {
+        $('#inherentMap.table-risk-map .data-cell').each(function() {
+            const cell = $(this);
             let html = '';
-            let kodePeristiwaInherent = $(cell).data('kode-peristiwa-inherent');
-            let kodePeristiwaResidual = $(cell).data('kode-peristiwa-residual');
+
+            const kodePeristiwaInherent = cell.data('kode-peristiwa-inherent');
             if (kodePeristiwaInherent && kodePeristiwaInherent.length > 0) {
                 for (let i = 0; i < kodePeristiwaInherent.length; i++) {
                     html += `<span class="box-inherent">R${kodePeristiwaInherent[i]}</span>`;
                 }
             }
 
+            const kodePeristiwaResidual = cell.data('kode-peristiwa-residual');
             if (kodePeristiwaResidual && kodePeristiwaResidual.length > 0) {
                 for (let i = 0; i < kodePeristiwaResidual.length; i++) {
                     html += `<span class="box-residual">R${kodePeristiwaResidual[i]}</span>`;
                 }
             }
 
-            $(cell).find('.kode-peristiwa').html(html);
+            cell.find('.kode-peristiwa').html(html);
+        });
+    }
+
+    function renderCurrentMapMarkers() {
+        $('#currentMap.table-risk-map .data-cell').each(function() {
+            for (let quarter = 1; quarter <= 4; quarter++) {
+                $(this).removeData('kode-peristiwa-current-q' + quarter);
+            }
+            $(this).removeData('has-current');
+            $(this).find('.kode-peristiwa').empty();
         });
 
-        const cellsC = $('#currentMap.table-risk-map .data-cell');
-        cellsC.each((index, cell) => {
+        risks.forEach((risk, idx) => {
+            const currentRiskMaps = formattedCurrentRiskMaps[risk.id] || [];
+            const code = (idx + 1).toString();
+
+            currentRiskMaps.forEach((currentRiskMap) => {
+                if (!currentRiskMap?.quarter) {
+                    return;
+                }
+
+                const matrixC = currentRiskMap.skala_dampak + '-' + currentRiskMap.skala_probabilitas;
+                const cellC = $(`#currentMap.table-risk-map .data-cell[data-matrix="${matrixC}"]`);
+
+                if (cellC.length) {
+                    const quarterKey = 'kode-peristiwa-current-q' + currentRiskMap.quarter;
+                    if (!cellC.data(quarterKey)) {
+                        cellC.data(quarterKey, []);
+                    }
+                    cellC.data(quarterKey).push(code);
+                    cellC.data('has-current', true);
+                }
+            });
+        });
+
+        $('#currentMap.table-risk-map .data-cell').each(function() {
+            const cell = $(this);
             let html = '';
-            let kodePeristiwaCurrent = null;
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-q1');
-            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
-                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                    html += `<span class="box-current current-q1">R${kodePeristiwaCurrent[i]}</span>`;
+
+            for (let quarter = 1; quarter <= 4; quarter++) {
+                const kodePeristiwaCurrent = cell.data('kode-peristiwa-current-q' + quarter);
+                if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
+                    for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
+                        html += `<span class="box-current current-q${quarter}">R${kodePeristiwaCurrent[i]}</span>`;
+                    }
                 }
             }
 
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-q2');
-            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
-                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                    html += `<span class="box-current current-q2">R${kodePeristiwaCurrent[i]}</span>`;
-                }
-            }
-
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-q3');
-            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
-                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                    html += `<span class="box-current current-q3">R${kodePeristiwaCurrent[i]}</span>`;
-                }
-            }
-
-            kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-q4');
-            if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
-                for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                    html += `<span class="box-current current-q4">R${kodePeristiwaCurrent[i]}</span>`;
-                }
-            }
-
-            $(cell).find('.kode-peristiwa').html(html);
+            cell.find('.kode-peristiwa').html(html);
         });
-    });
+    }
 
-    $('#quarterSelect').on('change', function() {
-        const quarter = $('#quarterSelect').val();
+    function updateSummaryTable(quarter) {
+        $('tr[data-risk-id]').each(function() {
+            const tr = $(this);
+            const riskId = tr.data('risk-id');
+
+            if (riskResidualData[riskId] && riskResidualData[riskId][quarter]) {
+                const dataRes = riskResidualData[riskId][quarter];
+
+                tr.find('.residual-nilai-dampak').text(dataRes.nilai_dampak ? formatRupiah(dataRes.nilai_dampak) : '-');
+                tr.find('.residual-skala-dampak').text(dataRes.skala_dampak ?? '-');
+                tr.find('.residual-nilai-prob').text(dataRes.nilai_prob ?? '-');
+                tr.find('.residual-skala-prob').text(dataRes.skala_prob ?? '-');
+                tr.find('.residual-nilai-risiko').text(dataRes.skala_risiko ?? '-');
+
+                const tdResLevel = tr.find('.residual-level-risiko');
+                tdResLevel.text(dataRes.level_risiko ?? '-');
+                tdResLevel.removeClass(function (index, className) {
+                    return (className.match(/(^|\s)bg-\S+/g) || []).join(' ');
+                });
+                if (dataRes.level_risiko) tdResLevel.addClass(getLevelClass(dataRes.level_risiko));
+            }
+        });
+    }
+
+    function updateDashboard(quarter) {
         $('#currentMap').prop('class', 'table-risk-map');
         $('#currentMap').addClass('show-q' + quarter);
+        renderResidualMapMarkers(quarter);
+        updateSummaryTable(quarter);
+    }
+
+    renderInherentMapMarkers();
+    renderCurrentMapMarkers();
+
+    const currentQuarter = Math.ceil((new Date().getMonth() + 1) / 3);
+    $('#quarterSelect').val(String(currentQuarter));
+
+    $('#quarterSelect').on('change', function() {
+        updateDashboard($(this).val());
     }).change();
 
     $('#exportPdfBtn').on('click', function() {

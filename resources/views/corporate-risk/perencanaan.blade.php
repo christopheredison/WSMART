@@ -281,6 +281,7 @@
         </div>
     </div>
 
+    @php $perencanaanBaseRoute = 'corporate-risk'; @endphp
     @include('risk-register-unit._modal_tambah_rencana_perlakuan_risiko')
     @include('risk-register-unit._modal_edit_rencana_perlakuan_risiko')
 
@@ -469,7 +470,7 @@ $(document).ready(function() {
             if (result.isConfirmed) {
                 // Jika konfirmasi "Ya", kirimkan permintaan AJAX untuk menghapus
                 $.ajax({
-                    url: `{{ route('risk-register-unit.hapus-rencana-perlakuan', ['riskRegister' => $identifikasiRisiko->id, 'id' => ':id']) }}`.replace(':id', rencanaId), // Endpoint hapus
+                    url: `{{ route('corporate-risk.hapus-rencana-perlakuan', ['riskRegister' => $identifikasiRisiko->id, 'id' => ':id']) }}`.replace(':id', rencanaId), // Endpoint hapus
                     type: 'DELETE',
                     data: {
                         _token: '{{ csrf_token() }}' // Kirim token CSRF untuk otentikasi
@@ -579,7 +580,7 @@ $(document).ready(function() {
     // Submit Tambah Dampak
     $('#btnSimpanTambahDampak').on('click', function() {
         $.ajax({
-            url: '/risk-register-unit/rencana-perlakuan-dampak/tambah',
+            url: '{{ route('corporate-risk.rencana-perlakuan-dampak.store') }}',
             type: 'POST',
             data: $('#formTambahRencanaDampak').serialize() + "&_token={{ csrf_token() }}",
             success: function(response) {
@@ -587,7 +588,7 @@ $(document).ready(function() {
                 Swal.fire('Berhasil', response.message, 'success').then(() => location.reload());
             },
             error: function(xhr) {
-                Swal.fire('Error', xhr.responseJSON.message || 'Terjadi kesalahan', 'error');
+                Swal.fire('Error', xhr.responseJSON?.message || 'Terjadi kesalahan', 'error');
             }
         });
     });
@@ -597,7 +598,7 @@ $(document).ready(function() {
         const id = $(this).data('id');
         const risikoId = $(this).data('risiko-id');
         const dampakRisikoId = $(this).data('dampak-risiko-id');
-        $.get(`/risk-register-unit/rencana-perlakuan-dampak/${id}`, function(data) {
+        $.get(`{{ url('corporate-risk/rencana-perlakuan-dampak') }}/${id}`, function(data) {
             $('#xdPerlakuanId').val(data.id);
             $('#xdRisikoId').val(risikoId);
             $('#xdDampakRisikoId').val(dampakRisikoId);
@@ -610,7 +611,6 @@ $(document).ready(function() {
 
             // Select2
             $('#picEditDampak').val(data.pic_jabatan_id).trigger('change');
-            // $('#divisiTerkaitEditDampak').val(data.divisi_terkait).trigger('change');
 
             fpImpact1.setDate(data.timeline_perlakuan_risiko_start);
             fpImpact2.setDate(data.timeline_perlakuan_risiko_end);
@@ -623,7 +623,7 @@ $(document).ready(function() {
     $('#btnUpdateDampak').on('click', function() {
         const id = $('#xdPerlakuanId').val();
         $.ajax({
-            url: `/risk-register-unit/rencana-perlakuan-dampak/${id}`,
+            url: `{{ url('corporate-risk/rencana-perlakuan-dampak') }}/${id}`,
             type: 'PUT',
             data: $('#formEditRencanaDampak').serialize() + "&_token={{ csrf_token() }}",
             success: function(response) {
@@ -631,7 +631,7 @@ $(document).ready(function() {
                 Swal.fire('Berhasil', response.message, 'success').then(() => location.reload());
             },
             error: function(xhr) {
-                Swal.fire('Error', xhr.responseJSON.message || 'Gagal update', 'error');
+                Swal.fire('Error', xhr.responseJSON?.message || 'Gagal update', 'error');
             }
         });
     });
@@ -654,7 +654,7 @@ $(document).ready(function() {
                 Swal.showLoading();
 
                 $.ajax({
-                    url: `/risk-register-unit/rencana-perlakuan-dampak/${rencanaId}`,
+                    url: `{{ url('corporate-risk/rencana-perlakuan-dampak') }}/${rencanaId}`,
                     type: 'DELETE',
                     data: {
                         _token: '{{ csrf_token() }}'
@@ -671,7 +671,7 @@ $(document).ready(function() {
                     error: function(xhr) {
                         Swal.fire(
                             'Gagal!',
-                            xhr.responseJSON.message || 'Terjadi kesalahan saat menghapus data.',
+                            xhr.responseJSON?.message || 'Terjadi kesalahan saat menghapus data.',
                             'error'
                         );
                     }

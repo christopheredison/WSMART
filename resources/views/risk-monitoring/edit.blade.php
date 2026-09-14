@@ -97,13 +97,13 @@
                 <td>{{ $item->kri }}</td>
                 <td>
                   @if ($riskMonitoring->periode_monitoring == 'Quarter 1')
-                  {{ $item->status_kri_terkini_q1 }}
+                  {{ str_replace('Waspada', 'Siaga', $item->status_kri_terkini_q1) }}
                   @elseif ($riskMonitoring->periode_monitoring == 'Quarter 2')
-                  {{ $item->status_kri_terkini_q2 }}
+                  {{ str_replace('Waspada', 'Siaga', $item->status_kri_terkini_q2) }}
                   @elseif ($riskMonitoring->periode_monitoring == 'Quarter 3')
-                  {{ $item->status_kri_terkini_q3 }}
+                  {{ str_replace('Waspada', 'Siaga', $item->status_kri_terkini_q3) }}
                   @elseif ($riskMonitoring->periode_monitoring == 'Quarter 4')
-                  {{ $item->status_kri_terkini_q4 }}
+                  {{ str_replace('Waspada', 'Siaga', $item->status_kri_terkini_q4) }}
                   @else
                   {{ '-' }}
                   @endif
@@ -355,8 +355,8 @@
             <div class="col-md-4">
               <div class="form-floating text-center">
                 <input class="form-control alert-warning" disabled="disabled" name="batas_waspada" id="batas_waspada"
-                  rows="3" placeholder="Batas Waspada">
-                <label for="batas_waspada">Batas Waspada</label>
+                  rows="3" placeholder="Batas Siaga">
+                <label for="batas_waspada">Batas Siaga</label>
               </div>
             </div>
             <div class="col-md-4">
@@ -379,7 +379,7 @@
                 <select class="form-select" name="status_kri" id="status_kri">
                   <option value="" selected disabled>---</option>
                   <option value="Aman">Aman</option>
-                  <option value="Waspada">Waspada</option>
+                  <option value="Siaga">Siaga</option>
                   <option value="Bahaya">Bahaya</option>
                 </select>
                 <label for="status_kri">Status KRI</label>
@@ -516,7 +516,7 @@ $(document).ready(function() {
       $('#batas_bahaya').val(data.batas_bahaya);
       //get from quarters
       $('#nilai_kri').val(data.nilai_kri);
-      $('#status_kri').val(data.status_kri);
+      $('#status_kri').val(data.status_kri === 'Waspada' ? 'Siaga' : data.status_kri);
       $('#mrid').val(data.mrid);
       $('#statusModal').modal('show');
     });

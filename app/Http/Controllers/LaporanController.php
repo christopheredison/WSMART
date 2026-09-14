@@ -11,11 +11,57 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\LaporanUnitExport;
 use App\Exports\LaporanProjectExport;
 use App\Exports\LaporanLossEventProjectExport;
+use App\Exports\LaporanLossEventUnitExport;
 use App\Exports\LaporanRiskRegisterBaruExport;
+use App\Exports\Support\MonitoringPeriodResolver;
 use Illuminate\Support\Facades\Log;
 
 class LaporanController extends Controller
 {
+    private function resolveUnitIdsForExport(Request $request, int $unitTypeId, string $allUnitsPermission): array
+    {
+        $unitId = $request->input('unit_id');
+
+        if ($unitId === 'all') {
+            if (!Gate::check($allUnitsPermission)) {
+                abort(403, 'Anda tidak memiliki akses untuk export semua unit.');
+            }
+
+            $unitIds = Unit::where('unit_type_id', $unitTypeId)
+                ->orderBy('name')
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            if (empty($unitIds)) {
+                abort(422, 'Tidak ada unit yang tersedia untuk di-export.');
+            }
+
+            $fileNameUnit = $unitTypeId === 2 ? 'Semua_Anak_Perusahaan' : 'Semua_Divisi';
+            $unitColumnLabel = $unitTypeId === 2 ? 'Nama Anak Perusahaan' : 'Nama Divisi';
+
+            return [
+                'unitIds' => $unitIds,
+                'includeUnitColumn' => true,
+                'unitColumnLabel' => $unitColumnLabel,
+                'fileNameUnit' => $fileNameUnit,
+            ];
+        }
+
+        $unit = Unit::findOrFail($unitId);
+
+        if ((int) $unit->unit_type_id !== $unitTypeId) {
+            abort(422, 'Unit yang dipilih tidak valid untuk laporan ini.');
+        }
+
+        return [
+            'unitIds' => [(int) $unit->id],
+            'includeUnitColumn' => false,
+            'unitColumnLabel' => $unitTypeId === 2 ? 'Nama Anak Perusahaan' : 'Nama Divisi',
+            'fileNameUnit' => str_replace(' ', '_', $unit->name),
+        ];
+    }
+
     public function korporat()
     {
         $periodes = Periode::orderBy('tahun', 'desc')->get();
@@ -41,6 +87,9 @@ class LaporanController extends Controller
             $periode = Periode::find($periodeId);
             $unit    = Unit::find($unitId);
 
+            // Laporan memotret bulan monitoring terakhir yang sudah selesai seluruhnya.
+            $month = MonitoringPeriodResolver::forUnits($periodeId, [(int) $unitId], $month);
+
             $namaBulan = [
                 1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
                 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
@@ -51,7 +100,7 @@ class LaporanController extends Controller
             $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
 
             $fileContents = Excel::raw(
-                new LaporanUnitExport($periodeId, $unitId, $month),
+                new LaporanUnitExport($periodeId, [(int) $unitId], $month),
                 \Maatwebsite\Excel\Excel::XLSX
             );
 
@@ -88,26 +137,30 @@ class LaporanController extends Controller
                          ->get();
         }
 
-        return view('laporan.unit', compact('periodes', 'units'));
+        $canExportAll = Gate::check('view_all_division');
+
+        return view('laporan.unit', compact('periodes', 'units', 'canExportAll'));
     }
 
     public function unitExport(Request $request)
     {
         $request->validate([
             'periode_id'     => 'required|exists:periodes,id',
-            'unit_id'        => 'required|exists:units,id',
+            'unit_id'        => 'required',
             'month'          => 'nullable|integer|between:1,12',
             'format_laporan' => 'required|in:lama,baru',
         ]);
 
         try {
-            $periodeId = $request->input('periode_id');
-            $unitId    = $request->input('unit_id');
+            $periodeId = (int) $request->input('periode_id');
             $month     = $request->input('month');
             $format    = $request->input('format_laporan');
+            $resolved  = $this->resolveUnitIdsForExport($request, 1, 'view_all_division');
 
-            $periode = Periode::find($periodeId);
-            $unit    = Unit::find($unitId);
+            $periode = Periode::findOrFail($periodeId);
+
+            // Laporan memotret bulan monitoring terakhir yang sudah selesai seluruhnya.
+            $month = MonitoringPeriodResolver::forUnits($periodeId, $resolved['unitIds'], $month);
 
             $namaBulan = [
                 1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
@@ -118,11 +171,23 @@ class LaporanController extends Controller
 
             // Tentukan Class Export berdasarkan pilihan
             if ($format === 'baru') {
-                $fileName = 'Laporan_Risk_Register_New_Format_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
-                $exportClass = new LaporanRiskRegisterBaruExport($periodeId, $unitId, $month);
+                $fileName = 'Laporan_Risk_Register_New_Format_' . $resolved['fileNameUnit'] . $monthString . '_' . $periode->tahun . '.xlsx';
+                $exportClass = new LaporanRiskRegisterBaruExport(
+                    $periodeId,
+                    $resolved['unitIds'],
+                    $month,
+                    $resolved['includeUnitColumn'],
+                    $resolved['unitColumnLabel']
+                );
             } else {
-                $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
-                $exportClass = new LaporanUnitExport($periodeId, $unitId, $month);
+                $fileName = 'Laporan_Risk_Register_' . $resolved['fileNameUnit'] . $monthString . '_' . $periode->tahun . '.xlsx';
+                $exportClass = new LaporanUnitExport(
+                    $periodeId,
+                    $resolved['unitIds'],
+                    $month,
+                    $resolved['includeUnitColumn'],
+                    $resolved['unitColumnLabel']
+                );
             }
 
             $fileContents = Excel::raw(
@@ -145,26 +210,30 @@ class LaporanController extends Controller
         $periodes = Periode::orderBy('tahun', 'desc')->get();
         $units = Gate::check('ap_admin') ? Unit::where('unit_type_id', 2)->get() : collect([auth()->user()->unit]);
 
-        return view('laporan.ap', compact('periodes', 'units'));
+        $canExportAll = Gate::check('ap_admin');
+
+        return view('laporan.ap', compact('periodes', 'units', 'canExportAll'));
     }
 
     public function apExport(Request $request)
     {
         $request->validate([
             'periode_id' => 'required|exists:periodes,id',
-            'unit_id'    => 'required|exists:units,id',
+            'unit_id'    => 'required',
             'month'      => 'nullable|integer|between:1,12',
             'format_laporan' => 'required|in:lama,baru',
         ]);
 
         try {
-            $periodeId = $request->input('periode_id');
-            $unitId    = $request->input('unit_id');
+            $periodeId = (int) $request->input('periode_id');
             $month     = $request->input('month');
             $format    = $request->input('format_laporan');
+            $resolved  = $this->resolveUnitIdsForExport($request, 2, 'ap_admin');
 
-            $periode = Periode::find($periodeId);
-            $unit    = Unit::find($unitId);
+            $periode = Periode::findOrFail($periodeId);
+
+            // Laporan memotret bulan monitoring terakhir yang sudah selesai seluruhnya.
+            $month = MonitoringPeriodResolver::forUnits($periodeId, $resolved['unitIds'], $month);
 
             $namaBulan = [
                 1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
@@ -175,11 +244,23 @@ class LaporanController extends Controller
 
              // Tentukan Class Export berdasarkan pilihan
             if ($format === 'baru') {
-                $fileName = 'Laporan_Risk_Register_New_Format_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
-                $exportClass = new LaporanRiskRegisterBaruExport($periodeId, $unitId, $month);
+                $fileName = 'Laporan_Risk_Register_New_Format_' . $resolved['fileNameUnit'] . $monthString . '_' . $periode->tahun . '.xlsx';
+                $exportClass = new LaporanRiskRegisterBaruExport(
+                    $periodeId,
+                    $resolved['unitIds'],
+                    $month,
+                    $resolved['includeUnitColumn'],
+                    $resolved['unitColumnLabel']
+                );
             } else {
-                $fileName = 'Laporan_Risk_Register_' . str_replace(' ', '_', $unit->name) . $monthString . '_' . $periode->tahun . '.xlsx';
-                $exportClass = new LaporanUnitExport($periodeId, $unitId, $month);
+                $fileName = 'Laporan_Risk_Register_' . $resolved['fileNameUnit'] . $monthString . '_' . $periode->tahun . '.xlsx';
+                $exportClass = new LaporanUnitExport(
+                    $periodeId,
+                    $resolved['unitIds'],
+                    $month,
+                    $resolved['includeUnitColumn'],
+                    $resolved['unitColumnLabel']
+                );
             }
 
             $fileContents = Excel::raw(
@@ -315,6 +396,9 @@ class LaporanController extends Controller
                 return response()->json(['message' => 'Tidak ada project yang dapat diakses untuk di-export.'], 403);
             }
 
+            // Laporan memotret bulan monitoring terakhir yang sudah selesai seluruhnya.
+            $month = MonitoringPeriodResolver::forProjects($finalProjectIds, $month, $tahun);
+
             $monthString = $month ? $namaBulan[(int)$month] : '';
 
             // Rakit nama file
@@ -449,6 +533,66 @@ class LaporanController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Gagal export laporan LED: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal generate laporan LED: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function unitLedExport(Request $request)
+    {
+        $request->validate([
+            'unit_id'    => 'required',
+            'periode_id' => 'required|exists:periodes,id',
+        ]);
+
+        try {
+            $resolved  = $this->resolveUnitIdsForExport($request, 1, 'view_all_division');
+            $periodeId = (int) $request->input('periode_id');
+            $periode   = Periode::findOrFail($periodeId);
+
+            $fileName = 'Laporan_Loss_Event_' . $resolved['fileNameUnit'] . '_' . $periode->tahun . '.xlsx';
+
+            $fileContents = Excel::raw(
+                new LaporanLossEventUnitExport($resolved['unitIds'], 'unit', $periodeId),
+                \Maatwebsite\Excel\Excel::XLSX
+            );
+
+            return response($fileContents, 200, [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal export laporan LED divisi: ' . $e->getMessage());
+
+            return response()->json(['message' => 'Gagal generate laporan LED: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function apLedExport(Request $request)
+    {
+        $request->validate([
+            'unit_id'    => 'required',
+            'periode_id' => 'required|exists:periodes,id',
+        ]);
+
+        try {
+            $resolved  = $this->resolveUnitIdsForExport($request, 2, 'ap_admin');
+            $periodeId = (int) $request->input('periode_id');
+            $periode   = Periode::findOrFail($periodeId);
+
+            $fileName = 'Laporan_Loss_Event_' . $resolved['fileNameUnit'] . '_' . $periode->tahun . '.xlsx';
+
+            $fileContents = Excel::raw(
+                new LaporanLossEventUnitExport($resolved['unitIds'], 'ap', $periodeId),
+                \Maatwebsite\Excel\Excel::XLSX
+            );
+
+            return response($fileContents, 200, [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal export laporan LED AP: ' . $e->getMessage());
+
             return response()->json(['message' => 'Gagal generate laporan LED: ' . $e->getMessage()], 500);
         }
     }

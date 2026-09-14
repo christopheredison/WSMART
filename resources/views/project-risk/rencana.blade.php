@@ -50,6 +50,37 @@
                 <div class="col-md-2">Level Risiko</div>
                 <div class="col-md-2 fw-bold">{{ $analisa?->level_risiko ?: '-' }}</div>
             </div>
+            @if(($analisa?->kategori_dampak ?? null) === \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF && $analisa?->impactDetails?->isNotEmpty())
+                <div class="row">
+                    <div class="col-12">
+                        <label class="fw-semibold mb-2">Rincian Perhitungan Dampak Inheren</label>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Uraian</th>
+                                        <th class="text-end">Volume</th>
+                                        <th>Satuan</th>
+                                        <th class="text-end">Harga Satuan</th>
+                                        <th class="text-end">Jumlah (Vol x HS)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($analisa->impactDetails as $detail)
+                                        <tr>
+                                            <td>{{ $detail->uraian }}</td>
+                                            <td class="text-end">{{ $detail->formattedVolume() }}</td>
+                                            <td>{{ $detail->satuan ?? '-' }}</td>
+                                            <td class="text-end">Rp {{ number_format((float) $detail->harga_satuan, 2, ',', '.') }}</td>
+                                            <td class="text-end fw-semibold">Rp {{ number_format((float) $detail->subtotal, 2, ',', '.') }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 

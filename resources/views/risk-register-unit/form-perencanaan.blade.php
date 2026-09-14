@@ -58,7 +58,7 @@
             <label for="biaya_perlakuan_risiko">Biaya Perlakuan Risiko</label>
         </div>
         <div class="invalid-feedback">
-            Biaya perlakuan risiko tidak boleh melebihi nilai dampak (Rp. {{ number_format($analisa->nilai_dampak, 0, ',', '.') }})
+            Biaya perlakuan risiko tidak boleh melebihi nilai dampak (Rp. {{ number_format($analisa->nilai_dampak ?? 0, 0, ',', '.') }})
         </div>
     </div>
     <div class="col-12 col-md-6">

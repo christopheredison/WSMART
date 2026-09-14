@@ -50,7 +50,10 @@ class CloseExpiredUnitRisks extends Command
         $updatedRisks = IdentifikasiRisiko::query()
             ->whereIn('unit_id', $expiredUnits)
             ->where('is_closed', false)
-            ->update(['is_closed' => true]);
+            ->update([
+                'is_closed' => true,
+                'closed_at' => now(),
+            ]);
 
         // Update status unit yang expired menjadi 0 (false)
         $updatedUnits = Unit::query()

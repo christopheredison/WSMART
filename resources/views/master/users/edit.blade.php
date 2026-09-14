@@ -151,12 +151,17 @@
                 </div>
                 <div class="col-md-9 me-lg-7 me-xxl-8">
                   <div class="row gx-2 gx-md-4">
-                    @foreach ($roles as $key => $value)
+                    @foreach ($roles as $role)
                     <div class="col-6 col-md-6 col-lg-3 mb-2">
                       <div class="form-check form-switch">
-                        <input id="roles_{{ $key }}" class="form-check-input" role="switch" type="checkbox" name="roles[]"
-                          value="{{ $value }}" {{ (isset($userRoles) && in_array($key, $userRoles)) ? 'checked' : '' }}>
-                        <label class="form-check-label" style="cursor:pointer;" for="roles_{{ $key }}">{{ ucwords(str_replace('_', ' ', $value)) }}</label>
+                        <input id="roles_{{ $role->id }}" class="form-check-input" role="switch" type="checkbox" name="roles[]"
+                          value="{{ $role->name }}" {{ (isset($userRoles) && in_array($role->id, $userRoles)) ? 'checked' : '' }}>
+                        <label class="form-check-label" style="cursor:pointer;" for="roles_{{ $role->id }}">
+                          {{ ucwords(str_replace('_', ' ', $role->name)) }}
+                          @if ($role->notes)
+                          <small class="d-block text-muted fw-normal mt-1">{{ $role->notes }}</small>
+                          @endif
+                        </label>
                       </div>
                     </div>
                     @endforeach

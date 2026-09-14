@@ -684,7 +684,7 @@ if (!function_exists('formatKriBatasJs')) {
                             <div class="tab-pane fade show active" id="tab_penyebab_{{ $monitoring->id }}" role="tabpanel">
                                 @php
                                     $groupedPenyebab = $monitoring->perlakuanPenyebabMonitorings->groupBy(function($item) {
-                                        return $item->perlakuanPenyebabRisikoUnit->penyebabRisiko->penyebab_risiko ?? 'Lainnya';
+                                        return $item->perlakuanPenyebabRisikoUnit?->penyebabRisiko?->penyebab_risiko ?? 'Lainnya';
                                     });
                                 @endphp
                                 @forelse($groupedPenyebab as $penyebabName => $items)
@@ -703,12 +703,13 @@ if (!function_exists('formatKriBatasJs')) {
                                                 </thead>
                                                 <tbody>
                                                     @foreach($items as $realisasi)
+                                                        @php $perlakuanPenyebab = $realisasi->perlakuanPenyebabRisikoUnit; @endphp
                                                         <tr>
                                                             <td class="bg-white">
-                                                                <strong class="text-primary">{{ $realisasi->perlakuanPenyebabRisikoUnit->rencana_perlakuan_risiko ?? '-' }}</strong>
+                                                                <strong class="text-primary">{{ $perlakuanPenyebab?->rencana_perlakuan_risiko ?? '-' }}</strong>
                                                                 <div class="mt-3 small">
-                                                                    <div class="text-muted">Anggaran: <span class="text-dark fw-bold">Rp {{ number_format($realisasi->perlakuanPenyebabRisikoUnit->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</span></div>
-                                                                    <div class="text-muted">PIC: <span class="text-dark">{{ $realisasi->perlakuanPenyebabRisikoUnit->pic ?? '-' }}</span></div>
+                                                                    <div class="text-muted">Anggaran: <span class="text-dark fw-bold">Rp {{ number_format($perlakuanPenyebab?->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</span></div>
+                                                                    <div class="text-muted">PIC: <span class="text-dark">{{ $perlakuanPenyebab?->pic ?? '-' }}</span></div>
                                                                 </div>
                                                             </td>
                                                             <td class="bg-white">
@@ -743,7 +744,7 @@ if (!function_exists('formatKriBatasJs')) {
                             <div class="tab-pane fade" id="tab_dampak_{{ $monitoring->id }}" role="tabpanel">
                                 @php
                                     $groupedDampak = $monitoring->perlakuanDampakMonitorings->groupBy(function($item) {
-                                        return $item->perlakuanDampak->dampakRisikoUnit->dampak_risiko ?? 'Lainnya';
+                                        return $item->perlakuanDampak?->dampakRisikoUnit?->dampak_risiko ?? 'Lainnya';
                                     });
                                 @endphp
                                 @forelse($groupedDampak as $dampakName => $items)
@@ -762,12 +763,13 @@ if (!function_exists('formatKriBatasJs')) {
                                                 </thead>
                                                 <tbody>
                                                     @foreach($items as $realisasi)
+                                                        @php $perlakuanDampak = $realisasi->perlakuanDampak; @endphp
                                                         <tr>
                                                             <td class="bg-white">
-                                                                <strong class="text-warning text-dark">{{ $realisasi->perlakuanDampak->rencana_perlakuan_risiko ?? '-' }}</strong>
+                                                                <strong class="text-warning text-dark">{{ $perlakuanDampak?->rencana_perlakuan_risiko ?? '-' }}</strong>
                                                                 <div class="mt-3 small">
-                                                                    <div class="text-muted">Anggaran: <span class="text-dark fw-bold">Rp {{ number_format($realisasi->perlakuanDampak->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</span></div>
-                                                                    <div class="text-muted">PIC: <span class="text-dark">{{ $realisasi->perlakuanDampak->pic ?? '-' }}</span></div>
+                                                                    <div class="text-muted">Anggaran: <span class="text-dark fw-bold">Rp {{ number_format($perlakuanDampak?->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</span></div>
+                                                                    <div class="text-muted">PIC: <span class="text-dark">{{ $perlakuanDampak?->pic ?? '-' }}</span></div>
                                                                 </div>
                                                             </td>
                                                             <td class="bg-white">

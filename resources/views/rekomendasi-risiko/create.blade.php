@@ -264,7 +264,7 @@
                         </div>
                         <div class="col-6 col-md-3"><div class="form-group form-floating"><input type="text" class="form-control" name="satuan_kri[]" placeholder="Satuan KRI"><label>Satuan KRI</label></div></div>
                         <div class="col-6 col-md-3"><div class="form-group form-floating"><input type="text" class="form-control border-success" name="batas_aman[]" placeholder="Batas Aman"><label>Batas Aman</label></div></div>
-                        <div class="col-6 col-md-3"><div class="form-group form-floating"><input type="text" class="form-control border-warning" name="batas_waspada[]" placeholder="Batas Waspada"><label>Batas Waspada</label></div></div>
+                        <div class="col-6 col-md-3"><div class="form-group form-floating"><input type="text" class="form-control border-warning" name="batas_waspada[]" placeholder="Batas Siaga"><label>Batas Siaga</label></div></div>
                         <div class="col-6 col-md-3"><div class="form-group form-floating"><input type="text" class="form-control border-danger" name="batas_bahaya[]" placeholder="Batas Bahaya"><label>Batas Bahaya</label></div></div>
                     </div>
                 </div>

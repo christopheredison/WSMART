@@ -10,6 +10,7 @@ use App\Models\ProjectRisk;
 use App\Models\ProjectRiskMonitoring;
 use App\Models\DataBatch;
 use App\Models\RiskMap;
+use App\Services\ProjectHasilUsahaSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
@@ -258,12 +259,21 @@ class ProjectPeriodeListController extends BasicCRUDController
 
                 if ($levelId == 6) {
                     // INPUTTER (Level 6):
-                    // Action Needed jika: Batch Draft (1) ATAU Revisi (5)
-                    $riskActionNeededSql = "EXISTS (
-                        SELECT 1 FROM data_batches db
-                        WHERE db.id = $latestBatchIdSql
-                        AND db.finish IS FALSE
-                        AND db.status IN (1, 5)
+                    // Status aktual risiko ikut dicek agar draft baru tidak terlewat
+                    // hanya karena batch sebelumnya sudah selesai.
+                    $riskActionNeededSql = "(
+                        EXISTS (
+                            SELECT 1 FROM project_risks pr
+                            WHERE pr.project_periode_list_id = project_periode_lists.id
+                              AND pr.deleted_at IS NULL
+                              AND pr.status IN (0, 1, 5)
+                        )
+                        OR EXISTS (
+                            SELECT 1 FROM data_batches db
+                            WHERE db.id = $latestBatchIdSql
+                              AND db.finish IS FALSE
+                              AND db.status IN (1, 5)
+                        )
                     )";
                 } elseif ($u_step > 0) {
                     // VERIFIKATOR:
@@ -859,25 +869,26 @@ class ProjectPeriodeListController extends BasicCRUDController
                     // Subquery Batch Terakhir (Untuk Draft, Revisi, Verifikasi)
                     $latestBatchSql = "(SELECT MAX(db2.id) FROM data_batches db2 WHERE db2.project_id = project_periode_lists.project_id AND db2.type = 2)";
 
-                    // Pengecekan absolut apakah sebuah Project sudah SELESAI
+                    // Risiko hanya dianggap selesai jika seluruh data risikonya Published.
+                    // Status batch tidak boleh mengalahkan status aktual data risiko.
                     $isSelesaiSql = "(
-                        EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchSql AND db.finish IS TRUE)
-                        OR (
-                            (SELECT COUNT(*) FROM project_risks pr WHERE pr.project_periode_list_id = project_periode_lists.id AND pr.deleted_at IS NULL) > 0
-                            AND
-                            (SELECT COUNT(*) FROM project_risks pr WHERE pr.project_periode_list_id = project_periode_lists.id AND pr.status != 6 AND pr.deleted_at IS NULL) = 0
-                        )
+                        (SELECT COUNT(*) FROM project_risks pr WHERE pr.project_periode_list_id = project_periode_lists.id AND pr.deleted_at IS NULL) > 0
+                        AND
+                        (SELECT COUNT(*) FROM project_risks pr WHERE pr.project_periode_list_id = project_periode_lists.id AND pr.status != 6 AND pr.deleted_at IS NULL) = 0
                     )";
 
                     if ($value === 'active') {
                         // Hanya Selesai
                         $query->whereRaw($isSelesaiSql);
                     } elseif ($value === 'draft') {
-                        // Draft TAPI Bukan Selesai
+                        // Gunakan status aktual risiko agar draft baru tetap terdeteksi
+                        // meskipun batch sebelumnya sudah selesai.
                         $query->whereRaw("NOT $isSelesaiSql")
-                              ->whereRaw("(
-                                  NOT EXISTS (SELECT 1 FROM data_batches db WHERE db.project_id = project_periode_lists.project_id AND db.type = 2)
-                                  OR EXISTS (SELECT 1 FROM data_batches db WHERE db.id = $latestBatchSql AND db.finish IS FALSE AND db.status IN (0, 1))
+                              ->whereRaw("EXISTS (
+                                  SELECT 1 FROM project_risks pr
+                                  WHERE pr.project_periode_list_id = project_periode_lists.id
+                                    AND pr.deleted_at IS NULL
+                                    AND pr.status IN (0, 1)
                               )")
                               ->whereRaw("(SELECT COUNT(*) FROM project_risks pr WHERE pr.project_periode_list_id = project_periode_lists.id AND pr.deleted_at IS NULL) > 0");
                     } elseif ($value === 'revisi') {
@@ -1088,15 +1099,20 @@ class ProjectPeriodeListController extends BasicCRUDController
     private function checkRiskActionNeeded($row, $user, $u_step, $levelId)
     {
         $lastBatch = $row->project->dataBatches->sortByDesc('id')->first();
-        if ($lastBatch && $lastBatch->finish) return false;
 
         $batchStep = $lastBatch ? $lastBatch->step_verification : 0;
         $batchStatus = $lastBatch ? $lastBatch->status : 1;
         $isMyTurn = false;
 
         if ($levelId == 6) {
-            if (in_array($batchStatus, [1, 5])) $isMyTurn = true;
+            $hasDraftOrRevision = $row->projectRisks
+                ->whereIn('status', [0, ProjectRisk::STATUS_INPUT_DATA, ProjectRisk::STATUS_REJECTED])
+                ->isNotEmpty();
+            if ($hasDraftOrRevision || (!$lastBatch?->finish && in_array($batchStatus, [1, 5]))) {
+                $isMyTurn = true;
+            }
         } else {
+            if ($lastBatch && $lastBatch->finish) return false;
             if (($u_step == $batchStep) ||
                 ($u_step == 2 && $batchStatus == 9) ||
                 ($u_step == 3 && $batchStatus == 10)) {
@@ -1167,8 +1183,9 @@ class ProjectPeriodeListController extends BasicCRUDController
         $totalRisk = $allRisks->count();
         $publishedCount = $allRisks->where('status', ProjectRisk::STATUS_PUBLISHED)->count();
 
-        // 2. Cek Aktif (Published)
-        if (($lastBatch && $lastBatch->finish) || ($totalRisk > 0 && $totalRisk === $publishedCount)) {
+        // 2. Published hanya jika seluruh risiko aktual sudah Published.
+        // Batch yang selesai tidak cukup karena risiko draft baru bisa ditambahkan setelahnya.
+        if ($totalRisk > 0 && $totalRisk === $publishedCount) {
             $positionHtml = '<div class="mt-2 text-dark fw-bold" style="font-size: 11px;">Posisi: Selesai</div>';
 
             return '<div class="d-flex flex-column align-items-start">
@@ -1180,6 +1197,16 @@ class ProjectPeriodeListController extends BasicCRUDController
         // 3. Logic Proses
         $batchStep = $lastBatch ? $lastBatch->step_verification : 0;
         $batchStatus = $lastBatch ? $lastBatch->status : 1;
+
+        // Status aktual risiko menjadi fallback ketika batch terakhir sudah selesai,
+        // tetapi setelah itu terdapat risiko baru atau risiko yang perlu direvisi.
+        if ($allRisks->where('status', ProjectRisk::STATUS_REJECTED)->isNotEmpty()) {
+            $batchStep = 0;
+            $batchStatus = DataBatch::STATUS_REVISI;
+        } elseif ($allRisks->whereIn('status', [0, ProjectRisk::STATUS_INPUT_DATA])->isNotEmpty()) {
+            $batchStep = 0;
+            $batchStatus = DataBatch::STATUS_PROSES;
+        }
 
         // Label Posisi
         $stepLabels = [
@@ -1787,11 +1814,10 @@ class ProjectPeriodeListController extends BasicCRUDController
         $meta = $project->meta ?? [];
         $riskLimit = ($project->nk ?? 0) * 0.03; // 3% dari Nilai Kontrak (NK)
 
-        // Cari LSP (Laba Setelah Pajak)
-        $hasilUsaha = \App\Models\ProjectHasilUsaha::where('profit_center', $meta['profit_center'] ?? null)
-                        ->orderBy('period', 'desc')
-                        ->first();
-        $lspValue = $hasilUsaha ? $hasilUsaha->lsp_review : 0;
+        // Cari LSP (Laba Setelah Pajak) dan sinkronkan jika data kosong
+        $syncService = app(ProjectHasilUsahaSyncService::class);
+        $hasilUsaha = $syncService->getLatestForProject($project, true);
+        $lspValue = $hasilUsaha?->lsp_review ?? 0;
 
         // Hitung Rencana dan Realisasi Biaya
         $rencanaBiayaTotal = 0;
@@ -1869,7 +1895,9 @@ class ProjectPeriodeListController extends BasicCRUDController
             });
 
         $user = Auth()->user();
-        $canEditProject = $this->userHasAccessToProject($user, $projectPeriode);
+        $user->loadMissing('projects');
+        $canEditProject = in_array($user->level_id ?? 0, [6, 7])
+            && $user->hasProject($projectPeriode);
 
         return view('project-periode.show', compact('projectPeriode', 'tahunMonitorings', 'formattedCurrentRiskMaps', 'riskRealisasiData', 'editFields', 'riskMaps', 'user', 'project', 'meta', 'riskLimit', 'lspValue', 'rencanaBiayaTotal', 'realisasiBiayaTotal', 'canEditProject'));
     }

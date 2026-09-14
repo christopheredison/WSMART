@@ -10,14 +10,28 @@ class SasaranProyek extends Model
 {
     use HasFactory, SoftDeletes;
 
+    public const APPROVAL_PENDING = 0;
+    public const APPROVAL_APPROVED = 1;
+    public const APPROVAL_REJECTED = 2;
+
     protected $fillable = [
         'costcenter_code',
+        'project_periode_list_id',
+        'requested_by',
         'kpi_desc',
         'status',
+        'approval_status',
+        'verified_by',
+        'verified_at',
+        'rejected_reason',
         'tahun',
         'kpi_id',
         'target_akhir_tahun',
         'satuan'
+    ];
+
+    protected $casts = [
+        'verified_at' => 'datetime',
     ];
 
     //data sasaran default tapi hanya informasi keterangan saja
@@ -53,5 +67,20 @@ class SasaranProyek extends Model
             ]);
             return $sasaran;
         })->values();
+    }
+
+    public function requester()
+    {
+        return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    public function verifier()
+    {
+        return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function projectPeriodeList()
+    {
+        return $this->belongsTo(ProjectPeriodeList::class, 'project_periode_list_id');
     }
 }

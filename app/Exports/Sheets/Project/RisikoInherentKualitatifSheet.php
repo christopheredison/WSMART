@@ -9,13 +9,24 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
+class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithColumnFormatting
 {
+    public function columnFormats(): array
+    {
+        $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
+
+        return [
+            'F' => $currencyFormat,
+            'J' => $currencyFormat,
+        ];
+    }
+
     protected $risikos;
 
     public function __construct(Collection $risikos)
@@ -238,8 +249,13 @@ class RisikoInherentKualitatifSheet implements FromCollection, WithHeadings, Wit
      */
     private function formatCurrency($value)
     {
-        if ($value == 0) return 'Rp0';
-        return 'Rp' . number_format($value, 0, ',', '.');
+        if ($value === null || $value === '') {
+            return 0;
+        }
+        if (is_string($value)) {
+            $value = preg_replace('/[^0-9.\-]/', '', $value);
+        }
+        return (float) ($value ?: 0);
     }
 
     /**

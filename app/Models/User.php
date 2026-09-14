@@ -151,4 +151,15 @@ class User extends Authenticatable implements AuditableContract
 
         return $directRoles;
     }
+
+    public function hasExactAdminRole(): bool
+    {
+        $roleNames = $this->relationLoaded('roles')
+            ? $this->roles->pluck('name')
+            : $this->roles()->pluck('name');
+
+        return $roleNames->contains(function ($roleName) {
+            return strtolower((string) $roleName) === 'admin';
+        });
+    }
 }

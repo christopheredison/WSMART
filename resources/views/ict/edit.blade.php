@@ -56,7 +56,7 @@
               </select>
             </div>
 
-            <div class="col-md-6 mb-3" id="existing-risiko-wrapper">
+            <div class="col-12 mb-3" id="existing-risiko-wrapper">
               <label for="risiko_id" class="form-label">Pilih Peristiwa Risiko</label>
               <select class="form-select select2" id="risiko_id" name="risiko_id">
                 <option value="">Pilih Peristiwa Risiko</option>
@@ -105,18 +105,24 @@
                   </thead>
                   <tbody>
                     @foreach(old('key_control', []) as $index => $oldControl)
+                    @php $isLocked = old('key_control_id.'.$index, 0) > 0; @endphp
                     <tr>
                         <td>
                             <input type="hidden" name="key_control_id[]" value="{{ old('key_control_id.'.$index, 0) }}">
                             <input type="hidden" name="ict_plan_control_id[]" value="{{ old('ict_plan_control_id.'.$index) }}">
-                            <input type="text" class="form-control" name="key_control[]" value="{{ $oldControl }}" {{ old('key_control_id.'.$index, 0) > 0 ? 'readonly' : '' }} required>
+                            <input type="text" class="form-control key-control-input" name="key_control[]" value="{{ $oldControl }}" {{ $isLocked ? 'readonly' : '' }} required>
                         </td>
                         <td class="text-center align-middle">
-                          @if(old('key_control_id.'.$index, 0) > 0)
-                            <button type="button" class="btn btn-sm btn-light text-muted" disabled><span class="bx bx-lock-alt"></span></button>
-                          @else
-                            <button type="button" class="btn btn-sm btn-outline-danger remove-key-control"><span class="bx bx-trash"></span></button>
-                          @endif
+                          <div class="d-inline-flex gap-1">
+                            @if($isLocked)
+                              <button type="button" class="btn btn-sm btn-outline-secondary unlock-key-control" title="Klik untuk unlock edit">
+                                <span class="bx bx-lock-alt"></span>
+                              </button>
+                            @endif
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-key-control" title="Hapus">
+                              <span class="bx bx-trash"></span>
+                            </button>
+                          </div>
                         </td>
                     </tr>
                     @endforeach
@@ -126,10 +132,17 @@
                           <td>
                               <input type="hidden" name="key_control_id[]" value="{{ $control->key_control_id }}">
                               <input type="hidden" name="ict_plan_control_id[]" value="{{ $control->id }}">
-                              <input type="text" class="form-control" name="key_control[]" value="{{ $control->key_control }}" readonly required>
+                              <input type="text" class="form-control key-control-input" name="key_control[]" value="{{ $control->key_control }}" readonly required>
                           </td>
                           <td class="text-center align-middle">
-                            <button type="button" class="btn btn-sm btn-light text-muted" disabled><span class="bx bx-lock-alt"></span></button>
+                            <div class="d-inline-flex gap-1">
+                              <button type="button" class="btn btn-sm btn-outline-secondary unlock-key-control" title="Klik untuk unlock edit">
+                                <span class="bx bx-lock-alt"></span>
+                              </button>
+                              <button type="button" class="btn btn-sm btn-outline-danger remove-key-control" title="Hapus">
+                                <span class="bx bx-trash"></span>
+                              </button>
+                            </div>
                           </td>
                       </tr>
                       @endforeach
@@ -183,20 +196,39 @@
       }
     }
 
+    function getKeyControlActionsHtml(isReadonly) {
+      if (isReadonly) {
+        return `
+          <div class="d-inline-flex gap-1">
+            <button type="button" class="btn btn-sm btn-outline-secondary unlock-key-control" title="Klik untuk unlock edit">
+              <span class="bx bx-lock-alt"></span>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-key-control" title="Hapus">
+              <span class="bx bx-trash"></span>
+            </button>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="d-inline-flex gap-1">
+          <button type="button" class="btn btn-sm btn-outline-danger remove-key-control" title="Hapus">
+            <span class="bx bx-trash"></span>
+          </button>
+        </div>
+      `;
+    }
+
     function addKeyControlRow(id, text, planControlId, isReadonly) {
       const readonlyAttr = isReadonly ? 'readonly' : '';
-      const removeBtn = isReadonly
-        ? '<button type="button" class="btn btn-sm btn-light text-muted" disabled><span class="bx bx-lock-alt"></span></button>'
-        : '<button type="button" class="btn btn-sm btn-outline-danger remove-key-control"><span class="bx bx-trash"></span></button>';
-
       const row = `
         <tr>
           <td>
             <input type="hidden" name="key_control_id[]" value="${id}">
             <input type="hidden" name="ict_plan_control_id[]" value="${planControlId || ''}">
-            <input type="text" class="form-control" name="key_control[]" value="${text || ''}" ${readonlyAttr} required>
+            <input type="text" class="form-control key-control-input" name="key_control[]" value="${text || ''}" ${readonlyAttr} required>
           </td>
-          <td class="text-center align-middle">${removeBtn}</td>
+          <td class="text-center align-middle">${getKeyControlActionsHtml(isReadonly)}</td>
         </tr>
       `;
       $('#keyControlTable tbody').append(row);
@@ -253,11 +285,56 @@
       addKeyControlRow(0, '', null, false);
     });
 
+    $(document).on('click', '.unlock-key-control', function() {
+      const $btn = $(this);
+      const $row = $btn.closest('tr');
+      const $input = $row.find('.key-control-input');
+
+      $input.prop('readonly', false).focus();
+      $btn
+        .removeClass('btn-outline-secondary unlock-key-control')
+        .addClass('btn-success lock-key-control')
+        .attr('title', 'Kunci kembali')
+        .html('<span class="bx bx-lock-open-alt"></span>');
+    });
+
+    $(document).on('click', '.lock-key-control', function() {
+      const $btn = $(this);
+      const $row = $btn.closest('tr');
+      const $input = $row.find('.key-control-input');
+
+      $input.prop('readonly', true);
+      $btn
+        .removeClass('btn-success lock-key-control')
+        .addClass('btn-outline-secondary unlock-key-control')
+        .attr('title', 'Klik untuk unlock edit')
+        .html('<span class="bx bx-lock-alt"></span>');
+    });
+
     $(document).on('click', '.remove-key-control', function() {
-      $(this).closest('tr').remove();
-      if ($('#keyControlTable tbody tr').length === 0) {
-        addKeyControlRow(0, '', null, false);
-      }
+      const $row = $(this).closest('tr');
+      const keyControlText = ($row.find('.key-control-input').val() || '').trim();
+
+      Swal.fire({
+        title: 'Hapus Key Control?',
+        text: keyControlText
+          ? `Key Control "${keyControlText}" akan dihapus dari form ini.`
+          : 'Baris Key Control ini akan dihapus dari form.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (!result.isConfirmed) {
+          return;
+        }
+
+        $row.remove();
+        if ($('#keyControlTable tbody tr').length === 0) {
+          addKeyControlRow(0, '', null, false);
+        }
+      });
     });
 
     toggleRiskMode();

@@ -30,19 +30,22 @@ class LaporanProjectExport implements WithMultipleSheets
     {
         $sheets = [];
 
-        // Buat Closure Filter untuk Cutoff Bulan & Status Publish
+        // Monitoring yang dipakai: publish terakhir sampai bulan terpilih.
+        // Jika bulan terpilih belum publish, fallback ke bulan sebelumnya yang sudah publish.
         $filterUpToPeriod = function($q) {
             if ($this->bulan && $this->tahun) {
-                $q->where(function($query) {
-                    // Ambil tahun sebelumnya ATAU tahun yang sama dengan bulan <= bulan terpilih
+                // Kolom month bertipe teks, sehingga "<=" dibandingkan secara
+                // leksikal ("2" > "10"). Pakai daftar bulan agar Oktober–Desember
+                // tidak kehilangan data monitoring.
+                $bulanSampai = range(1, (int) $this->bulan);
+                $q->where(function($query) use ($bulanSampai) {
                     $query->where('tahun', '<', $this->tahun)
-                          ->orWhere(function($subQuery) {
+                          ->orWhere(function($subQuery) use ($bulanSampai) {
                               $subQuery->where('tahun', $this->tahun)
-                                      ->where('month', '<=', $this->bulan);
+                                      ->whereIn('month', $bulanSampai);
                           });
                 });
             }
-            // Filter hanya yang sudah ter-publish
             $q->where(function($sq) {
                 $sq->where('status', 100)->orWhere('is_approved', 1)->orWhere('is_approved', true);
             });
@@ -76,7 +79,6 @@ class LaporanProjectExport implements WithMultipleSheets
             'projectRiskMonitorings.skalaProbabilitas',
             'projectRiskMonitorings.skalaDampakObj'
         ])
-        ->whereHas('projectRiskMonitorings', $filterUpToPeriod)
         ->whereNull('deleted_at');
 
         // Optimasi: jika projectIds null artinya "all projects", hindari whereIn ribuan ID.
@@ -91,7 +93,7 @@ class LaporanProjectExport implements WithMultipleSheets
             $sheets[] = new ResumeProjectSheet($singleProjectId, $this->bulan, $this->tahun);
         }
 
-        $sheets[] = new ProfilRisikoSheet($semuaRisiko);
+        $sheets[] = new ProfilRisikoSheet($semuaRisiko, $this->bulan, $this->tahun);
         $sheets[] = new RisikoInherentKuantitatifSheet($semuaRisiko);
         // $sheets[] = new RisikoInherentKualitatifSheet($semuaRisiko);
         $sheets[] = new RisikoResidualKuantitatifSheet($semuaRisiko);

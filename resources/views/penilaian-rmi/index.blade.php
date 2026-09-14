@@ -18,6 +18,14 @@
           <div class="ff-preheading">Daftar Data</div>
           <h2>Periode RMI</h2>
         </div>
+        <div class="ms-auto">
+          @can('rmi_period_logs')
+          <a class="btn btn-outline-secondary btn-sm" href="{{ route('penilaian-rmi.logs') }}">
+            <span class="bx bx-history"></span>
+            <span class="ms-1">Log Perubahan</span>
+          </a>
+          @endcan
+        </div>
       </div>
       <div class="card-header border-bottom">
           <div class="d-flex align-items-center gap-3">
@@ -86,6 +94,11 @@
                       <a href="{{ route('penilaian-rmi.aspek-kinerja', $period->id) }}" class="btn-input-icon text-success" data-bs-toggle="tooltip" title="Penilaian Aspek Kinerja">
                         <span class="bx bx-line-chart"></span>
                       </a>
+                      @can('rmi_period_logs')
+                      <a href="{{ route('penilaian-rmi.logs.show', $period->id) }}" class="btn-input-icon text-secondary" data-bs-toggle="tooltip" title="Log Perubahan">
+                        <span class="bx bx-history"></span>
+                      </a>
+                      @endcan
 
                       @php
                         $extKinerjaId = $skalaKinerjas->firstWhere('tingkat', $period->kinerja_external)?->id ?? '';

@@ -58,6 +58,8 @@ use App\Http\Controllers\Master\WBSController;
 use App\Http\Controllers\Project\ProjectPeriodeListController;
 use App\Http\Controllers\OpportunityController;
 use App\Http\Controllers\Project\ProjectRiskController;
+use App\Http\Controllers\Project\SasaranProyekApprovalController;
+use App\Http\Controllers\Project\PeristiwaRisikoApprovalController;
 use App\Http\Controllers\Project\ProjectRiskMonitoringController;
 use App\Http\Controllers\Project\ProjectRiskMonitoringDocumentController;
 use App\Http\Controllers\Project\ProjectLEDController;
@@ -85,6 +87,7 @@ use App\Http\Controllers\RMI\KuesionerPublikController;
 use App\Http\Controllers\RMI\KuesionerRespondenController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ReleaseNotesController;
+use App\Http\Controllers\DashboardSummaryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -161,6 +164,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::patch('/profile', [HomeController::class, 'update'])->name('profile');
 
     Route::get('/home/{data?}', [HomeController::class, 'index'])->name('home');
+    Route::get('/dashboard-summary', [DashboardSummaryController::class, 'index'])->name('dashboard-summary');
+    Route::get('/dashboard-summary/projects', [DashboardSummaryController::class, 'projects'])->name('dashboard-summary.projects');
     Route::get('/profil-risiko', [HomeController::class, 'profilRisiko'])->name('profil-risiko');
 
     Route::get('/struktur-tata-kelola-risiko', function () {
@@ -446,9 +451,25 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('/projects/risks/submit-request-edit', [App\Http\Controllers\Project\ProjectRiskController::class, 'submitRequestEdit'])->name('projects.risks.submit-request-edit');
     Route::post('/projects/risks/approve-request-edit', [App\Http\Controllers\Project\ProjectRiskController::class, 'approveRequestEdit'])->name('projects.risks.approve-request-edit');
     Route::post('/projects/risks/reject-request-edit', [App\Http\Controllers\Project\ProjectRiskController::class, 'rejectRequestEdit'])->name('projects.risks.reject-request-edit');
+    Route::post('/projects/risks/approve-close-request', [App\Http\Controllers\Project\ProjectRiskController::class, 'approveCloseRequest'])->name('projects.risks.approve-close-request');
+    Route::post('/projects/risks/reject-close-request', [App\Http\Controllers\Project\ProjectRiskController::class, 'rejectCloseRequest'])->name('projects.risks.reject-close-request');
+    Route::get('/projects/verifikasi-pengajuan', [SasaranProyekApprovalController::class, 'index'])->name('projects.verifikasi-pengajuan.index');
+    Route::get('/projects/sasaran-lainnya-approval', function () {
+        return redirect()->route('projects.verifikasi-pengajuan.index', request()->query());
+    });
+    Route::get('/projects/sasaran-risiko', [SasaranProyekApprovalController::class, 'existing'])->name('projects.sasaran-risiko.index');
+    Route::get('/projects/peristiwa-risiko', [PeristiwaRisikoApprovalController::class, 'existing'])->name('projects.peristiwa-risiko.index');
+    Route::post('/projects/{project}/sasaran-lainnya/submit', [SasaranProyekApprovalController::class, 'submit'])->name('projects.sasaran-lainnya.submit');
+    Route::post('/projects/sasaran-lainnya/{sasaranProyek}/approve', [SasaranProyekApprovalController::class, 'approve'])->name('projects.sasaran-lainnya.approve');
+    Route::post('/projects/sasaran-lainnya/{sasaranProyek}/reject', [SasaranProyekApprovalController::class, 'reject'])->name('projects.sasaran-lainnya.reject');
+    Route::post('/projects/{project}/peristiwa-lainnya/submit', [PeristiwaRisikoApprovalController::class, 'submit'])->name('projects.peristiwa-lainnya.submit');
+    Route::post('/project-led/{project}/peristiwa-lainnya/submit', [PeristiwaRisikoApprovalController::class, 'submitFromLed'])->name('project-led.peristiwa-lainnya.submit');
+    Route::post('/projects/peristiwa-lainnya/{peristiwaRisiko}/approve', [PeristiwaRisikoApprovalController::class, 'approve'])->name('projects.peristiwa-lainnya.approve');
+    Route::post('/projects/peristiwa-lainnya/{peristiwaRisiko}/reject', [PeristiwaRisikoApprovalController::class, 'reject'])->name('projects.peristiwa-lainnya.reject');
     Route::get('projects/{project}/detail', [ProjectController::class, 'detail'])->name('projects.detail');
     Route::get('projects/logs', [ProjectController::class, 'logs'])->name('projects.logs');
     Route::get('projects/{project}/logs', [ProjectController::class, 'logsByProject'])->name('projects.logs.show');
+    Route::get('project-risks/closed-at-audits', [\App\Http\Controllers\Project\ProjectRiskClosedAtAuditController::class, 'index'])->name('project-risks.closed-at-audits');
     Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit', 'destroy']);
     Route::resource('projects/{project}/risks', ProjectRiskController::class)->names('projects.risks');
     Route::get('projects/{project}/risks/{risk}/view', [ProjectRiskController::class, 'view'])->name('projects.risks.view');
@@ -550,6 +571,10 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('/calculate-poisson-residual', [ProjectRiskController::class, 'calculatePoissonRes'])
     ->name('calculate-poisson-residual');
 
+    Route::middleware('can:rmi_period_logs')->group(function () {
+        Route::get('penilaian-rmi/logs', [PenilaianRMIController::class, 'logs'])->name('penilaian-rmi.logs');
+        Route::get('penilaian-rmi/{id}/logs', [PenilaianRMIController::class, 'logsByPeriod'])->name('penilaian-rmi.logs.show');
+    });
     Route::resource('penilaian-rmi', 'App\Http\Controllers\PenilaianRMIController');
     // Penilaian Aspek Dinamis
     Route::get('penilaian-rmi/{id}/aspek-dinamis', 'App\Http\Controllers\PenilaianRMIController@aspekDinamis')
@@ -629,8 +654,10 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('korporat', [App\Http\Controllers\LaporanController::class, 'korporatExport'])->name('laporan.korporat.export');
     Route::get('unit', [App\Http\Controllers\LaporanController::class, 'unit'])->name('laporan.unit');
     Route::post('unit', [App\Http\Controllers\LaporanController::class, 'unitExport'])->name('laporan.unit.export');
+    Route::post('unit/export-led', [App\Http\Controllers\LaporanController::class, 'unitLedExport'])->name('laporan.unit.export_led');
     Route::get('ap', [App\Http\Controllers\LaporanController::class, 'ap'])->name('laporan.ap');
     Route::post('ap', [App\Http\Controllers\LaporanController::class, 'apExport'])->name('laporan.ap.export');
+    Route::post('ap/export-led', [App\Http\Controllers\LaporanController::class, 'apLedExport'])->name('laporan.ap.export_led');
     Route::get('project', [App\Http\Controllers\LaporanController::class, 'project'])->name('laporan.project');
     Route::post('project', [App\Http\Controllers\LaporanController::class, 'projectExport'])->name('laporan.project.export');
     Route::post('/laporan/project/export-konsolidasi', [App\Http\Controllers\LaporanController::class, 'projectKonsolidasiExport'])->name('laporan.project.export_konsolidasi');
@@ -754,6 +781,8 @@ Route::prefix('risk-register-unit')->middleware('auth')->group(function () {
     Route::post('/submit-request-edit', [RiskRegisterUnitController::class, 'submitRequestEdit'])->name('risk-register-unit.submit-request-edit');
     Route::post('/approve-request-edit', [RiskRegisterUnitController::class, 'approveRequestEdit'])->name('risk-register-unit.approve-request-edit');
     Route::post('/reject-request-edit', [RiskRegisterUnitController::class, 'rejectRequestEdit'])->name('risk-register-unit.reject-request-edit');
+    Route::post('/approve-close-request', [RiskRegisterUnitController::class, 'approveCloseRequest'])->name('risk-register-unit.approve-close-request');
+    Route::post('/reject-close-request', [RiskRegisterUnitController::class, 'rejectCloseRequest'])->name('risk-register-unit.reject-close-request');
 });
 
 Route::prefix('risk-register-ap')->group(function () {
@@ -797,6 +826,8 @@ Route::prefix('risk-register-ap')->group(function () {
     Route::post('/submit-request-edit', [RiskRegisterApController::class, 'submitRequestEdit'])->name('risk-register-ap.submit-request-edit');
     Route::post('/approve-request-edit', [RiskRegisterApController::class, 'approveRequestEdit'])->name('risk-register-ap.approve-request-edit');
     Route::post('/reject-request-edit', [RiskRegisterApController::class, 'rejectRequestEdit'])->name('risk-register-ap.reject-request-edit');
+    Route::post('/approve-close-request', [RiskRegisterApController::class, 'approveCloseRequest'])->name('risk-register-ap.approve-close-request');
+    Route::post('/reject-close-request', [RiskRegisterApController::class, 'rejectCloseRequest'])->name('risk-register-ap.reject-close-request');
 });
 
 Route::match(['get', 'post'], 'kamus-risiko-ap', [KamusRisikoApController::class, 'index'])->name('kamus-risiko-ap.index');
@@ -861,6 +892,12 @@ Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->
     Route::resource('/periods/{period}/monitorings', RiskRegisterCorporateMonitoringController::class)
             ->names('monitorings')
             ->only(['index', 'show', 'edit', 'update']);
+    Route::prefix('periods/{period}/monitorings')->name('monitorings.')->group(function () {
+        Route::post('send-all', [RiskRegisterCorporateMonitoringController::class, 'sendAllMonitoring'])->name('send.all');
+        Route::post('bulk-verify', [RiskRegisterCorporateMonitoringController::class, 'bulkVerifyMonitoring'])->name('bulk-verify');
+        Route::post('{monitoring}/verify', [RiskRegisterCorporateMonitoringController::class, 'verifyMonitoring'])->name('verify');
+        Route::get('{risk}/notes', [RiskRegisterCorporateMonitoringController::class, 'getNotes'])->name('notes');
+    });
 
     Route::get('/', [App\Http\Controllers\CorporateRiskController::class, 'index'])->name('index');
     Route::get('/create', [App\Http\Controllers\CorporateRiskController::class, 'create'])->name('create');
@@ -869,6 +906,10 @@ Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->
     Route::put('/{riskRegister}', [App\Http\Controllers\CorporateRiskController::class, 'update'])->name('update');
     Route::delete('/{riskRegister}', [App\Http\Controllers\CorporateRiskController::class, 'destroy'])->name('destroy');
     Route::get('/{riskRegister}/view', [App\Http\Controllers\CorporateRiskController::class, 'view'])->name('view');
+    Route::post('/send', [App\Http\Controllers\CorporateRiskController::class, 'send'])->name('send');
+    Route::post('/bulk-verifikasi', [App\Http\Controllers\CorporateRiskController::class, 'bulkVerifikasi'])->name('bulk-verifikasi');
+    Route::post('/{riskRegister}/verifikasi', [App\Http\Controllers\CorporateRiskController::class, 'verifikasi'])->name('verifikasi');
+    Route::get('/{riskRegister}/notes', [App\Http\Controllers\CorporateRiskController::class, 'getRiskNotes'])->name('notes');
 
     Route::get('/top-down', [App\Http\Controllers\CorporateRiskController::class, 'topDown'])->name('top-down');
     Route::post('/top-down', [App\Http\Controllers\CorporateRiskController::class, 'storeTopDown'])->name('store-top-down');
@@ -881,6 +922,11 @@ Route::prefix('corporate-risk')->name('corporate-risk.')->middleware(['auth'])->
     Route::delete('/{riskRegister}/perencanaan/{id}', [App\Http\Controllers\CorporateRiskController::class, 'hapusRencanaPerlakuan'])->name('hapus-rencana-perlakuan');
     Route::get('/{riskRegister}/perencanaan/{id}/edit', [App\Http\Controllers\CorporateRiskController::class, 'editRencanaPerlakuan'])->name('edit-rencana-perlakuan');
     Route::put('/{riskRegister}/perencanaan/{id}', [App\Http\Controllers\CorporateRiskController::class, 'updateRencanaPerlakuan'])->name('update-rencana-perlakuan');
+
+    Route::post('/rencana-perlakuan-dampak/tambah', [App\Http\Controllers\CorporateRiskController::class, 'simpanRencanaPerlakuanDampak'])->name('rencana-perlakuan-dampak.store');
+    Route::get('/rencana-perlakuan-dampak/{id}', [App\Http\Controllers\CorporateRiskController::class, 'editRencanaPerlakuanDampak'])->name('rencana-perlakuan-dampak.edit');
+    Route::put('/rencana-perlakuan-dampak/{id}', [App\Http\Controllers\CorporateRiskController::class, 'updateRencanaPerlakuanDampak'])->name('rencana-perlakuan-dampak.update');
+    Route::delete('/rencana-perlakuan-dampak/{id}', [App\Http\Controllers\CorporateRiskController::class, 'hapusRencanaPerlakuanDampak'])->name('rencana-perlakuan-dampak.destroy');
 
     Route::get('/get-division-risks/{unit}', [App\Http\Controllers\CorporateRiskController::class, 'getDivisionRisks'])->name('get-division-risks');
     Route::get('/get-ap-risks/{unit}', [App\Http\Controllers\CorporateRiskController::class, 'getApRisks'])->name('get-ap-risks');

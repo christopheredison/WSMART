@@ -21,6 +21,11 @@ class Audit extends OwenItAudit
         return $this->belongsTo(Unit::class, 'unit_id');
     }
 
+    public function rmiPeriod()
+    {
+        return $this->belongsTo(RMIPeriod::class, 'rmi_period_id');
+    }
+
     public function getEntityLabelAttribute(): string
     {
         return match ($this->auditable_type) {
@@ -35,6 +40,16 @@ class Audit extends OwenItAudit
             Project::class => 'Project',
             Unit::class => 'Unit',
             User::class => 'User',
+            RMIPeriod::class => 'Periode RMI',
+            PenilaianCapaianKinerja::class => 'Penilaian Aspek Kinerja',
+            DetailPenilaianCapaianKinerja::class => 'Jawaban Parameter Kinerja',
+            ParameterKinerjaDocument::class => 'Bukti Dukung Capaian Kinerja',
+            RMIPeriodDocument::class => 'Dokumen Pendukung Peringkat Akhir',
+            FinalRatingPeriod::class => 'Final Rating Periode',
+            ScoreCriteria::class => 'Skor Kriteria Aspek Dimensi',
+            ScoreCriteriaDoc::class => 'Dokumen Gap Analysis',
+            ScoreParameter::class => 'Skor Parameter Aspek Dimensi',
+            DimensionAspectEvaluation::class => 'Evaluasi Aspek Dimensi',
             default => class_basename($this->auditable_type),
         };
     }

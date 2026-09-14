@@ -117,6 +117,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 ->where('unit_type_id', 1)
                 ->with([
                     'unit',
+                    'closeRequestedBy',
                     'riskAnalysis.skalaDampakObj',
                     'riskAnalysis.skalaProbabilitas',
                     'riskAnalysis.skalaProbabilitasResidualQ' . $quarter,
@@ -607,13 +608,32 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             // === STATUS ===
             'is_closed' => [
                 'label' => 'Status Risiko',
-                'data' => 'is_closed',
-                'render' => '(data, type, row) => row.is_closed ? `<div class="badge bg-danger rounded-pill px-2">Closed</div>` : `<div class="badge bg-success rounded-pill px-2">Open</div>`',
+                'data' => 'is_closed_for_period',
+                'sortable' => false,
+                'searchable' => false,
+                'render' => '(data, type, row) => {
+                    const isClosed = row.is_closed_for_period == 1 || row.is_closed_for_period === true;
+                    if (isClosed) {
+                        const closedDate = row.closed_at_formatted || "";
+                        const dateLabel = closedDate ? ` - ${closedDate}` : "";
+                        return `<div class="badge bg-danger rounded-pill px-2" title="${closedDate ? "Ditutup pada " + closedDate : "Closed"}">Closed${dateLabel}</div>`;
+                    }
+                    if (parseInt(row.close_request) === 1) {
+                        return `<a href="javascript:void(0)" class="badge bg-warning text-dark rounded-pill px-2 mt-auto d-inline-flex align-items-center" onclick="showCloseRequestDetail(${row.id})" title="Klik untuk detail pengajuan penutupan">Pengajuan Tutup Risiko<i class="bx bx-info-circle ms-1" style="font-size:0.95em;"></i></a>`;
+                    }
+                    if (parseInt(row.close_request) === 3) {
+                        return `<div class="d-flex flex-column align-items-center gap-1">
+                            <div class="badge bg-success rounded-pill px-2">Open</div>
+                            <span class="badge bg-secondary-subtle text-dark border" style="font-size:10px;">Pengajuan Tutup Ditolak</span>
+                        </div>`;
+                    }
+                    return `<div class="badge bg-success rounded-pill px-2">Open</div>`;
+                }',
             ],
             'status_monitoring' => [
                 'label' => 'Status Approval',
                 'render' => '(data, type, row) => {
-                    if (row.is_closed) return `<div class="badge text-danger bg-danger-subtle">Dihentikan</div>`;
+                    if (row.is_closed_for_period == 1 || row.is_closed_for_period === true) return `<div class="badge text-danger bg-danger-subtle">Dihentikan</div>`;
                     if (!row.last_monitoring_risiko) return `<div class="badge bg-light text-dark border">Belum Dimonitor</div>`;
 
                     const m = row.last_monitoring_risiko;
@@ -691,14 +711,14 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'script' => <<<JS
                     window.location.href = "$monitoringRoute".replace(':id', $(this).data('id')).replace('%3Aquarter', $('#table-filter select[name="quarter"]').val()).replace('%3Amonth', $('#table-filter select[name="month"]').val());
                 JS,
-                'active_state' => '(data, type, row) => !row.is_closed && (!row.last_monitoring_risiko || row.last_monitoring_risiko.status == '.UnitRiskMonitoring::STATUS_DRAFT_REVISI.')'
+                'active_state' => '(data, type, row) => !(row.is_closed_for_period == 1 || row.is_closed_for_period === true) && (!row.last_monitoring_risiko || row.last_monitoring_risiko.status == '.UnitRiskMonitoring::STATUS_DRAFT_REVISI.')'
             ];
 
             $this->tableActions[] = [
                 'label' => 'Change to LED',
                 'btn_icon' => false,
                 'action' => 'change_to_led_unit',
-                'active_state' => '(data, type, row) => !row.is_closed && (row.last_monitoring_risiko?.status == '.UnitRiskMonitoring::STATUS_PUBLISHED.')',
+                'active_state' => '(data, type, row) => !(row.is_closed_for_period == 1 || row.is_closed_for_period === true) && (row.last_monitoring_risiko?.status == '.UnitRiskMonitoring::STATUS_PUBLISHED.')',
                 'extra_attrs' => [ 'style' => 'font-size: 16px; font-weight: 400;' ]
             ];
         }
@@ -713,7 +733,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'action' => 'script',
                 'script' => "showVerifikasiModal(__MONITORING_ID__, '__RISK_TITLE__', '__RISK_DESC__')",
                 'active_state' => '(data, type, row) => {
-                    if (row.is_closed) return false;
+                    if (row.is_closed_for_period == 1 || row.is_closed_for_period === true) return false;
 
                     const monitoring = row.last_monitoring_risiko;
                     if (!monitoring || monitoring.is_approved) return false;
@@ -825,7 +845,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         $workflow = UnitRiskMonitoring::getWorkflow();
         $allRisks = IdentifikasiRisiko::where('periode_id', $period->id)
             ->where('unit_id', $targetUnitId)
-            ->where('is_closed', 0)
+            ->openAsOf((int) $tahunPeriode, (int) $month)
             ->get();
 
         $riskIds = $allRisks->pluck('id');
@@ -1039,14 +1059,45 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $csrfToken = csrf_token();
 
-        $this->datatableCallback = function ($datatable) use ($summaryInfo, $escalationConfig) {
+        $this->datatableCallback = function ($datatable) use ($summaryInfo, $escalationConfig, $tahunPeriode, $month) {
+            $datatable->addColumn('is_closed_for_period', function ($row) use ($tahunPeriode, $month) {
+                return $row->isClosedAsOf((int) $tahunPeriode, (int) $month) ? 1 : 0;
+            });
             $datatable->with('summaryInfo', $summaryInfo);
             $datatable->with('escalationConfig', $escalationConfig);
         };
 
         // Injeksi Script Render Ulang Alert via AJAX Datatable
+        $closeRequestDetailUrlTemplate = route('risk-register-unit.view', ['riskRegister' => '__RISK_ID__']);
         $this->extraScripts[] = <<<SCRIPT
         <script>
+        function showCloseRequestDetail(id) {
+            const table = $('.ajax-datatable').DataTable();
+            const rowData = table.rows().data().toArray().find(r => String(r.id) === String(id)) || {};
+            const reason = rowData.close_request_reason || 'Tidak ada informasi alasan.';
+            const requestedAt = rowData.close_requested_at_formatted || '-';
+            const requestedBy = (rowData.close_requested_by && rowData.close_requested_by.name)
+                ? rowData.close_requested_by.name
+                : '-';
+            const riskName = rowData.peristiwa_risiko || 'Risiko Divisi';
+            const detailUrl = '{$closeRequestDetailUrlTemplate}'.replace('__RISK_ID__', id);
+
+            Swal.fire({
+                title: 'Detail Pengajuan Tutup Risiko',
+                icon: 'info',
+                html: `<div class="text-start">
+                    <p class="mb-2">Risiko: <strong>\${riskName}</strong></p>
+                    <div class="p-3 rounded bg-light border">
+                        <div class="mb-2"><strong>Alasan Penutupan:</strong><br><span>\${reason}</span></div>
+                        <div class="mb-2"><strong>Tanggal Pengajuan:</strong><br><span>\${requestedAt}</span></div>
+                        <div><strong>Diajukan Oleh:</strong><br><span>\${requestedBy}</span></div>
+                    </div>
+                    <div class="mt-3 text-end"><a href="\${detailUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary"><i class="bx bx-link-external me-1"></i>Lihat Detail Risiko</a></div>
+                </div>`,
+                confirmButtonText: 'Tutup'
+            });
+        }
+
         $(document).on('xhr.dt', function (e, settings, json, xhr) {
             if (json && 'summaryInfo' in json) {
                 let container = $('.card-body > .d-flex.align-items-center.justify-content-end.gap-3').first();
@@ -1742,25 +1793,47 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
         ]);
 
         $wasClosed = (bool) $risk->is_closed;
+        $message = 'Data berhasil disimpan';
+
         if ($request->is_closed == '1' && !$wasClosed) {
-            $closedAt = now();
+            if ((int) $risk->close_request === IdentifikasiRisiko::CLOSE_REQUEST_PENDING) {
+                return response()->json([
+                    'message' => 'Pengajuan penutupan risiko masih menunggu verifikasi.',
+                ], 422);
+            }
+
+            $closeReason = trim((string) $request->input('close_reason', ''));
+            if ($closeReason === '') {
+                return response()->json([
+                    'message' => 'Alasan penutupan risiko wajib diisi.',
+                ], 422);
+            }
+
+            $requestedAt = now();
             $risk->update([
-                'is_closed' => true,
-                'closed_at' => $closedAt,
+                'close_request' => IdentifikasiRisiko::CLOSE_REQUEST_PENDING,
+                'close_request_reason' => $closeReason,
+                'close_requested_at' => $requestedAt,
+                'close_requested_by' => $user->id,
             ]);
 
-            KamusRisikoUnit::updateOrCreate(
-                ['risiko_id' => $risk->id],
-            );
+            $monthNames = [
+                1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+            ];
+            $monthLabel = $monthNames[(int) $month] ?? $month;
+            $periodLabel = "(Quarter {$quarter}, Bulan {$monthLabel})";
 
-            $closeNoteText = 'Risiko ditutup melalui monitoring pada ' . $closedAt->format('d-m-Y H:i:s')
-                . " (Q{$quarter}, Bulan {$month}).";
+            $closeNoteText = 'Mengajukan penutupan risiko melalui monitoring pada '
+                . $requestedAt->format('d-m-Y H:i:s') . ' WIB'
+                . " {$periodLabel}. Alasan: {$closeReason}";
 
             RiskMonitoringNote::create([
                 'risiko_id' => $risk->id,
                 'type' => 1,
                 'user_id' => $user->id,
-                'status' => 1,
+                'status' => RiskMonitoringNote::STATUS_REQUEST_CLOSE,
                 'notes' => $closeNoteText,
                 'quarter' => $quarter,
                 'month' => $month,
@@ -1770,14 +1843,32 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
             RiskNote::create([
                 'risiko_id' => $risk->id,
                 'type' => 1,
-                'status' => 1,
+                'status' => RiskNote::STATUS_REQUEST_CLOSE,
                 'notes' => $closeNoteText,
                 'user_id' => $user->id,
             ]);
+
+            $riskName = $risk->peristiwa_risiko ?? 'Risiko Divisi';
+            $unitName = $risk->unit->name ?? 'Divisi Tidak Diketahui';
+            $targetLink = route('risk-register-unit.index', [
+                'pid' => $risk->periode_id,
+                'unit_id' => $risk->unit_id,
+                'verify_close_request' => $risk->id,
+            ]);
+
+            IdentifikasiRisiko::notifyRequestEditVerifiers(
+                'Pengajuan Tutup Risiko',
+                'Risk Officer mengajukan penutupan risiko (' . $riskName . ') pada divisi ' . $unitName . ' ' . $periodLabel . '. Alasan: ' . $closeReason,
+                $targetLink,
+                'bx bx-lock-alt',
+                'unit'
+            );
+
+            $message = 'Data berhasil disimpan. Pengajuan penutupan risiko telah dikirim untuk diverifikasi.';
         }
 
         return response()->json([
-            'message' => 'Data berhasil disimpan',
+            'message' => $message,
         ]);
     }
 
@@ -1795,7 +1886,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $riskIds = IdentifikasiRisiko::where('periode_id', $period->id)
             ->where('unit_id', $targetUnitId)
-            ->where('is_closed', false)
+            ->openAsOf((int) $period->tahun, (int) $month)
             ->pluck('id');
 
         $latestMonitorings = collect([]);
@@ -1946,7 +2037,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
 
         $riskIds = IdentifikasiRisiko::where('periode_id', $period->id)
             ->where('unit_id', $validated['unit_id'])
-            ->where('is_closed', 0)
+            ->openAsOf((int) $period->tahun, (int) $validated['month'])
             ->pluck('id');
 
         // Ambil ID Monitoring Terbaru
@@ -2069,7 +2160,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                 'risiko_id' => $monitoring->identifikasi_risiko_id,
                 'type' => 1, // Divisi
                 'user_id' => Auth::id(),
-                'status' => $validated['status_verifikasi'] == 'terima' ? 1 : 0,
+                'status' => $validated['status_verifikasi'] == 'terima' ? 1 : 2,
                 'notes' => $validated['notes'],
                 'quarter' => $monitoring->quarter,
                 'month' => $monitoring->month,
@@ -2138,7 +2229,7 @@ class RiskRegisterUnitMonitoringController extends BasicCRUDController
                     'risiko_id' => $monitoring->identifikasi_risiko_id,
                     'type' => 1,
                     'user_id' => $user->id,
-                    'status' => $validated['status_verifikasi'] == 'terima' ? 1 : 0,
+                    'status' => $validated['status_verifikasi'] == 'terima' ? 1 : 2,
                     'notes' => $validated['catatan_verifikasi'],
                     'quarter' => $monitoring->quarter,
                     'month' => $monitoring->month,

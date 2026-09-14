@@ -349,7 +349,7 @@ class RiskRegisterApController extends Controller
 
         // Legend tambahan untuk fitur Request Edit Risiko
         $canRequestEditLegend = ($levelId == 1 && $unitId == $user->unit_id);
-        $canVerifyRequestEditLegend = ($levelId == 2 && $is_mr);
+        $canVerifyRequestEditLegend = IdentifikasiRisiko::canVerifyRequestEdit($user, 'ap');
 
         if ($canRequestEditLegend) {
             $tableLegend[] = [
@@ -591,6 +591,7 @@ class RiskRegisterApController extends Controller
             'riskAnalysis.skalaProbabilitasResidualQ3',
             'riskAnalysis.skalaDampakResidualQ4Obj',
             'riskAnalysis.skalaProbabilitasResidualQ4',
+            'closeRequestedBy',
         ]);
 
         if ($status === 'open') {
@@ -741,7 +742,7 @@ class RiskRegisterApController extends Controller
             'metode_pengukuran.*.required' => 'Metode Pengukuran wajib diisi.',
             'satuan_kri.*.required' => 'Satuan wajib diisi.',
             'batas_aman.*.required' => 'Batas Aman wajib diisi.',
-            'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
+            'batas_waspada.*.required' => 'Batas Siaga wajib diisi.',
             'batas_bahaya.*.required' => 'Batas Bahaya wajib diisi.',
 
             'perkiraan_waktu_mulai_terpapar_risiko.required' => 'Tanggal mulai terpapar risiko wajib diisi.',
@@ -1443,12 +1444,13 @@ class RiskRegisterApController extends Controller
 
         // Ambil data identifikasi risiko
         $identifikasiRisiko = IdentifikasiRisiko::with([
-          'dampakRisikos',
           'kontrolEksistings',
-          'penyebabRisiko',
-          'kris',
+          'penyebabRisiko' => fn ($query) => $query->withCount('monitorings'),
+          'kris' => fn ($query) => $query
+              ->withCount('kriUnitMonitorings')
+              ->withCount('unitRiskPengendalians'),
           'parameterRisikos',
-          'dampakRisikos',
+          'dampakRisikos' => fn ($query) => $query->withCount('monitorings'),
         ])->findOrFail($id);
 
         // Ambil periode yang dipilih
@@ -1550,7 +1552,7 @@ class RiskRegisterApController extends Controller
             'metode_pengukuran.*.required' => 'Metode Pengukuran wajib diisi.',
             'satuan_kri.*.required' => 'Satuan wajib diisi.',
             'batas_aman.*.required' => 'Batas Aman wajib diisi.',
-            'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
+            'batas_waspada.*.required' => 'Batas Siaga wajib diisi.',
             'batas_bahaya.*.required' => 'Batas Bahaya wajib diisi.',
 
             'perkiraan_waktu_mulai_terpapar_risiko.required' => 'Tanggal mulai wajib diisi.',
@@ -1686,7 +1688,7 @@ class RiskRegisterApController extends Controller
 
                     // Bersihkan data numerik dari threshold inputmask
                     $batasAman    = $this->cleanDecimal($request->batas_aman[$key] ?? 0);
-                    $batasWaspada = $this->cleanDecimal($request->batas_waspada[$key] ?? 0);
+                    $batasSiaga = $this->cleanDecimal($request->batas_waspada[$key] ?? 0);
                     $batasBahaya  = $this->cleanDecimal($request->batas_bahaya[$key] ?? 0);
                     $satuanKri    = $request->satuan_kri[$key] ?? '';
                     $trenParam    = $request->tren_parameter[$key] ?? null;
@@ -1699,7 +1701,7 @@ class RiskRegisterApController extends Controller
                         'tren_parameter'    => $trenParam,
                         'metode_pengukuran' => $metodeUkur,
                         'batas_aman'        => $batasAman,
-                        'batas_waspada'     => $batasWaspada,
+                        'batas_waspada'     => $batasSiaga,
                         'batas_bahaya'      => $batasBahaya,
                     ];
 
@@ -1821,6 +1823,10 @@ class RiskRegisterApController extends Controller
         $identifikasiRisiko->update([
             'is_closed' => false,
             'closed_at' => null,
+            'close_request' => IdentifikasiRisiko::CLOSE_REQUEST_NONE,
+            'close_request_reason' => null,
+            'close_requested_at' => null,
+            'close_requested_by' => null,
         ]);
 
         return response()->json([
@@ -2452,7 +2458,16 @@ class RiskRegisterApController extends Controller
               'dampakRisikos',
               'penyebabRisikos',
               'parameterRisikos',
-              'riskAnalysis',
+              'riskAnalysis.skalaDampakObj',
+              'riskAnalysis.skalaProbabilitas',
+              'riskAnalysis.skalaDampakResidualQ1Obj',
+              'riskAnalysis.skalaProbabilitasResidualQ1',
+              'riskAnalysis.skalaDampakResidualQ2Obj',
+              'riskAnalysis.skalaProbabilitasResidualQ2',
+              'riskAnalysis.skalaDampakResidualQ3Obj',
+              'riskAnalysis.skalaProbabilitasResidualQ3',
+              'riskAnalysis.skalaDampakResidualQ4Obj',
+              'riskAnalysis.skalaProbabilitasResidualQ4',
               'projectRisks.project',
               'projectRisks.projectRiskAnalisa',
               'projectRisks.penyebabRisikoProjects',
@@ -2539,7 +2554,58 @@ class RiskRegisterApController extends Controller
             }
         }
 
-        return view('risk-register-ap.view', compact('user', 'risikos', 'risiko', 'riskMaps', 'formattedCurrentRiskMaps', 'risk_limit', 'risk_tolerance', 'historyMonitorings'));
+        $riskResidualData = $this->buildRiskResidualData($risikos);
+
+        return view('risk-register-ap.view', compact('user', 'risikos', 'risiko', 'riskMaps', 'formattedCurrentRiskMaps', 'riskResidualData', 'risk_limit', 'risk_tolerance', 'historyMonitorings'));
+    }
+
+    private function buildRiskResidualData($risikos): array
+    {
+        $riskResidualData = [];
+
+        foreach ($risikos as $risiko) {
+            $riskAnalysis = $risiko->riskAnalysis;
+            if (!$riskAnalysis) {
+                continue;
+            }
+
+            $riskResidualData[$risiko->id] = [
+                1 => [
+                    'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q1,
+                    'skala_dampak' => $riskAnalysis->skalaDampakResidualQ1Obj ? "({$riskAnalysis->skalaDampakResidualQ1Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ1Obj->deskripsi}" : '-',
+                    'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q1,
+                    'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ1 ? "({$riskAnalysis->skalaProbabilitasResidualQ1->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ1->skala}" : '-',
+                    'skala_risiko' => $riskAnalysis->skala_risiko_residual_q1,
+                    'level_risiko' => $riskAnalysis->level_risiko_residual_q1,
+                ],
+                2 => [
+                    'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q2,
+                    'skala_dampak' => $riskAnalysis->skalaDampakResidualQ2Obj ? "({$riskAnalysis->skalaDampakResidualQ2Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ2Obj->deskripsi}" : '-',
+                    'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q2,
+                    'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ2 ? "({$riskAnalysis->skalaProbabilitasResidualQ2->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ2->skala}" : '-',
+                    'skala_risiko' => $riskAnalysis->skala_risiko_residual_q2,
+                    'level_risiko' => $riskAnalysis->level_risiko_residual_q2,
+                ],
+                3 => [
+                    'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q3,
+                    'skala_dampak' => $riskAnalysis->skalaDampakResidualQ3Obj ? "({$riskAnalysis->skalaDampakResidualQ3Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ3Obj->deskripsi}" : '-',
+                    'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q3,
+                    'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ3 ? "({$riskAnalysis->skalaProbabilitasResidualQ3->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ3->skala}" : '-',
+                    'skala_risiko' => $riskAnalysis->skala_risiko_residual_q3,
+                    'level_risiko' => $riskAnalysis->level_risiko_residual_q3,
+                ],
+                4 => [
+                    'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q4,
+                    'skala_dampak' => $riskAnalysis->skalaDampakResidualQ4Obj ? "({$riskAnalysis->skalaDampakResidualQ4Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ4Obj->deskripsi}" : '-',
+                    'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q4,
+                    'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ4 ? "({$riskAnalysis->skalaProbabilitasResidualQ4->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ4->skala}" : '-',
+                    'skala_risiko' => $riskAnalysis->skala_risiko_residual_q4,
+                    'level_risiko' => $riskAnalysis->level_risiko_residual_q4,
+                ],
+            ];
+        }
+
+        return $riskResidualData;
     }
 
     private function getUserVerificationStep($level_id, $is_mr = false, $unit_mr = false)
@@ -3123,13 +3189,12 @@ class RiskRegisterApController extends Controller
             'verify_request_edit' => $risk->id
         ]);
 
-        $this->sendNotificationCustom(
-            'RW_MR',
-            $risk->unit_id,
+        IdentifikasiRisiko::notifyRequestEditVerifiers(
             'Request Edit Risiko',
             'Risk Officer mengajukan request edit untuk risiko (' . $riskName . ') pada unit ' . $unitName . '. Alasan: ' . $request->reason,
             $targetLink,
-            'bx bx-message-square-edit'
+            'bx bx-message-square-edit',
+            'ap'
         );
 
         return response()->json(['message' => 'Request edit berhasil dikirim']);
@@ -3141,6 +3206,10 @@ class RiskRegisterApController extends Controller
 
         $riskIds = is_array($request->risk_id) ? $request->risk_id : [$request->risk_id];
         $user = $request->user();
+
+        if (!IdentifikasiRisiko::canVerifyRequestEdit($user, 'ap')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk memverifikasi request edit.'], 403);
+        }
 
         $catatan = $request->notes ?? 'Menyetujui Request Edit Risiko. Akses telah dibuka (Unlocked).';
 
@@ -3190,7 +3259,7 @@ class RiskRegisterApController extends Controller
                 $targetLink = route('risk-register-ap.index', ['pid' => $risk->periode_id, 'unit_id' => $risk->unit_id]);
 
                 $this->sendNotificationCustom(
-                    'RO_DIVISI',
+                    'RO_AP',
                     $risk->unit_id,
                     'Request Edit Disetujui',
                     'Request edit risiko Anda (' . $riskName . ') telah disetujui.',
@@ -3212,7 +3281,13 @@ class RiskRegisterApController extends Controller
 
         $riskIds = is_array($request->risk_id) ? $request->risk_id : [$request->risk_id];
         $user = $request->user();
+
+        if (!IdentifikasiRisiko::canVerifyRequestEdit($user, 'ap')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk memverifikasi request edit.'], 403);
+        }
+
         $catatan = $request->notes ?? 'Menolak Request Edit Risiko.';
+        $rejectedBy = IdentifikasiRisiko::resolveRequestEditVerifierLabel($user, 'ap') ?? 'Divisi MR';
 
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
@@ -3234,10 +3309,10 @@ class RiskRegisterApController extends Controller
                 $targetLink = route('risk-register-ap.index', ['pid' => $risk->periode_id, 'unit_id' => $risk->unit_id]);
 
                 $this->sendNotificationCustom(
-                    'RO_DIVISI',
+                    'RO_AP',
                     $risk->unit_id,
                     'Request Edit Ditolak',
-                    'Request edit risiko Anda (' . $riskName . ') telah ditolak oleh Risk Owner MR.',
+                    'Request edit risiko Anda (' . $riskName . ') telah ditolak oleh ' . $rejectedBy . '.',
                     $targetLink,
                     'bx bx-x-circle'
                 );
@@ -3247,6 +3322,161 @@ class RiskRegisterApController extends Controller
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\DB::rollBack();
             return response()->json(['message' => 'Gagal menolak request: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function approveCloseRequest(Request $request)
+    {
+        $request->validate([
+            'risk_id' => 'required',
+            'add_to_kamus' => 'nullable',
+        ]);
+
+        $user = $request->user();
+        if (!IdentifikasiRisiko::canVerifyRequestEdit($user, 'ap')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk memverifikasi penutupan risiko.'], 403);
+        }
+
+        $risk = IdentifikasiRisiko::with(['unit'])->findOrFail($request->risk_id);
+        if ((int) $risk->close_request !== IdentifikasiRisiko::CLOSE_REQUEST_PENDING) {
+            return response()->json(['message' => 'Tidak ada pengajuan penutupan yang menunggu verifikasi.'], 422);
+        }
+
+        $addToKamus = filter_var($request->input('add_to_kamus', 0), FILTER_VALIDATE_BOOLEAN);
+        $closedAt = now();
+        $verifierLabel = IdentifikasiRisiko::resolveRequestEditVerifierLabel($user, 'ap') ?? 'Divisi MR';
+
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $risk->update([
+                'is_closed' => true,
+                'closed_at' => $closedAt,
+                'close_request' => IdentifikasiRisiko::CLOSE_REQUEST_APPROVED,
+            ]);
+
+            if ($addToKamus) {
+                \App\Models\KamusRisikoAp::updateOrCreate(
+                    ['risiko_id' => $risk->id],
+                );
+            }
+
+            $kamusText = $addToKamus
+                ? 'Risiko dimasukkan ke Kamus Risiko.'
+                : 'Risiko tidak dimasukkan ke Kamus Risiko.';
+
+            $noteText = 'Menyetujui penutupan risiko pada ' . $closedAt->format('d-m-Y H:i:s') . ' WIB'
+                . '. Alasan pengajuan: ' . ($risk->close_request_reason ?? '-')
+                . '. ' . $kamusText;
+
+            \App\Models\RiskNote::create([
+                'risiko_id' => $risk->id,
+                'type' => 1,
+                'status' => \App\Models\RiskNote::STATUS_CLOSE_APPROVED,
+                'notes' => $noteText,
+                'user_id' => $user->id,
+            ]);
+
+            \App\Models\RiskMonitoringNote::create([
+                'risiko_id' => $risk->id,
+                'type' => 1,
+                'user_id' => $user->id,
+                'status' => \App\Models\RiskMonitoringNote::STATUS_CLOSE_APPROVED,
+                'notes' => $noteText,
+                'quarter' => (int) ceil($closedAt->month / 3),
+                'month' => (int) $closedAt->month,
+                'year' => null,
+            ]);
+
+            $riskName = $risk->peristiwa_risiko ?? 'Risiko Anak Perusahaan';
+            $targetLink = route('risk-register-ap.index', [
+                'pid' => $risk->periode_id,
+                'unit_id' => $risk->unit_id,
+            ]);
+
+            $this->sendNotificationCustom(
+                'RO_AP',
+                $risk->unit_id,
+                'Penutupan Risiko Disetujui',
+                'Pengajuan penutupan risiko Anda (' . $riskName . ') telah disetujui oleh ' . $verifierLabel . '.',
+                $targetLink,
+                'bx bx-check-double'
+            );
+
+            \Illuminate\Support\Facades\DB::commit();
+            return response()->json(['message' => 'Penutupan risiko berhasil disetujui.']);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['message' => 'Gagal menyetujui penutupan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function rejectCloseRequest(Request $request)
+    {
+        $request->validate([
+            'risk_id' => 'required',
+            'notes' => 'required|string|min:3',
+        ]);
+
+        $user = $request->user();
+        if (!IdentifikasiRisiko::canVerifyRequestEdit($user, 'ap')) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk memverifikasi penutupan risiko.'], 403);
+        }
+
+        $risk = IdentifikasiRisiko::with(['unit'])->findOrFail($request->risk_id);
+        if ((int) $risk->close_request !== IdentifikasiRisiko::CLOSE_REQUEST_PENDING) {
+            return response()->json(['message' => 'Tidak ada pengajuan penutupan yang menunggu verifikasi.'], 422);
+        }
+
+        $catatan = trim($request->notes);
+        $rejectedBy = IdentifikasiRisiko::resolveRequestEditVerifierLabel($user, 'ap') ?? 'Divisi MR';
+
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $risk->update([
+                'close_request' => IdentifikasiRisiko::CLOSE_REQUEST_REJECTED,
+            ]);
+
+            $noteText = 'Menolak penutupan risiko. Alasan Penolakan: ' . $catatan;
+
+            \App\Models\RiskNote::create([
+                'risiko_id' => $risk->id,
+                'type' => 1,
+                'status' => \App\Models\RiskNote::STATUS_CLOSE_REJECTED,
+                'notes' => $noteText,
+                'user_id' => $user->id,
+            ]);
+
+            \App\Models\RiskMonitoringNote::create([
+                'risiko_id' => $risk->id,
+                'type' => 1,
+                'user_id' => $user->id,
+                'status' => \App\Models\RiskMonitoringNote::STATUS_CLOSE_REJECTED,
+                'notes' => $noteText,
+                'quarter' => (int) ceil(now()->month / 3),
+                'month' => (int) now()->month,
+                'year' => null,
+            ]);
+
+            $riskName = $risk->peristiwa_risiko ?? 'Risiko Anak Perusahaan';
+            $targetLink = route('risk-register-ap.index', [
+                'pid' => $risk->periode_id,
+                'unit_id' => $risk->unit_id,
+            ]);
+
+            $this->sendNotificationCustom(
+                'RO_AP',
+                $risk->unit_id,
+                'Penutupan Risiko Ditolak',
+                'Pengajuan penutupan risiko Anda (' . $riskName . ') telah ditolak oleh ' . $rejectedBy . '. Alasan: ' . $catatan,
+                $targetLink,
+                'bx bx-x-circle'
+            );
+
+            \Illuminate\Support\Facades\DB::commit();
+            return response()->json(['message' => 'Pengajuan penutupan risiko berhasil ditolak.']);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['message' => 'Gagal menolak penutupan: ' . $e->getMessage()], 500);
         }
     }
 

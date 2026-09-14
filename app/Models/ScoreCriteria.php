@@ -5,10 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use OwenIt\Auditing\Auditable;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 
-class ScoreCriteria extends Model
+class ScoreCriteria extends Model implements AuditableContract
 {
-    use HasFactory, SoftDeletes;
+    use Auditable, HasFactory, SoftDeletes;
 
     // jika Eloquent tidak otomatis mengenali table name:
     protected $table = 'score_criterias';

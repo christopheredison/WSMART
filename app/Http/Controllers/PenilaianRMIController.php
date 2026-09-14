@@ -25,6 +25,7 @@ use App\Models\FinalRating;
 use App\Models\FinalRatingPeriod;
 use App\Models\RMIPeriodDocument;
 use App\Models\ParameterKinerjaDocument;
+use App\Models\Audit;
 use Illuminate\Support\Facades\Validator;
 
 class PenilaianRMIController extends Controller
@@ -121,17 +122,15 @@ class PenilaianRMIController extends Controller
     public function show($id)
     {
         // 1. Ambil periode + eager load penilaian kinerja + detail + pilihan
-        $period = RMIPeriod::with([
-            'penilaianCapaianKinerja.details.pilihan',
-            'documents'
-        ])->findOrFail($id);
+        $period = RMIPeriod::with(['documents'])->findOrFail($id);
 
-        $evidenceMap = collect();
-        if ($period->penilaianCapaianKinerja) {
-            $penilaianId = $period->penilaianCapaianKinerja->id;
+        $penilaian = $this->findPeriodPenilaian($id);
 
-            $evidenceMap = ParameterKinerjaDocument::where('penilaian_capaian_kinerja_id', $penilaianId)->get()->groupBy('parameter_id');
-        }
+        $evidenceMap = ParameterKinerjaDocument::whereHas('penilaian', function ($q) use ($id) {
+                $q->where('rmi_period_id', $id);
+            })
+            ->get()
+            ->groupBy('parameter_id');
 
         // 2. Aspek Dimensi (tetap seperti existing)
         $dimensions = Dimension::with([
@@ -172,6 +171,7 @@ class PenilaianRMIController extends Controller
         // 4. Kirim semua ke view
         return view('penilaian-rmi.show', compact(
             'period',
+            'penilaian',
             'dimensions',
             'parameterScores',
             'criteriaScores',
@@ -235,24 +235,23 @@ class PenilaianRMIController extends Controller
      */
     public function saveAspekDinamis(Request $request, $periodId)
     {
-        if ($request->action === 'finish') {
-            $validator = Validator::make($request->all(), [
-                'scores' => 'array',
-                'scores.*' => 'required|numeric|min:0|max:5',
-                'gap_analysis' => 'array',
-                'gap_analysis.*' => 'nullable|string',
-                'action' => 'required|in:save,finish',
-            ]);
+        // Partial update: hanya kriteria yang dikirim yang diubah (aman multi-user).
+        $request->validate([
+            'scores' => 'nullable|array',
+            'scores.*' => 'nullable|numeric|min:0|max:5',
+            'action' => 'required|in:save,finish',
+            'gap_analysis' => 'nullable|array',
+            'gap_analysis.*' => 'nullable|string',
+        ]);
 
+        // Validasi gap hanya untuk kriteria yang ikut dikirim & scorable
+        if ($request->has('scores')) {
+            $validator = Validator::make($request->all(), []);
             $validator->after(function ($validator) use ($request) {
-                if (!$request->has('scores')) {
-                    return;
-                }
-
                 foreach ($request->scores as $criteriaId => $score) {
                     if ($this->isScorableCriteriaScore($score)) {
                         $gap = trim($request->gap_analysis[$criteriaId] ?? '');
-                        if ($gap === '') {
+                        if ($gap === '' && $request->action === 'finish') {
                             $validator->errors()->add(
                                 "gap_analysis.{$criteriaId}",
                                 'Gap analysis wajib diisi untuk kriteria yang tidak di-skip.'
@@ -263,29 +262,28 @@ class PenilaianRMIController extends Controller
             });
 
             if ($validator->fails()) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Validasi gagal. Mohon periksa kembali data Anda.',
+                        'errors' => $validator->errors()->all(),
+                    ], 422);
+                }
+
                 return back()->withErrors($validator)->withInput();
             }
-        } else {
-            $request->validate([
-                'scores' => 'array',
-                'scores.*' => 'nullable|numeric|min:0|max:5',
-                'action' => 'required|in:save,finish',
-                'gap_analysis' => 'array',
-                'gap_analysis.*' => 'nullable|string',
-            ]);
         }
 
         // Ambil periode
         $period = RMIPeriod::findOrFail($periodId);
 
-        // 1. Simpan skor kriteria dan gap analysis
+        // 1. Simpan skor kriteria dan gap analysis (hanya yang dikirim)
         if ($request->has('scores')) {
-            \Log::info('masuk ke dalam blok hasScores');
             foreach ($request->scores as $criteriaId => $score) {
                 $gap = $request->gap_analysis[$criteriaId] ?? null;
 
                 // Jika score null (belum diisi) dan action save, biarkan saja tersimpan null / di-skip
-                if ($score === null && $request->action === 'save') {
+                if (($score === null || $score === '') && $request->action === 'save') {
                     continue;
                 }
 
@@ -298,24 +296,25 @@ class PenilaianRMIController extends Controller
                     continue;
                 }
 
-                // Hapus data lama
-                ScoreCriteria::where('period_id', $periodId)
-                    ->where('parameter_criteria_id', $criteriaId)
-                    ->delete();
-
-                // Buat skor baru
-                ScoreCriteria::create([
-                    'period_id' => $periodId,
-                    'parameter_criteria_id' => $criteriaId,
-                    'score' => $score,
-                    'gap_analysis' => $gap
-                ]);
+                // Update existing agar dokumen terkait tidak orphan (hindari soft-delete + create)
+                if ($existing) {
+                    $existing->update([
+                        'score' => $score,
+                        'gap_analysis' => $gap,
+                    ]);
+                } else {
+                    ScoreCriteria::create([
+                        'period_id' => $periodId,
+                        'parameter_criteria_id' => $criteriaId,
+                        'score' => $score,
+                        'gap_analysis' => $gap,
+                    ]);
+                }
             }
         }
 
         // 2. Handle upload dokumen jika ada
         if ($request->has('files')) {
-            \Log::info('masuk ke dalam blok has files');
             foreach ($request->file('files') as $criteriaId => $fileArray) {
                 foreach ($fileArray as $file) {
                     if ($file && $file->isValid()) {
@@ -410,6 +409,23 @@ class PenilaianRMIController extends Controller
         // =========================================================================
 
         if ($request->action === 'finish') {
+            // Validasi kelengkapan dari DB (gabungan hasil multi-user), bukan hanya dari request
+            $completenessErrors = $this->validateAspekDinamisCompleteness($periodId);
+            if (!empty($completenessErrors)) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Penilaian belum lengkap. Mohon lengkapi semua kriteria terlebih dahulu.',
+                        'errors' => $completenessErrors,
+                    ], 422);
+                }
+
+                return back()
+                    ->withErrors(['completeness' => 'Penilaian belum lengkap. Pastikan semua kriteria sudah diisi (termasuk yang dikerjakan user lain).'])
+                    ->with('completeness_errors', $completenessErrors)
+                    ->withInput();
+            }
+
             // Update status periode menjadi selesai
             $period->update([
                 'status' => 2,
@@ -422,7 +438,7 @@ class PenilaianRMIController extends Controller
                 ]);
             }
 
-            return redirect()->route('penilaian-rmi.index')
+            return redirect()->route('penilaian-rmi.show', $periodId)
                 ->with('success', 'Penilaian Aspek Dimensi berhasil diselesaikan.');
         }
 
@@ -434,8 +450,47 @@ class PenilaianRMIController extends Controller
             ]);
         }
 
-        return redirect()->route('penilaian-rmi.index')
+        return redirect()->route('penilaian-rmi.show', $periodId)
             ->with('success', 'Penilaian Aspek Dimensi berhasil disimpan sementara.');
+    }
+
+    /**
+     * Validasi kelengkapan aspek dinamis berdasarkan data terbaru di database.
+     */
+    private function validateAspekDinamisCompleteness(int $periodId): array
+    {
+        $errors = [];
+        $allCriteria = ParameterCriteria::query()
+            ->with('parameter')
+            ->orderBy('parameter_id')
+            ->orderBy('id')
+            ->get();
+
+        if ($allCriteria->isEmpty()) {
+            return ['Belum ada kriteria penilaian yang dikonfigurasi.'];
+        }
+
+        $scoreMap = ScoreCriteria::where('period_id', $periodId)
+            ->whereIn('parameter_criteria_id', $allCriteria->pluck('id'))
+            ->get()
+            ->keyBy('parameter_criteria_id');
+
+        foreach ($allCriteria as $criteria) {
+            $scoreRow = $scoreMap->get($criteria->id);
+            $score = $scoreRow?->score;
+            $label = 'Parameter ID '.$criteria->parameter_id.', Kriteria ID '.$criteria->id;
+
+            if (!$this->isCriteriaFilled($score)) {
+                $errors[] = "{$label}: score belum diisi.";
+                continue;
+            }
+
+            if ($this->isScorableCriteriaScore($score) && trim((string) ($scoreRow->gap_analysis ?? '')) === '') {
+                $errors[] = "{$label}: gap analysis wajib diisi.";
+            }
+        }
+
+        return $errors;
     }
 
     /**
@@ -797,7 +852,7 @@ class PenilaianRMIController extends Controller
     }
 
     //Aspek Kinerja
-    public function aspekKinerja($id)
+    public function aspekKinerja(Request $request, $id)
     {
         // 1. Ambil periode
         $period = RMIPeriod::findOrFail($id);
@@ -816,10 +871,7 @@ class PenilaianRMIController extends Controller
             ->get();
 
         // 3. Cek apakah user sudah pernah menyimpan penilaian ini
-        $penilaian = PenilaianCapaianKinerja::firstWhere([
-            'user_id'       => auth()->id(),
-            'rmi_period_id' => $id,
-        ]);
+        $penilaian = $this->findPeriodPenilaian($id);
 
         // 4. Siapkan array existing untuk prefill
         $existing = $penilaian
@@ -842,6 +894,12 @@ class PenilaianRMIController extends Controller
         $corporateUnit = $units->firstWhere('unit_type_id', 4);
         $defaultUnitId = $corporateUnit ? $corporateUnit->id : ($units->first()->id ?? 0);
 
+        $period->load('documents');
+
+        $isCapaianComplete = $this->areParametersFilled($this->leafParameterIds($paramsCapaian), $existing);
+        $isKpmrComplete = $this->areParametersFilled($this->leafParameterIds($paramsKpmr), $existing);
+        $activeTab = $this->resolveAspekKinerjaTab($request, $id, $isCapaianComplete, $isKpmrComplete);
+
         return view('penilaian-rmi.penilaian-aspek-kinerja', compact(
             'period',
             'paramsCapaian',
@@ -852,6 +910,10 @@ class PenilaianRMIController extends Controller
             'finalRatingPeriod',
             'units',
             'defaultUnitId',
+            'isCapaianComplete',
+            'isKpmrComplete',
+            'activeTab',
+            'penilaian',
         ));
     }
 
@@ -887,10 +949,8 @@ class PenilaianRMIController extends Controller
         $data = $request->validate($rules);
 
         // 2. Ambil atau buat master Penilaian
-        $penilaian = PenilaianCapaianKinerja::updateOrCreate(
-            ['user_id'=>auth()->id(), 'rmi_period_id'=>$periodId],
-            []
-        );
+        $penilaian = $this->getOrCreatePeriodPenilaian($periodId);
+        $penilaian->load('details.pilihan');
 
         // 3. Differential update detail
         $existing = $penilaian->details->keyBy('parameter_id');
@@ -915,6 +975,8 @@ class PenilaianRMIController extends Controller
         foreach($existing as $det) {
             $det->delete();
         }
+
+        $penilaian->load('details.pilihan');
 
         // 4. Hitung total & skala Capaian Kinerja
         $totalCapaian = 0;
@@ -988,6 +1050,7 @@ class PenilaianRMIController extends Controller
 
         // 6. Simpan total & skala di Penilaian
         $penilaian->update([
+            'user_id'                     => auth()->id(),
             'total_nilai_capaian_kinerja' => $totalCapaian,
             'capaian_kinerja'             => $skalaCap?->id,
             'total_nilai_kpmr'            => $totalKpmr,
@@ -1083,36 +1146,31 @@ class PenilaianRMIController extends Controller
                 'final_score_rmi' => $finalScoreRmi
             ]);
 
-            return redirect()->route('penilaian-rmi.index')
+            return redirect()->route('penilaian-rmi.show', $periodId)
                             ->with('success', 'Penilaian Aspek Kinerja, KPMR, dan Final Rating selesai disimpan.');
         }
 
         // 9. Redirect sesuai action
         switch($data['action']) {
         case 'save_capaian':
-            return redirect()->route('penilaian-rmi.aspek-kinerja',$periodId)
+            return $this->redirectAspekKinerjaTab($periodId, 'kpmr')
                             ->with('success','Capaian Kinerja disimpan.')
-                            ->with('active_tab','kpmr')
                             ->withInput();
         case 'back_to_capaian':
-            return redirect()->route('penilaian-rmi.aspek-kinerja',$periodId)
-                            ->with('active_tab','capaian');
+            return $this->redirectAspekKinerjaTab($periodId, 'capaian');
 
         case 'save_kpmr':
-            return redirect()->route('penilaian-rmi.aspek-kinerja',$periodId)
+            return $this->redirectAspekKinerjaTab($periodId, 'final_rating')
                             ->with('success','Penilaian KPMR disimpan.')
-                            ->with('active_tab','final_rating')
                             ->withInput();
         case 'back_to_kpmr':
-            return redirect()->route('penilaian-rmi.aspek-kinerja',$periodId)
-                            ->with('active_tab','kpmr');
+            return $this->redirectAspekKinerjaTab($periodId, 'kpmr');
         case 'finish_final_rating':
-            // Tambahkan logika untuk menyimpan final rating jika diperlukan
-            return redirect()->route('penilaian-rmi.index')
+            return redirect()->route('penilaian-rmi.show', $periodId)
                             ->with('success','Penilaian Aspek Kinerja, KPMR, dan Final Rating sudah selesai disimpan.');
         case 'finish':
         default:
-            return redirect()->route('penilaian-rmi.index')
+            return redirect()->route('penilaian-rmi.show', $periodId)
                             ->with('success','Penilaian Aspek Kinerja & KPMR selesai disimpan.');
         }
     }
@@ -1333,16 +1391,10 @@ class PenilaianRMIController extends Controller
 
     public function getEvidence($periodId, $parameterId)
     {
-        $penilaian = PenilaianCapaianKinerja::where('user_id', auth()->id())
-            ->where('rmi_period_id', $periodId)
-            ->first();
-
-        if (!$penilaian) {
-            return response()->json(['documents' => []]);
-        }
-
-        $documents = ParameterKinerjaDocument::where('penilaian_capaian_kinerja_id', $penilaian->id)
-            ->where('parameter_id', $parameterId)
+        $documents = ParameterKinerjaDocument::where('parameter_id', $parameterId)
+            ->whereHas('penilaian', function ($q) use ($periodId) {
+                $q->where('rmi_period_id', $periodId);
+            })
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -1365,13 +1417,9 @@ class PenilaianRMIController extends Controller
         try {
             DB::beginTransaction();
 
-            $penilaian = PenilaianCapaianKinerja::updateOrCreate(
-                [
-                    'user_id'       => auth()->id(),
-                    'rmi_period_id' => $request->period_id
-                ],
-                []
-            );
+            $penilaian = $this->getOrCreatePeriodPenilaian($request->period_id);
+            $penilaian->user_id = auth()->id();
+            $penilaian->save();
 
             $file = $request->file('file');
             $originalName = $file->getClientOriginalName();
@@ -1408,10 +1456,6 @@ class PenilaianRMIController extends Controller
             return response()->json(['success' => false, 'message' => 'Dokumen tidak ditemukan.'], 404);
         }
 
-        if ($doc->penilaian->user_id != auth()->id()) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
-        }
-
         try {
             Storage::disk('public')->delete($doc->file_path);
 
@@ -1421,5 +1465,142 @@ class PenilaianRMIController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Gagal menghapus: ' . $e->getMessage()], 500);
         }
+    }
+
+    public function logs(Request $request)
+    {
+        abort_unless($request->user()?->can('rmi_period_logs'), 403);
+
+        $event = $request->query('event');
+        $periodId = $request->query('period_id');
+
+        $periods = RMIPeriod::query()->orderByDesc('year')->get(['id', 'year']);
+
+        $audits = Audit::query()
+            ->with(['user', 'auditable', 'rmiPeriod'])
+            ->whereIn('auditable_type', $this->rmiAuditableTypes())
+            ->when($periodId, function ($query) use ($periodId) {
+                $query->where(function ($q) use ($periodId) {
+                    $q->where('rmi_period_id', $periodId)
+                        ->orWhere(function ($q2) use ($periodId) {
+                            $q2->where('auditable_type', RMIPeriod::class)
+                                ->where('auditable_id', $periodId);
+                        });
+                });
+            })
+            ->when($event, function ($query) use ($event) {
+                $query->where('event', $event);
+            })
+            ->latest('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('penilaian-rmi.logs', compact('audits', 'periods', 'event', 'periodId'));
+    }
+
+    public function logsByPeriod(Request $request, $id)
+    {
+        $request->merge(['period_id' => $id]);
+
+        return $this->logs($request);
+    }
+
+    private function rmiAuditableTypes(): array
+    {
+        return [
+            RMIPeriod::class,
+            PenilaianCapaianKinerja::class,
+            DetailPenilaianCapaianKinerja::class,
+            ParameterKinerjaDocument::class,
+            RMIPeriodDocument::class,
+            FinalRatingPeriod::class,
+            ScoreCriteria::class,
+            ScoreCriteriaDoc::class,
+            ScoreParameter::class,
+            DimensionAspectEvaluation::class,
+        ];
+    }
+
+    private function findPeriodPenilaian($periodId): ?PenilaianCapaianKinerja
+    {
+        return PenilaianCapaianKinerja::with(['details.pilihan', 'user'])
+            ->where('rmi_period_id', $periodId)
+            ->latest('updated_at')
+            ->first();
+    }
+
+    private function getOrCreatePeriodPenilaian($periodId): PenilaianCapaianKinerja
+    {
+        $penilaian = PenilaianCapaianKinerja::where('rmi_period_id', $periodId)
+            ->latest('updated_at')
+            ->first();
+
+        if ($penilaian) {
+            return $penilaian;
+        }
+
+        return PenilaianCapaianKinerja::create([
+            'rmi_period_id' => $periodId,
+            'user_id' => auth()->id(),
+        ]);
+    }
+
+    private function leafParameterIds($params): array
+    {
+        $ids = [];
+        foreach ($params as $param) {
+            if ($param->children->isEmpty()) {
+                $ids[] = $param->id;
+            } else {
+                foreach ($param->children as $child) {
+                    $ids[] = $child->id;
+                }
+            }
+        }
+
+        return $ids;
+    }
+
+    private function areParametersFilled(array $leafIds, array $existing): bool
+    {
+        if ($leafIds === []) {
+            return false;
+        }
+
+        foreach ($leafIds as $leafId) {
+            if (empty($existing[$leafId])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function resolveAspekKinerjaTab(Request $request, $periodId, bool $isCapaianComplete, bool $isKpmrComplete): string
+    {
+        $sessionKey = 'aspek_kinerja_tab.'.$periodId;
+        $requested = $request->query('tab', $request->session()->get('active_tab', $request->session()->get($sessionKey, 'capaian')));
+
+        $allowed = ['capaian'];
+        if ($isCapaianComplete) {
+            $allowed[] = 'kpmr';
+        }
+        if ($isCapaianComplete && $isKpmrComplete) {
+            $allowed[] = 'final_rating';
+        }
+
+        $activeTab = in_array($requested, $allowed, true) ? $requested : 'capaian';
+        $request->session()->put($sessionKey, $activeTab);
+
+        return $activeTab;
+    }
+
+    private function redirectAspekKinerjaTab($periodId, string $tab)
+    {
+        session(['aspek_kinerja_tab.'.$periodId => $tab]);
+
+        return redirect()
+            ->route('penilaian-rmi.aspek-kinerja', ['id' => $periodId, 'tab' => $tab])
+            ->with('active_tab', $tab);
     }
 }

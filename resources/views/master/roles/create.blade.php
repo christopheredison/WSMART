@@ -33,6 +33,16 @@
               value="{{ old('name') }}" />
           </div>
         </div>
+        <div class="row g-2 mb-5">
+          <div class="col-12 col-md-2">
+            <p class="mb-0 fw-medium">Notes</p>
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label d-none" for="notes">Notes</label>
+            <textarea class="form-control" id="notes" name="notes" rows="3"
+              placeholder="Masukkan notes untuk role ini">{{ old('notes') }}</textarea>
+          </div>
+        </div>
         <div class="row g-2">
           <div class="col-12 col-md-2">
             <p class="mb-0 fw-medium">Role</p>

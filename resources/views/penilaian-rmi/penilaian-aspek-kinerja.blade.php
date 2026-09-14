@@ -11,7 +11,18 @@
               @include('partials.icon-layer')
             </div>
           </div>
-          <h2 class="h3">Penilaian Aspek Kinerja - Periode {{ $period->year }}</h2>
+          <h2 class="h3 mb-0">Penilaian Aspek Kinerja - Periode {{ $period->year }}</h2>
+          <div class="ms-auto d-flex align-items-center gap-2">
+            @if(!empty($penilaian?->user))
+              <small class="text-muted">Terakhir diubah oleh <strong>{{ $penilaian->user->name }}</strong>@if($penilaian->updated_at) ({{ $penilaian->updated_at->format('d M Y H:i') }})@endif</small>
+            @endif
+            @can('rmi_period_logs')
+            <a href="{{ route('penilaian-rmi.logs.show', $period->id) }}" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" title="Log Perubahan">
+              <span class="bx bx-history"></span>
+              <span class="ms-1">Log</span>
+            </a>
+            @endcan
+          </div>
         </div>
       </div>
       <div class="card-body">
@@ -23,13 +34,13 @@
 
         <ul class="nav nav-tabs mb-4" id="stepTabs" role="tablist">
           <li class="nav-item" role="presentation">
-            <button class="nav-link {{ session('active_tab','capaian')=='capaian' ? 'active' : '' }}" id="tab-capaian" data-bs-toggle="tab" data-bs-target="#capaian" type="button">1. Capaian Kinerja</button>
+            <button class="nav-link {{ $activeTab=='capaian' ? 'active' : '' }}" id="tab-capaian" data-bs-toggle="tab" data-bs-target="#capaian" type="button">1. Capaian Kinerja</button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link {{ session('active_tab')=='kpmr' ? 'active' : '' }} {{ session('active_tab')=='capaian' ? 'disabled' : '' }}" id="tab-kpmr" data-bs-toggle="tab" data-bs-target="#kpmr" type="button">2. Penilaian KPMR</button>
+            <button class="nav-link {{ $activeTab=='kpmr' ? 'active' : '' }} {{ $isCapaianComplete ? '' : 'disabled' }}" id="tab-kpmr" data-bs-toggle="tab" data-bs-target="#kpmr" type="button" @if(!$isCapaianComplete) tabindex="-1" aria-disabled="true" @endif>2. Penilaian KPMR</button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link {{ session('active_tab')=='final_rating' ? 'active' : '' }} {{ session('active_tab')=='capaian' || session('active_tab')=='kpmr' ? 'disabled' : '' }}" id="tab-final-rating" data-bs-toggle="tab" data-bs-target="#final-rating" type="button">3. Penilaian Tingkat Kesehatan Peringkat Akhir</button>
+            <button class="nav-link {{ $activeTab=='final_rating' ? 'active' : '' }} {{ ($isCapaianComplete && $isKpmrComplete) ? '' : 'disabled' }}" id="tab-final-rating" data-bs-toggle="tab" data-bs-target="#final-rating" type="button" @if(!($isCapaianComplete && $isKpmrComplete)) tabindex="-1" aria-disabled="true" @endif>3. Penilaian Tingkat Kesehatan Peringkat Akhir</button>
           </li>
         </ul>
 
@@ -41,7 +52,7 @@
           <div class="tab-content">
 
             {{-- STEP 1: Capaian Kinerja --}}
-            <div class="tab-pane fade {{ session('active_tab','capaian')=='capaian' ? 'show active' : '' }}" id="capaian">
+            <div class="tab-pane fade {{ $activeTab=='capaian' ? 'show active' : '' }}" id="capaian">
               <h4 class="mb-3">Penilaian Capaian Kinerja</h4>
 
               @foreach($paramsCapaian as $param)
@@ -140,13 +151,13 @@
 
               <div class="d-flex justify-content-end">
                 <button type="button" id="btn-save-capaian" class="btn btn-primary">
-                  Simpan Capaian & Lanjut <span class="bx bx-chevron-right ms-1"></span>
+                  Simpan Capaian Kinerja & Lanjut <span class="bx bx-chevron-right ms-1"></span>
                 </button>
               </div>
             </div>
 
             {{-- STEP 2: Penilaian KPMR --}}
-            <div class="tab-pane fade {{ session('active_tab')=='kpmr' ? 'show active' : '' }}" id="kpmr">
+            <div class="tab-pane fade {{ $activeTab=='kpmr' ? 'show active' : '' }}" id="kpmr">
               <div class="d-flex justify-content-between align-items-center mb-3">
                   <h4 class="mb-0">Penilaian Kualitas Penerapan Manajemen Risiko (KPMR)</h4>
 
@@ -233,16 +244,16 @@
 
               <div class="d-flex justify-content-between">
                 <button type="button" id="btn-back-capaian" class="btn btn-outline-secondary">
-                  <span class="bx bx-chevron-left me-1"></span> Kembali ke Capaian
+                  <span class="bx bx-chevron-left me-1"></span> Kembali ke Capaian Kinerja
                 </button>
                 <button type="button" id="btn-save-kpmr" class="btn btn-primary">
-                  Simpan KPMR & Lanjut <span class="bx bx-chevron-right ms-1"></span>
+                  Simpan Penilaian KPMR & Lanjut <span class="bx bx-chevron-right ms-1"></span>
                 </button>
               </div>
             </div>
 
             {{-- STEP 3: Penilaian Tingkat Kesehatan Peringkat Akhir --}}
-            <div class="tab-pane fade {{ session('active_tab')=='final_rating' ? 'show active' : '' }}" id="final-rating">
+            <div class="tab-pane fade {{ $activeTab=='final_rating' ? 'show active' : '' }}" id="final-rating">
               <h4 class="mb-3">Penilaian Tingkat Kesehatan Peringkat Akhir</h4>
 
               <div class="card mb-4">
@@ -295,32 +306,61 @@
                   </div>
                   @endif
 
-                  <div class="mt-4">
-                    <h6 class="form-label">Upload dokumen pendukung (opsional)</h6>
+                  <div class="mt-4 p-3 rounded-3 border bg-light">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                      <div>
+                        <h6 class="mb-0 fw-semibold">
+                          <i class="bx bx-paperclip me-1"></i> Dokumen Pendukung Peringkat Akhir
+                        </h6>
+                        <small class="text-muted">Opsional, maksimal 10 file (5MB per file)</small>
+                      </div>
+                      <button type="button" class="btn btn-sm btn-primary" id="btnAddFinalRatingDocument">
+                        <span class="bx bx-plus me-1"></span>Tambah Dokumen
+                      </button>
+                    </div>
                     <div id="document-uploads-container" style="display: none;">
                       {{-- Tempat untuk input file yang disembunyikan --}}
                     </div>
-                    <table class="table table-bordered">
-                      <thead>
-                        <tr>
-                          <th scope="col">Nama Dokumen</th>
-                          <th scope="col">Deskripsi (Opsional)</th>
-                          <th scope="col" style="width: 80px;">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody id="final-rating-documents-tbody">
-                        {{-- Baris dokumen akan ditambahkan di sini oleh JavaScript --}}
-                      </tbody>
-                      <tfoot>
-                        <tr>
-                          <td colspan="3" class="text-center">
-                            <button type="button" class="btn btn-link btn-sm py-1" id="btnAddFinalRatingDocument">
-                              <span class="bx bx-plus me-1"></span>Tambah Dokumen
-                            </button>
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                    <div class="table-responsive bg-white rounded-2 border">
+                      <table class="table table-bordered mb-0 align-middle">
+                        <thead class="table-light">
+                          <tr>
+                            <th scope="col">Nama Dokumen</th>
+                            <th scope="col">Deskripsi (Opsional)</th>
+                            <th scope="col" class="text-center" style="width: 90px;">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody id="final-rating-documents-tbody">
+                          @forelse($period->documents as $document)
+                            <tr class="document-row" data-existing-id="{{ $document->id }}" id="final-doc-row-{{ $document->id }}">
+                              <td>
+                                <a href="{{ asset('storage/' . $document->file_path) }}" target="_blank" class="text-decoration-none fw-medium" data-bs-toggle="tooltip" title="Lihat dokumen">
+                                  <i class="bx bx-file me-1 text-primary"></i>{{ $document->file_name }}
+                                </a>
+                              </td>
+                              <td>{{ $document->description ?: '-' }}</td>
+                              <td class="text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                  <a href="{{ asset('storage/' . $document->file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Lihat dokumen">
+                                    <i class="bx bx-show"></i>
+                                  </a>
+                                  <button type="button" class="btn btn-sm btn-outline-danger btn-delete-existing-doc" data-doc-id="{{ $document->id }}" data-bs-toggle="tooltip" title="Hapus dokumen">
+                                    <i class="bx bx-trash"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          @empty
+                            <tr id="empty-final-doc-row">
+                              <td colspan="3" class="text-center py-4 text-muted">
+                                <i class="bx bx-folder-open fs-4 d-block mb-1"></i>
+                                Belum ada dokumen pendukung
+                              </td>
+                            </tr>
+                          @endforelse
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -601,13 +641,73 @@
 </script>
 
 <script>
-  // -- Script original bawaan Blade (Tab Handling, Perhitungan Final Rating, dll) tetap di bawah --
   const tabCapaian = new bootstrap.Tab(document.querySelector('#tab-capaian'));
   const tabKpmr    = new bootstrap.Tab(document.querySelector('#tab-kpmr'));
   const tabFinalRating = new bootstrap.Tab(document.querySelector('#tab-final-rating'));
 
-  document.querySelector('#tab-kpmr').classList.toggle('disabled', sessionStorage.getItem('active_tab') !== 'kpmr' && sessionStorage.getItem('active_tab') !== 'final_rating');
-  document.querySelector('#tab-final-rating').classList.toggle('disabled', sessionStorage.getItem('active_tab') !== 'final_rating');
+  const aspekTabStorageKey = 'aspek_kinerja_tab_{{ $period->id }}';
+  const canOpenKpmrSaved = @json($isCapaianComplete);
+  const canOpenFinalSaved = @json($isCapaianComplete && $isKpmrComplete);
+  const tabTargetMap = {
+    '#capaian': 'capaian',
+    '#kpmr': 'kpmr',
+    '#final-rating': 'final_rating'
+  };
+
+  function isPaneComplete(paneId) {
+    const pane = document.getElementById(paneId);
+    if (!pane) return false;
+    const names = [...new Set([...pane.querySelectorAll('input[type="radio"][name^="responses"]')].map(el => el.name))];
+    if (names.length === 0) return false;
+    return names.every(name => pane.querySelector(`input[name="${name}"]:checked`));
+  }
+
+  function setTabEnabled(button, enabled) {
+    if (!button) return;
+    button.classList.toggle('disabled', !enabled);
+    if (enabled) {
+      button.removeAttribute('aria-disabled');
+      button.removeAttribute('tabindex');
+    } else {
+      button.setAttribute('aria-disabled', 'true');
+      button.setAttribute('tabindex', '-1');
+    }
+  }
+
+  function refreshTabAvailability() {
+    const canOpenKpmr = canOpenKpmrSaved || isPaneComplete('capaian');
+    const canOpenFinal = canOpenFinalSaved || (canOpenKpmr && isPaneComplete('kpmr'));
+    setTabEnabled(document.getElementById('tab-kpmr'), canOpenKpmr);
+    setTabEnabled(document.getElementById('tab-final-rating'), canOpenFinal);
+  }
+
+  function persistActiveTab(tab) {
+    sessionStorage.setItem(aspekTabStorageKey, tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    history.replaceState({}, '', url);
+  }
+
+  document.querySelectorAll('#stepTabs button[data-bs-toggle="tab"]').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      if (this.classList.contains('disabled')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+
+    btn.addEventListener('shown.bs.tab', function() {
+      const tab = tabTargetMap[this.getAttribute('data-bs-target')];
+      if (tab) persistActiveTab(tab);
+    });
+  });
+
+  document.querySelectorAll('#capaian input[type="radio"][name^="responses"], #kpmr input[type="radio"][name^="responses"]').forEach(el => {
+    el.addEventListener('change', refreshTabAvailability);
+  });
+
+  refreshTabAvailability();
+  persistActiveTab(@json($activeTab));
 
   // Handle final rating selection
   const finalRatingSelect = document.getElementById('final_rating_id');
@@ -646,16 +746,42 @@
     const documentsTbody = document.getElementById('final-rating-documents-tbody');
     const uploadsContainer = document.getElementById('document-uploads-container');
     const maxFiles = 10;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const emptyRowHtml = `
+      <tr id="empty-final-doc-row">
+        <td colspan="3" class="text-center py-4 text-muted">
+          <i class="bx bx-folder-open fs-4 d-block mb-1"></i>
+          Belum ada dokumen pendukung
+        </td>
+      </tr>`;
+
+    function documentRowCount() {
+      return documentsTbody.querySelectorAll('tr.document-row').length;
+    }
+
+    function syncEmptyState() {
+      const emptyRow = document.getElementById('empty-final-doc-row');
+      if (documentRowCount() === 0) {
+        if (!emptyRow) {
+          documentsTbody.innerHTML = emptyRowHtml;
+        }
+      } else if (emptyRow) {
+        emptyRow.remove();
+      }
+      addDocumentButton.style.display = documentRowCount() >= maxFiles ? 'none' : '';
+    }
 
     addDocumentButton.addEventListener('click', function() {
-      if (documentsTbody.rows.length >= maxFiles) {
+      if (documentRowCount() >= maxFiles) {
         alert(`Anda hanya dapat mengunggah maksimal ${maxFiles} dokumen.`);
         return;
       }
 
-      const index = Date.now(); // Indeks unik untuk setiap baris
+      const emptyRow = document.getElementById('empty-final-doc-row');
+      if (emptyRow) emptyRow.remove();
 
-      // Buat input file
+      const index = Date.now();
+
       const fileInput = document.createElement('input');
       fileInput.type = 'file';
       fileInput.name = `documents[${index}]`;
@@ -663,48 +789,44 @@
       fileInput.style.display = 'none';
       uploadsContainer.appendChild(fileInput);
 
-      // Buat baris tabel baru
       const newRow = documentsTbody.insertRow();
+      newRow.classList.add('document-row');
       newRow.setAttribute('data-index', index);
 
       newRow.innerHTML = `
-        <td><span class="filename">Pilih file...</span></td>
+        <td><span class="filename text-muted"><i class="bx bx-file me-1"></i>Pilih file...</span></td>
         <td>
           <input type="text" name="document_descriptions[${index}]" class="form-control form-control-sm" placeholder="Deskripsi singkat dokumen">
         </td>
-        <td>
-          <button type="button" class="btn btn-link btn-sm text-danger btn-remove-doc">Hapus</button>
+        <td class="text-center">
+          <button type="button" class="btn btn-sm btn-outline-danger btn-remove-doc" data-bs-toggle="tooltip" title="Hapus">
+            <i class="bx bx-trash"></i>
+          </button>
         </td>
       `;
 
-      // Event listener untuk input file
       fileInput.addEventListener('change', function() {
         if (this.files.length > 0) {
           const fileName = this.files[0].name;
-          // Batasi ukuran file (contoh: 5MB)
-          const fileSize = this.files[0].size / 1024 / 1024; // dalam MB
+          const fileSize = this.files[0].size / 1024 / 1024;
           if (fileSize > 5) {
               alert('Ukuran file tidak boleh lebih dari 5MB.');
-              this.value = ''; // Reset input file
+              this.value = '';
               return;
           }
-          newRow.querySelector('.filename').textContent = fileName;
+          newRow.querySelector('.filename').innerHTML = `<i class="bx bx-file me-1 text-primary"></i>${fileName}`;
+          newRow.querySelector('.filename').classList.remove('text-muted');
         }
       });
 
-      // Klik input file secara programatik
       fileInput.click();
-
-      // Sembunyikan tombol tambah jika sudah mencapai batas
-      if (documentsTbody.rows.length >= maxFiles) {
-        addDocumentButton.style.display = 'none';
-      }
+      syncEmptyState();
     });
 
-    // Event delegation untuk tombol hapus
     documentsTbody.addEventListener('click', function(e) {
-      if (e.target && e.target.classList.contains('btn-remove-doc')) {
-        const row = e.target.closest('tr');
+      const removeBtn = e.target.closest('.btn-remove-doc');
+      if (removeBtn) {
+        const row = removeBtn.closest('tr');
         const index = row.getAttribute('data-index');
         const fileInputToRemove = document.getElementById(`doc-file-${index}`);
 
@@ -712,11 +834,64 @@
           fileInputToRemove.remove();
         }
         row.remove();
+        syncEmptyState();
+        return;
+      }
 
-        // Tampilkan kembali tombol tambah
-        if (documentsTbody.rows.length < maxFiles) {
-          addDocumentButton.style.display = 'inline-block';
-        }
+      const deleteExistingBtn = e.target.closest('.btn-delete-existing-doc');
+      if (deleteExistingBtn) {
+        const docId = deleteExistingBtn.dataset.docId;
+        const url = `{{ url('penilaian-rmi/' . $period->id . '/aspek-kinerja/delete-document') }}/${docId}`;
+
+        Swal.fire({
+          title: 'Apakah Anda yakin?',
+          text: 'Dokumen yang dihapus tidak dapat dikembalikan!',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#6c757d',
+          confirmButtonText: 'Ya, hapus!',
+          cancelButtonText: 'Batal'
+        }).then((result) => {
+          if (!result.isConfirmed) return;
+
+          fetch(url, {
+            method: 'DELETE',
+            headers: {
+              'X-CSRF-TOKEN': csrfToken,
+              'Accept': 'application/json'
+            }
+          })
+          .then(response => {
+            if (!response.ok) {
+              return response.json().then(err => { throw new Error(err.message || 'Gagal menghapus dokumen.') });
+            }
+            return response.json();
+          })
+          .then(() => {
+            const row = document.getElementById(`final-doc-row-${docId}`);
+            if (row) row.remove();
+            syncEmptyState();
+            Swal.fire({
+              title: 'Berhasil!',
+              text: 'Dokumen telah dihapus.',
+              icon: 'success',
+              timer: 1500,
+              showConfirmButton: false
+            });
+          })
+          .catch(error => {
+            Swal.fire('Gagal!', error.message || 'Terjadi kesalahan saat menghapus dokumen.', 'error');
+          });
+        });
+      }
+    });
+
+    syncEmptyState();
+
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+      if (!bootstrap.Tooltip.getInstance(el)) {
+        new bootstrap.Tooltip(el);
       }
     });
   });

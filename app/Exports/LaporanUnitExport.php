@@ -15,16 +15,25 @@ use App\Exports\Sheets\Unit\RealisasiResidualSheet;
 
 class LaporanUnitExport implements WithMultipleSheets
 {
-    protected $periodeId;
-    protected $unitId;
+    protected int $periodeId;
+    protected array $unitIds;
     protected $bulan;
     protected $tahun;
+    protected bool $includeUnitColumn;
+    protected string $unitColumnLabel;
 
-    public function __construct(int $periodeId, int $unitId, $bulan = null)
-    {
+    public function __construct(
+        int $periodeId,
+        array $unitIds,
+        $bulan = null,
+        bool $includeUnitColumn = false,
+        string $unitColumnLabel = 'Nama Divisi'
+    ) {
         $this->periodeId = $periodeId;
-        $this->unitId = $unitId;
+        $this->unitIds = $unitIds;
         $this->bulan = $bulan;
+        $this->includeUnitColumn = $includeUnitColumn;
+        $this->unitColumnLabel = $unitColumnLabel;
 
         $periode = Periode::find($periodeId);
         $this->tahun = $periode ? $periode->tahun : null;
@@ -38,38 +47,33 @@ class LaporanUnitExport implements WithMultipleSheets
             'kategoriRisiko',
             'jenisRisiko',
             'peristiwaRisiko',
-            
-            // Menggunakan relasi hasMany agar bisa diurutkan untuk mendapat data fallback terbaru
-            'penyebabRisiko.perlakuanPenyebabRisikoUnit.perlakuanPenyebabUnitMonitorings' => function($q) {
-                $q->whereHas('unitRiskMonitoring', function($sq) {
+            'penyebabRisiko.perlakuanPenyebabRisikoUnit.perlakuanPenyebabUnitMonitorings' => function ($q) {
+                $q->whereHas('unitRiskMonitoring', function ($sq) {
                     $sq->where('status', 100)->where('is_approved', 1);
                     if ($this->bulan) {
-                        $sq->where('month', '<=', $this->bulan); // Fallback ke bulan sebelumnya
+                        $sq->where('month', '<=', $this->bulan);
                     }
                 });
                 $q->orderBy('id', 'desc');
             },
-            
-            'dampakRisikos.perlakuanDampakRisikos.perlakuanDampakMonitorings' => function($q) {
-                $q->whereHas('unitRiskMonitoring', function($sq) {
+            'dampakRisikos.perlakuanDampakRisikos.perlakuanDampakMonitorings' => function ($q) {
+                $q->whereHas('unitRiskMonitoring', function ($sq) {
                     $sq->where('status', 100)->where('is_approved', 1);
                     if ($this->bulan) {
-                        $sq->where('month', '<=', $this->bulan); // Fallback ke bulan sebelumnya
+                        $sq->where('month', '<=', $this->bulan);
                     }
                 });
                 $q->orderBy('id', 'desc');
             },
-            
-            'kris.kriUnitMonitorings' => function($q) {
-                $q->whereHas('unitRiskMonitoring', function($sq) {
+            'kris.kriUnitMonitorings' => function ($q) {
+                $q->whereHas('unitRiskMonitoring', function ($sq) {
                     $sq->where('status', 100)->where('is_approved', 1);
                     if ($this->bulan) {
-                        $sq->where('month', '<=', $this->bulan); // Fallback ke bulan sebelumnya
+                        $sq->where('month', '<=', $this->bulan);
                     }
                 });
                 $q->orderBy('id', 'desc');
             },
-            
             'kontrolEksistings',
             'jenisKontrolEksisting',
             'penilaianEfektifitasKontrol',
@@ -84,41 +88,35 @@ class LaporanUnitExport implements WithMultipleSheets
             'riskAnalysis.skalaProbabilitasResidualQ3',
             'riskAnalysis.skalaDampakResidualQ4Obj',
             'riskAnalysis.skalaProbabilitasResidualQ4',
-            
-            // Relasi Monitoring Utama
-            'monitoringRisikos' => function($query) {
-                // Pastikan data yang diambil adalah data yang sudah di-approve
+            'monitoringRisikos' => function ($query) {
                 $query->where('status', 100)->where('is_approved', 1);
-                
                 if ($this->bulan) {
-                    // Gunakan operator <= agar jika bulan yang dipilih kosong, 
-                    // otomatis menarik data bulan sebelumnya
                     $query->where('month', '<=', $this->bulan);
                 }
-                
-                // Urutkan dari bulan terbesar (terdekat dengan yang dipilih) 
-                // lalu ID terbaru jika ada multi-data di bulan yang sama
                 $query->orderBy('month', 'desc')->orderBy('id', 'desc');
             },
-            
             'monitoringRisikos.skalaProbabilitas',
-            'monitoringRisikos.skalaDampakObj'
+            'monitoringRisikos.skalaDampakObj',
         ])
         ->where('periode_id', $this->periodeId)
-        ->where('unit_id', $this->unitId)
+        ->whereIn('unit_id', $this->unitIds)
         ->get()
-        ->sortByDesc('riskAnalysis.skala_risiko');
+        ->sortBy([
+            fn ($risiko) => optional($risiko->unit)->name ?? '',
+            fn ($risiko) => -(float) (optional($risiko->riskAnalysis)->skala_risiko ?? 0),
+        ])
+        ->values();
 
-        $sheets = [
-            new ProfilRisikoSheet($semuaRisiko, $this->bulan),
-            new RisikoInherentKuantitatifSheet($semuaRisiko),
-            new RisikoInherentKualitatifSheet($semuaRisiko),
-            new RisikoResidualKuantitatifSheet($semuaRisiko),
-            new RisikoResidualKualitatifSheet($semuaRisiko),
-            new RencanaPerlakuanRisikoSheet($semuaRisiko),
-            new RealisasiResidualSheet($semuaRisiko, $this->bulan),
+        $sheetArgs = [$semuaRisiko, $this->bulan, $this->includeUnitColumn, $this->unitColumnLabel];
+
+        return [
+            new ProfilRisikoSheet(...$sheetArgs),
+            new RisikoInherentKuantitatifSheet($semuaRisiko, $this->includeUnitColumn, $this->unitColumnLabel),
+            new RisikoInherentKualitatifSheet($semuaRisiko, $this->includeUnitColumn, $this->unitColumnLabel),
+            new RisikoResidualKuantitatifSheet($semuaRisiko, $this->includeUnitColumn, $this->unitColumnLabel),
+            new RisikoResidualKualitatifSheet($semuaRisiko, $this->includeUnitColumn, $this->unitColumnLabel),
+            new RencanaPerlakuanRisikoSheet($semuaRisiko, $this->includeUnitColumn, $this->unitColumnLabel),
+            new RealisasiResidualSheet(...$sheetArgs),
         ];
-
-        return $sheets;
     }
 }

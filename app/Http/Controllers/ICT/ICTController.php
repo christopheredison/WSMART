@@ -108,7 +108,7 @@ class ICTController extends Controller
             ]);
         }
 
-        return redirect()->route('ict.index')->with('success', 'Data ICT Plan berhasil disimpan');
+        return redirect()->route('ict.show', $ictPlan->id)->with('success', 'Data ICT Plan berhasil disimpan');
     }
 
     public function edit($id)
@@ -288,8 +288,38 @@ class ICTController extends Controller
             $rules['batas_waktu_penyelesaian.*'] = 'required|date';
         }
 
-        // Jalankan Validasi
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules);
+        $attributeLabels = [
+            'jenis_kontrol' => 'Jenis Kontrol',
+            'bentuk_kontrol' => 'Bentuk Kontrol',
+            'level_pengendalian' => 'Level Pengendalian',
+            'kecukupan_desain_pengendalian_1' => 'Kecukupan Desain Pengendalian 1',
+            'kecukupan_desain_pengendalian_2' => 'Kecukupan Desain Pengendalian 2',
+            'kecukupan_desain_pengendalian_3' => 'Kecukupan Desain Pengendalian 3',
+            'kecukupan_desain_pengendalian_4' => 'Kecukupan Desain Pengendalian 4',
+            'kecukupan_desain_pengendalian_akhir' => 'Kesimpulan Kecukupan Desain Pengendalian',
+            'efektivitas_desain_pengendalian_1' => 'Efektivitas Desain Pengendalian 1',
+            'efektivitas_desain_pengendalian_2' => 'Efektivitas Desain Pengendalian 2',
+            'efektivitas_desain_pengendalian_3' => 'Efektivitas Desain Pengendalian 3',
+            'efektivitas_desain_pengendalian_akhir' => 'Kesimpulan Efektivitas Desain Pengendalian',
+            'kesimpulan_akhir' => 'Kesimpulan Akhir',
+            'hasil_temuan' => 'Hasil Temuan',
+            'rencana_tindak_lanjut' => 'Rencana Tindak Lanjut',
+            'batas_waktu_penyelesaian' => 'Batas Waktu Penyelesaian',
+        ];
+
+        $attributes = [];
+        $planControlCount = count($request->input('plan_control_id', []));
+        for ($i = 0; $i < $planControlCount; $i++) {
+            $row = $i + 1;
+            foreach ($attributeLabels as $field => $label) {
+                $attributes["{$field}.{$i}"] = "{$label} (Key Control #{$row})";
+            }
+        }
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules, [
+            'required' => ':attribute wajib diisi.',
+            'date' => ':attribute harus berupa tanggal yang valid.',
+        ], $attributes);
 
         // Custom Validation untuk Penanggung Jawab (karena ada logic OR)
         $validator->after(function ($validator) use ($request, $action) {
@@ -300,14 +330,17 @@ class ICTController extends Controller
 
                     // Jika SUBMIT, salah satu dari Jabatan atau Nama Manual harus diisi
                     if (empty($jabatanId) && empty($manualName)) {
-                        $validator->errors()->add("penanggung_jawab.{$key}", "Penanggung Jawab pada baris ke-" . ($key + 1) . " wajib diisi.");
+                        $validator->errors()->add("penanggung_jawab.{$key}", "Penanggung Jawab pada Key Control #" . ($key + 1) . " wajib diisi.");
                     }
                 }
             }
         });
 
         if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput()->with('error', 'Mohon lengkapi data yang wajib diisi.');
+            return back()
+                ->withErrors($validator)
+                ->withInput()
+                ->with('error', 'Mohon lengkapi data yang wajib diisi.');
         }
 
         try {
@@ -371,7 +404,7 @@ class ICTController extends Controller
                 ? 'Draft pengujian berhasil diperbarui.'
                 : 'Data pengujian ICT Plan berhasil disimpan.';
 
-            return redirect()->route('ict.index')->with('success', $message);
+            return redirect()->route('ict.show', $id)->with('success', $message);
 
         } catch (\Exception $e) {
             DB::rollback();
@@ -443,7 +476,7 @@ class ICTController extends Controller
             ]);
         }
 
-        return redirect()->route('ict.index')->with('success', 'Laporan ICT berhasil disimpan');
+        return redirect()->route('ict.show', $id)->with('success', 'Laporan ICT berhasil disimpan');
     }
 
     public function show($id)

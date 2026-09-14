@@ -625,7 +625,11 @@ if (!function_exists('formatKriBatasJs')) {
                     <button type="button" data-action="save" class="btn btn-primary ms-auto btn-action">Simpan</button>
                 </div>
                 <div class="col-auto ms-auto">
-                    <button type="button" data-action="save-and-close" class="btn btn-danger btn-action">Simpan dan Close Risiko</button>
+                    @if(!$risk->is_closed && (int) $risk->close_request !== \App\Models\IdentifikasiRisiko::CLOSE_REQUEST_PENDING)
+                        <button type="button" data-action="save-and-close" class="btn btn-danger btn-action">Simpan dan Close Risiko</button>
+                    @elseif((int) $risk->close_request === \App\Models\IdentifikasiRisiko::CLOSE_REQUEST_PENDING)
+                        <button type="button" class="btn btn-warning text-dark" disabled title="Menunggu verifikasi penutupan">Pengajuan Tutup Risiko Diproses</button>
+                    @endif
                 </div>
             </div>
         </div>
@@ -1010,7 +1014,7 @@ function validateRealisasiForm() {
     return isValid;
 }
 
-function submitForm(isClosed) {
+function submitForm(isClosed, closeReason = null) {
     $('.dom-edited').remove();
 
     const formData = new FormData($('#main-form')[0]);
@@ -1019,9 +1023,10 @@ function submitForm(isClosed) {
     formData.append('kri_projects', JSON.stringify(kriProjects));
     formData.append('quarter', quarter);
     formData.append('_method', 'PUT');
-
-    // Append new data for isClosed
     formData.append('is_closed', isClosed);
+    if (isClosed == 1 && closeReason) {
+        formData.append('close_reason', closeReason);
+    }
 
     $.ajax({
         url: '{{ route('risk-register-ap.monitorings.update', ['period' => request()->route('period'), 'monitoring' => request()->route('monitoring')]) }}',
@@ -1226,20 +1231,78 @@ $(document).ready(function() {
             // }
 
             const isClosing = (action === 'save-and-close');
-            const swalConfig = {
-                title: 'Konfirmasi',
-                text: isClosing
-                    ? `Apakah Anda yakin ingin menyimpan dan menutup risiko "${namaRisiko}" ini?`
-                    : 'Apakah Anda yakin ingin menyimpan data ini?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Ya, Lanjutkan',
-                cancelButtonText: 'Batal',
-            };
 
-            Swal.fire(swalConfig).then((result) => {
+            if (!isClosing) {
+                Swal.fire({
+                    title: 'Konfirmasi',
+                    text: 'Apakah Anda yakin ingin menyimpan data ini?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Lanjutkan',
+                    cancelButtonText: 'Batal',
+                }).then((result) => {
+                    if (result.isConfirmed) submitForm(0);
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Tutup Risiko?',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-2">Anda akan menyimpan monitoring dan mengajukan penutupan risiko <strong>${namaRisiko}</strong>.</p>
+                        <p class="mb-2">Silakan pilih alasan penutupan risiko:</p>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="closeReason" id="reason1" value="Sudah tidak relevan">
+                            <label class="form-check-label" for="reason1">Sudah tidak relevan</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="closeReason" id="reason2" value="Sudah terkendali">
+                            <label class="form-check-label" for="reason2">Sudah terkendali</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="closeReason" id="reason3" value="other">
+                            <label class="form-check-label" for="reason3">Lainnya</label>
+                        </div>
+                        <textarea id="otherReason" class="form-control mt-2 d-none" placeholder="Tuliskan alasan lainnya..."></textarea>
+                    </div>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ajukan Penutupan',
+                cancelButtonText: 'Batal',
+                reverseButtons: true,
+                didOpen: () => {
+                    const radios = document.querySelectorAll('input[name="closeReason"]');
+                    const textArea = document.getElementById('otherReason');
+                    radios.forEach(r => r.addEventListener('change', function() {
+                        if (this.value === 'other') {
+                            textArea.classList.remove('d-none');
+                        } else {
+                            textArea.classList.add('d-none');
+                        }
+                    }));
+                },
+                preConfirm: () => {
+                    const selected = document.querySelector('input[name="closeReason"]:checked');
+                    if (!selected) {
+                        Swal.showValidationMessage('Anda harus memilih alasan penutupan.');
+                        return false;
+                    }
+                    let reasonText = selected.value;
+                    if (reasonText === 'other') {
+                        const otherVal = document.getElementById('otherReason').value.trim();
+                        if (!otherVal) {
+                            Swal.showValidationMessage('Alasan lainnya tidak boleh kosong.');
+                            return false;
+                        }
+                        reasonText = otherVal;
+                    }
+                    return reasonText;
+                }
+            }).then((result) => {
                 if (result.isConfirmed) {
-                    submitForm(isClosing ? 1 : 0);
+                    submitForm(1, result.value);
                 }
             });
         } else if (action === 'update-kri') {
@@ -1652,7 +1715,7 @@ $(document).ready(function() {
         kriProjects[id]['nilai_kri_terkini_q' + quarter] = nilaiKri;
         kriProjects[id]['status_kri_terkini_q' + quarter] = statusKri;
 
-        // Ambil data pengendalian jika status Waspada/Bahaya
+        // Ambil data pengendalian jika status Siaga/Bahaya
         if (statusKri === '2' || statusKri === '3') {
             const rencanaPengendalian = $('#formUpdateKri [name="kri_rencana_pengendalian"]').val();
             const realisasiPengendalian = $('#formUpdateKri [name="kri_realisasi_pengendalian"]').val();

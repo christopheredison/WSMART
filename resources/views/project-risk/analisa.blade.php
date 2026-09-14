@@ -42,6 +42,7 @@
 
     <form id="mainForm">
         @csrf
+        <input type="hidden" name="is_new_analisa_mode" value="{{ $isNewAnalisaMode ? 1 : 0 }}">
         <div class="card mb-5">
             <div class="card-header stepper border-0 pb-0">
                 <div class="nav-link active d-flex align-items-center p-0">
@@ -139,7 +140,7 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label>Nilai Dampak</label>
-                        {{ Form::text('nilai_dampak', $analisa->nilai_dampak, ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak', 'autocomplete' => 'off']) }}
+                        {{ Form::text('nilai_dampak', $analisa->nilai_dampak, ['class' => 'form-control inputmask-rupiah', 'required' => true, 'id' => 'nilai_dampak', 'autocomplete' => 'off', 'readonly' => $isNewAnalisaMode]) }}
                     </div>
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
@@ -164,6 +165,36 @@
                         {{ Form::text('eksposur_risiko', '', ['class' => 'form-control inputmask-rupiah', 'disabled' => true, 'required' => true, 'autocomplete' => 'off']) }}
                     </div>
                 </div>
+                @if($isNewAnalisaMode)
+                    <div class="row mb-3" id="impact-detail-section">
+                        <div class="col-md-12">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="mb-0 fw-semibold">Detail Perhitungan Nilai Dampak Inheren</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddImpactDetail">
+                                    <i class='bx bx-plus'></i> Tambah Detail
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered align-middle mb-2">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="min-width: 240px;">Uraian</th>
+                                            <th style="min-width: 140px;">Volume</th>
+                                            <th style="min-width: 120px;">Satuan</th>
+                                            <th style="min-width: 180px;">Harga Satuan</th>
+                                            <th style="min-width: 200px;">Jumlah (Volume x Harga Satuan)</th>
+                                            <th style="width: 80px;">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="impact-detail-body"></tbody>
+                                </table>
+                            </div>
+                            <small class="text-muted d-block">
+                                Total jumlah akan menjadi Nilai Dampak Inheren secara otomatis.
+                            </small>
+                        </div>
+                    </div>
+                @endif
                 <div class="row mb-3">
                     <div class="col-md-3">
                         <label>Skala Dampak</label>
@@ -246,6 +277,7 @@
                 <div class="row mb-3 gx-3">
                     <div class="col-md-3">
                         <label>Skala Dampak Residual</label>
+                        <input type="hidden" name="skala_dampak_residual_hidden" id="skala_dampak_residual_hidden" value="{{ $analisa->skala_dampak_residual }}">
                         {{ Form::select('skala_dampak_residual', \App\Models\SkalaDampak::get()->mapWithKeys(function($item) { return [$item->tingkat => $item->tingkat . ' - ' . $item->deskripsi]; }), $analisa->skala_dampak_residual, ['class' => 'form-select', 'placeholder' => 'Pilih Skala Dampak Residual', 'required' => true, 'id' => 'skala_dampak_residual']) }}
                     </div>
                     <div class="col-md-4 d-none">
@@ -364,6 +396,91 @@ const savedSkalaRisiko = "{{ $analisa->skala_risiko ?? '' }}";
 const savedLevelRisiko = "{{ $analisa->level_risiko ?? '' }}";
 const savedSkalaRisikoResidual = "{{ $analisa->skala_risiko_residual ?? '' }}";
 const savedLevelRisikoResidual = "{{ $analisa->level_risiko_residual ?? '' }}";
+const isNewAnalisaMode = {{ $isNewAnalisaMode ? 'true' : 'false' }};
+
+function applyRupiahMask(selector = '.inputmask-rupiah') {
+    $(selector).inputmask({
+        alias: 'numeric',
+        groupSeparator: '.',
+        autoGroup: true,
+        digits: 0,
+        digitsOptional: false,
+        prefix: 'Rp ',
+        placeholder: '0',
+        rightAlign: false,
+        autoUnmask: true,
+        removeMaskOnSubmit: true,
+        min: 0,
+        allowMinus: false,
+        onKeyDown: function(e) {
+            if (e.key === 'Backspace' || e.keyCode === 8) {
+                setTimeout(() => {
+                    const unmasked = this.inputmask.unmaskedvalue();
+                    if (unmasked.length > 0) {
+                        const pos = this.selectionStart;
+                        if (pos === 0) {
+                            const end = this.value.length;
+                            this.setSelectionRange(end, end);
+                        }
+                    }
+                }, 0);
+            }
+        }
+    });
+}
+
+function applyNumericMask(selector = '.inputmask-numeric') {
+    $(selector).inputmask({
+        alias: 'numeric',
+        groupSeparator: '.',
+        radixPoint: ',',
+        autoGroup: true,
+        digits: 4,
+        digitsOptional: true,
+        prefix: '',
+        placeholder: '',
+        rightAlign: false,
+        autoUnmask: true,
+        removeMaskOnSubmit: true,
+        min: 0,
+        allowMinus: false,
+        onKeyDown: function(e) {
+            if (e.key === 'Backspace' || e.keyCode === 8) {
+                setTimeout(() => {
+                    const unmasked = this.inputmask.unmaskedvalue();
+                    if (unmasked.length > 0) {
+                        const pos = this.selectionStart;
+                        if (pos === 0) {
+                            const end = this.value.length;
+                            this.setSelectionRange(end, end);
+                        }
+                    }
+                }, 0);
+            }
+        }
+    });
+}
+
+function normalizeVolumeValue(value) {
+    if (value === null || value === undefined || value === '') return '';
+    const num = parseFloat(String(value).replace(',', '.'));
+    if (Number.isNaN(num)) return '';
+    return String(parseFloat(num.toFixed(4)));
+}
+
+function parseNumericInput(value) {
+    if (value === null || value === undefined) return 0;
+    const normalized = String(value).replace(/[^0-9,.-]/g, '').replace(',', '.');
+    const parsed = parseFloat(normalized);
+    return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function parseRupiahToNumber(value) {
+    if (value === null || value === undefined || value === '') return 0;
+    if (typeof value === 'number') return Number.isNaN(value) ? 0 : value;
+    const unmasked = String(value).replace(/[^0-9,-]/g, '').replace(',', '.');
+    return parseFloat(unmasked) || 0;
+}
 
 function getSkalaProbabilitasByValue(value) {
     const skalaProbabilitases = @json($skalaProbabilitas);
@@ -375,6 +492,47 @@ function getSkalaProbabilitasByValue(value) {
     }
 }
 
+function findSkalaOptionByNilai($scaleSelect, value) {
+    if (!$scaleSelect || !$scaleSelect.length || isNaN(value)) {
+        return $();
+    }
+
+    let $matched = $();
+    $scaleSelect.find('option').each(function() {
+        if (!this.value) return;
+        const min = parseFloat($(this).data('min'));
+        const max = parseFloat($(this).data('max'));
+        if (isNaN(min) || isNaN(max)) return;
+        if (value >= min && value <= max) {
+            $matched = $(this);
+            return false;
+        }
+    });
+
+    if ($matched.length) {
+        return $matched;
+    }
+
+    const matchedScale = getSkalaProbabilitasByValue(value);
+    if (matchedScale) {
+        return $scaleSelect.find('option[data-tingkat="' + matchedScale.tingkat + '"]');
+    }
+
+    return $();
+}
+
+function syncSkalaDropdownFromNilai($scaleSelect, value) {
+    const $option = findSkalaOptionByNilai($scaleSelect, value);
+    if (!$option.length) {
+        return false;
+    }
+
+    // Disabled option cannot be selected via .val() in some browsers
+    $option.prop('disabled', false);
+    $scaleSelect.val($option.val());
+    return true;
+}
+
 function refreshEksposureRisiko(residual = false) {
     const domEksposurRisiko = $('[name="eksposur_risiko' + (residual ? '_residual' : '') + '"]');
     const kategoriDampak = $('[name="kategori_dampak"]').val();
@@ -382,8 +540,8 @@ function refreshEksposureRisiko(residual = false) {
     const riskTolerance = parseFloat($('[name="risk_tolerance"]').val());
 
     if (kategoriDampak === "{{ \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF }}") {
-        const nilaiDampak = parseFloat($('[name="nilai_dampak' + (residual ? '_residual' : '') + '"]').val());
-        if (isNaN(nilaiDampak) || isNaN(nilaiProbabilitas)) {
+        const nilaiDampak = parseRupiahToNumber($('[name="nilai_dampak' + (residual ? '_residual' : '') + '"]').val());
+        if (!nilaiDampak || isNaN(nilaiProbabilitas)) {
             domEksposurRisiko.val('');
         } else {
             domEksposurRisiko.val(nilaiDampak * nilaiProbabilitas / 100);
@@ -402,23 +560,11 @@ function refreshEksposureRisiko(residual = false) {
 
 function refreshSkalaAndLevelRisiko(residual = false, isInit = false) {
     const riskMaps = @json($riskMaps);
+    const suffix = residual ? '_residual' : '';
 
     // 1. Ambil Elemen Input Output (Target)
-    const domSkalaRisiko = $('[name="skala_risiko' + (residual ? '_residual' : '') + '"]');
-    const domLevelRisiko = $('[name="level_risiko' + (residual ? '_residual' : '') + '"]');
-
-    // 2. Ambil Input Skala Dampak
-    const skalaDampak = $('[name="skala_dampak' + (residual ? '_residual' : '') + '"]').val();
-
-    // 3. Ambil Tingkat dari Dropdown Skala Parameter (Bukan dari input hidden/text)
-    let skalaProbabilitas = 0;
-    if (residual) {
-        // Ambil dari dropdown Residual
-        skalaProbabilitas = $('#skala_parameter_residual_id').find(':selected').data('tingkat');
-    } else {
-        // Ambil dari dropdown Inheren
-        skalaProbabilitas = $('#skala_parameter_id').find(':selected').data('tingkat');
-    }
+    const domSkalaRisiko = $('[name="skala_risiko' + suffix + '"]');
+    const domLevelRisiko = $('[name="level_risiko' + suffix + '"]');
 
     if (isInit) {
         if (!residual && savedSkalaRisiko && savedLevelRisiko) {
@@ -433,6 +579,28 @@ function refreshSkalaAndLevelRisiko(residual = false, isInit = false) {
         }
     }
 
+    // 2. Ambil Skala Dampak (select bisa disabled di kuantitatif, jadi fallback ke hidden)
+    const skalaDampak = $('[name="skala_dampak' + suffix + '"]').val()
+        || $('#skala_dampak' + suffix + '_hidden').val();
+
+    // 3. Ambil Tingkat Probabilitas: dropdown → hidden text → hitung dari nilai
+    const $scaleSelect = residual ? $('#skala_parameter_residual_id') : $('#skala_parameter_id');
+    let skalaProbabilitas = $scaleSelect.find(':selected').data('tingkat');
+
+    if (!skalaProbabilitas) {
+        skalaProbabilitas = $('[name="skala_probabilitas' + suffix + '"]').data('tingkat');
+    }
+
+    if (!skalaProbabilitas) {
+        const nilaiProbabilitas = parseFloat($('[name="nilai_probabilitas' + suffix + '"]').val());
+        if (!isNaN(nilaiProbabilitas)) {
+            const matchedScale = getSkalaProbabilitasByValue(nilaiProbabilitas);
+            if (matchedScale) {
+                skalaProbabilitas = matchedScale.tingkat;
+            }
+        }
+    }
+
     if (!skalaDampak || !skalaProbabilitas) {
         domSkalaRisiko.val('');
         domLevelRisiko.val('');
@@ -442,8 +610,6 @@ function refreshSkalaAndLevelRisiko(residual = false, isInit = false) {
     // 4. Mapping Risk Map (Kunci: "SkalaDampak-SkalaProbabilitas")
     const key = skalaDampak + '-' + skalaProbabilitas;
     const riskMap = riskMaps[key];
-
-    // console.log('Check Map:', key, riskMap); // Debugging
 
     if (riskMap) {
         domSkalaRisiko.val(riskMap.nilai_risiko);
@@ -468,6 +634,104 @@ $(document).ready(function() {
 
     const savedSkalaDampak = "{{ $analisa->skala_dampak ?? '' }}";
     const savedSkalaDampakResidual = "{{ $analisa->skala_dampak_residual ?? '' }}";
+    let impactDetailIndex = 0;
+
+    function renderImpactDetailRow(detail = null) {
+        const rowId = impactDetailIndex++;
+        const row = $(`
+            <tr data-row-id="${rowId}">
+                <td>
+                    <input type="text" class="form-control impact-uraian" name="impact_details[${rowId}][uraian]" required maxlength="255">
+                </td>
+                <td>
+                    <input type="text" class="form-control inputmask-numeric impact-volume" name="impact_details[${rowId}][volume]" required autocomplete="off" inputmode="decimal">
+                </td>
+                <td>
+                    <input type="text" class="form-control impact-satuan" name="impact_details[${rowId}][satuan]" maxlength="50" required>
+                </td>
+                <td>
+                    <input type="text" class="form-control inputmask-rupiah impact-harga" name="impact_details[${rowId}][harga_satuan]" required autocomplete="off">
+                </td>
+                <td>
+                    <input type="text" class="form-control inputmask-rupiah impact-subtotal-view" readonly autocomplete="off">
+                    <input type="hidden" class="impact-subtotal" name="impact_details[${rowId}][subtotal]" value="0">
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-impact-detail">
+                        <i class='bx bx-trash'></i>
+                    </button>
+                </td>
+            </tr>
+        `);
+
+        $('#impact-detail-body').append(row);
+        applyNumericMask(row.find('.inputmask-numeric'));
+        applyRupiahMask(row.find('.inputmask-rupiah'));
+
+        if (detail) {
+            row.find('.impact-uraian').val(detail.uraian ?? '');
+            row.find('.impact-volume').val(normalizeVolumeValue(detail.volume));
+            row.find('.impact-satuan').val(detail.satuan ?? '');
+            row.find('.impact-harga').val(detail.harga_satuan ?? 0);
+        }
+
+        updateImpactDetailRow(row);
+        refreshImpactDetailTotal();
+    }
+
+    function updateImpactDetailRow($row) {
+        const volume = parseNumericInput($row.find('.impact-volume').val());
+        const harga = parseNumericInput($row.find('.impact-harga').val());
+        const subtotal = Math.max(0, Math.round((volume * harga) * 100) / 100);
+        $row.find('.impact-subtotal').val(subtotal);
+        $row.find('.impact-subtotal-view').val(subtotal);
+    }
+
+    function refreshImpactDetailTotal() {
+        if (!isNewAnalisaMode) return;
+        let total = 0;
+        $('#impact-detail-body tr').each(function() {
+            total += parseNumericInput($(this).find('.impact-subtotal').val());
+        });
+
+        const roundedTotal = Math.max(0, Math.round(total));
+        $('#nilai_dampak').val(roundedTotal).trigger('change');
+    }
+
+    function toggleImpactDetailRequired(isRequired) {
+        const fields = $('#impact-detail-body').find('.impact-uraian, .impact-volume, .impact-satuan, .impact-harga');
+        fields.prop('required', isRequired);
+    }
+
+    if (isNewAnalisaMode) {
+        const existingDetails = @json($analisa->impactDetails ?? []);
+        if (Array.isArray(existingDetails) && existingDetails.length > 0) {
+            existingDetails.forEach(renderImpactDetailRow);
+        } else {
+            renderImpactDetailRow();
+        }
+
+        $('#btnAddImpactDetail').on('click', function() {
+            renderImpactDetailRow();
+        });
+
+        $('#impact-detail-body').on('input change', '.impact-volume, .impact-harga', function() {
+            const row = $(this).closest('tr');
+            updateImpactDetailRow(row);
+            refreshImpactDetailTotal();
+        });
+
+        $('#impact-detail-body').on('click', '.btn-remove-impact-detail', function() {
+            $(this).closest('tr').remove();
+            if ($('#impact-detail-body tr').length === 0) {
+                renderImpactDetailRow();
+            } else {
+                refreshImpactDetailTotal();
+            }
+        });
+
+        toggleImpactDetailRequired($('#kategoriDampak').val() === "{{ \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF }}");
+    }
 
     // === FITUR 1: Auto Set Parameter Type jika opsi hanya 1 (selain placeholder) ===
     if ($paramTypeInherent.find('option').length === 1) {
@@ -501,34 +765,21 @@ $(document).ready(function() {
     // Update Skala Dropdown otomatis ketika Nilai Probabilitas berubah
     $nilaiProbInherent.on('input change', function() {
         const value = parseFloat($(this).val());
-        if (isNaN(value)) return;
-
-        const matchedScale = getSkalaProbabilitasByValue(value);
-        if (matchedScale) {
-            const $option = $scaleInherent.find(`option[data-tingkat="${matchedScale.tingkat}"]`);
-            if ($option.length > 0) {
-                if ($scaleInherent.val() != $option.val()) {
-                    $scaleInherent.val($option.val()).trigger('change.selectOnly');
-                }
-            }
+        if (!isNaN(value)) {
+            // Set dropdown tanpa trigger('change') agar residual tidak dipaksa menyalin inheren
+            syncSkalaDropdownFromNilai($scaleInherent, value);
         }
         refreshEksposureRisiko();
+        refreshSkalaAndLevelRisiko(false);
     });
 
     $nilaiProbResidual.on('input change', function() {
         const value = parseFloat($(this).val());
-        if (isNaN(value)) return;
-
-        const matchedScale = getSkalaProbabilitasByValue(value);
-        if (matchedScale) {
-            const $option = $scaleResidual.find(`option[data-tingkat="${matchedScale.tingkat}"]`);
-            if ($option.length > 0) {
-                if ($scaleResidual.val() != $option.val()) {
-                    $scaleResidual.val($option.val()).trigger('change.selectOnly');
-                }
-            }
+        if (!isNaN(value)) {
+            syncSkalaDropdownFromNilai($scaleResidual, value);
         }
         refreshEksposureRisiko(true);
+        refreshSkalaAndLevelRisiko(true);
     });
 
     function validateNilaiProbabilitas($input, $scaleSelect) {
@@ -580,8 +831,19 @@ $(document).ready(function() {
         populateSkalaDropdown(selectedType, $scaleInherent, savedInherentId);
         populateSkalaDropdown(selectedType, $scaleResidual, savedResidualId);
 
+        const nilaiInherent = parseFloat($nilaiProbInherent.val());
+        const nilaiResidual = parseFloat($nilaiProbResidual.val());
+        if (!isNaN(nilaiInherent)) {
+            syncSkalaDropdownFromNilai($scaleInherent, nilaiInherent);
+        }
+        if (!isNaN(nilaiResidual)) {
+            syncSkalaDropdownFromNilai($scaleResidual, nilaiResidual);
+        }
+
         // Trigger perubahan skala residual untuk disable tingkat yang tidak valid
         $scaleInherent.trigger('change');
+        refreshSkalaAndLevelRisiko(false);
+        refreshSkalaAndLevelRisiko(true);
 
         // populateSkalaDropdown(selectedType, $scaleInherent);
         // populateSkalaDropdown(selectedType, $scaleResidual);
@@ -646,17 +908,10 @@ $(document).ready(function() {
     });
 
     $scaleResidual.on('change', function() {
-        // const $selectedOption = $(this).find('option:selected');
-        // const min = $selectedOption.data('min');
-        // const max = $selectedOption.data('max');
-
-        // if ($(this).val()) {
-        //     $nilaiProbResidual.prop('disabled', false).attr({ min, max }).val('');
-        // } else {
-        //     $nilaiProbResidual.prop('disabled', true).val('').attr({ min: 0, max: 100 });
-        // }
-        // $nilaiProbResidual.trigger('change');
-
+        const tingkat = $(this).find(':selected').data('tingkat');
+        if (tingkat) {
+            $('[name="skala_probabilitas_residual"]').data('tingkat', tingkat);
+        }
         refreshSkalaAndLevelRisiko(true);
     });
 
@@ -753,13 +1008,8 @@ $(document).ready(function() {
             // });
         }
 
-        const tingkatInherent = parseInt($scaleInherent.find('option:selected').data('tingkat')) || 0;
-        if (tingkatInherent > 0) {
-            $scaleResidual.find('option').each(function() {
-                const tingkatOption = parseInt($(this).data('tingkat')) || 0;
-                $(this).prop('disabled', tingkatOption > tingkatInherent);
-            });
-        }
+        // Jangan disable opsi residual: .val() gagal memilih option disabled,
+        // sehingga Skala/Level Risiko residual kadang tidak terhitung.
     }
 
     $('[name="nilai_probabilitas"], [name="nilai_probabilitas_residual"]').on('input change blur', function() {
@@ -795,13 +1045,28 @@ $(document).ready(function() {
         if (value === "{{ \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUALITATIF }}") {
             $('[name="nilai_dampak"]').prop('readonly', true).val(0);
             $('[name="nilai_dampak_residual"]').prop('readonly', true).val(0);
+            // Kualitatif: skala dampak dipilih manual
+            $('[name="skala_dampak"], [name="skala_dampak_residual"]').prop('disabled', false);
         } else {
-            $('[name="nilai_dampak"]').prop('readonly', false);
+            $('[name="nilai_dampak"]').prop('readonly', isNewAnalisaMode);
             $('[name="nilai_dampak_residual"]').prop('readonly', false);
+            // Kuantitatif: skala dampak terkunci (otomatis dari nilai dampak)
+            $('[name="skala_dampak"], [name="skala_dampak_residual"]').prop('disabled', true);
+            if (isNewAnalisaMode) {
+                refreshImpactDetailTotal();
+            }
         }
+
+        if (isNewAnalisaMode) {
+            const showBreakdown = value === "{{ \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF }}";
+            $('#impact-detail-section').toggle(showBreakdown);
+            toggleImpactDetailRequired(showBreakdown);
+        }
+        updateSkalaDampak();
         refreshEksposureRisiko();
         refreshEksposureRisiko(true);
-        refreshSkalaAndLevelRisiko();
+        refreshSkalaAndLevelRisiko(false);
+        refreshSkalaAndLevelRisiko(true);
     }).change();
 
     $('[name="nilai_probabilitas"]').on('input change', function() {
@@ -896,10 +1161,19 @@ $(document).ready(function() {
         const action = $(this).data('action'); // Ambil action dari tombol yang ditekan
         const form = $('#mainForm');
 
+        updateSkalaDampak();
+
+        const $skalaFields = $('#skala_dampak, #skala_dampak_residual');
+        const skalaWasDisabled = $skalaFields.map(function() { return this.disabled; }).get();
+        $skalaFields.prop('disabled', false);
+
         if (!form[0].checkValidity()) {
+            $skalaFields.each(function(i) { $(this).prop('disabled', !!skalaWasDisabled[i]); });
             form[0].reportValidity();
             return;
         }
+
+        $skalaFields.each(function(i) { $(this).prop('disabled', !!skalaWasDisabled[i]); });
 
         // Tampilkan konfirmasi Swal sebelum menyimpan data
         Swal.fire({
@@ -913,9 +1187,18 @@ $(document).ready(function() {
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
+                updateSkalaDampak();
+                $skalaFields.prop('disabled', false);
+
                 // Jika user menekan "Ya", lanjutkan request AJAX
                 const formData = new FormData(form[0]);
                 formData.append('action', action); // Tambahkan action ke formData
+                formData.set('skala_dampak', $('#skala_dampak').val() || $('#skala_dampak_hidden').val());
+                formData.set('skala_dampak_residual', $('#skala_dampak_residual').val() || $('#skala_dampak_residual_hidden').val());
+                formData.set('skala_dampak_hidden', $('#skala_dampak_hidden').val() || $('#skala_dampak').val());
+                formData.set('skala_dampak_residual_hidden', $('#skala_dampak_residual_hidden').val() || $('#skala_dampak_residual').val());
+
+                $skalaFields.each(function(i) { $(this).prop('disabled', !!skalaWasDisabled[i]); });
 
                 const url = "{{ route('projects.risks.do-analisa', ['project' => $projectPeriodeList->id, 'risk' => $projectRisk->id]) }}";
 
@@ -1049,8 +1332,9 @@ $(document).ready(function() {
     // Event listener untuk dropdown kategori dampak
     $('#kategoriDampak').on('change', function () {
         const selectedValue = $(this).val(); // Ambil nilai yang dipilih
+        const isKuantitatif = selectedValue == '{{ \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF }}';
 
-        if (selectedValue == '{{ \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF }}') {
+        if (isKuantitatif) {
             //$('#labelDeskripsiDampak').text('Asumsi Perhitungan Dampak');
             $('#divDeskripsiDampak').hide();
             $('#divDeskripsiDampakResidual').hide();
@@ -1087,6 +1371,15 @@ $(document).ready(function() {
             $('#area_dampak').prop('required', true);
             $('#asumsi_perhitungan_dampak').prop('required', false);
             $('#asumsi_perhitungan_dampak_residual').prop('required', false);
+        }
+
+        if (isNewAnalisaMode) {
+            $('#impact-detail-section').toggle(isKuantitatif);
+            toggleImpactDetailRequired(isKuantitatif);
+            $('[name="nilai_dampak"]').prop('readonly', true);
+            if (isKuantitatif) {
+                refreshImpactDetailTotal();
+            }
         }
 
         $('#skala_dampak').trigger('change');
@@ -1141,9 +1434,9 @@ $(document).ready(function() {
 
     function updateSkalaDampak(isInit = false) {
         const kategoriDampak = $('[name="kategori_dampak"]').val();
-        const riskLimit = parseFloat($('#risk_limit').val()) || 0;
-        const nilaiDampak = parseFloat($('[name="nilai_dampak"]').val().replace(/[^0-9.-]+/g, '')) || 0;
-        const nilaiDampakResidual = parseFloat($('[name="nilai_dampak_residual"]').val().replace(/[^0-9.-]+/g, '')) || 0;
+        const riskLimit = parseRupiahToNumber($('#risk_limit').val());
+        const nilaiDampak = parseRupiahToNumber($('[name="nilai_dampak"]').val());
+        const nilaiDampakResidual = parseRupiahToNumber($('[name="nilai_dampak_residual"]').val());
 
         const $skalaDampak = $('[name="skala_dampak"]');
         const $skalaDampakHidden = $('#skala_dampak_hidden');
@@ -1168,21 +1461,23 @@ $(document).ready(function() {
                 if (savedSkalaDampakResidual) skalaResidual = savedSkalaDampakResidual;
             }
 
-            // Old Code: Set nilai skala dampak dan buat readonly
-            // $skalaDampak.val(skala).prop('disabled', true);
-            // $skalaDampakResidual.val(skalaResidual).prop('disabled', true);
+            // Kuantitatif: set skala otomatis dan kunci agar tidak bisa diubah manual
+            $skalaDampak.val(String(skala)).prop('disabled', true);
+            $skalaDampakResidual.val(String(skalaResidual)).prop('disabled', true);
+            $skalaDampakHidden.val(String(skala));
+            $skalaDampakResidualHidden.val(String(skalaResidual));
 
-            $skalaDampak.val(skala).prop('disabled', false);
-            $skalaDampakResidual.val(skalaResidual).prop('disabled', false);
+            refreshEksposureRisiko();
+            refreshEksposureRisiko(true);
+            refreshSkalaAndLevelRisiko(false);
+            refreshSkalaAndLevelRisiko(true);
         } else {
-            // Jika kategori dampak Kualitatif, skala dampak bisa dipilih manual
-            // $skalaDampak.prop('disabled', false);
-            // $skalaDampakResidual.prop('disabled', false);
+            // Kualitatif: skala dampak dipilih manual
+            $skalaDampak.prop('disabled', false);
+            $skalaDampakResidual.prop('disabled', false);
+            $skalaDampakHidden.val($skalaDampak.val());
+            $skalaDampakResidualHidden.val($skalaDampakResidual.val());
         }
-
-        // Pastikan nilai tetap dikirim ke server meskipun disabled
-        $skalaDampakHidden.val($skalaDampak.val());
-        $skalaDampakResidualHidden.val($skalaDampakResidual.val());
     }
 
     function calculateSkalaDampak(percentage) {
@@ -1204,13 +1499,9 @@ $(document).ready(function() {
         $(targetHiddenField).val($(this).val());
     });
 
-    function parseRupiahToNumber(value) {
-        return parseFloat(value.replace(/[^0-9,-]/g, '').replace(',', '.')) || 0;
-    }
-
     $('#nilai_dampak').on('input', function () {
-        var nilaiDampak = $(this).val().replace(/[^\d.-]/g, ''); // Ambil hanya angka dari input text
         $('#nilai_dampak_residual').val(''); // Reset nilai dampak residual setiap kali nilai dampak diubah
+        updateSkalaDampak();
     });
 
     $('#nilai_dampak_residual').on('input change', function () {
@@ -1383,38 +1674,7 @@ $(document).ready(function() {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
-    $('.inputmask-rupiah').inputmask({
-        alias: 'numeric',
-        groupSeparator: '.',
-        autoGroup: true,
-        digits: 0,
-        digitsOptional: false,
-        prefix: 'Rp ',
-        placeholder: '0',
-        rightAlign: false,
-        autoUnmask: true,
-        removeMaskOnSubmit: true,
-        min: 0,
-        allowMinus: false,
-        onKeyDown: function(e) {
-        if (e.key === 'Backspace' || e.keyCode === 8) {
-            // tunda eksekusi sampai mask selesai di-apply
-            setTimeout(() => {
-                const unmasked = this.inputmask.unmaskedvalue();
-                // kalau masih ada angka tersisa
-                if (unmasked.length > 0) {
-                // cek posisi cursor
-                const pos = this.selectionStart;
-                if (pos === 0) {
-                    // pindahkan ke paling kanan
-                    const end = this.value.length;
-                    this.setSelectionRange(end, end);
-                }
-                }
-            }, 0);
-            }
-        }
-    });
+    applyRupiahMask('.inputmask-rupiah');
 });
 </script>
 @endpush

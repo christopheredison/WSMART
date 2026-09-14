@@ -9,13 +9,26 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
+class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithColumnFormatting, WithStrictNullComparison
 {
+    public function columnFormats(): array
+    {
+        $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
+
+        return [
+            'F' => $currencyFormat,
+            'J' => $currencyFormat,
+        ];
+    }
+
     protected $risikos;
 
     public function __construct(Collection $risikos)
@@ -127,12 +140,41 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 ];
 
                 $highestRow = $sheet->getHighestRow();
-                if ($highestRow > 2) { // Cek jika ada data di bawah header
-                    // Terapkan border ke semua sel data
-                    $sheet->getStyle('A3:L' . $highestRow)->applyFromArray($dataStyle);
+                $dataStartRow = 3;
+                $currencyCols = ['F', 'J'];
 
-                    // Panggil fungsi pewarnaan background
+                if ($highestRow >= $dataStartRow) {
+                    $this->forceNumericCurrencyCells($sheet, $currencyCols, $dataStartRow, $highestRow);
+
+                    $sheet->getStyle('A' . $dataStartRow . ':L' . $highestRow)->applyFromArray($dataStyle);
                     $this->applyLevelRisikoColoring($sheet, $highestRow);
+
+                    $totalRow = $highestRow + 1;
+                    $sheet->setCellValue('A' . $totalRow, 'TOTAL');
+                    $sheet->mergeCells('A' . $totalRow . ':E' . $totalRow);
+                    $sheet->setCellValue('F' . $totalRow, "=SUM(F{$dataStartRow}:F{$highestRow})");
+                    $sheet->setCellValue('J' . $totalRow, "=SUM(J{$dataStartRow}:J{$highestRow})");
+
+                    $sheet->getStyle('A' . $totalRow . ':L' . $totalRow)->applyFromArray([
+                        'font' => ['bold' => true],
+                        'fill' => [
+                            'fillType' => Fill::FILL_SOLID,
+                            'startColor' => ['rgb' => 'FFF2CC'],
+                        ],
+                        'borders' => [
+                            'allBorders' => [
+                                'borderStyle' => Border::BORDER_THIN,
+                                'color' => ['rgb' => '000000'],
+                            ],
+                        ],
+                        'alignment' => [
+                            'vertical' => Alignment::VERTICAL_CENTER,
+                        ],
+                    ]);
+                    $sheet->getStyle('A' . $totalRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
+                    $sheet->getStyle('F' . $totalRow)->getNumberFormat()->setFormatCode($currencyFormat);
+                    $sheet->getStyle('J' . $totalRow)->getNumberFormat()->setFormatCode($currencyFormat);
                 }
 
                 foreach (range('A', 'L') as $column) {
@@ -140,6 +182,23 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 }
             },
         ];
+    }
+
+    private function forceNumericCurrencyCells($sheet, array $columns, int $startRow, int $endRow): void
+    {
+        foreach ($columns as $col) {
+            for ($row = $startRow; $row <= $endRow; $row++) {
+                $raw = $sheet->getCell($col . $row)->getValue();
+                if (is_string($raw)) {
+                    $raw = preg_replace('/[^0-9.\-]/', '', $raw);
+                }
+                $sheet->setCellValueExplicit(
+                    $col . $row,
+                    (float) ($raw ?: 0),
+                    DataType::TYPE_NUMERIC
+                );
+            }
+        }
     }
 
     /**
@@ -236,8 +295,13 @@ class RisikoResidualKuantitatifSheet implements FromCollection, WithHeadings, Wi
      */
     private function formatCurrency($value)
     {
-        if ($value == 0) return 'Rp0';
-        return 'Rp' . number_format($value, 0, ',', '.');
+        if ($value === null || $value === '') {
+            return 0;
+        }
+        if (is_string($value)) {
+            $value = preg_replace('/[^0-9.\-]/', '', $value);
+        }
+        return (float) ($value ?: 0);
     }
 
     /**

@@ -208,7 +208,7 @@
                                     <th>Key Risk Indicator</th>
                                     <th>Satuan KRI</th>
                                     <th>Batas Aman</th>
-                                    <th>Batas Waspada</th>
+                                    <th>Batas Siaga</th>
                                     <th>Batas Bahaya</th>
                                     <th>Nilai KRI</th>
                                     <th>Kondisi</th>
@@ -232,7 +232,7 @@
                                             @php
                                                 $statusMap = [
                                                     1 => 'Aman',
-                                                    2 => 'Waspada',
+                                                    2 => 'Siaga',
                                                     3 => 'Bahaya',
                                                 ];
                                                 $status = $kriProject->last_monitoring?->status_kri_terkini;
@@ -501,6 +501,38 @@
                                 class="radio-label high-label {{ strtolower($projectRiskAnalisa->level_risiko) == 'high' ? 'active' : '' }}"
                                 for="high"></label>
                             </div>
+                            @php
+                                $impactDetailsInherent = $projectRiskAnalisa?->impactDetails ?? collect();
+                            @endphp
+                            @if($projectRiskAnalisa->kategori_dampak === \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF && $impactDetailsInherent->isNotEmpty())
+                                <div class="pt-2">
+                                    <small class="text-muted fw-semibold d-block mb-2">Rincian Dampak Inheren</small>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-sm align-middle mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Uraian</th>
+                                                    <th class="text-end">Volume</th>
+                                                    <th>Satuan</th>
+                                                    <th class="text-end">Harga Satuan</th>
+                                                    <th class="text-end">Jumlah</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($impactDetailsInherent as $detail)
+                                                    <tr>
+                                                        <td>{{ $detail->uraian }}</td>
+                                                        <td class="text-end">{{ $detail->formattedVolume() }}</td>
+                                                        <td>{{ $detail->satuan ?? '-' }}</td>
+                                                        <td class="text-end">Rp {{ number_format((float) $detail->harga_satuan, 2, ',', '.') }}</td>
+                                                        <td class="text-end fw-semibold">Rp {{ number_format((float) $detail->subtotal, 2, ',', '.') }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -851,7 +883,7 @@
                             <div class="tab-pane fade show active" id="tab_penyebab_{{ $monitoring->id }}" role="tabpanel">
                                 @php
                                     $groupedPenyebab = $monitoring->perlakuanPenyebabMonitorings->groupBy(function($item) {
-                                        return $item->perlakuanPenyebab->penyebabRisikoProject->penyebab_risiko ?? 'Lainnya';
+                                        return $item->perlakuanPenyebab?->penyebabRisikoProject?->penyebab_risiko ?? 'Lainnya';
                                     });
                                 @endphp
 
@@ -865,6 +897,8 @@
 
                                             @foreach($items as $realisasi)
                                                 @php
+                                                    $perlakuanPenyebab = $realisasi->perlakuanPenyebab;
+
                                                     // Ambil dokumen berdasarkan perlakuan_penyebab_risiko_id
                                                     // yang tersimpan di monitoring ini (via project_monitoring_id)
                                                     $docsForThis = $monitoring->perlakuanPenyebabRisikoDocuments
@@ -883,16 +917,16 @@
                                                     <div class="d-flex align-items-start gap-3 p-3 bg-white">
                                                         <div class="flex-grow-1">
                                                             <div class="fw-bold text-primary mb-1">
-                                                                {{ $realisasi->perlakuanPenyebab->rencana_perlakuan_risiko ?? '-' }}
+                                                                {{ $perlakuanPenyebab?->rencana_perlakuan_risiko ?? '-' }}
                                                             </div>
                                                             <div class="d-flex gap-3 flex-wrap small text-muted">
                                                                 <span>
                                                                     <i class='bx bx-money me-1'></i>
-                                                                    Anggaran: <strong class="text-dark">Rp {{ number_format($realisasi->perlakuanPenyebab->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</strong>
+                                                                    Anggaran: <strong class="text-dark">Rp {{ number_format($perlakuanPenyebab?->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</strong>
                                                                 </span>
                                                                 <span>
                                                                     <i class='bx bx-user me-1'></i>
-                                                                    PIC: <strong class="text-dark">{{ $realisasi->perlakuanPenyebab->pic ?? '-' }}</strong>
+                                                                    PIC: <strong class="text-dark">{{ $perlakuanPenyebab?->pic ?? '-' }}</strong>
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -1020,7 +1054,7 @@
                             <div class="tab-pane fade" id="tab_dampak_{{ $monitoring->id }}" role="tabpanel">
                                 @php
                                     $groupedDampak = $monitoring->perlakuanDampakMonitorings->groupBy(function($item) {
-                                        return $item->perlakuanDampak->dampakRisikoProject->dampak_risiko ?? 'Lainnya';
+                                        return $item->perlakuanDampak?->dampakRisikoProject?->dampak_risiko ?? 'Lainnya';
                                     });
                                 @endphp
 
@@ -1034,6 +1068,8 @@
 
                                             @foreach($items as $realisasi)
                                                 @php
+                                                    $perlakuanDampak = $realisasi->perlakuanDampak;
+
                                                     // Ambil dokumen berdasarkan perlakuan_dampak_risiko_id
                                                     // yang tersimpan di monitoring ini
                                                     $docsForThisDampak = $monitoring->perlakuanDampakRisikoDocuments
@@ -1052,16 +1088,16 @@
                                                     <div class="d-flex align-items-start gap-3 p-3 bg-white">
                                                         <div class="flex-grow-1">
                                                             <div class="fw-bold text-warning-emphasis mb-1">
-                                                                {{ $realisasi->perlakuanDampak->rencana_perlakuan_risiko ?? '-' }}
+                                                                {{ $perlakuanDampak?->rencana_perlakuan_risiko ?? '-' }}
                                                             </div>
                                                             <div class="d-flex gap-3 flex-wrap small text-muted">
                                                                 <span>
                                                                     <i class='bx bx-money me-1'></i>
-                                                                    Anggaran: <strong class="text-dark">Rp {{ number_format($realisasi->perlakuanDampak->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</strong>
+                                                                    Anggaran: <strong class="text-dark">Rp {{ number_format($perlakuanDampak?->biaya_perlakuan_risiko ?? 0, 0, ',', '.') }}</strong>
                                                                 </span>
                                                                 <span>
                                                                     <i class='bx bx-user me-1'></i>
-                                                                    PIC: <strong class="text-dark">{{ $realisasi->perlakuanDampak->pic ?? '-' }}</strong>
+                                                                    PIC: <strong class="text-dark">{{ $perlakuanDampak?->pic ?? '-' }}</strong>
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -1202,7 +1238,7 @@
                                             </tr>
                                             <tr>
                                                 <th class="bg-success text-white">Aman</th>
-                                                <th class="bg-warning text-dark">Waspada</th>
+                                                <th class="bg-warning text-dark">Siaga</th>
                                                 <th class="bg-danger text-white">Bahaya</th>
                                             </tr>
                                         </thead>
@@ -1219,7 +1255,7 @@
                                                     <td class="fw-bold text-center text-primary">{{ $realisasiKri?->nilai_kri_terkini ?? '-' }}</td>
                                                     <td class="text-center">
                                                         @php
-                                                            $statusMap = [1 => 'Aman', 2 => 'Waspada', 3 => 'Bahaya'];
+                                                            $statusMap = [1 => 'Aman', 2 => 'Siaga', 3 => 'Bahaya'];
                                                             $statusColor = [1 => 'success', 2 => 'warning', 3 => 'danger'];
                                                             $status = $realisasiKri->status_kri_terkini;
                                                         @endphp

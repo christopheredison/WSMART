@@ -109,7 +109,7 @@
                 <th>Risiko</th>
                 <th>Pemilik Risiko</th>
                 <th class="text-center white-space-nowrap">Batas Aman</th>
-                <th class="text-center white-space-nowrap">Batas Waspada</th>
+                <th class="text-center white-space-nowrap">Batas Siaga</th>
                 <th class="text-center white-space-nowrap">Batas Bahaya</th>
                 <th class="text-center white-space-nowrap">Kondisi Saat Ini</th>
                 <th>Kategori Risiko</th>
@@ -578,7 +578,7 @@ const kategoriChart = document.getElementById('kri_kategori');
 new Chart(kategoriChart, {
   type: 'doughnut',
   data: {
-    labels: ['Aman', 'Waspada', 'Bahaya'],
+    labels: ['Aman', 'Siaga', 'Bahaya'],
     datasets: [{
       data: [45, 30, 25],
       backgroundColor: [
@@ -607,7 +607,7 @@ const pemilikChart = document.getElementById('kri_pemilik');
 new Chart(pemilikChart, {
   type: 'doughnut',
   data: {
-    labels: ['Aman', 'Waspada', 'Bahaya'],
+    labels: ['Aman', 'Siaga', 'Bahaya'],
     datasets: [{
       data: [33, 12, 55],
       backgroundColor: [

@@ -2,6 +2,7 @@
 
 namespace App\Exports\Sheets\Unit;
 
+use App\Exports\Sheets\Unit\Concerns\SupportsUnitColumnExport;
 use App\Models\OpsiPerlakuanRisiko;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -11,20 +12,35 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 
-class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithStrictNullComparison
+class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithStrictNullComparison, WithColumnFormatting
 {
+    use SupportsUnitColumnExport;
+
     private $risikos;
     private $opsiPerlakuan = [];
     private $timelineData = [];
 
-    public function __construct(Collection $risikos)
+    public function __construct(Collection $risikos, bool $includeUnitColumn = false, string $unitColumnLabel = 'Nama Divisi')
     {
         $this->risikos = $risikos;
+        $this->includeUnitColumn = $includeUnitColumn;
+        $this->unitColumnLabel = $unitColumnLabel;
         $this->loadOpsiPerlakuan();
+    }
+
+    public function columnFormats(): array
+    {
+        $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
+
+        return $this->shiftColumnFormats([
+            'J' => $currencyFormat,
+        ]);
     }
 
     private function loadOpsiPerlakuan()
@@ -50,40 +66,37 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
+                $c = fn (string $col) => $this->c($col);
                 $sheet->insertNewRowBefore(1, 2);
 
-                $sheet->setCellValue('A1', 'No');
-                $sheet->setCellValue('B1', 'Nama BUMN');
-                $sheet->setCellValue('C1', 'No Risiko');
-                $sheet->setCellValue('D1', 'Tipe Perlakuan');
-                $sheet->setCellValue('E1', 'Kode Risiko (Penyebab/Dampak)');
-                $sheet->setCellValue('F1', 'Penyebab/Dampak Risiko');
-                $sheet->setCellValue('G1', 'Opsi Perlakuan Risiko');
-                $sheet->setCellValue('H1', 'Rencana Perlakuan Risiko');
-                $sheet->setCellValue('I1', 'Output Perlakuan Risiko');
-                $sheet->setCellValue('J1', 'Biaya Perlakuan Risiko');
-                $sheet->setCellValue('K1', 'Progress Perlakuan Risiko');
-                $sheet->setCellValue('L1', 'PIC');
-                $sheet->setCellValue('M1', 'Timeline');
+                $this->setUnitColumnHeader($sheet, 2);
 
-                $sheet->setCellValue('M2', '1');
-                $sheet->setCellValue('N2', '2');
-                $sheet->setCellValue('O2', '3');
-                $sheet->setCellValue('P2', '4');
-                $sheet->setCellValue('Q2', '5');
-                $sheet->setCellValue('R2', '6');
-                $sheet->setCellValue('S2', '7');
-                $sheet->setCellValue('T2', '8');
-                $sheet->setCellValue('U2', '9');
-                $sheet->setCellValue('V2', '10');
-                $sheet->setCellValue('W2', '11');
-                $sheet->setCellValue('X2', '12');
+                $sheet->setCellValue($c('A') . '1', 'No');
+                $sheet->setCellValue($c('B') . '1', 'Nama BUMN');
+                $sheet->setCellValue($c('C') . '1', 'No Risiko');
+                $sheet->setCellValue($c('D') . '1', 'Tipe Perlakuan');
+                $sheet->setCellValue($c('E') . '1', 'Kode Risiko (Penyebab/Dampak)');
+                $sheet->setCellValue($c('F') . '1', 'Penyebab/Dampak Risiko');
+                $sheet->setCellValue($c('G') . '1', 'Opsi Perlakuan Risiko');
+                $sheet->setCellValue($c('H') . '1', 'Rencana Perlakuan Risiko');
+                $sheet->setCellValue($c('I') . '1', 'Output Perlakuan Risiko');
+                $sheet->setCellValue($c('J') . '1', 'Biaya Perlakuan Risiko');
+                $sheet->setCellValue($c('K') . '1', 'Progress Perlakuan Risiko');
+                $sheet->setCellValue($c('L') . '1', 'PIC');
+                $sheet->setCellValue($c('M') . '1', 'Timeline');
 
-                for ($col = 'A'; $col <= 'L'; $col++) {
-                    $sheet->mergeCells("{$col}1:{$col}2");
+                for ($month = 1; $month <= 12; $month++) {
+                    $timelineCol = Coordinate::stringFromColumnIndex(
+                        Coordinate::columnIndexFromString($c('M')) + $month - 1
+                    );
+                    $sheet->setCellValue($timelineCol . '2', (string) $month);
                 }
 
-                $sheet->mergeCells('M1:X1');
+                foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'] as $col) {
+                    $sheet->mergeCells("{$c($col)}1:{$c($col)}2");
+                }
+
+                $sheet->mergeCells($c('M') . '1:' . $c('X') . '1');
 
                 $headerStyle = [
                     'alignment' => [
@@ -102,9 +115,9 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                         ]
                     ]
                 ];
-                $sheet->getStyle('A1:X2')->applyFromArray($headerStyle);
+                $sheet->getStyle('A1:' . $c('X') . '2')->applyFromArray($headerStyle);
 
-                $sheet->getStyle('M2:X2')->applyFromArray([
+                $sheet->getStyle($c('M') . '2:' . $c('X') . '2')->applyFromArray([
                     'fill' => [
                         'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
                         'startColor' => ['rgb' => 'DBDBDB']
@@ -114,23 +127,25 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 $lastRow = $sheet->getHighestRow();
 
                 if ($lastRow > 2) {
-                    $sheet->getStyle('A3:X' . $lastRow)->applyFromArray([
+                    $sheet->getStyle('A3:' . $c('X') . $lastRow)->applyFromArray([
                         'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
                         'alignment' => ['vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP, 'wrapText' => true],
                     ]);
 
-                    $sheet->getStyle('E3:E' . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+                    $sheet->getStyle($c('E') . '3:' . $c('E') . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
 
                     $centerCols = ['A', 'C', 'D', 'E', 'G', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'];
                     foreach ($centerCols as $col) {
-                        $sheet->getStyle("{$col}3:{$col}{$lastRow}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                        $sheet->getStyle("{$c($col)}3:{$c($col)}{$lastRow}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
                     }
 
                     $this->applyTimelineColoring($sheet, $lastRow);
+                    $this->appendCurrencyTotalRow($sheet, 3, $lastRow, 'X', ['J'], 'I');
                 }
 
-                foreach (range('A', 'X') as $column) {
-                    $sheet->getColumnDimension($column)->setAutoSize(true);
+                $lastColIndex = Coordinate::columnIndexFromString($c('X'));
+                for ($i = 1; $i <= $lastColIndex; $i++) {
+                    $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
                 }
             },
         ];
@@ -138,12 +153,14 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
 
     private function applyTimelineColoring($sheet, $maxRow)
     {
+        $timelineStartIndex = Coordinate::columnIndexFromString($this->c('M'));
+
         foreach ($this->timelineData as $rowIndex => $monthsData) {
             $actualRow = $rowIndex + 3;
             if ($actualRow <= $maxRow) {
                 for ($month = 0; $month < 12; $month++) {
                     if (isset($monthsData[$month]) && $monthsData[$month] === true) {
-                        $columnLetter = chr(77 + $month);
+                        $columnLetter = Coordinate::stringFromColumnIndex($timelineStartIndex + $month);
                         $sheet->getStyle($columnLetter . $actualRow)->applyFromArray([
                             'fill' => [
                                 'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -192,12 +209,12 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                     'opsi_perlakuan' => '-',
                     'rencana_perlakuan' => '-',
                     'output_perlakuan' => '-',
-                    'biaya_perlakuan' => '0',
+                    'biaya_perlakuan' => 0,
                     'progress' => '-',
                     'pic' => '-',
                 ];
                 $timelineMonths = array_fill(0, 12, '');
-                $exportData->push(array_merge($rowData, $timelineMonths));
+                $exportData->push(array_merge($this->prependUnit($rowData, $risiko), $timelineMonths));
 
                 $this->timelineData[$currentRowIndex] = array_fill(0, 12, false);
                 $currentRowIndex++;
@@ -243,7 +260,7 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                         'pic' => $perlakuan->pic ?? '-',
                     ];
 
-                    $exportData->push(array_merge($rowData, $timelineMonths));
+                    $exportData->push(array_merge($this->prependUnit($rowData, $risiko, $isFirstRowOfGroup), $timelineMonths));
                     $this->timelineData[$currentRowIndex] = $timelineBooleans;
                     $currentRowIndex++;
 
@@ -262,9 +279,9 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
         if (is_string($value)) {
             $value = preg_replace('/[^0-9.\-]/', '', $value);
         }
-        
+
         if ($value === '' || $value === null || !is_numeric($value)) {
-            return 0; 
+            return 0;
         }
 
         return (float) $value;

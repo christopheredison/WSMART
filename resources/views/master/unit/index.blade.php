@@ -11,7 +11,7 @@
               @include('partials.icon-layer')
             </div>
           </div>
-          <h2 class="h3">Unit</h2>
+          <h2 class="h3">Manajemen Divisi</h2>
           <div id="bulk-select-replace-element" class="col-auto ms-auto">
             <a class="btn btn-outline-secondary btn-sm" href="{{ route('unit.logs') }}">
               <span class="bx bx-history"></span>
@@ -19,11 +19,11 @@
             </a>
             <button class="btn btn-outline-info btn-sm" onclick="syncUnit()">
               <span class="bx bx-sync"></span>
-              <span class="ms-1">Sync</span>
+              <span class="ms-1">Sync Divisi</span>
             </button>
             <a class="btn btn-outline-info btn-sm" href="{{ route('unit.create') }}">
               <span class="bx bx-plus"></span>
-              <span class="ms-1">New</span>
+              <span class="ms-1">Tambah Divisi</span>
             </a>
           </div>
         </div>
@@ -63,8 +63,8 @@
                 </div>
               </th>
               <th class="sort white-space-nowrap" data-sort="no">#</th>
-              <th class="sort" data-sort="unit_type_id">Unit Type</th>
-              <th class="sort" data-sort="name">Name</th>
+              <th class="sort" data-sort="unit_type_id">Tipe Divisi</th>
+              <th class="sort" data-sort="name">Nama Divisi</th>
               <th class="sort" data-sort="cost_center">Cost Center</th>
               <th class="sort" data-sort="parent_id">Parent</th>
               <th class="sort" data-sort="valid_from">Valid From</th>

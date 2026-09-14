@@ -29,7 +29,7 @@ class MasterKriController extends BasicCRUDController
             'data' => 'batas_aman',
         ],
         'batas_waspada' => [
-            'label' => 'Batas Waspada',
+            'label' => 'Batas Siaga',
             'data' => 'batas_waspada',
         ],
         'batas_bahaya' => [
@@ -102,13 +102,13 @@ class MasterKriController extends BasicCRUDController
             [
                 'name' => 'batas_waspada',
                 'type' => 'text',
-                'label' => 'Batas Waspada',
+                'label' => 'Batas Siaga',
                 'parameters' => [
                     'batas_waspada',
                     '',
                     [
                         'class' => 'form-control',
-                        'placeholder' => 'Masukkan Batas Waspada',
+                        'placeholder' => 'Masukkan Batas Siaga',
                         'required' => true,
                     ]
                 ],

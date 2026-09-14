@@ -70,7 +70,7 @@
                   <div class="alert alert-success text-nowrap">Batas Aman</div>
                 </th>
                 <th class="batas_waspada">
-                  <div class="alert alert-warning text-nowrap">Batas Waspada</div>
+                  <div class="alert alert-warning text-nowrap">Batas Siaga</div>
                 </th>
                 <th class="batas_bahaya">
                   <div class="alert alert-danger text-nowrap">Batas Bahaya</div>

@@ -89,4 +89,9 @@ class ProjectRiskAnalisa extends Model
     {
         return $this->belongsTo(SkalaParameter::class, 'skala_parameter_residual_id');
     }
+
+    public function impactDetails()
+    {
+        return $this->hasMany(ProjectRiskImpactDetail::class, 'project_risk_analisa_id');
+    }
 }

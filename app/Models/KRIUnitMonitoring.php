@@ -15,7 +15,7 @@ class KRIUnitMonitoring extends Model
 
     public function keyRiskIndicator()
     {
-        return $this->belongsTo(KRI::class, 'key_risk_indicator_id', 'id');
+        return $this->belongsTo(KRI::class, 'key_risk_indicator_id', 'id')->withTrashed();
     }
 
     public function unitRiskMonitoring()

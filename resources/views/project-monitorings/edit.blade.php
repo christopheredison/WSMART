@@ -185,6 +185,38 @@
                                 class="radio-label high-label {{ strtolower($projectRiskAnalisa->level_risiko) == 'high' ? 'active' : '' }}"
                                 for="high"></label>
                             </div>
+                            @php
+                                $impactDetailsInherent = $projectRiskAnalisa?->impactDetails ?? collect();
+                            @endphp
+                            @if($projectRiskAnalisa->kategori_dampak === \App\Models\ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF && $impactDetailsInherent->isNotEmpty())
+                                <div class="pt-2">
+                                    <small class="text-muted fw-semibold d-block mb-2">Rincian Dampak Inheren</small>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-sm align-middle mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Uraian</th>
+                                                    <th class="text-end">Volume</th>
+                                                    <th>Satuan</th>
+                                                    <th class="text-end">Harga Satuan</th>
+                                                    <th class="text-end">Jumlah</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($impactDetailsInherent as $detail)
+                                                    <tr>
+                                                        <td>{{ $detail->uraian }}</td>
+                                                        <td class="text-end">{{ $detail->formattedVolume() }}</td>
+                                                        <td>{{ $detail->satuan ?? '-' }}</td>
+                                                        <td class="text-end">Rp {{ number_format((float) $detail->harga_satuan, 2, ',', '.') }}</td>
+                                                        <td class="text-end fw-semibold">Rp {{ number_format((float) $detail->subtotal, 2, ',', '.') }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -281,11 +313,12 @@
                                 <label for="">Realisasi Nilai Dampak</label>
                             </div>
                             <div class="form-floating">
-                                <input type="hidden" name="realisasi_skala_dampak" id="realisasi_skala_dampak_hidden">
+                                <input type="hidden" name="realisasi_skala_dampak" id="realisasi_skala_dampak_hidden" value="{{ old('realisasi_skala_dampak', $riskMonitoring?->skala_dampak) }}">
                                 <select
                                   class="form-select js-select-hide-search update-trigger"
                                   name="realisasi_skala_dampak"
                                   id="realisasi_skala_dampak"
+                                  {{ $projectRiskAnalisa->kategori_dampak == 'Kuantitatif' ? 'disabled' : '' }}
                                 >
                                   <option selected disabled>Skala Dampak</option>
                                   @foreach($skalaDampaks as $tingkat => $deskripsi)
@@ -696,7 +729,7 @@
                                     <th>Key Risk Indicator</th>
                                     <th>Satuan KRI</th>
                                     <th>Batas Aman</th>
-                                    <th>Batas Waspada</th>
+                                    <th>Batas Siaga</th>
                                     <th>Batas Bahaya</th>
                                     <th>Nilai KRI</th>
                                     <th>Kondisi</th>
@@ -719,7 +752,7 @@
                                             @php
                                                 $statusMap = [
                                                     1 => 'Aman',
-                                                    2 => 'Waspada',
+                                                    2 => 'Siaga',
                                                     3 => 'Bahaya',
                                                 ];
                                                 $status = $kriProject->status_kri_terkini;
@@ -830,7 +863,11 @@
                     <button type="button" data-action="save" class="btn btn-primary ms-auto btn-action">Simpan</button>
                 </div>
                 <div class="col-auto ms-auto">
-                    <button type="button" data-action="save-and-close" class="btn btn-danger btn-action">Simpan dan Close Risiko</button>
+                    @if(!$projectRisk->is_closed && (int) $projectRisk->close_request !== \App\Models\ProjectRisk::CLOSE_REQUEST_PENDING)
+                        <button type="button" data-action="save-and-close" class="btn btn-danger btn-action">Simpan dan Close Risiko</button>
+                    @elseif((int) $projectRisk->close_request === \App\Models\ProjectRisk::CLOSE_REQUEST_PENDING)
+                        <button type="button" class="btn btn-warning text-dark" disabled title="Menunggu verifikasi penutupan">Pengajuan Tutup Risiko Diproses</button>
+                    @endif
                 </div>
             </div>
         </div>
@@ -891,7 +928,7 @@
                             <div class="col-6 col-md-4 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
                                     <input type="text" class="form-control border-warning" name="batas_waspada" disabled>
-                                    <label for="batas_waspada_1">Batas Waspada</label>
+                                    <label for="batas_waspada_1">Batas Siaga</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-4 col-lg-auto flex-lg-grow-1">
@@ -910,7 +947,7 @@
                                 <div class="form-group form-floating">
                                     <select class="form-select" name="status_kri" required>
                                         <option value="1">Aman</option>
-                                        <option value="2">Waspada</option>
+                                        <option value="2">Siaga</option>
                                         <option value="3">Bahaya</option>
                                     </select>
                                     <label for="batas_bahaya_1">Status KRI</label>
@@ -1958,7 +1995,7 @@ $('#btnSimpanUpdateRealisasiDampak').on('click', function() {
 // =====================================================================
 // SUBMIT FORM UTAMA - dengan dokumen dari state (newDocsPenyebab / newDocsDampak)
 // =====================================================================
-function submitForm(isClosed) {
+function submitForm(isClosed, closeReason = null) {
     if (!validateRealisasiForm()) return;
 
     Swal.fire({
@@ -1975,6 +2012,9 @@ function submitForm(isClosed) {
     formData.append('quarter', quarter);
     formData.append('_method', 'PUT');
     formData.append('is_closed', isClosed);
+    if (isClosed == 1 && closeReason) {
+        formData.append('close_reason', closeReason);
+    }
 
     // Append file dari state newDocsPenyebab
     // Format: document_file_{perlakuanId}[] dan document_description_{perlakuanId}[]
@@ -2079,12 +2119,40 @@ function getSkalaProbabilitasByValue(value) {
     }
 }
 
+function parseNumericScale(value) {
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseNilaiDampakInput($el) {
+    let rawValue = null;
+    try {
+        rawValue = $el.inputmask('unmaskedvalue');
+    } catch (e) {
+        rawValue = null;
+    }
+
+    if (rawValue === undefined || rawValue === null || rawValue === '') {
+        rawValue = $el.val();
+    }
+
+    if (typeof rawValue === 'number') {
+        return Number.isFinite(rawValue) ? rawValue : 0;
+    }
+
+    const cleaned = String(rawValue ?? '').replace(/[^0-9,-]+/g, '').replace(',', '.');
+    const parsed = parseFloat(cleaned);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function refreshSkalaAndLevelRisiko() {
     const riskMaps = @json($riskMaps);
-    const skalaDampak = parseInt($('#realisasi_skala_dampak').val());
-    const skalaProbabilitas = parseInt($('#realisasi_skala_probabilitas').val());
-    $('#realisasi_skala_probabilitas_hidden').val(skalaProbabilitas);
-    $('#realisasi_skala_dampak_hidden').val(skalaDampak);
+    const skalaDampak = parseNumericScale($('#realisasi_skala_dampak').val())
+        || parseNumericScale($('#realisasi_skala_dampak_hidden').val());
+    const skalaProbabilitas = parseNumericScale($('#realisasi_skala_probabilitas').val())
+        || parseNumericScale($('#realisasi_skala_probabilitas_hidden').val());
+    $('#realisasi_skala_probabilitas_hidden').val(skalaProbabilitas ?? '');
+    $('#realisasi_skala_dampak_hidden').val(skalaDampak ?? '');
     const domSkalaRisiko = $('#realisasi_skala_risiko');
     const domLevelRisiko = $('#realisasi_level_risiko');
     if (!skalaDampak || !skalaProbabilitas) {
@@ -2134,12 +2202,76 @@ $(document).ready(function() {
         if (action === 'save' || action === 'save-and-close') {
             if (!validateRealisasiForm()) return;
             const isClosing = (action === 'save-and-close');
+
+            if (!isClosing) {
+                Swal.fire({
+                    title: 'Konfirmasi',
+                    text: 'Apakah Anda yakin ingin menyimpan data ini?',
+                    icon: 'question', showCancelButton: true,
+                    confirmButtonText: 'Ya, Lanjutkan', cancelButtonText: 'Batal',
+                }).then((result) => { if (result.isConfirmed) submitForm(0); });
+                return;
+            }
+
             Swal.fire({
-                title: 'Konfirmasi',
-                text: isClosing ? `Apakah Anda yakin ingin menyimpan dan menutup risiko "${namaRisiko}" ini?` : 'Apakah Anda yakin ingin menyimpan data ini?',
-                icon: 'question', showCancelButton: true,
-                confirmButtonText: 'Ya, Lanjutkan', cancelButtonText: 'Batal',
-            }).then((result) => { if (result.isConfirmed) submitForm(isClosing ? 1 : 0); });
+                title: 'Tutup Risiko?',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-2">Anda akan menyimpan monitoring dan mengajukan penutupan risiko <strong>${namaRisiko}</strong>.</p>
+                        <p class="mb-2">Silakan pilih alasan penutupan risiko:</p>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="closeReason" id="reason1" value="Sudah tidak relevan">
+                            <label class="form-check-label" for="reason1">Sudah tidak relevan</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="closeReason" id="reason2" value="Sudah terkendali">
+                            <label class="form-check-label" for="reason2">Sudah terkendali</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="closeReason" id="reason3" value="other">
+                            <label class="form-check-label" for="reason3">Lainnya</label>
+                        </div>
+                        <textarea id="otherReason" class="form-control mt-2 d-none" placeholder="Tuliskan alasan lainnya..."></textarea>
+                    </div>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ajukan Penutupan',
+                cancelButtonText: 'Batal',
+                reverseButtons: true,
+                didOpen: () => {
+                    const radios = document.querySelectorAll('input[name="closeReason"]');
+                    const textArea = document.getElementById('otherReason');
+                    radios.forEach(r => r.addEventListener('change', function() {
+                        if (this.value === 'other') {
+                            textArea.classList.remove('d-none');
+                        } else {
+                            textArea.classList.add('d-none');
+                        }
+                    }));
+                },
+                preConfirm: () => {
+                    const selected = document.querySelector('input[name="closeReason"]:checked');
+                    if (!selected) {
+                        Swal.showValidationMessage('Anda harus memilih alasan penutupan.');
+                        return false;
+                    }
+                    let reasonText = selected.value;
+                    if (reasonText === 'other') {
+                        const otherVal = document.getElementById('otherReason').value.trim();
+                        if (!otherVal) {
+                            Swal.showValidationMessage('Alasan lainnya tidak boleh kosong.');
+                            return false;
+                        }
+                        reasonText = otherVal;
+                    }
+                    return reasonText;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    submitForm(1, result.value);
+                }
+            });
         } else if (action === 'update-kri') {
             const kriId = $(this).data('id');
             const kriProject = kriProjects[kriId];
@@ -2151,7 +2283,7 @@ $(document).ready(function() {
                     $('#info_prev_kri_value').text(prevKriData.nilai_kri_terkini || '-');
                     let statusLabel = '-', badgeClass = 'gray';
                     if (prevKriData.status_kri_terkini == '1') { statusLabel = 'Aman'; badgeClass = 'success'; }
-                    else if (prevKriData.status_kri_terkini == '2') { statusLabel = 'Waspada'; badgeClass = 'warning'; }
+                    else if (prevKriData.status_kri_terkini == '2') { statusLabel = 'Siaga'; badgeClass = 'warning'; }
                     else if (prevKriData.status_kri_terkini == '3') { statusLabel = 'Bahaya'; badgeClass = 'danger'; }
                     $('#info_prev_kri_status').html(`<span class="badge bg-${badgeClass}">${statusLabel}</span>`);
                 } else {
@@ -2202,7 +2334,7 @@ $(document).ready(function() {
         const id = $('#formUpdateKri input[name="kri_project_id"]').val();
         const nilaiKri = $('#formUpdateKri input[name="nilai_kri"]').val();
         const statusKri = $('#formUpdateKri :input[name="status_kri"]').val();
-        const statusMap = { '1': 'Aman', '2': 'Waspada', '3': 'Bahaya' };
+        const statusMap = { '1': 'Aman', '2': 'Siaga', '3': 'Bahaya' };
         kriProjects[id]['nilai_kri_terkini'] = nilaiKri;
         kriProjects[id]['status_kri_terkini'] = statusKri;
         const tr = $('#table-kri tr[data-id="' + id + '"]');
@@ -2264,25 +2396,26 @@ $(document).ready(function() {
 
     function hitungRealisasiSkalaDampak() {
         const kategoriDampak = '{{ $projectRiskAnalisa->kategori_dampak }}';
-        let rawValue = $('#realisasi_nilai_dampak').inputmask('unmaskedvalue');
-        if (!rawValue && rawValue !== 0) rawValue = $('#realisasi_nilai_dampak').val().replace(/[^0-9,-]+/g,"").replace(",",".");
-        const nilaiDampak = parseFloat(rawValue) || 0;
+        const nilaiDampak = parseNilaiDampakInput($('#realisasi_nilai_dampak'));
         const riskLimit = parseFloat('{{ $risk_limit }}') || 0;
         const skalaDampakSelect = $('#realisasi_skala_dampak');
         const skalaDampakHidden = $('#realisasi_skala_dampak_hidden');
         if (kategoriDampak === 'Kuantitatif') {
             let percentage = 100, skala = 5;
             if (riskLimit > 0) { percentage = (nilaiDampak / riskLimit) * 100; skala = hitungSkalaDampak(percentage); }
-            skalaDampakSelect.val(skala).trigger('change');
-            skalaDampakSelect.prop('disabled', false);
+            // Kunci select: nilai otomatis dari nilai dampak, dikirim via hidden
             skalaDampakHidden.val(skala);
+            skalaDampakSelect.val(String(skala)).trigger('change');
+            skalaDampakSelect.prop('disabled', true);
         } else {
+            // Kualitatif: skala dampak dipilih manual
             skalaDampakSelect.prop('disabled', false);
-            skalaDampakHidden.val('0');
+            const selectedSkala = parseNumericScale(skalaDampakSelect.val());
+            skalaDampakHidden.val(selectedSkala ?? '');
         }
     }
 
-    $('#realisasi_nilai_dampak').on('keyup change', function() {
+    $('#realisasi_nilai_dampak').on('keyup change input', function() {
         hitungRealisasiSkalaDampak();
         refreshSkalaAndLevelRisiko();
     });
@@ -2302,6 +2435,7 @@ $(document).ready(function() {
         ],
     });
 
+    hitungRealisasiSkalaDampak();
     refreshSkalaAndLevelRisiko();
 });
 </script>

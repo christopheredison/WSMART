@@ -261,7 +261,17 @@
                                 {{-- STATUS RISIKO --}}
                                 <td>
                                     @if ($risiko->is_closed)
-                                        <span class="badge bg-danger rounded-pill px-2 mt-auto">Closed</span>
+                                        <span class="badge bg-danger rounded-pill px-2 mt-auto d-inline-flex align-items-center">
+                                            Closed
+                                            @if ($risiko->closed_at_formatted)
+                                                <i class="bx bx-info-circle ms-1" style="cursor:pointer;font-size:0.95em;"
+                                                   data-bs-toggle="popover"
+                                                   data-bs-trigger="hover focus"
+                                                   data-bs-placement="top"
+                                                   data-bs-content="Ditutup pada: {{ $risiko->closed_at_formatted }}"
+                                                   title=""></i>
+                                            @endif
+                                        </span>
                                     @else
                                         <span class="badge bg-success rounded-pill px-2 mt-auto">Open</span>
                                     @endif
@@ -330,6 +340,10 @@
 $(document).ready(function () {
     const inputmaskGeneral = $('.inputmask-general');
     const risks = @json($risikos);
+
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function (el) {
+        new bootstrap.Popover(el);
+    });
 
     $('#modalEdit input[name="nk_ppn"],#modalEdit input[name="rapk"]').on('change', function() {
         const nkPpn = $('#modalEdit input[name="nk_ppn"]').inputmask('unmaskedvalue');
@@ -423,6 +437,147 @@ $(document).ready(function () {
     };
 
     // Fungsi Render Peta & Tabel Dinamis
+    function getResidualMatrix(risk, quarter) {
+        const analysis = risk.risk_analysis;
+        if (!analysis) {
+            return null;
+        }
+
+        const skalaDampak = analysis[`skala_dampak_residual_q${quarter}`];
+        const skalaProb = analysis[`skala_probabilitas_residual_q${quarter}`]?.tingkat;
+
+        if (skalaDampak == null || skalaProb == null) {
+            return null;
+        }
+
+        return `${skalaDampak}-${skalaProb}`;
+    }
+
+    function renderInherentMapMarkers() {
+        $('#inherentMap.table-risk-map .data-cell').each(function() {
+            $(this).removeData('kode-peristiwa-inherent');
+            $(this).removeData('kode-peristiwa-residual');
+            $(this).removeData('has-inherent');
+            $(this).removeData('has-residual');
+            $(this).find('.kode-peristiwa').empty();
+        });
+
+        risks.forEach((risk, idx) => {
+            const matrixI = risk.risk_analysis?.skala_dampak + '-' + risk.risk_analysis?.skala_probabilitas?.tingkat;
+            const cellI = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixI}"]`);
+            const code = (idx + 1).toString();
+
+            if (cellI.length) {
+                if (!cellI.data('kode-peristiwa-inherent')) {
+                    cellI.data('kode-peristiwa-inherent', []);
+                }
+                cellI.data('kode-peristiwa-inherent').push(code);
+                cellI.data('has-inherent', true);
+            }
+        });
+
+        paintInherentResidualMapCells();
+    }
+
+    function renderResidualMapMarkers(quarter) {
+        $('#inherentMap.table-risk-map .data-cell').each(function() {
+            $(this).removeData('kode-peristiwa-residual');
+            $(this).removeData('has-residual');
+        });
+
+        risks.forEach((risk, idx) => {
+            const matrixR = getResidualMatrix(risk, quarter);
+            if (!matrixR) {
+                return;
+            }
+
+            const cellR = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixR}"]`);
+            const code = (idx + 1).toString();
+
+            if (cellR.length) {
+                if (!cellR.data('kode-peristiwa-residual')) {
+                    cellR.data('kode-peristiwa-residual', []);
+                }
+                cellR.data('kode-peristiwa-residual').push(code);
+                cellR.data('has-residual', true);
+            }
+        });
+
+        paintInherentResidualMapCells();
+    }
+
+    function paintInherentResidualMapCells() {
+        $('#inherentMap.table-risk-map .data-cell').each(function() {
+            const cell = $(this);
+            let html = '';
+
+            const kodePeristiwaInherent = cell.data('kode-peristiwa-inherent');
+            if (kodePeristiwaInherent && kodePeristiwaInherent.length > 0) {
+                for (let i = 0; i < kodePeristiwaInherent.length; i++) {
+                    html += `<span class="box-inherent">R${kodePeristiwaInherent[i]}</span>`;
+                }
+            }
+
+            const kodePeristiwaResidual = cell.data('kode-peristiwa-residual');
+            if (kodePeristiwaResidual && kodePeristiwaResidual.length > 0) {
+                for (let i = 0; i < kodePeristiwaResidual.length; i++) {
+                    html += `<span class="box-residual">R${kodePeristiwaResidual[i]}</span>`;
+                }
+            }
+
+            cell.find('.kode-peristiwa').html(html);
+        });
+    }
+
+    function renderCurrentMapMarkers() {
+        $('#currentMap.table-risk-map .data-cell').each(function() {
+            for (let month = 1; month <= 12; month++) {
+                $(this).removeData('kode-peristiwa-current-m' + month);
+            }
+            $(this).removeData('has-current');
+            $(this).find('.kode-peristiwa').empty();
+        });
+
+        risks.forEach((risk, idx) => {
+            const currentRiskMaps = formattedCurrentRiskMaps[risk.id] || [];
+            const code = (idx + 1).toString();
+
+            currentRiskMaps.forEach((currentRiskMap) => {
+                if (!currentRiskMap?.month) {
+                    return;
+                }
+
+                const matrixC = currentRiskMap.skala_dampak + '-' + currentRiskMap.skala_probabilitas;
+                const cellC = $(`#currentMap.table-risk-map .data-cell[data-matrix="${matrixC}"]`);
+
+                if (cellC.length) {
+                    const monthKey = 'kode-peristiwa-current-m' + currentRiskMap.month;
+                    if (!cellC.data(monthKey)) {
+                        cellC.data(monthKey, []);
+                    }
+                    cellC.data(monthKey).push(code);
+                    cellC.data('has-current', true);
+                }
+            });
+        });
+
+        $('#currentMap.table-risk-map .data-cell').each(function() {
+            const cell = $(this);
+            let html = '';
+
+            for (let month = 1; month <= 12; month++) {
+                const kodePeristiwaCurrent = cell.data('kode-peristiwa-current-m' + month);
+                if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
+                    for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
+                        html += `<span class="box-current current-m${month}">R${kodePeristiwaCurrent[i]}</span>`;
+                    }
+                }
+            }
+
+            cell.find('.kode-peristiwa').html(html);
+        });
+    }
+
     function updateDashboard(month) {
         const quarter = Math.ceil(month / 3);
 
@@ -430,7 +585,10 @@ $(document).ready(function () {
         $('#currentMap').prop('class', 'table-risk-map');
         $('#currentMap').addClass('show-m' + month);
 
-        // 2. Update Table Content (Realisasi & Residual)
+        // 2. Sinkronkan marker residual pada peta kiri dengan kuartal terpilih
+        renderResidualMapMarkers(quarter);
+
+        // 3. Update Table Content (Realisasi & Residual)
         $('tr[data-risk-id]').each(function() {
             const tr = $(this);
             const riskId = tr.data('risk-id');
@@ -473,102 +631,15 @@ $(document).ready(function () {
         });
     }
 
-    // Deteksi saat bulan dropdown diganti
-    $('#monthSelect').on('change', function() {
-        updateDashboard($(this).val());
-    });
-
     // Jalankan Load Pertama Kali
     const currentMonth = new Date().getMonth() + 1;
-    $('#monthSelect').val(currentMonth); // Set input select default
-    updateDashboard(currentMonth); // Call update
-
-    // (Sisa script Anda untuk Peta Inherent/Residual awal, InputMask, dll biarkan seperti biasa)
-
-    risks.forEach((risk, idx) => {
-        const matrixI = risk.risk_analysis?.skala_dampak + '-' + risk.risk_analysis?.skala_probabilitas?.tingkat;
-        const matrixR = risk.risk_analysis?.skala_dampak_residual + '-' + risk.risk_analysis?.skala_probabilitas_residual_q4?.tingkat;
-
-        const cellI = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixI}"]`);
-        const cellR = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixR}"]`);
-
-        const code = (idx + 1).toString();
-
-        if (cellI.length) {
-            if (!cellI.data('kode-peristiwa-inherent')) {
-                cellI.data('kode-peristiwa-inherent', []);
-            }
-
-            cellI.data('kode-peristiwa-inherent').push(code);
-            cellI.data('has-inherent', true);
-        }
-
-        if (cellR.length) {
-            if (!cellR.data('kode-peristiwa-residual')) {
-                cellR.data('kode-peristiwa-residual', []);
-            }
-
-            cellR.data('kode-peristiwa-residual').push(code);
-            cellR.data('has-residual', true);
-        }
-
-        const currentRiskMaps = formattedCurrentRiskMaps[risk.id];
-        currentRiskMaps.forEach((currentRiskMap) => {
-            const matrixC = currentRiskMap.skala_dampak + '-' + currentRiskMap.skala_probabilitas;
-            const cellC = $(`#currentMap.table-risk-map .data-cell[data-matrix="${matrixC}"]`);
-
-            if (cellC.length) {
-                if (!cellC.data('kode-peristiwa-current-m' + currentRiskMap.month)) {
-                    cellC.data('kode-peristiwa-current-m' + currentRiskMap.month, []);
-                }
-
-                cellC.data('kode-peristiwa-current-m' + currentRiskMap.month).push(code);
-                cellC.data('has-current', true);
-            }
-        });
-
-        const cells = $('#inherentMap.table-risk-map .data-cell');
-        cells.each((index, cell) => {
-            let html = '';
-            let kodePeristiwaInherent = $(cell).data('kode-peristiwa-inherent');
-            let kodePeristiwaResidual = $(cell).data('kode-peristiwa-residual');
-            if (kodePeristiwaInherent && kodePeristiwaInherent.length > 0) {
-                for (let i = 0; i < kodePeristiwaInherent.length; i++) {
-                    html += `<span class="box-inherent">R${kodePeristiwaInherent[i]}</span>`;
-                }
-            }
-
-            if (kodePeristiwaResidual && kodePeristiwaResidual.length > 0) {
-                for (let i = 0; i < kodePeristiwaResidual.length; i++) {
-                    html += `<span class="box-residual">R${kodePeristiwaResidual[i]}</span>`;
-                }
-            }
-
-            $(cell).find('.kode-peristiwa').html(html);
-        });
-
-        const cellsC = $('#currentMap.table-risk-map .data-cell');
-        cellsC.each((index, cell) => {
-            let html = '';
-            let kodePeristiwaCurrent = null;
-            for (let month = 1; month <= 12; month++) {
-                kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-m' + month);
-                if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
-                    for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
-                        html += `<span class="box-current current-m${month}">R${kodePeristiwaCurrent[i]}</span>`;
-                    }
-                }
-            }
-
-            $(cell).find('.kode-peristiwa').html(html);
-        });
-    });
+    $('#monthSelect').val(currentMonth);
+    renderInherentMapMarkers();
+    renderCurrentMapMarkers();
+    updateDashboard(currentMonth);
 
     $('#monthSelect,#tahunSelect').on('change', function() {
-        const month = $('#monthSelect').val();
-        const tahun = $('#tahunSelect').val();
-        $('#currentMap').prop('class', 'table-risk-map');
-        $('#currentMap').addClass('show-m' + month);
+        updateDashboard($('#monthSelect').val());
     }).change();
 
     flatpickr('.flatpickr-range', {

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\FormatsRiskStatusForExport;
+use App\Traits\HasRequestEditVerification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,7 +13,7 @@ use OwenIt\Auditing\Auditable;
 
 class IdentifikasiRisiko extends Model implements AuditableContract
 {
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, FormatsRiskStatusForExport, HasFactory, HasRequestEditVerification, SoftDeletes;
 
     protected $fillable = [
         'unit_type_id',
@@ -55,10 +57,95 @@ class IdentifikasiRisiko extends Model implements AuditableContract
         'closed_at',
         'request_edit',
         'request_edit_reason',
+        'close_request',
+        'close_request_reason',
+        'close_requested_at',
+        'close_requested_by',
     ];
 
     protected $guarded = [];
     protected $table = 'identifikasi_risikos';
+
+    public const CLOSE_REQUEST_NONE = 0;
+    public const CLOSE_REQUEST_PENDING = 1;
+    public const CLOSE_REQUEST_APPROVED = 2;
+    public const CLOSE_REQUEST_REJECTED = 3;
+
+    protected $casts = [
+        'is_closed' => 'boolean',
+        'closed_at' => 'datetime',
+        'published_at' => 'datetime',
+        'close_request' => 'integer',
+        'close_requested_at' => 'datetime',
+    ];
+
+    protected $appends = [
+        'closed_at_formatted',
+        'close_requested_at_formatted',
+    ];
+
+    /**
+     * Risiko dianggap closed pada periode monitoring jika sudah ditutup
+     * dan closed_at jatuh pada atau sebelum bulan/tahun yang dipilih.
+     * Contoh: closed_at di Maret → monitoring Februari masih Open.
+     */
+    public function isClosedAsOf(?int $year, ?int $month): bool
+    {
+        if (!$this->is_closed) {
+            return false;
+        }
+
+        if (!$this->closed_at || !$year || !$month) {
+            return true;
+        }
+
+        $closedYear = (int) $this->closed_at->format('Y');
+        $closedMonth = (int) $this->closed_at->format('n');
+
+        return $closedYear < $year
+            || ($closedYear === $year && $closedMonth <= $month);
+    }
+
+    public function scopeOpenAsOf($query, int $year, int $month)
+    {
+        return $query->where(function ($q) use ($year, $month) {
+            $q->where('is_closed', 0)
+                ->orWhere(function ($q2) use ($year, $month) {
+                    $q2->where('is_closed', 1)
+                        ->whereNotNull('closed_at')
+                        ->where(function ($q3) use ($year, $month) {
+                            $q3->whereYear('closed_at', '>', $year)
+                                ->orWhere(function ($q4) use ($year, $month) {
+                                    $q4->whereYear('closed_at', $year)
+                                        ->whereMonth('closed_at', '>', $month);
+                                });
+                        });
+                });
+        });
+    }
+
+    public function getClosedAtFormattedAttribute(): ?string
+    {
+        if (!$this->closed_at) {
+            return null;
+        }
+
+        return $this->closed_at->format('d/m/Y');
+    }
+
+    public function getCloseRequestedAtFormattedAttribute(): ?string
+    {
+        if (!$this->close_requested_at) {
+            return null;
+        }
+
+        return $this->close_requested_at->format('d-m-Y H:i:s') . ' WIB';
+    }
+
+    public function closeRequestedBy()
+    {
+        return $this->belongsTo(User::class, 'close_requested_by');
+    }
 
     public function perlakuanDampakRisikos()
     {
@@ -319,6 +406,32 @@ class IdentifikasiRisiko extends Model implements AuditableContract
     public const PROGRESS_ON_REVISION_DELETED = 2;
     public const PROGRESS_ON_ACCEPTED = 3;
     public const PROGRESS_ON_FINAL = 4;
+
+    /**
+     * Penerima notifikasi & verifikator Request Edit (unit & AP).
+     * Scope 'ap' memakai mr_notification_ap, selain itu mr_notification_division.
+     */
+    public static function getRequestEditVerifiers(?string $scope = 'unit'): array
+    {
+        $permission = $scope === 'ap' ? 'mr_notification_ap' : 'mr_notification_division';
+
+        return [
+            [
+                'role' => 'RO_MR',
+                'level_id' => 1,
+                'unit_mr' => true,
+                'permission' => $permission,
+                'label' => 'Risk Officer MR',
+            ],
+            [
+                'role' => 'RW_MR',
+                'level_id' => 2,
+                'unit_mr' => true,
+                'permission' => $permission,
+                'label' => 'Risk Owner MR',
+            ],
+        ];
+    }
 
     public function refreshRealisasi()
     {

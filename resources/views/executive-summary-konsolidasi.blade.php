@@ -25,13 +25,21 @@
                 <div class="col-md-4">
                     <label for="unit_selector" class="form-label fw-bold">Filter Divisi Operasi</label>
                     <select name="unit_id" id="unit_selector" class="form-select select2">
-                        <option value="" selected>Semua Divisi Operasi</option>
-                        @foreach ($units as $unit)
-                            <option value="{{ $unit->id }}" {{ $unit->id == $selectedUnitId ? 'selected' : '' }}>
+                        @if($canViewAllDivisions)
+                            <option value="" {{ empty($selectedUnitId) ? 'selected' : '' }}>Semua Divisi Operasi</option>
+                        @endif
+                        @forelse ($units as $unit)
+                            <option value="{{ $unit->id }}" {{ (int) $unit->id === (int) $selectedUnitId ? 'selected' : '' }}>
                                 {{ $unit->name }}
                             </option>
-                        @endforeach
+                        @empty
+                            <option value="" selected disabled>Tidak ada divisi yang dapat diakses</option>
+                        @endforelse
                     </select>
+                    @if (!$canViewAllDivisions && $units->count() <= 1)
+                        <input type="hidden" id="unit_selector_fallback" value="{{ $selectedUnitId }}">
+                        <small class="text-muted">Menampilkan data sesuai kewenangan divisi Anda.</small>
+                    @endif
                 </div>
                 <div class="col-md-4">
                     <label for="peristiwa_selector" class="form-label fw-bold">Filter Peristiwa Risiko</label>
@@ -459,7 +467,9 @@
 <script type="text/javascript">
 $(document).ready(function() {
     function applyFilterAndRefresh() {
-        var unitId = $('#unit_selector').val();
+        var unitId = $('#unit_selector').prop('disabled')
+            ? ($('#unit_selector_fallback').val() || $('#unit_selector').val())
+            : $('#unit_selector').val();
         var period = $('#period_selector').val();
         var peristiwaId = $('#peristiwa_selector').val();
 

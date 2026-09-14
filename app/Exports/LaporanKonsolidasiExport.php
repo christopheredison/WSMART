@@ -126,58 +126,48 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
         // Definisikan tanggal batas akhir bulan dari periode cutoff terpilih (jam 23:59:59)
         $cutoffDate = Carbon::create($this->tahun, $this->bulan, 1)->endOfMonth()->format('Y-m-d 23:59:59');
 
-        $filterUpToPeriod = function($q) {
+        $filterUpToPeriod = function ($q) {
             if ($this->bulan && $this->tahun) {
-                $q->where(function($query) {
+                // Kolom month bertipe teks, sehingga "<=" dibandingkan secara
+                // leksikal ("2" > "10"). Pakai daftar bulan agar Oktober–Desember
+                // tidak kehilangan data monitoring.
+                $bulanSampai = range(1, (int) $this->bulan);
+                $q->where(function($query) use ($bulanSampai) {
                     // Ambil tahun-tahun sebelumnya, ATAU tahun yang sama tapi bulan <= bulan terpilih
                     $query->where('tahun', '<', $this->tahun)
-                          ->orWhere(function($subQuery) {
+                          ->orWhere(function($subQuery) use ($bulanSampai) {
                               $subQuery->where('tahun', $this->tahun)
-                                       ->where('month', '<=', $this->bulan);
+                                       ->whereIn('month', $bulanSampai);
                           });
                 });
             }
 
-            // FILTER STATE DINAMIS (published, unpublished, atau all)
-            if ($this->statusPublish === 'published') {
-                $q->where(function($sq) {
-                    $sq->where('status', 100)->orWhere('is_approved', 1)->orWhere('is_approved', true);
-                });
-            } elseif ($this->statusPublish === 'unpublished') {
-                $q->where(function($sq) {
-                    $sq->where('status', '!=', 100)
-                      ->where(function($sub) {
-                          $sub->where('is_approved', 0)->orWhere('is_approved', false)->orWhereNull('is_approved');
-                      });
-                });
-            }
+            $this->applyMonitoringStatusFilter($q);
         };
-
-        // 2. Terapkan closure ke dalam eager loading
-        $startOfSelectedPeriod = Carbon::create($this->tahun, $this->bulan, 1)
-            ->startOfMonth()
-            ->toDateString();
 
         $query = ProjectRisk::with([
             'project',
             'sasaranProyek',
             'peristiwaRisiko',
-            'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings' => function($q) use ($filterUpToPeriod) {
-                $q->whereHas('projectMonitoring', $filterUpToPeriod);
+            'penyebabRisikoProjects.perlakuanPenyebabRisiko.perlakuanPenyebabMonitorings' => function ($q) use ($filterUpToPeriod) {
+                $q->whereHas('projectMonitoring', $filterUpToPeriod)
+                  ->with('projectMonitoring');
             },
-            'perlakuanDampakRisikos.perlakuanDampakMonitorings' => function($q) use ($filterUpToPeriod) {
-                $q->whereHas('projectMonitoring', $filterUpToPeriod);
+            'perlakuanDampakRisikos.perlakuanDampakMonitorings' => function ($q) use ($filterUpToPeriod) {
+                $q->whereHas('projectMonitoring', $filterUpToPeriod)
+                  ->with('projectMonitoring');
             },
             'dampakRisikoProjects',
             'projectRiskAnalisa.skalaDampakObj',
             'projectRiskAnalisa.skalaProbabilitas',
-            'projectRiskMonitorings' => function($q) use ($filterUpToPeriod) {
+            'projectRiskMonitorings' => function ($q) use ($filterUpToPeriod) {
                 $filterUpToPeriod($q);
-                // Wajib diurutkan ke yang paling baru agar saat fungsi ->first() dipanggil, yang ditarik adalah bulan terakhir/latest.
                 $q->orderBy('tahun', 'desc')->orderBy('month', 'desc')->orderBy('id', 'desc');
             },
-            'kriProjects.kriProjectMonitorings' => function($q) use ($filterUpToPeriod) {
-                $q->whereHas('projectMonitoring', $filterUpToPeriod)->orderBy('id', 'desc');
+            'kriProjects.kriProjectMonitorings' => function ($q) use ($filterUpToPeriod) {
+                $q->whereHas('projectMonitoring', $filterUpToPeriod)
+                  ->with('projectMonitoring')
+                  ->orderBy('id', 'desc');
             }
         ]);
 
@@ -217,7 +207,25 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
         $data = new Collection();
         $no = 1;
 
-        foreach ($risks as $risk) {
+        // Penyeragaman bulan monitoring bersifat per proyek, bukan satu bulan untuk seluruh laporan.
+        // Contoh: Proyek B published terakhir lengkap di Juni → Juni; Proyek C lengkap di Agustus → Agustus.
+        foreach ($risks->groupBy('project_id') as $projectRisks) {
+            $snapshot = $this->resolveUniformMonitoringPeriod($projectRisks);
+
+            if ($snapshot) {
+                $snapshotEnd = $snapshot['end'];
+                $projectRisks = $projectRisks->filter(function ($risk) use ($snapshotEnd) {
+                    return $risk->created_at && Carbon::parse($risk->created_at)->lte($snapshotEnd);
+                });
+            }
+
+            if ($projectRisks->isEmpty()) {
+                continue;
+            }
+
+            [$rencanaBiayaTotal, $realisasiBiayaTotal] = $this->sumProjectBiaya($projectRisks, $snapshot);
+
+            foreach ($projectRisks as $risk) {
             $project = $risk->project;
             if (!$project) continue;
 
@@ -225,40 +233,24 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             $meta = $project->meta ?? [];
             $profitCenter = $project->profit_center ?? ($meta['profit_center'] ?? null);
 
-            $hasilUsaha = ProjectHasilUsaha::where('profit_center', $profitCenter)->orderBy('period', 'desc')->first();
-            $lspValue = $hasilUsaha ? $hasilUsaha->lsp_review : 0;
+            $hasilUsaha = app(\App\Services\ProjectHasilUsahaSyncService::class)
+                ->getLatestForProject($project, true);
+            $lspValue = $hasilUsaha?->lsp_review ?? 0;
 
             $jenisKontrak = empty($meta['jenis_kontrak_name']) ? '-' : (is_array($meta['jenis_kontrak_name']) ? implode(', ', $meta['jenis_kontrak_name']) : $meta['jenis_kontrak_name']);
             $caraPembayaran = empty($meta['pembayaran_name']) ? '-' : (is_array($meta['pembayaran_name']) ? implode(', ', $meta['pembayaran_name']) : $meta['pembayaran_name']);
-
-            $rencanaBiayaTotal = 0;
-            $realisasiBiayaTotal = 0;
-
-            foreach ($project->projectRisks ?? [$risk] as $r) {
-                foreach ($r->penyebabRisikoProjects as $p) {
-                    foreach ($p->perlakuanPenyebabRisiko as $plk) {
-                        $rencanaBiayaTotal += $plk->biaya_perlakuan_risiko ?? 0;
-                        // Nullsafe operator ?-> ditambahkan agar jika kosong tidak mengembalikan Exception Error
-                        $realisasiBiayaTotal += $plk->perlakuanPenyebabMonitorings->sortByDesc('id')->first()?->realisasi_biaya_perlakuan_risiko ?? 0;
-                    }
-                }
-                foreach ($r->perlakuanDampakRisikos as $pld) {
-                    $rencanaBiayaTotal += $pld->biaya_perlakuan_risiko ?? 0;
-                    $realisasiBiayaTotal += $pld->perlakuanDampakMonitorings->sortByDesc('id')->first()?->realisasi_biaya_perlakuan_risiko ?? 0;
-                }
-            }
 
             $riskLimit = ($project->nk ?? 0) * 0.03;
             $peristiwaText = ($risk->peristiwa_risiko_id == 0) ? $risk->rencana_kegiatan : ($risk->peristiwaRisiko->title ?? '-');
 
             $statusKriList = [];
             foreach ($risk->kriProjects as $kri) {
-                $lastMon = $kri->kriProjectMonitorings->sortByDesc('id')->first();
+                $lastMon = $this->childMonitoringForPeriod($kri->kriProjectMonitorings, $snapshot);
                 $statusKri = '-';
                 if ($lastMon) {
                     switch ((int)$lastMon->status_kri_terkini) {
                         case 1: $statusKri = 'Aman'; break;
-                        case 2: $statusKri = 'Waspada'; break;
+                        case 2: $statusKri = 'Siaga'; break;
                         case 3: $statusKri = 'Bahaya'; break;
                     }
                 }
@@ -281,7 +273,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                     $noItem = ($idx+1).'.'.($i+1);
                     $perlakuanPenyebabStr .= $noItem . ' ' . $plk->rencana_perlakuan_risiko . "\n";
 
-                    $lastMon = $plk->perlakuanPenyebabMonitorings->sortByDesc('id')->first();
+                    $lastMon = $this->childMonitoringForPeriod($plk->perlakuanPenyebabMonitorings, $snapshot);
                     $realisasiPerlakuanStr .= "Penyebab $noItem: " . ($lastMon?->deskripsi_perlakuan_risiko ?? '-') . "\n";
                     if($plk->pic) $picStr[] = "Penyebab $noItem: " . $plk->pic;
 
@@ -294,7 +286,7 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                 $noList = $idx + 1;
                 $perlakuanDampakStr .= $noList . '. ' . $pd->rencana_perlakuan_risiko . "\n";
 
-                $lastMon = $pd->perlakuanDampakMonitorings->sortByDesc('id')->first();
+                $lastMon = $this->childMonitoringForPeriod($pd->perlakuanDampakMonitorings, $snapshot);
                 $realisasiPerlakuanStr .= "Dampak $noList: " . ($lastMon?->deskripsi_perlakuan_risiko ?? '-') . "\n";
                 if($pd->pic) $picStr[] = "Dampak $noList: " . $pd->pic;
 
@@ -307,27 +299,10 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
 
             $analisa = $risk->projectRiskAnalisa;
 
-            // Memanggil relasi monitoring, akan otomats mengambil 'first' / terbaru karena sudah di-ORDER BY 'desc' di Eager Load
-            $lastMonitoring = $risk->projectRiskMonitorings->first();
-
-            // Ambil Monitoring Realisasi Terupdate
-            // $levelResidualRealisasi = '-';
-            // $periodeMonitoringText = '-';
-
-            // if ($lastMonitoring) {
-            //     if ($lastMonitoring->level_risiko) {
-            //         $levelResidualRealisasi = $lastMonitoring->level_risiko . ' - ' . ($lastMonitoring->skala_risiko ?? 0);
-            //     }
-
-            //     // Set text "Bulan Tahun" (Contoh: "Februari 2024")
-            //     if ($lastMonitoring->month && $lastMonitoring->tahun) {
-            //         $bulanStr = $namaBulan[(int)$lastMonitoring->month] ?? $lastMonitoring->month;
-            //         $periodeMonitoringText = $bulanStr . ' ' . $lastMonitoring->tahun;
-            //     }
-            // }
+            $lastMonitoring = $this->monitoringForPeriod($risk->projectRiskMonitorings, $snapshot);
 
             // Default realisasi = Inherent.
-            // Ini dipakai ketika belum ada monitoring publish/approved sampai periode cutoff.
+            // Ini dipakai ketika belum ada bulan monitoring yang seragam terpublish sampai periode cutoff.
             $realisasiDampak = $analisa->nilai_dampak ?? 0;
             $realisasiEksposur = $analisa->eksposur_risiko ?? 0;
             $levelResidualRealisasi = ($analisa->level_risiko ?? '-') . ' - ' . ($analisa->skala_risiko ?? 0);
@@ -345,21 +320,18 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
                     $bulanStr = $namaBulan[(int)$lastMonitoring->month] ?? $lastMonitoring->month;
                     $periodeMonitoringText = $bulanStr . ' ' . $lastMonitoring->tahun;
                 }
+            } else if ($snapshot) {
+                $bulanStr = $namaBulan[(int) $snapshot['month']] ?? $snapshot['month'];
+                $periodeMonitoringText = $bulanStr . ' ' . $snapshot['tahun'];
             }
 
             // =========================================================================
             // PERBAIKAN LOGIKA STATUS KONSOLIDASI: Penentuan status Open / Closed
             // =========================================================================
-            $statusTeks = 'Open';
-            if ($risk->is_closed) {
-                // Jika is_closed = 1, namun tanggal penutupan (updated_at) ternyata di atas batas cutoff,
-                // berarti pada masa cutoff tersebut risiko ini statusnya harus dianggap masih 'Open'
-                if ($risk->updated_at && $risk->updated_at->format('Y-m-d H:i:s') > $cutoffDate) {
-                    $statusTeks = 'Open';
-                } else {
-                    $statusTeks = 'Closed';
-                }
-            }
+            $statusTeks = $risk->formatStatusRisikoForExport(
+                $this->tahun ? (int) $this->tahun : null,
+                $this->bulan ? (int) $this->bulan : null
+            );
 
             $row = [
                 $no++,
@@ -425,8 +397,167 @@ class LaporanKonsolidasiExport implements FromCollection, WithHeadings, ShouldAu
             ];
 
             $data->push($row);
+            }
         }
 
         return $data;
+    }
+
+    /**
+     * Filter status monitoring sesuai opsi export.
+     * Published = status 100.
+     */
+    private function applyMonitoringStatusFilter($q): void
+    {
+        if ($this->statusPublish === 'unpublished') {
+            $q->where(function ($sq) {
+                $sq->where('status', '!=', 100)
+                  ->where(function ($sub) {
+                      $sub->where('is_approved', 0)->orWhere('is_approved', false)->orWhereNull('is_approved');
+                  });
+            });
+            return;
+        }
+
+        if ($this->statusPublish === 'all') {
+            return;
+        }
+
+        $q->where('status', 100);
+    }
+
+    private function monitoringMatchesFilter($monitoring): bool
+    {
+        if ($this->statusPublish === 'unpublished') {
+            return (int) $monitoring->status !== 100
+                && !($monitoring->is_approved == 1 || $monitoring->is_approved === true);
+        }
+
+        if ($this->statusPublish === 'all') {
+            return true;
+        }
+
+        return (int) $monitoring->status === 100;
+    }
+
+    /**
+     * Cari bulan monitoring seragam dari data risiko proyek itu sendiri.
+     * Setiap proyek dievaluasi terpisah: ambil bulan terbaru (<= periode laporan)
+     * di mana SEMUA risiko proyek yang sudah ada di bulan itu sudah terpublish (status 100).
+     * Proyek lain tidak mempengaruhi hasil bulan ini.
+     */
+    private function resolveUniformMonitoringPeriod(Collection $projectRisks): ?array
+    {
+        if (!$this->bulan || !$this->tahun || $projectRisks->isEmpty()) {
+            return null;
+        }
+
+        $cursor = Carbon::create((int) $this->tahun, (int) $this->bulan, 1)->startOfMonth();
+        $earliestCreated = $projectRisks
+            ->filter(fn ($risk) => !empty($risk->created_at))
+            ->min('created_at');
+
+        if (!$earliestCreated) {
+            return null;
+        }
+
+        $earliest = Carbon::parse($earliestCreated)->startOfMonth();
+
+        while ($cursor->gte($earliest)) {
+            $month = (int) $cursor->month;
+            $year = (int) $cursor->year;
+            $endOfMonth = $cursor->copy()->endOfMonth();
+
+            $existingRisks = $projectRisks->filter(function ($risk) use ($endOfMonth) {
+                return $risk->created_at && Carbon::parse($risk->created_at)->lte($endOfMonth);
+            });
+
+            $allPublishedInMonth = $existingRisks->isNotEmpty()
+                && $existingRisks->every(function ($risk) use ($month, $year) {
+                    return $this->monitoringForMonth($risk->projectRiskMonitorings, $month, $year) !== null;
+                });
+
+            if ($allPublishedInMonth) {
+                return [
+                    'month' => $month,
+                    'tahun' => $year,
+                    'end' => $endOfMonth,
+                ];
+            }
+
+            $cursor->subMonth();
+        }
+
+        return null;
+    }
+
+    private function monitoringForMonth(?Collection $monitorings, int $month, int $year)
+    {
+        if (!$monitorings || $monitorings->isEmpty()) {
+            return null;
+        }
+
+        return $monitorings
+            ->filter(function ($monitoring) use ($month, $year) {
+                return (int) $monitoring->month === $month
+                    && (int) $monitoring->tahun === $year
+                    && $this->monitoringMatchesFilter($monitoring);
+            })
+            ->sortByDesc('id')
+            ->first();
+    }
+
+    private function monitoringForPeriod(?Collection $monitorings, ?array $snapshot)
+    {
+        if (!$snapshot) {
+            return null;
+        }
+
+        return $this->monitoringForMonth($monitorings, (int) $snapshot['month'], (int) $snapshot['tahun']);
+    }
+
+    private function childMonitoringForPeriod(?Collection $monitorings, ?array $snapshot)
+    {
+        if (!$snapshot || !$monitorings || $monitorings->isEmpty()) {
+            return null;
+        }
+
+        return $monitorings
+            ->filter(function ($monitoring) use ($snapshot) {
+                $parent = $monitoring->projectMonitoring;
+                if (!$parent) {
+                    return false;
+                }
+
+                return (int) $parent->month === (int) $snapshot['month']
+                    && (int) $parent->tahun === (int) $snapshot['tahun']
+                    && $this->monitoringMatchesFilter($parent);
+            })
+            ->sortByDesc('id')
+            ->first();
+    }
+
+    private function sumProjectBiaya(Collection $projectRisks, ?array $snapshot): array
+    {
+        $rencana = 0;
+        $realisasi = 0;
+
+        foreach ($projectRisks as $risk) {
+            foreach ($risk->penyebabRisikoProjects as $penyebab) {
+                foreach ($penyebab->perlakuanPenyebabRisiko as $perlakuan) {
+                    $rencana += $perlakuan->biaya_perlakuan_risiko ?? 0;
+                    $lastMon = $this->childMonitoringForPeriod($perlakuan->perlakuanPenyebabMonitorings, $snapshot);
+                    $realisasi += $lastMon?->realisasi_biaya_perlakuan_risiko ?? 0;
+                }
+            }
+
+            foreach ($risk->perlakuanDampakRisikos as $perlakuanDampak) {
+                $rencana += $perlakuanDampak->biaya_perlakuan_risiko ?? 0;
+                $lastMon = $this->childMonitoringForPeriod($perlakuanDampak->perlakuanDampakMonitorings, $snapshot);
+                $realisasi += $lastMon?->realisasi_biaya_perlakuan_risiko ?? 0;
+            }
+        }
+
+        return [$rencana, $realisasi];
     }
 }

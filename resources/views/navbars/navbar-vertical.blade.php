@@ -93,7 +93,7 @@
         <!-- Executive Summary Menu Start -->
         <li class="nav-item">
           @php $shouldOpen = in_array(url()->current(), []) @endphp
-          <a class="nav-link dropdown-indicator {{ $shouldOpen ? '' : 'collapsed' }} {{ request()->is('executive-summary-unit') || request()->is('executive-summary-proyek') || request()->is('executive-summary-corporate') ? 'active' : '' }}"
+          <a class="nav-link dropdown-indicator {{ $shouldOpen ? '' : 'collapsed' }} {{ request()->is('executive-summary-unit') || request()->is('executive-summary-proyek') || request()->is('executive-summary-project') || request()->is('executive-summary-konsolidasi') || request()->is('executive-summary-corporate') ? 'active' : '' }}"
             href="#executive-summary" role="button" data-bs-toggle="collapse"
             aria-expanded="{{ $shouldOpen ? 'true' : 'false' }}" aria-controls="executive-summary">
             <div class="d-flex align-items-center">
@@ -102,7 +102,7 @@
             </div>
           </a>
           <ul
-            class="nav collapse {{ $shouldOpen ? 'show' : '' }} {{ request()->is('executive-summary-unit') || request()->is('executive-summary-proyek') || request()->is('executive-summary-corporate') ? 'show' : '' }}"
+            class="nav collapse {{ $shouldOpen ? 'show' : '' }} {{ request()->is('executive-summary-unit') || request()->is('executive-summary-proyek') || request()->is('executive-summary-project') || request()->is('executive-summary-konsolidasi') || request()->is('executive-summary-corporate') ? 'show' : '' }}"
             id="executive-summary">
 
             @can('corporate_dashboard_menu')
@@ -135,13 +135,20 @@
             </li>
             @endcan
 
-            @can('proyek_konsolidasi_dashboard_menu')
+            @if(
+              Gate::check('proyek_konsolidasi_dashboard_menu')
+              || Gate::check('can_access_project_under_division')
+              || Gate::check('view_all_division')
+              || Gate::check('view_all_project')
+              || Gate::check('project_admin_access')
+              || (Gate::check('proyek_dashboard_menu') && auth()->user()?->projects()?->exists())
+            )
             <li class="nav-item"><a class="nav-link {{ request()->is('executive-summary-konsolidasi') ? 'active' : '' }}"
                 href="/executive-summary-konsolidasi">
                 <span class="nav-link-text">Proyek Konsolidasi</span>
               </a>
             </li>
-            @endcan
+            @endif
 
             @can('proyek_dashboard_menu')
             <li class="nav-item"><a class="nav-link {{ request()->is('executive-summary-project') ? 'active' : '' }}"
@@ -308,6 +315,21 @@
 
         @endcan
 
+        @can('verification_mr')
+        <li class="nav-item single-indicator">
+          <a class="nav-link {{ request()->routeIs('projects.verifikasi-pengajuan.index') || request()->routeIs('projects.sasaran-risiko.index') || request()->routeIs('projects.peristiwa-risiko.index') ? 'active' : '' }}"
+            href="{{ route('projects.verifikasi-pengajuan.index') }}" role="button" data-bs-toggle="" aria-expanded="false">
+            <span class="nav-link-icon d-flex align-items-center w-100">
+              <i class="menu-icon tf-icons bx bx-check-shield"></i>
+              <span class="nav-link-text">Pengajuan Sasaran dan Peristiwa Risiko Proyek</span>
+              @if(($pendingVerifikasiCount ?? 0) > 0)
+                <span class="badge bg-danger rounded-pill ms-auto">{{ $pendingVerifikasiCount }}</span>
+              @endif
+            </span>
+          </a>
+        </li>
+        @endcan
+
         @can('rmd_menu')
         <li class="nav-item single-indicator">
           <a class="nav-link {{ request()->routeIs('metrik-strategi-risiko.index') ? 'active' : '' }}" href="{{route('metrik-strategi-risiko.index')}}" role="button"
@@ -381,7 +403,7 @@
 
         <!-- Master Data Start -->
         <li class="nav-item">
-          <a class="nav-link dropdown-indicator {{ request()->is('peristiwa-risiko') ||  request()->is('rencana-kegiatan') ||  request()->is('master-risiko') ||  request()->is('tck') ||  request()->is('area-dampak') ||  request()->is('skala-dampak') ||  request()->is('skala-probabilitas') ||  request()->is('skala-probabilitas') ||  request()->is('sikap-risiko') ||  request()->is('periode') ||  request()->is('kategori-risiko') ||  request()->is('kategori-risiko') ||  request()->is('jenis-risiko') ||  request()->is('peristiwa-risiko') ||  request()->is('unit-type') ||  request()->is('unit') ||  request()->is('roles') || request()->is('users') || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'taksonomi-risiko.index', 'kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index', 'measurement-parameter.index', 'jabatan.index', 'data-sync.index']) ? 'active' : '' }}"
+          <a class="nav-link dropdown-indicator {{ request()->is('peristiwa-risiko') ||  request()->is('rencana-kegiatan') ||  request()->is('master-risiko') ||  request()->is('tck') ||  request()->is('area-dampak') ||  request()->is('skala-dampak') ||  request()->is('skala-probabilitas') ||  request()->is('skala-probabilitas') ||  request()->is('sikap-risiko') ||  request()->is('periode') ||  request()->is('kategori-risiko') ||  request()->is('kategori-risiko') ||  request()->is('jenis-risiko') ||  request()->is('peristiwa-risiko') ||  request()->is('unit-type') ||  request()->is('unit') ||  request()->is('roles') || request()->is('users') || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'taksonomi-risiko.index', 'kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index', 'measurement-parameter.index', 'jabatan.index', 'data-sync.index', 'wbs.index']) ? 'active' : '' }}"
             href="#master-data" role="button" data-bs-toggle="collapse" aria-expanded="false"
             aria-controls="master-data">
             <div class="d-flex align-items-center">
@@ -390,10 +412,10 @@
             </div>
           </a>
             <ul
-            class="nav collapse {{ request()->is(['peristiwa-risiko', 'rencana-kegiatan', 'master-risiko', 'tck', 'area-dampak', 'skala-dampak', 'skala-probabilitas', 'sikap-risiko', 'periode', 'kategori-risiko', 'jenis-risiko', 'unit-type', 'unit', 'roles', 'users']) || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'taksonomi-risiko.index','kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index', 'measurement-parameter.index', 'jabatan.index', 'data-sync.index']) ? 'show' : '' }}"
+            class="nav collapse {{ request()->is(['peristiwa-risiko', 'rencana-kegiatan', 'master-risiko', 'tck', 'area-dampak', 'skala-dampak', 'skala-probabilitas', 'sikap-risiko', 'periode', 'kategori-risiko', 'jenis-risiko', 'unit-type', 'unit', 'roles', 'users']) || request()->routeIs(['project-divisi.index', 'project-sektor.index', 'projects.index', 'master-kri.index', 'penilaian-efektivitas-kontrol.index', 'taksonomi-risiko.index','kontrol-eksisting.index', 'jenis-kontrol-eksisting.index', 'jenis-rencana-perlakuan-risiko.index', 'opsi-perlakuan-risiko.index', 'project-type.index', 'project-location.index', 'rmi-period.index', 'question.index', 'measurement-parameter.index', 'jabatan.index', 'data-sync.index', 'wbs.index']) ? 'show' : '' }}"
             id="master-data">
 
-            @can('project_divisi_list')
+            <!-- @can('project_divisi_list')
             <li class="nav-item">
               <a class="nav-link {{ request()->routeIs('project-divisi.index') ? 'active' : '' }}"
                 href="{{ route('project-divisi.index') }}">
@@ -407,6 +429,43 @@
               <a class="nav-link {{ request()->routeIs('project-sektor.index') ? 'active' : '' }}"
                 href="{{ route('project-sektor.index') }}">
                 <span class="nav-link-text">Project Sektor</span>
+              </a>
+            </li>
+            @endcan -->
+            
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('roles.index') ? 'active' : '' }}"
+                href="{{ route('roles.index') }}">
+                <span class="nav-link-text">Manage Role</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('users.index') ? 'active' : '' }}"
+                href="{{ route('users.index') }}">
+                <span class="nav-link-text">Manage User</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('unit.index') ? 'active' : '' }}"
+                href="{{ route('unit.index') }}">
+                <span class="nav-link-text">Divisi</span>
+              </a>
+            </li>
+            
+            @can('project_list')
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('projects.index') ? 'active' : '' }}"
+                href="{{ route('projects.index') }}">
+                <span class="nav-link-text">Project</span>
+              </a>
+            </li>
+            @endcan
+
+            @can('data_sync_access')
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('data-sync.index') ? 'active' : '' }}"
+                href="{{ route('data-sync.index') }}">
+                <span class="nav-link-text">Sinkronisasi Data</span>
               </a>
             </li>
             @endcan
@@ -426,28 +485,32 @@
               </a>
             </li>
 
-            @can('project_list')
-            <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('projects.index') ? 'active' : '' }}"
-                href="{{ route('projects.index') }}">
-                <span class="nav-link-text">Project</span>
-              </a>
-            </li>
-            @endcan
-
-            @can('master_kri_list')
+            <!-- @can('master_kri_list')
             <li class="nav-item">
               <a class="nav-link {{ request()->routeIs('master-kri.index') ? 'active' : '' }}"
                 href="{{ route('master-kri.index') }}">
                 <span class="nav-link-text">Master KRI</span>
               </a>
             </li>
-            @endcan
+            @endcan -->
+            
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('periode') ? 'active' : '' }}" href="/periode">
+                <span class="nav-link-text">Periode Risiko</span>
+              </a>
+            </li>
 
             <li class="nav-item">
               <a class="nav-link {{ request()->routeIs('peristiwa-risiko.index') ? 'active' : '' }}"
                 href="{{ route('peristiwa-risiko.index') }}">
                 <span class="nav-link-text">Peristiwa Risiko</span>
+              </a>
+            </li>
+            
+            <li class="nav-item">
+              <a class="nav-link {{ request()->routeIs('taksonomi-risiko.index') ? 'active' : '' }}"
+                href="{{ route('taksonomi-risiko.index') }}">
+                <span class="nav-link-text">Taksonomi Danantara</span>
               </a>
             </li>
 
@@ -478,23 +541,14 @@
             </li>
             @endcan
 
-            @can('penilaian_efektivitas_kontrol_list')
-            <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('taksonomi-risiko.index') ? 'active' : '' }}"
-                href="{{ route('taksonomi-risiko.index') }}">
-                <span class="nav-link-text">Taksonomi Danantara</span>
-              </a>
-            </li>
-            @endcan
-
-            @can('jenis_rencana_perlakuan_risiko_list')
+            <!-- @can('jenis_rencana_perlakuan_risiko_list')
             <li class="nav-item">
               <a class="nav-link {{ request()->routeIs('jenis-rencana-perlakuan-risiko.index') ? 'active' : '' }}"
                 href="{{ route('jenis-rencana-perlakuan-risiko.index') }}">
                 <span class="nav-link-text">Jenis Rencana Perlakuan Risiko</span>
               </a>
             </li>
-            @endcan
+            @endcan -->
 
             @can('opsi_perlakuan_risiko_list')
             <li class="nav-item">
@@ -505,29 +559,24 @@
             </li>
             @endcan
 
-            @can('project_type_list')
+            <!-- @can('project_type_list')
             <li class="nav-item">
               <a class="nav-link {{ request()->routeIs('project-type.index') ? 'active' : '' }}"
                 href="{{ route('project-type.index') }}">
                 <span class="nav-link-text">Tipe Proyek</span>
               </a>
             </li>
-            @endcan
+            @endcan -->
 
-            @can('project_location_list')
+            <!-- @can('project_location_list')
             <li class="nav-item">
               <a class="nav-link {{ request()->routeIs('project-location.index') ? 'active' : '' }}"
                 href="{{ route('project-location.index') }}">
                 <span class="nav-link-text">Lokasi Proyek</span>
               </a>
             </li>
-            @endcan
+            @endcan -->
 
-            <li class="nav-item">
-              <a class="nav-link {{ request()->is('periode') ? 'active' : '' }}" href="/periode">
-                <span class="nav-link-text">Periode Risiko</span>
-              </a>
-            </li>
             @can('rmi_period_list')
             <li class="nav-item">
               <a class="nav-link {{ request()->routeIs('rmi-period.index') ? 'active' : '' }}" href="{{ route('rmi-period.index') }}">
@@ -561,32 +610,7 @@
                 <span class="nav-link-text">Parameter Pengukuran</span>
               </a>
             </li>
-            <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('unit.index') ? 'active' : '' }}"
-                href="{{ route('unit.index') }}">
-                <span class="nav-link-text">Divisi</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('users.index') ? 'active' : '' }}"
-                href="{{ route('users.index') }}">
-                <span class="nav-link-text">Manage User</span>
-              </a>
-            </li>
-            @can('data_sync_access')
-            <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('data-sync.index') ? 'active' : '' }}"
-                href="{{ route('data-sync.index') }}">
-                <span class="nav-link-text">Sinkronisasi Data</span>
-              </a>
-            </li>
-            @endcan
-            <li class="nav-item">
-              <a class="nav-link {{ request()->routeIs('roles.index') ? 'active' : '' }}"
-                href="{{ route('roles.index') }}">
-                <span class="nav-link-text">Manage Role</span>
-              </a>
-            </li>
+            
             @can('jabatan_list')
             <li class="nav-item">
               <a class="nav-link {{ request()->routeIs('jabatan.index') ? 'active' : '' }}"
@@ -595,64 +619,66 @@
               </a>
             </li>
             @endcan
+
             <li class="nav-item">
               <a class="nav-link {{ request()->is('wbs') ? 'active' : '' }}" href="/wbs">
                 <span class="nav-link-text">WBS</span>
               </a>
             </li>
+
             {{--
             <li class="nav-item">
               <a class="nav-link {{ request()->is('tck') ? 'active' : '' }}" href="/tck">
-            <span class="nav-link-text">KPI/Sasaran</span>
-            </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {{ request()->is('area-dampak') ? 'active' : '' }}" href="/area-dampak">
-            <span class="nav-link-text">Area Dampak</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {{ request()->is('skala-dampak') ? 'active' : '' }}" href="/skala-dampak">
-            <span class="nav-link-text">Skala Dampak</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {{ request()->is('skala-probabilitas') ? 'active' : '' }}" href="/skala-probabilitas">
-            <span class="nav-link-text">Skala Probabilitas</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {{ request()->is('sikap-risiko') ? 'active' : '' }}" href="/sikap-risiko">
-            <span class="nav-link-text">Sikap Risiko</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {{ request()->is('kategori-risiko') ? 'active' : '' }}" href="/kategori-risiko">
-            <span class="nav-link-text">Kategori Risiko</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {{ request()->is('jenis-risiko') ? 'active' : '' }}" href="/jenis-risiko">
-            <span class="nav-link-text">Jenis Risiko</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {{ request()->is('peristiwa-risiko') ? 'active' : '' }}" href="/peristiwa-risiko">
-            <span class="nav-link-text">Peristiwa Risiko</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {{ request()->is('rencana-kegiatan') ? 'active' : '' }}" href="/rencana-kegiatan">
-            <span class="nav-link-text">Rencana Kegiatan</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {{ request()->is('master-risiko') ? 'active' : '' }}" href="/master-risiko">
-            <span class="nav-link-text">Master Risiko</span>
-          </a>
-        </li>
-        --}}
-      </ul>
+                <span class="nav-link-text">KPI/Sasaran</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('area-dampak') ? 'active' : '' }}" href="/area-dampak">
+                <span class="nav-link-text">Area Dampak</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('skala-dampak') ? 'active' : '' }}" href="/skala-dampak">
+                <span class="nav-link-text">Skala Dampak</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('skala-probabilitas') ? 'active' : '' }}" href="/skala-probabilitas">
+                <span class="nav-link-text">Skala Probabilitas</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('sikap-risiko') ? 'active' : '' }}" href="/sikap-risiko">
+                <span class="nav-link-text">Sikap Risiko</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('kategori-risiko') ? 'active' : '' }}" href="/kategori-risiko">
+                <span class="nav-link-text">Kategori Risiko</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('jenis-risiko') ? 'active' : '' }}" href="/jenis-risiko">
+                <span class="nav-link-text">Jenis Risiko</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('peristiwa-risiko') ? 'active' : '' }}" href="/peristiwa-risiko">
+                <span class="nav-link-text">Peristiwa Risiko</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('rencana-kegiatan') ? 'active' : '' }}" href="/rencana-kegiatan">
+                <span class="nav-link-text">Rencana Kegiatan</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ request()->is('master-risiko') ? 'active' : '' }}" href="/master-risiko">
+                <span class="nav-link-text">Master Risiko</span>
+              </a>
+            </li>
+          --}}
+        </ul>
       </li>
       <!-- Master Data End -->
 
