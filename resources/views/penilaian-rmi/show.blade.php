@@ -4,15 +4,12 @@
 @include('partials.success-message')
 
 @php
-  // Prepare data
-  $period    = $period;      // RMIPeriod instance passed from controller
-  $penilaian = $period->penilaianCapaianKinerja; // with details/pilihan eager-loaded
-  //$details   = $penilaian->details->keyBy('parameter_id');
+  $penilaian = $penilaian ?? null;
   $details   = $penilaian ? $penilaian->details->keyBy('parameter_id') : collect();
-  //$paramsDim = $paramsDimensi;   // Aspek Dimensi, passed from controller
   $paramsDim = $dimensions;
-  $paramsC   = $paramsCapaian;   // Aspek Capaian Kinerja
-  $paramsK   = $paramsKpmr;      // Aspek KPMR
+  $paramsC   = $paramsCapaian;
+  $paramsK   = $paramsKpmr;
+  $evidenceMap = $evidenceMap ?? collect();
 @endphp
 @push('styles')
 <style>
@@ -57,6 +54,14 @@
 </style>
 @endpush
 <div class="container px-0">
+  <div class="d-flex justify-content-end mb-3">
+    @can('rmi_period_logs')
+    <a href="{{ route('penilaian-rmi.logs.show', $period->id) }}" class="btn btn-outline-secondary btn-sm">
+      <span class="bx bx-history"></span>
+      <span class="ms-1">Log Perubahan</span>
+    </a>
+    @endcan
+  </div>
 
   {{-- 1. Informasi Periode & Ringkasan --}}
   {{-- <div class="row mb-4">
@@ -136,6 +141,9 @@
 
                 <dt class="col-sm-6 px-0 text-muted">Tanggal Update</dt>
                 <dd class="col-sm-6 px-0">{{ $period->updated_at->format('d M Y H:i') }}</dd>
+
+                <dt class="col-sm-6 px-0 text-muted">Terakhir diubah oleh</dt>
+                <dd class="col-sm-6 px-0">{{ $penilaian?->user?->name ?? '-' }}</dd>
 
                 <hr class="my-2 border-light">
 
@@ -243,7 +251,7 @@
 
   <div class="card mb-4 shadow-sm">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-      Dokumen Pendukung
+      <span>Dokumen Pendukung Peringkat Akhir</span>
       <span id="doc-count-badge" class="badge bg-info text-secondary-emphasis">{{ $period->documents->count() }} File</span>
     </div>
     <div class="card-body p-0">
@@ -267,13 +275,14 @@
                 <td>{{ $document->created_at->format('d M Y') }}</td>
                 <td class="text-center pe-3">
                   <div class="d-flex justify-content-center gap-1">
-                    <a href="{{ Storage::url($document->file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="Download">
-                      <i class="bx bx-download"></i>
+                    <a href="{{ asset('storage/' . $document->file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Lihat dokumen">
+                      <i class="bx bx-show"></i>
                     </a>
                     <button type="button" class="btn btn-sm btn-outline-danger btn-delete-document"
                       data-doc-id="{{ $document->id }}"
                       data-period-id="{{ $period->id }}"
-                      title="Hapus">
+                      data-bs-toggle="tooltip"
+                      title="Hapus dokumen">
                       <i class="bx bx-trash"></i>
                     </button>
                   </div>
@@ -282,7 +291,7 @@
             @empty
               <tr id="empty-doc-row">
                 <td colspan="5" class="text-center py-4 text-muted">
-                  Tidak ada dokumen pendukung.
+                  Belum ada dokumen pendukung peringkat akhir.
                 </td>
               </tr>
             @endforelse
@@ -331,7 +340,7 @@
             ];
 
             // Dapatkan ID skala (1–5) dari PenilaianCapaianKinerja
-            $pen  = $period->penilaianCapaianKinerja;
+            $pen  = $penilaian;
             $kRow = ($pen?->capaian_kinerja ?? 1) - 1;
             $kCol = ($pen?->kpmr ?? 1) - 1;
           @endphp
@@ -392,6 +401,7 @@
                     <th>Jawaban</th>
                     <th>Skala</th>
                     <th>Keterangan</th>
+                    <th>Bukti Dukung</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -402,20 +412,34 @@
                         $jawab = $d?->pilihan->code  ?? '-';
                         $skala = $d?->pilihan->scale ?? '-';
                         $ket   = $d?->comment        ?? '-';
+                        $paramDocs = collect($evidenceMap->get($param->id, []));
                       @endphp
                       <tr>
                         <td>{{ $i+1 }}</td>
                         <td>
-                          {{ $param->name }}<br>
-                          <small class="text-muted">
+                          <div class="fw-medium mb-1">{{ $param->name }}</div>
+                          <div class="small">
                             @foreach($param->options as $opt)
-                              {{ $opt->code }}. {{ $opt->description }};
+                              @php $isSelected = strtolower((string) $opt->code) === strtolower((string) $jawab); @endphp
+                              <div class="{{ $isSelected ? 'fw-bold text-dark' : 'text-muted' }}">
+                                {{ strtolower($opt->code) }}. {{ $opt->description }}
+                              </div>
                             @endforeach
-                          </small>
+                          </div>
                         </td>
                         <td class="text-center fw-bold">{{ strtoupper($jawab) }}</td>
                         <td class="text-center">{{ $skala }}</td>
                         <td>{{ $ket }}</td>
+                        <td>
+                          @forelse($paramDocs as $doc)
+                            <a href="{{ asset('storage/' . $doc->file_path) }}" target="_blank" class="d-flex align-items-center gap-1 text-decoration-none small mb-1" data-bs-toggle="tooltip" title="Lihat {{ $doc->filename }}">
+                              <i class="bx bx-file"></i>
+                              <span class="text-truncate" style="max-width: 160px;">{{ $doc->filename }}</span>
+                            </a>
+                          @empty
+                            <span class="text-muted">-</span>
+                          @endforelse
+                        </td>
                       </tr>
                     @else
                       @foreach($param->children as $j => $child)
@@ -425,20 +449,34 @@
                           $skala = $d?->pilihan->scale ?? '-';
                           $ket   = ($d && !empty($d->comment)) ? $d->comment : '-';
                           $no    = $child->code;
+                          $childDocs = collect($evidenceMap->get($child->id, []));
                         @endphp
                         <tr>
                           <td>{{ $no }}</td>
                           <td class="ps-4">
-                            {{ $child->name }}<br>
-                            <small class="text-muted">
+                            <div class="fw-medium mb-1">{{ $child->name }}</div>
+                            <div class="small">
                               @foreach($child->options as $opt)
-                                {{ $opt->code }}. {{ $opt->description }};
+                                @php $isSelected = strtolower((string) $opt->code) === strtolower((string) $jawab); @endphp
+                                <div class="{{ $isSelected ? 'fw-bold text-dark' : 'text-muted' }}">
+                                  {{ strtolower($opt->code) }}. {{ $opt->description }}
+                                </div>
                               @endforeach
-                            </small>
+                            </div>
                           </td>
                           <td class="text-center fw-bold">{{ strtoupper($jawab) }}</td>
                           <td class="text-center">{{ $skala }}</td>
                           <td>{{ $ket }}</td>
+                          <td>
+                            @forelse($childDocs as $doc)
+                              <a href="{{ asset('storage/' . $doc->file_path) }}" target="_blank" class="d-flex align-items-center gap-1 text-decoration-none small mb-1" data-bs-toggle="tooltip" title="Lihat {{ $doc->filename }}">
+                                <i class="bx bx-file"></i>
+                                <span class="text-truncate" style="max-width: 160px;">{{ $doc->filename }}</span>
+                              </a>
+                            @empty
+                              <span class="text-muted">-</span>
+                            @endforelse
+                          </td>
                         </tr>
                       @endforeach
                     @endif
@@ -475,12 +513,15 @@
                       <tr>
                         <td>{{ $i+1 }}</td>
                         <td>
-                          {{ $param->name }}<br>
-                          <small class="text-muted">
+                          <div class="fw-medium mb-1">{{ $param->name }}</div>
+                          <div class="small">
                             @foreach($param->options as $opt)
-                              {{ $opt->code }}. {{ $opt->description }};
+                              @php $isSelected = strtolower((string) $opt->code) === strtolower((string) $jawab); @endphp
+                              <div class="{{ $isSelected ? 'fw-bold text-dark' : 'text-muted' }}">
+                                {{ strtolower($opt->code) }}. {{ $opt->description }}
+                              </div>
                             @endforeach
-                          </small>
+                          </div>
                         </td>
                         <td>{{ strtoupper($jawab) }}</td>
                         <td>{{ $skala }}</td>
@@ -497,12 +538,15 @@
                         <tr>
                           <td>{{ $child->code }}</td>
                           <td class="ps-4">
-                            {{ $child->name }}<br>
-                            <small class="text-muted">
+                            <div class="fw-medium mb-1">{{ $child->name }}</div>
+                            <div class="small">
                               @foreach($child->options as $opt)
-                                {{ $opt->code }}. {{ $opt->description }};
+                                @php $isSelected = strtolower((string) $opt->code) === strtolower((string) $jawab); @endphp
+                                <div class="{{ $isSelected ? 'fw-bold text-dark' : 'text-muted' }}">
+                                  {{ strtolower($opt->code) }}. {{ $opt->description }}
+                                </div>
                               @endforeach
-                            </small>
+                            </div>
                           </td>
                           <td>{{ strtoupper($jawab) }}</td>
                           <td>{{ $skala }}</td>
@@ -561,8 +605,9 @@
                         <td>{{ $no++ }}</td>
                         <td><strong>{{ $param->name }}</strong></td>
                         <td>{{ $param->weight }}%</td>
+                        <td>-</td>
                         <td>{{ number_format($sum,2) }}</td>
-                        <td>—</td><td><strong>{{ $skTop }}</strong></td>
+                        <td><strong>{{ $skTop }}</strong></td>
                       </tr>
                       @foreach($param->children as $c)
                         @php
@@ -636,8 +681,9 @@
                         <td>{{ $no2++ }}</td>
                         <td><strong>{{ $param->name }}</strong></td>
                         <td>{{ $param->weight }}%</td>
+                        <td>-</td>
                         <td>{{ number_format($sum,2) }}</td>
-                        <td>—</td><td><strong>{{ $skTop }}</strong></td>
+                        <td><strong>{{ $skTop }}</strong></td>
                       </tr>
                       @foreach($param->children as $c)
                         @php
@@ -681,6 +727,13 @@
 @push('scripts')
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+    const tooltipList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipList.forEach(function (tooltipTriggerEl) {
+      if (!bootstrap.Tooltip.getInstance(tooltipTriggerEl)) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+      }
+    });
+
     const tableBody = document.getElementById('document-table-body');
     const docCountBadge = document.getElementById('doc-count-badge');
 
@@ -736,7 +789,7 @@
                         const emptyRowHtml = `
                             <tr id="empty-doc-row">
                                 <td colspan="5" class="text-center py-4 text-muted">
-                                    Tidak ada dokumen pendukung.
+                                    Belum ada dokumen pendukung peringkat akhir.
                                 </td>
                             </tr>`;
                         tableBody.innerHTML = emptyRowHtml;

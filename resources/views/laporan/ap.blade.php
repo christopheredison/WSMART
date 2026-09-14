@@ -21,6 +21,13 @@
         <form id="exportForm">
           @csrf
           <div class="row g-3">
+            <div class="col-md-3">
+              <label for="report_type" class="form-label">Jenis Laporan</label>
+              <select name="report_type" id="report_type" class="form-select" required>
+                <option value="risk_register">Risk Register Anak Perusahaan</option>
+                <option value="loss_event">Loss Event Database (LED)</option>
+              </select>
+            </div>
             <div class="col-md-2">
               <label for="periode_id" class="form-label">Periode</label>
               <select name="periode_id" id="periode_id" class="form-select select2" required>
@@ -30,7 +37,7 @@
                 @endforeach
               </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2" id="container_month">
               <label for="month" class="form-label">Bulan Monitoring</label>
               <select name="month" id="month" class="form-select select2">
                 <option value="">Pilih Bulan (Opsional)...</option>
@@ -46,10 +53,13 @@
                 @endforeach
               </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label for="unit_id" class="form-label">Anak Perusahaan</label>
               <select name="unit_id" id="unit_id" class="form-select select2" required>
                 <option value="">Pilih AP...</option>
+                @if (!empty($canExportAll))
+                  <option value="all">Semua Anak Perusahaan</option>
+                @endif
                 @if (is_iterable($units))
                   @foreach ($units as $unit)
                     <option value="{{ $unit->id }}">{{ $unit->name }}</option>
@@ -59,7 +69,7 @@
                 @endif
               </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2" id="container_format">
               <label for="format_laporan" class="form-label">Format Laporan</label>
               <select name="format_laporan" id="format_laporan" class="form-select select2" required>
                 <option value="lama">Format Lama</option>
@@ -87,30 +97,52 @@
 @section('scripts')
 <script type="text/javascript">
 $(document).ready(function() {
+    $('#report_type').on('change', function() {
+        const isLed = $(this).val() === 'loss_event';
+
+        if (isLed) {
+            $('#container_month, #container_format').addClass('d-none');
+            $('#format_laporan').prop('required', false);
+        } else {
+            $('#container_month, #container_format').removeClass('d-none');
+            $('#format_laporan').prop('required', true);
+        }
+    });
+
+    $('#report_type').trigger('change');
+
     $('#exportForm').on('submit', function(e) {
         e.preventDefault();
 
-        // Validasi form
+        const reportType = $('#report_type').val();
         const periodeId = $('#periode_id').val();
         const unitId = $('#unit_id').val();
 
         if (!periodeId || !unitId) {
-            alert('Harap pilih periode dan unit terlebih dahulu.');
+            Swal.fire('Perhatian', 'Harap pilih periode dan anak perusahaan terlebih dahulu.', 'warning');
             return;
         }
 
         showLoading();
 
+        let targetUrl = '{{ route("laporan.ap.export") }}';
+        const payload = {
+            _token: $('input[name="_token"]').val(),
+            periode_id: periodeId,
+            unit_id: unitId,
+        };
+
+        if (reportType === 'loss_event') {
+            targetUrl = '{{ route("laporan.ap.export_led") }}';
+        } else {
+            payload.month = $('#month').val();
+            payload.format_laporan = $('#format_laporan').val();
+        }
+
         $.ajax({
-            url: '{{ route("laporan.ap.export") }}',
+            url: targetUrl,
             type: 'POST',
-            data: {
-                _token: $('input[name="_token"]').val(),
-                periode_id: periodeId,
-                unit_id: unitId,
-                month: $('#month').val(),
-                format_laporan: $('#format_laporan').val(),
-            },
+            data: payload,
             xhrFields: {
                 responseType: 'blob'
             },

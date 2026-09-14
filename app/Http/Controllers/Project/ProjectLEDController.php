@@ -60,6 +60,11 @@ class ProjectLEDController extends Controller
                 ->addColumn('action', function($row) {
                     return view('project-led._table_action', compact('row'))->render();
                 })
+                ->editColumn('tanggal_kejadian', function($row) {
+                    return $row->tanggal_kejadian
+                        ? Carbon::parse($row->tanggal_kejadian)->locale('id')->translatedFormat('F Y')
+                        : '-';
+                })
                 ->editColumn('nama_kejadian', function($row) {
                     return $row->nama_kejadian ?? '-';
                 })
@@ -82,7 +87,7 @@ class ProjectLEDController extends Controller
                 ->make(true);
         }
 
-        $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
+        $peristiwaRisikos = PeristiwaRisiko::usableForProject()->orderBy('title')->get();
         $kategoriKejadians = KategoriKejadian::all();
 
         $project = null;
@@ -97,7 +102,7 @@ class ProjectLEDController extends Controller
     {
         $project = null;
         $projectSektors = ProjectSektor::all();
-        $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get(); // Filter for project type
+        $peristiwaRisikos = PeristiwaRisiko::usableForProject()->orderBy('title')->get();
         $projects = Project::with(['projectPeriodeList.projectRisks' => function($query) {
             $query->with('penyebabRisikoProjects.perlakuanPenyebabRisiko');
         }])->get();
@@ -132,8 +137,8 @@ class ProjectLEDController extends Controller
         $validator = Validator::make($request->all(), [
             'project_id' => 'required|exists:projects,id',
             'nama_kejadian' => 'required|string',
-            'peristiwa_risiko_id' => 'required',
-            'deskripsi_kejadian' => $request->peristiwa_risiko_id == 'other' ? 'required|string' : 'nullable|string',
+            'peristiwa_risiko_id' => 'required|not_in:other',
+            'deskripsi_kejadian' => 'nullable|string',
             'tanggal_kejadian' => 'required',
             // 'kategori_kejadian_id' => 'required|exists:kategori_kejadians,id',
             'sumber_penyebab_kejadian' => 'required|in:1,2',
@@ -148,6 +153,8 @@ class ProjectLEDController extends Controller
             'nilai_premi' => 'nullable|numeric|min:0',
             'nilai_klaim' => 'nullable|numeric|min:0',
             'penyebab_data' => 'nullable|string',
+        ], [
+            'peristiwa_risiko_id.not_in' => 'Ajukan peristiwa lainnya terlebih dahulu dan tunggu persetujuan MR sebelum dipilih.',
         ]);
 
         if ($validator->fails()) {
@@ -307,7 +314,7 @@ class ProjectLEDController extends Controller
     {
         $lossEvent = LossEventProject::with('penyebabRisikoProjectLeds.perlakuanPenyebabRisiko')->findOrFail($id);
         $projectSektors = ProjectSektor::all();
-        $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get(); // Filter for project type
+        $peristiwaRisikos = PeristiwaRisiko::usableForProject($lossEvent->peristiwa_risiko_id)->orderBy('title')->get();
         $projects = Project::with(['projectPeriodeList.projectRisks' => function($query) {
             $query->with('penyebabRisikoProjects.perlakuanPenyebabRisiko');
         }])->get();
@@ -366,8 +373,8 @@ class ProjectLEDController extends Controller
         // dd($request->all());
         $validator = Validator::make($request->all(), [
             'nama_kejadian' => 'required|string|max:255',
-            'peristiwa_risiko_id' => 'required',
-            'deskripsi_kejadian' => $request->peristiwa_risiko_id == '0' ? 'required|string' : 'nullable|string',
+            'peristiwa_risiko_id' => 'required|not_in:other',
+            'deskripsi_kejadian' => in_array((string) $request->peristiwa_risiko_id, ['0', 'legacy'], true) ? 'required|string' : 'nullable|string',
             'tanggal_kejadian' => 'required',
             // 'kategori_kejadian_id' => 'required|exists:kategori_kejadians,id',
             'sumber_penyebab_kejadian' => 'required|in:1,2',
@@ -382,10 +389,19 @@ class ProjectLEDController extends Controller
             'nilai_premi' => 'required_if:status_asuransi,1|nullable|numeric|min:0',
             'nilai_klaim' => 'required_if:status_asuransi,1|nullable|numeric|min:0',
             'penyebab_data' => 'nullable|string',
+        ], [
+            'peristiwa_risiko_id.not_in' => 'Ajukan peristiwa lainnya terlebih dahulu dan tunggu persetujuan MR sebelum dipilih.',
         ]);
 
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        if (in_array((string) $request->peristiwa_risiko_id, ['legacy', '0', 'other'], true)) {
+            $request->merge([
+                'peristiwa_risiko_id' => 0,
+                'deskripsi_kejadian' => $request->deskripsi_kejadian ?: $lossEvent->deskripsi_kejadian,
+            ]);
         }
 
         DB::beginTransaction();
@@ -628,7 +644,7 @@ class ProjectLEDController extends Controller
             ];
         });
 
-        $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
+        $peristiwaRisikos = PeristiwaRisiko::usableForProject()->orderBy('title')->get();
         $kategoriKejadians = KategoriKejadian::all();
         $jenisRisikos = JenisRisiko::with('kategoriRisiko')->get();
         $analisa = $projectRisk->projectRiskAnalisa;
@@ -767,7 +783,13 @@ class ProjectLEDController extends Controller
             // Cek apakah risiko perlu di-close
             $wasClosed = (bool) $risk->is_closed;
             if ($request->input('is_closed') == '1' && !$wasClosed) {
-                $closedAt = now();
+                $quarter = (int) (optional($monitoring)->quarter ?? 1);
+                $month = (int) (optional($monitoring)->month ?? 1);
+                $year = (int) (optional($monitoring)->tahun ?? now()->year);
+
+                // Penutupan mengikuti bulan monitoring, bukan tanggal konversi dijalankan.
+                $closedAt = Carbon::create($year, max(1, min(12, $month)), 1)->endOfMonth();
+
                 $risk->update([
                   'is_closed' => true,
                   'closed_at' => $closedAt,
@@ -780,11 +802,8 @@ class ProjectLEDController extends Controller
                     ],
                 );
 
-                $quarter = (int) (optional($monitoring)->quarter ?? 1);
-                $month = (int) (optional($monitoring)->month ?? 1);
-                $year = (int) (optional($monitoring)->tahun ?? now()->year);
                 $closeNoteText = 'Risiko ditutup melalui konversi ke LED pada '
-                    . $closedAt->format('d-m-Y H:i:s')
+                    . now()->format('d-m-Y H:i:s')
                     . " (Q{$quarter}, Bulan {$month}).";
 
                 RiskMonitoringNote::create([

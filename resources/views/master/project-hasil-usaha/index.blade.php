@@ -8,6 +8,7 @@
             <h4 class="alert-heading">Ringkasan Sinkronisasi</h4>
             <p>
                 - <strong>Berhasil:</strong> {{ $summary['success'] }} proyek <br>
+                - <strong>Diperbarui dari kosong:</strong> {{ $summary['refreshed_empty'] ?? 0 }} proyek <br>
                 - <strong>Dilewati:</strong> {{ $summary['skipped'] }} proyek <br>
                 - <strong>Gagal:</strong> {{ $summary['failed'] }} proyek
             </p>
@@ -55,6 +56,7 @@
                         <th>Periode</th>
                         <th>Nilai Kontrak Total</th>
                         <th>Nilai Kontrak Porsi</th>
+                        <th>LSP Review</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -102,6 +104,7 @@ $(document).ready(function() {
             { data: 'period', name: 'period' },
             { data: 'kontrak_review_total', name: 'kontrak_review_total' },
             { data: 'kontrak_review', name: 'kontrak_review' },
+            { data: 'lsp_review', name: 'lsp_review' },
             { data: 'action', name: 'action', orderable: false, searchable: false },
         ]
     });

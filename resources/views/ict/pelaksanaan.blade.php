@@ -1,5 +1,6 @@
 @extends('layouts.default')
 @section('dashboard')
+@include('partials.success-message')
 <div class="row g-5 mb-5">
   <div class="col-12">
     <div class="card btn-reveal-trigger">
@@ -61,7 +62,7 @@
                 <div class="row mb-4">
                   <div class="col-md-4">
                     <label class="form-label">Jenis Kontrol <span class="text-danger">*</span></label>
-                    <select name="jenis_kontrol[]" class="form-select" required>
+                    <select name="jenis_kontrol[]" class="form-select js-required" data-fieldname="Jenis Kontrol (Key Control #{{ $index + 1 }})">
                       <option value="">Pilih Jenis Kontrol</option>
                       <option value="1" {{ old('jenis_kontrol.'.$index, $do?->jenis_kontrol) == 1 ? 'selected' : '' }}>Kontrol Operasi</option>
                       <option value="2" {{ old('jenis_kontrol.'.$index, $do?->jenis_kontrol) == 2 ? 'selected' : '' }}>Kontrol Kepatuhan</option>
@@ -70,7 +71,7 @@
                   </div>
                   <div class="col-md-4">
                     <label class="form-label">Bentuk Kontrol <span class="text-danger">*</span></label>
-                    <select name="bentuk_kontrol[]" class="form-select" required>
+                    <select name="bentuk_kontrol[]" class="form-select js-required" data-fieldname="Bentuk Kontrol (Key Control #{{ $index + 1 }})">
                       <option value="">Pilih Bentuk Kontrol</option>
                       <option value="1" {{ old('bentuk_kontrol.'.$index, $do?->bentuk_kontrol) == 1 ? 'selected' : '' }}>SOP</option>
                       <option value="2" {{ old('bentuk_kontrol.'.$index, $do?->bentuk_kontrol) == 2 ? 'selected' : '' }}>Kebijakan</option>
@@ -80,7 +81,7 @@
                   </div>
                   <div class="col-md-4">
                     <label class="form-label">Level Pengendalian <span class="text-danger">*</span></label>
-                    <select name="level_pengendalian[]" class="form-select" required>
+                    <select name="level_pengendalian[]" class="form-select js-required" data-fieldname="Level Pengendalian (Key Control #{{ $index + 1 }})">
                       <option value="">Pilih Level Pengendalian</option>
                       <option value="1" {{ old('level_pengendalian.'.$index, $do?->level_pengendalian) == 1 ? 'selected' : '' }}>Entitas</option>
                       <option value="2" {{ old('level_pengendalian.'.$index, $do?->level_pengendalian) == 2 ? 'selected' : '' }}>Operasional</option>
@@ -94,7 +95,7 @@
                   <div class="row mb-3">
                     <div class="col-md-6">
                       <label class="form-label">Efektivitas pelaksanaan pengendalian dalam mencapai tujuan pengendalian intern <span class="text-danger">*</span></label>
-                      <select name="kecukupan_desain_pengendalian_1[]" class="form-select" required>
+                      <select name="kecukupan_desain_pengendalian_1[]" class="form-select js-required" data-fieldname="Kecukupan Desain 1 (Key Control #{{ $index + 1 }})">
                         <option value="">Pilih Kecukupan</option>
                         <option value="1" {{ old('kecukupan_desain_pengendalian_1.'.$index, $do?->kecukupan_desain_pengendalian_1) == 1 ? 'selected' : '' }}>Cukup</option>
                         <option value="2" {{ old('kecukupan_desain_pengendalian_1.'.$index, $do?->kecukupan_desain_pengendalian_1) == 2 ? 'selected' : '' }}>Tidak Cukup</option>
@@ -102,7 +103,7 @@
                     </div>
                     <div class="col-md-6">
                       <label class="form-label">Kecukupan desain pengendalian dalam memitigasi risiko <span class="text-danger">*</span></label>
-                      <select name="kecukupan_desain_pengendalian_2[]" class="form-select" required>
+                      <select name="kecukupan_desain_pengendalian_2[]" class="form-select js-required" data-fieldname="Kecukupan Desain 2 (Key Control #{{ $index + 1 }})">
                         <option value="">Pilih Kecukupan</option>
                         <option value="1" {{ old('kecukupan_desain_pengendalian_2.'.$index, $do?->kecukupan_desain_pengendalian_2) == 1 ? 'selected' : '' }}>Cukup</option>
                         <option value="2" {{ old('kecukupan_desain_pengendalian_2.'.$index, $do?->kecukupan_desain_pengendalian_2) == 2 ? 'selected' : '' }}>Tidak Cukup</option>
@@ -112,7 +113,7 @@
                   <div class="row mb-3">
                     <div class="col-md-6">
                       <label class="form-label">Kecukupan dokumentasi yang memadai untuk pengendalian <span class="text-danger">*</span></label>
-                      <select name="kecukupan_desain_pengendalian_3[]" class="form-select" required>
+                      <select name="kecukupan_desain_pengendalian_3[]" class="form-select js-required" data-fieldname="Kecukupan Desain 3 (Key Control #{{ $index + 1 }})">
                         <option value="">Pilih Kecukupan</option>
                         <option value="1" {{ old('kecukupan_desain_pengendalian_3.'.$index, $do?->kecukupan_desain_pengendalian_3) == 1 ? 'selected' : '' }}>Cukup</option>
                         <option value="2" {{ old('kecukupan_desain_pengendalian_3.'.$index, $do?->kecukupan_desain_pengendalian_3) == 2 ? 'selected' : '' }}>Tidak Cukup</option>
@@ -120,7 +121,7 @@
                     </div>
                     <div class="col-md-6">
                       <label class="form-label">Keberadaan risiko perusahaan yang belum termitigasi <span class="text-danger">*</span></label>
-                      <select name="kecukupan_desain_pengendalian_4[]" class="form-select" required>
+                      <select name="kecukupan_desain_pengendalian_4[]" class="form-select js-required" data-fieldname="Kecukupan Desain 4 (Key Control #{{ $index + 1 }})">
                         <option value="">Pilih Kecukupan</option>
                         <option value="1" {{ old('kecukupan_desain_pengendalian_4.'.$index, $do?->kecukupan_desain_pengendalian_4) == 1 ? 'selected' : '' }}>Cukup</option>
                         <option value="2" {{ old('kecukupan_desain_pengendalian_4.'.$index, $do?->kecukupan_desain_pengendalian_4) == 2 ? 'selected' : '' }}>Tidak Cukup</option>
@@ -130,7 +131,7 @@
                   <div class="row">
                     <div class="col-md-12">
                       <label class="form-label">Kesimpulan Kecukupan Desain Pengendalian <span class="text-danger">*</span></label>
-                      <select name="kecukupan_desain_pengendalian_akhir[]" class="form-select" required>
+                      <select name="kecukupan_desain_pengendalian_akhir[]" class="form-select js-required" data-fieldname="Kesimpulan Kecukupan (Key Control #{{ $index + 1 }})">
                         <option value="">Pilih Kesimpulan</option>
                         <option value="1" {{ old('kecukupan_desain_pengendalian_akhir.'.$index, $do?->kecukupan_desain_pengendalian_akhir) == 1 ? 'selected' : '' }}>Cukup</option>
                         <option value="2" {{ old('kecukupan_desain_pengendalian_akhir.'.$index, $do?->kecukupan_desain_pengendalian_akhir) == 2 ? 'selected' : '' }}>Tidak Cukup</option>
@@ -145,7 +146,7 @@
                   <div class="row mb-3">
                     <div class="col-md-6">
                       <label class="form-label">Efektivitas pelaksanaan pengendalian dalam mencapai tujuan <span class="text-danger">*</span></label>
-                      <select name="efektivitas_desain_pengendalian_1[]" class="form-select" required>
+                      <select name="efektivitas_desain_pengendalian_1[]" class="form-select js-required" data-fieldname="Efektivitas Desain 1 (Key Control #{{ $index + 1 }})">
                         <option value="">Pilih Efektivitas</option>
                         <option value="1" {{ old('efektivitas_desain_pengendalian_1.'.$index, $do?->efektivitas_desain_pengendalian_1) == 1 ? 'selected' : '' }}>Efektif</option>
                         <option value="2" {{ old('efektivitas_desain_pengendalian_1.'.$index, $do?->efektivitas_desain_pengendalian_1) == 2 ? 'selected' : '' }}>Efektif Sebagian</option>
@@ -154,7 +155,7 @@
                     </div>
                     <div class="col-md-6">
                       <label class="form-label">Konsistensi pelaksanaan pengendalian di lapangan <span class="text-danger">*</span></label>
-                      <select name="efektivitas_desain_pengendalian_2[]" class="form-select" required>
+                      <select name="efektivitas_desain_pengendalian_2[]" class="form-select js-required" data-fieldname="Efektivitas Desain 2 (Key Control #{{ $index + 1 }})">
                         <option value="">Pilih Efektivitas</option>
                         <option value="1" {{ old('efektivitas_desain_pengendalian_2.'.$index, $do?->efektivitas_desain_pengendalian_2) == 1 ? 'selected' : '' }}>Efektif</option>
                         <option value="2" {{ old('efektivitas_desain_pengendalian_2.'.$index, $do?->efektivitas_desain_pengendalian_2) == 2 ? 'selected' : '' }}>Efektif Sebagian</option>
@@ -165,7 +166,7 @@
                   <div class="row mb-3">
                     <div class="col-md-12">
                       <label class="form-label">Kesesuaian pelaksanaan tugas manajemen dan karyawan <span class="text-danger">*</span></label>
-                      <select name="efektivitas_desain_pengendalian_3[]" class="form-select" required>
+                      <select name="efektivitas_desain_pengendalian_3[]" class="form-select js-required" data-fieldname="Efektivitas Desain 3 (Key Control #{{ $index + 1 }})">
                         <option value="">Pilih Efektivitas</option>
                         <option value="1" {{ old('efektivitas_desain_pengendalian_3.'.$index, $do?->efektivitas_desain_pengendalian_3) == 1 ? 'selected' : '' }}>Efektif</option>
                         <option value="2" {{ old('efektivitas_desain_pengendalian_3.'.$index, $do?->efektivitas_desain_pengendalian_3) == 2 ? 'selected' : '' }}>Efektif Sebagian</option>
@@ -176,7 +177,7 @@
                   <div class="row">
                     <div class="col-md-12">
                       <label class="form-label">Kesimpulan Efektivitas Desain Pengendalian <span class="text-danger">*</span></label>
-                      <select name="efektivitas_desain_pengendalian_akhir[]" class="form-select kesimpulan-efektivitas" data-index="{{ $index }}" required>
+                      <select name="efektivitas_desain_pengendalian_akhir[]" class="form-select kesimpulan-efektivitas js-required" data-index="{{ $index }}" data-fieldname="Kesimpulan Efektivitas (Key Control #{{ $index + 1 }})">
                         <option value="">Pilih Kesimpulan</option>
                         <option value="1" {{ old('efektivitas_desain_pengendalian_akhir.'.$index, $do?->efektivitas_desain_pengendalian_akhir) == 1 ? 'selected' : '' }}>Efektif</option>
                         <option value="2" {{ old('efektivitas_desain_pengendalian_akhir.'.$index, $do?->efektivitas_desain_pengendalian_akhir) == 2 ? 'selected' : '' }}>Efektif Sebagian</option>
@@ -192,19 +193,19 @@
                   <div class="row mb-3">
                     <div class="col-md-12">
                       <label class="form-label">Kesimpulan Akhir <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control kesimpulan-akhir-{{ $index }}" name="kesimpulan_akhir[]" value="{{ old('kesimpulan_akhir.'.$index, $do?->kesimpulan_akhir) }}" readonly>
+                      <input type="text" class="form-control kesimpulan-akhir-{{ $index }} js-required" name="kesimpulan_akhir[]" value="{{ old('kesimpulan_akhir.'.$index, $do?->kesimpulan_akhir) }}" data-fieldname="Kesimpulan Akhir (Key Control #{{ $index + 1 }})" readonly>
                     </div>
                   </div>
                   <div class="row mb-3">
                     <div class="col-md-12">
                       <label class="form-label">Hasil Temuan <span class="text-danger">*</span></label>
-                      <textarea class="form-control" name="hasil_temuan[]" rows="3" required>{{ old('hasil_temuan.'.$index, $do?->hasil_temuan) }}</textarea>
+                      <textarea class="form-control js-required" name="hasil_temuan[]" rows="3" data-fieldname="Hasil Temuan (Key Control #{{ $index + 1 }})">{{ old('hasil_temuan.'.$index, $do?->hasil_temuan) }}</textarea>
                     </div>
                   </div>
                   <div class="row mb-3">
                     <div class="col-md-12">
                       <label class="form-label">Rencana Tindak Lanjut <span class="text-danger">*</span></label>
-                      <textarea class="form-control" name="rencana_tindak_lanjut[]" rows="3" required>{{ old('rencana_tindak_lanjut.'.$index, $do?->rencana_tindak_lanjut) }}</textarea>
+                      <textarea class="form-control js-required" name="rencana_tindak_lanjut[]" rows="3" data-fieldname="Rencana Tindak Lanjut (Key Control #{{ $index + 1 }})">{{ old('rencana_tindak_lanjut.'.$index, $do?->rencana_tindak_lanjut) }}</textarea>
                     </div>
                   </div>
                   <div class="row">
@@ -212,16 +213,16 @@
                       <label class="form-label">Batas Waktu Penyelesaian Tindak Lanjut <span class="text-danger">*</span></label>
                       <input
                         type="text"
-                        class="form-control flatpickr-date bg-white"
+                        class="form-control flatpickr-date bg-white js-required"
                         name="batas_waktu_penyelesaian[]"
                         placeholder="Pilih Tanggal"
                         value="{{ old('batas_waktu_penyelesaian.'.$index, $do?->batas_waktu_penyelesaian ? $do->batas_waktu_penyelesaian->format('Y-m-d') : '') }}"
-                        required
+                        data-fieldname="Batas Waktu Penyelesaian (Key Control #{{ $index + 1 }})"
                       >
                     </div>
                     <div class="col-md-6">
                       <label class="form-label">Penanggung Jawab Tindak Lanjut <span class="text-danger">*</span></label>
-                      <select name="penanggung_jawab_jabatan_id[]" class="form-select" required>
+                      <select name="penanggung_jawab_jabatan_id[]" class="form-select js-required" data-fieldname="Penanggung Jawab (Key Control #{{ $index + 1 }})">
                         <option value="">Pilih Jabatan</option>
                         @foreach($jabatans as $jabatan)
                           <option value="{{ $jabatan->id }}" {{ old('penanggung_jawab_jabatan_id.'.$index, $do?->penanggung_jawab_jabatan_id) == $jabatan->id ? 'selected' : '' }}>
@@ -229,7 +230,6 @@
                           </option>
                         @endforeach
                       </select>
-                      {{-- Jika ingin menghandle manual input penanggung jawab juga --}}
                       <input type="hidden" name="penanggung_jawab[]" value="{{ old('penanggung_jawab.'.$index, $do?->penanggung_jawab) }}">
                     </div>
                   </div>
@@ -255,35 +255,40 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+  .select2-container .select2-selection.is-invalid,
+  .select2-container--default .select2-selection--single.is-invalid {
+    border-color: #dc3545 !important;
+  }
+  .flatpickr-input.is-invalid + input.form-control,
+  input.form-control.is-invalid {
+    border-color: #dc3545 !important;
+  }
+  .invalid-feedback.d-block {
+    display: block !important;
+  }
+</style>
+@endpush
+
 @push('scripts')
 <script>
   $(document).ready(function() {
     flatpickr('.flatpickr-date', {
-        altInput: true,
-        altFormat: "j F Y",
-        dateFormat: "Y-m-d",
-        disableMobile: "true",
+      altInput: true,
+      altFormat: "j F Y",
+      dateFormat: "Y-m-d",
+      disableMobile: "true",
     });
 
-    // Fungsi untuk menghasilkan kesimpulan akhir
     function generateKesimpulanAkhir(index) {
-      // Dapatkan section berdasarkan index
       const section = $('.key-control-section').eq(index);
-
-      // Dapatkan nilai dari dropdown di dalam section yang spesifik
-      // Gunakan selector yang sesuai dengan struktur HTML
       const kecukupanSelect = section.find('select[name="kecukupan_desain_pengendalian_akhir[]"]');
       const efektivitasSelect = section.find('select[name="efektivitas_desain_pengendalian_akhir[]"]');
       const kesimpulanInput = section.find('.kesimpulan-akhir-' + index);
 
-      // Ambil nilai terlebih dahulu
       const kecukupanVal = kecukupanSelect.val();
       const efektivitasVal = efektivitasSelect.val();
-
-      // Tambahkan debugging
-      console.log('Generating kesimpulan for index:', index);
-      console.log('Kecukupan value:', kecukupanVal);
-      console.log('Efektivitas value:', efektivitasVal);
 
       let kecukupanText = '';
       let efektivitasText = '';
@@ -297,81 +302,199 @@
 
       if (kecukupanText && efektivitasText) {
         kesimpulanInput.val(kecukupanText + ' dan ' + efektivitasText);
+        clearFieldError(kesimpulanInput);
       } else {
         kesimpulanInput.val('');
       }
     }
 
-    // Gunakan event delegation untuk menangani perubahan pada dropdown
+    function markFieldError($el, message) {
+      $el.addClass('is-invalid');
+
+      if ($el.hasClass('select2-hidden-accessible')) {
+        $el.next('.select2-container').find('.select2-selection').addClass('is-invalid');
+      }
+
+      if ($el.hasClass('flatpickr-input') && $el[0]._flatpickr) {
+        const altInput = $el[0]._flatpickr.altInput;
+        if (altInput) {
+          $(altInput).addClass('is-invalid');
+        }
+      }
+
+      let $feedback = $el.siblings('.invalid-feedback');
+      if (!$feedback.length && $el.hasClass('select2-hidden-accessible')) {
+        $feedback = $el.next('.select2-container').siblings('.invalid-feedback');
+      }
+      if (!$feedback.length && $el.hasClass('flatpickr-input')) {
+        $feedback = $el.parent().find('.invalid-feedback');
+      }
+
+      if (!$feedback.length) {
+        $feedback = $('<div class="invalid-feedback d-block"></div>');
+        if ($el.hasClass('select2-hidden-accessible')) {
+          $el.next('.select2-container').after($feedback);
+        } else if ($el.hasClass('flatpickr-input') && $el[0]._flatpickr && $el[0]._flatpickr.altInput) {
+          $($el[0]._flatpickr.altInput).after($feedback);
+        } else {
+          $el.after($feedback);
+        }
+      }
+
+      $feedback.text(message || 'Field ini wajib diisi.');
+    }
+
+    function clearFieldError($el) {
+      $el.removeClass('is-invalid');
+
+      if ($el.hasClass('select2-hidden-accessible')) {
+        $el.next('.select2-container').find('.select2-selection').removeClass('is-invalid');
+      }
+
+      if ($el.hasClass('flatpickr-input') && $el[0]._flatpickr) {
+        const altInput = $el[0]._flatpickr.altInput;
+        if (altInput) {
+          $(altInput).removeClass('is-invalid');
+        }
+      }
+
+      $el.siblings('.invalid-feedback').remove();
+      if ($el.hasClass('select2-hidden-accessible')) {
+        $el.next('.select2-container').siblings('.invalid-feedback').remove();
+      }
+      if ($el.hasClass('flatpickr-input')) {
+        $el.parent().find('.invalid-feedback').remove();
+      }
+    }
+
+    function clearAllErrors() {
+      $('#ictDoForm .js-required').each(function() {
+        clearFieldError($(this));
+      });
+    }
+
+    function validateRequiredFields() {
+      clearAllErrors();
+
+      let isValid = true;
+      let firstInvalid = null;
+      const errorMessages = [];
+
+      // Pastikan kesimpulan akhir ter-generate dulu
+      $('.key-control-section').each(function(index) {
+        generateKesimpulanAkhir(index);
+      });
+
+      $('#ictDoForm .js-required').each(function() {
+        const $el = $(this);
+        const value = ($el.val() || '').toString().trim();
+
+        if (!value) {
+          isValid = false;
+          const fieldName = $el.data('fieldname') || 'Field wajib';
+          markFieldError($el, fieldName + ' wajib diisi.');
+          errorMessages.push('<li>' + fieldName + '</li>');
+
+          if (!firstInvalid) {
+            firstInvalid = $el.hasClass('select2-hidden-accessible')
+              ? $el.next('.select2-container')
+              : ($el.hasClass('flatpickr-input') && $el[0]._flatpickr && $el[0]._flatpickr.altInput
+                  ? $($el[0]._flatpickr.altInput)
+                  : $el);
+          }
+        }
+      });
+
+      return { isValid, firstInvalid, errorMessages };
+    }
+
     $(document).on('change', 'select[name="kecukupan_desain_pengendalian_akhir[]"]', function() {
       const index = $(this).closest('.key-control-section').data('index');
-      console.log('Kecukupan changed, index:', index);
       generateKesimpulanAkhir(index);
     });
 
-
-
-    // Gunakan event delegation untuk menangani perubahan pada dropdown efektivitas
     $(document).on('change', 'select[name="efektivitas_desain_pengendalian_akhir[]"]', function() {
       const index = $(this).closest('.key-control-section').data('index');
-      console.log('Efektivitas changed, index:', index);
       generateKesimpulanAkhir(index);
     });
 
-    // Inisialisasi kesimpulan akhir untuk semua key control saat halaman dimuat
     $('.key-control-section').each(function(index) {
       const kecukupanVal = $(this).find('select[name="kecukupan_desain_pengendalian_akhir[]"]').val();
       const efektivitasVal = $(this).find('select[name="efektivitas_desain_pengendalian_akhir[]"]').val();
-
       if (kecukupanVal && efektivitasVal) {
         generateKesimpulanAkhir(index);
       }
     });
 
-    // Inisialisasi Select2
     $('select').select2({
-        width: '100%',
-        placeholder: 'Pilih Opsi'
+      width: '100%',
+      placeholder: 'Pilih Opsi'
     });
 
-    let clickedButtonValue = '';
+    $(document).on('change', '#ictDoForm .js-required', function() {
+      clearFieldError($(this));
+    });
 
-    $('button[type="submit"]').on('click', function(e) {
-        e.preventDefault();
-        clickedButtonValue = $(this).val(); // 'draft' atau 'submit'
-        let form = $('#ictDoForm');
+    $(document).on('input', '#ictDoForm textarea.js-required, #ictDoForm input.js-required', function() {
+      clearFieldError($(this));
+    });
 
-        let titleText = 'Konfirmasi';
-        let bodyText = '';
-        let confirmBtnText = '';
+    function submitForm(actionValue) {
+      const form = $('#ictDoForm');
+      form.find('input[name="action"][type="hidden"]').remove();
+      $('<input>').attr({
+        type: 'hidden',
+        name: 'action',
+        value: actionValue
+      }).appendTo(form);
+      form.submit();
+    }
 
-        if(clickedButtonValue === 'draft') {
-            bodyText = 'Data akan disimpan sementara (DRAFT). Field yang kosong diperbolehkan. Lanjutkan?';
-            confirmBtnText = 'Ya, Simpan Sementara';
-        } else {
-            bodyText = 'Apakah Anda yakin ingin menyimpan data pengujian ICT Plan ini secara Final? Semua field wajib diisi.';
-            confirmBtnText = 'Ya, Simpan';
-        }
+    $('#btnDraft, #btnSimpan').on('click', function(e) {
+      e.preventDefault();
+      const actionValue = $(this).val();
 
-        Swal.fire({
-            title: titleText,
-            text: bodyText,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: confirmBtnText,
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $('<input>').attr({
-                    type: 'hidden',
-                    name: 'action',
-                    value: clickedButtonValue
-                }).appendTo(form);
-                form.submit();
+      if (actionValue === 'submit') {
+        const validation = validateRequiredFields();
+        if (!validation.isValid) {
+          const errorHtml = '<div class="text-start" style="max-height: 250px; overflow-y: auto;">' +
+            '<p class="mb-2 text-dark">Mohon lengkapi bagian berikut:</p>' +
+            '<ul class="text-danger ps-3 mb-0" style="font-size: 0.95rem;">' +
+              validation.errorMessages.join('') +
+            '</ul></div>';
+
+          Swal.fire({
+            icon: 'error',
+            title: 'Penilaian Belum Lengkap!',
+            html: errorHtml,
+            confirmButtonText: 'Mengerti'
+          }).then(() => {
+            if (validation.firstInvalid && validation.firstInvalid.length) {
+              $('html, body').animate({
+                scrollTop: validation.firstInvalid.offset().top - 150
+              }, 400);
             }
-        });
-    });
+          });
+          return;
+        }
+      }
 
+      const isDraft = actionValue === 'draft';
+      Swal.fire({
+        title: 'Konfirmasi',
+        text: isDraft
+          ? 'Data akan disimpan sementara (DRAFT). Field yang kosong diperbolehkan. Lanjutkan?'
+          : 'Apakah Anda yakin ingin menyimpan data pengujian ICT Plan ini secara Final?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: isDraft ? 'Ya, Simpan Sementara' : 'Ya, Simpan',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          submitForm(actionValue);
+        }
+      });
+    });
   });
 </script>
 @endpush

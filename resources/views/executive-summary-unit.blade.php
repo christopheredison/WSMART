@@ -455,7 +455,7 @@
     <div class="card">
         <div class="card-header stepper border-0 pb-0">
             <div class="nav-link active d-flex align-items-center p-0">
-                <span class="h3 mb-0">Daftar KRI (Status Waspada & Bahaya)</span>
+                <span class="h3 mb-0">Daftar KRI (Status Siaga & Bahaya)</span>
             </div>
         </div>
         <div class="card-body">
@@ -467,7 +467,7 @@
                             <th style="min-width: 200px;">Penyebab</th>
                             <th style="min-width: 150px;">KRI</th>
                             <th>Batas Aman</th>
-                            <th>Batas Waspada</th>
+                            <th>Batas Siaga</th>
                             <th>Batas Bahaya</th>
                             <th>Kondisi Saat Ini</th>
                             <th>Status</th>
@@ -510,7 +510,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="8" class="text-center p-4">Tidak ada data KRI dengan status Waspada atau Bahaya.</td>
+                            <td colspan="8" class="text-center p-4">Tidak ada data KRI dengan status Siaga atau Bahaya.</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -526,7 +526,7 @@
                 </div>
                 <div class="d-flex align-items-center gap-1 status-container yellow">
                     <div class="status-yellow"></div>
-                    <span>Waspada</span>
+                    <span>Siaga</span>
                 </div>
                 <div class="d-flex align-items-center gap-1 status-container red">
                     <div class="status-red"></div>

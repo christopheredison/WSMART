@@ -6,11 +6,12 @@ use App\Supports\Helper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use OwenIt\Auditing\Auditable;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 
-class RMIPeriod extends Model
+class RMIPeriod extends Model implements AuditableContract
 {
-    use HasFactory;
-    use SoftDeletes;
+    use Auditable, HasFactory, SoftDeletes;
 
     protected $table = 'rmi_periods';
 
@@ -71,7 +72,7 @@ class RMIPeriod extends Model
 
     public function penilaianCapaianKinerja()
     {
-        return $this->hasOne(PenilaianCapaianKinerja::class, 'rmi_period_id')->latestOfMany();
+        return $this->hasOne(PenilaianCapaianKinerja::class, 'rmi_period_id')->latestOfMany('updated_at');
     }
 
     public function documents()

@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\HasRiskNoteStatuses;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class RiskMonitoringNote extends Model
 {
-    use HasFactory, SoftDeletes;
-    
+    use HasFactory, HasRiskNoteStatuses, SoftDeletes;
+
     protected $table = 'risk_monitoring_notes';
 
     protected $fillable = [
@@ -21,6 +22,10 @@ class RiskMonitoringNote extends Model
         'quarter',
         'month',
         'year',
+    ];
+
+    protected $casts = [
+        'status' => 'integer',
     ];
 
     public function user()

@@ -24,7 +24,7 @@
                         <div class="col-6 col-md-4 col-lg-auto flex-lg-grow-1">
                             <div class="form-group form-floating text-center">
                                 <input type="text" class="form-control border-warning" name="batas_waspada" disabled>
-                                <label for="batas_waspada_1">Batas Waspada</label>
+                                <label for="batas_waspada_1">Batas Siaga</label>
                             </div>
                         </div>
                         <div class="col-6 col-md-4 col-lg-auto flex-lg-grow-1">
@@ -43,7 +43,7 @@
                             <div class="form-group form-floating">
                                 <select class="form-select" name="status_kri" required>
                                     <option value="1">Aman</option>
-                                    <option value="2">Waspada</option>
+                                    <option value="2">Siaga</option>
                                     <option value="3">Bahaya</option>
                                 </select>
                                 <label for="batas_bahaya_1">Status KRI</label>

@@ -15,11 +15,11 @@ class UnitRiskPengendalian extends Model
 
     public function parameter()
     {
-        return $this->belongsTo(ParameterRisikoUnit::class, 'parameter_id');
+        return $this->belongsTo(ParameterRisikoUnit::class, 'parameter_id')->withTrashed();
     }
 
     public function kri()
     {
-        return $this->belongsTo(KRI::class, 'kri_id', 'id');
+        return $this->belongsTo(KRI::class, 'kri_id', 'id')->withTrashed();
     }
 }

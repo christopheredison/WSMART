@@ -102,7 +102,9 @@ class SyncWikaProjects extends Command
                     'batasan_biaya_perlakuan_risiko' => $batasanBiaya,
                     'cost_center_parent' => $costCenterParent,
                     'masa_pelaksanaan_start' => $projectData['tgl_mulai'] ?? null,
-                    'masa_pelaksanaan_end' => $projectData['bast1'] ?? null,
+                    'masa_pelaksanaan_end' => !empty($projectData['tgl_selesai'])
+                        ? Carbon::parse($projectData['tgl_selesai'])->addDays((int) \App\Models\GlobalSetting::getValue('project_status_threshold_days', 45))->toDateString()
+                        : null,
                     'tanggal_mulai' => $projectData['tanggal_mulai'] ?? null,
                     'meta'           => $projectData,
                 ]);

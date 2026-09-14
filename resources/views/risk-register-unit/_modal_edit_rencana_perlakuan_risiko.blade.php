@@ -37,7 +37,7 @@ $(document).ready(function() {
         console.log('penyebabRisikoId:', penyebabRisikoId);
 
         $.ajax({
-            url: `{{ route('risk-register-unit.update-rencana-perlakuan', ['riskRegister' => $identifikasiRisiko->id, 'id' => ':id']) }}`.replace(':id', perlakuanId),
+            url: `{{ route(($perencanaanBaseRoute ?? 'risk-register-unit') . '.update-rencana-perlakuan', ['riskRegister' => $identifikasiRisiko->id, 'id' => ':id']) }}`.replace(':id', perlakuanId),
             type: 'PUT',
             data: formData,
             success: function(response) {
@@ -96,15 +96,17 @@ $(document).ready(function() {
     // Mendapatkan elemen select untuk opsi perlakuan risiko dan jenis rencana perlakuan risiko
     const opsiPerlakuanRisiko = document.getElementById('opsi_perlakuan_risiko');
     const jenisRencanaPerlakuanRisiko = document.getElementById('jenis_rencana_perlakuan_risiko');
-    
-    // Menambahkan event listener untuk perubahan pada opsi perlakuan risiko
-    opsiPerlakuanRisiko.addEventListener('change', function() {
-        // Jika opsi perlakuan risiko yang dipilih adalah ID 3 (Accept/monitor)
-        if (this.value === '3') {
-            // Set jenis rencana perlakuan risiko ke ID 8 (Lainnya)
-            jenisRencanaPerlakuanRisiko.value = '8';
-        }
-    });
+
+    // Field jenis rencana bisa tidak ada (sudah di-comment di form) — jaga null safety
+    if (opsiPerlakuanRisiko) {
+        opsiPerlakuanRisiko.addEventListener('change', function() {
+            // Jika opsi perlakuan risiko yang dipilih adalah ID 3 (Accept/monitor)
+            if (this.value === '3' && jenisRencanaPerlakuanRisiko) {
+                // Set jenis rencana perlakuan risiko ke ID 8 (Lainnya)
+                jenisRencanaPerlakuanRisiko.value = '8';
+            }
+        });
+    }
 })
 </script>
 @endpush

@@ -28,7 +28,7 @@ class KRIProjectMonitoring extends Model
 
     public function kriProject()
     {
-        return $this->belongsTo(KRIProject::class, 'kri_project_id');
+        return $this->belongsTo(KRIProject::class, 'kri_project_id')->withTrashed();
     }
 
     public function projectMonitoring()

@@ -108,6 +108,33 @@ class UnitRiskMonitoring extends Model
     }
 
     /**
+     * Definisi Workflow Monitoring Korporat (delegasi ke DataBatch agar mudah disesuaikan).
+     * Default: Risk Officer MR (input) -> Risk Owner MR (verifikasi + publish)
+     */
+    public static function getCorporateWorkflow()
+    {
+        $flow = DataBatch::getCorporateMonitoringApprovalFlow();
+        $workflow = [];
+
+        foreach ($flow['steps'] as $status => $config) {
+            $workflow[(int) $status] = [
+                'level' => (int) $config['level_id'],
+                'label' => $config['label'],
+                'role' => $config['role'] ?? null,
+                'unit_mr' => (bool) ($config['unit_mr'] ?? true),
+                'next_status' => $config['next_status'] ?? null,
+                'next_label' => $config['next_label'] ?? null,
+                'can_input' => (bool) ($config['can_input'] ?? false),
+                'can_send' => (bool) ($config['can_send'] ?? false),
+                'can_verify' => (bool) ($config['can_verify'] ?? false),
+                'can_publish' => (bool) ($config['can_publish'] ?? false),
+            ];
+        }
+
+        return $workflow;
+    }
+
+    /**
      * Logic Pengembalian Status (Rejection)
      */
     public static function getReturnStatus($currentStatus, $isUnitMr = false)

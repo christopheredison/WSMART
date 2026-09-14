@@ -147,7 +147,13 @@
                     </div>
                 </div>
                 <div class="row mb-2">
-                    <div class="col-md-5 fw-bold text-muted">Tanggal Selesai</div>
+                    <div class="col-md-5 fw-bold text-muted">Tanggal Selesai (API)</div>
+                    <div class="col-md-7">
+                        {{ !empty($meta['tgl_selesai']) ? \Carbon\Carbon::parse($meta['tgl_selesai'])->translatedFormat('d F Y') : '-' }}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-5 fw-bold text-muted">Tanggal Selesai (+45 Hari)</div>
                     <div class="col-md-7">
                         {{ $project->masa_pelaksanaan_end ? \Carbon\Carbon::parse($project->masa_pelaksanaan_end)->translatedFormat('d F Y') : '-' }}
                     </div>

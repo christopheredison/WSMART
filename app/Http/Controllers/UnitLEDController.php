@@ -87,6 +87,11 @@ class UnitLEDController extends Controller
                 ->addColumn('action', function($row) use ($unitExpired) {
                     return view('unit-led._table_action', compact('row', 'unitExpired'))->render();
                 })
+                ->editColumn('tanggal_kejadian', function($row) {
+                    return $row->tanggal_kejadian
+                        ? Carbon::parse($row->tanggal_kejadian)->locale('id')->translatedFormat('F Y')
+                        : '-';
+                })
                 ->editColumn('nama_kejadian', function($row) {
                     return $row->nama_kejadian ?? '-';
                 })
@@ -717,7 +722,10 @@ class UnitLEDController extends Controller
             // Cek apakah risiko perlu di-close
             $wasClosed = (bool) $riskRegister->is_closed;
             if ($request->input('is_closed') == '1' && !$wasClosed) {
-                $closedAt = now();
+                $month = (int) (optional($monitoring)->month ?? 1);
+                $tahun = (int) (optional($riskRegister->periode)->tahun ?? now()->year);
+                $mon = max(1, min(12, $month));
+                $closedAt = Carbon::create($tahun, $mon, 1)->endOfMonth();
                 $riskRegister->update([
                   'is_closed' => true,
                   'closed_at' => $closedAt,
@@ -727,9 +735,8 @@ class UnitLEDController extends Controller
                     ['risiko_id' => $riskRegister->id],
                 );
 
-                $month = (int) (optional($monitoring)->month ?? 1);
                 $closeNoteText = 'Risiko ditutup melalui konversi ke LED pada '
-                    . $closedAt->format('d-m-Y H:i:s')
+                    . now()->format('d-m-Y H:i:s')
                     . " (Q{$quarter}, Bulan {$month}).";
 
                 RiskMonitoringNote::create([

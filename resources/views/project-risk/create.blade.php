@@ -26,15 +26,6 @@
                 </div>
                 <div class="card-body">
                     <div class="row g-3 gx-md-5">
-                        {{--
-                        <div class="col-md-12">
-                            <div class="form-group d-lg-flex">
-                                <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko</label>
-                                <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
-                                    value="{{ old('target_capaian_kinerja') }}" placeholder="Sasaran Risiko" required></textarea>
-                            </div>
-                        </div>
-                        --}}
                         <div class="col-md-12">
                             <div class="form-group d-lg-flex">
                                 <label class="form-label label-lg-start col-lg-4 col-xxl-3 me-lg-2">Sasaran Risiko</label>
@@ -44,10 +35,24 @@
                                         @foreach($sasaranProyeks as $sasaranProyek)
                                             <option value="{{ $sasaranProyek->id }}" data-kpi="{{ $sasaranProyek->kpi_desc }}">{{ $sasaranProyek->kpi_desc }}</option>
                                         @endforeach
-                                        <option value="other">Sasaran Lainnya</option>
+                                        <option value="other">Ajukan Sasaran Lainnya</option>
                                     </select>
-                                    <textarea class="form-control mt-2 d-none" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
-                                        placeholder="Masukkan Sasaran Risiko Lainnya"></textarea>
+                                    <div class="alert alert-info mt-2 d-none mb-2" id="sasaran-other-guide">
+                                        Sasaran ini perlu persetujuan Divisi Manajemen Risiko sebelum bisa digunakan.
+                                    </div>
+                                    <div class="d-none" id="sasaran-other-box">
+                                        <textarea class="form-control" id="target_capaian_kinerja" name="target_capaian_kinerja" rows="3"
+                                            placeholder="Masukkan usulan sasaran risiko lainnya"></textarea>
+                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" id="btn-submit-sasaran-lainnya">
+                                                <i class="bx bx-send me-1"></i>Ajukan Persetujuan
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btn-refresh-sasaran">
+                                                <i class="bx bx-refresh me-1"></i>Muat Ulang Pilihan Sasaran
+                                            </button>
+                                        </div>
+                                        <small class="text-muted d-block mt-2">Setelah disetujui Divisi Manajemen Risiko, pilih kembali sasaran dari dropdown di atas.</small>
+                                    </div>
                                     <input type="hidden" id="kpi_desc_selected" name="kpi_desc_selected">
                                 </div>
                             </div>
@@ -77,15 +82,29 @@
                                         @foreach ($peristiwaRisikos as $peristiwaRisiko)
                                             <option value="{{ $peristiwaRisiko->id }}">{{ $peristiwaRisiko->title }}</option>
                                         @endforeach
-                                        <option value="other" {{ old('peristiwa_risiko_id') == 'other' || (!empty($projectRisk->rencana_kegiatan) && empty($projectRisk->peristiwa_risiko_id)) ? 'selected' : '' }}>Lainnya</option>
+                                        <option value="other" {{ old('peristiwa_risiko_id') == 'other' ? 'selected' : '' }}>Ajukan Peristiwa Lainnya</option>
                                     </select>
-                                    <textarea
-                                      class="form-control mt-2 {{ (old('peristiwa_risiko_id') == 'other' || (!empty($projectRisk->rencana_kegiatan) && empty($projectRisk->peristiwa_risiko_id))) ? '' : 'd-none' }}"
-                                      id="peristiwa_risiko_lainnya"
-                                      name="rencana_kegiatan"
-                                      rows="3"
-                                      placeholder="Masukkan Peristiwa Risiko Lainnya"
-                                    >{{ old('rencana_kegiatan', $projectRisk->rencana_kegiatan ?? '') }}</textarea>
+                                    <div class="alert alert-info mt-2 d-none mb-2" id="peristiwa-other-guide">
+                                        Peristiwa ini perlu persetujuan Divisi Manajemen Risiko sebelum bisa digunakan.
+                                    </div>
+                                    <div class="d-none" id="peristiwa-other-box">
+                                        <textarea
+                                          class="form-control"
+                                          id="peristiwa_risiko_lainnya"
+                                          name="rencana_kegiatan"
+                                          rows="3"
+                                          placeholder="Masukkan usulan peristiwa risiko lainnya"
+                                        >{{ old('rencana_kegiatan', $projectRisk->rencana_kegiatan ?? '') }}</textarea>
+                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" id="btn-submit-peristiwa-lainnya">
+                                                <i class="bx bx-send me-1"></i>Ajukan Persetujuan
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btn-refresh-peristiwa">
+                                                <i class="bx bx-refresh me-1"></i>Muat Ulang Pilihan Peristiwa
+                                            </button>
+                                        </div>
+                                        <small class="text-muted d-block mt-2">Setelah disetujui Divisi Manajemen Risiko, pilih kembali peristiwa dari dropdown di atas.</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -346,7 +365,7 @@
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                         <div class="form-group form-floating text-center">
                                             <input type="text" class="form-control border-warning" name="batas_waspada[]" id="batas_waspada">
-                                            <label for="batas_waspada_1">Batas Waspada</label>
+                                            <label for="batas_waspada_1">Batas Siaga</label>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
@@ -502,18 +521,32 @@
     $('#peristiwa_risiko').on('change', function() {
         const selectedValue = $(this).val();
         const otherTextarea = $('#peristiwa_risiko_lainnya');
+        const otherGuide = $('#peristiwa-other-guide');
+        const otherBox = $('#peristiwa-other-box');
+        const refreshBtn = $('#btn-refresh-peristiwa');
 
         if (selectedValue === 'other') {
-            otherTextarea.removeClass('d-none').attr('required', true);
+            otherGuide.removeClass('d-none');
+            otherBox.removeClass('d-none');
+            otherTextarea.removeClass('d-none').attr('required', false);
         } else {
+            otherGuide.addClass('d-none');
+            otherBox.addClass('d-none');
             otherTextarea.addClass('d-none').attr('required', false).val('');
+            refreshBtn.addClass('d-none');
         }
     });
 
     $(document).ready(function() {
+        const submitSasaranUrl = @json(route('projects.sasaran-lainnya.submit', ['project' => $projectPeriodeList->id]));
+        const submitPeristiwaUrl = @json(route('projects.peristiwa-lainnya.submit', ['project' => $projectPeriodeList->id]));
         $('.select2').select2({
             width: '100%',
         });
+
+        if ($('#peristiwa_risiko').val() === 'other') {
+            $('#peristiwa_risiko').trigger('change');
+        }
 
         $('.rupiah-input').inputmask({
             alias: 'numeric',
@@ -553,21 +586,155 @@
             const selectedValue = $(this).val();
             const targetTextarea = $('#target_capaian_kinerja');
             const kpiDescSelected = $('#kpi_desc_selected');
+            const otherGuide = $('#sasaran-other-guide');
+            const otherBox = $('#sasaran-other-box');
+            const refreshBtn = $('#btn-refresh-sasaran');
 
             if (selectedValue === 'other') {
-                // Jika opsi "Lainnya" dipilih, tampilkan textarea
-                targetTextarea.removeClass('d-none').attr('required', true);
+                otherGuide.removeClass('d-none');
+                otherBox.removeClass('d-none');
+                targetTextarea.removeClass('d-none').attr('required', false);
                 kpiDescSelected.val('');
             } else if (selectedValue) {
-                // Jika opsi lain dipilih, sembunyikan textarea dan isi dengan nilai dari data-kpi
                 const kpiDesc = $(this).find('option:selected').data('kpi');
-                targetTextarea.addClass('d-none').attr('required', false);
+                otherGuide.addClass('d-none');
+                otherBox.addClass('d-none');
+                targetTextarea.addClass('d-none').attr('required', false).val('');
+                refreshBtn.addClass('d-none');
                 kpiDescSelected.val(kpiDesc);
             } else {
-                // Jika tidak ada opsi yang dipilih
-                targetTextarea.addClass('d-none').attr('required', false);
+                otherGuide.addClass('d-none');
+                otherBox.addClass('d-none');
+                targetTextarea.addClass('d-none').attr('required', false).val('');
+                refreshBtn.addClass('d-none');
                 kpiDescSelected.val('');
             }
+        });
+
+        $('#btn-submit-sasaran-lainnya').on('click', function() {
+            const value = $('#target_capaian_kinerja').val().trim();
+            const btn = $(this);
+
+            if (!value) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Data Belum Lengkap',
+                    text: 'Mohon isi deskripsi sasaran lainnya terlebih dahulu.',
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Ajukan sasaran ini?',
+                html: `Sasaran <strong>${$('<div>').text(value).html()}</strong> akan dikirim ke Divisi Manajemen Risiko untuk diverifikasi.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, Ajukan',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                btn.prop('disabled', true);
+
+                $.ajax({
+                    url: submitSasaranUrl,
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        kpi_desc: value,
+                    },
+                    success: function(response) {
+                        $('#btn-refresh-sasaran').removeClass('d-none');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Pengajuan Berhasil',
+                            text: response.message || 'Pengajuan telah dikirim ke MR.',
+                        });
+                    },
+                    error: function(xhr) {
+                        const msg = xhr?.responseJSON?.message || 'Gagal mengirim pengajuan sasaran. Silakan coba lagi.';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Pengajuan Gagal',
+                            text: msg,
+                        });
+                    },
+                    complete: function() {
+                        btn.prop('disabled', false);
+                    }
+                });
+            });
+        });
+
+        $('#btn-refresh-sasaran').on('click', function() {
+            window.location.reload();
+        });
+
+        $('#btn-submit-peristiwa-lainnya').on('click', function() {
+            const value = $('#peristiwa_risiko_lainnya').val().trim();
+            const btn = $(this);
+
+            if (!value) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Data Belum Lengkap',
+                    text: 'Mohon isi deskripsi peristiwa risiko lainnya terlebih dahulu.',
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Ajukan peristiwa ini?',
+                html: `Peristiwa <strong>${$('<div>').text(value).html()}</strong> akan dikirim ke Divisi Manajemen Risiko untuk diverifikasi.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, Ajukan',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                btn.prop('disabled', true);
+
+                $.ajax({
+                    url: submitPeristiwaUrl,
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        title: value,
+                    },
+                    success: function(response) {
+                        $('#btn-refresh-peristiwa').removeClass('d-none');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Pengajuan Berhasil',
+                            text: response.message || 'Pengajuan telah dikirim ke MR.',
+                        });
+                    },
+                    error: function(xhr) {
+                        const msg = xhr?.responseJSON?.message || 'Gagal mengirim pengajuan peristiwa. Silakan coba lagi.';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Pengajuan Gagal',
+                            text: msg,
+                        });
+                    },
+                    complete: function() {
+                        btn.prop('disabled', false);
+                    }
+                });
+            });
+        });
+
+        $('#btn-refresh-peristiwa').on('click', function() {
+            window.location.reload();
         });
 
         try {
@@ -697,7 +864,7 @@
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
                                 <div class="form-group form-floating text-center">
                                     <input type="text" class="form-control border-warning" name="batas_waspada[]">
-                                    <label for="batas_waspada_1">Batas Waspada</label>
+                                    <label for="batas_waspada_1">Batas Siaga</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3 col-lg-auto flex-lg-grow-1">
@@ -896,6 +1063,16 @@
             const action = $(this).data('action');
             const form = $('#main-form');
             const url = form.attr('action');
+            const selectedSasaran = $('#sasaran_proyek_id').val();
+
+            if (selectedSasaran === 'other') {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Sasaran Belum Bisa Dipakai',
+                    text: 'Silakan ajukan sasaran lainnya terlebih dahulu, lalu tunggu persetujuan MR sebelum menyimpan risiko.',
+                });
+                return;
+            }
 
             // Penting: inputmask kadang perlu di unmask manual jika tidak autoUnmask
             const data = new FormData(form[0]);

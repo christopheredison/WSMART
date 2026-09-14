@@ -112,7 +112,7 @@
                                 <th width="35%">Key Risk Indicator</th>
                                 <th width="15%">Satuan KRI</th>
                                 <th width="15%">Batas Aman</th>
-                                <th width="15%">Batas Waspada</th>
+                                <th width="15%">Batas Siaga</th>
                                 <th width="15%">Batas Bahaya</th>
                             </tr>
                         </thead>

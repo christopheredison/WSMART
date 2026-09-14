@@ -9,14 +9,26 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use Carbon\Carbon;
 
-class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
+class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithColumnFormatting, WithStrictNullComparison
 {
+    public function columnFormats(): array
+    {
+        $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
+
+        return [
+            'I' => $currencyFormat, // Biaya Perlakuan Risiko
+        ];
+    }
+
     private $risikos;
     private $timelineData = [];
     private $opsiPerlakuan = [];
@@ -107,12 +119,45 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
                 $sheet->getStyle('A1:' . $lastColLetter . '2')->applyFromArray($style);
 
                 $lastRow = $sheet->getHighestRow();
-                if ($lastRow > 2) {
+                $dataStartRow = 3;
+                if ($lastRow >= $dataStartRow) {
+                    // Pastikan biaya tersimpan sebagai angka
+                    for ($row = $dataStartRow; $row <= $lastRow; $row++) {
+                        $raw = $sheet->getCell('I' . $row)->getValue();
+                        if (is_string($raw)) {
+                            $raw = preg_replace('/[^0-9.\-]/', '', $raw);
+                        }
+                        $sheet->setCellValueExplicit('I' . $row, (float) ($raw ?: 0), DataType::TYPE_NUMERIC);
+                    }
+
                     $sheet->getStyle('A3:' . $lastColLetter . $lastRow)->applyFromArray([
                         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                         'alignment' => ['vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true]
                     ]);
                     $this->applyTimelineColoring($sheet, $lastRow);
+
+                    // Baris TOTAL biaya perlakuan
+                    $totalRow = $lastRow + 1;
+                    $sheet->setCellValue('A' . $totalRow, 'TOTAL');
+                    $sheet->mergeCells('A' . $totalRow . ':H' . $totalRow);
+                    $sheet->setCellValue('I' . $totalRow, "=SUM(I{$dataStartRow}:I{$lastRow})");
+
+                    $sheet->getStyle('A' . $totalRow . ':' . $lastColLetter . $totalRow)->applyFromArray([
+                        'font' => ['bold' => true],
+                        'fill' => [
+                            'fillType' => Fill::FILL_SOLID,
+                            'startColor' => ['rgb' => 'FFF2CC'],
+                        ],
+                        'borders' => [
+                            'allBorders' => ['borderStyle' => Border::BORDER_THIN],
+                        ],
+                        'alignment' => [
+                            'vertical' => Alignment::VERTICAL_CENTER,
+                        ],
+                    ]);
+                    $sheet->getStyle('A' . $totalRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
+                    $sheet->getStyle('I' . $totalRow)->getNumberFormat()->setFormatCode($currencyFormat);
                 }
             },
         ];
@@ -189,8 +234,8 @@ class RencanaPerlakuanRisikoSheet implements FromCollection, WithHeadings, WithT
             'opsi' => $this->opsiPerlakuan[$perlakuan->opsi_perlakuan_risiko] ?? '-',
             'rencana' => $perlakuan->rencana_perlakuan_risiko ?? '-',
             'output' => $perlakuan->output_perlakuan_risiko ?? '-',
-            'biaya' => $perlakuan->biaya_perlakuan_risiko ? 'Rp ' . number_format($perlakuan->biaya_perlakuan_risiko, 0, ',', '.') : '-',
-            'progress' => ($perlakuan->lastMonitoring->progress_rencana_perlakuan_risiko ?? 0) . '%',
+            'biaya' => (float) ($perlakuan->biaya_perlakuan_risiko ?: 0),
+            'progress' => ($perlakuan->lastMonitoring?->progress_rencana_perlakuan_risiko ?? 0) . '%',
             'pic' => $perlakuan->pic ?? '-',
         ];
 

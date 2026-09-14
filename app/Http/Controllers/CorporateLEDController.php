@@ -50,6 +50,11 @@ class CorporateLEDController extends Controller
                 ->addColumn('action', function($row) {
                     return view('corporate-led._table_action', compact('row'))->render();
                 })
+                ->editColumn('tanggal_kejadian', function($row) {
+                    return $row->tanggal_kejadian
+                        ? Carbon::parse($row->tanggal_kejadian)->locale('id')->translatedFormat('F Y')
+                        : '-';
+                })
                 ->editColumn('nama_kejadian', function($row) {
                     return $row->nama_kejadian ?? '-';
                 })

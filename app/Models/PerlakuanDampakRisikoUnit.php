@@ -32,7 +32,7 @@ class PerlakuanDampakRisikoUnit extends Model
 
     public function dampakRisikoUnit()
     {
-        return $this->belongsTo(DampakRisikoUnit::class, 'dampak_risiko_id', 'id');
+        return $this->belongsTo(DampakRisikoUnit::class, 'dampak_risiko_id', 'id')->withTrashed();
     }
 
     public function picJabatan()

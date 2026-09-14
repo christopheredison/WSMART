@@ -5,7 +5,7 @@
     <form class="card" method="POST" action="{{ route('unit.store') }}">
       @csrf
       <div class="card-header d-flex flex-between-center">
-        <h2 class="h4">Buat Unit Baru</h2>
+        <h2 class="h4">Buat Divisi Baru</h2>
         <div class="lead__icon lead__icon_sm">
           <div class="svg-icon svg-icon-secondary">
             @include('partials.icon-tool')
@@ -25,7 +25,7 @@
         @endif
         <div class="row gx-0 gy-3">
           <div class="form-group d-md-flex">
-            <label class="form-label label-md-start col-md-3">Tipe Unit</label>
+            <label class="form-label label-md-start col-md-3">Tipe Divisi</label>
             <select class="form-select js-select-hide-search" name="unit_type_id">
               <option value="Tipe Unit" selected disabled>Pilih</option>
               @foreach($unitType as $id => $name)
@@ -44,8 +44,8 @@
             </div>
           </div>
           <div class="form-group d-md-flex">
-            <label class="form-label label-md-start col-md-3">Nama Unit</label>
-            <input class="form-control" id="name" name="name" type="text" placeholder="Isi Nama Unit"
+            <label class="form-label label-md-start col-md-3">Nama Divisi</label>
+            <input class="form-control" id="name" name="name" type="text" placeholder="Isi Nama Divisi"
               value="{{ old('name') }}" />
           </div>
           <div class="form-group d-md-flex">

@@ -47,6 +47,7 @@
               </th>
               <th class="sort white-space-nowrap" data-sort="no">#</th>
               <th>Name</th>
+              <th class="no-sort">Notes</th>
               <th class="no-sort">Permissions</th>
               <th class="no-sort">Action</th>
             </tr>
@@ -62,6 +63,7 @@
               </td>
               <td class="index-number">{{ $index + 1 }}</td>
               <td>{{ $item->name }}</td>
+              <td class="mw-15r">{{ $item->notes ?: '-' }}</td>
               <td class="mw-20r">
                 @foreach ($item->permissions as $permission)
                 {{ ucwords(str_replace('_', ' ', $permission->name)) }}

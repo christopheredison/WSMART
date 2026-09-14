@@ -43,6 +43,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\SasaranProyek;
 use App\Models\DataBatch;
 use App\Models\RiskNote;
+use App\Models\RiskMonitoringNote;
+use App\Models\KamusRisikoProject;
 use App\Models\ApprovalLog;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalStep;
@@ -245,12 +247,14 @@ class ProjectRiskController extends BasicCRUDController
                     return rejectedText;
                 }
                 if (data === 6) {
-                    return "Published";
-                }
-                if (data === 6) {
-                    statusText = "Published";
-                    if (row.request_edit == 1) statusText += " (Request Edit)";
-                    else if (row.request_edit == 3) statusText += " (Request Edit Ditolak)";
+                    let html = `<div class="d-flex flex-column align-items-center gap-1"><div>Published</div>`;
+                    if (row.request_edit == 1) {
+                        html += `<a href="javascript:void(0)" class="badge bg-warning text-dark rounded-pill px-2 d-inline-flex align-items-center" onclick="approveRequestEdit(${row.id})" title="Klik untuk verifikasi request edit">Request Edit<i class="bx bx-info-circle ms-1" style="font-size:0.95em;"></i></a>`;
+                    } else if (row.request_edit == 3) {
+                        html += `<span class="badge bg-secondary-subtle text-dark border" style="font-size:10px;">Request Edit Ditolak</span>`;
+                    }
+                    html += `</div>`;
+                    return html;
                 }
                 if (data === 7) {
                     return "Rejected by Risk Officer MR";
@@ -268,17 +272,74 @@ class ProjectRiskController extends BasicCRUDController
             'searchable' => false,
             'class' => 'text-center align-start',
             'render' => '(data, type, row) => {
-                // Cek nilai is_closed (biasanya 1 untuk closed, 0 untuk open)
-                return (row.is_closed == 1)
-                    ? `<div class="badge bg-danger rounded-pill px-2 mt-auto">
-                        Closed
-                      </div>`
-                    : `<div class="badge bg-success rounded-pill px-2 mt-auto">
-                        Open
-                      </div>`;
+                if (row.is_closed == 1 || row.is_closed === true) {
+                    let icon = "";
+                    if (row.closed_at_formatted || row.closed_at) {
+                        const formatted = row.closed_at_formatted || row.closed_at;
+                        icon = `<i class="bx bx-info-circle ms-1" style="cursor:pointer;font-size:0.95em;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-placement="top" data-bs-content="Ditutup pada: ${formatted}" title=""></i>`;
+                    }
+                    return `<div class="badge bg-danger rounded-pill px-2 mt-auto d-inline-flex align-items-center">Closed${icon}</div>`;
+                }
+                if (row.close_request == 1) {
+                    return `<div class="d-flex flex-column align-items-center gap-1">
+                        <a href="javascript:void(0)" class="badge bg-warning text-dark rounded-pill px-2 d-inline-flex align-items-center" onclick="verifyCloseRequest(${row.id})" title="Klik untuk verifikasi penutupan">Pengajuan Tutup Risiko<i class="bx bx-info-circle ms-1" style="font-size:0.95em;"></i></a>
+                        <button type="button" class="btn btn-sm btn-outline-warning py-0 px-2" onclick="verifyCloseRequest(${row.id})" style="font-size:11px;">Verifikasi Penutupan</button>
+                    </div>`;
+                }
+                if (row.close_request == 3) {
+                    return `<div class="d-flex flex-column align-items-center gap-1">
+                        <div class="badge bg-success rounded-pill px-2">Open</div>
+                        <span class="badge bg-secondary-subtle text-dark border" style="font-size:10px;">Pengajuan Tutup Ditolak</span>
+                    </div>`;
+                }
+                return `<div class="badge bg-success rounded-pill px-2 mt-auto">Open</div>`;
             }',
         ],
     ];
+
+    /**
+     * Ambil batch risiko proyek yang benar dan tutup batch lama yang tertinggal.
+     */
+    private function getOrCreateCurrentRiskBatch(int $projectId, int $periodeId = 0): DataBatch
+    {
+        return DB::transaction(function () use ($projectId, $periodeId) {
+            $baseQuery = DataBatch::where('project_id', $projectId)
+                ->where('periode_id', $periodeId)
+                ->where('type', 2);
+
+            $latestBatch = (clone $baseQuery)
+                ->orderByDesc('batch')
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->first();
+
+            if ($latestBatch) {
+                // Batch yang lebih lama tidak boleh tetap aktif ketika batch yang lebih
+                // baru sudah berjalan atau bahkan sudah selesai.
+                (clone $baseQuery)
+                    ->where('id', '!=', $latestBatch->id)
+                    ->where('finish', false)
+                    ->update([
+                        'status' => DataBatch::STATUS_FINISH,
+                        'finish' => true,
+                    ]);
+            }
+
+            if (!$latestBatch || $latestBatch->finish) {
+                return DataBatch::create([
+                    'project_id' => $projectId,
+                    'periode_id' => $periodeId,
+                    'type' => 2,
+                    'batch' => ($latestBatch?->batch ?? 0) + 1,
+                    'status' => DataBatch::STATUS_PROSES,
+                    'step_verification' => 0,
+                    'finish' => false,
+                ]);
+            }
+
+            return $latestBatch;
+        });
+    }
 
     public function index() {
         $projectPeriodeListId = request()->route('project');
@@ -289,23 +350,7 @@ class ProjectRiskController extends BasicCRUDController
         $user = request()->user();
         $levelId = $user->level_id;
 
-        $dataBatch = DataBatch::where('project_id', $projectId)
-                      ->where('periode_id', $periodeId)
-                      ->where('type', 2)
-                      ->where('finish', false)
-                      ->orderBy('batch', 'desc')
-                      ->first();
-
-        if(!$dataBatch){
-            $dataBatch = DataBatch::create([
-                'project_id' => $projectId,
-                'periode_id' => $periodeId,
-                'type' => 2,
-                'status' => DataBatch::STATUS_PROSES,
-                'step_verification' => 0,
-                'finish' => false
-            ]);
-        }
+        $dataBatch = $this->getOrCreateCurrentRiskBatch($projectId, $periodeId);
         $status = $dataBatch->status;
 
         $is_mr = $user->unit ? ($user->unit->unit_mr == 1) : false;
@@ -331,6 +376,7 @@ class ProjectRiskController extends BasicCRUDController
                     'projectRiskAnalisa.skalaProbabilitasResidual',
                     'projectRiskAnalisa.skalaDampakObj',
                     'projectRiskAnalisa.skalaDampakResidualObj',
+                    'closeRequestedBy:id,name',
                 ])
                 ->orderBy('project_risks.is_closed', 'asc')
                 ->orderBy('project_risk_analisas.skala_risiko', 'desc')
@@ -406,8 +452,8 @@ class ProjectRiskController extends BasicCRUDController
                 $this->tableLegend[] = ['icon' => '<span class="bx bx-message-square-edit text-info"></span>', 'label' => 'Request Edit Risiko'];
             }
 
-            // Tombol Approve Request Edit untuk Risk Owner MR (Level 2 + MR)
-            if ($levelId == 2 && $is_mr) {
+            // Tombol Approve Request Edit mengikuti konfigurasi di model ProjectRisk
+            if (ProjectRisk::canVerifyRequestEdit($user)) {
                 $this->tableActions[] = [
                     'label' => '<span class="bx bx-check-double text-success"></span>',
                     'btn_icon' => true,
@@ -417,6 +463,16 @@ class ProjectRiskController extends BasicCRUDController
                     'active_state' => 'function(id, type, row) { return row.status === 6 && row.request_edit == 1; }'
                 ];
                 $this->tableLegend[] = ['icon' => '<span class="bx bx-check-double text-success"></span>', 'label' => 'Setujui Request Edit'];
+
+                $this->tableActions[] = [
+                    'label' => '<span class="bx bx-lock-alt text-warning"></span>',
+                    'btn_icon' => true,
+                    'action' => 'script',
+                    'script' => 'verifyCloseRequest($(this).data("id"))',
+                    'title' => 'Verifikasi Penutupan Risiko',
+                    'active_state' => 'function(id, type, row) { return row.close_request == 1 && !(row.is_closed == 1 || row.is_closed === true); }'
+                ];
+                $this->tableLegend[] = ['icon' => '<span class="bx bx-lock-alt text-warning"></span>', 'label' => 'Verifikasi Penutupan Risiko'];
             }
 
 
@@ -701,7 +757,11 @@ class ProjectRiskController extends BasicCRUDController
         $submitRequestRoute = route('projects.risks.submit-request-edit');
         $approveRequestRoute = route('projects.risks.approve-request-edit');
         $rejectRequestRoute = route('projects.risks.reject-request-edit');
+        $approveCloseRoute = route('projects.risks.approve-close-request');
+        $rejectCloseRoute = route('projects.risks.reject-close-request');
         $reopenRoute = route('projects.risks.reopen', ['project' => request()->route('project'), 'risk' => ':id']);
+        $riskDetailUrlTemplate = route('projects.risks.view', ['project' => request()->route('project'), 'risk' => '__RISK_ID__']);
+        $canVerifyClose = ProjectRisk::canVerifyRequestEdit($user) ? 'true' : 'false';
 
         // CEK APAKAH ADA PERMINTAAN AUTO-VERIFY DARI URL
         $autoVerifyJs = '';
@@ -717,7 +777,7 @@ class ProjectRiskController extends BasicCRUDController
                 });
             ";
 
-            if ($levelId == 2 && $is_mr) {
+            if (ProjectRisk::canVerifyRequestEdit($user)) {
                 $riskToVerify = ProjectRisk::with('peristiwaRisiko')->find($autoVerifyId);
 
                 if ($riskToVerify && $riskToVerify->request_edit == 1) {
@@ -739,8 +799,48 @@ class ProjectRiskController extends BasicCRUDController
             }
         }
 
+        // Auto-verify close request dari notifikasi
+        $autoVerifyCloseId = request()->query('verify_close_request');
+        if ($autoVerifyCloseId) {
+            $autoVerifyJs .= "
+                $(document).ready(function() {
+                    if (typeof clearUrlParam === 'function') {
+                        clearUrlParam();
+                    }
+                });
+            ";
+
+            if (ProjectRisk::canVerifyRequestEdit($user)) {
+                $riskToClose = ProjectRisk::with(['peristiwaRisiko', 'closeRequestedBy'])->find($autoVerifyCloseId);
+                if ($riskToClose && (int) $riskToClose->close_request === ProjectRisk::CLOSE_REQUEST_PENDING) {
+                    $closeRiskName = $riskToClose->peristiwa_risiko_id == 0
+                        ? ($riskToClose->rencana_kegiatan ?? 'Risiko Proyek')
+                        : ($riskToClose->peristiwaRisiko->title ?? 'Risiko Proyek');
+                    $closePayload = json_encode([
+                        'reason' => $riskToClose->close_request_reason ?: 'Tidak ada informasi alasan.',
+                        'riskName' => $closeRiskName,
+                        'requestedAt' => $riskToClose->close_requested_at_formatted ?? '-',
+                        'requestedBy' => optional($riskToClose->closeRequestedBy)->name ?? '-',
+                        'detailUrl' => route('projects.risks.view', [
+                            'project' => $projectPeriodeListId,
+                            'risk' => $riskToClose->id,
+                        ]),
+                    ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+
+                    $autoVerifyJs .= "
+                        $(document).ready(function() {
+                            setTimeout(function() {
+                                verifyCloseRequest({$autoVerifyCloseId}, {$closePayload});
+                            }, 700);
+                        });
+                    ";
+                }
+            }
+        }
+
         // Ambil nama project secara global karena list ini spesifik per project
         $globalProjectName = addslashes($projectPeriodeList->project->project_name);
+        $requestEditVerifierLabel = ProjectRisk::getRequestEditVerifierLabel();
 
         // INJEKSI SCRIPT JAVASCRIPT & MODAL REQUEST EDIT
         $this->extraScripts[] = <<<SCRIPT
@@ -754,7 +854,7 @@ class ProjectRiskController extends BasicCRUDController
                         <div class="modal-body">
                             <input type="hidden" id="request_risk_id">
                             <div class="alert alert-info mb-3">
-                                Risiko ini telah di-Publish. Silakan ajukan request jika perlu melakukan perubahan. Request akan dikirimkan ke <strong>Risk Owner MR</strong>.
+                                Risiko ini telah di-Publish. Silakan ajukan request jika perlu melakukan perubahan. Request akan dikirimkan ke <strong>{$requestEditVerifierLabel}</strong>.
                             </div>
                             <div class="form-group mb-0">
                                 <label class="form-label fw-bold">Alasan Perubahan Data Risiko <span class="text-danger">*</span></label>
@@ -787,7 +887,7 @@ class ProjectRiskController extends BasicCRUDController
 
                 Swal.fire({
                     title: 'Kirim Request?',
-                    text: 'Request edit risiko akan dikirimkan ke Risk Owner MR.',
+                    text: 'Request edit risiko akan dikirimkan ke {$requestEditVerifierLabel}.',
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonText: 'Ya, Kirim',
@@ -818,15 +918,24 @@ class ProjectRiskController extends BasicCRUDController
             }
 
             function clearUrlParam() {
-                if (window.location.search.includes('verify_request_edit')) {
-                    const url = new URL(window.location);
+                const url = new URL(window.location);
+                let changed = false;
+                if (url.searchParams.has('verify_request_edit')) {
                     url.searchParams.delete('verify_request_edit');
+                    changed = true;
+                }
+                if (url.searchParams.has('verify_close_request')) {
+                    url.searchParams.delete('verify_close_request');
+                    changed = true;
+                }
+                if (changed) {
                     window.history.replaceState({}, '', url);
                 }
             }
 
             // Menerima parameter kedua (manualReason) jika ditrigger dari URL
             function approveRequestEdit(id, manualReason = null, manualRiskName = null) {
+                const canVerify = {$canVerifyClose};
                 const table = $('.ajax-datatable').DataTable();
                 const rowData = table.rows().data().toArray().find(r => r.id == id);
 
@@ -849,6 +958,21 @@ class ProjectRiskController extends BasicCRUDController
                     } else {
                         riskName = (rowData.peristiwa_risiko?.title) ? rowData.peristiwa_risiko.title : (rowData.peristiwa_risiko || 'Risiko Proyek');
                     }
+                }
+
+                if (!canVerify) {
+                    Swal.fire({
+                        title: 'Detail Request Edit',
+                        icon: 'info',
+                        html: `<div class="text-start">
+                            <p class="mb-2">Risiko: <strong>\${riskName}</strong></p>
+                            <div class="p-3 rounded bg-light border">
+                                <div><strong>Alasan Request Edit:</strong><br><span>\${reason}</span></div>
+                            </div>
+                        </div>`,
+                        confirmButtonText: 'Tutup'
+                    });
+                    return;
                 }
 
                 Swal.fire({
@@ -919,6 +1043,157 @@ class ProjectRiskController extends BasicCRUDController
                 });
             }
 
+            function verifyCloseRequest(id, preset = null) {
+                const canVerify = {$canVerifyClose};
+                const table = $('.ajax-datatable').DataTable();
+                const rowData = table.rows().data().toArray().find(r => String(r.id) === String(id));
+
+                let reason = 'Tidak ada informasi alasan.';
+                let riskName = 'Risiko Proyek';
+                let requestedAt = '-';
+                let requestedBy = '-';
+                let detailUrl = '{$riskDetailUrlTemplate}'.replace('__RISK_ID__', id);
+
+                if (preset && typeof preset === 'object') {
+                    reason = preset.reason || reason;
+                    riskName = preset.riskName || riskName;
+                    requestedAt = preset.requestedAt || requestedAt;
+                    requestedBy = preset.requestedBy || requestedBy;
+                    if (preset.detailUrl) detailUrl = preset.detailUrl;
+                } else if (rowData) {
+                    reason = rowData.close_request_reason || reason;
+                    requestedAt = rowData.close_requested_at_formatted || rowData.close_requested_at || '-';
+                    requestedBy = (rowData.close_requested_by && rowData.close_requested_by.name)
+                        ? rowData.close_requested_by.name
+                        : (rowData.close_requested_by_name || '-');
+                    if (rowData.peristiwa_risiko_id == 0) {
+                        riskName = rowData.rencana_kegiatan || riskName;
+                    } else {
+                        riskName = (rowData.peristiwa_risiko && rowData.peristiwa_risiko.title)
+                            ? rowData.peristiwa_risiko.title
+                            : riskName;
+                    }
+                }
+
+                const detailLinkHtml = detailUrl
+                    ? `<div class="mt-3 text-end"><a href="\${detailUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary"><span class="bx bx-link-external me-1"></span>Lihat Detail Risiko</a></div>`
+                    : '';
+
+                if (!canVerify) {
+                    Swal.fire({
+                        title: 'Detail Pengajuan Tutup Risiko',
+                        icon: 'info',
+                        html: `<div class="text-start">
+                            <p class="mb-2">Risiko: <strong>\${riskName}</strong></p>
+                            <div class="p-3 rounded bg-light border">
+                                <div class="mb-2"><strong>Alasan Penutupan:</strong><br><span>\${reason}</span></div>
+                                <div class="mb-2"><strong>Tanggal Pengajuan:</strong><br><span>\${requestedAt}</span></div>
+                                <div><strong>Diajukan Oleh:</strong><br><span>\${requestedBy}</span></div>
+                            </div>
+                            \${detailLinkHtml}
+                        </div>`,
+                        confirmButtonText: 'Tutup'
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Verifikasi Penutupan Risiko',
+                    icon: 'warning',
+                    width: 640,
+                    html: `<div class="text-start">
+                        <p class="mb-3">Detail pengajuan penutupan untuk risiko <strong>\${riskName}</strong> pada proyek <strong>{$globalProjectName}</strong>:</p>
+                        <div class="p-3 mb-3 rounded bg-light border">
+                            <div class="mb-2"><strong>Alasan Penutupan:</strong><br><span class="text-dark">\${reason}</span></div>
+                            <div class="mb-2"><strong>Tanggal Pengajuan:</strong><br><span class="text-dark">\${requestedAt}</span></div>
+                            <div><strong>Diajukan Oleh:</strong><br><span class="text-dark">\${requestedBy}</span></div>
+                        </div>
+                        \${detailLinkHtml}
+                        <div class="form-check p-3 mt-3 rounded border border-primary-subtle bg-primary-subtle">
+                            <input class="form-check-input" type="checkbox" id="addToKamusRisiko" checked>
+                            <label class="form-check-label fw-semibold" for="addToKamusRisiko">
+                                Masukkan risiko ini ke Kamus Risiko
+                            </label>
+                            <div class="form-text">Centang jika risiko yang ditutup perlu masuk ke kamus risiko proyek.</div>
+                        </div>
+                    </div>`,
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: '<span class="bx bx-check"></span> Terima Close Risiko',
+                    denyButtonText: '<span class="bx bx-x"></span> Tolak Close Risiko',
+                    cancelButtonText: 'Batal',
+                    customClass: {
+                        confirmButton: 'btn btn-success me-2',
+                        denyButton: 'btn btn-danger me-2',
+                        cancelButton: 'btn btn-secondary'
+                    },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const addToKamus = document.getElementById('addToKamusRisiko')?.checked ? 1 : 0;
+                        Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                        $.ajax({
+                            url: '{$approveCloseRoute}',
+                            type: 'POST',
+                            data: {
+                                _token: '{$csrfToken}',
+                                risk_id: id,
+                                add_to_kamus: addToKamus
+                            },
+                            success: function(res) {
+                                Swal.fire('Berhasil', res.message, 'success').then(() => {
+                                    clearUrlParam();
+                                    table.ajax.reload(null, false);
+                                });
+                            },
+                            error: function(err) {
+                                Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                            }
+                        });
+                    } else if (result.isDenied) {
+                        Swal.fire({
+                            title: 'Tolak Close Risiko',
+                            input: 'textarea',
+                            inputLabel: 'Alasan penolakan',
+                            inputPlaceholder: 'Tuliskan alasan penolakan penutupan risiko...',
+                            inputAttributes: { 'aria-label': 'Alasan penolakan' },
+                            showCancelButton: true,
+                            confirmButtonText: 'Ya, Tolak',
+                            cancelButtonText: 'Batal',
+                            confirmButtonColor: '#dc3545',
+                            preConfirm: (value) => {
+                                if (!value || !value.trim()) {
+                                    Swal.showValidationMessage('Alasan penolakan wajib diisi.');
+                                    return false;
+                                }
+                                return value.trim();
+                            }
+                        }).then((denyResult) => {
+                            if (!denyResult.isConfirmed) return;
+                            Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                            $.ajax({
+                                url: '{$rejectCloseRoute}',
+                                type: 'POST',
+                                data: {
+                                    _token: '{$csrfToken}',
+                                    risk_id: id,
+                                    notes: denyResult.value
+                                },
+                                success: function(res) {
+                                    Swal.fire('Ditolak', res.message, 'info').then(() => {
+                                        clearUrlParam();
+                                        table.ajax.reload(null, false);
+                                    });
+                                },
+                                error: function(err) {
+                                    Swal.fire('Gagal', err.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                                }
+                            });
+                        });
+                    }
+                });
+            }
+
             function submitEskalasiForm(formId, actionText) {
                 Swal.fire({
                     title: 'Konfirmasi',
@@ -959,22 +1234,12 @@ class ProjectRiskController extends BasicCRUDController
                         } else {
                             let html = '';
                             notes.forEach(note => {
-                                // Penyesuaian Badge Status Note
-                                let statusBadge = '';
-                                if (note.status == 1) {
-                                    statusBadge = '<span class="badge bg-success-subtle text-success">Diterima / Disetujui</span>';
-                                } else if (note.status == 2) {
-                                    statusBadge = '<span class="badge bg-danger-subtle text-danger">Ditolak</span>';
-                                } else if (note.status == 3) {
-                                    statusBadge = '<span class="badge bg-warning-subtle text-warning">Request Edit</span>';
-                                } else {
-                                    statusBadge = '<span class="badge bg-secondary-subtle text-secondary">Info</span>';
-                                }
-
-                                const formattedDate = new Date(note.created_at).toLocaleString('id-ID', {
-                                    day: '2-digit', month: 'short', year: 'numeric',
-                                    hour: '2-digit', minute: '2-digit'
-                                });
+                                const statusBadge = (window.RiskNoteHelpers && window.RiskNoteHelpers.statusBadge)
+                                    ? window.RiskNoteHelpers.statusBadge(note.status)
+                                    : '<span class="badge bg-primary-subtle text-primary">Informasi</span>';
+                                const formattedDate = (window.RiskNoteHelpers && window.RiskNoteHelpers.formatDateWib)
+                                    ? window.RiskNoteHelpers.formatDateWib(note.created_at)
+                                    : new Date(note.created_at).toLocaleString('id-ID');
 
                                 html += `
                                 <div class="card mb-3 shadow-sm">
@@ -1231,6 +1496,21 @@ class ProjectRiskController extends BasicCRUDController
             }
 
             {$autoVerifyJs}
+
+            function initClosedStatusPopovers(root) {
+                const scope = root || document;
+                scope.querySelectorAll('[data-bs-toggle="popover"]').forEach(function (el) {
+                    const existing = bootstrap.Popover.getInstance(el);
+                    if (existing) {
+                        existing.dispose();
+                    }
+                    new bootstrap.Popover(el);
+                });
+            }
+
+            $(document).on('draw.dt', '.ajax-datatable', function () {
+                initClosedStatusPopovers(this);
+            });
             </script>
         SCRIPT;
 
@@ -1294,9 +1574,7 @@ class ProjectRiskController extends BasicCRUDController
 
         $targetLink = route('projects.risks.index', ['project' => $risk->project_periode_list_id]) . '?verify_request_edit=' . $risk->id;
 
-        $this->sendNotificationCustom(
-            'RW_MR',
-            $risk->project_periode_list_id,
+        ProjectRisk::notifyRequestEditVerifiers(
             'Request Edit Risiko',
             'Risk Officer Proyek mengajukan request edit untuk risiko (' . $riskName . ') pada proyek ' . $projectName . '. Alasan: ' . $request->reason,
             $targetLink,
@@ -1312,6 +1590,10 @@ class ProjectRiskController extends BasicCRUDController
 
         $riskIds = is_array($request->risk_id) ? $request->risk_id : [$request->risk_id];
         $user = $request->user();
+
+        if (!ProjectRisk::canVerifyRequestEdit($user)) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk memverifikasi request edit.'], 403);
+        }
 
         $catatan = $request->notes ?? 'Menyetujui Request Edit Risiko. Akses telah dibuka (Unlocked).';
 
@@ -1335,22 +1617,10 @@ class ProjectRiskController extends BasicCRUDController
                     'user_id' => $user->id,
                 ]);
 
-                $dataBatch = DataBatch::where('project_id', $risk->project_id)
-                        ->where('type', 2)
-                        ->where('finish', false)
-                        ->orderBy('batch', 'desc')
-                        ->first();
-
-                if (!$dataBatch) {
-                    DataBatch::create([
-                        'project_id' => $risk->project_id,
-                        'periode_id' => $risk->periode_id,
-                        'type' => 2,
-                        'status' => DataBatch::STATUS_PROSES,
-                        'step_verification' => 0,
-                        'finish' => false
-                    ]);
-                }
+                $this->getOrCreateCurrentRiskBatch(
+                    (int) $risk->project_id,
+                    (int) $risk->periode_id
+                );
 
                 $riskName = $risk->peristiwa_risiko_id == 0
                     ? $risk->rencana_kegiatan
@@ -1383,7 +1653,12 @@ class ProjectRiskController extends BasicCRUDController
         $riskIds = is_array($request->risk_id) ? $request->risk_id : [$request->risk_id];
         $user = $request->user();
 
+        if (!ProjectRisk::canVerifyRequestEdit($user)) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk memverifikasi request edit.'], 403);
+        }
+
         $catatan = $request->notes ?? 'Menolak Request Edit Risiko.';
+        $rejectedBy = ProjectRisk::resolveRequestEditVerifierLabel($user) ?? 'Divisi MR';
 
         DB::beginTransaction();
         try {
@@ -1412,7 +1687,7 @@ class ProjectRiskController extends BasicCRUDController
                     'RO_PROYEK',
                     $risk->project_periode_list_id,
                     'Request Edit Ditolak',
-                    'Request edit risiko Anda (' . $riskName . ') telah ditolak oleh Risk Owner MR.',
+                    'Request edit risiko Anda (' . $riskName . ') telah ditolak oleh ' . $rejectedBy . '.',
                     $targetLink,
                     'bx bx-x-circle'
                 );
@@ -1422,6 +1697,162 @@ class ProjectRiskController extends BasicCRUDController
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Gagal menolak request: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function approveCloseRequest(Request $request)
+    {
+        $request->validate([
+            'risk_id' => 'required',
+            'add_to_kamus' => 'nullable',
+        ]);
+
+        $user = $request->user();
+        if (!ProjectRisk::canVerifyRequestEdit($user)) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk memverifikasi penutupan risiko.'], 403);
+        }
+
+        $risk = ProjectRisk::with(['peristiwaRisiko', 'project'])->findOrFail($request->risk_id);
+        if ((int) $risk->close_request !== ProjectRisk::CLOSE_REQUEST_PENDING) {
+            return response()->json(['message' => 'Tidak ada pengajuan penutupan yang menunggu verifikasi.'], 422);
+        }
+
+        $addToKamus = filter_var($request->input('add_to_kamus', 0), FILTER_VALIDATE_BOOLEAN);
+        $closedAt = now();
+        $verifierLabel = ProjectRisk::resolveRequestEditVerifierLabel($user) ?? 'Divisi MR';
+
+        DB::beginTransaction();
+        try {
+            $risk->update([
+                'is_closed' => true,
+                'closed_at' => $closedAt,
+                'close_request' => ProjectRisk::CLOSE_REQUEST_APPROVED,
+            ]);
+
+            if ($addToKamus) {
+                KamusRisikoProject::updateOrCreate(
+                    ['project_risk_id' => $risk->id],
+                    ['project_id' => $risk->project_id],
+                );
+            }
+
+            $kamusText = $addToKamus
+                ? 'Risiko dimasukkan ke Kamus Risiko.'
+                : 'Risiko tidak dimasukkan ke Kamus Risiko.';
+
+            $noteText = 'Menyetujui penutupan risiko pada ' . $closedAt->format('d-m-Y H:i:s') . ' WIB'
+                . '. Alasan pengajuan: ' . ($risk->close_request_reason ?? '-')
+                . '. ' . $kamusText;
+
+            RiskNote::create([
+                'risiko_id' => $risk->id,
+                'type' => 2,
+                'status' => RiskNote::STATUS_CLOSE_APPROVED,
+                'notes' => $noteText,
+                'user_id' => $user->id,
+            ]);
+
+            RiskMonitoringNote::create([
+                'risiko_id' => $risk->id,
+                'type' => 2,
+                'user_id' => $user->id,
+                'status' => RiskMonitoringNote::STATUS_CLOSE_APPROVED,
+                'notes' => $noteText,
+                'quarter' => (int) ceil($closedAt->month / 3),
+                'month' => (int) $closedAt->month,
+                'year' => (int) $closedAt->year,
+            ]);
+
+            $riskName = $risk->peristiwa_risiko_id == 0
+                ? $risk->rencana_kegiatan
+                : ($risk->peristiwaRisiko->title ?? 'Risiko Proyek');
+
+            $targetLink = route('projects.risks.index', ['project' => $risk->project_periode_list_id]);
+
+            $this->sendNotificationCustom(
+                'RO_PROYEK',
+                $risk->project_periode_list_id,
+                'Penutupan Risiko Disetujui',
+                'Pengajuan penutupan risiko Anda (' . $riskName . ') telah disetujui oleh ' . $verifierLabel . '.',
+                $targetLink,
+                'bx bx-check-double'
+            );
+
+            DB::commit();
+            return response()->json(['message' => 'Penutupan risiko berhasil disetujui.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal menyetujui penutupan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function rejectCloseRequest(Request $request)
+    {
+        $request->validate([
+            'risk_id' => 'required',
+            'notes' => 'required|string|min:3',
+        ]);
+
+        $user = $request->user();
+        if (!ProjectRisk::canVerifyRequestEdit($user)) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk memverifikasi penutupan risiko.'], 403);
+        }
+
+        $risk = ProjectRisk::with(['peristiwaRisiko', 'project'])->findOrFail($request->risk_id);
+        if ((int) $risk->close_request !== ProjectRisk::CLOSE_REQUEST_PENDING) {
+            return response()->json(['message' => 'Tidak ada pengajuan penutupan yang menunggu verifikasi.'], 422);
+        }
+
+        $catatan = trim($request->notes);
+        $rejectedBy = ProjectRisk::resolveRequestEditVerifierLabel($user) ?? 'Divisi MR';
+
+        DB::beginTransaction();
+        try {
+            $risk->update([
+                'close_request' => ProjectRisk::CLOSE_REQUEST_REJECTED,
+            ]);
+
+            $noteText = 'Menolak penutupan risiko. Alasan Penolakan: ' . $catatan;
+
+            RiskNote::create([
+                'risiko_id' => $risk->id,
+                'type' => 2,
+                'status' => RiskNote::STATUS_CLOSE_REJECTED,
+                'notes' => $noteText,
+                'user_id' => $user->id,
+            ]);
+
+            RiskMonitoringNote::create([
+                'risiko_id' => $risk->id,
+                'type' => 2,
+                'user_id' => $user->id,
+                'status' => RiskMonitoringNote::STATUS_CLOSE_REJECTED,
+                'notes' => $noteText,
+                'quarter' => (int) ceil(now()->month / 3),
+                'month' => (int) now()->month,
+                'year' => (int) now()->year,
+            ]);
+
+            $riskName = $risk->peristiwa_risiko_id == 0
+                ? $risk->rencana_kegiatan
+                : ($risk->peristiwaRisiko->title ?? 'Risiko Proyek');
+
+            $targetLink = route('projects.risks.index', ['project' => $risk->project_periode_list_id]);
+
+            $this->sendNotificationCustom(
+                'RO_PROYEK',
+                $risk->project_periode_list_id,
+                'Penutupan Risiko Ditolak',
+                'Pengajuan penutupan risiko Anda (' . $riskName . ') telah ditolak oleh ' . $rejectedBy . '. Alasan: ' . $catatan,
+                $targetLink,
+                'bx bx-x-circle'
+            );
+
+            DB::commit();
+            return response()->json(['message' => 'Pengajuan penutupan risiko berhasil ditolak.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal menolak penutupan: ' . $e->getMessage()], 500);
         }
     }
 
@@ -1585,7 +2016,10 @@ class ProjectRiskController extends BasicCRUDController
 
             // Cari data sasaran proyek berdasarkan profit_center dan tahun berjalan
             $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)
-                                          // ->where('tahun', $tahunBerjalan)
+                                          ->where(function ($q) {
+                                              $q->whereNull('approval_status')
+                                                ->orWhere('approval_status', SasaranProyek::APPROVAL_APPROVED);
+                                          })
                                           ->get();
 
             // Jika tidak ada data, lakukan sinkronisasi dengan API
@@ -1657,7 +2091,10 @@ class ProjectRiskController extends BasicCRUDController
 
                 // Ambil data yang baru disimpan
                 $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)
-                                              // ->where('tahun', $tahunBerjalan)
+                                              ->where(function ($q) {
+                                                  $q->whereNull('approval_status')
+                                                    ->orWhere('approval_status', SasaranProyek::APPROVAL_APPROVED);
+                                              })
                                               ->get();
             }
         }
@@ -1668,7 +2105,7 @@ class ProjectRiskController extends BasicCRUDController
 
         $periode = Periode::where('status','active')->first();
 
-        $peristiwaRisikos = PeristiwaRisiko::where('type', 2)->get();
+        $peristiwaRisikos = PeristiwaRisiko::usableForProject()->orderBy('title')->get();
 
         $masterKris = MasterKRI::get();
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
@@ -1696,9 +2133,9 @@ class ProjectRiskController extends BasicCRUDController
         if ($request->action === 'save' || $request->action === 'savenext') {
             // 1. Definisikan Rules
             $rules = [
-                'sasaran_proyek_id' => 'nullable',
-                'peristiwa_risiko_id' => 'required',
-                'rencana_kegiatan' => $request->peristiwa_risiko_id === 'other' ? 'required' : 'nullable',
+                'sasaran_proyek_id' => 'required|not_in:other',
+                'peristiwa_risiko_id' => 'required|not_in:other',
+                'rencana_kegiatan' => 'nullable',
 
                 'kategori_risiko_id' => 'nullable',
                 'jenis_risiko_id' => 'required',
@@ -1728,20 +2165,12 @@ class ProjectRiskController extends BasicCRUDController
 
             // Tambahan Logic: Pastikan Sasaran Risiko terisi
             // Jika dropdown kosong DAN input manual kosong, maka error
-            if (empty($request->sasaran_proyek_id) && empty($request->target_capaian_kinerja)) {
-                $rules['sasaran_proyek_id'] = 'required';
-            }
-            // Jika pilih "Lainnya" tapi textarea kosong
-            if ($request->sasaran_proyek_id === 'other' && empty($request->target_capaian_kinerja)) {
-                $rules['target_capaian_kinerja'] = 'required';
-            }
-
-            // 2. Custom Error Messages (Lebih Manusiawi)
             $messages = [
                 'sasaran_proyek_id.required' => 'Mohon pilih Sasaran Risiko terlebih dahulu.',
-                'target_capaian_kinerja.required' => 'Karena Anda memilih "Sasaran Lainnya", mohon deskripsikan sasaran tersebut.',
+                'sasaran_proyek_id.not_in' => 'Ajukan sasaran lainnya terlebih dahulu dan tunggu persetujuan MR sebelum dipilih.',
 
                 'peristiwa_risiko_id.required' => 'Silakan pilih Peristiwa Risiko dari daftar.',
+                'peristiwa_risiko_id.not_in' => 'Ajukan peristiwa lainnya terlebih dahulu dan tunggu persetujuan MR sebelum dipilih.',
                 'rencana_kegiatan.required' => 'Mohon tuliskan nama Peristiwa Risiko (karena Anda memilih "Lainnya").',
 
                 'kategori_risiko_id.required' => 'Kategori Risiko belum terdeteksi (pilih Jenis Risiko dulu).',
@@ -1765,7 +2194,7 @@ class ProjectRiskController extends BasicCRUDController
                 'key_risk_indicator.*.required' => 'Nama KRI wajib diisi.',
                 'satuan_kri.*.required' => 'Satuan KRI wajib diisi.',
                 'batas_aman.*.required' => 'Batas Aman wajib diisi.',
-                'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
+                'batas_waspada.*.required' => 'Batas Siaga wajib diisi.',
                 'batas_bahaya.*.required' => 'Batas Bahaya wajib diisi.',
 
                 'kontrol_eksisting.required' => 'Mohon masukkan minimal satu Kontrol Eksisting.',
@@ -1808,15 +2237,7 @@ class ProjectRiskController extends BasicCRUDController
             $sasaranProyekId = null;
             $targetCapaianKinerja = '';
 
-            if ($request->sasaran_proyek_id === 'other') {
-                // Jika opsi "Lainnya" dipilih, buat data SasaranProyek baru
-                // $sasaranProyek = SasaranProyek::create([
-                //     'costcenter_code' => $project->costcenter_code ?? 'MANUAL-INPUT',
-                //     'kpi_desc' => $request->target_capaian_kinerja,
-                // ]);
-                //$sasaranProyekId = $sasaranProyek->id;
-                $targetCapaianKinerja = $request->target_capaian_kinerja;
-            } else if ($request->sasaran_proyek_id) {
+            if ($request->sasaran_proyek_id) {
                 // Jika opsi yang sudah ada dipilih
                 $sasaranProyekId = $request->sasaran_proyek_id;
                 // Cek jika ini adalah sasaran default (yang memiliki ID fake 'default_')
@@ -1824,15 +2245,12 @@ class ProjectRiskController extends BasicCRUDController
                     $sasaranProyekId = null;
                 }
                 $targetCapaianKinerja = $request->kpi_desc_selected;
-            } else {
-                // Fallback jika tidak ada yang dipilih
-                $targetCapaianKinerja = $request->target_capaian_kinerja;
             }
 
             $peristiwaRisikoId = $request->peristiwa_risiko_id;
             $rencanaKegiatan = null;
 
-            if ($peristiwaRisikoId === 'other') {
+            if (in_array((string) $peristiwaRisikoId, ['other', 'legacy', '0'], true)) {
                 $peristiwaRisikoId = 0;
                 $rencanaKegiatan = $request->rencana_kegiatan;
             }
@@ -1962,11 +2380,11 @@ class ProjectRiskController extends BasicCRUDController
     public function edit($resource)
     {
         $projectRisk = ProjectRisk::with([
-          'penyebabRisikoProjects',
-          'kriProjects',
+          'penyebabRisikoProjects' => fn ($query) => $query->withCount('monitorings'),
+          'kriProjects' => fn ($query) => $query->withCount('kriProjectMonitorings'),
           'peristiwaRisiko',
           'parameterRisikoProjects',
-          'dampakRisikoProjects',
+          'dampakRisikoProjects' => fn ($query) => $query->withCount('monitorings'),
         ])->findOrFail(request()->route('risk'));
 
         //dd($projectRisk);
@@ -1985,14 +2403,19 @@ class ProjectRiskController extends BasicCRUDController
 
         $sasaranProyeks = collect();
         if ($profitCenter) {
-            $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)->get();
+            $sasaranProyeks = SasaranProyek::where('costcenter_code', $profitCenter)
+                ->where(function ($q) {
+                    $q->whereNull('approval_status')
+                        ->orWhere('approval_status', SasaranProyek::APPROVAL_APPROVED);
+                })
+                ->get();
         }
 
         //tambahkan sasaran proyek yang ada di database dengan sasaran default (tanpa ada id)
         $defaultSasaran = SasaranProyek::getDefaults();
         $sasaranProyeks = $sasaranProyeks->concat($defaultSasaran);
 
-        $peristiwaRisikos = PeristiwaRisiko::get();
+        $peristiwaRisikos = PeristiwaRisiko::usableForProject($projectRisk->peristiwa_risiko_id)->orderBy('title')->get();
 
         $masterKris = MasterKRI::get();
         $jenisKontrolEksistings = JenisKontrolEksisting::get();
@@ -2023,9 +2446,8 @@ class ProjectRiskController extends BasicCRUDController
 
         if ($request->action === 'save' || $request->action === 'savenext') {
               $rules = [
-                'peristiwa_risiko_id' => 'required',
-                // Jika pilih "Lainnya", rencana_kegiatan wajib diisi
-                'rencana_kegiatan' => $request->peristiwa_risiko_id === 'other' ? 'required' : 'nullable',
+                'peristiwa_risiko_id' => 'required|not_in:other',
+                'rencana_kegiatan' => 'nullable',
 
                 'kategori_risiko_id' => 'nullable',
                 'jenis_risiko_id' => 'required',
@@ -2054,20 +2476,15 @@ class ProjectRiskController extends BasicCRUDController
                 'kontrol_eksisting.*' => 'required|string',
             ];
 
-            // Validasi Sasaran (Logic Khusus)
-            if (empty($request->sasaran_proyek_id) && empty($request->target_capaian_kinerja)) {
-                $rules['sasaran_proyek_id'] = 'required';
-            }
-            if ($request->sasaran_proyek_id === 'other' && empty($request->target_capaian_kinerja)) {
-                $rules['target_capaian_kinerja'] = 'required';
-            }
+            $rules['sasaran_proyek_id'] = 'required|not_in:other';
 
             // --- 2. PESAN ERROR CUSTOM ---
             $messages = [
                 'sasaran_proyek_id.required' => 'Mohon pilih Sasaran Risiko.',
-                'target_capaian_kinerja.required' => 'Mohon deskripsikan sasaran risiko lainnya.',
+                'sasaran_proyek_id.not_in' => 'Ajukan sasaran lainnya terlebih dahulu dan tunggu persetujuan MR sebelum dipilih.',
 
                 'peristiwa_risiko_id.required' => 'Peristiwa Risiko wajib dipilih.',
+                'peristiwa_risiko_id.not_in' => 'Ajukan peristiwa lainnya terlebih dahulu dan tunggu persetujuan MR sebelum dipilih.',
                 'rencana_kegiatan.required' => 'Nama Peristiwa Risiko (Lainnya) wajib diisi.',
 
                 'jenis_risiko_id.required' => 'Jenis Risiko T2 & T3 wajib dipilih.',
@@ -2088,7 +2505,7 @@ class ProjectRiskController extends BasicCRUDController
                 'key_risk_indicator.*.required' => 'KRI tidak boleh kosong.',
                 'satuan_kri.*.required' => 'Satuan KRI wajib diisi.',
                 'batas_aman.*.required' => 'Batas Aman wajib diisi.',
-                'batas_waspada.*.required' => 'Batas Waspada wajib diisi.',
+                'batas_waspada.*.required' => 'Batas Siaga wajib diisi.',
                 'batas_bahaya.*.required' => 'Batas Bahaya wajib diisi.',
 
                 'kontrol_eksisting.required' => 'Minimal satu kontrol eksisting harus diisi.',
@@ -2124,9 +2541,9 @@ class ProjectRiskController extends BasicCRUDController
             $sasaranProyekId = null;
             $targetCapaianKinerja = '';
 
-            if ($request->sasaran_proyek_id === 'other') {
+            if ($request->sasaran_proyek_id === 'legacy') {
                 $sasaranProyekId = null;
-                $targetCapaianKinerja = $request->target_capaian_kinerja;
+                $targetCapaianKinerja = $projectRisk->target_capaian_kinerja;
             } else if ($request->sasaran_proyek_id) {
                 $sasaranProyekId = $request->sasaran_proyek_id;
                 // Cek jika ini adalah sasaran default (yang memiliki ID fake 'default_')
@@ -2134,16 +2551,14 @@ class ProjectRiskController extends BasicCRUDController
                     $sasaranProyekId = null;
                 }
                 $targetCapaianKinerja = $request->kpi_desc_selected;
-            } else {
-                $targetCapaianKinerja = $request->target_capaian_kinerja;
             }
 
             $peristiwaRisikoId = $request->peristiwa_risiko_id;
             $rencanaKegiatan = null;
 
-            if ($peristiwaRisikoId === 'other') {
+            if (in_array((string) $peristiwaRisikoId, ['other', 'legacy', '0'], true)) {
                 $peristiwaRisikoId = 0;
-                $rencanaKegiatan = $request->rencana_kegiatan;
+                $rencanaKegiatan = $request->rencana_kegiatan ?: $projectRisk->rencana_kegiatan;
             }
 
             $cleanRencanaKegiatan = $this->cleanInput($rencanaKegiatan);
@@ -2330,6 +2745,7 @@ class ProjectRiskController extends BasicCRUDController
                 'projectRiskAnalisa.skalaProbabilitas',
                 'projectRiskAnalisa.skalaDampakResidualObj',
                 'projectRiskAnalisa.skalaProbabilitasResidual',
+                'projectRiskAnalisa.impactDetails',
                 'projectRiskMonitorings' => function($query) {
                     $query->orderBy('tahun', 'desc')
                         ->orderBy('month', 'desc')
@@ -2512,6 +2928,10 @@ class ProjectRiskController extends BasicCRUDController
         $projectRisk->update([
             'is_closed' => false,
             'closed_at' => null,
+            'close_request' => ProjectRisk::CLOSE_REQUEST_NONE,
+            'close_request_reason' => null,
+            'close_requested_at' => null,
+            'close_requested_by' => null,
         ]);
 
         return response()->json([
@@ -2532,8 +2952,11 @@ class ProjectRiskController extends BasicCRUDController
         $project = $projectPeriodeList->project;
         $periode = $projectPeriodeList->periode;
         $analisa = $projectRisk->projectRiskAnalisa;
+        $isNewAnalisaMode = $projectRisk->usesImpactBreakdown();
         if (!$analisa) {
-            $analisa = $projectRisk->projectRiskAnalisa()->create([]);
+            $analisa = new ProjectRiskAnalisa();
+        } else {
+            $analisa->load('impactDetails');
         }
 
         $selectedParameterType = null;
@@ -2597,7 +3020,7 @@ class ProjectRiskController extends BasicCRUDController
         $risk_limit = ($projectPeriodeList->project->nk ?? 0) * 0.03;
         // dd($projectRisk);
 
-        return view('project-risk.analisa', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'skalaProbabilitas', 'riskMaps', 'analisa', 'areas', 'groupedAreas', 'risk_tolerance', 'risk_limit', 'parameterTypes', 'groupedSkalaParameters', 'selectedParameterType'));
+        return view('project-risk.analisa', compact('projectRisk', 'project', 'periode', 'projectPeriodeList', 'skalaProbabilitas', 'riskMaps', 'analisa', 'areas', 'groupedAreas', 'risk_tolerance', 'risk_limit', 'parameterTypes', 'groupedSkalaParameters', 'selectedParameterType', 'isNewAnalisaMode'));
     }
 
     public function doAnalisa(Request $request) {
@@ -2611,8 +3034,29 @@ class ProjectRiskController extends BasicCRUDController
         // }
 
         $analisa = $projectRisk->projectRiskAnalisa;
+        $isNewAnalisaMode = $projectRisk->usesImpactBreakdown();
         if (!$analisa) {
             $analisa = $projectRisk->projectRiskAnalisa()->create([]);
+        }
+
+        $project = $projectPeriodeList->project;
+        $nilai_dampak = $this->cleanRupiah($request->nilai_dampak);
+        $nilai_dampak_residual = $this->cleanRupiah($request->nilai_dampak_residual);
+
+        // Dropdown skala dampak dikunci (disabled) pada kategori kuantitatif,
+        // sehingga nilainya tidak ikut terkirim. Hitung ulang di server
+        // atau ambil dari hidden field agar validasi tidak gagal.
+        if ($request->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
+            $riskLimitForSkala = ($project->nk ?? 0) * 0.03;
+            $request->merge([
+                'skala_dampak' => $this->hitungSkalaDampak($nilai_dampak, $riskLimitForSkala),
+                'skala_dampak_residual' => $this->hitungSkalaDampak($nilai_dampak_residual, $riskLimitForSkala),
+            ]);
+        } else {
+            $request->merge([
+                'skala_dampak' => $request->input('skala_dampak_hidden') ?: $request->input('skala_dampak'),
+                'skala_dampak_residual' => $request->input('skala_dampak_residual_hidden') ?: $request->input('skala_dampak_residual'),
+            ]);
         }
 
         $request->validate([
@@ -2625,13 +3069,66 @@ class ProjectRiskController extends BasicCRUDController
             'skala_dampak_residual' => 'required',
         ]);
 
+        $impactDetailsPayload = [];
+        $nilaiDampakFromDetails = null;
+        if ($isNewAnalisaMode && $request->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
+            $sanitizedImpactDetails = [];
+            foreach ((array) $request->impact_details as $idx => $detail) {
+                $rawVolume = $detail['volume'] ?? null;
+                if ($this->containsNonNumeric($rawVolume)) {
+                    return response()->json([
+                        'message' => 'Volume hanya boleh diisi angka.',
+                    ], 422);
+                }
+
+                $detail['volume'] = $this->cleanNumeric($rawVolume);
+                $sanitizedImpactDetails[$idx] = $detail;
+            }
+            $request->merge(['impact_details' => $sanitizedImpactDetails]);
+
+            $request->validate([
+                'impact_details' => 'required|array|min:1',
+                'impact_details.*.uraian' => 'required|string|max:255',
+                'impact_details.*.volume' => 'required|numeric|min:0.0001',
+                'impact_details.*.satuan' => 'required|string|max:50',
+                'impact_details.*.harga_satuan' => 'required',
+            ], [
+                'impact_details.*.volume.numeric' => 'Volume hanya boleh diisi angka.',
+                'impact_details.*.volume.min' => 'Volume harus lebih dari 0.',
+            ]);
+
+            foreach ((array) $request->impact_details as $detail) {
+                $uraian = trim((string) ($detail['uraian'] ?? ''));
+                $volume = $this->cleanNumeric($detail['volume'] ?? 0);
+                $satuan = trim((string) ($detail['satuan'] ?? ''));
+                $hargaSatuan = $this->cleanRupiah($detail['harga_satuan'] ?? 0);
+
+                if ($uraian === '' || $satuan === '' || $volume <= 0 || $hargaSatuan < 0) {
+                    continue;
+                }
+
+                $subtotal = round($volume * $hargaSatuan, 2);
+                $impactDetailsPayload[] = [
+                    'uraian' => $uraian,
+                    'volume' => $volume,
+                    'satuan' => $satuan,
+                    'harga_satuan' => $hargaSatuan,
+                    'subtotal' => $subtotal,
+                ];
+            }
+
+            if (empty($impactDetailsPayload)) {
+                return response()->json([
+                    'message' => 'Detail perhitungan dampak minimal harus memiliki 1 baris yang valid.',
+                ], 422);
+            }
+
+            $nilaiDampakFromDetails = (int) round(collect($impactDetailsPayload)->sum('subtotal'));
+        }
+
         //dd($request);
 
         $xrisk_limit = $this->cleanRupiah($request->_risk_limit);
-        $nilai_dampak = $this->cleanRupiah($request->nilai_dampak);
-        $nilai_dampak_residual = $this->cleanRupiah($request->nilai_dampak_residual);
-
-        $project = $projectPeriodeList->project;
         $riskMaps = RiskMap::get()->keyBy(function($item) {
             return $item->skala_dampak . '-' . $item->skala_probabilitas;
         });
@@ -2734,13 +3231,15 @@ class ProjectRiskController extends BasicCRUDController
             // $toUpdate['skala_dampak'] = $request->skala_dampak;
             // $toUpdate['skala_dampak_residual'] = $request->skala_dampak_residual;
 
-            $toUpdate['nilai_dampak'] = $nilai_dampak;
+            $toUpdate['nilai_dampak'] = $isNewAnalisaMode && $nilaiDampakFromDetails !== null
+                ? $nilaiDampakFromDetails
+                : $nilai_dampak;
             $toUpdate['nilai_dampak_residual'] = $nilai_dampak_residual;
             $toUpdate['risk_limit'] = $risk_limit;
         }
         else{
-            $skalaDampakFinal = $request->skala_dampak_hidden ?: $request->skala_dampak;
-            $skalaDampakResidualFinal = $request->skala_dampak_residual_hidden ?: $request->skala_dampak_residual;
+            $skalaDampakFinal = $request->skala_dampak;
+            $skalaDampakResidualFinal = $request->skala_dampak_residual;
 
             // $toUpdate['skala_dampak'] = $request->skala_dampak_hidden;
             // $toUpdate['skala_dampak_residual'] = $request->skala_dampak_residual_hidden;
@@ -2810,6 +3309,11 @@ class ProjectRiskController extends BasicCRUDController
 
         $analisa->update($toUpdate);
 
+        if ($isNewAnalisaMode && $request->kategori_dampak === ProjectRiskAnalisa::KATEGORI_DAMPAK_KUANTITATIF) {
+            $analisa->impactDetails()->delete();
+            $analisa->impactDetails()->createMany($impactDetailsPayload);
+        }
+
         $projectRisk->update([
             'skala_risiko' => $toUpdate['skala_risiko'],
             'level_risiko' => $toUpdate['level_risiko'],
@@ -2827,6 +3331,8 @@ class ProjectRiskController extends BasicCRUDController
         $projectRisk = ProjectRisk::with([
             'penyebabRisikoProjects.perlakuanPenyebabRisiko',
             'perlakuanDampakRisikos',
+            'projectRiskAnalisa.impactDetails',
+            'projectRiskAnalisa.skalaProbabilitas',
         ])->findOrFail(request()->route('risk'));
 
         //dd($projectRisk->penyebabRisikoProjects);
@@ -3256,8 +3762,40 @@ class ProjectRiskController extends BasicCRUDController
 
     // Fungsi cleanRupiah diletakkan di dalam controller
     private function cleanRupiah($value) {
-        if (empty($value)) return 0;
-        return (float) str_replace(['Rp', '.', ','], ['', '', ''], $value);
+        if ($value === null || $value === '') return 0;
+        return (float) str_replace(['Rp', '.', ',', ' '], ['', '', '', ''], (string) $value);
+    }
+
+    private function containsNonNumeric($value): bool
+    {
+        if ($value === null || $value === '') {
+            return false;
+        }
+
+        return (bool) preg_match('/[^0-9.,\s-]/', (string) $value);
+    }
+
+    private function cleanNumeric($value): float
+    {
+        if ($value === null || $value === '') {
+            return 0;
+        }
+
+        $normalized = preg_replace('/[^0-9,.-]/', '', (string) $value);
+        if ($normalized === '' || $normalized === '-' || $normalized === '.' || $normalized === ',') {
+            return 0;
+        }
+
+        if (str_contains($normalized, ',') && str_contains($normalized, '.')) {
+            $normalized = str_replace('.', '', $normalized);
+            $normalized = str_replace(',', '.', $normalized);
+        } elseif (str_contains($normalized, ',')) {
+            $normalized = str_replace(',', '.', $normalized);
+        } elseif (preg_match('/^\d{1,3}(\.\d{3})+$/', $normalized)) {
+            $normalized = str_replace('.', '', $normalized);
+        }
+
+        return (float) $normalized;
     }
 
     function hitungSkalaDampak($nilai_dampak, $risk_limit) {

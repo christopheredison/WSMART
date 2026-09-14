@@ -185,17 +185,18 @@
                                 <th>Skala Probabilitas Inherent</th>
                                 <th>Nilai Risiko Inherent</th>
                                 <th>Level Risiko Inherent</th>
-                                <th>Nilai Dampak Residual</th>
+                                <th>Nilai Dampak Residual <small>(Sesuai Kuartal)</small></th>
                                 <th>Skala Dampak Residual</th>
                                 <th>Nilai Probabilitas Residual</th>
                                 <th>Skala Probabilitas Residual</th>
                                 <th>Nilai Risiko Residual</th>
                                 <th>Level Risiko Residual</th>
+                                <th>Status Risiko</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($risikos as $risiko)
-                            <tr>
+                            <tr data-risk-id="{{ $risiko->id }}">
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $risiko->peristiwa_risiko ?? '-' }}</td>
                                 <td>{{ $risiko->deskripsi_peristiwa_risiko ?? '-' }}</td>
@@ -213,25 +214,34 @@
                                 </td>
                                 <td>{{ $risiko->riskAnalysis?->skala_risiko ?? '-' }}</td>
                                 <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($risiko->riskAnalysis?->level_risiko)))}}">{{ $risiko->riskAnalysis?->level_risiko ?? '-' }}</td>
-                                <td>{{ $risiko->riskAnalysis?->nilai_dampak_residual ? 'Rp ' . number_format($risiko->riskAnalysis->nilai_dampak_residual, 0, ',', '.') : '-' }}</td>
+                                <td class="residual-nilai-dampak">-</td>
+                                <td class="residual-skala-dampak">-</td>
+                                <td class="residual-nilai-prob">-</td>
+                                <td class="residual-skala-prob">-</td>
+                                <td class="residual-nilai-risiko">-</td>
+                                <td class="residual-level-risiko">-</td>
                                 <td>
-                                    {{ $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->tingkat
-                                        ? '(' . $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->tingkat . ') ' . $risiko->riskAnalysis?->skalaDampakResidualQ4Obj?->deskripsi
-                                        : '-' }}
+                                    @if ($risiko->is_closed)
+                                        <span class="badge bg-danger rounded-pill px-2 mt-auto d-inline-flex align-items-center">
+                                            Closed
+                                            @if ($risiko->closed_at_formatted)
+                                                <i class="bx bx-info-circle ms-1" style="cursor:pointer;font-size:0.95em;"
+                                                   data-bs-toggle="popover"
+                                                   data-bs-trigger="hover focus"
+                                                   data-bs-placement="top"
+                                                   data-bs-content="Ditutup pada: {{ $risiko->closed_at_formatted }}"
+                                                   title=""></i>
+                                            @endif
+                                        </span>
+                                    @else
+                                        <span class="badge bg-success rounded-pill px-2 mt-auto">Open</span>
+                                    @endif
                                 </td>
-                                <td>{{ $risiko->riskAnalysis?->nilai_probabilitas_residual ?? '-' }}</td>
-                                <td>
-                                    {{ $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->tingkat
-                                        ? '(' . $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->tingkat . ') ' . $risiko->riskAnalysis?->skalaProbabilitasResidualQ4?->skala
-                                        : '-' }}
-                                </td>
-                                <td>{{ $risiko->riskAnalysis?->skala_risiko_residual ?? '-' }}</td>
-                                <td class="bg-{{str_replace(' ', '-', str_replace('to ', '', strtolower($risiko->riskAnalysis?->level_risiko_residual)))}}">{{ $risiko->riskAnalysis?->level_risiko_residual ?? '-' }}</td>
                             </tr>
                             @endforeach
                             @if ($risikos->isEmpty())
                             <tr>
-                                <td colspan="15" class="text-center p-3">Tidak ada data</td>
+                                <td colspan="16" class="text-center p-3">Tidak ada data</td>
                             </tr>
                             @endif
                         </tbody>
@@ -292,6 +302,10 @@
 $(document).ready(function () {
     const inputmaskGeneral = $('.inputmask-general');
     const risks = @json($risikos);
+
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function (el) {
+        new bootstrap.Popover(el);
+    });
 
     $('#modalEdit input[name="nk_ppn"],#modalEdit input[name="rapk"]').on('change', function() {
         const nkPpn = $('#modalEdit input[name="nk_ppn"]').inputmask('unmaskedvalue');
@@ -354,74 +368,147 @@ $(document).ready(function () {
 
 
     const formattedCurrentRiskMaps = @json($formattedCurrentRiskMaps);
-    risks.forEach((risk, idx) => {
-        const matrixI = risk.risk_analysis?.skala_dampak + '-' + risk.risk_analysis?.skala_probabilitas?.tingkat;
-        const matrixR = risk.risk_analysis?.skala_dampak_residual + '-' + risk.risk_analysis?.skala_probabilitas_residual_q4?.tingkat;
+    const riskResidualData = @json($riskResidualData);
 
-        const cellI = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixI}"]`);
-        const cellR = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixR}"]`);
+    const formatRupiah = (number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+    };
 
-        const code = (idx + 1).toString();
+    const getLevelClass = (levelName) => {
+        if (!levelName) return '';
+        return 'bg-' + levelName.toLowerCase().replace('to ', '').replace(/\s+/g, '-');
+    };
 
-        if (cellI.length) {
-            if (!cellI.data('kode-peristiwa-inherent')) {
-                cellI.data('kode-peristiwa-inherent', []);
-            }
-
-            cellI.data('kode-peristiwa-inherent').push(code);
-            cellI.data('has-inherent', true);
+    function getResidualMatrix(risk, quarter) {
+        const analysis = risk.risk_analysis;
+        if (!analysis) {
+            return null;
         }
 
-        if (cellR.length) {
-            if (!cellR.data('kode-peristiwa-residual')) {
-                cellR.data('kode-peristiwa-residual', []);
-            }
+        const skalaDampak = analysis[`skala_dampak_residual_q${quarter}`];
+        const skalaProb = analysis[`skala_probabilitas_residual_q${quarter}`]?.tingkat;
 
-            cellR.data('kode-peristiwa-residual').push(code);
-            cellR.data('has-residual', true);
+        if (skalaDampak == null || skalaProb == null) {
+            return null;
         }
 
-        const currentRiskMaps = formattedCurrentRiskMaps[risk.id];
-        currentRiskMaps.forEach((currentRiskMap) => {
-            const matrixC = currentRiskMap.skala_dampak + '-' + currentRiskMap.skala_probabilitas;
-            const cellC = $(`#currentMap.table-risk-map .data-cell[data-matrix="${matrixC}"]`);
+        return `${skalaDampak}-${skalaProb}`;
+    }
 
-            if (cellC.length) {
-                if (!cellC.data('kode-peristiwa-current-m' + currentRiskMap.month)) {
-                    cellC.data('kode-peristiwa-current-m' + currentRiskMap.month, []);
+    function renderInherentMapMarkers() {
+        $('#inherentMap.table-risk-map .data-cell').each(function() {
+            $(this).removeData('kode-peristiwa-inherent');
+            $(this).removeData('kode-peristiwa-residual');
+            $(this).removeData('has-inherent');
+            $(this).removeData('has-residual');
+            $(this).find('.kode-peristiwa').empty();
+        });
+
+        risks.forEach((risk, idx) => {
+            const matrixI = risk.risk_analysis?.skala_dampak + '-' + risk.risk_analysis?.skala_probabilitas?.tingkat;
+            const cellI = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixI}"]`);
+            const code = (idx + 1).toString();
+
+            if (cellI.length) {
+                if (!cellI.data('kode-peristiwa-inherent')) {
+                    cellI.data('kode-peristiwa-inherent', []);
                 }
-
-                cellC.data('kode-peristiwa-current-m' + currentRiskMap.month).push(code);
-                cellC.data('has-current', true);
+                cellI.data('kode-peristiwa-inherent').push(code);
+                cellI.data('has-inherent', true);
             }
         });
 
-        const cells = $('#inherentMap.table-risk-map .data-cell');
-        cells.each((index, cell) => {
+        paintInherentResidualMapCells();
+    }
+
+    function renderResidualMapMarkers(quarter) {
+        $('#inherentMap.table-risk-map .data-cell').each(function() {
+            $(this).removeData('kode-peristiwa-residual');
+            $(this).removeData('has-residual');
+        });
+
+        risks.forEach((risk, idx) => {
+            const matrixR = getResidualMatrix(risk, quarter);
+            if (!matrixR) {
+                return;
+            }
+
+            const cellR = $(`#inherentMap.table-risk-map .data-cell[data-matrix="${matrixR}"]`);
+            const code = (idx + 1).toString();
+
+            if (cellR.length) {
+                if (!cellR.data('kode-peristiwa-residual')) {
+                    cellR.data('kode-peristiwa-residual', []);
+                }
+                cellR.data('kode-peristiwa-residual').push(code);
+                cellR.data('has-residual', true);
+            }
+        });
+
+        paintInherentResidualMapCells();
+    }
+
+    function paintInherentResidualMapCells() {
+        $('#inherentMap.table-risk-map .data-cell').each(function() {
+            const cell = $(this);
             let html = '';
-            let kodePeristiwaInherent = $(cell).data('kode-peristiwa-inherent');
-            let kodePeristiwaResidual = $(cell).data('kode-peristiwa-residual');
+
+            const kodePeristiwaInherent = cell.data('kode-peristiwa-inherent');
             if (kodePeristiwaInherent && kodePeristiwaInherent.length > 0) {
                 for (let i = 0; i < kodePeristiwaInherent.length; i++) {
                     html += `<span class="box-inherent">R${kodePeristiwaInherent[i]}</span>`;
                 }
             }
 
+            const kodePeristiwaResidual = cell.data('kode-peristiwa-residual');
             if (kodePeristiwaResidual && kodePeristiwaResidual.length > 0) {
                 for (let i = 0; i < kodePeristiwaResidual.length; i++) {
                     html += `<span class="box-residual">R${kodePeristiwaResidual[i]}</span>`;
                 }
             }
 
-            $(cell).find('.kode-peristiwa').html(html);
+            cell.find('.kode-peristiwa').html(html);
+        });
+    }
+
+    function renderCurrentMapMarkers() {
+        $('#currentMap.table-risk-map .data-cell').each(function() {
+            for (let month = 1; month <= 12; month++) {
+                $(this).removeData('kode-peristiwa-current-m' + month);
+            }
+            $(this).removeData('has-current');
+            $(this).find('.kode-peristiwa').empty();
         });
 
-        const cellsC = $('#currentMap.table-risk-map .data-cell');
-        cellsC.each((index, cell) => {
+        risks.forEach((risk, idx) => {
+            const currentRiskMaps = formattedCurrentRiskMaps[risk.id] || [];
+            const code = (idx + 1).toString();
+
+            currentRiskMaps.forEach((currentRiskMap) => {
+                if (!currentRiskMap?.month) {
+                    return;
+                }
+
+                const matrixC = currentRiskMap.skala_dampak + '-' + currentRiskMap.skala_probabilitas;
+                const cellC = $(`#currentMap.table-risk-map .data-cell[data-matrix="${matrixC}"]`);
+
+                if (cellC.length) {
+                    const monthKey = 'kode-peristiwa-current-m' + currentRiskMap.month;
+                    if (!cellC.data(monthKey)) {
+                        cellC.data(monthKey, []);
+                    }
+                    cellC.data(monthKey).push(code);
+                    cellC.data('has-current', true);
+                }
+            });
+        });
+
+        $('#currentMap.table-risk-map .data-cell').each(function() {
+            const cell = $(this);
             let html = '';
-            let kodePeristiwaCurrent = null;
+
             for (let month = 1; month <= 12; month++) {
-                kodePeristiwaCurrent = $(cell).data('kode-peristiwa-current-m' + month);
+                const kodePeristiwaCurrent = cell.data('kode-peristiwa-current-m' + month);
                 if (kodePeristiwaCurrent && kodePeristiwaCurrent.length > 0) {
                     for (let i = 0; i < kodePeristiwaCurrent.length; i++) {
                         html += `<span class="box-current current-m${month}">R${kodePeristiwaCurrent[i]}</span>`;
@@ -429,15 +516,49 @@ $(document).ready(function () {
                 }
             }
 
-            $(cell).find('.kode-peristiwa').html(html);
+            cell.find('.kode-peristiwa').html(html);
         });
-    });
+    }
 
-    $('#monthSelect,#tahunSelect').on('change', function() {
-        const month = $('#monthSelect').val();
-        const tahun = $('#tahunSelect').val();
+    function updateDashboard(month) {
+        const quarter = Math.ceil(month / 3);
+
         $('#currentMap').prop('class', 'table-risk-map');
         $('#currentMap').addClass('show-m' + month);
+
+        renderResidualMapMarkers(quarter);
+
+        $('tr[data-risk-id]').each(function() {
+            const tr = $(this);
+            const riskId = tr.data('risk-id');
+
+            if (riskResidualData[riskId] && riskResidualData[riskId][quarter]) {
+                const dataRes = riskResidualData[riskId][quarter];
+
+                tr.find('.residual-nilai-dampak').text(dataRes.nilai_dampak ? formatRupiah(dataRes.nilai_dampak) : '-');
+                tr.find('.residual-skala-dampak').text(dataRes.skala_dampak ?? '-');
+                tr.find('.residual-nilai-prob').text(dataRes.nilai_prob ?? '-');
+                tr.find('.residual-skala-prob').text(dataRes.skala_prob ?? '-');
+                tr.find('.residual-nilai-risiko').text(dataRes.skala_risiko ?? '-');
+
+                const tdResLevel = tr.find('.residual-level-risiko');
+                tdResLevel.text(dataRes.level_risiko ?? '-');
+                tdResLevel.removeClass(function (index, className) {
+                    return (className.match(/(^|\s)bg-\S+/g) || []).join(' ');
+                });
+                if (dataRes.level_risiko) tdResLevel.addClass(getLevelClass(dataRes.level_risiko));
+            }
+        });
+    }
+
+    const currentMonth = new Date().getMonth() + 1;
+    $('#monthSelect').val(currentMonth);
+    renderInherentMapMarkers();
+    renderCurrentMapMarkers();
+    updateDashboard(currentMonth);
+
+    $('#monthSelect,#tahunSelect').on('change', function() {
+        updateDashboard($('#monthSelect').val());
     }).change();
 
     flatpickr('.flatpickr-range', {

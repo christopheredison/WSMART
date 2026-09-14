@@ -37,7 +37,7 @@ class PerlakuanPenyebabRisikoUnit extends Model
 
     public function penyebabRisiko()
     {
-        return $this->belongsTo(PenyebabRisiko::class, 'penyebab_risiko_id');
+        return $this->belongsTo(PenyebabRisiko::class, 'penyebab_risiko_id')->withTrashed();
     }
 
     public function documents()
@@ -116,5 +116,10 @@ class PerlakuanPenyebabRisikoUnit extends Model
     public function picJabatan()
     {
         return $this->belongsTo(Jabatan::class, 'pic_jabatan_id');
+    }
+
+    public function opsiPerlakuan()
+    {
+        return $this->belongsTo(OpsiPerlakuanRisiko::class, 'opsi_perlakuan_risiko');
     }
 }

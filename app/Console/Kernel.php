@@ -20,6 +20,9 @@ class Kernel extends ConsoleKernel
 
         // Sinkronisasi data project WIKA setiap hari pukul 02:00
         $schedule->command('projects:sync-wika')->dailyAt('02:00');
+
+        // Sinkronisasi hasil usaha / LSP proyek setiap hari pukul 02:30
+        $schedule->command('projects:sync-hasil-usaha')->dailyAt('02:30');
     }
 
     /**

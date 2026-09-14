@@ -48,6 +48,7 @@ return [
         'identifikasi_risiko_id' => App\AuditResolvers\IdentifikasiRisikoIdResolver::class,
         'project_risk_id' => App\AuditResolvers\ProjectRiskIdResolver::class,
         'unit_id' => App\AuditResolvers\UnitIdResolver::class,
+        'rmi_period_id' => App\AuditResolvers\RmiPeriodIdResolver::class,
     ],
 
     /*

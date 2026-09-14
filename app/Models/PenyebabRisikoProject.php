@@ -4,12 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 use OwenIt\Auditing\Auditable;
 
 class PenyebabRisikoProject extends Model implements AuditableContract
 {
-    use Auditable, HasFactory;
+    use Auditable, HasFactory, SoftDeletes;
 
     protected $auditExclude = [
         'progress_rencana_perlakuan_risiko_q1',
@@ -90,5 +91,15 @@ class PenyebabRisikoProject extends Model implements AuditableContract
     public function perlakuanPenyebabRisiko()
     {
         return $this->hasMany(PerlakuanPenyebabRisiko::class, 'penyebab_risiko_id');
+    }
+
+    public function monitorings()
+    {
+        return $this->hasManyThrough(
+            PerlakuanPenyebabMonitoring::class,
+            PerlakuanPenyebabRisiko::class,
+            'penyebab_risiko_id',
+            'perlakuan_penyebab_id'
+        );
     }
 }

@@ -9,13 +9,26 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents
+class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithEvents, WithColumnFormatting, WithStrictNullComparison
 {
+    public function columnFormats(): array
+    {
+        $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
+
+        return [
+            'F' => $currencyFormat, // Nilai Dampak
+            'J' => $currencyFormat, // Eksposur Risiko
+        ];
+    }
+
     protected $risikos;
 
     public function __construct(Collection $risikos)
@@ -128,12 +141,46 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 ];
 
                 $highestRow = $sheet->getHighestRow();
-                if ($highestRow > 2) { // Cek jika ada data di bawah header
+                $dataStartRow = 3;
+                $currencyCols = ['F', 'J'];
+
+                if ($highestRow >= $dataStartRow) {
+                    // Pastikan nilai currency tersimpan sebagai angka (bukan text)
+                    $this->forceNumericCurrencyCells($sheet, $currencyCols, $dataStartRow, $highestRow);
+
                     // Terapkan border ke semua sel data
-                    $sheet->getStyle('A3:L' . $highestRow)->applyFromArray($dataStyle);
+                    $sheet->getStyle('A' . $dataStartRow . ':L' . $highestRow)->applyFromArray($dataStyle);
 
                     // Panggil fungsi pewarnaan background
                     $this->applyLevelRisikoColoring($sheet, $highestRow);
+
+                    // Tambah baris TOTAL
+                    $totalRow = $highestRow + 1;
+                    $sheet->setCellValue('A' . $totalRow, 'TOTAL');
+                    $sheet->mergeCells('A' . $totalRow . ':E' . $totalRow);
+                    $sheet->setCellValue('F' . $totalRow, "=SUM(F{$dataStartRow}:F{$highestRow})");
+                    $sheet->setCellValue('J' . $totalRow, "=SUM(J{$dataStartRow}:J{$highestRow})");
+
+                    $sheet->getStyle('A' . $totalRow . ':L' . $totalRow)->applyFromArray([
+                        'font' => ['bold' => true],
+                        'fill' => [
+                            'fillType' => Fill::FILL_SOLID,
+                            'startColor' => ['rgb' => 'FFF2CC'],
+                        ],
+                        'borders' => [
+                            'allBorders' => [
+                                'borderStyle' => Border::BORDER_THIN,
+                                'color' => ['rgb' => '000000'],
+                            ],
+                        ],
+                        'alignment' => [
+                            'vertical' => Alignment::VERTICAL_CENTER,
+                        ],
+                    ]);
+                    $sheet->getStyle('A' . $totalRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    $currencyFormat = '_("Rp"* #,##0.00_);_("Rp"* \(#,##0.00\);_("Rp"* "-"??_);_(@_)';
+                    $sheet->getStyle('F' . $totalRow)->getNumberFormat()->setFormatCode($currencyFormat);
+                    $sheet->getStyle('J' . $totalRow)->getNumberFormat()->setFormatCode($currencyFormat);
                 }
 
                 foreach (range('A', 'L') as $column) {
@@ -141,6 +188,26 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
                 }
             },
         ];
+    }
+
+    /**
+     * Paksa cell currency menjadi numeric agar bisa di-SUM di Excel
+     */
+    private function forceNumericCurrencyCells($sheet, array $columns, int $startRow, int $endRow): void
+    {
+        foreach ($columns as $col) {
+            for ($row = $startRow; $row <= $endRow; $row++) {
+                $raw = $sheet->getCell($col . $row)->getValue();
+                if (is_string($raw)) {
+                    $raw = preg_replace('/[^0-9.\-]/', '', $raw);
+                }
+                $sheet->setCellValueExplicit(
+                    $col . $row,
+                    (float) ($raw ?: 0),
+                    DataType::TYPE_NUMERIC
+                );
+            }
+        }
     }
 
     /**
@@ -233,12 +300,17 @@ class RisikoInherentKuantitatifSheet implements FromCollection, WithHeadings, Wi
     }
 
     /**
-     * Format currency to Rupiah
+     * Format currency as numeric value for Excel currency format
      */
     private function formatCurrency($value)
     {
-        if ($value == 0) return 'Rp0';
-        return 'Rp' . number_format($value, 0, ',', '.');
+        if ($value === null || $value === '') {
+            return 0;
+        }
+        if (is_string($value)) {
+            $value = preg_replace('/[^0-9.\-]/', '', $value);
+        }
+        return (float) ($value ?: 0);
     }
 
     /**

@@ -255,6 +255,16 @@ class ProjectController extends BasicCRUDController
 
     public function update(Request $request, $resource)
     {
+        $data = $this->model::with('projectPeriodeList')->findOrFail($resource);
+
+        $user = $request->user();
+        if (in_array($user->level_id ?? 0, [6, 7])) {
+            $user->loadMissing('projects');
+            if (!$user->hasProject($data)) {
+                abort(403, 'Anda tidak memiliki akses ke proyek ini.');
+            }
+        }
+
         if ($request->has('biaya_perlakuan_risiko_rkp') && $request->biaya_perlakuan_risiko_rkp !== null) {
             $cleanRkp = str_replace('.', '', $request->biaya_perlakuan_risiko_rkp);
             $cleanRkp = str_replace(',', '.', $cleanRkp);
@@ -275,8 +285,6 @@ class ProjectController extends BasicCRUDController
         if ($request->has('biaya_perlakuan_risiko_rkp')) {
             $toUpdate['biaya_perlakuan_risiko_rkp'] = $request->biaya_perlakuan_risiko_rkp;
         }
-
-        $data = $this->model::with('projectPeriodeList')->findOrFail($resource);
 
         $data->update($toUpdate);
 
@@ -398,7 +406,9 @@ class ProjectController extends BasicCRUDController
                     'batasan_biaya_perlakuan_risiko' => $batasanBiaya,
                     'cost_center_parent' => $costCenterParent,
                     'masa_pelaksanaan_start' => $projectData['tgl_mulai'] ?? null,
-                    'masa_pelaksanaan_end' => $projectData['bast1'] ?? null,
+                    'masa_pelaksanaan_end' => !empty($projectData['tgl_selesai'])
+                        ? Carbon::parse($projectData['tgl_selesai'])->addDays((int) \App\Models\GlobalSetting::getValue('project_status_threshold_days', 45))->toDateString()
+                        : null,
                     'tanggal_mulai' => $projectData['tanggal_mulai'] ?? null,
                     'meta'           => $projectData,
                 ]);

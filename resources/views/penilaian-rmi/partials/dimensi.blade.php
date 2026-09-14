@@ -3,7 +3,28 @@
   // Variabel yang tersedia:
   // $dimensions, $parameterScores, $criteriaScores, $dimensionScores
 
-  // 1. INISIASI COUNTER PARAMETER GLOBAL
+  // Hitung nomor parameter global + rentang per sub dimensi
+  $paramIndex = 1;
+  $subDimensionParamRanges = [];
+
+  foreach ($dimensions as $dimension) {
+    foreach ($dimension->subDimensions as $subDimension) {
+      $count = $subDimension->measurementParameters->count();
+      if ($count > 0) {
+        $start = $paramIndex;
+        $end = $paramIndex + $count - 1;
+        $subDimensionParamRanges[$subDimension->id] = [
+          'start' => $start,
+          'end' => $end,
+        ];
+        $paramIndex = $end + 1;
+      } else {
+        $subDimensionParamRanges[$subDimension->id] = null;
+      }
+    }
+  }
+
+  // Reset counter untuk render konten
   $paramIndex = 1;
 @endphp
 
@@ -27,7 +48,6 @@
 
             <span class="badge bg-primary ms-2">
               @php
-                // Cari skor dimensi langsung dari tabel DimensionAspectEvaluation
                 $dimScore = null;
                 $dimensionEval = $dimensionScores->where('dimension_id', $dimension->id)->first();
                 if ($dimensionEval) {
@@ -52,6 +72,15 @@
           {{-- Tab Navigasi Sub-Dimensi --}}
           <ul class="nav nav-pills mb-4" id="subDimensionTab-{{ $dimension->id }}" role="tablist">
             @foreach($dimension->subDimensions as $subIndex => $subDimension)
+              @php
+                $range = $subDimensionParamRanges[$subDimension->id] ?? null;
+                $rangeLabel = null;
+                if ($range) {
+                  $rangeLabel = $range['start'] === $range['end']
+                    ? (string) $range['start']
+                    : $range['start'] . '-' . $range['end'];
+                }
+              @endphp
               <li class="nav-item" role="presentation">
                 <button class="nav-link {{ $subIndex == 0 ? 'active' : '' }}"
                         id="sub-tab-{{ $subDimension->id }}"
@@ -61,6 +90,9 @@
                         aria-controls="sub-content-{{ $subDimension->id }}"
                         aria-selected="{{ $subIndex == 0 ? 'true' : 'false' }}">
                   {{ $subDimension->name }}
+                  @if($rangeLabel)
+                    <span class="badge bg-light text-dark border ms-1">Param {{ $rangeLabel }}</span>
+                  @endif
                 </button>
               </li>
             @endforeach
@@ -79,8 +111,6 @@
                   <div class="card mb-3 border-secondary">
                     <div class="card-header bg-light">
                       <div class="d-flex justify-content-between align-items-center">
-
-                        {{-- 2. UBAH HEADER PARAMETER AGAR MENAMPILKAN NOMOR --}}
                         <h6 class="mb-0 fw-bold text-dark">Parameter {{ $paramIndex }}: {{ $parameter->statement }}</h6>
 
                         <div>
@@ -99,14 +129,11 @@
                       </div>
                     </div>
                     <div class="card-body p-0">
-                      {{-- Tabel Kriteria --}}
                       <div class="table-responsive">
                         <table class="table table-bordered table-hover mb-0">
                           <thead class="table-light">
                             <tr>
-                              {{-- 3. TAMBAHKAN KOLOM NOMOR --}}
                               <th class="text-center align-middle" width="5%">No</th>
-
                               <th class="align-middle">Kriteria</th>
                               <th class="text-center align-middle" width="80">Score</th>
                               <th class="align-middle">Gap Analysis</th>
@@ -115,12 +142,8 @@
                           </thead>
                           <tbody>
                             @foreach($parameter->criteria as $criteria)
-                              {{-- Menerapkan selang-seling warna menggunakan $loop->even dari Laravel Blade --}}
                               <tr class="{{ $loop->even ? 'table-light' : 'bg-white' }}">
-
-                                {{-- 4. CETAK NOMOR ITERASI UNTUK KRITERIA --}}
                                 <td class="text-center align-middle fw-bold text-muted">{{ $loop->iteration }}</td>
-
                                 <td class="align-middle">
                                   @if(isset($criteriaScores[$criteria->id]))
                                     @php
@@ -136,13 +159,6 @@
                                     <span class="text-muted fst-italic">Belum dinilai</span>
                                   @endif
                                 </td>
-                                {{-- <td class="text-center align-middle">
-                                  @if(isset($criteriaScores[$criteria->id]))
-                                    <span class="badge bg-primary fs-6">{{ $criteriaScores[$criteria->id]->score }}</span>
-                                  @else
-                                    -
-                                  @endif
-                                </td> --}}
                                 <td class="text-center align-middle">
                                   @if(isset($criteriaScores[$criteria->id]))
                                     @php
@@ -175,7 +191,6 @@
                                   @if(isset($criteriaScores[$criteria->id]) && $criteriaScores[$criteria->id]->documents->count())
                                     <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
                                       @foreach($criteriaScores[$criteria->id]->documents as $doc)
-                                        {{-- Kotak dokumen tetap putih agar menonjol (pop-up) di atas warna abu-abu --}}
                                         <li class="d-flex align-items-center justify-content-between p-2 bg-white border border-secondary-subtle rounded shadow-sm">
                                           <div class="d-flex align-items-center text-truncate pe-2">
                                             <i class="bx bxs-file text-primary fs-5 me-2"></i>
@@ -207,7 +222,6 @@
                   </div>
 
                   @php $paramIndex++; @endphp
-
                 @endforeach
 
               </div>
@@ -219,3 +233,25 @@
     </div>
   </div>
 </div>
+
+@push('scripts')
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const dimensionTab = document.getElementById('dimensionTab');
+    if (!dimensionTab) return;
+
+    dimensionTab.querySelectorAll('button[data-bs-toggle="tab"]').forEach(function (btn) {
+      btn.addEventListener('shown.bs.tab', function (event) {
+        const targetSelector = event.target.getAttribute('data-bs-target');
+        const dimensionPane = targetSelector ? document.querySelector(targetSelector) : null;
+        if (!dimensionPane) return;
+
+        const firstSubTab = dimensionPane.querySelector('.nav-pills .nav-link');
+        if (firstSubTab && !firstSubTab.classList.contains('active')) {
+          bootstrap.Tab.getOrCreateInstance(firstSubTab).show();
+        }
+      });
+    });
+  });
+</script>
+@endpush

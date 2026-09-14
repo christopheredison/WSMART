@@ -39,7 +39,7 @@ class PerlakuanPenyebabRisiko extends Model
 
     public function penyebabRisikoProject()
     {
-        return $this->belongsTo(PenyebabRisikoProject::class, 'penyebab_risiko_id');
+        return $this->belongsTo(PenyebabRisikoProject::class, 'penyebab_risiko_id')->withTrashed();
     }
 
     public function perlakuanPenyebabMonitorings()

@@ -55,10 +55,10 @@
 <h2 class="mb-4 text-primary fw-bold"><i class="fas fa-tachometer-alt me-2"></i>Key Risk Indicator (KRI)</h2>
 <hr class="mb-4">
 <div class="row g-4 mb-5">
-    {{-- KRI Waspada --}}
+    {{-- KRI Siaga --}}
     <div class="col-md-6">
         <div class="card h-100 shadow-sm">
-            <div class="card-header bg-warning text-dark"><h5 class="mb-0 fw-bold">Hati-hati (Waspada)</h5></div>
+            <div class="card-header bg-warning text-dark"><h5 class="mb-0 fw-bold">Hati-hati (Siaga)</h5></div>
             <div class="card-body">
                 <ul class="list-group list-group-flush">
                     @forelse($waspadaKRI as $kri)
@@ -71,7 +71,7 @@
                       {{ $kri['nama_kri'] }}
                     </li>
                     @empty
-                    <li class="list-group-item text-muted">Tidak ada KRI berstatus waspada.</li>
+                    <li class="list-group-item text-muted">Tidak ada KRI berstatus siaga.</li>
                     @endforelse
                 </ul>
             </div>

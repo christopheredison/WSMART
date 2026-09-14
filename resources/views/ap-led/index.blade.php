@@ -80,7 +80,7 @@
                         <thead>
                             <tr>
                                 <th class="white-space-nowrap">#</th>
-                                <th class="sort" data-sort="tahun">Tahun Kejadian</th>
+                                <th class="sort" data-sort="tanggal_kejadian">Tanggal Kejadian</th>
                                 <th class="sort" data-sort="nama_kejadian">Nama Kejadian</th>
                                 <th class="sort" data-sort="identifikasi_kejadian">Identifikasi Kejadian</th>
                                 <th class="sort" data-sort="kategori_kejadian">Kategori Kejadian</th>
@@ -169,7 +169,7 @@ $(document).ready(function() {
                     return meta.row + meta.settings._iDisplayStart + 1;
                 }
             },
-            {data: 'tahun', name: 'tahun'},
+            {data: 'tanggal_kejadian', name: 'tanggal_kejadian'},
             {data: 'nama_kejadian', name: 'nama_kejadian'},
             {data: 'identifikasi_kejadian', name: 'identifikasi_kejadian'},
             {data: 'kategori_kejadian', name: 'kategori_kejadian'},

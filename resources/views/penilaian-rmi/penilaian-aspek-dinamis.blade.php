@@ -248,9 +248,176 @@
 <script>
   $(document).ready(function() {
     const form = $('#formPenilaian');
+    const formEl = document.getElementById('formPenilaian');
+    const originalScores = {};
+    const originalGaps = {};
+    const saveUrl = form.attr('action');
 
-    // Fungsi Reusable untuk Konfirmasi Swal & Loading Submit
+    // Snapshot nilai awal saat halaman dibuka (untuk partial save multi-user)
+    $('select[name^="scores"]').each(function() {
+      const id = String($(this).data('criteria-id'));
+      originalScores[id] = $(this).val() ?? '';
+    });
+
+    $('textarea[name^="gap_analysis"]').each(function() {
+      const match = ($(this).attr('name') || '').match(/\[(\d+)\]/);
+      if (!match) return;
+      originalGaps[match[1]] = $(this).val() ?? '';
+    });
+
+    function getDirtyCriteriaIds() {
+      const dirty = new Set();
+
+      $('select[name^="scores"]').each(function() {
+        const id = String($(this).data('criteria-id'));
+        const current = $(this).val() ?? '';
+        if (String(current) !== String(originalScores[id] ?? '')) {
+          dirty.add(id);
+        }
+      });
+
+      $('textarea[name^="gap_analysis"]').each(function() {
+        const match = ($(this).attr('name') || '').match(/\[(\d+)\]/);
+        if (!match) return;
+        const id = match[1];
+        if (String($(this).val() ?? '') !== String(originalGaps[id] ?? '')) {
+          dirty.add(id);
+        }
+      });
+
+      $('input[type="file"][name^="files"]').each(function() {
+        if (this.files && this.files.length > 0) {
+          const match = ($(this).attr('name') || '').match(/files\[(\d+)\]/);
+          if (match) dirty.add(match[1]);
+        }
+      });
+
+      return dirty;
+    }
+
+    // Bangun FormData kecil: hanya CSRF + action + kriteria yang berubah + file yang benar-benar dipilih.
+    // Ini menghindari error PHP "Multipart body parts limit exceeded".
+    function buildPartialFormData(actionValue, dirtyIds) {
+      const formData = new FormData();
+      const token = form.find('input[name="_token"]').val();
+
+      formData.append('_token', token);
+      formData.append('action', actionValue);
+
+      dirtyIds.forEach(function(criteriaId) {
+        const scoreSelect = formEl.querySelector('select[name="scores[' + criteriaId + ']"]');
+        const gapTextarea = formEl.querySelector('textarea[name="gap_analysis[' + criteriaId + ']"]');
+
+        if (scoreSelect) {
+          formData.append('scores[' + criteriaId + ']', scoreSelect.value ?? '');
+        }
+
+        if (gapTextarea) {
+          formData.append('gap_analysis[' + criteriaId + ']', gapTextarea.value ?? '');
+        }
+
+        // Hanya append file yang benar-benar dipilih (bukan input kosong)
+        for (let i = 0; i < 3; i++) {
+          const fileInput = formEl.querySelector('input[type="file"][name="files[' + criteriaId + '][' + i + ']"]');
+          if (fileInput && fileInput.files && fileInput.files[0]) {
+            formData.append('files[' + criteriaId + '][' + i + ']', fileInput.files[0]);
+          }
+        }
+      });
+
+      return formData;
+    }
+
+    function submitPartialForm(actionValue, dirtyIds) {
+      const formData = buildPartialFormData(actionValue, dirtyIds);
+
+      $.ajax({
+        url: saveUrl,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        success: function(response, textStatus, xhr) {
+          // Redirect response (Laravel redirect) biasanya 200 + HTML, atau ikut Location
+          const redirectUrl = xhr.getResponseHeader('X-Redirect') || null;
+
+          if (response && response.success === false) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Gagal Menyimpan',
+              text: response.message || 'Terjadi kesalahan saat menyimpan data.',
+              confirmButtonColor: '#0d6efd'
+            });
+            return;
+          }
+
+          const message = (response && response.message)
+            ? response.message
+            : (actionValue === 'finish'
+              ? 'Penilaian Aspek Dimensi berhasil diselesaikan.'
+              : 'Penilaian Aspek Dimensi berhasil disimpan sementara.');
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: message,
+            confirmButtonColor: '#0d6efd'
+          }).then(function() {
+            window.location.href = @json(route('penilaian-rmi.show', $period->id));
+          });
+        },
+        error: function(xhr) {
+          let message = 'Terjadi kesalahan saat menyimpan data.';
+          let html = null;
+
+          if (xhr.status === 422) {
+            const res = xhr.responseJSON || {};
+            message = res.message || 'Validasi gagal. Mohon periksa kembali data Anda.';
+
+            if (res.errors) {
+              const list = Array.isArray(res.errors)
+                ? res.errors
+                : Object.values(res.errors).flat();
+
+              if (list.length) {
+                html = '<div class="text-start" style="max-height:250px;overflow-y:auto;"><ul class="text-danger ps-3 mb-0">' +
+                  list.map(function(item) { return '<li>' + item + '</li>'; }).join('') +
+                  '</ul></div>';
+              }
+            }
+          } else if (xhr.responseJSON && xhr.responseJSON.message) {
+            message = xhr.responseJSON.message;
+          } else if (typeof xhr.responseText === 'string' && xhr.responseText.indexOf('Multipart body parts limit') !== -1) {
+            message = 'Form terlalu besar untuk dikirim. Silakan refresh halaman lalu simpan ulang (hanya perubahan Anda yang dikirim).';
+          }
+
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal Menyimpan',
+            text: html ? undefined : message,
+            html: html || undefined,
+            confirmButtonColor: '#0d6efd'
+          });
+        }
+      });
+    }
+
     function submitWithLoadingAndConfirmation(actionValue, title, text, confirmText, confirmColor) {
+      const dirtyIds = getDirtyCriteriaIds();
+
+      if (actionValue === 'save' && dirtyIds.size === 0) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Tidak ada perubahan',
+          text: 'Belum ada data yang diubah untuk disimpan sementara.',
+          confirmButtonColor: '#0d6efd'
+        });
+        return;
+      }
+
       Swal.fire({
         title: title,
         text: text,
@@ -260,63 +427,50 @@
         confirmButtonText: confirmText,
         cancelButtonText: 'Batal'
       }).then((result) => {
-        if (result.isConfirmed) {
+        if (!result.isConfirmed) return;
 
-          // Memunculkan Loading overlay
-          Swal.fire({
-            title: 'Memproses Data...',
-            html: 'Mohon tunggu sebentar, data sedang disimpan.',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            showConfirmButton: false,
-            didOpen: () => {
-              Swal.showLoading();
-            }
-          });
+        Swal.fire({
+          title: 'Memproses Data...',
+          html: 'Mohon tunggu sebentar, data sedang disimpan.',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
 
-          // 1. Ubah value dari input hidden sesuai tombol yang diklik ('save' atau 'finish')
-          document.getElementById('formAction').value = actionValue;
-
-          // 2. Submit form menggunakan native Javascript form.submit()
-          document.getElementById('formPenilaian').submit();
-        }
+        submitPartialForm(actionValue, dirtyIds);
       });
     }
 
-    // Action SELESAI (Berlaku untuk button form & floating)
+    // Action SELESAI: kelengkapan final divalidasi server dari DB (hasil gabungan multi-user)
     $('#btn-finish, #floatingFinishBtn').click(function(e) {
       e.preventDefault();
 
       let isValid = true;
       let firstInvalidElement = null;
-      let errorMessages = []; // Array untuk menampung nama field yang kosong
+      let errorMessages = [];
+      const dirtyIds = getDirtyCriteriaIds();
 
-      // 1. Reset semua styling error
       $('select[name^="scores"]').removeClass('is-invalid');
       $('textarea[name^="gap_analysis"]').removeClass('is-invalid');
       $('.btn-gap-modal').removeClass('btn-danger text-white');
 
-      // 2. Validasi Score
-      $('select[name^="scores"]').each(function() {
-        if ($(this).val() === null || $(this).val() === '') {
-          isValid = false;
-          $(this).addClass('is-invalid');
-          errorMessages.push('<li>' + $(this).data('fieldname') + '</li>');
-          if (!firstInvalidElement) firstInvalidElement = $(this);
-        }
-      });
-
-      // 3. Validasi Gap Analysis (skip jika score = 0)
-      $('select[name^="scores"]').each(function() {
-        const scoreVal = $(this).val();
-        const criteriaId = $(this).data('criteria-id');
+      dirtyIds.forEach(function(criteriaId) {
+        const scoreSelect = $('select[name="scores[' + criteriaId + ']"]');
         const gapTextarea = $('textarea[name="gap_analysis[' + criteriaId + ']"]');
+        const scoreVal = scoreSelect.val();
+
+        if (scoreVal === null || scoreVal === '') {
+          isValid = false;
+          scoreSelect.addClass('is-invalid');
+          errorMessages.push('<li>' + (scoreSelect.data('fieldname') || ('Score kriteria ' + criteriaId)) + '</li>');
+          if (!firstInvalidElement) firstInvalidElement = scoreSelect;
+          return;
+        }
 
         if (scoreVal === '0' || scoreVal === 0) {
-          gapTextarea.removeClass('is-invalid');
-          let modalId = gapTextarea.closest('.modal').attr('id');
-          let triggerBtn = $('button[data-bs-target="#' + modalId + '"]');
-          triggerBtn.removeClass('btn-danger text-white');
           return;
         }
 
@@ -327,18 +481,15 @@
           let modalId = gapTextarea.closest('.modal').attr('id');
           let triggerBtn = $('button[data-bs-target="#' + modalId + '"]');
           triggerBtn.removeClass('btn-primary btn-outline-primary').addClass('btn-danger text-white');
-
-          errorMessages.push('<li>' + gapTextarea.data('fieldname') + '</li>');
+          errorMessages.push('<li>' + (gapTextarea.data('fieldname') || ('Gap Analysis kriteria ' + criteriaId)) + '</li>');
 
           if (!firstInvalidElement) firstInvalidElement = triggerBtn;
         }
       });
 
-      // 4. Jika ada error, tampilkan List Error spesifik di SweetAlert
       if (!isValid) {
-        // Bungkus array errorMessages menjadi HTML ul/li
         let errorHtml = '<div class="text-start" style="max-height: 250px; overflow-y: auto;">' +
-                          '<p class="mb-2 text-dark">Mohon lengkapi bagian berikut:</p>' +
+                          '<p class="mb-2 text-dark">Mohon lengkapi bagian yang Anda ubah:</p>' +
                           '<ul class="text-danger ps-3 mb-0" style="font-size: 0.95rem;">' +
                             errorMessages.join('') +
                           '</ul>' +
@@ -346,34 +497,32 @@
 
         Swal.fire({
           icon: 'error',
-          title: 'Penilaian Belum Lengkap!',
-          html: errorHtml, // Menggunakan param html, bukan text
+          title: 'Data Perubahan Belum Lengkap!',
+          html: errorHtml,
           confirmButtonColor: '#0d6efd'
         }).then(() => {
-          if (firstInvalidElement) {
+          if (firstInvalidElement && firstInvalidElement.length) {
             $('html, body').animate({
               scrollTop: firstInvalidElement.offset().top - 150
             }, 500);
 
             if (firstInvalidElement.is('select')) {
-                firstInvalidElement.focus();
+              firstInvalidElement.focus();
             }
           }
         });
         return;
       }
 
-      // Lolos validasi -> Submit
       submitWithLoadingAndConfirmation(
         'finish',
         'Selesaikan Penilaian?',
-        'Pastikan semua data dan gap analysis sudah benar. Data yang diselesaikan akan diproses ke tahap selanjutnya.',
+        'Sistem akan mengecek kelengkapan dari database (termasuk data yang diisi user lain). Hanya perubahan Anda yang akan disimpan.',
         'Ya, Selesaikan!',
         '#198754'
       );
     });
 
-    // EVENT LISTENER: Hapus border merah saat user memilih Score
     $(document).on('change', 'select[name^="scores"]', function() {
       $(this).removeClass('is-invalid');
 
@@ -387,45 +536,44 @@
       }
     });
 
-// EVENT LISTENER: Ubah warna dan icon (Check) tombol Modal secara LIVE
-$(document).on('input', 'textarea[name^="gap_analysis"]', function() {
-  $(this).removeClass('is-invalid');
+    $(document).on('input', 'textarea[name^="gap_analysis"]', function() {
+      $(this).removeClass('is-invalid');
 
-  let modalId = $(this).closest('.modal').attr('id');
-  let triggerBtn = $('button[data-bs-target="#' + modalId + '"]');
-  let icon = triggerBtn.find('i');
+      let modalId = $(this).closest('.modal').attr('id');
+      let triggerBtn = $('button[data-bs-target="#' + modalId + '"]');
+      let icon = triggerBtn.find('.bx');
 
-  if ($(this).val().trim() !== '') {
-    // Jika terisi -> Tombol Solid Biru, icon Check Circle
-    triggerBtn.removeClass('btn-danger btn-outline-primary').addClass('btn-primary text-white');
-    icon.removeClass('bx-file').addClass('bx-check-circle');
-  } else {
-    // Jika kosong -> Tombol Outline Biru, icon File
-    triggerBtn.removeClass('btn-danger btn-primary text-white').addClass('btn-outline-primary');
-    icon.removeClass('bx-check-circle').addClass('bx-file');
-  }
-});
+      if ($(this).val().trim() !== '') {
+        triggerBtn.removeClass('btn-danger btn-outline-primary').addClass('btn-primary text-white');
+        icon.removeClass('bx-file').addClass('bx-check-circle');
+      } else {
+        triggerBtn.removeClass('btn-danger btn-primary text-white').addClass('btn-outline-primary');
+        icon.removeClass('bx-check-circle').addClass('bx-file');
+      }
+    });
 
-    // Action SIMPAN SEMENTARA (Berlaku untuk button form & floating)
     $('#btn-save, #floatingSaveBtn').click(function(e) {
       e.preventDefault();
 
       submitWithLoadingAndConfirmation(
         'save',
         'Simpan Sementara?',
-        'Progres pengisian Anda akan disimpan agar bisa dilanjutkan kembali nanti.',
+        'Hanya bagian yang Anda ubah yang akan disimpan, sehingga tidak menimpa data user lain.',
         'Ya, Simpan!',
-        '#0d6efd' // Biru primary
+        '#0d6efd'
       );
     });
 
-    // Logic untuk Tampilkan/sembunyikan floating buttons berdasarkan scroll (tetap sama)
+    // Cegah native submit penuh (Enter key) yang bisa memicu multipart limit
+    form.on('submit', function(e) {
+      e.preventDefault();
+    });
+
     const formButtons = $('.d-flex.justify-content-between.mt-4');
     const floatingButtons = $('#floatingButtons');
 
     $(window).scroll(function() {
-      // Guarding jika element tidak ditemukan
-      if(formButtons.length === 0) return;
+      if (formButtons.length === 0) return;
 
       const formButtonsPosition = formButtons.offset().top;
       const scrollPosition = $(window).scrollTop() + $(window).height();
@@ -437,9 +585,7 @@ $(document).on('input', 'textarea[name^="gap_analysis"]', function() {
       }
     });
 
-    // Trigger scroll event pada awal load untuk set status awal
     $(window).scroll();
-
   });
 </script>
 @endpush

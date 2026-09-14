@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use OwenIt\Auditing\Auditable;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 
-class RMIPeriodDocument extends Model
+class RMIPeriodDocument extends Model implements AuditableContract
 {
-    use HasFactory;
+    use Auditable, HasFactory;
 
     protected $table = 'rmi_period_documents';
 

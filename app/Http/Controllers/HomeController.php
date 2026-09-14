@@ -24,6 +24,7 @@ use App\Models\ProjectHasilUsaha;
 use App\Models\KRIUnitMonitoring;
 use App\Models\KRIProjectMonitoring;
 use App\Models\UnitRiskMonitoring;
+use App\Services\ProjectHasilUsahaSyncService;
 use App\Models\UnitHasilUsaha;
 use Illuminate\Http\Request;
 use App\Supports\ApiWika;
@@ -223,7 +224,7 @@ class HomeController extends Controller
                     'warna_tingkat_risiko' => strtolower(str_replace(' ', '-', $riskMaps->where('nilai_risiko', $item->skala_risiko)->pluck('level_risiko')->first())),
                     'tck_terpengaruh' => $item->tck?->title ?: '-',
                     'kri' => $item->risiko->kri->kri,
-                    'status_kri' => ['bahaya' => 'red', 'waspada' => 'yellow', 'aman'=> 'green'][strtolower($item->risiko->kri->statusKri)] ?? '',
+                    'status_kri' => ['bahaya' => 'red', 'waspada' => 'yellow', 'siaga' => 'yellow', 'aman'=> 'green'][strtolower($item->risiko->kri->statusKri)] ?? '',
                     'risk_owner' => $item->unit->name,
                 ];
             })->values(),
@@ -392,7 +393,7 @@ class HomeController extends Controller
                     'warna_tingkat_risiko' => strtolower(str_replace(' ', '-', $riskMaps->where('nilai_risiko', $item->skala_risiko)->pluck('level_risiko')->first())),
                     'tck_terpengaruh' => $item->tck?->title ?: '-',
                     'kri' => $item->risiko->kri->kri,
-                    'status_kri' => ['bahaya' => 'red', 'waspada' => 'yellow', 'aman'=> 'green'][strtolower($item->risiko->kri->statusKri)] ?? '',
+                    'status_kri' => ['bahaya' => 'red', 'waspada' => 'yellow', 'siaga' => 'yellow', 'aman'=> 'green'][strtolower($item->risiko->kri->statusKri)] ?? '',
                     'risk_owner' => $item->unit->name,
                 ];
             })->values(),
@@ -433,7 +434,16 @@ class HomeController extends Controller
         $risikos = IdentifikasiRisiko::with([
             'periode',
             'peristiwaRisiko',
-            'riskAnalysis',
+            'riskAnalysis.skalaDampakObj',
+            'riskAnalysis.skalaProbabilitas',
+            'riskAnalysis.skalaDampakResidualQ1Obj',
+            'riskAnalysis.skalaProbabilitasResidualQ1',
+            'riskAnalysis.skalaDampakResidualQ2Obj',
+            'riskAnalysis.skalaProbabilitasResidualQ2',
+            'riskAnalysis.skalaDampakResidualQ3Obj',
+            'riskAnalysis.skalaProbabilitasResidualQ3',
+            'riskAnalysis.skalaDampakResidualQ4Obj',
+            'riskAnalysis.skalaProbabilitasResidualQ4',
             'monitoringRisikos' => function ($query) {
                 $query->orderBy('id', 'desc');
             },
@@ -451,11 +461,10 @@ class HomeController extends Controller
             ])
             ->values();
 
-        $currentRiskMaps          = $risikos->pluck('currentRiskMapsMonth');
         $formattedCurrentRiskMaps = [];
 
-        foreach ($risikos as $idx => $risk) {
-            $currentValue = $risk->currentRiskMapsMonth['inherent'];
+        foreach ($risikos as $risk) {
+            $currentValue = $risk->currentRiskMapsMonth['inherent'] ?? [];
             for ($month = 1; $month <= 12; $month++) {
                 if ($nextValue = ($risk->currentRiskMapsMonth[$month] ?? null)) {
                     $currentValue = $nextValue;
@@ -467,6 +476,8 @@ class HomeController extends Controller
                 $formattedCurrentRiskMaps[$risk->id][] = $currentValue;
             }
         }
+
+        $riskResidualData = $this->buildRiskResidualData($risikos);
 
         $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
             ->get()
@@ -594,6 +605,7 @@ class HomeController extends Controller
             'selectedUnit',
             'risikos',
             'formattedCurrentRiskMaps',
+            'riskResidualData',
             'riskMaps',
             'dashboardData',
         ));
@@ -844,7 +856,16 @@ class HomeController extends Controller
         $risikos = IdentifikasiRisiko::with([
             'periode',
             'peristiwaRisiko',
-            'riskAnalysis',
+            'riskAnalysis.skalaDampakObj',
+            'riskAnalysis.skalaProbabilitas',
+            'riskAnalysis.skalaDampakResidualQ1Obj',
+            'riskAnalysis.skalaProbabilitasResidualQ1',
+            'riskAnalysis.skalaDampakResidualQ2Obj',
+            'riskAnalysis.skalaProbabilitasResidualQ2',
+            'riskAnalysis.skalaDampakResidualQ3Obj',
+            'riskAnalysis.skalaProbabilitasResidualQ3',
+            'riskAnalysis.skalaDampakResidualQ4Obj',
+            'riskAnalysis.skalaProbabilitasResidualQ4',
             'monitoringRisikos' => function ($query) {
                 $query->orderBy('id', 'desc');
             },
@@ -861,10 +882,9 @@ class HomeController extends Controller
             ])
             ->values();
 
-        $currentRiskMaps          = $risikos->pluck('currentRiskMaps');
         $formattedCurrentRiskMaps = [];
 
-        foreach ($risikos as $idx => $risk) {
+        foreach ($risikos as $risk) {
             $getFallbackValue = function($targetQuarter) use ($risk) {
                 if (isset($risk->current_risk_maps[$targetQuarter]) &&
                     !is_null($risk->current_risk_maps[$targetQuarter]['skala_dampak']) &&
@@ -909,6 +929,8 @@ class HomeController extends Controller
                 }
             }
         }
+
+        $riskResidualData = $this->buildRiskResidualData($risikos);
 
         $riskMaps = RiskMap::select('skala_dampak', 'skala_probabilitas', 'nilai_risiko', 'level_risiko')
             ->get()
@@ -1004,6 +1026,7 @@ class HomeController extends Controller
           'selectedUnit',
           'risikos',
           'formattedCurrentRiskMaps',
+          'riskResidualData',
           'riskMaps',
           'period',
           'dashboardData',
@@ -1393,49 +1416,31 @@ class HomeController extends Controller
 
             try {
                 $periodForApi = \Carbon\Carbon::parse($selectedPeriod)->format('Ym');
-                $profitCenter = $selectedProject->meta['profit_center'] ?? null;
-                $hasilUsahaRecord = null;
+                $syncService = app(ProjectHasilUsahaSyncService::class);
+                $hasilUsahaRecord = ProjectHasilUsaha::where('project_id', $selectedProject->id)
+                    ->where('period', $periodForApi)
+                    ->first();
 
-                if ($profitCenter) {
-                    $hasilUsahaRecord = ProjectHasilUsaha::where('project_id', $selectedProject->id)->where('period', $periodForApi)->first();
+                if ($syncService->needsSync($hasilUsahaRecord)) {
+                    $hasilUsahaRecord = $syncService->syncProject($selectedProject, $periodForApi);
+                }
 
-                    $apiResponse = (new ApiWika())->getHasilUsahaProject($periodForApi, $profitCenter);
+                if (!$hasilUsahaRecord) {
+                    $hasilUsahaRecord = $syncService->getLatestForProject($selectedProject, true);
+                }
 
-                    if ($apiResponse && $apiResponse['status'] && isset($apiResponse['data']['hasil_usaha'])) {
-                        $apiData = $apiResponse['data']['hasil_usaha'];
+                if ($hasilUsahaRecord) {
+                    $summaryData['omset_kontrak_total'] = $hasilUsahaRecord->kontrak_review;
+                    $summaryData['omset_penjualan_sd_bulan'] = $hasilUsahaRecord->penjualan_ri;
+                    $summaryData['lsp_rencana_sd_bulan'] = $hasilUsahaRecord->lsp_ra;
+                    $summaryData['lsp_realisasi_sd_bulan'] = $hasilUsahaRecord->lsp_ri;
+                    $summaryData['omset_penjualan_sd_selesai'] = $hasilUsahaRecord->penjualan_ra;
+                    $summaryData['lsp_rencana_sd_selesai'] = $hasilUsahaRecord->lsp_review;
+                    $summaryData['lsp_realisasi_sd_selesai'] = $hasilUsahaRecord->lsp_proyeksi;
 
-                        $hasilUsahaRecord = ProjectHasilUsaha::updateOrCreate(
-                            ['project_id' => $selectedProject->id, 'period' => $periodForApi],
-                            [
-                                'profit_center'   => $profitCenter,
-                                'response_data'   => $apiResponse['data'],
-                                'kontrak_review'    => $apiData['kontrak_review'] ?? 0,
-                                'kontrak_review_total'    => $apiData['kontrak_review_total'] ?? 0,
-                                'progress_fisik_ra' => $apiData['progress_fisik_ra'] ?? 0,
-                                'progress_fisik_ri' => $apiData['progress_fisik_ri'] ?? 0,
-                                'penjualan_ra'      => $apiData['penjualan_ra'] ?? 0,
-                                'penjualan_ri'      => $apiData['penjualan_ri'] ?? 0,
-                                'lsp_review'        => $apiData['lsp_review'] ?? 0,
-                                'lsp_ra'            => $apiData['lsp_ra'] ?? 0,
-                                'lsp_ri'            => $apiData['lsp_ri'] ?? 0,
-                                'lsp_proyeksi'      => $apiData['lsp_proyeksi'] ?? 0,
-                            ]
-                        );
-                    }
-
-                    if ($hasilUsahaRecord) {
-                        $summaryData['omset_kontrak_total'] = $hasilUsahaRecord->kontrak_review;
-                        $summaryData['omset_penjualan_sd_bulan'] = $hasilUsahaRecord->penjualan_ri;
-                        $summaryData['lsp_rencana_sd_bulan'] = $hasilUsahaRecord->lsp_ra;
-                        $summaryData['lsp_realisasi_sd_bulan'] = $hasilUsahaRecord->lsp_ri;
-                        $summaryData['omset_penjualan_sd_selesai'] = $hasilUsahaRecord->penjualan_ra;
-                        $summaryData['lsp_rencana_sd_selesai'] = $hasilUsahaRecord->lsp_review;
-                        $summaryData['lsp_realisasi_sd_selesai'] = $hasilUsahaRecord->lsp_proyeksi;
-
-                        $summaryData['progress_sd_bulan'] = ($summaryData['omset_kontrak_total'] > 0)
-                            ? ($summaryData['omset_penjualan_sd_bulan'] / $summaryData['omset_kontrak_total']) * 100
-                            : 0;
-                    }
+                    $summaryData['progress_sd_bulan'] = ($summaryData['omset_kontrak_total'] > 0)
+                        ? ($summaryData['omset_penjualan_sd_bulan'] / $summaryData['omset_kontrak_total']) * 100
+                        : 0;
                 }
             } catch (\Exception $e) {
                 Log::channel('wikaapi')->error("Gagal mengambil atau memproses data Hasil Usaha Project", [
@@ -2721,34 +2726,93 @@ class HomeController extends Controller
             ->toDateString();
 
         $user = auth()->user();
+        $user->loadMissing(['unit', 'projects']);
 
-        // 1. FILTER DIVISI OPERASI
-        $units = Unit::where('unit_type_id', 1)
-                     ->whereHas('projects')
-                     ->orderBy('name')
-                     ->get();
+        $canViewAllDivisions = Gate::check('view_all_division')
+            || Gate::check('view_all_project')
+            || Gate::check('project_admin_access');
+
+        $canAccessDivisionProjects = Gate::check('can_access_project_under_division');
+        $isDivisionOperasiUser = $user->unit && (int) $user->unit->unit_type_id === 1;
+        $assignedProjectIds = $user->projects->pluck('id');
+
+        $hasPageAccess = Gate::check('proyek_konsolidasi_dashboard_menu')
+            || $canViewAllDivisions
+            || $canAccessDivisionProjects
+            || (Gate::check('proyek_dashboard_menu') && $assignedProjectIds->isNotEmpty());
+
+        if (!$hasPageAccess) {
+            abort(403, 'Anda tidak memiliki akses ke dashboard Proyek Konsolidasi.');
+        }
+
+        // 1. FILTER DIVISI & PROYEK BERDASARKAN KEWENANGAN
+        $allowedProjectIds = null; // null = semua proyek di unit yang diizinkan
+        $isDivisionScopedUser = $isDivisionOperasiUser
+            && ($canAccessDivisionProjects || Gate::check('unit_dashboard_menu'));
+
+        if ($canViewAllDivisions) {
+            $units = Unit::where('unit_type_id', 1)
+                ->whereHas('projects')
+                ->orderBy('name')
+                ->get();
+        } elseif ($isDivisionScopedUser) {
+            // User Divisi Operasi: hanya divisi sendiri, seluruh proyek di bawahnya
+            $units = Unit::where('id', $user->unit_id)
+                ->where('unit_type_id', 1)
+                ->get();
+        } elseif ($assignedProjectIds->isNotEmpty()) {
+            // User project: hanya divisi dari project yang di-assign, dan hanya project tersebut
+            $assignedProjects = $user->projects;
+            $costCenters = $assignedProjects->pluck('cost_center_parent')->unique()->filter();
+
+            $units = Unit::where('unit_type_id', 1)
+                ->whereIn('cost_center', $costCenters)
+                ->orderBy('name')
+                ->get();
+
+            $allowedProjectIds = $assignedProjectIds;
+        } elseif ($isDivisionOperasiUser) {
+            // Fallback Divisi Operasi: tetap hanya divisi sendiri
+            $units = Unit::where('id', $user->unit_id)
+                ->where('unit_type_id', 1)
+                ->get();
+        } else {
+            $units = collect();
+            $allowedProjectIds = collect();
+        }
+
+        // Validasi unit terpilih agar tidak bisa bypass via query string
+        $allowedUnitIds = $units->pluck('id')->map(fn ($id) => (int) $id);
+        if ($selectedUnitId && !$allowedUnitIds->contains((int) $selectedUnitId)) {
+            $selectedUnitId = null;
+        }
+
+        // User non view-all: kunci ke divisinya jika hanya punya 1 divisi
+        if (!$canViewAllDivisions && $units->count() === 1) {
+            $selectedUnitId = $units->first()->id;
+        }
+
         $listPeristiwa = PeristiwaRisiko::orderBy('title')->get();
 
         // 2. FILTER PROYEK AKTIF BERDASARKAN DIVISI & PERIODE CUTOFF
         $projectQuery = Project::query();
+
+        if ($allowedProjectIds !== null) {
+            $projectQuery->whereIn('id', $allowedProjectIds->isEmpty() ? [0] : $allowedProjectIds);
+        } elseif (!$canViewAllDivisions && $isDivisionOperasiUser && $user->unit?->cost_center) {
+            $projectQuery->where('cost_center_parent', $user->unit->cost_center);
+        }
+
         if ($selectedUnitId) {
-            $selectedUnit = Unit::find($selectedUnitId);
+            $selectedUnit = $units->firstWhere('id', (int) $selectedUnitId) ?? Unit::find($selectedUnitId);
             if ($selectedUnit) {
                 $projectQuery->where('cost_center_parent', $selectedUnit->cost_center);
             }
+        } elseif (!$canViewAllDivisions) {
+            $projectQuery->whereRaw('1 = 0');
         }
 
         $hariIni = Carbon::today()->toDateString();
-
-        // $projectQuery->where(function($q) use ($endOfSelectedPeriod) {
-        //     $q->whereNull('masa_pelaksanaan_end')
-        //       ->orWhereDate('masa_pelaksanaan_end', '>=', $endOfSelectedPeriod);
-        // });
-
-        // $projectQuery->where(function($q) use ($startOfSelectedPeriod) {
-        //     $q->whereNull('masa_pelaksanaan_end')
-        //     ->orWhereDate('masa_pelaksanaan_end', '>=', $startOfSelectedPeriod);
-        // });
 
         // Hanya yang tanggalnya tidak kosong dan >= hari ini yang dianggap Aktif
         $projectQuery->whereNotNull('masa_pelaksanaan_end')
@@ -3101,7 +3165,8 @@ class HomeController extends Controller
             'projects',
             'formattedCurrentRiskMaps',
             'riskMaps',
-            'topLedProyek'
+            'topLedProyek',
+            'canViewAllDivisions'
         ));
     }
 
@@ -3126,11 +3191,65 @@ class HomeController extends Controller
             case 'bahaya':
                 return 1;
             case 'waspada':
+            case 'siaga':
                 return 2;
             case 'aman':
                 return 3;
             default:
                 return 4;
         }
+    }
+
+    private function buildRiskResidualData($risikos): array
+    {
+        $riskResidualData = [];
+
+        foreach ($risikos as $risiko) {
+            $riskAnalysis = $risiko->riskAnalysis;
+            if (!$riskAnalysis) {
+                continue;
+            }
+
+            $riskResidualData[$risiko->id] = [
+                1 => [
+                    'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q1,
+                    'skala_dampak' => $riskAnalysis->skalaDampakResidualQ1Obj ? "({$riskAnalysis->skalaDampakResidualQ1Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ1Obj->deskripsi}" : '-',
+                    'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q1,
+                    'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ1 ? "({$riskAnalysis->skalaProbabilitasResidualQ1->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ1->skala}" : '-',
+                    'skala_risiko' => $riskAnalysis->skala_risiko_residual_q1,
+                    'eksposur_risiko' => $riskAnalysis->eksposur_risiko_residual_q1,
+                    'level_risiko' => $riskAnalysis->level_risiko_residual_q1,
+                ],
+                2 => [
+                    'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q2,
+                    'skala_dampak' => $riskAnalysis->skalaDampakResidualQ2Obj ? "({$riskAnalysis->skalaDampakResidualQ2Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ2Obj->deskripsi}" : '-',
+                    'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q2,
+                    'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ2 ? "({$riskAnalysis->skalaProbabilitasResidualQ2->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ2->skala}" : '-',
+                    'skala_risiko' => $riskAnalysis->skala_risiko_residual_q2,
+                    'eksposur_risiko' => $riskAnalysis->eksposur_risiko_residual_q2,
+                    'level_risiko' => $riskAnalysis->level_risiko_residual_q2,
+                ],
+                3 => [
+                    'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q3,
+                    'skala_dampak' => $riskAnalysis->skalaDampakResidualQ3Obj ? "({$riskAnalysis->skalaDampakResidualQ3Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ3Obj->deskripsi}" : '-',
+                    'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q3,
+                    'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ3 ? "({$riskAnalysis->skalaProbabilitasResidualQ3->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ3->skala}" : '-',
+                    'skala_risiko' => $riskAnalysis->skala_risiko_residual_q3,
+                    'eksposur_risiko' => $riskAnalysis->eksposur_risiko_residual_q3,
+                    'level_risiko' => $riskAnalysis->level_risiko_residual_q3,
+                ],
+                4 => [
+                    'nilai_dampak' => $riskAnalysis->nilai_dampak_residual_q4,
+                    'skala_dampak' => $riskAnalysis->skalaDampakResidualQ4Obj ? "({$riskAnalysis->skalaDampakResidualQ4Obj->tingkat}) {$riskAnalysis->skalaDampakResidualQ4Obj->deskripsi}" : '-',
+                    'nilai_prob'   => $riskAnalysis->nilai_probabilitas_residual_q4,
+                    'skala_prob'   => $riskAnalysis->skalaProbabilitasResidualQ4 ? "({$riskAnalysis->skalaProbabilitasResidualQ4->tingkat}) {$riskAnalysis->skalaProbabilitasResidualQ4->skala}" : '-',
+                    'skala_risiko' => $riskAnalysis->skala_risiko_residual_q4,
+                    'eksposur_risiko' => $riskAnalysis->eksposur_risiko_residual_q4,
+                    'level_risiko' => $riskAnalysis->level_risiko_residual_q4,
+                ],
+            ];
+        }
+
+        return $riskResidualData;
     }
 }

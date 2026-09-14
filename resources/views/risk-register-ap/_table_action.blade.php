@@ -12,9 +12,6 @@
             }
         }
     }
-    
-    // Logic untuk MR
-    $is_mr = auth()->user()->unit ? (auth()->user()->unit->unit_mr == 1) : false;
 @endphp
 
 @if(!$unitExpired)
@@ -53,11 +50,19 @@
       </button>
   @endif
 
-  @if(auth()->user()->level_id == 2 && $is_mr && $item->status == 6 && $item->request_edit == 1)
+  @if(\App\Models\IdentifikasiRisiko::canVerifyRequestEdit(auth()->user(), 'ap') && $item->status == 6 && $item->request_edit == 1)
       <button type="button" class="btn-input-icon" onclick='approveRequestEdit({{ $item->id }}, @json($item->request_edit_reason), @json($item->peristiwa_risiko), @json($item->unit->name ?? "Unit Tidak Diketahui"))'>
           <span class="bx bx-check-double text-success" data-bs-toggle="tooltip" title="Setujui Request Edit"></span>
       </button>
   @endif
+
+  @if(\App\Models\IdentifikasiRisiko::canVerifyRequestEdit(auth()->user(), 'ap') && (int) $item->close_request === 1 && !$item->is_closed)
+      <button type="button" class="btn-input-icon" onclick='verifyCloseRequest({{ $item->id }}, @json($item->close_request_reason), @json($item->peristiwa_risiko), @json(optional($item->closeRequestedBy)->name ?? "-"), @json($item->close_requested_at_formatted ?? "-"))'>
+          <span class="bx bx-lock-alt text-warning" data-bs-toggle="tooltip" title="Verifikasi Penutupan Risiko"></span>
+      </button>
+  @endif
+
+
 
   @can('risk_register_verification')
   @php

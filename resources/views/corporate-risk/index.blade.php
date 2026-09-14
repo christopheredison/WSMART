@@ -4,20 +4,51 @@
 <div class="row g-5 mb-5">
   <div class="col-12">
     <div class="card btn-reveal-trigger">
-      <div class="card-header d-flex align-items-center gap-3">
-        <div class="bg-info-subtle p-2 rounded-4">
-          <div class="lead__icon">
-            <div class="svg-icon svg-icon-2x svg-icon-info">
-              @include('partials.icon-pyramid')
+      <div class="card-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-info-subtle p-2 rounded-4">
+            <div class="lead__icon">
+              <div class="svg-icon svg-icon-2x svg-icon-info">
+                @include('partials.icon-pyramid')
+              </div>
             </div>
           </div>
-        </div>
-        <div class="d-block">
-          <div class="ff-preheading">Input Data</div>
-          <h2>Risk Register Korporat</h2>
-          @if(isset($selectedPeriode))
-          <div class="ff-preheading">Periode: {{ $selectedPeriode->tahun }}</div>
-          @endif
+          <div>
+            <div class="ff-preheading">Input Data</div>
+            <h2>Risk Register Korporat</h2>
+            @if(isset($selectedPeriode))
+            <div class="ff-preheading">Periode: {{ $selectedPeriode->tahun }}</div>
+            @endif
+          </div>
+          <div class="ms-auto d-flex align-items-center gap-3">
+            <div class="col-auto">
+              @php
+                  // Logic sama seperti risk-register-unit:
+                  // Level 1 (Risk Officer MR) boleh menambah risiko.
+                  $canAdd = false;
+                  if (($is_unit_mr ?? true) && ($levelId ?? null) == 1) {
+                      $canAdd = true;
+                  } elseif (($levelId ?? null) == 1) {
+                      $canAdd = true;
+                  }
+                  $pid = $selectedPeriode->id ?? null;
+              @endphp
+              @can('risk_register_create')
+                @if(
+                    !($unitExpired ?? false)
+                    && ($status == null || $status == 1 || $status == 5)
+                    && $canAdd
+                )
+                <a id="add-risk-button" href="{{ route('corporate-risk.create', ['pid' => $pid]) }}" type="button"
+                  class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
+                  data-bs-title="Tambah Risiko">
+                  <span class="bx bx-plus"></span>
+                  <span class="ms-1">Tambah Risiko</span>
+                </a>
+                @endif
+              @endcan
+            </div>
+          </div>
         </div>
       </div>
       <div class="card-header border-bottom">
@@ -34,6 +65,55 @@
           </div>
       </div>
       <div class="card-body dt-header-true">
+        <div class="d-flex align-items-center justify-content-end gap-3">
+          @if(!empty($summaryInfo))
+          <div class="alert alert-{{ $summaryInfo['type'] }} alert-dismissible fade show d-flex align-items-center mt-0 mb-3 flex-grow-1" role="alert">
+              <div class="bg-{{ $summaryInfo['type'] }} text-white rounded-circle p-0 me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                  <i class="bx {{ $summaryInfo['icon'] }} text-white fs-4"></i>
+              </div>
+              <div class="flex-grow-1 pe-4">
+                  {!! $summaryInfo['message'] !!}
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          @endif
+
+          <div class="col-auto ms-auto d-flex gap-2 align-items-center">
+              @if(isset($escalationConfig) && $escalationConfig['show'])
+                <form id="form-eskalasi-action" action="{{ $escalationConfig['route'] }}" method="POST" class="d-inline-block">
+                  @csrf
+                  @if(isset($escalationConfig['parameters']) && is_array($escalationConfig['parameters']))
+                    @foreach($escalationConfig['parameters'] as $name => $value)
+                      <input type="hidden" name="{{ $name }}" value="{{ $value }}">
+                    @endforeach
+                  @endif
+
+                  @if(($escalationConfig['parameters']['send_type'] ?? '') == 'rev')
+                    <button type="button"
+                      class="btn btn-warning btn-arrow-right"
+                      onclick="document.getElementById('modalKirimPerbaikanRisiko') && bootstrap.Modal.getOrCreateInstance(document.getElementById('modalKirimPerbaikanRisiko')).show()"
+                      {{ ($escalationConfig['disabled'] ?? false) ? 'disabled' : '' }}>
+                      {{ $escalationConfig['label'] }}
+                    </button>
+                  @else
+                    <button type="button"
+                      class="btn {{ str_contains(strtolower($escalationConfig['label']), 'publish') ? 'btn-success' : 'btn-info' }} btn-arrow-right"
+                      onclick="submitEskalasiForm('form-eskalasi-action', '{{ $escalationConfig['label'] }}')"
+                      {{ ($escalationConfig['disabled'] ?? false) ? 'disabled' : '' }}>
+                      {{ $escalationConfig['label'] }}
+                    </button>
+                  @endif
+                </form>
+              @endif
+          </div>
+        </div>
+
+        @if(!empty($batchNotes))
+        <div class="alert alert-warning">
+          <strong>Catatan Perbaikan:</strong> {{ $batchNotes->notes }}
+        </div>
+        @endif
+
         <div id="tableExample3">
           <div class="row g-2 mb-1">
             <div class="col-12 col-sm-4" style="display:none;">
@@ -46,22 +126,6 @@
               </select>
             </div>
 
-            {{-- <div class="col-12 col-sm-4">
-              <label for="filter-risk-t2t3" class="form-label d-none">T2 & T3 KBUMN</label>
-              <select id="filter-risk-t2t3" class="form-select select2">
-                <option value="" selected>T2 & T3 KBUMN</option>
-                @foreach($jenisRisiko as $id => $title)
-                    @php
-                        $kategori = \App\Models\JenisRisiko::find($id)->kategoriRisiko;
-                        $kategoriTitle = $kategori ? $kategori->title : '';
-                    @endphp
-                    <option value="{{ $kategoriTitle }} - {{ $title }}" {{ old('jenis_risiko_id') == $id ? 'selected' : '' }}>
-                        {{ $kategoriTitle }} - {{ $title }}
-                    </option>
-                @endforeach
-              </select>
-            </div> --}}
-
             <div class="col-5 col-sm-2" style="display:none;">
               <label for="filter-risk-level" class="form-label d-none">Level Risiko</label>
               <select id="filter-risk-level" class="form-select js-select-hide-search">
@@ -73,38 +137,19 @@
                 <option value="Low">Low</option>
               </select>
             </div>
-            <div class="col-auto ms-auto d-flex gap-2 align-items-center">
-              {{-- <div class="col-auto ms-auto">
-                <a href="{{ route('kamus-risiko-unit.index') }}" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Kamus Risiko">
-                  <span class="bx bx-book-bookmark"></span>
-                  <span class="ms-1">Kamus Risiko</span>
-                </a>
-              </div> --}}
-              <div class="col-auto ms-auto">
-              @php
-                  // diasumsikan di view Anda ada $selectedPeriode
-                  $pid = $selectedPeriode->id;
-              @endphp
-              @can('risk_register_create')
-                @if($status == null || $status == 1 || $status == 5)
-                <a id="add-risk-button" href="{{ route('corporate-risk.create', ['pid' => $pid]) }}" type="button"
-                  class="btn btn-outline-info btn-sm d-flex flex-center" data-bs-toggle="tooltip"
-                  data-bs-title="Tambah Risiko">
-                  <span class="bx bx-plus"></span>
-                  <span class="ms-1">Tambah Risiko</span>
-                </a>
-                @endif
-              @endcan
-              </div>
-            </div>
+          </div>
+          <div class="col-auto mb-3 d-none" id="bulk-verify-container">
+            <button type="button" class="btn btn-success btn-sm align-self-center" onclick="handleBulkVerifikasiClick()">
+              <span class="bx bx-check-shield"></span> Verifikasi Risiko (<span id="count-checked">0</span>)
+            </button>
           </div>
           <table class="table ajax-datatable" id="example" data-paging="true" data-info="true" data-filter="true">
             <thead>
               <tr>
                 <th class="no-sort white-space-nowrap">
-                  @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
+                  @if(isset($step_order) && $step_order > 0 && isset($dataBatch) && $dataBatch->step_verification == $step_order)
                   <div class="form-check mb-0">
-                    <input class="form-check-input" type="checkbox" id="select-all" />
+                    <input class="form-check-input" type="checkbox" id="check-all-risiko" />
                   </div>
                   @endif
                 </th>
@@ -120,7 +165,8 @@
                 <th class="sort mw-10r" data-sort="eksposure_risiko_inherent">Eksposure Risiko</th>
                 <th class="sort mw-10r" data-sort="total_biaya_rencana_perlakuan">Total Biaya Rencana Perlakuan</th>
                 <th class="sort mw-15r" data-sort="waktu_terpapar">Waktu Terpapar</th>
-                <th class="sort" data-sort="status">Status</th>
+                <th class="sort" data-sort="status">Status Approval</th>
+                <th class="sort" data-sort="status_risiko">Status Risiko</th>
                 <th class="no-sort white-space-nowrap" data-sort="action">Action</th>
               </tr>
             </thead>
@@ -128,10 +174,12 @@
               @foreach ($risiko as $index => $item)
               <tr>
                 <td class="white-space-nowrap">
-                  @if($status == \App\Models\DataBatch::STATUS_RANKING && isset($avgQuantitativeExposure))
+                  @if(isset($step_order) && $step_order > 0 && isset($dataBatch) && $dataBatch->step_verification == $step_order && !in_array($item->status, [\App\Models\IdentifikasiRisiko::STATUS_TERVERIFIKASI, \App\Models\IdentifikasiRisiko::STATUS_PUBLISHED]))
                   <div class="form-check mb-0">
-                    <input class="form-check-input select-item" type="checkbox" name="selected_items[]"
-                      value="{{ $item->id }}" />
+                    <input class="form-check-input select-risiko" type="checkbox" name="selected_items[]"
+                      value="{{ $item->id }}"
+                      data-peristiwa="{{ $item->peristiwa_risiko }}"
+                      data-deskripsi="{{ $item->deskripsi_peristiwa_risiko }}" />
                   </div>
                   @endif
                 </td>
@@ -216,26 +264,60 @@
                   @break
                   @case(3)
                     @php
+                      $canVerifyStatus = false;
+                      if (isset($dataBatch) && $item->step_verification == $step_order && $dataBatch->step_verification == $step_order && in_array($item->status, [2, 3])) {
+                        $canVerifyStatus = true;
+                      }
                       $acceptedText = 'Accepted';
-                      if ($item->step_verification == 2) {
-                        $acceptedText = 'Accepted by Risk Owner Divisi';
-                      } elseif ($item->step_verification == 3) {
-                        $acceptedText = 'Accepted by Risk Officer MR';
-                      } elseif ($item->step_verification == 3) {
-                        $acceptedText = 'Accepted by Risk Owner MR';
+                      if ($item->step_verification == 1) {
+                        $acceptedText = $canVerifyStatus
+                          ? 'Need Verification Risk Owner MR'
+                          : 'On Review Risk Owner MR';
                       }
                     @endphp
                     {{ $acceptedText }}
                   @break
                   @case(4)
-                  Accepted
+                      @php
+                        $text = 'Accepted';
+                        if ($item->step_verification == 1) {
+                          $text = 'Accepted by Risk Owner MR';
+                        }
+                      @endphp
+                      {{ $text }}
                   @break
                   @case(5)
-                  Need Revision or Rejected
+                  @php
+                    $rejectedText = 'Need Revision or Rejected';
+                    if ((int) $item->step_verification === 1 || (int) $item->step_verification === 0) {
+                      $rejectedText = 'Rejected by Risk Owner MR';
+                    }
+                  @endphp
+                  {{ $rejectedText }}
+                  @break
+                  @case(6)
+                  Published
                   @break
                   @default
                   Draft
                   @endswitch
+                </td>
+                <td class="status_risiko text-center">
+                  @if($item->is_closed)
+                    <div class="badge bg-danger rounded-pill px-2 mt-auto d-inline-flex align-items-center">
+                      Closed
+                      @if($item->closed_at_formatted)
+                        <i class="bx bx-info-circle ms-1" style="cursor:pointer;font-size:0.95em;"
+                           data-bs-toggle="popover"
+                           data-bs-trigger="hover focus"
+                           data-bs-placement="top"
+                           data-bs-content="Ditutup pada: {{ $item->closed_at_formatted }}"
+                           title=""></i>
+                      @endif
+                    </div>
+                  @else
+                    <div class="badge bg-success rounded-pill px-2 mt-auto">Open</div>
+                  @endif
                 </td>
                 <td class="white-space-nowrap">
                   @can('risk_register_view')
@@ -244,7 +326,14 @@
                     <span class="bx bx-show-alt"></span>
                   </a>
                   @endcan
-                  @include('corporate-risk._table_action', ['item' => $item])
+                  @include('corporate-risk._table_action', [
+                    'item' => $item,
+                    'status' => $status,
+                    'step_order' => $step_order ?? 0,
+                    'dataBatch' => $dataBatch ?? null,
+                    'u_step' => $u_step ?? 0,
+                    'unitExpired' => $unitExpired ?? false,
+                  ])
                 </td>
               </tr>
               @endforeach
@@ -261,163 +350,265 @@
     </div>
   </div>
 </div>
+
+<!-- Modal Verifikasi Risiko -->
+<div class="modal fade" id="modalVerifikasiRisiko" tabindex="-1" aria-labelledby="verifikasiRisikoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="verifikasiRisikoLabel">Verifikasi Risiko</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-4">
+          <h6 id="modal-peristiwa-risiko">Peristiwa Risiko: </h6>
+          <p id="modal-deskripsi-risiko"></p>
+        </div>
+        <form id="form-verifikasi" action="" method="POST">
+          @csrf
+          <div class="mb-3">
+            <label for="catatan-verifikasi" class="form-label">Catatan Verifikasi</label>
+            <textarea class="form-control" id="catatan-verifikasi" name="catatan_verifikasi" rows="4" placeholder="Masukkan catatan verifikasi..."></textarea>
+          </div>
+          <input type="hidden" name="status_verifikasi" id="status-verifikasi" value="">
+          <div id="bulk-ids-container"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" id="btn-terima-risiko">Terima Risiko</button>
+        <button type="button" class="btn btn-danger" id="btn-tolak-risiko">Tolak Risiko</button>
+        <button type="button" class="btn btn-muted" data-bs-dismiss="modal">Batal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Kirim Perbaikan Risiko -->
+<div class="modal fade" id="modalKirimPerbaikanRisiko" tabindex="-1" aria-labelledby="kirimPerbaikanRisikoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="kirimPerbaikanRisikoLabel">Kirim Perbaikan Risiko</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="form-kirim-perbaikan" action="{{ route('corporate-risk.send') }}" method="POST">
+          @csrf
+          <input type="hidden" name="periode_id" value="{{ $selectedPeriode->id ?? '' }}">
+          <input type="hidden" name="unit_id" value="{{ $unitId }}">
+          <input type="hidden" name="send_type" value="rev">
+          <div class="mb-3">
+            <label for="catatan-perbaikan" class="form-label">Catatan Perbaikan</label>
+            <textarea class="form-control" id="catatan-perbaikan" name="catatan_perbaikan" rows="4" placeholder="Masukkan catatan perbaikan..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-submit" id="btn-kirim-perbaikan">Kirim Perbaikan</button>
+        <button type="button" class="btn btn-muted" data-bs-dismiss="modal">Batal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Catatan -->
+@include('corporate-risk._modal_catatan')
 @endsection
 @section('scripts')
+@include('partials.risk-note-helpers')
 <script>
-const table = new DataTable('#example');
-table.on('mouseenter', 'td', function() {
-  let colIdx = table.cell(this).index().column;
-
-  table
-    .cells()
-    .nodes()
-    .each((el) => el.classList.remove('highlight'));
-
-  table
-    .column(colIdx)
-    .nodes()
-    .each((el) => el.classList.add('highlight'));
-});
-
-function deleteItem(element) {
-  if (confirm('Are you sure you want to delete?')) {
-    // Ambil form yang berisi tombol hapus
-    const form = element.parentNode;
-    // Submit form untuk menghapus item
-    form.submit();
-  }
+function submitEskalasiForm(formId, actionText) {
+    Swal.fire({
+        title: 'Konfirmasi',
+        text: `Apakah Anda yakin ingin melakukan "${actionText}"?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Lanjutkan',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById(formId).submit();
+        }
+    });
 }
-</script>
-<script>
+
+function showVerifikasiModal(id, peristiwaRisiko, deskripsiRisiko) {
+  document.getElementById('modal-peristiwa-risiko').textContent = 'Peristiwa Risiko: ' + peristiwaRisiko;
+  document.getElementById('modal-deskripsi-risiko').textContent = deskripsiRisiko;
+
+  const form = document.getElementById('form-verifikasi');
+  form.action = '{{ url("corporate-risk") }}/' + id + '/verifikasi';
+  form.reset();
+  document.getElementById('status-verifikasi').value = '';
+  document.getElementById('bulk-ids-container').innerHTML = '';
+
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalVerifikasiRisiko')).show();
+
+  document.getElementById('btn-terima-risiko').onclick = function() {
+    submitVerifikasi(id, 'terima');
+  };
+  document.getElementById('btn-tolak-risiko').onclick = function() {
+    submitVerifikasi(id, 'tolak');
+  };
+}
+
+function submitVerifikasi(id, status) {
+  const form = document.getElementById('form-verifikasi');
+  const catatanInput = document.getElementById('catatan-verifikasi');
+  if (!catatanInput.value.trim()) {
+    Swal.fire({ title: 'Peringatan', text: 'Catatan verifikasi tidak boleh kosong', icon: 'warning' });
+    return;
+  }
+
+  document.getElementById('status-verifikasi').value = status;
+  Swal.fire({
+    title: status === 'terima' ? 'Terima Risiko?' : 'Kembalikan Risiko?',
+    text: status === 'terima' ? 'Risiko akan diverifikasi dan diterima' : 'Risiko akan dikembalikan untuk revisi',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: status === 'terima' ? 'Ya, Terima' : 'Ya, Kembalikan',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) form.submit();
+  });
+}
+
+function showCatatanRisiko(riskId) {
+    const modalElement = document.getElementById('modalCatatan');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+    const contentDiv = $('#catatan-content');
+
+    contentDiv.html('<div class="d-flex justify-content-center my-4"><div class="spinner-border" role="status"><span class="visually-hidden">Memuat...</span></div></div>');
+
+    const url = "{{ route('corporate-risk.notes', ['riskRegister' => ':id']) }}".replace(':id', riskId);
+
+    $.ajax({
+        url: url,
+        type: 'GET',
+        success: function(notes) {
+            if (!notes.length) {
+                contentDiv.html('<div class="text-center my-4"><i class="fas fa-comment-slash fa-2x text-muted mb-2"></i><p>Belum ada catatan untuk risiko ini.</p></div>');
+            } else {
+                let html = '';
+                notes.forEach(note => {
+                    const statusBadge = window.RiskNoteHelpers.statusBadge(note.status);
+                    const formattedDate = window.RiskNoteHelpers.formatDateWib(note.created_at);
+
+                    html += `
+                    <div class="card mb-3 shadow-sm">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                            <div class="fw-bold">
+                                ${note.user ? note.user.name : 'User Tidak Ditemukan'}
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <small class="text-muted">${formattedDate}</small>
+                                ${statusBadge}
+                            </div>
+                        </div>
+                        <div class="card-body py-2">
+                            <p class="card-text mb-0">${note.notes || '<i>Tidak ada catatan.</i>'}</p>
+                        </div>
+                    </div>
+                    `;
+                });
+                contentDiv.html(html);
+            }
+            modal.show();
+        },
+        error: function() {
+            contentDiv.html('<div class="text-center my-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p>Gagal memuat catatan.</p></div>');
+            modal.show();
+        }
+    });
+}
+
+function handleBulkVerifikasiClick() {
+    const checked = $('.select-risiko:checked');
+    if (!checked.length) return;
+
+    const idsContainer = document.getElementById('bulk-ids-container');
+    idsContainer.innerHTML = '';
+    checked.each(function() {
+        idsContainer.innerHTML += `<input type="hidden" name="ids[]" value="${$(this).val()}">`;
+    });
+
+    document.getElementById('modal-peristiwa-risiko').textContent = `Bulk Verifikasi (${checked.length} risiko)`;
+    document.getElementById('modal-deskripsi-risiko').textContent = 'Verifikasi massal untuk risiko yang dipilih.';
+    const form = document.getElementById('form-verifikasi');
+    form.action = '{{ route("corporate-risk.bulk-verifikasi") }}';
+    form.reset();
+    document.getElementById('status-verifikasi').value = '';
+
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalVerifikasiRisiko')).show();
+    document.getElementById('btn-terima-risiko').onclick = function() { submitVerifikasi(null, 'terima'); };
+    document.getElementById('btn-tolak-risiko').onclick = function() { submitVerifikasi(null, 'tolak'); };
+}
+
 $(document).ready(function() {
-  // Inisialisasi DataTable
-  const table = $('#example').DataTable();
-
-  // Fungsi untuk menangani perubahan nilai di select unit
-  $('#filter-unit').on('change', function() {
-    //var unitId = $(this).val(); // Mendapatkan nilai unit yang dipilih
-    // Memfilter baris tabel berdasarkan nilai unit yang dipilih pada kolom 'Unit'
-    //table.column(1).search(unitId).draw();
-    const selectedUnitId = $(this).val();
-    const currentUrl = new URL(window.location.href);
-
-    // Hapus parameter unit_id jika "Semua Unit" dipilih
-    if (selectedUnitId === '') {
-        currentUrl.searchParams.delete('unit_id');
-    } else {
-        currentUrl.searchParams.set('unit_id', selectedUnitId);
-    }
-
-    // Refresh halaman dengan parameter baru
-    window.location.href = currentUrl.toString();
+  const table = $('#example').DataTable({
+      "paging": true,
+      "info": true,
+      "searching": true,
+      "columnDefs": [
+        {
+          "searchable": false,
+          "orderable": false,
+          "targets": 0
+        }
+      ],
+      "order": [[1, 'asc']],
+      "layout": {
+        "topEnd": {
+            "search": {
+                "placeholder": 'Search...'
+            }
+        }
+      }
   });
 
   $('#filter-risk-event').on('change', function() {
-    var riskEvent = $(this).val();
-    table.column(4).search(riskEvent).draw();
+    table.column(4).search($(this).val()).draw();
   });
 
-  $('#filter-risk-t2t3').on('change', function() {
-    var riskEvent = $(this).val();
-    table.column(4).search(riskEvent).draw();
-  });
-
-  // Function to handle changes in the risk level filter
   $('#filter-risk-level').on('change', function() {
-    var riskLevel = $(this).val();
-    table.column(8).search(riskLevel).draw();
+    table.column(8).search($(this).val()).draw();
   });
 
-  document.querySelector('#send-form').addEventListener('submit', function(event) {
-    event.preventDefault(); // Mencegah form submission otomatis
+  $('#check-all-risiko').on('change', function() {
+    $('.select-risiko').prop('checked', this.checked);
+    toggleBulkVerify();
+  });
 
-    const status = {{ $status ?? 'null' }};
-    const stepOrder = {{ $step_order ?? 'null' }};
+  $(document).on('change', '.select-risiko', toggleBulkVerify);
 
-    if(status === 6){
-      //redirect ke halaman risk corporate
-      window.location.href = "{{ route('corporate-risk.index') }}";
+  function toggleBulkVerify() {
+    const count = $('.select-risiko:checked').length;
+    $('#count-checked').text(count);
+    if (count > 0) $('#bulk-verify-container').removeClass('d-none');
+    else $('#bulk-verify-container').addClass('d-none');
+  }
+
+  $('#btn-kirim-perbaikan').on('click', function() {
+    const catatan = $('#catatan-perbaikan').val().trim();
+    if (!catatan) {
+      Swal.fire({ title: 'Peringatan', text: 'Catatan perbaikan tidak boleh kosong', icon: 'warning' });
+      return;
     }
-    else if(status===3){
-      const selectedRisks = [];
-      document.querySelectorAll('.select-item:checked').forEach(function(checkbox) {
-        selectedRisks.push(checkbox.value);
-      });
+    $('#form-kirim-perbaikan').submit();
+  });
+});
 
-      // Jika tidak ada risiko yang dipilih, tampilkan peringatan
-      if(selectedRisks.length === 0) {
-        Swal.fire({
-          title: "Peringatan",
-          text: "Silakan pilih minimal satu risiko untuk dijadikan risiko utama",
-          icon: "warning",
-        });
-        return;
+document.addEventListener('DOMContentLoaded', function() {
+  const status = {{ $status ?? 'null' }};
+  const addRiskButton = document.getElementById('add-risk-button');
+  if (addRiskButton) {
+    addRiskButton.addEventListener('click', function(event) {
+      if (status !== null && status != 1 && status != 5) {
+        event.preventDefault();
+        alert('Belum bisa menambah data risiko karena sedang dalam proses konfirmasi.');
       }
-
-      // Hapus input hidden yang mungkin sudah ada sebelumnya
-      document.querySelectorAll('input[name="selected_risks[]"]').forEach(function(input) {
-        input.remove();
-      });
-
-      // Tambahkan input hidden untuk setiap risiko yang dipilih
-      selectedRisks.forEach(function(riskId) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'selected_risks[]';
-        input.value = riskId;
-        this.appendChild(input);
-      }, this);
-
-      Swal.fire({
-        title: "Apakah Anda yakin?",
-        text: "Terima Risiko Terpilih sebagai Risiko Utama?",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Ya, terima risiko!",
-        cancelButtonText: "Tidak, batal",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          this.submit(); // Kirim form jika dikonfirmasi
-        }
-      });
-    }
-    else if (status === 5 && (stepOrder === 0 || stepOrder === null)) {// Jika status adalah 5 (revisi) dan step_order adalah 0 atau null, tampilkan modal kirim perbaikan
-      const modal = new bootstrap.Modal(document.getElementById('modalKirimPerbaikanRisiko'));
-      modal.show();
-    } else {
-      // Jika tidak, tampilkan konfirmasi SweetAlert seperti biasa
-      Swal.fire({
-        title: "Apakah Anda yakin?",
-        text: "Semua Data Risiko akan dikirim untuk dilakukan verifikasi selanjutnya dan anda tidak dapat melakukan penambahan risiko dan edit risiko sementara waktu",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Ya, kirim risiko!",
-        cancelButtonText: "Tidak, batal",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          this.submit(); // Kirim form jika dikonfirmasi
-        }
-      });
-    }
-  });
-
-  // Select/Deselect all checkboxes
-  $('#select-all').on('click', function() {
-    var rows = table.rows({
-      'search': 'applied'
-    }).nodes();
-    $('input[type="checkbox"]', rows).prop('checked', this.checked);
-  });
-
-  // Handle individual row selection
-  $('#example tbody').on('change', 'input[type="checkbox"]', function() {
-    if (!this.checked) {
-      var el = $('#select-all').get(0);
-      if (el && el.checked && ('indeterminate' in el)) {
-        el.indeterminate = true;
-      }
-    }
-  });
+    });
+  }
 });
 </script>
 @endsection

@@ -39,7 +39,7 @@ $(document).ready(function() {
         const formData = $('#formTambahRencana').serialize(); // Ambil semua data dari form
 
         $.ajax({
-            url: '{{ route('risk-register-unit.do-perencanaan', $identifikasiRisiko->id) }}', // Endpoint untuk menyimpan data
+            url: '{{ route(($perencanaanBaseRoute ?? 'risk-register-unit') . '.do-perencanaan', $identifikasiRisiko->id) }}', // Endpoint untuk menyimpan data
             type: 'POST',
             data: formData,
             success: function(response) {
@@ -56,7 +56,9 @@ $(document).ready(function() {
             error: function(xhr) {
                 let errorMessage = 'Terjadi kesalahan.';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message; // Ambil pesan error dari controller jika ada
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
                 }
                 Swal.fire({
                     title: 'Error',
@@ -140,15 +142,17 @@ $(document).ready(function() {
     // Mendapatkan elemen select untuk opsi perlakuan risiko dan jenis rencana perlakuan risiko
     const opsiPerlakuanRisiko = document.getElementById('opsi_perlakuan_risiko');
     const jenisRencanaPerlakuanRisiko = document.getElementById('jenis_rencana_perlakuan_risiko');
-    
-    // Menambahkan event listener untuk perubahan pada opsi perlakuan risiko
-    opsiPerlakuanRisiko.addEventListener('change', function() {
-        // Jika opsi perlakuan risiko yang dipilih adalah ID 3 (Accept/monitor)
-        if (this.value === '3') {
-            // Set jenis rencana perlakuan risiko ke ID 8 (Lainnya)
-            jenisRencanaPerlakuanRisiko.value = '8';
-        }
-    });
+
+    // Field jenis rencana bisa tidak ada (sudah di-comment di form) — jaga null safety
+    if (opsiPerlakuanRisiko) {
+        opsiPerlakuanRisiko.addEventListener('change', function() {
+            // Jika opsi perlakuan risiko yang dipilih adalah ID 3 (Accept/monitor)
+            if (this.value === '3' && jenisRencanaPerlakuanRisiko) {
+                // Set jenis rencana perlakuan risiko ke ID 8 (Lainnya)
+                jenisRencanaPerlakuanRisiko.value = '8';
+            }
+        });
+    }
 })
 </script>
 @endpush

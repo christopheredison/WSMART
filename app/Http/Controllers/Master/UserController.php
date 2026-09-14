@@ -83,10 +83,13 @@ class UserController extends Controller
                             $editUrl = route('users.edit', $row->id);
                             $btn .= '<a href="'.$editUrl.'" class="btn-input-icon" title="Edit"><span class="bx bx-edit"></span></a>';
                         }
-                        $isAdminTarget = collect($row->role_names ?? [])->map(function ($roleName) {
-                            return strtolower((string) $roleName);
-                        })->contains('admin');
-                        if ($canGhostLogin && auth()->id() !== $row->id && !$isAdminTarget) {
+                        // $isAdminTarget = collect($row->role_names ?? [])->map(function ($roleName) {
+                        //     return strtolower((string) $roleName);
+                        // })->contains('admin');
+                        if (
+                            $canGhostLogin && auth()->id() !== $row->id
+                            // && !$isAdminTarget
+                        ) {
                             $btn .= '<button type="button" class="btn-input-icon btn-ghost-login" data-user-id="'.$row->id.'" data-user-name="'.e($row->name).'">
                                         <span class="bx bx-ghost" title="Ghost Login"></span>
                                     </button>';
@@ -118,7 +121,7 @@ class UserController extends Controller
 
     public function create()
     {
-        $roles = Role::orderBy('name', 'asc')->pluck('name', 'id');
+        $roles = Role::orderBy('name', 'asc')->get(['id', 'name', 'notes']);
         $roless = Role::with('permissions')->orderBy('name', 'asc')->get();
         $unit = Unit::pluck('name','id');
 
@@ -200,7 +203,7 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        $roles = Role::orderBy('name', 'asc')->pluck('name', 'id');
+        $roles = Role::orderBy('name', 'asc')->get(['id', 'name', 'notes']);
         $userRoles = $user->roles->pluck('id')->toArray();
         $roless = Role::with('permissions')->orderBy('name', 'asc')->get();
         $unit = Unit::pluck('name','id');

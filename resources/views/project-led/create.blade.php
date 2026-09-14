@@ -35,15 +35,29 @@
                                               {{ $risiko->title }}
                                           </option>
                                       @endforeach
-                                      <option value="other" {{ old('peristiwa_risiko_id') == 'other' ? 'selected' : '' }}>Lainnya</option>
+                                      <option value="other" {{ old('peristiwa_risiko_id') == 'other' ? 'selected' : '' }}>Ajukan Peristiwa Lainnya</option>
                                   </select>
-                                  <textarea
-                                    class="form-control mt-2 {{ (old('peristiwa_risiko_id') == 'other') ? '' : 'd-none' }}"
-                                    id="peristiwa_risiko_lainnya"
-                                    name="deskripsi_kejadian"
-                                    rows="3"
-                                    placeholder="Masukkan Identifikasi Kejadian Lainnya"
-                                  >{{ old('deskripsi_kejadian') }}</textarea>
+                                  <div class="alert alert-info mt-2 d-none mb-2" id="peristiwa-other-guide">
+                                      Peristiwa ini perlu persetujuan Divisi Manajemen Risiko sebelum bisa digunakan.
+                                  </div>
+                                  <div class="d-none" id="peristiwa-other-box">
+                                    <textarea
+                                      class="form-control"
+                                      id="peristiwa_risiko_lainnya"
+                                      name="deskripsi_kejadian"
+                                      rows="3"
+                                      placeholder="Masukkan usulan identifikasi kejadian / peristiwa risiko lainnya"
+                                    >{{ old('deskripsi_kejadian') }}</textarea>
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btn-submit-peristiwa-lainnya">
+                                            <i class="bx bx-send me-1"></i>Ajukan Persetujuan
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btn-refresh-peristiwa">
+                                            <i class="bx bx-refresh me-1"></i>Muat Ulang Pilihan Peristiwa
+                                        </button>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">Setelah disetujui Divisi Manajemen Risiko, pilih kembali peristiwa dari dropdown di atas.</small>
+                                  </div>
                                 </div>
                             </div>
 
@@ -230,15 +244,93 @@
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
 $(document).ready(function() {
+    const submitPeristiwaUrl = @json($project ? route('project-led.peristiwa-lainnya.submit', ['project' => $project->id]) : null);
+
     $('#peristiwa_risiko_id').on('change', function() {
         const selectedValue = $(this).val();
         const otherTextarea = $('#peristiwa_risiko_lainnya');
+        const otherGuide = $('#peristiwa-other-guide');
+        const otherBox = $('#peristiwa-other-box');
+        const refreshBtn = $('#btn-refresh-peristiwa');
 
         if (selectedValue === 'other') {
-            otherTextarea.removeClass('d-none').attr('required', true);
+            otherGuide.removeClass('d-none');
+            otherBox.removeClass('d-none');
+            otherTextarea.removeClass('d-none').attr('required', false);
         } else {
+            otherGuide.addClass('d-none');
+            otherBox.addClass('d-none');
             otherTextarea.addClass('d-none').attr('required', false).val('');
+            refreshBtn.addClass('d-none');
         }
+    }).trigger('change');
+
+    $('#btn-submit-peristiwa-lainnya').on('click', function() {
+        const value = $('#peristiwa_risiko_lainnya').val().trim();
+        const btn = $(this);
+
+        if (!submitPeristiwaUrl) {
+            Swal.fire('Gagal', 'Proyek tidak ditemukan untuk pengajuan peristiwa.', 'error');
+            return;
+        }
+
+        if (!value) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Data Belum Lengkap',
+                text: 'Mohon isi deskripsi peristiwa risiko lainnya terlebih dahulu.',
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Ajukan peristiwa ini?',
+            html: `Peristiwa <strong>${$('<div>').text(value).html()}</strong> akan dikirim ke Divisi Manajemen Risiko untuk diverifikasi.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, Ajukan',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            btn.prop('disabled', true);
+
+            $.ajax({
+                url: submitPeristiwaUrl,
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    title: value,
+                },
+                success: function(response) {
+                    $('#btn-refresh-peristiwa').removeClass('d-none');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Pengajuan Berhasil',
+                        text: response.message || 'Pengajuan telah dikirim ke MR.',
+                    });
+                },
+                error: function(xhr) {
+                    const msg = xhr?.responseJSON?.message || 'Gagal mengirim pengajuan peristiwa. Silakan coba lagi.';
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Pengajuan Gagal',
+                        text: msg,
+                    });
+                },
+                complete: function() {
+                    btn.prop('disabled', false);
+                }
+            });
+        });
+    });
+
+    $('#btn-refresh-peristiwa').on('click', function() {
+        window.location.reload();
     });
 
     var flatpickrMulai = flatpickr("#timelineRange1", {

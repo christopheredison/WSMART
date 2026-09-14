@@ -15,11 +15,14 @@ use Carbon\Carbon;
 class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, ShouldAutoSize, WithEvents
 {
     private $risikos;
+    private $bulan;
+    private $tahun;
 
-    // Sekarang menggunakan Collection $risikos
-    public function __construct(Collection $risikos)
+    public function __construct(Collection $risikos, $bulan = null, $tahun = null)
     {
         $this->risikos = $risikos;
+        $this->bulan = $bulan;
+        $this->tahun = $tahun;
     }
 
     public function title(): string
@@ -77,7 +80,7 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
 
                 // Row 2: Sub-header untuk Kategori Treshold KRI
                 $sheet->setCellValue('Q2', 'Aman');
-                $sheet->setCellValue('R2', 'Waspada');
+                $sheet->setCellValue('R2', 'Siaga');
                 $sheet->setCellValue('S2', 'Bahaya');
 
                 // Merge sel header vertikal (tanpa sub-header)
@@ -188,7 +191,10 @@ class ProfilRisikoSheet implements FromCollection, WithTitle, WithHeadings, Shou
 
         $statusRisiko = '-';
         if ($isFirstRowOfGroup) {
-            $statusRisiko = $risiko->is_closed ? 'Closed' : 'Open';
+            $statusRisiko = $risiko->formatStatusRisikoForExport(
+                $this->tahun ? (int) $this->tahun : null,
+                $this->bulan ? (int) $this->bulan : null
+            );
         }
 
         return [

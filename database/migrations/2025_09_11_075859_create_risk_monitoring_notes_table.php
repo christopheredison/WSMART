@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('risiko_id');
             $table->integer('type')->comment('1: Divisi, 2: Project');
-            $table->boolean('status')->comment('1: Diterima, 0: Ditolak');
+            $table->integer('status')->comment('1 = diterima/verifikasi, 2 = ditolak/revisi, 3 = pengajuan');
             $table->text('notes')->nullable();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->integer('quarter')->nullable();

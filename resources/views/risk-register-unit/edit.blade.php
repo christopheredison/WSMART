@@ -97,7 +97,9 @@
                 <div class="card-body">
                     <div id="dampak-risiko-body">
                         @forelse($identifikasiRisiko->dampakRisikos as $index => $dampak)
-                        <div class="row g-2 mb-3 dampak-row-item">
+                        <div class="row g-2 mb-3 dampak-row-item"
+                            data-has-monitoring="{{ $dampak->monitorings_count > 0 ? '1' : '0' }}"
+                            data-item-label="dampak risiko">
                             <div class="col">
                                 <div class="form-floating">
                                     <input type="hidden" name="dampak_ids[]" value="{{ $dampak->id }}">
@@ -158,7 +160,9 @@
                 <div class="card-body">
                     <div id="penyebab-risiko-body">
                         @forelse($identifikasiRisiko->penyebabRisiko as $penyebab)
-                        <div class="row g-2 mb-3">
+                        <div class="row g-2 mb-3 penyebab-row-item"
+                            data-has-monitoring="{{ $penyebab->monitorings_count > 0 ? '1' : '0' }}"
+                            data-item-label="penyebab risiko">
                             <div class="col">
                                 <div class="form-floating">
                                     <input type="hidden" name="penyebab_ids[]" value="{{ $penyebab->id }}">
@@ -226,7 +230,10 @@
                         @endphp
                         
                         @foreach($kriItems as $kri)
-                        <div class="row g-2 mb-3 border-bottom pb-3 kri-row-item" data-id="{{ $kri ? $kri->id : '' }}">
+                        <div class="row g-2 mb-3 border-bottom pb-3 kri-row-item"
+                            data-id="{{ $kri ? $kri->id : '' }}"
+                            data-has-monitoring="{{ $kri && (($kri->kri_unit_monitorings_count + $kri->unit_risk_pengendalians_count) > 0) ? '1' : '0' }}"
+                            data-item-label="parameter / KRI">
                             <div class="col">
                                 <input type="hidden" name="kri_ids[]" value="{{ $kri ? $kri->id : '' }}">
 
@@ -450,8 +457,32 @@
 @push('scripts')
 <script src="{{ asset('vendors/inputmask/jquery.inputmask.min.js') }}"></script>
 <script>
-    function removeRow(event) {
-        let row = $(event.target).closest('.row');
+    async function confirmMonitoredRowDeletion(row) {
+        if (String(row.data('has-monitoring')) !== '1') {
+            return true;
+        }
+
+        const itemLabel = row.data('item-label') || 'data';
+        const result = await Swal.fire({
+            title: 'Data Sudah Dimonitoring',
+            text: `Data ${itemLabel} ini sudah memiliki history monitoring. Tetap hapus dari risiko aktif? History monitoring akan tetap tersimpan.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal',
+        });
+
+        return result.isConfirmed;
+    }
+
+    async function removeRow(event) {
+        const row = $(event.target).closest('.row');
+        if (!await confirmMonitoredRowDeletion(row)) {
+            return;
+        }
+
         row.remove();
         reindexKri();
     }
@@ -658,8 +689,12 @@
         let deletedKriIds = [];
 
         // Event listener khusus untuk tombol hapus KRI
-        $(document).on('click', '.remove-kri-btn', function() {
-            let row = $(this).closest('.kri-row-item');
+        $(document).on('click', '.remove-kri-btn', async function() {
+            const row = $(this).closest('.kri-row-item');
+            if (!await confirmMonitoredRowDeletion(row)) {
+                return;
+            }
+
             let kriId = row.data('id'); // Ambil ID dari data attribute
 
             // Jika baris yang dihapus memiliki ID (berarti data lama dari database)
